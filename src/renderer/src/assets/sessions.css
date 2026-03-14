@@ -61,22 +61,6 @@
   color: var(--bde-text-muted);
 }
 
-.session-list__refresh {
-  background: none;
-  border: none;
-  color: var(--bde-text-muted);
-  cursor: pointer;
-  font-size: 16px;
-  padding: 2px 6px;
-  border-radius: 4px;
-  transition: color 0.15s, background 0.15s;
-}
-
-.session-list__refresh:hover {
-  color: var(--bde-text);
-  background: rgba(255, 255, 255, 0.06);
-}
-
 .session-list__group {
   padding: 0 8px 8px;
 }
@@ -89,13 +73,6 @@
   letter-spacing: 0.5px;
   color: var(--bde-text-muted);
   padding: 4px 4px 4px;
-}
-
-.session-list__empty {
-  padding: 24px 12px;
-  text-align: center;
-  color: var(--bde-text-muted);
-  font-size: 13px;
 }
 
 /* ── Session Row ──────────────────────────────────────── */
@@ -163,16 +140,6 @@
   gap: 6px;
   font-size: 11px;
   color: var(--bde-text-muted);
-}
-
-.session-row__badge {
-  background: rgba(255, 255, 255, 0.06);
-  padding: 1px 5px;
-  border-radius: 3px;
-  font-size: 10px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
 }
 
 .session-row__time {
@@ -376,23 +343,6 @@
   color: var(--bde-text-muted);
 }
 
-.live-feed__btn {
-  background: none;
-  border: 1px solid var(--bde-border);
-  color: var(--bde-text-muted);
-  font-size: 11px;
-  font-family: var(--bde-font-ui);
-  padding: 3px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.live-feed__btn:hover {
-  color: var(--bde-text);
-  border-color: var(--bde-text-muted);
-}
-
 .live-feed__lines {
   flex: 1;
   padding: 8px 12px;
@@ -594,20 +544,6 @@
   cursor: not-allowed;
 }
 
-.agent-director__spinner {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border: 2px solid var(--bde-text-muted);
-  border-top-color: var(--bde-accent);
-  border-radius: 50%;
-  animation: agent-spin 0.6s linear infinite;
-}
-
-@keyframes agent-spin {
-  to { transform: rotate(360deg); }
-}
-
 .agent-director__chips {
   display: flex;
   gap: 6px;
@@ -712,12 +648,6 @@
   justify-content: center;
 }
 
-.log-viewer__placeholder {
-  font-size: 13px;
-  color: var(--bde-text-muted);
-  font-style: italic;
-}
-
 .log-viewer__header {
   display: flex;
   align-items: center;
@@ -735,23 +665,6 @@
   color: var(--bde-text-muted);
 }
 
-.log-viewer__btn {
-  background: none;
-  border: 1px solid var(--bde-border);
-  color: var(--bde-text-muted);
-  font-size: 11px;
-  font-family: var(--bde-font-ui);
-  padding: 3px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: color 0.15s, border-color 0.15s;
-}
-
-.log-viewer__btn:hover {
-  color: var(--bde-text);
-  border-color: var(--bde-text-muted);
-}
-
 .log-viewer__messages {
   flex: 1;
   padding: 12px;
@@ -761,8 +674,7 @@
   overflow-y: auto;
 }
 
-.log-viewer__loading,
-.log-viewer__empty-msg {
+.log-viewer__loading {
   color: var(--bde-text-muted);
   font-size: 12px;
   font-style: italic;

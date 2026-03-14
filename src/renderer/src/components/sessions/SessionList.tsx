@@ -1,5 +1,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { useSessionsStore, AgentSession } from '../../stores/sessions'
+import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
+import { EmptyState } from '../ui/EmptyState'
 
 function timeAgo(ts: number): string {
   const seconds = Math.floor((Date.now() - ts) / 1000)
@@ -56,7 +59,7 @@ function SessionRow({
       <div className="session-row__info">
         <span className="session-row__label">{session.displayName || session.key}</span>
         <span className="session-row__meta">
-          <span className="session-row__badge">{modelBadgeLabel(session.model)}</span>
+          <Badge variant="muted" size="sm">{modelBadgeLabel(session.model)}</Badge>
           <span className="session-row__time">{timeAgo(session.updatedAt)}</span>
         </span>
       </div>
@@ -100,9 +103,9 @@ export function SessionList(): React.JSX.Element {
     <div className="session-list">
       <div className="session-list__header">
         <span className="session-list__title">Sessions</span>
-        <button className="session-list__refresh" onClick={fetchSessions} title="Refresh">
+        <Button variant="icon" size="sm" onClick={fetchSessions} title="Refresh">
           ↻
-        </button>
+        </Button>
       </div>
 
       {fetchError && (
@@ -146,7 +149,7 @@ export function SessionList(): React.JSX.Element {
       )}
 
       {!loading && !fetchError && sessions.length === 0 && (
-        <div className="session-list__empty">No sessions</div>
+        <EmptyState title="No sessions" />
       )}
     </div>
   )

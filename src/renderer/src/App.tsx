@@ -7,6 +7,8 @@ import { TitleBar } from './components/layout/TitleBar'
 import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
 import { ToastContainer } from './components/layout/ToastContainer'
+import { Button } from './components/ui/Button'
+import { Kbd } from './components/ui/Kbd'
 import SprintView from './views/SprintView'
 import { SessionsView } from './views/SessionsView'
 import MemoryView from './views/MemoryView'
@@ -56,14 +58,14 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Eleme
         <div className="shortcuts-overlay__list">
           {SHORTCUTS.map((s) => (
             <div key={s.keys} className="shortcuts-overlay__row">
-              <kbd className="shortcuts-overlay__kbd">{s.keys}</kbd>
+              <Kbd>{s.keys}</Kbd>
               <span>{s.description}</span>
             </div>
           ))}
         </div>
-        <button className="shortcuts-overlay__close" onClick={onClose}>
+        <Button variant="ghost" className="shortcuts-overlay__close" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
     </div>
   )

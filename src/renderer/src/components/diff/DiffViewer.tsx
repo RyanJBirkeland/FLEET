@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import type { DiffFile } from '../../lib/diff-parser'
+import { EmptyState } from '../ui/EmptyState'
 
 function FileList({
   files,
@@ -50,7 +51,7 @@ function DiffViewer({ files }: { files: DiffFile[] }): React.JSX.Element {
   if (files.length === 0) {
     return (
       <div className="diff-view-container">
-        <div className="diff-empty">No changes vs origin/main</div>
+        <EmptyState title="No changes vs origin/main" />
       </div>
     )
   }

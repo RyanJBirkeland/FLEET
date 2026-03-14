@@ -2,6 +2,8 @@ import { useState, useCallback } from 'react'
 import { useSessionsStore } from '../../stores/sessions'
 import { invokeTool } from '../../lib/rpc'
 import { toast } from '../../stores/toasts'
+import { Button } from '../ui/Button'
+import { Spinner } from '../ui/Spinner'
 
 const TASK_TEMPLATES = [
   { id: 'fix-build', label: 'Fix build errors', task: 'Find and fix all build errors in the project. Run the build, read the errors, and fix them one by one.' },
@@ -111,14 +113,16 @@ export function AgentDirector(): React.JSX.Element {
       <div className="agent-director__header">
         <span className="agent-director__title">Agent Director</span>
         {selectedKey && isRunning && (
-          <button
+          <Button
+            variant="danger"
+            size="sm"
             className="agent-director__kill"
             onClick={handleKill}
             disabled={killing}
             title="Stop this session"
           >
             {killing ? '...' : 'Stop'}
-          </button>
+          </Button>
         )}
       </div>
 
@@ -127,16 +131,18 @@ export function AgentDirector(): React.JSX.Element {
         <span className="agent-director__section-label">Quick Task</span>
         <div className="agent-director__templates">
           {TASK_TEMPLATES.map((t) => (
-            <button
+            <Button
               key={t.id}
+              variant="ghost"
+              size="sm"
               className="agent-director__template"
               onClick={() => handleTemplateClick(t.task)}
               disabled={spawning}
               title={t.task}
             >
-              {spawning ? <span className="agent-director__spinner" /> : null}
+              {spawning ? <Spinner size="sm" /> : null}
               {t.label}
-            </button>
+            </Button>
           ))}
         </div>
         <form className="agent-director__form" onSubmit={handleSpawnSubmit}>
@@ -148,13 +154,15 @@ export function AgentDirector(): React.JSX.Element {
             onChange={(e) => setTaskInput(e.target.value)}
             disabled={spawning}
           />
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             className="agent-director__send"
             type="submit"
             disabled={!taskInput.trim() || spawning}
           >
             {spawning ? 'Starting...' : 'Run'}
-          </button>
+          </Button>
         </form>
       </div>
 
@@ -164,14 +172,16 @@ export function AgentDirector(): React.JSX.Element {
           <span className="agent-director__section-label">Steer Session</span>
           <div className="agent-director__chips">
             {STEERING_CHIPS.map((chip) => (
-              <button
+              <Button
                 key={chip.id}
+                variant="ghost"
+                size="sm"
                 className="agent-director__chip"
                 onClick={() => handleChip(chip.label)}
                 disabled={sending}
               >
                 {chip.label}
-              </button>
+              </Button>
             ))}
           </div>
           <form className="agent-director__form" onSubmit={handleSteerSubmit}>
@@ -183,13 +193,15 @@ export function AgentDirector(): React.JSX.Element {
               onChange={(e) => setSteerInput(e.target.value)}
               disabled={sending}
             />
-            <button
+            <Button
+              variant="primary"
+              size="sm"
               className="agent-director__send"
               type="submit"
               disabled={!steerInput.trim() || sending}
             >
               {sending ? 'Sending...' : 'Send'}
-            </button>
+            </Button>
           </form>
           {sentMessages.length > 0 && (
             <div className="agent-director__history">

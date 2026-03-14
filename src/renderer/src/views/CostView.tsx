@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { invokeTool } from '../lib/rpc'
+import { Spinner } from '../components/ui/Spinner'
+import { EmptyState } from '../components/ui/EmptyState'
 
 interface SessionWithTokens {
   key: string
@@ -73,7 +75,7 @@ export default function CostView(): React.JSX.Element {
   if (loading) {
     return (
       <div className="cost-view">
-        <div className="cost-view__loading">Loading cost data...</div>
+        <div className="cost-view__loading"><Spinner size="md" /></div>
       </div>
     )
   }
@@ -100,7 +102,7 @@ export default function CostView(): React.JSX.Element {
       </div>
 
       {sessionsWithCost.length === 0 ? (
-        <div className="cost-view__empty">No sessions found</div>
+        <EmptyState title="No sessions found" />
       ) : (
         <div className="cost-view__table-wrap">
           <table className="cost-table">

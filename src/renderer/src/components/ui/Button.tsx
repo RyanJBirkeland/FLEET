@@ -9,6 +9,7 @@ type ButtonProps = {
   children: ReactNode
   title?: string
   className?: string
+  type?: 'button' | 'submit' | 'reset'
 }
 
 export function Button({
@@ -20,6 +21,7 @@ export function Button({
   children,
   title,
   className,
+  type,
 }: ButtonProps) {
   const classes = [
     'bde-btn',
@@ -37,6 +39,7 @@ export function Button({
       onClick={onClick}
       disabled={disabled || loading}
       title={title}
+      type={type}
     >
       {loading && <span className="bde-btn__spinner" />}
       {children}

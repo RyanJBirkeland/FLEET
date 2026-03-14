@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from 'react'
 import DiffViewer from '../components/diff/DiffViewer'
 import { parseDiff } from '../lib/diff-parser'
 import type { DiffFile } from '../lib/diff-parser'
+import { Button } from '../components/ui/Button'
+import { Spinner } from '../components/ui/Spinner'
 
 function DiffView(): React.JSX.Element {
   const [repos, setRepos] = useState<Record<string, string>>({})
@@ -82,19 +84,14 @@ function DiffView(): React.JSX.Element {
               View PR &rarr;
             </a>
           )}
-          <button
-            className="diff-view__refresh"
-            onClick={loadDiff}
-            disabled={loading}
-            title="Refresh diff"
-          >
+          <Button variant="icon" size="sm" onClick={loadDiff} disabled={loading} title="Refresh diff">
             &#x21bb;
-          </button>
+          </Button>
         </div>
       </div>
       {error && <div className="diff-view__error">{error}</div>}
       {loading ? (
-        <div className="diff-view__loading">Loading diff&hellip;</div>
+        <div className="diff-view__loading"><Spinner size="md" /></div>
       ) : (
         <DiffViewer files={files} />
       )}
