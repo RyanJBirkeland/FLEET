@@ -6,14 +6,60 @@
 @import '@fontsource/jetbrains-mono/500.css';
 
 :root {
+  /* Colors */
   --bde-bg: #0A0A0A;
   --bde-surface: #111111;
-  --bde-border: #1E1E1E;
+  --bde-surface-high: #1A1A1A;
+  --bde-border: #2A2A2A;
+  --bde-border-hover: #3A3A3A;
   --bde-accent: #00D37F;
-  --bde-text: #F0F0F0;
-  --bde-text-muted: #6B6B6B;
-  --bde-font-ui: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  --bde-font-code: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+  --bde-accent-dim: rgba(0, 211, 127, 0.15);
+  --bde-text: #E8E8E8;
+  --bde-text-muted: #888888;
+  --bde-text-dim: #555555;
+  --bde-danger: #FF4D4D;
+  --bde-danger-dim: rgba(255, 77, 77, 0.15);
+  --bde-warning: #F59E0B;
+  --bde-info: #3B82F6;
+  --bde-success: #00D37F;
+
+  /* Typography */
+  --bde-font-ui: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --bde-font-code: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+
+  /* Font sizes */
+  --bde-size-xs: 11px;
+  --bde-size-sm: 12px;
+  --bde-size-md: 13px;
+  --bde-size-lg: 14px;
+  --bde-size-xl: 16px;
+  --bde-size-xxl: 20px;
+
+  /* Spacing */
+  --bde-space-1: 4px;
+  --bde-space-2: 8px;
+  --bde-space-3: 12px;
+  --bde-space-4: 16px;
+  --bde-space-5: 20px;
+  --bde-space-6: 24px;
+  --bde-space-8: 32px;
+
+  /* Radii */
+  --bde-radius-sm: 4px;
+  --bde-radius-md: 6px;
+  --bde-radius-lg: 8px;
+  --bde-radius-xl: 12px;
+  --bde-radius-full: 9999px;
+
+  /* Shadows */
+  --bde-shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --bde-shadow-md: 0 4px 12px rgba(0,0,0,0.5);
+  --bde-shadow-lg: 0 16px 48px rgba(0,0,0,0.6);
+
+  /* Transitions */
+  --bde-transition-fast: 100ms ease;
+  --bde-transition-base: 150ms ease;
+  --bde-transition-slow: 200ms ease;
 }
 
 *,
