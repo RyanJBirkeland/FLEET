@@ -1,0 +1,130 @@
+import { useState } from 'react'
+import { useSessionsStore } from '../../stores/sessions'
+
+const TEMPLATES = [
+  { id: 'feature', label: '✦ Feature' },
+  { id: 'fix', label: '⚡ Fix' },
+  { id: 'refactor', label: '↻ Refactor' },
+  { id: 'tests', label: '✓ Tests' }
+] as const
+
+const REPOS = ['life-os', 'feast'] as const
+
+const MODELS = [
+  { id: 'haiku', label: 'Haiku' },
+  { id: 'sonnet', label: 'Sonnet' },
+  { id: 'opus', label: 'Opus' }
+] as const
+
+function slugify(text: string): string {
+  return text
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 50)
+}
+
+export function TaskComposer(): React.JSX.Element {
+  const [template, setTemplate] = useState<string>('feature')
+  const [repo, setRepo] = useState<string>(REPOS[0])
+  const [title, setTitle] = useState('')
+  const [description, setDescription] = useState('')
+  const [model, setModel] = useState<string>('sonnet')
+  const [spawning, setSpawning] = useState(false)
+
+  const spawnSession = useSessionsStore((s) => s.spawnSession)
+
+  const branchName = title ? `feat/${slugify(title)}` : ''
+
+  const handleRun = async (): Promise<void> => {
+    if (!title.trim() || spawning) return
+    setSpawning(true)
+    try {
+      await spawnSession({ template, repo, title, description, model })
+      setTitle('')
+      setDescription('')
+    } finally {
+      setSpawning(false)
+    }
+  }
+
+  return (
+    <div className="task-composer">
+      <div className="task-composer__section">
+        <label className="task-composer__label">Template</label>
+        <div className="task-composer__chips">
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              className={`task-composer__chip ${template === t.id ? 'task-composer__chip--active' : ''}`}
+              onClick={() => setTemplate(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="task-composer__section">
+        <label className="task-composer__label">Repository</label>
+        <select
+          className="task-composer__select"
+          value={repo}
+          onChange={(e) => setRepo(e.target.value)}
+        >
+          {REPOS.map((r) => (
+            <option key={r} value={r}>
+              {r}
+            </option>
+          ))}
+        </select>
+      </div>
+
+      <div className="task-composer__section">
+        <label className="task-composer__label">Title</label>
+        <input
+          className="task-composer__input"
+          type="text"
+          placeholder="e.g. Add user settings page"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+        />
+        {branchName && <span className="task-composer__branch">{branchName}</span>}
+      </div>
+
+      <div className="task-composer__section">
+        <label className="task-composer__label">Description</label>
+        <textarea
+          className="task-composer__textarea"
+          placeholder="Describe the task in detail (markdown supported)"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          rows={6}
+        />
+      </div>
+
+      <div className="task-composer__section">
+        <label className="task-composer__label">Model</label>
+        <div className="task-composer__chips">
+          {MODELS.map((m) => (
+            <button
+              key={m.id}
+              className={`task-composer__chip ${model === m.id ? 'task-composer__chip--active' : ''}`}
+              onClick={() => setModel(m.id)}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <button
+        className="task-composer__run"
+        onClick={handleRun}
+        disabled={!title.trim() || spawning}
+      >
+        {spawning ? 'Spawning…' : '▶ Run Now'}
+      </button>
+    </div>
+  )
+}
