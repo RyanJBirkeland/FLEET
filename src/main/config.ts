@@ -8,6 +8,17 @@ interface GatewayConfig {
   token: string
 }
 
+export function getGitHubToken(): string | null {
+  const configPath = join(homedir(), '.openclaw', 'openclaw.json')
+  try {
+    const raw = readFileSync(configPath, 'utf-8')
+    const config = JSON.parse(raw)
+    return config.githubToken ?? process.env['GITHUB_TOKEN'] ?? null
+  } catch {
+    return process.env['GITHUB_TOKEN'] ?? null
+  }
+}
+
 export function getGatewayConfig(): GatewayConfig {
   const configPath = join(homedir(), '.openclaw', 'openclaw.json')
 

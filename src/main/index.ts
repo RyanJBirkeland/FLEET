@@ -2,7 +2,8 @@ import { app, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { getGatewayConfig } from './config'
+import { getGatewayConfig, getGitHubToken } from './config'
+import { getRepoPaths, readSprintMd } from './git'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -53,6 +54,10 @@ app.whenReady().then(() => {
   }
 
   ipcMain.handle('get-gateway-config', () => gatewayConfig)
+  ipcMain.handle('get-github-token', () => getGitHubToken())
+  ipcMain.handle('get-repo-paths', () => getRepoPaths())
+  ipcMain.handle('read-sprint-md', (_e, repoPath: string) => readSprintMd(repoPath))
+  ipcMain.handle('open-external', (_e, url: string) => shell.openExternal(url))
 
   createWindow()
 
