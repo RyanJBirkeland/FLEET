@@ -38,7 +38,7 @@ function useAccentColor(): [string, (color: string) => void] {
 
 export default function SettingsView(): React.JSX.Element {
   const status = useGatewayStore((s) => s.status)
-  const reconnect = useGatewayStore((s) => s.connect)
+  const reconnect = useGatewayStore((s) => s.reconnect)
 
   const [url, setUrl] = useState('')
   const [token, setToken] = useState('')
@@ -74,7 +74,7 @@ export default function SettingsView(): React.JSX.Element {
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
-      // saveGatewayConfig not yet in preload — skip for now, token already read from disk
+      await window.api.saveGatewayConfig(url, token)
       setDirty(false)
       toast.success('Gateway config saved')
       await reconnect()
