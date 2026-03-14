@@ -112,7 +112,7 @@
 /* ── ActivityBar ───────────────────────────────────────── */
 
 .activity-bar {
-  width: 48px;
+  width: 64px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -125,8 +125,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding-top: 8px;
+  gap: 2px;
+  padding-top: 6px;
   flex: 1;
   display: flex;
   overflow: hidden;
@@ -134,9 +134,11 @@
 
 .activity-bar__item {
   position: relative;
-  width: 40px;
-  height: 40px;
+  width: 56px;
+  height: 52px;
   display: flex;
+  flex-direction: column;
+  gap: 3px;
   align-items: center;
   justify-content: center;
   background: none;
@@ -145,6 +147,14 @@
   cursor: pointer;
   border-radius: 6px;
   transition: color 0.15s, background 0.15s;
+}
+
+.activity-bar__item-label {
+  font-size: 10px;
+  font-weight: 500;
+  color: inherit;
+  letter-spacing: 0.1px;
+  line-height: 1;
 }
 
 .activity-bar__item:hover {
@@ -160,8 +170,8 @@
   content: '';
   position: absolute;
   left: -4px;
-  top: 8px;
-  bottom: 8px;
+  top: 6px;
+  bottom: 6px;
   width: 3px;
   border-radius: 0 2px 2px 0;
   background: var(--bde-accent);
