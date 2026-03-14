@@ -1,4 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { Button } from '../ui/Button'
+import { Badge } from '../ui/Badge'
+import { EmptyState } from '../ui/EmptyState'
 
 // --- Types ---
 
@@ -219,14 +222,9 @@ export default function SprintBoard() {
             ))}
           </div>
         </div>
-        <button
-          className="sprint-board__refresh"
-          onClick={load}
-          disabled={loading}
-          title="Refresh"
-        >
+        <Button variant="icon" size="sm" onClick={load} disabled={loading} title="Refresh">
           &#x21bb;
-        </button>
+        </Button>
       </div>
 
       {error && <div className="sprint-board__error">{error}</div>}
@@ -248,7 +246,7 @@ export default function SprintBoard() {
               </div>
               <div className="sprint-col__cards">
                 {inProgress.length === 0 ? (
-                  <div className="sprint-empty">Nothing checked out</div>
+                  <EmptyState title="Nothing checked out" />
                 ) : (
                   inProgress.map((item) => (
                     <CheckedOutCard
@@ -286,7 +284,7 @@ export default function SprintBoard() {
               </div>
               <div className="sprint-col__cards">
                 {pendingQueue.length === 0 ? (
-                  <div className="sprint-empty">Queue is empty</div>
+                  <EmptyState title="Queue is empty" />
                 ) : (
                   pendingQueue.map((item, i) => (
                     <div key={i} className="sprint-card">
@@ -305,7 +303,7 @@ export default function SprintBoard() {
               </div>
               <div className="sprint-col__cards">
                 {doneItems.length === 0 ? (
-                  <div className="sprint-empty">No completed PRs yet</div>
+                  <EmptyState title="No completed PRs yet" />
                 ) : (
                   doneItems.map((item) => (
                     <div key={item.pr} className="sprint-card">
@@ -368,25 +366,20 @@ function CheckedOutCard({
         >
           {item.branch}
         </a>
-        <span
-          className={`sprint-card__badge ${
-            item.status === 'Active'
-              ? 'sprint-card__badge--active'
-              : item.status === 'Done'
-                ? 'sprint-card__badge--done'
-                : ''
-          }`}
+        <Badge
+          variant={item.status === 'Active' ? 'warning' : item.status === 'Done' ? 'success' : 'default'}
+          size="sm"
         >
           {item.status}
-        </span>
+        </Badge>
       </div>
       <div className="sprint-card__meta">
         <span>{item.agent}</span>
         <span>{timeAgo(item.started)}</span>
       </div>
-      <button onClick={onToggle} className="sprint-card__files-toggle">
+      <Button variant="ghost" size="sm" className="sprint-card__files-toggle" onClick={onToggle}>
         {expanded ? '\u25BE' : '\u25B8'} {files.length} file{files.length !== 1 ? 's' : ''}
-      </button>
+      </Button>
       {expanded && (
         <ul className="sprint-card__files-list">
           {files.map((f) => (

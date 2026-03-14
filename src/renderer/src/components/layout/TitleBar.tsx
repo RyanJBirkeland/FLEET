@@ -1,4 +1,5 @@
 import { useUIStore, type RepoFilter, type View } from '../../stores/ui'
+import { Badge } from '../ui/Badge'
 
 const VIEW_LABELS: Record<View, string> = {
   sessions: 'Sessions',
@@ -47,7 +48,7 @@ export function TitleBar({ sessionCount, totalCost }: TitleBarProps): React.JSX.
 
       <div className="titlebar__right">
         {sessionCount > 0 && (
-          <span className="titlebar__badge">{sessionCount} active</span>
+          <Badge variant="success" size="sm">{sessionCount} active</Badge>
         )}
         <span className="titlebar__cost">${totalCost.toFixed(2)}</span>
       </div>

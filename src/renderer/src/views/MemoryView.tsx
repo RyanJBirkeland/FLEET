@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '../stores/toasts'
+import { Button } from '../components/ui/Button'
+import { EmptyState } from '../components/ui/EmptyState'
 
 interface MemoryFile {
   path: string
@@ -138,16 +140,12 @@ export default function MemoryView(): React.JSX.Element {
           <span className="memory-sidebar__title">Memory</span>
           <span className="memory-sidebar__count">{files.length}</span>
           <div className="memory-sidebar__actions">
-            <button
-              className="memory-sidebar__btn"
-              onClick={() => setNewFilePrompt(true)}
-              title="New file"
-            >
+            <Button variant="icon" size="sm" onClick={() => setNewFilePrompt(true)} title="New file">
               +
-            </button>
-            <button className="memory-sidebar__btn" onClick={loadFiles} title="Refresh">
+            </Button>
+            <Button variant="icon" size="sm" onClick={loadFiles} title="Refresh">
               &#x21bb;
-            </button>
+            </Button>
           </div>
         </div>
 
@@ -204,7 +202,7 @@ export default function MemoryView(): React.JSX.Element {
           ))}
 
           {files.length === 0 && (
-            <div className="memory-sidebar__empty">No memory files found</div>
+            <EmptyState title="No memory files found" />
           )}
         </div>
       </div>
@@ -218,20 +216,12 @@ export default function MemoryView(): React.JSX.Element {
                 {isDirty && <span className="memory-editor__dirty"> &bull;</span>}
               </span>
               <div className="memory-editor__actions">
-                <button
-                  className="memory-editor__btn memory-editor__btn--discard"
-                  onClick={discard}
-                  disabled={!isDirty}
-                >
+                <Button variant="ghost" size="sm" onClick={discard} disabled={!isDirty}>
                   Discard
-                </button>
-                <button
-                  className="memory-editor__btn memory-editor__btn--save"
-                  onClick={saveFile}
-                  disabled={!isDirty}
-                >
+                </Button>
+                <Button variant="primary" size="sm" onClick={saveFile} disabled={!isDirty}>
                   Save
-                </button>
+                </Button>
               </div>
             </div>
             <textarea
@@ -243,7 +233,7 @@ export default function MemoryView(): React.JSX.Element {
             />
           </>
         ) : (
-          <div className="memory-editor__empty">Select a file to view</div>
+          <EmptyState title="Select a file to view" />
         )}
       </div>
     </div>

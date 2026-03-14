@@ -3,6 +3,7 @@ import { useUIStore, type View } from '../../stores/ui'
 import { useGatewayStore } from '../../stores/gateway'
 import { useSessionsStore, type AgentSession } from '../../stores/sessions'
 import { toast } from '../../stores/toasts'
+import { Kbd } from '../ui/Kbd'
 
 type CommandCategory = 'navigation' | 'action' | 'session'
 
@@ -235,7 +236,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
                     onMouseEnter={() => setSelectedIndex(idx)}
                   >
                     <span className="command-palette__label">{cmd.label}</span>
-                    {cmd.hint && <kbd className="command-palette__hint">{cmd.hint}</kbd>}
+                    {cmd.hint && <Kbd>{cmd.hint}</Kbd>}
                   </button>
                 )
               })}

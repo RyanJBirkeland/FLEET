@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
 import { useChatStore, LogLine } from '../../stores/chat'
 import { useSessionsStore } from '../../stores/sessions'
 import { useGatewayStore } from '../../stores/gateway'
+import { Button } from '../ui/Button'
 
 function formatTime(ts: number): string {
   const d = new Date(ts)
@@ -108,9 +109,9 @@ export function LiveFeed(): React.JSX.Element {
           <span className="live-feed__title">Live Feed</span>
           {selectedKey && <span className="live-feed__session-key">{selectedKey}</span>}
         </div>
-        <button className="live-feed__btn" onClick={handleClear} title="Clear feed">
+        <Button variant="ghost" size="sm" onClick={handleClear} title="Clear feed">
           Clear
-        </button>
+        </Button>
       </div>
       <div className="live-feed__lines" ref={linesRef} onScroll={handleScroll}>
         {lines.map((line) => (
@@ -129,9 +130,9 @@ export function LiveFeed(): React.JSX.Element {
         )}
       </div>
       {paused && (
-        <button className="live-feed__resume" onClick={handleResume}>
+        <Button variant="ghost" size="sm" className="live-feed__resume" onClick={handleResume}>
           Resume auto-scroll
-        </button>
+        </Button>
       )}
     </div>
   )

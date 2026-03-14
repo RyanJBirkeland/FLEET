@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useSessionsStore } from '../../stores/sessions'
+import { Button } from '../ui/Button'
 
 const TEMPLATES = [
   { id: 'feature', label: '✦ Feature' },
@@ -54,13 +55,15 @@ export function TaskComposer(): React.JSX.Element {
         <label className="task-composer__label">Template</label>
         <div className="task-composer__chips">
           {TEMPLATES.map((t) => (
-            <button
+            <Button
               key={t.id}
+              variant="ghost"
+              size="sm"
               className={`task-composer__chip ${template === t.id ? 'task-composer__chip--active' : ''}`}
               onClick={() => setTemplate(t.id)}
             >
               {t.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
@@ -107,24 +110,28 @@ export function TaskComposer(): React.JSX.Element {
         <label className="task-composer__label">Model</label>
         <div className="task-composer__chips">
           {MODELS.map((m) => (
-            <button
+            <Button
               key={m.id}
+              variant="ghost"
+              size="sm"
               className={`task-composer__chip ${model === m.id ? 'task-composer__chip--active' : ''}`}
               onClick={() => setModel(m.id)}
             >
               {m.label}
-            </button>
+            </Button>
           ))}
         </div>
       </div>
 
-      <button
+      <Button
+        variant="primary"
         className="task-composer__run"
         onClick={handleRun}
         disabled={!title.trim() || spawning}
+        loading={spawning}
       >
         {spawning ? 'Spawning…' : '▶ Run Now'}
-      </button>
+      </Button>
     </div>
   )
 }

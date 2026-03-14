@@ -21,8 +21,7 @@
   color: var(--bde-text);
 }
 
-.cost-view__loading,
-.cost-view__empty {
+.cost-view__loading {
   display: flex;
   align-items: center;
   justify-content: center;

@@ -3,6 +3,8 @@ import { Eye, EyeOff, ExternalLink } from 'lucide-react'
 import { useGatewayStore } from '../stores/gateway'
 import { clearConfigCache } from '../lib/rpc'
 import { toast } from '../stores/toasts'
+import { Button } from '../components/ui/Button'
+import { Badge } from '../components/ui/Badge'
 
 const ACCENT_PRESETS = [
   { color: '#00D37F', label: 'Green' },
@@ -146,51 +148,55 @@ export default function SettingsView(): React.JSX.Element {
                 onChange={(e) => handleTokenChange(e.target.value)}
                 placeholder="Token from openclaw.json"
               />
-              <button
+              <Button
+                variant="icon"
+                size="sm"
                 className="settings-field__toggle"
                 onClick={() => setShowToken((v) => !v)}
                 title={showToken ? 'Hide token' : 'Show token'}
                 type="button"
               >
                 {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
-              </button>
+              </Button>
             </div>
           </label>
 
           <div className="settings-field__row">
             <div className="settings-field__status">
-              <div
-                className={`settings-field__dot settings-field__dot--${status}`}
-              />
-              <span className="settings-field__status-text">
+              <Badge
+                variant={status === 'connected' ? 'success' : status === 'error' ? 'danger' : status === 'connecting' ? 'warning' : 'muted'}
+                size="sm"
+              >
                 {status.charAt(0).toUpperCase() + status.slice(1)}
-              </span>
+              </Badge>
             </div>
 
             <div className="settings-field__actions">
-              <button
-                className="settings-btn settings-btn--secondary"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={handleTest}
                 disabled={testing || !url || !token}
+                loading={testing}
                 type="button"
               >
                 {testing ? 'Testing...' : 'Test Connection'}
-              </button>
+              </Button>
               {testResult && (
-                <span
-                  className={`settings-field__test-result settings-field__test-result--${testResult}`}
-                >
+                <Badge variant={testResult === 'success' ? 'success' : 'danger'} size="sm">
                   {testResult === 'success' ? 'OK' : 'Failed'}
-                </span>
+                </Badge>
               )}
-              <button
-                className="settings-btn settings-btn--primary"
+              <Button
+                variant="primary"
+                size="sm"
                 onClick={handleSave}
                 disabled={!dirty || saving || !url || !token}
+                loading={saving}
                 type="button"
               >
                 {saving ? 'Saving...' : 'Save'}
-              </button>
+              </Button>
             </div>
           </div>
         </section>
@@ -241,13 +247,15 @@ export default function SettingsView(): React.JSX.Element {
             </div>
             <div className="settings-about__row">
               <span className="settings-about__label">Source</span>
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 className="settings-about__link"
                 onClick={() => window.api.openExternal(GITHUB_URL)}
                 type="button"
               >
                 GitHub <ExternalLink size={12} />
-              </button>
+              </Button>
             </div>
           </div>
         </section>

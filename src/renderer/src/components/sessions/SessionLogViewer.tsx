@@ -2,6 +2,8 @@ import { useEffect, useRef, useState, useCallback } from 'react'
 import { useSessionsStore } from '../../stores/sessions'
 import { invokeTool } from '../../lib/rpc'
 import { toast } from '../../stores/toasts'
+import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
 
 interface HistoryMessage {
   role: 'assistant' | 'user' | 'tool' | 'system'
@@ -116,7 +118,7 @@ export function SessionLogViewer(): React.JSX.Element {
   if (!selectedKey) {
     return (
       <div className="log-viewer log-viewer--empty">
-        <span className="log-viewer__placeholder">Select a session to view logs</span>
+        <EmptyState title="Select a session to view logs" />
       </div>
     )
   }
@@ -125,19 +127,21 @@ export function SessionLogViewer(): React.JSX.Element {
     <div className="log-viewer">
       <div className="log-viewer__header">
         <span className="log-viewer__title">Session Log</span>
-        <button className="log-viewer__btn" onClick={handleCopy} title="Copy as markdown">
+        <Button variant="ghost" size="sm" onClick={handleCopy} title="Copy as markdown">
           Copy
-        </button>
+        </Button>
       </div>
       <div className="log-viewer__messages" ref={scrollRef}>
         {hasMore && (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             className="log-viewer__load-more"
             onClick={handleLoadMore}
             disabled={loading}
           >
             {loading ? 'Loading\u2026' : 'Load earlier messages'}
-          </button>
+          </Button>
         )}
         {loading && messages.length === 0 && (
           <div className="log-viewer__loading">Loading history\u2026</div>
@@ -207,7 +211,7 @@ export function SessionLogViewer(): React.JSX.Element {
           )
         })}
         {!loading && messages.length === 0 && (
-          <span className="log-viewer__empty-msg">No messages in this session</span>
+          <EmptyState title="No messages in this session" />
         )}
       </div>
     </div>

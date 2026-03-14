@@ -1,6 +1,8 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { listOpenPRs, mergePR, type PullRequest } from '../../lib/github-api'
 import { toast } from '../../stores/toasts'
+import { Button } from '../ui/Button'
+import { EmptyState } from '../ui/EmptyState'
 
 const REPOS = [
   { label: 'life-os', owner: 'RyanJBirkeland', name: 'life-os', color: '#00D37F' },
@@ -80,9 +82,9 @@ export default function PRList() {
       <div className="pr-list__header">
         <span className="pr-list__title">Open Pull Requests</span>
         <span className="pr-list__count">{prs.length}</span>
-        <button className="sprint-board__refresh" onClick={load} disabled={loading} title="Refresh">
+        <Button variant="icon" size="sm" onClick={load} disabled={loading} title="Refresh">
           &#x21bb;
-        </button>
+        </Button>
       </div>
 
       {error && <div className="sprint-board__error">{error}</div>}
@@ -94,7 +96,7 @@ export default function PRList() {
             <div className="sprint-board__skeleton" />
           </div>
         ) : prs.length === 0 ? (
-          <div className="sprint-empty">No open PRs</div>
+          <EmptyState title="No open PRs" />
         ) : (
           prs.map((pr) => (
             <div key={`${pr.repo}-${pr.number}`} className="pr-row">
@@ -111,19 +113,23 @@ export default function PRList() {
                 </span>
               </div>
               <div className="pr-row__actions">
-                <button
+                <Button
+                  variant="ghost"
+                  size="sm"
                   className="pr-row__btn pr-row__btn--open"
                   onClick={() => window.api.openExternal(pr.html_url)}
                 >
                   Open
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="primary"
+                  size="sm"
                   className="pr-row__btn pr-row__btn--merge"
                   disabled={merging === pr.number}
                   onClick={() => setConfirmMerge(pr)}
                 >
                   {merging === pr.number ? '...' : 'Merge'}
-                </button>
+                </Button>
               </div>
             </div>
           ))
@@ -138,16 +144,17 @@ export default function PRList() {
               #{confirmMerge.number} &mdash; {confirmMerge.title}
             </p>
             <div className="pr-confirm__actions">
-              <button className="pr-row__btn" onClick={() => setConfirmMerge(null)}>
+              <Button variant="ghost" size="sm" onClick={() => setConfirmMerge(null)}>
                 Cancel
-              </button>
-              <button
-                className="pr-row__btn pr-row__btn--merge"
+              </Button>
+              <Button
+                variant="primary"
+                size="sm"
                 disabled={merging === confirmMerge.number}
                 onClick={() => handleMerge(confirmMerge)}
               >
                 {merging === confirmMerge.number ? 'Merging...' : 'Confirm Merge'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>

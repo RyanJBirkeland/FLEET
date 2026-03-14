@@ -1,4 +1,5 @@
 import type { ConnectionStatus } from '../../lib/gateway'
+import { Badge } from '../ui/Badge'
 
 interface StatusBarProps {
   status: ConnectionStatus
@@ -18,7 +19,9 @@ export function StatusBar({ status, sessionCount, model, onReconnect }: StatusBa
           onClick={onReconnect}
           title={isConnected ? 'Connected' : 'Click to reconnect'}
         >
-          {isConnected ? '◉ Connected ws://127.0.0.1:18789' : '◌ Disconnected'}
+          <Badge variant={isConnected ? 'success' : 'muted'} size="sm">
+            {isConnected ? 'Connected ws://127.0.0.1:18789' : 'Disconnected'}
+          </Badge>
         </button>
       </div>
 
