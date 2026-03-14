@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useGatewayStore } from './stores/gateway'
 import { useUIStore, type View } from './stores/ui'
+import { useSessionsStore } from './stores/sessions'
 import { ActivityBar } from './components/layout/ActivityBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
 import SprintView from './views/SprintView'
+import { SessionsView } from './views/SessionsView'
 
 const VIEW_ORDER: View[] = ['sessions', 'sprint', 'diff', 'memory', 'settings']
 
@@ -17,6 +19,7 @@ const SHORTCUTS: { keys: string; description: string }[] = [
 ]
 
 function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
+  if (activeView === 'sessions') return <SessionsView />
   if (activeView === 'sprint') return <SprintView />
   return (
     <div className="view-router">
@@ -53,6 +56,7 @@ function App(): React.JSX.Element {
   const connect = useGatewayStore((s) => s.connect)
   const activeView = useUIStore((s) => s.activeView)
   const setView = useUIStore((s) => s.setView)
+  const runningCount = useSessionsStore((s) => s.runningCount)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -102,7 +106,7 @@ function App(): React.JSX.Element {
 
   return (
     <div className="app-shell">
-      <TitleBar sessionCount={0} totalCost={0} />
+      <TitleBar sessionCount={runningCount} totalCost={0} />
 
       <div className="app-shell__body">
         <ActivityBar connectionStatus={status} />
@@ -114,7 +118,7 @@ function App(): React.JSX.Element {
 
       <StatusBar
         status={status}
-        sessionCount={0}
+        sessionCount={runningCount}
         model="claude-sonnet-4-6"
         onReconnect={() => connect()}
       />
