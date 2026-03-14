@@ -5,6 +5,7 @@ import { ActivityBar } from './components/layout/ActivityBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
+import SprintView from './views/SprintView'
 
 const VIEW_ORDER: View[] = ['sessions', 'sprint', 'diff', 'memory', 'settings']
 
@@ -16,6 +17,7 @@ const SHORTCUTS: { keys: string; description: string }[] = [
 ]
 
 function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
+  if (activeView === 'sprint') return <SprintView />
   return (
     <div className="view-router">
       <span className="view-router__placeholder">

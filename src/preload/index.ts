@@ -3,7 +3,12 @@ import { electronAPI } from '@electron-toolkit/preload'
 
 const api = {
   getGatewayConfig: (): Promise<{ url: string; token: string }> =>
-    ipcRenderer.invoke('get-gateway-config')
+    ipcRenderer.invoke('get-gateway-config'),
+  getGitHubToken: (): Promise<string | null> => ipcRenderer.invoke('get-github-token'),
+  getRepoPaths: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-repo-paths'),
+  readSprintMd: (repoPath: string): Promise<string> =>
+    ipcRenderer.invoke('read-sprint-md', repoPath),
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke('open-external', url)
 }
 
 if (process.contextIsolated) {
