@@ -57,7 +57,9 @@ const SHORTCUTS_RIGHT: { keys: string; description: string }[] = [
 
 function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
   const wrap = (name: string, el: React.JSX.Element): React.JSX.Element => (
-    <ErrorBoundary name={name}>{el}</ErrorBoundary>
+    <div key={name} className="view-enter">
+      <ErrorBoundary name={name}>{el}</ErrorBoundary>
+    </div>
   )
   if (activeView === 'sessions') return wrap('Sessions', <SessionsView />)
   if (activeView === 'terminal') return wrap('Terminal', <TerminalView />)
@@ -194,9 +196,7 @@ function App(): React.JSX.Element {
       <div className="app-shell__body">
         <ActivityBar connectionStatus={status} />
         <div className="app-shell__content">
-          <div key={activeView} className="view-enter">
-            <ViewRouter activeView={activeView} />
-          </div>
+          <ViewRouter activeView={activeView} />
         </div>
       </div>
       <StatusBar

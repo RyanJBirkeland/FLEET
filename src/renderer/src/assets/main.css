@@ -245,7 +245,7 @@
 /* ── ViewRouter ────────────────────────────────────────── */
 
 .view-enter {
-  animation: bde-fade-in 150ms ease;
+  animation: bde-slide-up-fade 120ms ease forwards;
   display: flex;
   flex: 1;
   overflow: hidden;
