@@ -88,10 +88,8 @@ function renderInline(text: string): React.JSX.Element {
   return <>{parts}</>
 }
 
-const POLL_FAST = 1_500
-const POLL_SLOW = 8_000
-const ACTIVE_THRESHOLD = 30_000
-const STREAMING_THRESHOLD = 15_000
+const POLL_STREAMING = 1_000
+const POLL_IDLE = 5_000
 
 interface Props {
   sessionKey: string
@@ -99,7 +97,7 @@ interface Props {
   refreshTrigger: number
 }
 
-export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): React.JSX.Element {
+export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedMsgs, setExpandedMsgs] = useState<Set<number>>(new Set())
@@ -108,6 +106,9 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
   const messagesRef = useRef<ChatMessage[]>([])
   const lastCountRef = useRef(0)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const [streaming, setStreaming] = useState(false)
+  const prevLastAssistantContentRef = useRef('')
+  const pollIntervalRef = useRef(POLL_IDLE)
 
   const isNearBottom = useCallback((): boolean => {
     const el = scrollRef.current
@@ -162,7 +163,28 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
         messagesRef.current = incoming
         lastCountRef.current = incoming.length
         setMessages([...incoming])
+      } else if (incoming.length > 0) {
+        // Same count — update if last message content changed (streaming)
+        const lastIn = incoming[incoming.length - 1]
+        const lastCur = messagesRef.current[messagesRef.current.length - 1]
+        if (lastIn && lastCur && lastIn.content !== lastCur.content) {
+          messagesRef.current = incoming
+          setMessages([...incoming])
+          if (isNearBottom()) scrollToBottom()
+        }
       }
+
+      // Detect streaming: last message is assistant and content is still growing
+      const lastMsg = incoming[incoming.length - 1]
+      if (lastMsg?.role === 'assistant') {
+        const grew = lastMsg.content.length > prevLastAssistantContentRef.current.length
+        prevLastAssistantContentRef.current = lastMsg.content
+        setStreaming(grew)
+      } else {
+        prevLastAssistantContentRef.current = ''
+        setStreaming(false)
+      }
+
       setLoading(false)
     } catch {
       if (loading) {
@@ -172,9 +194,12 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
     }
   }, [sessionKey, loading, isNearBottom, scrollToBottom])
 
-  // Adaptive polling interval
-  const isAgentActive = updatedAt ? Date.now() - updatedAt < ACTIVE_THRESHOLD : false
-  const pollInterval = isAgentActive ? POLL_FAST : POLL_SLOW
+  // Update polling interval ref on every render so the recursive timer picks it up
+  pollIntervalRef.current = streaming ? POLL_STREAMING : POLL_IDLE
+
+  // Stable ref so recursive setTimeout always calls latest poll
+  const pollRef = useRef(poll)
+  pollRef.current = poll
 
   // Initial fetch + adaptive poll
   useEffect(() => {
@@ -184,21 +209,23 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
     messagesRef.current = []
     lastCountRef.current = 0
     userScrolledUp.current = false
+    prevLastAssistantContentRef.current = ''
+    setStreaming(false)
 
-    poll()
+    pollRef.current()
 
     const schedulePoll = (): void => {
       pollTimerRef.current = setTimeout(async () => {
-        await poll()
+        await pollRef.current()
         schedulePoll()
-      }, pollInterval)
+      }, pollIntervalRef.current)
     }
     schedulePoll()
 
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
-  }, [sessionKey, pollInterval]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Refresh on send
   useEffect(() => {
@@ -240,7 +267,6 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
     return () => window.removeEventListener('keydown', handler)
   }, [activeView])
 
-  const isStreaming = updatedAt ? Date.now() - updatedAt < STREAMING_THRESHOLD : false
   const showScrollButton = userScrolledUp.current && messages.length > 0
 
   const toggleExpand = useCallback((idx: number) => {
@@ -254,6 +280,9 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
 
   // Filter out tool messages for chat display
   const visibleMessages = messages.filter((m) => m.role !== 'tool')
+  const lastAssistantVisibleIdx = streaming
+    ? visibleMessages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1)
+    : -1
 
   if (loading && visibleMessages.length === 0) {
     return (
@@ -305,6 +334,13 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
                 <span className="chat-msg__text chat-msg__text--rich">
                   {renderContent(msg.content)}
                 </span>
+                {idx === lastAssistantVisibleIdx && (
+                  <span className="streaming-indicator streaming-indicator--inline">
+                    <span className="streaming-indicator__dot" />
+                    <span className="streaming-indicator__dot" />
+                    <span className="streaming-indicator__dot" />
+                  </span>
+                )}
                 {isLong && !isExpanded && (
                   <div className="chat-msg__expand-fade">
                     <span className="chat-msg__expand-label">Click to expand</span>
@@ -318,13 +354,6 @@ export function ChatThread({ sessionKey, updatedAt, refreshTrigger }: Props): Re
           )
         })}
 
-        {isStreaming && (
-          <div className="streaming-indicator">
-            <span className="streaming-indicator__dot" />
-            <span className="streaming-indicator__dot" />
-            <span className="streaming-indicator__dot" />
-          </div>
-        )}
       </div>
 
       {showScrollButton && (
