@@ -39,7 +39,8 @@ export function ActivityBar({ connectionStatus }: ActivityBarProps): React.JSX.E
             onClick={() => setView(view)}
             title={label + ' (' + shortcut + ')'}
           >
-            <Icon size={20} strokeWidth={1.5} />
+            <Icon size={18} strokeWidth={1.5} />
+            <span className="activity-bar__item-label">{label}</span>
           </button>
         ))}
       </div>
