@@ -94,10 +94,10 @@ const POLL_IDLE = 5_000
 interface Props {
   sessionKey: string
   updatedAt?: number
-  refreshTrigger: number
+  refreshTrigger?: number
 }
 
-export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Element {
+export function ChatThread({ sessionKey, refreshTrigger = 0 }: Props): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedMsgs, setExpandedMsgs] = useState<Set<number>>(new Set())
@@ -327,7 +327,7 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
             return (
               <div key={idx} className="chat-msg chat-msg--tool">
                 <button className="log-msg__tool-toggle" onClick={() => toggleTool(idx)}>
-                  <span className="log-msg__tool-arrow">{expandedTools.has(idx) ? '▾' : '▸'}</span>
+                  <span className="log-msg__tool-arrow">{expandedTools.has(idx) ? '\u25BE' : '\u25B8'}</span>
                   <span className="log-msg__tool-name">{msg.toolName || 'tool'}</span>
                   <span className="log-msg__tool-preview">{msg.content.slice(0, 80)}</span>
                 </button>
