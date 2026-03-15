@@ -1,12 +1,11 @@
 /**
  * SessionsView — two-pane chat interface for agent sessions.
  * Left pane: session list with status dots + model badge.
- * Right pane: chat thread for selected session + message input.
+ * Right pane: chat thread for selected session (includes message input).
  */
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { SessionList } from '../components/sessions/SessionList'
 import { ChatThread } from '../components/sessions/ChatThread'
-import { MessageInput } from '../components/sessions/MessageInput'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useSessionsStore } from '../stores/sessions'
 
@@ -17,8 +16,6 @@ export function SessionsView(): React.JSX.Element {
   const selectedKey = useSessionsStore((s) => s.selectedSessionKey)
   const selectSession = useSessionsStore((s) => s.selectSession)
   const fetchSessions = useSessionsStore((s) => s.fetchSessions)
-
-  const [refreshTrigger, setRefreshTrigger] = useState(0)
 
   useEffect(() => {
     fetchSessions()
@@ -32,18 +29,33 @@ export function SessionsView(): React.JSX.Element {
     }
   }, [sessions, selectedKey, selectSession])
 
-  const handleSent = useCallback(() => {
-    setRefreshTrigger((n) => n + 1)
-  }, [])
+  const [sidebarWidth, setSidebarWidth] = useState(240)
 
   const selectedSession = sessions.find((s) => s.key === selectedKey)
 
   return (
     <div className="sessions-chat">
-      <div className="sessions-chat__sidebar">
+      <div className="sessions-chat__sidebar" style={{ width: sidebarWidth }}>
         <SessionList />
       </div>
-
+      <div
+        className="sessions-view__handle"
+        onMouseDown={(e) => {
+          e.preventDefault()
+          const startX = e.clientX
+          const startW = sidebarWidth
+          const onMove = (ev: MouseEvent): void => {
+            const delta = ev.clientX - startX
+            setSidebarWidth(Math.min(400, Math.max(180, startW + delta)))
+          }
+          const onUp = (): void => {
+            window.removeEventListener('mousemove', onMove)
+            window.removeEventListener('mouseup', onUp)
+          }
+          window.addEventListener('mousemove', onMove)
+          window.addEventListener('mouseup', onUp)
+        }}
+      />
       <div className="sessions-chat__main">
         {selectedKey && selectedSession ? (
           <>
@@ -56,11 +68,7 @@ export function SessionsView(): React.JSX.Element {
               <ChatThread
                 sessionKey={selectedKey}
                 updatedAt={selectedSession.updatedAt}
-                refreshTrigger={refreshTrigger}
               />
-            </div>
-            <div className="sessions-chat__input">
-              <MessageInput sessionKey={selectedKey} onSent={handleSent} />
             </div>
           </>
         ) : (

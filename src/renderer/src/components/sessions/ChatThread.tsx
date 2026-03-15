@@ -94,20 +94,22 @@ const POLL_IDLE = 5_000
 interface Props {
   sessionKey: string
   updatedAt?: number
-  refreshTrigger: number
+  refreshTrigger?: number
 }
 
-export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Element {
+export function ChatThread({ sessionKey, refreshTrigger = 0 }: Props): React.JSX.Element {
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedMsgs, setExpandedMsgs] = useState<Set<number>>(new Set())
+  const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set())
+  const [streaming, setStreaming] = useState(false)
   const scrollRef = useRef<HTMLDivElement>(null)
   const userScrolledUp = useRef(false)
   const messagesRef = useRef<ChatMessage[]>([])
   const lastCountRef = useRef(0)
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const [streaming, setStreaming] = useState(false)
   const prevLastAssistantContentRef = useRef('')
+  const hasPolledRef = useRef(false)
   const pollIntervalRef = useRef(POLL_IDLE)
 
   const isNearBottom = useCallback((): boolean => {
@@ -177,13 +179,16 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
       // Detect streaming: last message is assistant and content is still growing
       const lastMsg = incoming[incoming.length - 1]
       if (lastMsg?.role === 'assistant') {
-        const grew = lastMsg.content.length > prevLastAssistantContentRef.current.length
+        const grew =
+          hasPolledRef.current &&
+          lastMsg.content.length > prevLastAssistantContentRef.current.length
         prevLastAssistantContentRef.current = lastMsg.content
         setStreaming(grew)
       } else {
         prevLastAssistantContentRef.current = ''
         setStreaming(false)
       }
+      hasPolledRef.current = true
 
       setLoading(false)
     } catch {
@@ -206,11 +211,13 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
     setMessages([])
     setLoading(true)
     setExpandedMsgs(new Set())
+    setExpandedTools(new Set())
+    setStreaming(false)
     messagesRef.current = []
     lastCountRef.current = 0
     userScrolledUp.current = false
     prevLastAssistantContentRef.current = ''
-    setStreaming(false)
+    hasPolledRef.current = false
 
     pollRef.current()
 
@@ -278,8 +285,16 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
     })
   }, [])
 
-  // Filter out tool messages for chat display
-  const visibleMessages = messages.filter((m) => m.role !== 'tool')
+  const toggleTool = useCallback((idx: number) => {
+    setExpandedTools((prev) => {
+      const n = new Set(prev)
+      n.has(idx) ? n.delete(idx) : n.add(idx)
+      return n
+    })
+  }, [])
+
+  // Show all messages including tool calls
+  const visibleMessages = messages
   const lastAssistantVisibleIdx = streaming
     ? visibleMessages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1)
     : -1
@@ -304,6 +319,21 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
             return (
               <div key={idx} className="chat-msg chat-msg--system">
                 <span className="chat-msg__text">{msg.content}</span>
+              </div>
+            )
+          }
+
+          if (msg.role === 'tool') {
+            return (
+              <div key={idx} className="chat-msg chat-msg--tool">
+                <button className="log-msg__tool-toggle" onClick={() => toggleTool(idx)}>
+                  <span className="log-msg__tool-arrow">{expandedTools.has(idx) ? '\u25BE' : '\u25B8'}</span>
+                  <span className="log-msg__tool-name">{msg.toolName || 'tool'}</span>
+                  <span className="log-msg__tool-preview">{msg.content.slice(0, 80)}</span>
+                </button>
+                {expandedTools.has(idx) && (
+                  <pre className="log-msg__tool-args">{msg.content}</pre>
+                )}
               </div>
             )
           }
@@ -333,14 +363,14 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
               >
                 <span className="chat-msg__text chat-msg__text--rich">
                   {renderContent(msg.content)}
+                  {idx === lastAssistantVisibleIdx && (
+                    <span className="streaming-indicator--inline">
+                      <span className="streaming-indicator__dot" />
+                      <span className="streaming-indicator__dot" />
+                      <span className="streaming-indicator__dot" />
+                    </span>
+                  )}
                 </span>
-                {idx === lastAssistantVisibleIdx && (
-                  <span className="streaming-indicator streaming-indicator--inline">
-                    <span className="streaming-indicator__dot" />
-                    <span className="streaming-indicator__dot" />
-                    <span className="streaming-indicator__dot" />
-                  </span>
-                )}
                 {isLong && !isExpanded && (
                   <div className="chat-msg__expand-fade">
                     <span className="chat-msg__expand-label">Click to expand</span>
@@ -353,7 +383,6 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
             </div>
           )
         })}
-
       </div>
 
       {showScrollButton && (

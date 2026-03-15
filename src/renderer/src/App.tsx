@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useGatewayStore } from './stores/gateway'
 import { useUIStore, type View } from './stores/ui'
 import { useSessionsStore } from './stores/sessions'
+import { calcCost, resolveModel } from './lib/cost'
 import { ActivityBar } from './components/layout/ActivityBar'
 import { TitleBar } from './components/layout/TitleBar'
 import { StatusBar } from './components/layout/StatusBar'
@@ -57,7 +58,9 @@ const SHORTCUTS_RIGHT: { keys: string; description: string }[] = [
 
 function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
   const wrap = (name: string, el: React.JSX.Element): React.JSX.Element => (
-    <ErrorBoundary name={name}>{el}</ErrorBoundary>
+    <div key={name} className="view-enter">
+      <ErrorBoundary name={name}>{el}</ErrorBoundary>
+    </div>
   )
   if (activeView === 'sessions') return wrap('Sessions', <SessionsView />)
   if (activeView === 'terminal') return wrap('Terminal', <TerminalView />)
@@ -125,6 +128,12 @@ function App(): React.JSX.Element {
   const activeView = useUIStore((s) => s.activeView)
   const setView = useUIStore((s) => s.setView)
   const runningCount = useSessionsStore((s) => s.runningCount)
+  const sessions = useSessionsStore((s) => s.sessions)
+  const totalCost = sessions.reduce((sum, s) => {
+    const input = s.contextTokens ?? 0
+    const output = Math.max(0, (s.totalTokens ?? 0) - (s.contextTokens ?? 0))
+    return sum + calcCost(input, output, resolveModel(s.model))
+  }, 0)
 
   const [paletteOpen, setPaletteOpen] = useState(false)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
@@ -190,13 +199,11 @@ function App(): React.JSX.Element {
 
   return (
     <div className="app-shell">
-      <TitleBar sessionCount={runningCount} totalCost={0} />
+      <TitleBar sessionCount={runningCount} totalCost={totalCost} />
       <div className="app-shell__body">
         <ActivityBar connectionStatus={status} />
         <div className="app-shell__content">
-          <div key={activeView} className="view-enter">
-            <ViewRouter activeView={activeView} />
-          </div>
+          <ViewRouter activeView={activeView} />
         </div>
       </div>
       <StatusBar
