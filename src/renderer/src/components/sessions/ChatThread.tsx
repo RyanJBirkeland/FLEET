@@ -156,10 +156,11 @@ export function ChatThread({ sessionKey, refreshTrigger }: Props): React.JSX.Ele
 
       if (incoming.length > lastCountRef.current) {
         const newMessages = incoming.slice(lastCountRef.current)
+        const isInitialLoad = lastCountRef.current === 0
         messagesRef.current = [...messagesRef.current, ...newMessages]
         lastCountRef.current = incoming.length
         setMessages([...messagesRef.current])
-        if (isNearBottom()) scrollToBottom()
+        if (isInitialLoad || isNearBottom()) scrollToBottom()
       } else if (incoming.length < lastCountRef.current) {
         // Session was reset or messages were cleared
         messagesRef.current = incoming
