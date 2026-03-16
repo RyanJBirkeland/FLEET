@@ -1,7 +1,7 @@
 import { useCallback, useMemo, useState } from 'react'
 import { AgentRow } from './AgentRow'
-import type { UnifiedAgent } from '../../stores/unifiedAgents'
-import { useUnifiedAgents, groupUnifiedAgents } from '../../stores/unifiedAgents'
+import type { UnifiedAgent } from '../../hooks/useUnifiedAgents'
+import { useUnifiedAgents, groupUnifiedAgents } from '../../hooks/useUnifiedAgents'
 import { useSessionsStore } from '../../stores/sessions'
 
 export interface AgentListProps {

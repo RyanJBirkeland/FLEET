@@ -3,9 +3,9 @@
  * and agent history into a single flat list of UnifiedAgent objects.
  */
 import { useMemo } from 'react'
-import { useSessionsStore } from './sessions'
-import { useLocalAgentsStore } from './localAgents'
-import { useAgentHistoryStore } from './agentHistory'
+import { useSessionsStore } from '../stores/sessions'
+import { useLocalAgentsStore } from '../stores/localAgents'
+import { useAgentHistoryStore } from '../stores/agentHistory'
 
 export type AgentSource = 'openclaw' | 'sub-agent' | 'local'
 export type AgentStatus = 'running' | 'done' | 'failed' | 'timeout' | 'unknown'
