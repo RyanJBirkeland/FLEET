@@ -29,6 +29,34 @@ vi.mock('../../../stores/sessions', () => ({
   ),
 }))
 
+vi.mock('../../../stores/localAgents', () => ({
+  useLocalAgentsStore: Object.assign(
+    vi.fn((selector: (s: { processes: [] }) => unknown) =>
+      selector({ processes: [] })
+    ),
+    {
+      getState: () => ({
+        processes: [],
+        killLocalAgent: vi.fn().mockResolvedValue(undefined),
+      }),
+    }
+  ),
+}))
+
+vi.mock('../../../stores/agentHistory', () => ({
+  useAgentHistoryStore: Object.assign(
+    vi.fn((selector: (s: { selectAgent: () => void }) => unknown) =>
+      selector({ selectAgent: vi.fn() })
+    ),
+    {
+      getState: () => ({
+        agents: [],
+        fetchAgents: vi.fn().mockResolvedValue(undefined),
+      }),
+    }
+  ),
+}))
+
 vi.mock('../../../stores/toasts', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
 }))
@@ -55,12 +83,12 @@ describe('CommandPalette', () => {
 
   it('shows navigation group', () => {
     render(<CommandPalette open={true} onClose={onClose} />)
-    expect(screen.getByText('Navigation')).toBeInTheDocument()
+    expect(screen.getByText('Navigate')).toBeInTheDocument()
   })
 
   it('shows actions group', () => {
     render(<CommandPalette open={true} onClose={onClose} />)
-    expect(screen.getByText('Actions')).toBeInTheDocument()
+    expect(screen.getByText('Agent Actions')).toBeInTheDocument()
   })
 
   it('filters commands by search input', async () => {

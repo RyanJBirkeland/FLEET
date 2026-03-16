@@ -307,6 +307,15 @@ export function SessionList(): React.JSX.Element {
     return () => clearInterval(interval)
   }, [fetchProcesses])
 
+  // Listen for command palette spawn request
+  useEffect(() => {
+    const handler = (): void => {
+      setSpawnOpen(true)
+    }
+    window.addEventListener('bde:open-spawn-modal', handler)
+    return () => window.removeEventListener('bde:open-spawn-modal', handler)
+  }, [])
+
   // Filter helpers
   const filterSession = (s: AgentSession): boolean => {
     if (!query) return true

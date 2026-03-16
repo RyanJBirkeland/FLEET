@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useUIStore, type View } from '../../stores/ui'
 import { useGatewayStore } from '../../stores/gateway'
-import { useSessionsStore, type AgentSession } from '../../stores/sessions'
+import { useLocalAgentsStore } from '../../stores/localAgents'
+import { useAgentHistoryStore, type AgentMeta } from '../../stores/agentHistory'
 import { toast } from '../../stores/toasts'
 import { Kbd } from '../ui/Kbd'
 
@@ -16,9 +17,9 @@ interface Command {
 }
 
 const CATEGORY_LABELS: Record<CommandCategory, string> = {
-  navigation: 'Navigation',
-  action: 'Actions',
-  session: 'Recent Sessions'
+  navigation: 'Navigate',
+  action: 'Agent Actions',
+  session: 'Recent Agents'
 }
 
 function fuzzyMatch(query: string, text: string): boolean {
@@ -39,43 +40,44 @@ interface CommandPaletteProps {
 export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JSX.Element | null {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
-  const [recentSessions, setRecentSessions] = useState<AgentSession[]>([])
+  const [recentAgents, setRecentAgents] = useState<AgentMeta[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const setView = useUIStore((s) => s.setView)
   const connect = useGatewayStore((s) => s.connect)
-  const selectSession = useSessionsStore((s) => s.selectSession)
+  const selectAgent = useAgentHistoryStore((s) => s.selectAgent)
 
-  // Fetch recent sessions when palette opens
+  // Fetch recent agents when palette opens
   useEffect(() => {
     if (!open) return
     setQuery('')
     setSelectedIndex(0)
     requestAnimationFrame(() => inputRef.current?.focus())
 
-    const sessions = useSessionsStore.getState().sessions
-    setRecentSessions(sessions.slice(0, 5))
+    const agents = useAgentHistoryStore.getState().agents
+    setRecentAgents(agents.slice(0, 5))
 
     // Also try a fresh fetch
-    useSessionsStore
+    useAgentHistoryStore
       .getState()
-      .fetchSessions()
+      .fetchAgents()
       .then(() => {
-        setRecentSessions(useSessionsStore.getState().sessions.slice(0, 5))
+        setRecentAgents(useAgentHistoryStore.getState().agents.slice(0, 5))
       })
       .catch(() => {
-        // ignore — we already have cached sessions
+        // ignore — we already have cached agents
       })
   }, [open])
 
   const commands = useMemo<Command[]>(() => {
     const navCommands: { view: View; label: string; hint: string }[] = [
       { view: 'sessions', label: 'Go to Sessions', hint: '\u23181' },
-      { view: 'sprint', label: 'Go to Sprint', hint: '\u23182' },
-      { view: 'diff', label: 'Go to Diff', hint: '\u23183' },
-      { view: 'memory', label: 'Go to Memory', hint: '\u23184' },
-      { view: 'cost', label: 'Go to Cost', hint: '\u23185' },
-      { view: 'settings', label: 'Go to Settings', hint: '\u23186' }
+      { view: 'terminal', label: 'Go to Terminal', hint: '\u23182' },
+      { view: 'sprint', label: 'Go to Sprint', hint: '\u23183' },
+      { view: 'diff', label: 'Go to Diff', hint: '\u23184' },
+      { view: 'memory', label: 'Go to Memory', hint: '\u23185' },
+      { view: 'cost', label: 'Go to Cost', hint: '\u23186' },
+      { view: 'settings', label: 'Go to Settings', hint: '\u23187' }
     ]
 
     const nav: Command[] = navCommands.map((v) => ({
@@ -91,63 +93,69 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
 
     const actions: Command[] = [
       {
-        id: 'action-reconnect',
-        label: 'Reconnect Gateway',
+        id: 'action-spawn-agent',
+        label: 'Spawn Agent',
         category: 'action',
-        action: () => {
-          connect()
-          toast.info('Reconnecting to gateway\u2026')
-          onClose()
-        }
-      },
-      {
-        id: 'action-refresh',
-        label: 'Refresh',
-        category: 'action',
-        hint: '\u2318R',
-        action: () => {
-          window.dispatchEvent(new CustomEvent('bde:refresh'))
-          toast.info('Refreshing\u2026')
-          onClose()
-        }
-      },
-      {
-        id: 'action-new-task',
-        label: 'New Agent Task',
-        category: 'action',
+        hint: 'Open spawn modal',
         action: () => {
           setView('sessions')
           onClose()
-          // Focus the task input after navigation renders
+          // Trigger spawn modal after navigation renders
           requestAnimationFrame(() => {
-            window.dispatchEvent(new CustomEvent('bde:focus-task-input'))
+            window.dispatchEvent(new CustomEvent('bde:open-spawn-modal'))
           })
         }
       },
       {
-        id: 'action-github',
-        label: 'Open GitHub',
+        id: 'action-kill-all',
+        label: 'Kill All',
         category: 'action',
-        action: () => {
-          window.api.openExternal('https://github.com/RyanJBirkeland/BDE')
+        hint: 'Kill all running',
+        action: async () => {
+          const processes = useLocalAgentsStore.getState().processes
+          const killLocalAgent = useLocalAgentsStore.getState().killLocalAgent
+
+          if (processes.length === 0) {
+            toast.info('No running agents to kill')
+            onClose()
+            return
+          }
+
+          try {
+            await Promise.all(processes.map((p) => killLocalAgent(p.pid)))
+            toast.success(`Killed ${processes.length} agent${processes.length > 1 ? 's' : ''}`)
+          } catch (error) {
+            toast.error('Failed to kill some agents')
+          }
           onClose()
         }
       }
     ]
 
-    const sessionItems: Command[] = recentSessions.map((s) => ({
-      id: `session-${s.key}`,
-      label: s.displayName || s.key,
-      category: 'session',
-      action: () => {
-        setView('sessions')
-        selectSession(s.key)
-        onClose()
-      }
-    }))
+    const agentItems: Command[] = recentAgents.map((agent) => {
+      const timeAgo = (() => {
+        const ms = Date.now() - new Date(agent.startedAt).getTime()
+        const hours = Math.floor(ms / 3600000)
+        if (hours < 1) return 'just now'
+        if (hours === 1) return '1h ago'
+        return `${hours}h ago`
+      })()
 
-    return [...nav, ...actions, ...sessionItems]
-  }, [setView, onClose, connect, selectSession, recentSessions])
+      return {
+        id: `agent-${agent.id}`,
+        label: `${agent.repo || agent.task.slice(0, 30)}`,
+        category: 'session',
+        hint: `${agent.model} ${timeAgo}`,
+        action: () => {
+          setView('sessions')
+          selectAgent(agent.id)
+          onClose()
+        }
+      }
+    })
+
+    return [...nav, ...actions, ...agentItems]
+  }, [setView, onClose, connect, selectAgent, recentAgents])
 
   const filtered = useMemo(() => {
     if (!query) return commands
