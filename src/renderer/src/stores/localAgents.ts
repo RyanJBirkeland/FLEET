@@ -19,6 +19,7 @@ export interface SpawnedAgent {
   repoPath: string
   model: string
   spawnedAt: number
+  interactive: boolean
 }
 
 interface LocalAgentsState {
@@ -82,7 +83,8 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
           task: args.task,
           repoPath: args.repoPath,
           model: args.model ?? 'sonnet',
-          spawnedAt: Date.now()
+          spawnedAt: Date.now(),
+          interactive: result.interactive ?? false
         }
       ]
     }))
