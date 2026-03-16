@@ -1,6 +1,22 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 
+interface AgentMeta {
+  id: string
+  pid: number | null
+  bin: string
+  model: string
+  repo: string
+  repoPath: string
+  task: string
+  startedAt: string
+  finishedAt: string | null
+  exitCode: number | null
+  status: 'running' | 'done' | 'failed' | 'unknown'
+  logPath: string
+  source: 'bde' | 'openclaw' | 'external'
+}
+
 const api = {
   getGatewayConfig: (): Promise<{ url: string; token: string }> =>
     ipcRenderer.invoke('get-gateway-config'),
@@ -67,6 +83,20 @@ const api = {
     fromByte?: number
   }): Promise<{ content: string; nextByte: number }> =>
     ipcRenderer.invoke('local:tailAgentLog', args),
+
+  // Agent history — persistent audit trail
+  agents: {
+    list: (args: { limit?: number; status?: string }): Promise<AgentMeta[]> =>
+      ipcRenderer.invoke('agents:list', args),
+    getMeta: (args: { id: string }): Promise<AgentMeta | null> =>
+      ipcRenderer.invoke('agents:getMeta', args),
+    readLog: (args: { id: string; fromByte?: number }): Promise<{ content: string; nextByte: number }> =>
+      ipcRenderer.invoke('agents:readLog', args),
+    import: (args: { meta: Partial<AgentMeta>; content: string }): Promise<AgentMeta> =>
+      ipcRenderer.invoke('agents:import', args),
+    markDone: (args: { id: string; exitCode: number }): Promise<void> =>
+      ipcRenderer.invoke('agents:markDone', args)
+  },
 
   // Gateway tool invocation — proxied through main process to avoid CORS
   invokeTool: (tool: string, args?: Record<string, unknown>): Promise<unknown> =>

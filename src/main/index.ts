@@ -29,6 +29,15 @@ import {
   cleanupOldLogs
 } from './local-agents'
 import type { SpawnLocalAgentArgs, TailLogArgs } from './local-agents'
+import {
+  listAgents,
+  getAgentMeta,
+  readLog,
+  importAgent,
+  updateAgentMeta,
+  pruneOldAgents
+} from './agent-history'
+import type { AgentMeta } from './agent-history'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -96,6 +105,30 @@ app.whenReady().then(() => {
   )
   ipcMain.handle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))
   cleanupOldLogs()
+
+  // --- Agent history IPC ---
+  ipcMain.handle('agents:list', (_e, args: { limit?: number; status?: string }) =>
+    listAgents(args.limit, args.status)
+  )
+  ipcMain.handle('agents:getMeta', (_e, args: { id: string }) =>
+    getAgentMeta(args.id)
+  )
+  ipcMain.handle('agents:readLog', (_e, args: { id: string; fromByte?: number }) =>
+    readLog(args.id, args.fromByte)
+  )
+  ipcMain.handle(
+    'agents:import',
+    (_e, args: { meta: Partial<AgentMeta>; content: string }) =>
+      importAgent(args.meta, args.content)
+  )
+  ipcMain.handle('agents:markDone', async (_e, args: { id: string; exitCode: number }) => {
+    await updateAgentMeta(args.id, {
+      finishedAt: new Date().toISOString(),
+      exitCode: args.exitCode,
+      status: args.exitCode === 0 ? 'done' : 'failed'
+    })
+  })
+  pruneOldAgents()
 
   // --- Git read-only IPC ---
   ipcMain.handle('get-diff', (_e, repoPath: string, base?: string) => getDiff(repoPath, base))

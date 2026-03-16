@@ -1,5 +1,21 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 
+export interface AgentMeta {
+  id: string
+  pid: number | null
+  bin: string
+  model: string
+  repo: string
+  repoPath: string
+  task: string
+  startedAt: string
+  finishedAt: string | null
+  exitCode: number | null
+  status: 'running' | 'done' | 'failed' | 'unknown'
+  logPath: string
+  source: 'bde' | 'openclaw' | 'external'
+}
+
 declare global {
   interface Window {
     electron: ElectronAPI
@@ -53,6 +69,15 @@ declare global {
       gitPush: (cwd: string) => Promise<string>
       gitBranches: (cwd: string) => Promise<{ current: string; branches: string[] }>
       gitCheckout: (cwd: string, branch: string) => Promise<void>
+
+      // Agent history — persistent audit trail
+      agents: {
+        list: (args: { limit?: number; status?: string }) => Promise<AgentMeta[]>
+        getMeta: (args: { id: string }) => Promise<AgentMeta | null>
+        readLog: (args: { id: string; fromByte?: number }) => Promise<{ content: string; nextByte: number }>
+        import: (args: { meta: Partial<AgentMeta>; content: string }) => Promise<AgentMeta>
+        markDone: (args: { id: string; exitCode: number }) => Promise<void>
+      }
 
       // Gateway RPC
       invokeTool: (tool: string, args?: Record<string, unknown>) => Promise<unknown>
