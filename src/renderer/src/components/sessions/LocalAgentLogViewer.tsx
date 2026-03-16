@@ -80,14 +80,21 @@ function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: boolean
     const trimmed = line.trim()
     if (!trimmed) continue
 
-    let parsed: Record<string, unknown>
+    let outer: Record<string, unknown>
     try {
-      parsed = JSON.parse(trimmed) as Record<string, unknown>
+      outer = JSON.parse(trimmed) as Record<string, unknown>
     } catch {
       // Not valid JSON — render as plain text fallback
       items.push({ kind: 'plain', text: trimmed })
       continue
     }
+
+    // --output-format stream-json wraps each SDK event in { type: "stream_event", event: {...} }
+    // Unwrap to get the inner event for unified handling
+    const parsed: Record<string, unknown> =
+      outer.type === 'stream_event' && outer.event && typeof outer.event === 'object'
+        ? (outer.event as Record<string, unknown>)
+        : outer
 
     const type = parsed.type as string | undefined
 
@@ -163,7 +170,30 @@ function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: boolean
         hasMessageStop = true
         break
 
-      // message_start, content_block_start — no-op, just structural markers
+      case 'content_block_start': {
+        // Tool use blocks announced here in stream-json format
+        const block = parsed.content_block as Record<string, unknown> | undefined
+        if (block?.type === 'tool_use') {
+          if (currentText) {
+            items.push({ kind: 'text', text: currentText })
+            currentText = ''
+          }
+          const inputRaw = block.input
+          const inputStr = inputRaw && typeof inputRaw === 'object'
+            ? JSON.stringify(inputRaw, null, 2)
+            : typeof inputRaw === 'string' ? inputRaw : ''
+          // Only push if input is non-empty (it often fills in via input_json_delta)
+          items.push({
+            kind: 'tool_use',
+            id: String(block.id ?? ''),
+            name: String(block.name ?? 'tool'),
+            input: inputStr
+          })
+        }
+        break
+      }
+
+      // message_start — no-op
       default:
         break
     }
