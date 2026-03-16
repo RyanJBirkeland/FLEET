@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocalAgentsStore } from '../../stores/localAgents'
+import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
 
 const REPOS = ['BDE', 'life-os', 'feast'] as const
@@ -89,7 +90,10 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
       e.preventDefault()
       if (!task.trim() || spawning) return
       const repoPath = repoPaths[repo]
-      if (!repoPath) return
+      if (!repoPath) {
+        toast.error(`Repo path not found for "${repo}" — check git.ts REPO_PATHS`)
+        return
+      }
       setSpawning(true)
       try {
         const taskTrimmed = task.trim()
@@ -100,7 +104,10 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
         setHistory(newHistory)
         localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory))
 
+        toast.success('Agent spawned')
         onClose()
+      } catch (err) {
+        toast.error(`Spawn failed: ${err instanceof Error ? err.message : String(err)}`)
       } finally {
         setSpawning(false)
       }
