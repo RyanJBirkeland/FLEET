@@ -23,6 +23,8 @@ const api = {
   getGitHubToken: (): Promise<string | null> => ipcRenderer.invoke('get-github-token'),
   saveGatewayConfig: (url: string, token: string): Promise<void> =>
     ipcRenderer.invoke('save-gateway-config', url, token),
+  getSupabaseConfig: (): Promise<{ url: string; anonKey: string } | null> =>
+    ipcRenderer.invoke('get-supabase-config'),
   getRepoPaths: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-repo-paths'),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('open-external', url),
   listMemoryFiles: (): Promise<
@@ -73,6 +75,8 @@ const api = {
     ipcRenderer.invoke('local:spawnClaudeAgent', args),
   sendToAgent: (pid: number, message: string): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('local:sendToAgent', { pid, message }),
+  isAgentInteractive: (pid: number): Promise<boolean> =>
+    ipcRenderer.invoke('local:isInteractive', pid),
   killLocalAgent: (pid: number): Promise<{ ok: boolean; error?: string }> =>
     ipcRenderer.invoke('kill-local-agent', pid),
   tailAgentLog: (args: {

@@ -1,11 +1,13 @@
 import { create } from 'zustand'
 import type { AgentMeta } from '../../../preload/index.d'
 import { createLogPollerActions, type LogPollerState } from '../lib/logPoller'
+import { AGENT_LIST_FETCH_LIMIT } from '../lib/constants'
 
 interface AgentHistoryState extends LogPollerState {
   agents: AgentMeta[]
   selectedId: string | null
   loading: boolean
+  isFetching: boolean
 
   fetchAgents: () => Promise<void>
   selectAgent: (id: string | null) => void
@@ -26,14 +28,18 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
     logContent: '',
     logNextByte: 0,
     loading: false,
+    isFetching: false,
     _logInterval: null,
 
     fetchAgents: async (): Promise<void> => {
+      set({ isFetching: true })
       try {
-        const agents = await window.api.agents.list({ limit: 100 })
+        const agents = await window.api.agents.list({ limit: AGENT_LIST_FETCH_LIMIT })
         set({ agents })
       } catch {
         // Non-critical
+      } finally {
+        set({ isFetching: false })
       }
     },
 

@@ -28,6 +28,7 @@ interface LocalAgentsState extends LogPollerState {
   lastUpdated: number
   collapsed: boolean
   spawnedAgents: SpawnedAgent[]
+  isSpawning: boolean
   selectedLocalAgentPid: number | null
 
   fetchProcesses: () => Promise<void>
@@ -54,6 +55,7 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
         lastUpdated: 0,
         collapsed: false,
         spawnedAgents: [],
+        isSpawning: false,
         selectedLocalAgentPid: null,
         logContent: '',
         logNextByte: 0,
@@ -73,29 +75,34 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
         },
 
         spawnAgent: async (args) => {
-          const result = await window.api.spawnLocalAgent(args)
-          set((s) => ({
-            spawnedAgents: [
-              ...s.spawnedAgents,
-              {
-                id: result.id,
-                pid: result.pid,
-                logPath: result.logPath,
-                task: args.task,
-                repoPath: args.repoPath,
-                model: args.model ?? 'sonnet',
-                spawnedAt: Date.now(),
-                interactive: result.interactive ?? false
-              }
-            ]
-          }))
-          return result
+          set({ isSpawning: true })
+          try {
+            const result = await window.api.spawnLocalAgent(args)
+            set((s) => ({
+              spawnedAgents: [
+                ...s.spawnedAgents,
+                {
+                  id: result.id,
+                  pid: result.pid,
+                  logPath: result.logPath,
+                  task: args.task,
+                  repoPath: args.repoPath,
+                  model: args.model ?? 'sonnet',
+                  spawnedAt: Date.now(),
+                  interactive: result.interactive ?? false
+                }
+              ]
+            }))
+            return result
+          } finally {
+            set({ isSpawning: false })
+          }
         },
 
         sendToAgent: async (pid, message) => {
           const result = await window.api.sendToAgent(pid, message)
           if (!result.ok) {
-            console.error('sendToAgent failed:', result.error)
+            throw new Error(result.error ?? 'Cannot send to agent — stdin not available (agent may have been spawned outside this session)')
           }
         },
 

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { EmptyState } from '../ui/EmptyState'
+import { POLL_SPRINT_INTERVAL } from '../../lib/constants'
 
 // --- Types ---
 
@@ -17,17 +18,12 @@ interface SprintTask {
 
 // --- Config ---
 
-const SUPABASE_URL = 'https://ponbudosprotfhissvzo.supabase.co'
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBvbmJ1ZG9zcHJvdGZoaXNzdnpvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NTkyNzgsImV4cCI6MjA4ODEzNTI3OH0.KwALcQ9P404nMKyx76Jz7UA9QEQsDn2UFWw8mAb_ZNI'
-
 const REPOS = [
   { label: 'bde', color: '#6C8EEF' },
   { label: 'life-os', color: '#00D37F' },
   { label: 'feast', color: '#FF8A00' }
 ]
 
-const REFRESH_INTERVAL = 30_000
 
 // --- Helpers ---
 
@@ -53,16 +49,34 @@ export default function SprintBoard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const [supabaseUrl, setSupabaseUrl] = useState<string | null>(null)
+  const [supabaseAnonKey, setSupabaseAnonKey] = useState<string | null>(null)
+
+  useEffect(() => {
+    window.api.getSupabaseConfig().then((cfg) => {
+      if (cfg) {
+        setSupabaseUrl(cfg.url)
+        setSupabaseAnonKey(cfg.anonKey)
+      } else {
+        setError('Supabase not configured — set supabaseUrl and supabaseAnonKey in ~/.openclaw/openclaw.json or env vars')
+        setLoading(false)
+      }
+    }).catch(() => {
+      setError('Failed to load Supabase config')
+      setLoading(false)
+    })
+  }, [])
 
   const load = useCallback(async () => {
+    if (!supabaseUrl || !supabaseAnonKey) return
     try {
       setLoading(true)
       const res = await fetch(
-        `${SUPABASE_URL}/rest/v1/sprint_tasks?repo=eq.${repo}&order=priority.asc`,
+        `${supabaseUrl}/rest/v1/sprint_tasks?repo=eq.${repo}&order=priority.asc`,
         {
           headers: {
-            apikey: SUPABASE_ANON_KEY,
-            Authorization: `Bearer ${SUPABASE_ANON_KEY}`
+            apikey: supabaseAnonKey,
+            Authorization: `Bearer ${supabaseAnonKey}`
           }
         }
       )
@@ -74,18 +88,19 @@ export default function SprintBoard() {
     } finally {
       setLoading(false)
     }
-  }, [repo])
+  }, [repo, supabaseUrl, supabaseAnonKey])
 
   useEffect(() => {
+    if (!supabaseUrl || !supabaseAnonKey) return
     setLoading(true)
     setTasks([])
     load()
     if (intervalRef.current) clearInterval(intervalRef.current)
-    intervalRef.current = setInterval(load, REFRESH_INTERVAL)
+    intervalRef.current = setInterval(load, POLL_SPRINT_INTERVAL)
     return () => {
       if (intervalRef.current) clearInterval(intervalRef.current)
     }
-  }, [load])
+  }, [load, supabaseUrl, supabaseAnonKey])
 
   const active = tasks.filter((t) => t.status === 'active')
   const queued = tasks.filter((t) => t.status === 'queued')
@@ -115,7 +130,7 @@ export default function SprintBoard() {
         </Button>
       </div>
 
-      {error && <div className="sprint-board__error">{error}</div>}
+      {error && <div className="sprint-board__error bde-error-banner">{error}</div>}
 
       <div className="sprint-board__columns">
         {loading && tasks.length === 0 ? (
@@ -130,7 +145,7 @@ export default function SprintBoard() {
             <div className="sprint-col">
               <div className="sprint-col__header">
                 <span className="sprint-col__icon sprint-col__icon--red">In Progress</span>
-                <span className="sprint-col__count">{active.length}</span>
+                <span className="sprint-col__count bde-count-badge">{active.length}</span>
               </div>
               <div className="sprint-col__cards">
                 {active.length === 0 ? (
@@ -147,7 +162,7 @@ export default function SprintBoard() {
             <div className="sprint-col">
               <div className="sprint-col__header">
                 <span className="sprint-col__icon sprint-col__icon--yellow">Queue</span>
-                <span className="sprint-col__count">{queued.length}</span>
+                <span className="sprint-col__count bde-count-badge">{queued.length}</span>
               </div>
               <div className="sprint-col__cards">
                 {queued.length === 0 ? (
@@ -164,7 +179,7 @@ export default function SprintBoard() {
             <div className="sprint-col">
               <div className="sprint-col__header">
                 <span className="sprint-col__icon sprint-col__icon--green">Done This Sprint</span>
-                <span className="sprint-col__count">{done.length}</span>
+                <span className="sprint-col__count bde-count-badge">{done.length}</span>
               </div>
               <div className="sprint-col__cards">
                 {done.length === 0 ? (
