@@ -20,6 +20,15 @@ export const SPAWN_TASK_MAX_CHARS_SOFT = 2_000
 export const SPAWN_TASK_MAX_CHARS_HARD = 4_000
 export const SPAWN_TASK_HISTORY_LIMIT = 10
 
+// Repositories
+export const REPO_OPTIONS = [
+  { label: 'BDE', owner: 'RyanJBirkeland', color: '#6C8EEF' },
+  { label: 'life-os', owner: 'RyanJBirkeland', color: '#00D37F' },
+  { label: 'feast', owner: 'RyanJBirkeland', color: '#FF8A00' }
+] as const
+
+export type RepoOption = (typeof REPO_OPTIONS)[number]
+
 // UI
 export const SIDEBAR_WIDTH_DEFAULT = 240
 export const SIDEBAR_WIDTH_MIN = 180

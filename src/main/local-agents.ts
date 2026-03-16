@@ -174,18 +174,8 @@ export async function getAgentProcesses(): Promise<LocalAgentProcess[]> {
 
 // --- Spawn a Claude CLI agent on the Max plan ---
 
-export interface SpawnLocalAgentArgs {
-  task: string
-  repoPath: string
-  model?: string // 'sonnet' | 'haiku' | 'opus'
-}
-
-export interface SpawnLocalAgentResult {
-  pid: number
-  logPath: string
-  id: string
-  interactive: boolean
-}
+export type { SpawnLocalAgentArgs, SpawnLocalAgentResult } from '../shared/types'
+import type { SpawnLocalAgentArgs, SpawnLocalAgentResult } from '../shared/types'
 
 function modelToFlag(model?: string): string {
   if (model === 'haiku') return 'claude-haiku-4-5'

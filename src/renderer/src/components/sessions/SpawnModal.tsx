@@ -2,9 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useLocalAgentsStore } from '../../stores/localAgents'
 import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
-import { SPAWN_TASK_MAX_CHARS_SOFT, SPAWN_TASK_MAX_CHARS_HARD, SPAWN_TASK_HISTORY_LIMIT } from '../../lib/constants'
-
-const REPOS = ['BDE', 'life-os', 'feast'] as const
+import { SPAWN_TASK_MAX_CHARS_SOFT, SPAWN_TASK_MAX_CHARS_HARD, SPAWN_TASK_HISTORY_LIMIT, REPO_OPTIONS } from '../../lib/constants'
 const MODELS = [
   { id: 'haiku', label: 'Haiku', claude: 'claude-haiku-4-5-20251001' },
   { id: 'sonnet', label: 'Sonnet', claude: 'claude-sonnet-4-6' },
@@ -20,7 +18,7 @@ interface SpawnModalProps {
 
 export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Element | null {
   const [task, setTask] = useState('')
-  const [repo, setRepo] = useState<string>(REPOS[0])
+  const [repo, setRepo] = useState<string>(REPO_OPTIONS[0].label)
   const [model, setModel] = useState<string>('sonnet')
   const [showHistory, setShowHistory] = useState(false)
   const [history, setHistory] = useState<string[]>([])
@@ -47,7 +45,7 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
   useEffect(() => {
     if (open) {
       setTask('')
-      setRepo(REPOS[0])
+      setRepo(REPO_OPTIONS[0].label)
       setModel('sonnet')
       setShowHistory(false)
       requestAnimationFrame(() => textareaRef.current?.focus())
@@ -186,12 +184,12 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
               onChange={(e) => setRepo(e.target.value)}
               disabled={spawning}
             >
-              {REPOS.map((r) => {
-                const path = repoPaths[r]
-                const shortPath = path ? path.replace(/^\/Users\/[^/]+/, '~') : r
+              {REPO_OPTIONS.map((r) => {
+                const path = repoPaths[r.label]
+                const shortPath = path ? path.replace(/^\/Users\/[^/]+/, '~') : r.label
                 return (
-                  <option key={r} value={r}>
-                    {r} ({shortPath})
+                  <option key={r.label} value={r.label}>
+                    {r.label} ({shortPath})
                   </option>
                 )
               })}

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { EmptyState } from '../ui/EmptyState'
-import { POLL_SPRINT_INTERVAL } from '../../lib/constants'
+import { POLL_SPRINT_INTERVAL, REPO_OPTIONS } from '../../lib/constants'
 import { timeAgo } from '../../lib/format'
 
 // --- Types ---
@@ -17,18 +17,12 @@ interface SprintTask {
   updated_at: string
 }
 
-// --- Config ---
 
-const REPOS = [
-  { label: 'bde', color: '#6C8EEF' },
-  { label: 'life-os', color: '#00D37F' },
-  { label: 'feast', color: '#FF8A00' }
-]
 
 // --- Component ---
 
 export default function SprintBoard() {
-  const [repo, setRepo] = useState<string>('bde')
+  const [repo, setRepo] = useState<string>(REPO_OPTIONS[0].label)
   const [tasks, setTasks] = useState<SprintTask[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -56,7 +50,7 @@ export default function SprintBoard() {
     try {
       setLoading(true)
       const res = await fetch(
-        `${supabaseUrl}/rest/v1/sprint_tasks?repo=eq.${repo}&order=priority.asc`,
+        `${supabaseUrl}/rest/v1/sprint_tasks?repo=eq.${repo.toLowerCase()}&order=priority.asc`,
         {
           headers: {
             apikey: supabaseAnonKey,
@@ -96,7 +90,7 @@ export default function SprintBoard() {
         <div className="sprint-board__title-row">
           <span className="sprint-board__title">Sprint Board</span>
           <div className="sprint-board__repo-switcher">
-            {REPOS.map((r) => (
+            {REPO_OPTIONS.map((r) => (
               <button
                 key={r.label}
                 onClick={() => setRepo(r.label)}
