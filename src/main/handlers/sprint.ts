@@ -13,6 +13,7 @@ interface SupabaseEnv {
 export interface CreateTaskInput {
   title: string
   repo: string
+  prompt?: string
   description?: string
   spec?: string
   priority?: number
@@ -136,6 +137,7 @@ export function registerSprintHandlers(): void {
     const payload = {
       title: task.title,
       repo: task.repo,
+      prompt: task.prompt ?? task.spec ?? task.title,
       description: task.description ?? null,
       spec: task.spec ?? null,
       priority: task.priority ?? 0,

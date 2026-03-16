@@ -93,10 +93,14 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
         sessionKey: 'main',
         message: prompt,
         timeoutSeconds: 30,
-      })) as { response?: string } | null
+      })) as {
+        ok?: boolean
+        result?: { content?: Array<{ type: string; text: string }> }
+      } | null
 
-      if (result?.response) {
-        setDraft(result.response)
+      const text = result?.result?.content?.[0]?.text ?? ''
+      if (text) {
+        setDraft(text)
         setDirty(true)
         setEditing(true)
       }

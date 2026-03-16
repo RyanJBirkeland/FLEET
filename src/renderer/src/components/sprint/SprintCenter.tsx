@@ -7,12 +7,19 @@ import { NewTicketModal } from './NewTicketModal'
 import { toast } from '../../stores/toasts'
 import { POLL_SPRINT_INTERVAL, REPO_OPTIONS } from '../../lib/constants'
 
+const REPO_LABEL_TO_ENUM: Record<string, string> = {
+  BDE: 'bde',
+  'life-os': 'life-os',
+  feast: 'feast',
+}
+
 // --- Types ---
 
 export interface SprintTask {
   id: string
   title: string
   repo: string
+  prompt: string | null
   priority: number
   status: 'backlog' | 'queued' | 'active' | 'done'
   description: string | null
@@ -81,21 +88,49 @@ export default function SprintCenter() {
 
   const createTask = useCallback(
     async (data: { title: string; repo: string; description: string; spec: string; priority: number }) => {
+      const repoEnum = REPO_LABEL_TO_ENUM[data.repo] ?? data.repo.toLowerCase()
+
+      // Optimistic insert so the card appears immediately
+      const optimistic: SprintTask = {
+        id: `temp-${Date.now()}`,
+        title: data.title,
+        repo: repoEnum,
+        priority: data.priority,
+        status: 'backlog',
+        description: data.description || null,
+        spec: data.spec || null,
+        prompt: data.spec || data.title,
+        agent_session_id: null,
+        pr_number: null,
+        pr_status: null,
+        pr_url: null,
+        column_order: 0,
+        started_at: null,
+        completed_at: null,
+        updated_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+      }
+      setTasks((prev) => [optimistic, ...prev])
+
       try {
         const result = (await window.api.sprint.create({
           title: data.title,
-          repo: data.repo,
+          repo: repoEnum,
+          prompt: data.spec || data.title,
           description: data.description || undefined,
           spec: data.spec || undefined,
           priority: data.priority,
           status: 'backlog',
         })) as SprintTask
 
+        // Replace optimistic with server row
         if (result?.id) {
-          setTasks((prev) => [result, ...prev])
+          setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? result : t)))
         }
-        toast.success('Ticket created in Backlog')
+        toast.success('Ticket created — saved to Backlog')
       } catch (e) {
+        // Remove optimistic on failure
+        setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
         toast.error(e instanceof Error ? e.message : 'Failed to create task')
       }
     },
