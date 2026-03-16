@@ -132,6 +132,31 @@ export function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: 
         break
       }
 
+      case 'assistant': {
+        // Complete assistant turn from --verbose output.
+        // Authoritative — discard streaming delta text for this turn to avoid duplication.
+        currentText = ''
+        while (items.length > 0 && (items[items.length - 1].kind === 'text' || items[items.length - 1].kind === 'tool_use')) {
+          items.pop()
+        }
+        const msg = parsed.message as Record<string, unknown> | undefined
+        const contentBlocks = Array.isArray(msg?.content) ? msg.content as Record<string, unknown>[] : []
+        for (const block of contentBlocks) {
+          if (block.type === 'text' && typeof block.text === 'string' && block.text.trim()) {
+            items.push({ kind: 'text', text: block.text })
+          } else if (block.type === 'tool_use') {
+            const inp = block.input
+            items.push({
+              kind: 'tool_use',
+              id: String(block.id ?? ''),
+              name: String(block.name ?? 'tool'),
+              input: inp && typeof inp === 'object' ? JSON.stringify(inp, null, 2) : String(inp ?? '')
+            })
+          }
+        }
+        break
+      }
+
       case 'message_stop':
         hasMessageStop = true
         break

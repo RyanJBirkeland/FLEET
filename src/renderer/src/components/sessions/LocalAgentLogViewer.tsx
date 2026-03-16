@@ -269,14 +269,23 @@ export function AgentLogViewer({ agentId }: { agentId: string }): React.JSX.Elem
 export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element {
   const processes = useLocalAgentsStore((s) => s.processes)
   const spawnedAgents = useLocalAgentsStore((s) => s.spawnedAgents)
-  const logContent = useLocalAgentsStore((s) => s.logContent)
+  const localLogContent = useLocalAgentsStore((s) => s.logContent)
   const selectLocalAgent = useLocalAgentsStore((s) => s.selectLocalAgent)
   const startLogPolling = useLocalAgentsStore((s) => s.startLogPolling)
   const stopLogPolling = useLocalAgentsStore((s) => s.stopLogPolling)
   const sendToAgent = useLocalAgentsStore((s) => s.sendToAgent)
 
+  // Agents spawned externally (task runner, CLI) aren't in spawnedAgents.
+  // Fall back to agent history — match by PID to get logPath + metadata.
+  const historyAgents = useAgentHistoryStore((s) => s.agents)
+  const historyLogContent = useAgentHistoryStore((s) => s.logContent)
+  const selectHistoryAgent = useAgentHistoryStore((s) => s.selectAgent)
+
   const proc = processes.find((p) => p.pid === pid)
   const spawned = spawnedAgents.find((a) => a.pid === pid)
+  const historyAgent = !spawned ? historyAgents.find((a) => a.pid === pid) : null
+
+  const logContent = historyAgent ? historyLogContent : localLogContent
   const isAlive = !!proc
   const isInteractive = !!spawned?.interactive && isAlive
 
@@ -290,19 +299,31 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
     return () => clearInterval(interval)
   }, [])
 
-  // Start polling the log file
+  // Route externally-spawned agents through history store (readLog by ID)
   useEffect(() => {
+    if (historyAgent) {
+      selectHistoryAgent(historyAgent.id)
+      return
+    }
     if (!spawned?.logPath) return
     startLogPolling(spawned.logPath)
     return () => stopLogPolling()
-  }, [spawned?.logPath, startLogPolling, stopLogPolling])
+  }, [historyAgent?.id, spawned?.logPath, startLogPolling, stopLogPolling, selectHistoryAgent])
 
-  const repoLabel = proc ? cwdToRepoLabel(proc.cwd) : spawned ? cwdToRepoLabel(spawned.repoPath) : '?'
+  const repoLabel = proc
+    ? cwdToRepoLabel(proc.cwd)
+    : spawned
+      ? cwdToRepoLabel(spawned.repoPath)
+      : historyAgent?.repo ?? '?'
   const elapsed = proc
     ? formatElapsed(proc.startedAt)
     : spawned
       ? formatElapsed(spawned.spawnedAt)
-      : ''
+      : historyAgent
+        ? (historyAgent.finishedAt
+            ? formatDuration(historyAgent.startedAt, historyAgent.finishedAt)
+            : formatElapsed(new Date(historyAgent.startedAt).getTime()))
+        : ''
 
   const handleOpenInTerminal = useCallback(() => {
     const openAgentTab = useTerminalStore.getState().openAgentTab
