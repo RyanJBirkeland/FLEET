@@ -72,6 +72,7 @@ declare global {
         create: (task: {
           title: string
           repo: string
+          prompt?: string
           description?: string
           spec?: string
           priority?: number

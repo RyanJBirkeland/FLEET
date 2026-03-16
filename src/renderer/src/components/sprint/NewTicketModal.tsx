@@ -49,7 +49,7 @@ const TEMPLATES: Record<string, { label: string; spec: string }> = {
 
 export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps) {
   const [title, setTitle] = useState('')
-  const [repo, setRepo] = useState(REPO_OPTIONS[0].label)
+  const [repo, setRepo] = useState<string>(REPO_OPTIONS[0].label)
   const [priority, setPriority] = useState(1)
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [spec, setSpec] = useState('')
@@ -106,10 +106,14 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
         sessionKey: 'main',
         message: prompt,
         timeoutSeconds: 30,
-      })) as { response?: string } | null
+      })) as {
+        ok?: boolean
+        result?: { content?: Array<{ type: string; text: string }> }
+      } | null
 
-      if (result?.response) {
-        setSpec(result.response)
+      const text = result?.result?.content?.[0]?.text ?? ''
+      if (text) {
+        setSpec(text)
       }
     } catch {
       // silent — user can retry
