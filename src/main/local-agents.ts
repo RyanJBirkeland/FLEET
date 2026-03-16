@@ -210,6 +210,8 @@ export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<Spawn
 
   const child = spawn('claude', [
     '--print',
+    '--output-format', 'stream-json',
+    '--include-partial-messages',
     '--model', modelToFlag(args.model),
     '--permission-mode', 'bypassPermissions',
     args.task
