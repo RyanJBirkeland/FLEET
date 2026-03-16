@@ -59,6 +59,19 @@ describe('terminal store', () => {
     expect(useTerminalStore.getState().tabs[0].ptyId).toBe(42)
   })
 
+  it('renameTab updates the label of the correct tab', () => {
+    useTerminalStore.getState().renameTab('tab-1', 'my-server')
+    expect(useTerminalStore.getState().tabs[0].label).toBe('my-server')
+  })
+
+  it('renameTab does not affect other tabs', () => {
+    useTerminalStore.getState().addTab()
+    const tabs = useTerminalStore.getState().tabs
+    useTerminalStore.getState().renameTab(tabs[1].id, 'renamed')
+    expect(useTerminalStore.getState().tabs[0].label).toBe('Terminal 1')
+    expect(useTerminalStore.getState().tabs[1].label).toBe('renamed')
+  })
+
   it('setPtyId does not affect other tabs', () => {
     useTerminalStore.getState().addTab()
     const tabs = useTerminalStore.getState().tabs

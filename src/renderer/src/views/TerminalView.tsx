@@ -1,10 +1,65 @@
-import { Plus, X } from 'lucide-react'
-import { TerminalPane } from '../components/terminal/TerminalPane'
+import { useCallback, useEffect, useState } from 'react'
+import { Plus, X, SplitSquareVertical } from 'lucide-react'
+import { TerminalPane, clearTerminal } from '../components/terminal/TerminalPane'
 import { tokens } from '../design-system/tokens'
 import { useTerminalStore } from '../stores/terminal'
+import { useUIStore } from '../stores/ui'
 
 export function TerminalView(): React.JSX.Element {
   const { tabs, activeTabId, addTab, closeTab, setActiveTab } = useTerminalStore()
+  const activeView = useUIStore((s) => s.activeView)
+  const [hoveredTabId, setHoveredTabId] = useState<string | null>(null)
+
+  const handleClear = useCallback(() => {
+    if (activeTabId) clearTerminal(activeTabId)
+  }, [activeTabId])
+
+  // Keyboard shortcuts — capture phase so they fire before App.tsx global handler
+  useEffect(() => {
+    if (activeView !== 'terminal') return
+
+    const handler = (e: KeyboardEvent): void => {
+      if (!e.metaKey) return
+
+      if (e.key === 't') {
+        e.preventDefault()
+        e.stopPropagation()
+        useTerminalStore.getState().addTab()
+        return
+      }
+
+      if (e.key === 'w') {
+        e.preventDefault()
+        e.stopPropagation()
+        const { activeTabId: id } = useTerminalStore.getState()
+        if (id) useTerminalStore.getState().closeTab(id)
+        return
+      }
+
+      if (e.key === 'k') {
+        e.preventDefault()
+        e.stopPropagation()
+        const { activeTabId: id } = useTerminalStore.getState()
+        if (id) clearTerminal(id)
+        return
+      }
+
+      // Cmd+1-9: switch to tab N
+      if (e.key >= '1' && e.key <= '9') {
+        const idx = Number(e.key) - 1
+        const { tabs: currentTabs } = useTerminalStore.getState()
+        if (idx < currentTabs.length) {
+          e.preventDefault()
+          e.stopPropagation()
+          useTerminalStore.getState().setActiveTab(currentTabs[idx].id)
+        }
+        return
+      }
+    }
+
+    window.addEventListener('keydown', handler, true)
+    return () => window.removeEventListener('keydown', handler, true)
+  }, [activeView])
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tokens.color.bg }}>
@@ -16,37 +71,54 @@ export function TerminalView(): React.JSX.Element {
           background: tokens.color.surface,
           borderBottom: `1px solid ${tokens.color.border}`,
           minHeight: 36,
-          paddingLeft: tokens.space[2],
-          gap: tokens.space[1],
           flexShrink: 0
         }}
       >
-        {tabs.map((tab) => {
-          const isActive = tab.id === activeTabId
-          return (
-            <div
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: tokens.space[2],
-                padding: `0 ${tokens.space[4]}`,
-                minWidth: 130,
-                height: 36,
-                fontSize: tokens.size.sm,
-                fontFamily: tokens.font.ui,
-                color: isActive ? tokens.color.text : tokens.color.textMuted,
-                background: isActive ? tokens.color.bg : 'transparent',
-                borderBottom: isActive ? `2px solid ${tokens.color.accent}` : '2px solid transparent',
-                cursor: 'pointer',
-                userSelect: 'none',
-                whiteSpace: 'nowrap',
-                transition: tokens.transition.fast
-              }}
-            >
-              <span style={{ flex: 1 }}>{tab.label}</span>
-              {tabs.length > 1 && (
+        {/* Scrollable tabs region */}
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: tokens.space[1],
+            paddingLeft: tokens.space[2],
+            overflowX: 'auto',
+            flex: 1,
+            minWidth: 0,
+            scrollbarWidth: 'none'
+          }}
+        >
+          {tabs.map((tab) => {
+            const isActive = tab.id === activeTabId
+            const isHovered = tab.id === hoveredTabId
+            const showClose = tabs.length > 1 && (isActive || isHovered)
+            return (
+              <div
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                onMouseEnter={() => setHoveredTabId(tab.id)}
+                onMouseLeave={() => setHoveredTabId(null)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: tokens.space[2],
+                  padding: `0 ${tokens.space[4]}`,
+                  minWidth: 120,
+                  height: 36,
+                  fontSize: tokens.size.sm,
+                  fontFamily: tokens.font.ui,
+                  color: isActive ? tokens.color.text : tokens.color.textMuted,
+                  background: isActive ? tokens.color.bg : 'transparent',
+                  borderBottom: isActive
+                    ? `2px solid ${tokens.color.accent}`
+                    : '2px solid transparent',
+                  cursor: 'pointer',
+                  userSelect: 'none',
+                  whiteSpace: 'nowrap',
+                  flexShrink: 0,
+                  transition: tokens.transition.fast
+                }}
+              >
+                <span style={{ flex: 1 }}>{tab.label}</span>
                 <span
                   onClick={(e) => {
                     e.stopPropagation()
@@ -61,6 +133,8 @@ export function TerminalView(): React.JSX.Element {
                     borderRadius: tokens.radius.sm,
                     color: tokens.color.textDim,
                     flexShrink: 0,
+                    opacity: showClose ? 1 : 0,
+                    pointerEvents: showClose ? 'auto' : 'none',
                     transition: tokens.transition.fast
                   }}
                   onMouseEnter={(e) => {
@@ -74,38 +148,103 @@ export function TerminalView(): React.JSX.Element {
                 >
                   <X size={12} />
                 </span>
-              )}
-            </div>
-          )
-        })}
+              </div>
+            )
+          })}
 
-        {/* Add tab button */}
-        <button
-          onClick={addTab}
+          {/* Add tab button */}
+          <button
+            onClick={addTab}
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 28,
+              height: 28,
+              border: 'none',
+              background: 'transparent',
+              color: tokens.color.textMuted,
+              cursor: 'pointer',
+              borderRadius: tokens.radius.sm,
+              flexShrink: 0,
+              transition: tokens.transition.fast
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = tokens.color.text
+              e.currentTarget.style.background = tokens.color.surfaceHigh
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = tokens.color.textMuted
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+
+        {/* Toolbar — right side */}
+        <div
           style={{
-            display: 'inline-flex',
+            display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center',
-            width: 28,
-            height: 28,
-            border: 'none',
-            background: 'transparent',
-            color: tokens.color.textMuted,
-            cursor: 'pointer',
-            borderRadius: tokens.radius.sm,
-            transition: tokens.transition.fast
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.color = tokens.color.text
-            e.currentTarget.style.background = tokens.color.surfaceHigh
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.color = tokens.color.textMuted
-            e.currentTarget.style.background = 'transparent'
+            gap: tokens.space[1],
+            paddingRight: tokens.space[2],
+            paddingLeft: tokens.space[2],
+            flexShrink: 0
           }}
         >
-          <Plus size={16} />
-        </button>
+          {/* Clear button */}
+          <button
+            onClick={handleClear}
+            title="Clear terminal"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: tokens.space[1],
+              height: 26,
+              padding: `0 ${tokens.space[2]}`,
+              border: 'none',
+              background: 'transparent',
+              color: tokens.color.textMuted,
+              fontSize: tokens.size.xs,
+              fontFamily: tokens.font.ui,
+              cursor: 'pointer',
+              borderRadius: tokens.radius.sm,
+              transition: tokens.transition.fast
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.color = tokens.color.text
+              e.currentTarget.style.background = tokens.color.surfaceHigh
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.color = tokens.color.textMuted
+              e.currentTarget.style.background = 'transparent'
+            }}
+          >
+            <span style={{ userSelect: 'none' }}>⌘K</span>
+          </button>
+
+          {/* Split button — disabled placeholder for Story 3 */}
+          <button
+            disabled
+            title="Split pane (coming soon)"
+            style={{
+              display: 'inline-flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 26,
+              height: 26,
+              border: 'none',
+              background: 'transparent',
+              color: tokens.color.textDim,
+              cursor: 'not-allowed',
+              borderRadius: tokens.radius.sm,
+              opacity: 0.5
+            }}
+          >
+            <SplitSquareVertical size={14} />
+          </button>
+        </div>
       </div>
 
       {/* Terminal panes — all mounted, only active is visible */}

@@ -19,6 +19,7 @@ interface TerminalStore {
   addTab: () => void
   closeTab: (id: string) => void
   setActiveTab: (id: string) => void
+  renameTab: (id: string, title: string) => void
   setPtyId: (tabId: string, ptyId: number) => void
 }
 
@@ -44,6 +45,11 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   },
 
   setActiveTab: (id) => set({ activeTabId: id }),
+
+  renameTab: (id, title) =>
+    set((s) => ({
+      tabs: s.tabs.map((t) => (t.id === id ? { ...t, label: title } : t))
+    })),
 
   setPtyId: (tabId, ptyId) =>
     set((s) => ({

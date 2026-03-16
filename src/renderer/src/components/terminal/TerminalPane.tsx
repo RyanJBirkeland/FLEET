@@ -5,6 +5,13 @@ import { WebLinksAddon } from 'xterm-addon-web-links'
 import { useTerminalStore } from '../../stores/terminal'
 import 'xterm/css/xterm.css'
 
+/** Module-level map so TerminalView can call clear() on the active instance */
+const terminalInstances = new Map<string, Terminal>()
+
+export function clearTerminal(tabId: string): void {
+  terminalInstances.get(tabId)?.clear()
+}
+
 interface TerminalPaneProps {
   tabId: string
   visible: boolean
@@ -42,6 +49,7 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
 
     termRef.current = term
     fitAddonRef.current = fitAddon
+    terminalInstances.set(tabId, term)
 
     window.api.terminal.create({ cols: term.cols, rows: term.rows }).then((id) => {
       useTerminalStore.getState().setPtyId(tabId, id)
@@ -69,6 +77,7 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
 
     return () => {
       cleanupRef.current?.()
+      terminalInstances.delete(tabId)
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
