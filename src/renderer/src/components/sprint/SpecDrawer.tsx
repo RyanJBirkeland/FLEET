@@ -35,7 +35,7 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint }: 
 
   useEffect(() => {
     if (task) {
-      setDraft(task.spec ?? '')
+      setDraft(task.spec ?? task.prompt ?? '')
       setEditing(false)
       setDirty(false)
       setGenerating(false)
@@ -61,7 +61,7 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint }: 
         if (editing && dirty) {
           if (confirm('Discard unsaved changes?')) {
             setEditing(false)
-            setDraft(task.spec ?? '')
+            setDraft(task.spec ?? task.prompt ?? '')
             setDirty(false)
           }
         } else {
@@ -85,6 +85,7 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint }: 
 
 Task title: "${task.title}"
 Repo: ${task.repo}
+Agent prompt: ${task.prompt || '(none)'}
 Current notes: ${draft || '(none)'}
 
 Write a complete, spec-ready prompt for a Claude Code agent to implement this task. Follow the spec format in memory/spec-template.md. Include: Problem, Solution, Data shapes (if applicable), Files to Change, Out of Scope. Be specific and technical. Output only the spec markdown, no commentary.`
@@ -146,7 +147,7 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
                     size="sm"
                     onClick={() => {
                       setEditing(false)
-                      setDraft(task.spec ?? '')
+                      setDraft(task.spec ?? task.prompt ?? '')
                       setDirty(false)
                     }}
                   >
@@ -169,10 +170,10 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
                   disabled={generating}
                   placeholder="Write your spec in markdown..."
                 />
-              ) : task.spec ? (
+              ) : (task.spec || task.prompt) ? (
                 <div
                   className="spec-drawer__rendered"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(task.spec) }}
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(task.spec ?? task.prompt ?? '') }}
                 />
               ) : (
                 <EmptyState
