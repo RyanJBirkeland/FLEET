@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { persist } from 'zustand/middleware'
 
 export interface LocalAgentProcess {
   pid: number
@@ -44,7 +45,9 @@ interface LocalAgentsState {
   stopLogPolling: () => void
 }
 
-export const useLocalAgentsStore = create<LocalAgentsState>((set, get) => ({
+export const useLocalAgentsStore = create<LocalAgentsState>()(
+  persist(
+    (set, get) => ({
   processes: [],
   lastUpdated: 0,
   collapsed: false,
@@ -131,5 +134,11 @@ export const useLocalAgentsStore = create<LocalAgentsState>((set, get) => ({
       clearInterval(_logInterval)
       set({ _logInterval: null })
     }
+  }),
+  {
+    name: 'bde-local-agents',
+    // Only persist spawnedAgents — not ephemeral runtime state
+    partialize: (s) => ({ spawnedAgents: s.spawnedAgents })
   }
-}))
+)
+)
