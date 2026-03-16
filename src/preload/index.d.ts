@@ -23,6 +23,7 @@ declare global {
       getGatewayConfig: () => Promise<{ url: string; token: string }>
       getGitHubToken: () => Promise<string | null>
       saveGatewayConfig: (url: string, token: string) => Promise<void>
+      getSupabaseConfig: () => Promise<{ url: string; anonKey: string } | null>
       getRepoPaths: () => Promise<Record<string, string>>
       readSprintMd: (repoPath: string) => Promise<string>
       openExternal: (url: string) => Promise<void>
@@ -54,6 +55,7 @@ declare global {
         model?: string
       }) => Promise<{ pid: number; logPath: string; id: string; interactive: boolean }>
       sendToAgent: (pid: number, message: string) => Promise<{ ok: boolean; error?: string }>
+      isAgentInteractive: (pid: number) => Promise<boolean>
       killLocalAgent: (pid: number) => Promise<{ ok: boolean; error?: string }>
       tailAgentLog: (args: {
         logPath: string

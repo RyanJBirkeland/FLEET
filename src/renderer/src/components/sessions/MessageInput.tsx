@@ -44,8 +44,14 @@ export function MessageInput({ sessionKey, sessionMode, localPid, onSent, onBefo
     const trimmed = text.trim()
     if (!trimmed || sending) return
 
-    if (sessionMode === 'chat' && !client) return
-    if (sessionMode === 'local' && !localPid) return
+    if (sessionMode === 'chat' && !client) {
+      toast.error('Gateway not connected')
+      return
+    }
+    if (sessionMode === 'local' && !localPid) {
+      toast.error('No agent PID')
+      return
+    }
 
     setSending(true)
     setText('')
@@ -57,8 +63,8 @@ export function MessageInput({ sessionKey, sessionMode, localPid, onSent, onBefo
         await steerSubAgent(sessionKey, trimmed)
       } else if (sessionMode === 'local') {
         await sendToAgent(localPid!, trimmed)
-      } else {
-        await client!.call('chat.send', { sessionKey, message: trimmed, idempotencyKey: crypto.randomUUID() })
+      } else if (client) {
+        await client.call('chat.send', { sessionKey, message: trimmed, idempotencyKey: crypto.randomUUID() })
       }
       onSent()
     } catch (err) {
