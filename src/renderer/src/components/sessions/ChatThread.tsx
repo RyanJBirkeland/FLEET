@@ -4,7 +4,7 @@ import { useUIStore } from '../../stores/ui'
 import { toast } from '../../stores/toasts'
 import { EmptyState } from '../ui/EmptyState'
 import { Spinner } from '../ui/Spinner'
-import { CHAT_HISTORY_LIMIT, CHAT_SCROLL_THRESHOLD, CHAT_COLLAPSE_THRESHOLD } from '../../lib/constants'
+import { CHAT_HISTORY_LIMIT, CHAT_SCROLL_THRESHOLD, CHAT_COLLAPSE_THRESHOLD, POLL_CHAT_STREAMING_MS, POLL_CHAT_IDLE_MS } from '../../lib/constants'
 import { normalizeContent } from '../../lib/message'
 import { renderContent } from '../../lib/markdown'
 import type { ChatMessage } from '../../lib/agent-messages'
@@ -15,8 +15,8 @@ function formatTime(ts: number | string | undefined): string {
   return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
 
-const POLL_STREAMING = 1_000
-const POLL_IDLE = 5_000
+const POLL_STREAMING = POLL_CHAT_STREAMING_MS
+const POLL_IDLE = POLL_CHAT_IDLE_MS
 
 interface Props {
   sessionKey?: string
