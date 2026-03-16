@@ -4,7 +4,7 @@
  * Left pane: session list with status dots + model badge.
  * Right pane: layout depends on splitMode.
  */
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Columns2, Grid2x2, Square, Plus } from 'lucide-react'
 import { AgentList } from '../components/sessions/AgentList'
 import { SpawnModal } from '../components/sessions/SpawnModal'
@@ -92,6 +92,13 @@ export function SessionsView(): React.JSX.Element {
     localSendPid != null ? 'local' :
     selectedSubAgent ? 'steer' : 'chat'
   const [query, setQuery] = useState('')
+  const [debouncedQuery, setDebouncedQuery] = useState('')
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const handleQueryChange = useCallback((value: string) => {
+    setQuery(value)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => setDebouncedQuery(value), 150)
+  }, [])
   const [spawnOpen, setSpawnOpen] = useState(false)
 
   // Unified selection handler
@@ -294,17 +301,17 @@ export function SessionsView(): React.JSX.Element {
             type="text"
             placeholder="Filter agents…"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => handleQueryChange(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Escape') {
-                setQuery('')
+                handleQueryChange('')
                 e.currentTarget.blur()
               }
             }}
           />
         </div>
         <AgentList
-          filter={query}
+          filter={debouncedQuery}
           selectedId={selectedUnifiedId}
           onSelect={handleUnifiedSelect}
           onKill={handleUnifiedKill}

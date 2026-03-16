@@ -7,7 +7,7 @@ import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
 import { readdir, stat, unlink, readFile } from 'fs/promises'
-import { join, basename as pathBasename } from 'path'
+import { join, dirname, basename as pathBasename } from 'path'
 import {
   createAgentRecord,
   updateAgentMeta,
@@ -28,7 +28,7 @@ const ELECTRON_PATH = [
   '/usr/local/bin',
   '/opt/homebrew/bin',
   `${process.env.HOME}/.local/bin`,
-  `${process.env.HOME}/.nvm/versions/node/v22.22.0/bin`,
+  `${dirname(process.execPath)}`,
 ].filter(Boolean).join(':')
 
 export interface LocalAgentProcess {

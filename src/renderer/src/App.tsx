@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGatewayStore } from './stores/gateway'
 import { useUIStore, type View } from './stores/ui'
@@ -149,11 +149,11 @@ function App(): React.JSX.Element {
   const setView = useUIStore((s) => s.setView)
   const runningCount = useSessionsStore((s) => s.runningCount)
   const sessions = useSessionsStore((s) => s.sessions)
-  const totalCost = sessions.reduce((sum, s) => {
+  const totalCost = useMemo(() => sessions.reduce((sum, s) => {
     const input = s.contextTokens ?? 0
     const output = Math.max(0, (s.totalTokens ?? 0) - (s.contextTokens ?? 0))
     return sum + calcCost(input, output, resolveModel(s.model))
-  }, 0)
+  }, 0), [sessions])
 
   const paletteOpen = useCommandPaletteStore((s) => s.isOpen)
   const togglePalette = useCommandPaletteStore((s) => s.toggle)
