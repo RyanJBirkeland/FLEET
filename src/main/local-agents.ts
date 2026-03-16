@@ -69,12 +69,12 @@ function parseElapsedToMs(elapsed: string): number {
 
 function matchAgentBin(command: string): string | null {
   const parts = command.split(/\s+/)
-  for (const part of parts) {
-    const basename = (part.split('/').pop() ?? '').toLowerCase()
-    const match = AGENT_BINS.find((b) => basename === b)
-    if (match) return match
-  }
-  return null
+  // Only check the first token (the executable itself)
+  const execPath = parts[0] ?? ''
+  // Exclude macOS .app bundles (e.g. Claude.app, Cursor.app) — we only want CLI tools
+  if (execPath.includes('.app/Contents')) return null
+  const basename = (execPath.split('/').pop() ?? '').toLowerCase()
+  return AGENT_BINS.find((b) => basename === b) ?? null
 }
 
 export async function getAgentProcesses(): Promise<LocalAgentProcess[]> {
