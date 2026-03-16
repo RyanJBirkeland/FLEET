@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { execSync, execFileSync } from 'child_process'
+import { execSync, execFileSync, spawnSync } from 'child_process'
 import {
   gitCommit,
   gitCheckout,
@@ -16,6 +16,7 @@ import {
 vi.mock('child_process', () => ({
   execSync: vi.fn(),
   execFileSync: vi.fn(),
+  spawnSync: vi.fn(),
 }))
 
 vi.mock('fs/promises', async (importOriginal) => {
@@ -112,27 +113,48 @@ describe('git.ts', () => {
 
   describe('gitPush', () => {
     it('returns stdout on success', () => {
-      vi.mocked(execSync).mockReturnValue('Everything up-to-date\n')
+      vi.mocked(spawnSync).mockReturnValue({
+        status: 0,
+        stdout: 'Everything up-to-date',
+        stderr: '',
+        error: undefined,
+      } as any)
 
       const result = gitPush('/tmp/repo')
-      expect(result).toBe('Everything up-to-date\n')
+      expect(result).toBe('Everything up-to-date')
     })
 
-    it('returns error string on failure', () => {
-      const error = new Error('push failed') as Error & { stdout: string; stderr: string }
-      error.stdout = 'rejected'
-      error.stderr = ''
-      vi.mocked(execSync).mockImplementation(() => { throw error })
+    it('throws on non-zero exit code', () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        status: 1,
+        stdout: '',
+        stderr: 'error: failed to push some refs',
+        error: undefined,
+      } as any)
 
-      const result = gitPush('/tmp/repo')
-      expect(result).toBe('rejected')
+      expect(() => gitPush('/tmp/repo')).toThrow('error: failed to push some refs')
     })
 
-    it('returns error message when no stdout/stderr', () => {
-      vi.mocked(execSync).mockImplementation(() => { throw new Error('network error') })
+    it('throws on spawn error', () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        status: null,
+        stdout: '',
+        stderr: '',
+        error: new Error('spawn git ENOENT'),
+      } as any)
 
-      const result = gitPush('/tmp/repo')
-      expect(result).toBe('network error')
+      expect(() => gitPush('/tmp/repo')).toThrow('spawn git ENOENT')
+    })
+
+    it('uses fallback message when stderr is empty on failure', () => {
+      vi.mocked(spawnSync).mockReturnValue({
+        status: 128,
+        stdout: '',
+        stderr: '',
+        error: undefined,
+      } as any)
+
+      expect(() => gitPush('/tmp/repo')).toThrow('git push exited with code 128')
     })
   })
 

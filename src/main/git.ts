@@ -122,8 +122,11 @@ export function gitPush(cwd: string): string {
     encoding: 'utf-8',
     maxBuffer: 10 * 1024 * 1024
   })
-  if (result.error) return result.error.message
-  return result.stdout + result.stderr || 'Push failed'
+  if (result.error) throw new Error(result.error.message)
+  if (result.status !== 0) {
+    throw new Error(result.stderr.trim() || `git push exited with code ${result.status}`)
+  }
+  return (result.stdout + result.stderr).trim() || 'Pushed successfully'
 }
 
 export function gitBranches(cwd: string): { current: string; branches: string[] } {

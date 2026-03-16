@@ -11,6 +11,7 @@ import type { DiffFile } from '../lib/diff-parser'
 import { Button } from '../components/ui/Button'
 import { POLL_GIT_STATUS_INTERVAL } from '../lib/constants'
 import * as git from '../services/git'
+import { toast } from '../stores/toasts'
 
 interface GitFileEntry {
   path: string
@@ -196,7 +197,9 @@ function DiffView(): React.JSX.Element {
       setPushOutput(output || 'Pushed successfully')
       await refresh()
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Push failed')
+      const msg = e instanceof Error ? e.message : 'Push failed'
+      setError(msg)
+      toast.error(msg)
     } finally {
       setPushing(false)
     }
