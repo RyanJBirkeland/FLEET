@@ -1,175 +1,13 @@
-import { useEffect, useRef, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo } from 'react'
 import { useLocalAgentsStore } from '../../stores/localAgents'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { useTerminalStore } from '../../stores/terminal'
 import { cwdToRepoLabel } from '../../lib/utils'
 import { Button } from '../ui/Button'
 import { parseStreamJson } from '../../lib/stream-parser'
-import type { ChatItemResult } from '../../lib/stream-parser'
-import { renderContent } from '../../lib/markdown'
+import { chatItemsToMessages } from '../../lib/agent-messages'
+import { ChatThread } from './ChatThread'
 import { formatElapsed, formatDuration, formatTime } from '../../lib/format'
-
-// ── Truncate helper ─────────────────────────────────────
-
-function truncate(s: string, max: number): string {
-  if (s.length <= max) return s
-  return s.slice(0, max) + '\u2026'
-}
-
-// ── Chat Body (shared between both viewer components) ───
-
-interface ChatBodyProps {
-  logContent: string
-  isRunning: boolean
-  elapsed: string
-}
-
-function AgentChatBody({ logContent, isRunning, elapsed }: ChatBodyProps): React.JSX.Element {
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const [autoScroll, setAutoScroll] = useState(true)
-  const [expandedTools, setExpandedTools] = useState<Set<number>>(new Set())
-  const [expandedMsgs, setExpandedMsgs] = useState<Set<number>>(new Set())
-
-  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
-
-  // Auto-scroll
-  useEffect(() => {
-    if (autoScroll && scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }, [logContent, autoScroll])
-
-  const handleScroll = useCallback(() => {
-    const el = scrollRef.current
-    if (!el) return
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 40
-    setAutoScroll(atBottom)
-  }, [])
-
-  const handleResume = (): void => {
-    setAutoScroll(true)
-    if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight
-    }
-  }
-
-  const toggleTool = useCallback((idx: number) => {
-    setExpandedTools((prev) => {
-      const n = new Set(prev)
-      n.has(idx) ? n.delete(idx) : n.add(idx)
-      return n
-    })
-  }, [])
-
-  const toggleExpand = useCallback((idx: number) => {
-    setExpandedMsgs((prev) => {
-      const n = new Set(prev)
-      n.has(idx) ? n.delete(idx) : n.add(idx)
-      return n
-    })
-  }, [])
-
-  // Find the last text item index for streaming cursor
-  const lastTextIdx = isStreaming || isRunning
-    ? items.reduce((acc, item, i) => (item.kind === 'text' ? i : acc), -1)
-    : -1
-
-  // Find the result item
-  const resultItem = items.find((i): i is ChatItemResult => i.kind === 'result')
-
-  return (
-    <>
-      <div className="agent-chat__body" ref={scrollRef} onScroll={handleScroll}>
-        {items.map((item, idx) => {
-          switch (item.kind) {
-            case 'text': {
-              const isLong = item.text.length > 600
-              const isExpanded = expandedMsgs.has(idx)
-              const showCursor = idx === lastTextIdx
-
-              return (
-                <div key={idx} className="chat-msg chat-msg--assistant">
-                  <div className="agent-chat__avatar">{'\u2B21'}</div>
-                  <div
-                    className={`chat-msg__bubble chat-msg__bubble--assistant${isLong && !isExpanded ? ' chat-msg__bubble--collapsed' : ''}`}
-                    onClick={isLong ? () => toggleExpand(idx) : undefined}
-                  >
-                    <span className="chat-msg__text chat-msg__text--rich">
-                      {renderContent(item.text)}
-                      {showCursor && (
-                        <span className="agent-log__cursor">{'\u258B'}</span>
-                      )}
-                    </span>
-                    {isLong && !isExpanded && (
-                      <div className="chat-msg__expand-fade">
-                        <span className="chat-msg__expand-label">Click to expand</span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            }
-
-            case 'tool_use':
-              return (
-                <div key={idx} className="chat-msg chat-msg--tool">
-                  <button className="log-msg__tool-toggle" onClick={() => toggleTool(idx)}>
-                    <span className="log-msg__tool-arrow">{expandedTools.has(idx) ? '\u25BE' : '\u25B8'}</span>
-                    <span className="log-msg__tool-name">{item.name}</span>
-                    <span className="log-msg__tool-preview">{truncate(item.input, 80)}</span>
-                  </button>
-                  {expandedTools.has(idx) && (
-                    <pre className="log-msg__tool-args">{item.input}</pre>
-                  )}
-                </div>
-              )
-
-            case 'tool_result':
-              return (
-                <div key={idx} className="agent-chat__tool-result">
-                  <span className="log-msg__tool-label">Result</span>
-                  <span className="agent-chat__tool-result-text">{truncate(item.content, 200)}</span>
-                </div>
-              )
-
-            case 'result':
-              // Rendered in the footer bar instead
-              return null
-
-            case 'plain':
-              return (
-                <div key={idx} className="agent-chat__plain-line">
-                  {item.text}
-                </div>
-              )
-          }
-        })}
-      </div>
-
-      {/* Result footer bar */}
-      {resultItem && (
-        <div className={`agent-log__exit-bar${resultItem.subtype === 'error' ? ' agent-log__exit-bar--failed' : ''}`}>
-          {resultItem.subtype === 'success' ? '\u2713' : '\u2717'}{' '}
-          {resultItem.result || (resultItem.subtype === 'success' ? 'Done' : 'Failed')}
-          {resultItem.costUsd != null && ` \u00B7 $${resultItem.costUsd.toFixed(3)}`}
-          {elapsed && ` \u00B7 ${elapsed}`}
-        </div>
-      )}
-
-      {/* Resume auto-scroll pill */}
-      {!autoScroll && (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="agent-log__resume"
-          onClick={handleResume}
-        >
-          Resume auto-scroll
-        </Button>
-      )}
-    </>
-  )
-}
 
 // ── AgentLogViewer (history-store, by ID) ───────────────
 
@@ -181,21 +19,10 @@ export function AgentLogViewer({ agentId }: { agentId: string }): React.JSX.Elem
 
   const agent = agents.find((a) => a.id === agentId) ?? null
 
-  const [, setTick] = useState(0)
   const isRunning = agent?.status === 'running'
 
-  // Tick for elapsed time
-  useEffect(() => {
-    if (!isRunning) return
-    const interval = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(interval)
-  }, [isRunning])
-
-  const elapsed = agent
-    ? isRunning
-      ? formatElapsed(new Date(agent.startedAt).getTime())
-      : formatDuration(agent.startedAt, agent.finishedAt)
-    : ''
+  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
+  const chatMessages = useMemo(() => chatItemsToMessages(items), [items])
 
   return (
     <div className="agent-log">
@@ -229,7 +56,7 @@ export function AgentLogViewer({ agentId }: { agentId: string }): React.JSX.Elem
           <span className="agent-log__task-text">{agent.task}</span>
         </div>
       )}
-      <AgentChatBody logContent={logContent} isRunning={isRunning} elapsed={elapsed} />
+      <ChatThread messages={chatMessages} isStreaming={isRunning && isStreaming} />
     </div>
   )
 }
@@ -263,6 +90,9 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   const [, setTick] = useState(0)
   const [steerInput, setSteerInput] = useState('')
   const [sentMessages, setSentMessages] = useState<string[]>([])
+
+  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
+  const chatMessages = useMemo(() => chatItemsToMessages(items), [items])
 
   // Tick for elapsed time
   useEffect(() => {
@@ -353,7 +183,7 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
           </Button>
         </div>
       </div>
-      <AgentChatBody logContent={logContent} isRunning={isAlive} elapsed={elapsed} />
+      <ChatThread messages={chatMessages} isStreaming={isAlive && isStreaming} />
 
       {/* Sent message bubbles */}
       {sentMessages.length > 0 && (

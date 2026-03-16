@@ -7,14 +7,7 @@ import { Spinner } from '../ui/Spinner'
 import { CHAT_HISTORY_LIMIT, CHAT_SCROLL_THRESHOLD, CHAT_COLLAPSE_THRESHOLD } from '../../lib/constants'
 import { normalizeContent } from '../../lib/message'
 import { renderContent } from '../../lib/markdown'
-
-interface ChatMessage {
-  role: 'user' | 'assistant' | 'system' | 'tool'
-  content: string
-  timestamp?: number | string
-  toolName?: string
-  toolArgs?: Record<string, unknown>
-}
+import type { ChatMessage } from '../../lib/agent-messages'
 
 function formatTime(ts: number | string | undefined): string {
   if (!ts) return ''
@@ -26,13 +19,18 @@ const POLL_STREAMING = 1_000
 const POLL_IDLE = 5_000
 
 interface Props {
-  sessionKey: string
+  sessionKey?: string
   updatedAt?: number
   refreshTrigger?: number
   optimisticMessages?: ChatMessage[]
+  /** Pre-fetched messages — skips IPC polling when provided */
+  messages?: ChatMessage[]
+  /** Streaming indicator for external messages mode */
+  isStreaming?: boolean
 }
 
-export function ChatThread({ sessionKey, refreshTrigger = 0, optimisticMessages = [] }: Props): React.JSX.Element {
+export function ChatThread({ sessionKey, refreshTrigger = 0, optimisticMessages = [], messages: externalMessages, isStreaming: isStreamingProp }: Props): React.JSX.Element {
+  const isExternalMode = externalMessages !== undefined
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [loading, setLoading] = useState(true)
   const [expandedMsgs, setExpandedMsgs] = useState<Set<number>>(new Set())
@@ -127,8 +125,10 @@ export function ChatThread({ sessionKey, refreshTrigger = 0, optimisticMessages 
   const pollRef = useRef(poll)
   pollRef.current = poll
 
-  // Initial fetch + adaptive poll
+  // Initial fetch + adaptive poll (skipped in external mode)
   useEffect(() => {
+    if (isExternalMode) return
+
     setMessages([])
     setLoading(true)
     setExpandedMsgs(new Set())
@@ -153,14 +153,19 @@ export function ChatThread({ sessionKey, refreshTrigger = 0, optimisticMessages 
     return () => {
       if (pollTimerRef.current) clearTimeout(pollTimerRef.current)
     }
-  }, [sessionKey]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [sessionKey, isExternalMode]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Refresh on send
+  // Refresh on send (skipped in external mode)
   useEffect(() => {
-    if (refreshTrigger > 0) {
-      poll()
-    }
-  }, [refreshTrigger]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (isExternalMode || refreshTrigger <= 0) return
+    poll()
+  }, [refreshTrigger, isExternalMode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // External mode: auto-scroll when messages change
+  useEffect(() => {
+    if (!isExternalMode) return
+    if (isNearBottom()) scrollToBottom()
+  }, [externalMessages]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleScroll = useCallback(() => {
     const el = scrollRef.current
@@ -213,13 +218,13 @@ export function ChatThread({ sessionKey, refreshTrigger = 0, optimisticMessages 
     })
   }, [])
 
-  // Show all messages including tool calls; append any optimistic (not-yet-confirmed) messages
-  const visibleMessages = [...messages, ...optimisticMessages]
-  const lastAssistantVisibleIdx = streaming
+  const effectiveStreaming = isExternalMode ? (isStreamingProp ?? false) : streaming
+  const visibleMessages = isExternalMode ? externalMessages : [...messages, ...optimisticMessages]
+  const lastAssistantVisibleIdx = effectiveStreaming
     ? visibleMessages.reduce((acc, m, i) => (m.role === 'assistant' ? i : acc), -1)
     : -1
 
-  if (loading && visibleMessages.length === 0) {
+  if (loading && !isExternalMode && visibleMessages.length === 0) {
     return (
       <div className="chat-thread chat-thread--loading">
         <Spinner size="md" />
