@@ -8,10 +8,11 @@ import { SessionList } from '../components/sessions/SessionList'
 import { SessionHeader } from '../components/sessions/SessionHeader'
 import { ChatThread } from '../components/sessions/ChatThread'
 import { MessageInput } from '../components/sessions/MessageInput'
-import { LocalAgentLogViewer } from '../components/sessions/LocalAgentLogViewer'
+import { LocalAgentLogViewer, AgentLogViewer } from '../components/sessions/LocalAgentLogViewer'
 import { EmptyState } from '../components/ui/EmptyState'
 import { useSessionsStore } from '../stores/sessions'
 import { useLocalAgentsStore } from '../stores/localAgents'
+import { useAgentHistoryStore } from '../stores/agentHistory'
 
 const POLL_INTERVAL = 10_000
 
@@ -52,6 +53,7 @@ export function SessionsView(): React.JSX.Element {
 
   const subAgents = useSessionsStore((s) => s.subAgents)
   const selectedLocalAgentPid = useLocalAgentsStore((s) => s.selectedLocalAgentPid)
+  const selectedHistoryId = useAgentHistoryStore((s) => s.selectedId)
   const selectedSession = sessions.find((s) => s.key === selectedKey)
   const selectedSubAgent = subAgents.find((a) => a.sessionKey === selectedKey) ?? null
   const sessionMode: 'chat' | 'steer' = selectedSubAgent ? 'steer' : 'chat'
@@ -80,7 +82,9 @@ export function SessionsView(): React.JSX.Element {
         }}
       />
       <div className="sessions-chat__main">
-        {selectedLocalAgentPid ? (
+        {selectedHistoryId ? (
+          <AgentLogViewer agentId={selectedHistoryId} />
+        ) : selectedLocalAgentPid ? (
           <LocalAgentLogViewer pid={selectedLocalAgentPid} />
         ) : selectedKey && (selectedSession || selectedSubAgent) ? (
           <>

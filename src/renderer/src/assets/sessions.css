@@ -1519,3 +1519,123 @@
   color: var(--bde-text);
   border-color: var(--bde-accent);
 }
+
+/* ── Agent Log Task Bar ─────────────────────────────── */
+
+.agent-log__task-bar {
+  display: flex;
+  gap: 6px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--bde-border);
+  font-size: 12px;
+  line-height: 1.4;
+  flex-shrink: 0;
+}
+
+.agent-log__task-label {
+  color: var(--bde-text-muted);
+  flex-shrink: 0;
+  font-weight: 600;
+}
+
+.agent-log__task-text {
+  color: var(--bde-text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+/* ── Agent Log Exit Bar ─────────────────────────────── */
+
+.agent-log__exit-bar {
+  padding: 8px 12px;
+  border-top: 1px solid var(--bde-border);
+  font-size: 12px;
+  font-family: var(--bde-font-code);
+  color: var(--bde-text-muted);
+  flex-shrink: 0;
+}
+
+.agent-log__exit-bar--failed {
+  color: #f87171;
+}
+
+.agent-log__status--failed {
+  color: #f87171;
+}
+
+/* ── Agent History Panel ────────────────────────────── */
+
+.agent-history__status-icon {
+  width: 14px;
+  flex-shrink: 0;
+  font-size: 11px;
+  text-align: center;
+}
+
+.agent-history__status--done {
+  color: var(--bde-accent);
+}
+
+.agent-history__status--failed {
+  color: #f87171;
+}
+
+.agent-history__status--running {
+  color: var(--bde-accent);
+}
+
+.agent-history__status--unknown {
+  color: var(--bde-text-muted);
+}
+
+.agent-history__task {
+  flex: 1;
+  font-size: 11px;
+  color: var(--bde-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.agent-history__import-btn {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bde-text-muted);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+.local-agent-row:hover .agent-history__import-btn {
+  opacity: 1;
+}
+
+.agent-history__import-btn:hover {
+  color: var(--bde-accent);
+  background: rgba(0, 211, 127, 0.1);
+}
+
+.agent-history__view-all {
+  font-size: 11px;
+  color: var(--bde-text-muted);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 12px 12px 4px;
+  transition: color 0.15s;
+}
+
+.agent-history__view-all:hover {
+  color: var(--bde-accent);
+}

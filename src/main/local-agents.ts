@@ -6,9 +6,14 @@
 import { exec, spawn } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
-import { mkdir, readdir, stat, unlink, readFile } from 'fs/promises'
-import { createWriteStream } from 'fs'
-import { join } from 'path'
+import { readdir, stat, unlink, readFile } from 'fs/promises'
+import { join, basename as pathBasename } from 'path'
+import {
+  createAgentRecord,
+  updateAgentMeta,
+  appendLog as appendAgentLog,
+  listAgents
+} from './agent-history'
 
 const execAsync = promisify(exec)
 
@@ -82,8 +87,8 @@ function matchAgentBin(command: string): string | null {
   const execPath = parts[0] ?? ''
   // Exclude macOS .app bundles (e.g. Claude.app, Cursor.app) — we only want CLI tools
   if (execPath.includes('.app/Contents')) return null
-  const basename = (execPath.split('/').pop() ?? '').toLowerCase()
-  return AGENT_BINS.find((b) => basename === b) ?? null
+  const binName = (execPath.split('/').pop() ?? '').toLowerCase()
+  return AGENT_BINS.find((b) => binName === b) ?? null
 }
 
 export async function getAgentProcesses(): Promise<LocalAgentProcess[]> {
@@ -142,6 +147,22 @@ export async function getAgentProcesses(): Promise<LocalAgentProcess[]> {
       if (!livePids.has(pid)) cwdCache.delete(pid)
     }
 
+    // Reconcile agent history: mark running agents as done if their PID is gone
+    try {
+      const running = await listAgents(500, 'running')
+      for (const agent of running) {
+        if (agent.pid && !livePids.has(agent.pid)) {
+          await updateAgentMeta(agent.id, {
+            finishedAt: new Date().toISOString(),
+            status: 'unknown',
+            exitCode: null
+          })
+        }
+      }
+    } catch {
+      // Non-critical — don't break process listing
+    }
+
     return results
   } catch {
     return []
@@ -170,9 +191,22 @@ function modelToFlag(model?: string): string {
 
 export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<SpawnLocalAgentResult> {
   const id = randomUUID()
-  const logPath = join(LOG_DIR, `${id}.log`)
 
-  await mkdir(LOG_DIR, { recursive: true })
+  // Create persistent agent record
+  const meta = await createAgentRecord({
+    id,
+    pid: null,
+    bin: 'claude',
+    model: modelToFlag(args.model),
+    repo: pathBasename(args.repoPath),
+    repoPath: args.repoPath,
+    task: args.task,
+    startedAt: new Date().toISOString(),
+    finishedAt: null,
+    exitCode: null,
+    status: 'running',
+    source: 'bde'
+  })
 
   const child = spawn('claude', [
     '--print',
@@ -186,12 +220,27 @@ export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<Spawn
     env: { ...process.env, PATH: ELECTRON_PATH }
   })
 
-  const logStream = createWriteStream(logPath, { flags: 'a' })
-  child.stdout?.pipe(logStream)
-  child.stderr?.pipe(logStream)
-  child.unref()
+  // Update record with real PID
+  await updateAgentMeta(id, { pid: child.pid ?? null })
 
-  return { pid: child.pid!, logPath, id }
+  // Stream output to persistent log
+  child.stdout?.on('data', (chunk: Buffer) => {
+    appendAgentLog(id, chunk.toString())
+  })
+  child.stderr?.on('data', (chunk: Buffer) => {
+    appendAgentLog(id, chunk.toString())
+  })
+
+  child.on('exit', async (code) => {
+    await updateAgentMeta(id, {
+      finishedAt: new Date().toISOString(),
+      exitCode: code,
+      status: code === 0 ? 'done' : 'failed'
+    })
+  })
+
+  child.unref()
+  return { pid: child.pid!, logPath: meta.logPath, id }
 }
 
 // --- Tail agent log file ---

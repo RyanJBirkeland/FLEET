@@ -7,7 +7,7 @@ import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { EmptyState } from '../ui/EmptyState'
 import { SpawnModal } from './SpawnModal'
-import { LocalAgentRow, cwdToRepoLabel } from './LocalAgentRow'
+import { AgentHistoryPanel } from './AgentHistoryPanel'
 
 function timeAgo(ts: number): string {
   const seconds = Math.floor((Date.now() - ts) / 1000)
@@ -240,9 +240,6 @@ export function SessionList(): React.JSX.Element {
   const fetchError = useSessionsStore((s) => s.fetchError)
   const followMode = useSessionsStore((s) => s.followMode)
   const setFollowMode = useSessionsStore((s) => s.setFollowMode)
-  const localProcesses = useLocalAgentsStore((s) => s.processes)
-  const localCollapsed = useLocalAgentsStore((s) => s.collapsed)
-  const setLocalCollapsed = useLocalAgentsStore((s) => s.setCollapsed)
   const fetchProcesses = useLocalAgentsStore((s) => s.fetchProcesses)
   const activeView = useUIStore((s) => s.activeView)
   const [focusIndex, setFocusIndex] = useState(-1)
@@ -339,16 +336,6 @@ export function SessionList(): React.JSX.Element {
     return filterSession(s)
   })
   const filteredSubAgents = subAgents.filter(filterSubAgent)
-
-  const filteredLocalAgents = localProcesses.filter((p) => {
-    if (!query) return true
-    const q = query.toLowerCase()
-    return (
-      p.bin.toLowerCase().includes(q) ||
-      cwdToRepoLabel(p.cwd).toLowerCase().includes(q) ||
-      String(p.pid).includes(q)
-    )
-  })
 
   const activeSubAgentCount = subAgents.filter((s) => s._isActive).length
 
@@ -522,28 +509,7 @@ export function SessionList(): React.JSX.Element {
             )}
       </div>
 
-      {filteredLocalAgents.length > 0 && (
-        <div className="session-list__group">
-          <div className="session-list__group-header">
-            <button
-              className="local-agents__collapse-btn"
-              onClick={() => setLocalCollapsed(!localCollapsed)}
-            >
-              <span className={`local-agents__chevron ${localCollapsed ? '' : 'local-agents__chevron--open'}`}>
-                ›
-              </span>
-              <span className="session-list__group-label" style={{ padding: 0 }}>
-                Local Agents ({filteredLocalAgents.length})
-              </span>
-            </button>
-            <span className="local-agents__live-dot" title="Polling every 5s" />
-          </div>
-          {!localCollapsed &&
-            filteredLocalAgents.map((proc) => (
-              <LocalAgentRow key={proc.pid} process={proc} />
-            ))}
-        </div>
-      )}
+      <AgentHistoryPanel query={query} />
 
       {!loading && !fetchError && sessions.length === 0 && (
         <EmptyState
