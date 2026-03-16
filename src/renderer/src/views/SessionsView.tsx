@@ -5,8 +5,9 @@
  * Right pane: layout depends on splitMode.
  */
 import { useEffect, useState, useCallback } from 'react'
-import { Columns2, Grid2x2, Square } from 'lucide-react'
+import { Columns2, Grid2x2, Square, Plus } from 'lucide-react'
 import { AgentList } from '../components/sessions/AgentList'
+import { SpawnModal } from '../components/sessions/SpawnModal'
 import { SessionHeader } from '../components/sessions/SessionHeader'
 import { ChatThread } from '../components/sessions/ChatThread'
 import { ChatPane } from '../components/sessions/ChatPane'
@@ -85,6 +86,7 @@ export function SessionsView(): React.JSX.Element {
   // Unified agent selection state
   const [selectedUnifiedId, setSelectedUnifiedId] = useState<string | null>(null)
   const [query, setQuery] = useState('')
+  const [spawnOpen, setSpawnOpen] = useState(false)
 
   // Unified selection handler
   const handleUnifiedSelect = useCallback(
@@ -258,6 +260,13 @@ export function SessionsView(): React.JSX.Element {
       <div className="sessions-chat__sidebar" style={{ width: sidebarWidth }}>
         <div className="session-list__header">
           <span className="session-list__title">AGENTS</span>
+          <button
+            className="session-list__new-btn"
+            onClick={() => setSpawnOpen(true)}
+            title="Spawn Agent"
+          >
+            <Plus size={14} />
+          </button>
         </div>
         <div className="session-list__search">
           <input
@@ -314,6 +323,7 @@ export function SessionsView(): React.JSX.Element {
         </div>
         {renderMainContent()}
       </div>
+      <SpawnModal open={spawnOpen} onClose={() => setSpawnOpen(false)} />
     </div>
   )
 }
