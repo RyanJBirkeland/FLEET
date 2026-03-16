@@ -15,11 +15,12 @@ import { MiniChatPane } from '../components/sessions/MiniChatPane'
 import { MessageInput } from '../components/sessions/MessageInput'
 import { LocalAgentLogViewer, AgentLogViewer } from '../components/sessions/LocalAgentLogViewer'
 import { EmptyState } from '../components/ui/EmptyState'
-import { useSessionsStore, type SplitMode } from '../stores/sessions'
+import { useSessionsStore } from '../stores/sessions'
+import { useSplitLayoutStore, type SplitMode } from '../stores/splitLayout'
 import { useLocalAgentsStore } from '../stores/localAgents'
 import { useAgentHistoryStore } from '../stores/agentHistory'
 import { useUIStore } from '../stores/ui'
-import type { UnifiedAgent } from '../stores/unifiedAgents'
+import type { UnifiedAgent } from '../hooks/useUnifiedAgents'
 import { toast } from '../stores/toasts'
 import { POLL_SESSIONS_INTERVAL, SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../lib/constants'
 
@@ -34,12 +35,12 @@ export function SessionsView(): React.JSX.Element {
   const selectedKey = useSessionsStore((s) => s.selectedSessionKey)
   const selectSession = useSessionsStore((s) => s.selectSession)
   const fetchSessions = useSessionsStore((s) => s.fetchSessions)
-  const splitMode = useSessionsStore((s) => s.splitMode)
-  const setSplitMode = useSessionsStore((s) => s.setSplitMode)
-  const splitPanes = useSessionsStore((s) => s.splitPanes)
-  const focusedPaneIndex = useSessionsStore((s) => s.focusedPaneIndex)
-  const setFocusedPane = useSessionsStore((s) => s.setFocusedPane)
-  const setPaneSession = useSessionsStore((s) => s.setPaneSession)
+  const splitMode = useSplitLayoutStore((s) => s.splitMode)
+  const setSplitMode = useSplitLayoutStore((s) => s.setSplitMode)
+  const splitPanes = useSplitLayoutStore((s) => s.splitPanes)
+  const focusedPaneIndex = useSplitLayoutStore((s) => s.focusedPaneIndex)
+  const setFocusedPane = useSplitLayoutStore((s) => s.setFocusedPane)
+  const setPaneSession = useSplitLayoutStore((s) => s.setPaneSession)
   const activeView = useUIStore((s) => s.activeView)
 
   useEffect(() => {

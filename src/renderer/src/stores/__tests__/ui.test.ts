@@ -3,15 +3,11 @@ import { useUIStore } from '../ui'
 
 describe('ui store', () => {
   beforeEach(() => {
-    useUIStore.setState({ activeView: 'sessions', repoFilter: 'all' })
+    useUIStore.setState({ activeView: 'sessions' })
   })
 
   it('initial state has activeView sessions', () => {
     expect(useUIStore.getState().activeView).toBe('sessions')
-  })
-
-  it('initial state has repoFilter all', () => {
-    expect(useUIStore.getState().repoFilter).toBe('all')
   })
 
   it('setView updates activeView', () => {
@@ -25,15 +21,5 @@ describe('ui store', () => {
       useUIStore.getState().setView(v)
       expect(useUIStore.getState().activeView).toBe(v)
     }
-  })
-
-  it('setRepoFilter updates repoFilter', () => {
-    useUIStore.getState().setRepoFilter('life-os')
-    expect(useUIStore.getState().repoFilter).toBe('life-os')
-  })
-
-  it('setRepoFilter to feast works', () => {
-    useUIStore.getState().setRepoFilter('feast')
-    expect(useUIStore.getState().repoFilter).toBe('feast')
   })
 })

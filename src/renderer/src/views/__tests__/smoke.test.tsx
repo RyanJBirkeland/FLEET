@@ -33,7 +33,7 @@ vi.mock('../../stores/sessions', () => ({
 
 vi.mock('../../stores/ui', () => ({
   useUIStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ activeView: 'sessions', repoFilter: 'all', setView: vi.fn(), setRepoFilter: vi.fn() })
+    selector({ activeView: 'sessions', setView: vi.fn() })
   ),
 }))
 

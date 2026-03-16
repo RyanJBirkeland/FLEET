@@ -26,8 +26,6 @@ const api = {
   getSupabaseConfig: (): Promise<{ url: string; anonKey: string } | null> =>
     ipcRenderer.invoke('get-supabase-config'),
   getRepoPaths: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-repo-paths'),
-  readSprintMd: (repoPath: string): Promise<string> =>
-    ipcRenderer.invoke('read-sprint-md', repoPath),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('open-external', url),
   listMemoryFiles: (): Promise<
     { path: string; name: string; size: number; modifiedAt: number }[]
@@ -36,11 +34,6 @@ const api = {
     ipcRenderer.invoke('read-memory-file', path),
   writeMemoryFile: (path: string, content: string): Promise<void> =>
     ipcRenderer.invoke('write-memory-file', path, content),
-  getDiff: (repoPath: string, base?: string): Promise<string> =>
-    ipcRenderer.invoke('get-diff', repoPath, base),
-  getBranch: (repoPath: string): Promise<string> => ipcRenderer.invoke('get-branch', repoPath),
-  getLog: (repoPath: string, n?: number): Promise<string> =>
-    ipcRenderer.invoke('get-log', repoPath, n),
   setTitle: (title: string): void => ipcRenderer.send('set-title', title),
 
   // Git client
@@ -109,10 +102,6 @@ const api = {
   // Gateway tool invocation — proxied through main process to avoid CORS
   invokeTool: (tool: string, args?: Record<string, unknown>): Promise<unknown> =>
     ipcRenderer.invoke('gateway:invoke', tool, args ?? {}),
-
-  // Session history (agent output tabs)
-  getSessionHistory: (sessionKey: string): Promise<any[]> =>
-    ipcRenderer.invoke('sessions:getHistory', sessionKey),
 
   // Terminal PTY
   terminal: {

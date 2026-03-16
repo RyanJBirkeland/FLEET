@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { POLL_LOG_INTERVAL } from '../lib/constants'
+import { createLogPollerActions, type LogPollerState } from '../lib/logPoller'
 
 export interface LocalAgentProcess {
   pid: number
@@ -23,18 +23,13 @@ export interface SpawnedAgent {
   interactive: boolean
 }
 
-interface LocalAgentsState {
+interface LocalAgentsState extends LogPollerState {
   processes: LocalAgentProcess[]
   lastUpdated: number
   collapsed: boolean
-  // Spawned agent tracking
   spawnedAgents: SpawnedAgent[]
   isSpawning: boolean
-  // Log viewer state
   selectedLocalAgentPid: number | null
-  logContent: string
-  logNextByte: number
-  _logInterval: ReturnType<typeof setInterval> | null
 
   fetchProcesses: () => Promise<void>
   setCollapsed: (collapsed: boolean) => void
@@ -52,118 +47,90 @@ interface LocalAgentsState {
 
 export const useLocalAgentsStore = create<LocalAgentsState>()(
   persist(
-    (set, get) => ({
-  processes: [],
-  lastUpdated: 0,
-  collapsed: false,
-  spawnedAgents: [],
-  isSpawning: false,
-  selectedLocalAgentPid: null,
-  logContent: '',
-  logNextByte: 0,
-  _logInterval: null,
+    (set, get) => {
+      const poller = createLogPollerActions(get, set)
 
-  fetchProcesses: async (): Promise<void> => {
-    try {
-      const procs = await window.api.getAgentProcesses()
-      set({ processes: procs, lastUpdated: Date.now() })
-    } catch (err) {
-      console.warn('[localAgents] fetchProcesses failed:', err)
-    }
-  },
+      return {
+        processes: [],
+        lastUpdated: 0,
+        collapsed: false,
+        spawnedAgents: [],
+        isSpawning: false,
+        selectedLocalAgentPid: null,
+        logContent: '',
+        logNextByte: 0,
+        _logInterval: null,
 
-  setCollapsed: (collapsed): void => {
-    set({ collapsed })
-  },
-
-  spawnAgent: async (args) => {
-    set({ isSpawning: true })
-    try {
-      const result = await window.api.spawnLocalAgent(args)
-      set((s) => ({
-        spawnedAgents: [
-          ...s.spawnedAgents,
-          {
-            id: result.id,
-            pid: result.pid,
-            logPath: result.logPath,
-            task: args.task,
-            repoPath: args.repoPath,
-            model: args.model ?? 'sonnet',
-            spawnedAt: Date.now(),
-            interactive: result.interactive ?? false
+        fetchProcesses: async (): Promise<void> => {
+          try {
+            const procs = await window.api.getAgentProcesses()
+            set({ processes: procs, lastUpdated: Date.now() })
+          } catch {
+            // Silently fail — local agents are non-critical
           }
-        ]
-      }))
-      return result
-    } finally {
-      set({ isSpawning: false })
-    }
-  },
+        },
 
-  sendToAgent: async (pid, message) => {
-    const result = await window.api.sendToAgent(pid, message)
-    if (!result.ok) {
-      throw new Error(result.error ?? 'Cannot send to agent — stdin not available (agent may have been spawned outside this session)')
-    }
-  },
+        setCollapsed: (collapsed): void => {
+          set({ collapsed })
+        },
 
-  killLocalAgent: async (pid): Promise<void> => {
-    await window.api.killLocalAgent(pid)
-    // Let ps-polling clean up the process list naturally
-  },
+        spawnAgent: async (args) => {
+          set({ isSpawning: true })
+          try {
+            const result = await window.api.spawnLocalAgent(args)
+            set((s) => ({
+              spawnedAgents: [
+                ...s.spawnedAgents,
+                {
+                  id: result.id,
+                  pid: result.pid,
+                  logPath: result.logPath,
+                  task: args.task,
+                  repoPath: args.repoPath,
+                  model: args.model ?? 'sonnet',
+                  spawnedAt: Date.now(),
+                  interactive: result.interactive ?? false
+                }
+              ]
+            }))
+            return result
+          } finally {
+            set({ isSpawning: false })
+          }
+        },
 
-  selectLocalAgent: (pid): void => {
-    const prev = get()
-    if (prev._logInterval) {
-      clearInterval(prev._logInterval)
-    }
-    set({
-      selectedLocalAgentPid: pid,
-      logContent: '',
-      logNextByte: 0,
-      _logInterval: null
-    })
-  },
+        sendToAgent: async (pid, message) => {
+          const result = await window.api.sendToAgent(pid, message)
+          if (!result.ok) {
+            throw new Error(result.error ?? 'Cannot send to agent — stdin not available (agent may have been spawned outside this session)')
+          }
+        },
 
-  startLogPolling: (logPath): void => {
-    const prev = get()
-    if (prev._logInterval) clearInterval(prev._logInterval)
+        killLocalAgent: async (pid): Promise<void> => {
+          await window.api.killLocalAgent(pid)
+        },
 
-    const poll = async (): Promise<void> => {
-      try {
-        const result = await window.api.tailAgentLog({
-          logPath,
-          fromByte: get().logNextByte
-        })
-        if (result.content) {
-          set((s) => ({
-            logContent: s.logContent + result.content,
-            logNextByte: result.nextByte
-          }))
-        }
-      } catch {
-        // Log file may not exist yet
+        selectLocalAgent: (pid): void => {
+          poller.stopLogPolling()
+          set({
+            selectedLocalAgentPid: pid,
+            logContent: '',
+            logNextByte: 0
+          })
+        },
+
+        startLogPolling: (logPath): void => {
+          poller.startLogPolling((fromByte) =>
+            window.api.tailAgentLog({ logPath, fromByte })
+          )
+        },
+
+        stopLogPolling: poller.stopLogPolling
       }
+    },
+    {
+      name: 'bde-local-agents',
+      partialize: (s) => ({ spawnedAgents: s.spawnedAgents })
     }
-
-    poll()
-    const interval = setInterval(poll, POLL_LOG_INTERVAL)
-    set({ _logInterval: interval })
-  },
-
-  stopLogPolling: (): void => {
-    const { _logInterval } = get()
-    if (_logInterval) {
-      clearInterval(_logInterval)
-      set({ _logInterval: null })
-    }
-  }
-  }),
-  {
-    name: 'bde-local-agents',
-    // Only persist spawnedAgents — not ephemeral runtime state
-    partialize: (s) => ({ spawnedAgents: s.spawnedAgents })
-  }
-)
+  )
 )

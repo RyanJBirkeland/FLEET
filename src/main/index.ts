@@ -169,6 +169,7 @@ app.whenReady().then(() => {
   safeHandle('get-branch', (_e, repoPath: string) => getBranch(repoPath))
   safeHandle('get-log', (_e, repoPath: string, n?: number) => getLog(repoPath, n))
 
+
   // --- Git client IPC ---
   safeHandle('git:status', (_e, cwd: string) => gitStatus(cwd))
   safeHandle('git:diff', (_e, cwd: string, file?: string) => gitDiffFile(cwd, file))

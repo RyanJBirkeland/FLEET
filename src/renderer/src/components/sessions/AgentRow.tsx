@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import { Badge } from '../ui/Badge'
-import type { UnifiedAgent } from '../../stores/unifiedAgents'
-import { getStaleLevel } from '../../stores/unifiedAgents'
+import type { UnifiedAgent } from '../../hooks/useUnifiedAgents'
+import { getStaleLevel } from '../../hooks/useUnifiedAgents'
 
 export interface AgentRowProps {
   agent: UnifiedAgent

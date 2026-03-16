@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { groupUnifiedAgents, getStaleLevel, type UnifiedAgent } from '../unifiedAgents'
+import { groupUnifiedAgents, getStaleLevel, type UnifiedAgent } from '../../hooks/useUnifiedAgents'
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = 24 * ONE_HOUR
