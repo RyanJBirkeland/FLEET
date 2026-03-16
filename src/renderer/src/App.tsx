@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { useGatewayStore } from './stores/gateway'
 import { useUIStore, type View } from './stores/ui'
 import { useSessionsStore } from './stores/sessions'
+import { useCommandPaletteStore } from './stores/commandPalette'
 import { calcCost, resolveModel } from './lib/cost'
 import { ActivityBar } from './components/layout/ActivityBar'
 import { TitleBar } from './components/layout/TitleBar'
@@ -42,7 +43,7 @@ const VIEW_TITLES: Record<View, string> = {
 
 const SHORTCUTS_LEFT: { keys: string; description: string }[] = [
   { keys: '\u23181\u20137', description: 'Switch views' },
-  { keys: '\u2318K', description: 'Command palette' },
+  { keys: '\u2318P', description: 'Command palette' },
   { keys: '\u2318R', description: 'Refresh current view' },
   { keys: 'Escape', description: 'Close panel / blur input' },
   { keys: '?', description: 'Show shortcuts' }
@@ -135,7 +136,9 @@ function App(): React.JSX.Element {
     return sum + calcCost(input, output, resolveModel(s.model))
   }, 0)
 
-  const [paletteOpen, setPaletteOpen] = useState(false)
+  const paletteOpen = useCommandPaletteStore((s) => s.isOpen)
+  const togglePalette = useCommandPaletteStore((s) => s.toggle)
+  const closePalette = useCommandPaletteStore((s) => s.close)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   useEffect(() => {
@@ -157,7 +160,7 @@ function App(): React.JSX.Element {
 
       if (e.key === 'Escape') {
         e.preventDefault()
-        if (paletteOpen) { setPaletteOpen(false); return }
+        if (paletteOpen) { closePalette(); return }
         if (shortcutsOpen) { setShortcutsOpen(false); return }
         if (inInput) { (document.activeElement as HTMLElement)?.blur(); return }
         window.dispatchEvent(new CustomEvent('bde:escape'))
@@ -172,9 +175,9 @@ function App(): React.JSX.Element {
         return
       }
 
-      if (e.metaKey && e.key === 'k') {
+      if (e.metaKey && e.key === 'p') {
         e.preventDefault()
-        setPaletteOpen((prev) => !prev)
+        togglePalette()
         return
       }
 
@@ -189,7 +192,7 @@ function App(): React.JSX.Element {
         setShortcutsOpen((prev) => !prev)
       }
     },
-    [setView, paletteOpen, shortcutsOpen]
+    [setView, paletteOpen, shortcutsOpen, closePalette, togglePalette]
   )
 
   useEffect(() => {
@@ -212,7 +215,7 @@ function App(): React.JSX.Element {
         model="claude-sonnet-4-6"
         onReconnect={() => connect()}
       />
-      <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} />
+      <CommandPalette open={paletteOpen} onClose={closePalette} />
       {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
       <ToastContainer />
     </div>
