@@ -16,11 +16,15 @@ function makeTab(): TerminalTab {
 interface TerminalStore {
   tabs: TerminalTab[]
   activeTabId: string
+  showFind: boolean
+  selectedShell: string
   addTab: () => void
   closeTab: (id: string) => void
   setActiveTab: (id: string) => void
   renameTab: (id: string, title: string) => void
   setPtyId: (tabId: string, ptyId: number) => void
+  setShowFind: (show: boolean) => void
+  setSelectedShell: (shell: string) => void
 }
 
 const initialTab = makeTab()
@@ -28,6 +32,8 @@ const initialTab = makeTab()
 export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabs: [initialTab],
   activeTabId: initialTab.id,
+  showFind: false,
+  selectedShell: '/bin/zsh',
 
   addTab: () => {
     const tab = makeTab()
@@ -54,5 +60,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   setPtyId: (tabId, ptyId) =>
     set((s) => ({
       tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, ptyId } : t))
-    }))
+    })),
+
+  setShowFind: (show) => set({ showFind: show }),
+  setSelectedShell: (shell) => set({ selectedShell: shell })
 }))

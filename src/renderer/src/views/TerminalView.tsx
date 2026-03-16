@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Plus, X, SplitSquareVertical } from 'lucide-react'
 import { TerminalPane, clearTerminal } from '../components/terminal/TerminalPane'
+import { FindBar } from '../components/terminal/FindBar'
 import { tokens } from '../design-system/tokens'
 import { useTerminalStore } from '../stores/terminal'
 import { useUIStore } from '../stores/ui'
 
 export function TerminalView(): React.JSX.Element {
-  const { tabs, activeTabId, addTab, closeTab, setActiveTab } = useTerminalStore()
+  const { tabs, activeTabId, addTab, closeTab, setActiveTab, selectedShell, setSelectedShell } =
+    useTerminalStore()
   const activeView = useUIStore((s) => s.activeView)
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null)
 
@@ -41,6 +43,14 @@ export function TerminalView(): React.JSX.Element {
         e.stopPropagation()
         const { activeTabId: id } = useTerminalStore.getState()
         if (id) clearTerminal(id)
+        return
+      }
+
+      if (e.key === 'f') {
+        e.preventDefault()
+        e.stopPropagation()
+        const store = useTerminalStore.getState()
+        store.setShowFind(!store.showFind)
         return
       }
 
@@ -193,6 +203,20 @@ export function TerminalView(): React.JSX.Element {
             flexShrink: 0
           }}
         >
+          {/* Shell picker */}
+          <select
+            className="terminal-shell-picker"
+            value={selectedShell}
+            onChange={(e) => setSelectedShell(e.target.value)}
+            title="Default shell for new tabs"
+          >
+            {['/bin/bash', '/bin/zsh', '/bin/sh', 'node'].map((shell) => (
+              <option key={shell} value={shell}>
+                {shell.split('/').pop()}
+              </option>
+            ))}
+          </select>
+
           {/* Clear button */}
           <button
             onClick={handleClear}
@@ -249,6 +273,7 @@ export function TerminalView(): React.JSX.Element {
 
       {/* Terminal panes — all mounted, only active is visible */}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+        <FindBar />
         {tabs.map((tab) => (
           <div
             key={tab.id}

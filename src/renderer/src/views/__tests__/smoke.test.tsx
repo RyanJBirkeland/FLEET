@@ -56,9 +56,13 @@ vi.mock('../../stores/terminal', () => {
       const state = {
         tabs: [tab],
         activeTabId: 'tab-1',
+        showFind: false,
+        selectedShell: '/bin/zsh',
         addTab: vi.fn(),
         closeTab: vi.fn(),
         setActiveTab: vi.fn(),
+        setShowFind: vi.fn(),
+        setSelectedShell: vi.fn(),
       }
       return selector ? selector(state) : state
     }),
@@ -119,6 +123,12 @@ vi.mock('../../components/diff/DiffViewer', () => ({
 
 vi.mock('../../components/terminal/TerminalPane', () => ({
   TerminalPane: () => <div data-testid="terminal-pane" />,
+  clearTerminal: vi.fn(),
+  getSearchAddon: vi.fn(),
+}))
+
+vi.mock('../../components/terminal/FindBar', () => ({
+  FindBar: () => null,
 }))
 
 // Mock window.api for views that use it — assign directly to preserve window methods

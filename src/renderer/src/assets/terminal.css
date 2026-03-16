@@ -1,0 +1,69 @@
+/* ── Terminal: Find bar ────────────────────────────────── */
+
+.terminal-find {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--bde-surface-high, var(--bde-surface));
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-md, 6px);
+  padding: 4px 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.terminal-find__input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--bde-text);
+  font-family: var(--bde-font-code);
+  font-size: 13px;
+  width: 180px;
+}
+
+.terminal-find__count {
+  font-size: 11px;
+  color: var(--bde-text-muted);
+  min-width: 60px;
+  text-align: right;
+}
+
+.terminal-find__btn {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--bde-text-muted);
+  cursor: pointer;
+  border-radius: 3px;
+}
+
+.terminal-find__btn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--bde-text);
+}
+
+/* ── Terminal: Shell picker ───────────────────────────── */
+
+.terminal-shell-picker {
+  background: transparent;
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm, 4px);
+  color: var(--bde-text-muted);
+  font-size: 12px;
+  padding: 2px 6px;
+  cursor: pointer;
+  height: 24px;
+}
+
+.terminal-shell-picker:focus {
+  outline: none;
+  border-color: var(--bde-accent);
+}

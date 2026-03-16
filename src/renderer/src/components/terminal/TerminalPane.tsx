@@ -1,15 +1,21 @@
 import { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
+import { SearchAddon } from 'xterm-addon-search'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { useTerminalStore } from '../../stores/terminal'
 import 'xterm/css/xterm.css'
 
 /** Module-level map so TerminalView can call clear() on the active instance */
 const terminalInstances = new Map<string, Terminal>()
+const searchAddons = new Map<string, SearchAddon>()
 
 export function clearTerminal(tabId: string): void {
   terminalInstances.get(tabId)?.clear()
+}
+
+export function getSearchAddon(tabId: string): SearchAddon | undefined {
+  return searchAddons.get(tabId)
 }
 
 interface TerminalPaneProps {
@@ -42,7 +48,9 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
     })
 
     const fitAddon = new FitAddon()
+    const searchAddon = new SearchAddon()
     term.loadAddon(fitAddon)
+    term.loadAddon(searchAddon)
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
     fitAddon.fit()
@@ -50,6 +58,7 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
     termRef.current = term
     fitAddonRef.current = fitAddon
     terminalInstances.set(tabId, term)
+    searchAddons.set(tabId, searchAddon)
 
     window.api.terminal.create({ cols: term.cols, rows: term.rows }).then((id) => {
       useTerminalStore.getState().setPtyId(tabId, id)
@@ -78,6 +87,7 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
     return () => {
       cleanupRef.current?.()
       terminalInstances.delete(tabId)
+      searchAddons.delete(tabId)
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
