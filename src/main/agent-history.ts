@@ -6,26 +6,13 @@ import { mkdir, readFile, writeFile, appendFile, rm, readdir } from 'fs/promises
 import { join } from 'path'
 import { homedir } from 'os'
 import { randomUUID } from 'crypto'
+import type { AgentMeta } from '../shared/types'
+
+export type { AgentMeta }
 
 const BDE_DIR = join(homedir(), '.bde')
 const AGENTS_INDEX = join(BDE_DIR, 'agents.json')
 const LOGS_DIR = join(BDE_DIR, 'agent-logs')
-
-export interface AgentMeta {
-  id: string
-  pid: number | null
-  bin: string
-  model: string
-  repo: string
-  repoPath: string
-  task: string
-  startedAt: string
-  finishedAt: string | null
-  exitCode: number | null
-  status: 'running' | 'done' | 'failed' | 'unknown'
-  logPath: string
-  source: 'bde' | 'openclaw' | 'external'
-}
 
 async function ensureDir(dir: string): Promise<void> {
   await mkdir(dir, { recursive: true })

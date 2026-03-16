@@ -1,20 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
+import type { AgentMeta } from '../shared/types'
 
-export interface AgentMeta {
-  id: string
-  pid: number | null
-  bin: string
-  model: string
-  repo: string
-  repoPath: string
-  task: string
-  startedAt: string
-  finishedAt: string | null
-  exitCode: number | null
-  status: 'running' | 'done' | 'failed' | 'unknown'
-  logPath: string
-  source: 'bde' | 'openclaw' | 'external'
-}
+export type { AgentMeta }
 
 declare global {
   interface Window {

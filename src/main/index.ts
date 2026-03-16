@@ -10,6 +10,7 @@ import { registerGatewayHandlers } from './handlers/gateway-handlers'
 import { registerWindowHandlers } from './handlers/window-handlers'
 import { registerFsHandlers } from './fs'
 
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 1280,

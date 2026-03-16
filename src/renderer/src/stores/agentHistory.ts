@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AgentMeta } from '../../../preload/index.d'
+import type { AgentMeta } from '../../../shared/types'
 import { createLogPollerActions, type LogPollerState } from '../lib/logPoller'
 import { AGENT_LIST_FETCH_LIMIT } from '../lib/constants'
 

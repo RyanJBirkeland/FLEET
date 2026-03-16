@@ -3,13 +3,11 @@ import { listOpenPRs, mergePR, type PullRequest } from '../../lib/github-api'
 import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
-import { POLL_PR_LIST_INTERVAL } from '../../lib/constants'
+import { POLL_PR_LIST_INTERVAL, REPO_OPTIONS } from '../../lib/constants'
 import { timeAgo } from '../../lib/format'
 
-const REPOS = [
-  { label: 'life-os', owner: 'RyanJBirkeland', name: 'life-os', color: '#00D37F' },
-  { label: 'feast', owner: 'RyanJBirkeland', name: 'feast', color: '#FF8A00' }
-]
+// PRList excludes BDE (this app) — only show external repos
+const PR_REPOS = REPO_OPTIONS.filter((r) => r.label !== 'BDE')
 
 export default function PRList() {
   const [prs, setPrs] = useState<PullRequest[]>([])
@@ -22,7 +20,7 @@ export default function PRList() {
   const load = useCallback(async () => {
     try {
       const results = await Promise.all(
-        REPOS.map((r) => listOpenPRs(r.owner, r.name).catch(() => [] as PullRequest[]))
+        PR_REPOS.map((r) => listOpenPRs(r.owner, r.label).catch(() => [] as PullRequest[]))
       )
       const all = results
         .flat()
@@ -45,11 +43,11 @@ export default function PRList() {
   }, [load])
 
   const handleMerge = async (pr: PullRequest) => {
-    const repo = REPOS.find((r) => r.name === pr.repo)
+    const repo = PR_REPOS.find((r) => r.label === pr.repo)
     if (!repo) return
     setMerging(pr.number)
     try {
-      await mergePR(repo.owner, repo.name, pr.number)
+      await mergePR(repo.owner, repo.label, pr.number)
       setPrs((prev) => prev.filter((p) => !(p.number === pr.number && p.repo === pr.repo)))
       toast.success(`Merged #${pr.number} successfully`)
     } catch (e) {
@@ -61,7 +59,7 @@ export default function PRList() {
   }
 
   const repoColor = (repoName: string) =>
-    REPOS.find((r) => r.name === repoName)?.color ?? '#6B6B6B'
+    PR_REPOS.find((r) => r.label === repoName)?.color ?? '#6B6B6B'
 
   return (
     <div className="pr-list">

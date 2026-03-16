@@ -1,21 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-
-interface AgentMeta {
-  id: string
-  pid: number | null
-  bin: string
-  model: string
-  repo: string
-  repoPath: string
-  task: string
-  startedAt: string
-  finishedAt: string | null
-  exitCode: number | null
-  status: 'running' | 'done' | 'failed' | 'unknown'
-  logPath: string
-  source: 'bde' | 'openclaw' | 'external'
-}
+import type { AgentMeta } from '../shared/types'
 
 const api = {
   getGatewayConfig: (): Promise<{ url: string; token: string }> =>
