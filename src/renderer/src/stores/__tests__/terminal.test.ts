@@ -4,7 +4,7 @@ import { useTerminalStore } from '../terminal'
 describe('terminal store', () => {
   beforeEach(() => {
     // Reset to a single tab state
-    const tab = { id: 'tab-1', label: 'Terminal 1', ptyId: null }
+    const tab = { id: 'tab-1', label: 'Terminal 1', shell: '/bin/zsh', ptyId: null }
     useTerminalStore.setState({ tabs: [tab], activeTabId: 'tab-1' })
   })
 

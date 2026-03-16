@@ -23,12 +23,15 @@ interface TerminalStore {
   tabs: TerminalTab[]
   activeTabId: string
   showFind: boolean
+  splitEnabled: boolean
+  splitTabId: string | null
   addTab: (shell?: string) => void
   closeTab: (id: string) => void
   setActiveTab: (id: string) => void
   renameTab: (id: string, title: string) => void
   setPtyId: (tabId: string, ptyId: number) => void
   setShowFind: (show: boolean) => void
+  toggleSplit: () => void
 }
 
 const initialTab = makeTab()
@@ -37,6 +40,8 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   tabs: [initialTab],
   activeTabId: initialTab.id,
   showFind: false,
+  splitEnabled: false,
+  splitTabId: null,
 
   addTab: (shell?) => {
     const tab = makeTab(shell)
@@ -44,13 +49,15 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
   },
 
   closeTab: (id) => {
-    const { tabs, activeTabId } = get()
+    const { tabs, activeTabId, splitTabId } = get()
     if (tabs.length <= 1) return
     const idx = tabs.findIndex((t) => t.id === id)
     const next = tabs.filter((t) => t.id !== id)
     const newActive =
       activeTabId === id ? next[Math.min(idx, next.length - 1)].id : activeTabId
-    set({ tabs: next, activeTabId: newActive })
+    // If closing the split tab, disable split
+    const newSplitState = splitTabId === id ? { splitEnabled: false, splitTabId: null } : {}
+    set({ tabs: next, activeTabId: newActive, ...newSplitState })
   },
 
   setActiveTab: (id) => set({ activeTabId: id }),
@@ -65,5 +72,13 @@ export const useTerminalStore = create<TerminalStore>((set, get) => ({
       tabs: s.tabs.map((t) => (t.id === tabId ? { ...t, ptyId } : t))
     })),
 
-  setShowFind: (show) => set({ showFind: show })
+  setShowFind: (show) => set({ showFind: show }),
+
+  toggleSplit: () => {
+    const { splitEnabled, activeTabId } = get()
+    set({
+      splitEnabled: !splitEnabled,
+      splitTabId: !splitEnabled ? activeTabId : null
+    })
+  }
 }))

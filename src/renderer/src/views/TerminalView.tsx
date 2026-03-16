@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Plus, ChevronDown, X, SplitSquareVertical } from 'lucide-react'
+import { Group, Panel, Separator } from 'react-resizable-panels'
 import { TerminalPane, clearTerminal } from '../components/terminal/TerminalPane'
 import { FindBar } from '../components/terminal/FindBar'
 import { ShellPicker } from '../components/terminal/ShellPicker'
@@ -8,7 +9,7 @@ import { useTerminalStore } from '../stores/terminal'
 import { useUIStore } from '../stores/ui'
 
 export function TerminalView(): React.JSX.Element {
-  const { tabs, activeTabId, addTab, closeTab, setActiveTab } = useTerminalStore()
+  const { tabs, activeTabId, addTab, closeTab, setActiveTab, splitEnabled, toggleSplit } = useTerminalStore()
   const activeView = useUIStore((s) => s.activeView)
   const [hoveredTabId, setHoveredTabId] = useState<string | null>(null)
   const [showShellPicker, setShowShellPicker] = useState(false)
@@ -52,6 +53,13 @@ export function TerminalView(): React.JSX.Element {
         e.stopPropagation()
         const store = useTerminalStore.getState()
         store.setShowFind(!store.showFind)
+        return
+      }
+
+      if (e.shiftKey && e.key === 'D') {
+        e.preventDefault()
+        e.stopPropagation()
+        useTerminalStore.getState().toggleSplit()
         return
       }
 
@@ -273,10 +281,10 @@ export function TerminalView(): React.JSX.Element {
             <span style={{ userSelect: 'none' }}>⌘K</span>
           </button>
 
-          {/* Split button — disabled placeholder for Story 3 */}
+          {/* Split button */}
           <button
-            disabled
-            title="Split pane (coming soon)"
+            onClick={toggleSplit}
+            title={splitEnabled ? 'Close split (⌘⇧D)' : 'Split pane (⌘⇧D)'}
             style={{
               display: 'inline-flex',
               alignItems: 'center',
@@ -284,11 +292,23 @@ export function TerminalView(): React.JSX.Element {
               width: 26,
               height: 26,
               border: 'none',
-              background: 'transparent',
-              color: tokens.color.textDim,
-              cursor: 'not-allowed',
+              background: splitEnabled ? tokens.color.surfaceHigh : 'transparent',
+              color: splitEnabled ? tokens.color.accent : tokens.color.textMuted,
+              cursor: 'pointer',
               borderRadius: tokens.radius.sm,
-              opacity: 0.5
+              transition: tokens.transition.fast
+            }}
+            onMouseEnter={(e) => {
+              if (!splitEnabled) {
+                e.currentTarget.style.color = tokens.color.text
+                e.currentTarget.style.background = tokens.color.surfaceHigh
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!splitEnabled) {
+                e.currentTarget.style.color = tokens.color.textMuted
+                e.currentTarget.style.background = 'transparent'
+              }
             }}
           >
             <SplitSquareVertical size={14} />
@@ -308,7 +328,33 @@ export function TerminalView(): React.JSX.Element {
               display: tab.id === activeTabId ? 'block' : 'none'
             }}
           >
-            <TerminalPane tabId={tab.id} shell={tab.shell} visible={tab.id === activeTabId} />
+            {splitEnabled && tab.id === activeTabId ? (
+              <Group orientation="horizontal">
+                <Panel defaultSize={50} minSize={20}>
+                  <TerminalPane tabId={tab.id} shell={tab.shell} visible={true} />
+                </Panel>
+                <Separator
+                  style={{
+                    width: 4,
+                    background: tokens.color.border,
+                    cursor: 'col-resize',
+                    transition: tokens.transition.fast,
+                    flexShrink: 0
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = tokens.color.accent
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = tokens.color.border
+                  }}
+                />
+                <Panel defaultSize={50} minSize={20}>
+                  <TerminalPane tabId={`${tab.id}-split`} shell={tab.shell} visible={true} />
+                </Panel>
+              </Group>
+            ) : (
+              <TerminalPane tabId={tab.id} shell={tab.shell} visible={true} />
+            )}
           </div>
         ))}
       </div>
