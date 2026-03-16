@@ -84,9 +84,12 @@ declare global {
       // Gateway RPC
       invokeTool: (tool: string, args?: Record<string, unknown>) => Promise<unknown>
 
+      // Session history (agent output tabs)
+      getSessionHistory: (sessionKey: string) => Promise<any[]>
+
       // Terminal PTY
       terminal: {
-        create: (opts: { cols: number; rows: number }) => Promise<number>
+        create: (opts: { cols: number; rows: number; shell?: string }) => Promise<number>
         write: (id: number, data: string) => void
         resize: (id: number, cols: number, rows: number) => Promise<void>
         kill: (id: number) => Promise<void>

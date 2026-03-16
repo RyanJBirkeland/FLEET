@@ -1,16 +1,30 @@
 import { useEffect, useRef } from 'react'
 import { Terminal } from 'xterm'
 import { FitAddon } from 'xterm-addon-fit'
+import { SearchAddon } from 'xterm-addon-search'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { useTerminalStore } from '../../stores/terminal'
 import 'xterm/css/xterm.css'
 
+/** Module-level map so TerminalView can call clear() on the active instance */
+const terminalInstances = new Map<string, Terminal>()
+const searchAddons = new Map<string, SearchAddon>()
+
+export function clearTerminal(tabId: string): void {
+  terminalInstances.get(tabId)?.clear()
+}
+
+export function getSearchAddon(tabId: string): SearchAddon | undefined {
+  return searchAddons.get(tabId)
+}
+
 interface TerminalPaneProps {
   tabId: string
+  shell?: string
   visible: boolean
 }
 
-export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.Element {
+export function TerminalPane({ tabId, shell, visible }: TerminalPaneProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const cleanupRef = useRef<(() => void) | null>(null)
   const fitAddonRef = useRef<FitAddon | null>(null)
@@ -35,15 +49,19 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
     })
 
     const fitAddon = new FitAddon()
+    const searchAddon = new SearchAddon()
     term.loadAddon(fitAddon)
+    term.loadAddon(searchAddon)
     term.loadAddon(new WebLinksAddon())
     term.open(containerRef.current)
     fitAddon.fit()
 
     termRef.current = term
     fitAddonRef.current = fitAddon
+    terminalInstances.set(tabId, term)
+    searchAddons.set(tabId, searchAddon)
 
-    window.api.terminal.create({ cols: term.cols, rows: term.rows }).then((id) => {
+    window.api.terminal.create({ cols: term.cols, rows: term.rows, shell }).then((id) => {
       useTerminalStore.getState().setPtyId(tabId, id)
 
       const removeDataListener = window.api.terminal.onData(id, (data) => term.write(data))
@@ -69,6 +87,8 @@ export function TerminalPane({ tabId, visible }: TerminalPaneProps): React.JSX.E
 
     return () => {
       cleanupRef.current?.()
+      terminalInstances.delete(tabId)
+      searchAddons.delete(tabId)
       term.dispose()
       termRef.current = null
       fitAddonRef.current = null
