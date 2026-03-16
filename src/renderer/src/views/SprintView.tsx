@@ -1,21 +1,9 @@
 /**
- * SprintView — sprint planning and PR tracking.
- * Renders a kanban-style SprintBoard (from SPRINT.md) alongside a GitHub
- * PRList showing open pull requests. Data fetched via IPC (read-sprint-md)
- * and gateway RPC.
+ * SprintView — Scrum Planning Center with Kanban board, spec drawer, and PR list.
+ * Replaces the old read-only SprintBoard + PRList split layout.
  */
-import SprintBoard from '../components/sprint/SprintBoard'
-import PRList from '../components/sprint/PRList'
+import SprintCenter from '../components/sprint/SprintCenter'
 
 export default function SprintView() {
-  return (
-    <div className="sprint-view">
-      <div className="sprint-view__board">
-        <SprintBoard />
-      </div>
-      <div className="sprint-view__prs">
-        <PRList />
-      </div>
-    </div>
-  )
+  return <SprintCenter />
 }
