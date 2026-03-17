@@ -15,6 +15,7 @@ type SpecDrawerProps = {
   onSave: (taskId: string, spec: string) => void
   onLaunch: (task: SprintTask) => void
   onPushToSprint: (task: SprintTask) => void
+  onMarkDone?: (task: SprintTask) => void
 }
 
 function renderMarkdown(md: string): string {
@@ -31,7 +32,7 @@ function renderMarkdown(md: string): string {
     .replace(/^(?!<[huplo])(.+)$/gm, '<p>$1</p>')
 }
 
-export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint }: SpecDrawerProps) {
+export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, onMarkDone }: SpecDrawerProps) {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -256,6 +257,11 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
                   onClick={() => onLaunch(task)}
                 >
                   Launch Agent
+                </Button>
+              )}
+              {onMarkDone && task.status !== 'done' && (
+                <Button variant="ghost" size="sm" onClick={() => onMarkDone(task)}>
+                  ✓ Mark Done
                 </Button>
               )}
             </div>

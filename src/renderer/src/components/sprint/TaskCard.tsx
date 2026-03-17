@@ -16,6 +16,7 @@ type TaskCardProps = {
   onLaunch: (task: SprintTask) => void
   onViewSpec: (task: SprintTask) => void
   onViewOutput: (task: SprintTask) => void
+  onMarkDone?: (task: SprintTask) => void
 }
 
 function repoBadgeVariant(repo: string): 'info' | 'warning' | 'success' | 'default' {
@@ -35,6 +36,7 @@ export const TaskCard = memo(function TaskCard({
   onLaunch,
   onViewSpec,
   onViewOutput,
+  onMarkDone,
 }: TaskCardProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -119,12 +121,24 @@ export const TaskCard = memo(function TaskCard({
             <Button variant="ghost" size="sm" onClick={() => onViewSpec(task)}>
               Spec
             </Button>
+            {onMarkDone && (
+              <Button variant="ghost" size="sm" onClick={() => onMarkDone(task)}>
+                ✓ Done
+              </Button>
+            )}
           </>
         )}
         {task.status === 'active' && (
-          <Button variant="ghost" size="sm" onClick={() => onViewOutput(task)}>
-            View Output
-          </Button>
+          <>
+            <Button variant="ghost" size="sm" onClick={() => onViewOutput(task)}>
+              View Output
+            </Button>
+            {onMarkDone && (
+              <Button variant="ghost" size="sm" onClick={() => onMarkDone(task)}>
+                ✓ Done
+              </Button>
+            )}
+          </>
         )}
         {task.status === 'done' && (
           <>

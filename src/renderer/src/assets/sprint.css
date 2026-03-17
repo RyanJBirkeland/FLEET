@@ -1668,6 +1668,27 @@
   background: var(--bde-accent-hover);
 }
 
+.bde-task-table__actions-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.bde-task-table__action-btn--done {
+  opacity: 0;
+  color: var(--bde-success, #4ade80);
+  transition: opacity 0.15s, color 0.15s, background 0.15s;
+}
+
+tr:hover .bde-task-table__action-btn--done {
+  opacity: 1;
+}
+
+.bde-task-table__action-btn--done:hover {
+  color: var(--bde-success, #4ade80);
+  background: var(--bde-hover);
+}
+
 .bde-task-table__priority-dot {
   display: inline-block;
   width: 8px;

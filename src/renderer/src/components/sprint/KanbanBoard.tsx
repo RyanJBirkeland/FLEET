@@ -26,6 +26,7 @@ type KanbanBoardProps = {
   onLaunch: (task: SprintTask) => void
   onViewSpec: (task: SprintTask) => void
   onViewOutput: (task: SprintTask) => void
+  onMarkDone?: (task: SprintTask) => void
 }
 
 const VALID_STATUSES: SprintTask['status'][] = ['queued', 'active']
@@ -58,6 +59,7 @@ export function KanbanBoard({
   onLaunch,
   onViewSpec,
   onViewOutput,
+  onMarkDone,
 }: KanbanBoardProps) {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
   const [activeTask, setActiveTask] = useState<SprintTask | null>(null)
@@ -122,6 +124,7 @@ export function KanbanBoard({
           onLaunch={onLaunch}
           onViewSpec={onViewSpec}
           onViewOutput={onViewOutput}
+          onMarkDone={onMarkDone}
         />
         <KanbanColumn
           status="active"
@@ -133,6 +136,7 @@ export function KanbanBoard({
           onLaunch={onLaunch}
           onViewSpec={onViewSpec}
           onViewOutput={onViewOutput}
+          onMarkDone={onMarkDone}
         />
         <KanbanColumn
           status="review"
@@ -145,6 +149,7 @@ export function KanbanBoard({
           onLaunch={onLaunch}
           onViewSpec={onViewSpec}
           onViewOutput={onViewOutput}
+          onMarkDone={onMarkDone}
         />
       </div>
       <DragOverlay dropAnimation={null}>
