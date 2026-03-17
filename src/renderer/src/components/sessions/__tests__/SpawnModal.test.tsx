@@ -5,10 +5,11 @@ import { SpawnModal } from '../SpawnModal'
 import { toast } from '../../../stores/toasts'
 
 const mockSpawnAgent = vi.fn()
+const mockFetchProcesses = vi.fn()
 
 vi.mock('../../../stores/localAgents', () => ({
   useLocalAgentsStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ spawnAgent: mockSpawnAgent })
+    selector({ spawnAgent: mockSpawnAgent, fetchProcesses: mockFetchProcesses, isSpawning: false })
   ),
 }))
 
@@ -31,15 +32,22 @@ describe('SpawnModal', () => {
     expect(textarea).toHaveValue('')
   })
 
-  it('submit button disabled when task is empty', () => {
+  it('submit button disabled while repos are loading', () => {
     render(<SpawnModal open={true} onClose={onClose} />)
-    const submitBtn = screen.getByRole('button', { name: 'Spawn' })
+    const submitBtn = screen.getByRole('button', { name: 'Loading...' })
+    expect(submitBtn).toBeDisabled()
+  })
+
+  it('submit button disabled when task is empty', async () => {
+    render(<SpawnModal open={true} onClose={onClose} />)
+    const submitBtn = await screen.findByRole('button', { name: 'Spawn' })
     expect(submitBtn).toBeDisabled()
   })
 
   it('submit button disabled when task is whitespace-only', async () => {
     const user = userEvent.setup()
     render(<SpawnModal open={true} onClose={onClose} />)
+    await screen.findByRole('button', { name: 'Spawn' })
     const textarea = screen.getByPlaceholderText('Describe the task for the agent...')
     await user.type(textarea, '   ')
     const submitBtn = screen.getByRole('button', { name: 'Spawn' })
@@ -48,22 +56,20 @@ describe('SpawnModal', () => {
 
   it('submit button disabled when task exceeds 4000 chars', async () => {
     render(<SpawnModal open={true} onClose={onClose} />)
+    await screen.findByRole('button', { name: 'Spawn' })
     const textarea = screen.getByPlaceholderText('Describe the task for the agent...')
     // Use fireEvent.change to set a value beyond the maxLength
     const { fireEvent } = await import('@testing-library/react')
     const longTask = 'a'.repeat(4001)
     fireEvent.change(textarea, { target: { value: longTask } })
 
-    // The textarea has maxLength={4000} so the value is capped, but verify
-    // the submit button's state reflects validation
-    const submitBtn = screen.getByRole('button', { name: 'Spawn' })
-    // With maxLength, textarea caps input; button should still be enabled for valid-length text
-    // The actual enforcement is the HTML maxLength attribute
+    // The textarea has maxLength={4000} so the value is capped
     expect(textarea).toHaveAttribute('maxLength', '4000')
   })
 
   it('warning shown when task exceeds 2000 chars', async () => {
     render(<SpawnModal open={true} onClose={onClose} />)
+    await screen.findByRole('button', { name: 'Spawn' })
     const textarea = screen.getByPlaceholderText('Describe the task for the agent...')
     // Directly set value via fireEvent to avoid typing 2001 chars
     const longTask = 'a'.repeat(2001)
@@ -78,6 +84,7 @@ describe('SpawnModal', () => {
     const user = userEvent.setup()
     render(<SpawnModal open={true} onClose={onClose} />)
 
+    await screen.findByRole('button', { name: 'Spawn' })
     const textarea = screen.getByPlaceholderText('Describe the task for the agent...')
     await user.type(textarea, 'Fix the tests')
 
@@ -93,10 +100,11 @@ describe('SpawnModal', () => {
     })
   })
 
-  it('closes on successful spawn', async () => {
+  it('closes on successful spawn and refreshes agent list', async () => {
     const user = userEvent.setup()
     render(<SpawnModal open={true} onClose={onClose} />)
 
+    await screen.findByRole('button', { name: 'Spawn' })
     const textarea = screen.getByPlaceholderText('Describe the task for the agent...')
     await user.type(textarea, 'Do something')
 
@@ -106,6 +114,7 @@ describe('SpawnModal', () => {
     await waitFor(() => {
       expect(onClose).toHaveBeenCalled()
       expect(toast.success).toHaveBeenCalledWith('Agent spawned')
+      expect(mockFetchProcesses).toHaveBeenCalled()
     })
   })
 
@@ -114,6 +123,7 @@ describe('SpawnModal', () => {
     const user = userEvent.setup()
     render(<SpawnModal open={true} onClose={onClose} />)
 
+    await screen.findByRole('button', { name: 'Spawn' })
     const textarea = screen.getByPlaceholderText('Describe the task for the agent...')
     await user.type(textarea, 'Do something')
 
