@@ -46,6 +46,12 @@ vi.stubGlobal('api', {
   gitPush: vi.fn().mockResolvedValue(''),
   gitBranches: vi.fn().mockResolvedValue({ current: 'main', branches: ['main'] }),
   gitCheckout: vi.fn().mockResolvedValue(undefined),
+  sprint: {
+    list: vi.fn().mockResolvedValue([]),
+    create: vi.fn().mockResolvedValue({}),
+    update: vi.fn().mockResolvedValue({}),
+    readLog: vi.fn().mockResolvedValue({ content: '', status: 'unknown' }),
+  },
   terminal: {
     create: vi.fn().mockResolvedValue(1),
     write: vi.fn(),
