@@ -13,6 +13,7 @@ import { registerWindowHandlers } from './handlers/window-handlers'
 import { registerSprintHandlers } from './handlers/sprint'
 import { registerFsHandlers } from './fs'
 import { getDb, closeDb } from './db'
+import { startSprintSseClient, stopSprintSseClient } from './sprint-sse'
 
 const DEBOUNCE_MS = 500
 
@@ -92,6 +93,9 @@ app.whenReady().then(() => {
 
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
+
+  startSprintSseClient()
+  app.on('will-quit', stopSprintSseClient)
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
