@@ -90,4 +90,22 @@ function runMigrations(db: Database.Database): void {
   } catch {
     // Column already exists — ignore
   }
+
+  // Add cost columns to agent_runs (idempotent)
+  const costColumns = [
+    ['cost_usd', 'REAL'],
+    ['tokens_in', 'INTEGER'],
+    ['tokens_out', 'INTEGER'],
+    ['cache_read', 'INTEGER'],
+    ['cache_create', 'INTEGER'],
+    ['duration_ms', 'INTEGER'],
+    ['num_turns', 'INTEGER']
+  ] as const
+  for (const [col, type] of costColumns) {
+    try {
+      db.exec(`ALTER TABLE agent_runs ADD COLUMN ${col} ${type}`)
+    } catch {
+      // Column already exists — ignore
+    }
+  }
 }
