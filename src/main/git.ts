@@ -3,6 +3,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 
 import { getGitHubToken } from './config'
+import { getDb } from './db'
 
 const REPO_PATHS: Record<string, string> = {
   BDE: join(homedir(), 'Documents', 'Repositories', 'BDE'),
@@ -164,6 +165,30 @@ async function fetchPrStatusRest(pr: PrStatusInput): Promise<PrStatusResult> {
   }
 }
 
+function markTaskCancelled(prNumber: number): void {
+  try {
+    getDb()
+      .prepare(
+        "UPDATE sprint_tasks SET status='cancelled', completed_at=? WHERE pr_number=? AND status='active'"
+      )
+      .run(new Date().toISOString(), prNumber)
+  } catch (err) {
+    console.warn('[pollPrStatuses] Failed to mark task cancelled:', err)
+  }
+}
+
 export async function pollPrStatuses(prs: PrStatusInput[]): Promise<PrStatusResult[]> {
-  return Promise.all(prs.map(fetchPrStatusRest))
+  const results = await Promise.all(prs.map(fetchPrStatusRest))
+
+  for (const result of results) {
+    if (result.state === 'CLOSED' && !result.merged) {
+      const input = prs.find((p) => p.taskId === result.taskId)
+      if (!input) continue
+      const parsed = parsePrUrl(input.prUrl)
+      if (!parsed) continue
+      markTaskCancelled(Number(parsed.number))
+    }
+  }
+
+  return results
 }
