@@ -1173,6 +1173,31 @@
   padding: 8px 0;
 }
 
+.log-drawer__plain-text {
+  padding: 12px 16px;
+  font-family: var(--bde-font-mono);
+  font-size: 12px;
+  color: var(--bde-text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-y: auto;
+  flex: 1;
+  margin: 0;
+}
+
+.log-drawer__empty {
+  padding: 16px;
+  color: var(--bde-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.log-drawer__no-session {
+  padding: 16px;
+  color: var(--bde-text-muted);
+  font-size: 12px;
+}
+
 .log-drawer__footer {
   height: 40px;
   display: flex;
