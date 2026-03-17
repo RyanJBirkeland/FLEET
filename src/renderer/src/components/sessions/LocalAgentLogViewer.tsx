@@ -9,6 +9,17 @@ import { chatItemsToMessages } from '../../lib/agent-messages'
 import { ChatThread } from './ChatThread'
 import { formatElapsed, formatDuration, formatTime } from '../../lib/format'
 
+// ── Isolated tick component (avoids re-rendering parent every second) ──
+
+function ElapsedTime({ startedAt }: { startedAt: number }) {
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [])
+  return <span>{formatElapsed(startedAt)}</span>
+}
+
 // ── Truncation banner ────────────────────────────────────
 
 function LogTruncationBanner({ trimmedLines }: { trimmedLines: number }): React.JSX.Element | null {
@@ -103,18 +114,11 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   const isAlive = !!proc
   const isInteractive = !!spawned?.interactive && isAlive
 
-  const [, setTick] = useState(0)
   const [steerInput, setSteerInput] = useState('')
   const [sentMessages, setSentMessages] = useState<string[]>([])
 
   const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
   const chatMessages = useMemo(() => chatItemsToMessages(items), [items])
-
-  // Tick for elapsed time
-  useEffect(() => {
-    const interval = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(interval)
-  }, [])
 
   // Route externally-spawned agents through history store (readLog by ID)
   useEffect(() => {
@@ -132,15 +136,18 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
     : spawned
       ? cwdToRepoLabel(spawned.repoPath)
       : historyAgent?.repo ?? '?'
-  const elapsed = proc
-    ? formatElapsed(proc.startedAt)
+
+  const elapsedStartedAt = proc
+    ? proc.startedAt
     : spawned
-      ? formatElapsed(spawned.spawnedAt)
+      ? spawned.spawnedAt
       : historyAgent
-        ? (historyAgent.finishedAt
-            ? formatDuration(historyAgent.startedAt, historyAgent.finishedAt)
-            : formatElapsed(new Date(historyAgent.startedAt).getTime()))
-        : ''
+        ? new Date(historyAgent.startedAt).getTime()
+        : null
+
+  const finishedDuration = !proc && !spawned && historyAgent?.finishedAt
+    ? formatDuration(historyAgent.startedAt, historyAgent.finishedAt)
+    : null
 
   const handleOpenInTerminal = useCallback(() => {
     const openAgentTab = useTerminalStore.getState().openAgentTab
@@ -173,7 +180,13 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
           <span className="agent-log__bin">claude</span>
           <span className="agent-log__repo">~/{repoLabel}</span>
           <span className="agent-log__meta">pid {pid}</span>
-          <span className="agent-log__meta">{elapsed}</span>
+          <span className="agent-log__meta">
+            {finishedDuration
+              ? finishedDuration
+              : elapsedStartedAt
+                ? <ElapsedTime startedAt={elapsedStartedAt} />
+                : ''}
+          </span>
           {isAlive ? (
             <span className="agent-log__status agent-log__status--running">running</span>
           ) : (
