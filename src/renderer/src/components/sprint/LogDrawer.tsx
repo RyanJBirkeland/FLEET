@@ -1,13 +1,12 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { parseStreamJson } from '../../lib/stream-parser'
+import { parseStreamJson, stripAnsi } from '../../lib/stream-parser'
 import { chatItemsToMessages } from '../../lib/agent-messages'
 import type { ChatMessage } from '../../lib/agent-messages'
 import { ChatThread } from '../sessions/ChatThread'
 import { Button } from '../ui/Button'
 import { toast } from '../../stores/toasts'
+import { subscribeSSE, type LogChunkEvent, type LogDoneEvent } from '../../lib/taskRunnerSSE'
 import type { SprintTask } from './SprintCenter'
-
-const LOG_POLL_INTERVAL = 2_000
 
 type LogDrawerProps = {
   task: SprintTask | null
@@ -19,37 +18,59 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
   const [agentStatus, setAgentStatus] = useState('unknown')
   const [steerInput, setSteerInput] = useState('')
   const [sentMessages, setSentMessages] = useState<ChatMessage[]>([])
-  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const fromByteRef = useRef(0)
 
+  // Effect 1: reset state only when switching to a different agent
   useEffect(() => {
-    if (!task?.agent_run_id) return
-
+    fromByteRef.current = 0
     setLogContent('')
     setAgentStatus('unknown')
     setSentMessages([])
+  }, [task?.agent_run_id])
 
-    const fetchLog = async (): Promise<void> => {
+  // Effect 2: catch-up read + SSE subscription for live streaming
+  useEffect(() => {
+    if (!task?.agent_run_id) return
+    const agentId = task.agent_run_id
+    const isActive = task.status === 'active'
+
+    const catchUp = async (): Promise<void> => {
       try {
-        const result = await window.api.sprint.readLog(task.agent_run_id!)
-        setLogContent(result.content)
+        const result = await window.api.sprint.readLog(agentId, fromByteRef.current)
+        if (result.content) {
+          setLogContent((prev) => prev + stripAnsi(result.content))
+          fromByteRef.current = result.nextByte
+        }
         setAgentStatus(result.status)
       } catch {
-        // Non-critical — drawer will show empty state
+        // Log may not exist yet
       }
     }
 
-    fetchLog()
+    catchUp()
 
-    const isActive = task.status === 'active'
-    if (isActive) {
-      pollRef.current = setInterval(fetchLog, LOG_POLL_INTERVAL)
-    }
+    if (!isActive) return // completed tasks: catch-up read is enough
+
+    // Real-time SSE for active tasks
+    const unsubChunk = subscribeSSE('log:chunk', (data: unknown) => {
+      const ev = data as LogChunkEvent
+      if (ev.agentId !== agentId) return
+      if (ev.fromByte < fromByteRef.current) return // already covered by catch-up
+      const cleaned = stripAnsi(ev.content)
+      setLogContent((prev) => prev + cleaned)
+      fromByteRef.current = ev.fromByte + new TextEncoder().encode(ev.content).length
+    })
+
+    const unsubDone = subscribeSSE('log:done', (data: unknown) => {
+      const ev = data as LogDoneEvent
+      if (ev.agentId !== agentId) return
+      setAgentStatus(ev.exitCode === 0 ? 'done' : 'failed')
+      catchUp() // final catch-up in case we missed chunks
+    })
 
     return () => {
-      if (pollRef.current) {
-        clearInterval(pollRef.current)
-        pollRef.current = null
-      }
+      unsubChunk()
+      unsubDone()
     }
   }, [task?.agent_run_id, task?.status])
 

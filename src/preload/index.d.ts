@@ -81,7 +81,7 @@ declare global {
           status?: string
         }) => Promise<unknown>
         update: (id: string, patch: Record<string, unknown>) => Promise<unknown>
-        readLog: (agentId: string) => Promise<{ content: string; status: string }>
+        readLog: (agentId: string, fromByte?: number) => Promise<{ content: string; status: string; nextByte: number }>
         readSpecFile: (filePath: string) => Promise<string>
         generatePrompt: (args: {
           taskId: string
