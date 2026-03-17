@@ -84,7 +84,6 @@ vi.mock('../../stores/chat', () => ({
 
 vi.mock('../../lib/rpc', () => ({
   invokeTool: vi.fn().mockResolvedValue({ sessions: [], count: 0 }),
-  clearConfigCache: vi.fn(),
 }))
 
 vi.mock('../../lib/github-api', () => ({

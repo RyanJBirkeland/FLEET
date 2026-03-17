@@ -7,7 +7,7 @@ import { useSessionsStore } from '../stores/sessions'
 import { useLocalAgentsStore } from '../stores/localAgents'
 import { useAgentHistoryStore } from '../stores/agentHistory'
 
-export type AgentSource = 'openclaw' | 'sub-agent' | 'local'
+type AgentSource = 'openclaw' | 'sub-agent' | 'local'
 export type AgentStatus = 'running' | 'done' | 'failed' | 'timeout' | 'unknown'
 
 export interface UnifiedAgent {

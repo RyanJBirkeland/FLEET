@@ -60,10 +60,8 @@ declare global {
       // Agent history — persistent audit trail
       agents: {
         list: (args: { limit?: number; status?: string }) => Promise<AgentMeta[]>
-        getMeta: (args: { id: string }) => Promise<AgentMeta | null>
         readLog: (args: { id: string; fromByte?: number }) => Promise<{ content: string; nextByte: number }>
         import: (args: { meta: Partial<AgentMeta>; content: string }) => Promise<AgentMeta>
-        markDone: (args: { id: string; exitCode: number }) => Promise<void>
       }
 
       // PR status polling
@@ -84,7 +82,6 @@ declare global {
           status?: string
         }) => Promise<unknown>
         update: (id: string, patch: Record<string, unknown>) => Promise<unknown>
-        delete: (id: string) => Promise<{ ok: boolean }>
         readLog: (agentId: string) => Promise<{ content: string; status: string }>
       }
 

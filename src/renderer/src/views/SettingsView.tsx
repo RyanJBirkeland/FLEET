@@ -8,7 +8,6 @@ import { useCallback, useEffect, useState } from 'react'
 import { Eye, EyeOff, ExternalLink } from 'lucide-react'
 import { useGatewayStore } from '../stores/gateway'
 import { useThemeStore } from '../stores/theme'
-import { clearConfigCache } from '../lib/rpc'
 import { toast } from '../stores/toasts'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
@@ -88,7 +87,6 @@ export default function SettingsView(): React.JSX.Element {
     setSaving(true)
     try {
       await settingsService.saveConfig({ url, token })
-      clearConfigCache()
       setDirty(false)
       toast.success('Gateway config saved')
       await reconnect()
