@@ -380,50 +380,54 @@ export default function SprintCenter() {
         </div>
       </div>
 
-      {loading && tasks.length === 0 ? (
-        <div className="kanban-board">
-          <div className="kanban-col">
-            <div className="sprint-board__skeleton" style={{ height: 120 }} />
+      <div className="sprint-center__body">
+        {loading && tasks.length === 0 ? (
+          <div className="kanban-board">
+            {['To Do', 'In Progress', 'Awaiting Review'].map((label) => (
+              <div key={label} className="kanban-col">
+                <div className="kanban-col__header">
+                  {label} <span className="sprint-col__count bde-count-badge">&mdash;</span>
+                </div>
+                <div className="kanban-col__cards">
+                  <div className="sprint-board__skeleton" />
+                  <div className="sprint-board__skeleton" />
+                </div>
+              </div>
+            ))}
           </div>
-          <div className="kanban-col">
-            <div className="sprint-board__skeleton" style={{ height: 120 }} />
-          </div>
-          <div className="kanban-col">
-            <div className="sprint-board__skeleton" style={{ height: 120 }} />
-          </div>
-        </div>
-      ) : (
-        <>
-          <KanbanBoard
-            todoTasks={partition.todo}
-            activeTasks={partition.inProgress}
-            awaitingReviewTasks={partition.awaitingReview}
-            prMergedMap={prMergedMap}
-            generatingIds={generatingIds}
-            onDragEnd={handleDragEnd}
-            onPushToSprint={handlePushToSprint}
-            onLaunch={handleLaunch}
-            onViewSpec={setSelectedTask}
-            onViewOutput={handleViewOutput}
-          />
+        ) : (
+          <>
+            <KanbanBoard
+              todoTasks={partition.todo}
+              activeTasks={partition.inProgress}
+              awaitingReviewTasks={partition.awaitingReview}
+              prMergedMap={prMergedMap}
+              generatingIds={generatingIds}
+              onDragEnd={handleDragEnd}
+              onPushToSprint={handlePushToSprint}
+              onLaunch={handleLaunch}
+              onViewSpec={setSelectedTask}
+              onViewOutput={handleViewOutput}
+            />
 
-          <TaskTable
-            section="done"
-            tasks={partition.done}
-            onPushToSprint={handlePushToSprint}
-            onViewSpec={setSelectedTask}
-            onViewOutput={handleViewOutput}
-          />
+            <TaskTable
+              section="done"
+              tasks={partition.done}
+              onPushToSprint={handlePushToSprint}
+              onViewSpec={setSelectedTask}
+              onViewOutput={handleViewOutput}
+            />
 
-          <TaskTable
-            section="backlog"
-            tasks={partition.backlog}
-            onPushToSprint={handlePushToSprint}
-            onViewSpec={setSelectedTask}
-            onViewOutput={handleViewOutput}
-          />
-        </>
-      )}
+            <TaskTable
+              section="backlog"
+              tasks={partition.backlog}
+              onPushToSprint={handlePushToSprint}
+              onViewSpec={setSelectedTask}
+              onViewOutput={handleViewOutput}
+            />
+          </>
+        )}
+      </div>
 
       <PRSection />
 

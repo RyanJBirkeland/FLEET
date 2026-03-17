@@ -746,6 +746,14 @@
   user-select: none;
 }
 
+/* ── Sprint Center Body (scrollable wrapper) ─────────── */
+
+.sprint-center__body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
 /* ── Kanban Board ─────────────────────────────────────── */
 
 .kanban-board {
@@ -753,20 +761,17 @@
   grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   padding: 12px 16px;
-  flex: 1;
-  min-height: 0;
-  overflow-y: hidden;
 }
 
 .kanban-col {
   display: flex;
   flex-direction: column;
+  max-height: calc(100vh - 200px);
+  min-height: 0;
   background: var(--glass-tint-dark);
   border: 1px solid var(--bde-border);
   border-radius: var(--bde-radius-md);
   overflow: hidden;
-  min-height: 0;
-  max-height: calc(100vh - 200px);
 }
 
 .kanban-col__header {
@@ -782,9 +787,6 @@
   color: var(--bde-text-muted);
   background: var(--glass-tint-mid);
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  z-index: 1;
 }
 
 .kanban-col__cards {
