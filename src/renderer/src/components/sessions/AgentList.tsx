@@ -124,7 +124,7 @@ export function AgentList({
             </button>
           </div>
           <motion.ul
-            variants={VARIANTS.staggerContainer}
+            variants={active.length > 10 ? VARIANTS.fadeIn : VARIANTS.staggerContainer}
             initial="initial"
             animate="animate"
           >
@@ -154,7 +154,7 @@ export function AgentList({
             <span>RECENT ({recent.length})</span>
           </div>
           <motion.ul
-            variants={VARIANTS.staggerContainer}
+            variants={recent.length > 10 ? VARIANTS.fadeIn : VARIANTS.staggerContainer}
             initial="initial"
             animate="animate"
           >
@@ -193,7 +193,7 @@ export function AgentList({
           </span>
         </div>
         <motion.ul
-          variants={VARIANTS.staggerContainer}
+          variants={historyVisible.length > 10 ? VARIANTS.fadeIn : VARIANTS.staggerContainer}
           initial="initial"
           animate="animate"
         >

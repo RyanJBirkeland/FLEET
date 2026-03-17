@@ -65,7 +65,7 @@ export function KanbanColumn({
             tasks.map((task, i) => (
               <motion.div
                 key={task.id}
-                layoutId={reduced ? undefined : task.id}
+                layoutId={reduced || tasks.length > 10 ? undefined : task.id}
                 transition={reduced ? REDUCED_TRANSITION : SPRINGS.default}
               >
                 <TaskCard
