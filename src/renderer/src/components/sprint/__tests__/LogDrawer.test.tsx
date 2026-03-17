@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import type { SprintTask } from '../../../../../shared/types'
 
 vi.mock('../../../lib/stream-parser', () => ({
-  parseStreamJson: vi.fn().mockReturnValue({ items: [], isStreaming: false }),
+  parseStreamJson: vi.fn().mockReturnValue({ items: [{ type: 'text', content: 'hello' }], isStreaming: false }),
 }))
 
 vi.mock('../../../lib/agent-messages', () => ({
