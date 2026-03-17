@@ -1,6 +1,9 @@
+import { MAX_LOG_LINES } from './constants'
+
 export interface LogPollerState {
   logContent: string
   logNextByte: number
+  logTrimmedLines: number
 }
 
 export function createLogPollerActions(
@@ -20,9 +23,20 @@ export function createLogPollerActions(
         try {
           const result = await readFn(get().logNextByte)
           if (result.content) {
+            let updated = get().logContent + result.content
+            let trimmedLines = get().logTrimmedLines
+
+            const lines = updated.split('\n')
+            if (lines.length > MAX_LOG_LINES) {
+              const excess = lines.length - MAX_LOG_LINES
+              trimmedLines += excess
+              updated = lines.slice(excess).join('\n')
+            }
+
             set({
-              logContent: get().logContent + result.content,
-              logNextByte: result.nextByte
+              logContent: updated,
+              logNextByte: result.nextByte,
+              logTrimmedLines: trimmedLines
             })
           }
         } catch {

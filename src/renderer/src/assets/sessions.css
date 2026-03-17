@@ -1691,6 +1691,15 @@
   -webkit-box-orient: vertical;
 }
 
+.agent-log__truncation-banner {
+  padding: 4px 12px;
+  font-size: var(--bde-size-xs);
+  color: var(--bde-text-muted);
+  text-align: center;
+  border-bottom: 1px solid var(--bde-border);
+  flex-shrink: 0;
+}
+
 /* ── Agent Log Exit Bar ─────────────────────────────── */
 
 .agent-log__exit-bar {
