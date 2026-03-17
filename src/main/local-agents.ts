@@ -6,13 +6,12 @@
 import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import { randomUUID } from 'crypto'
-import { readdir, stat, unlink, readFile } from 'fs/promises'
+import { readdir, stat, unlink, appendFile, open } from 'fs/promises'
 import { join, dirname, basename as pathBasename } from 'path'
 import { validateLogPath } from './fs'
 import {
   createAgentRecord,
   updateAgentMeta,
-  appendLog as appendAgentLog,
   listAgents
 } from './agent-history'
 
@@ -265,12 +264,13 @@ export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<Spawn
   // Update record with real PID
   await updateAgentMeta(id, { pid: child.pid ?? null })
 
-  // Stream output to persistent log
+  // Stream output to persistent log — cache logPath to avoid a SQLite lookup per chunk
+  const logPath = meta.logPath
   child.stdout?.on('data', (chunk: Buffer) => {
-    appendAgentLog(id, chunk.toString())
+    appendFile(logPath, chunk.toString(), 'utf-8').catch(() => {})
   })
   child.stderr?.on('data', (chunk: Buffer) => {
-    appendAgentLog(id, chunk.toString())
+    appendFile(logPath, chunk.toString(), 'utf-8').catch(() => {})
   })
 
   child.on('exit', async (code) => {
@@ -333,9 +333,14 @@ export async function tailAgentLog(args: TailLogArgs): Promise<TailLogResult> {
   const safePath = validateLogPath(args.logPath)
   const fromByte = args.fromByte ?? 0
   try {
-    const buf = await readFile(safePath)
-    const slice = buf.subarray(fromByte)
-    return { content: slice.toString('utf-8'), nextByte: buf.length }
+    const fh = await open(safePath, 'r')
+    const stats = await fh.stat()
+    const size = stats.size
+    if (fromByte >= size) { await fh.close(); return { content: '', nextByte: fromByte } }
+    const buf = Buffer.alloc(size - fromByte)
+    await fh.read(buf, 0, buf.length, fromByte)
+    await fh.close()
+    return { content: buf.toString('utf-8'), nextByte: size }
   } catch {
     return { content: '', nextByte: fromByte }
   }
