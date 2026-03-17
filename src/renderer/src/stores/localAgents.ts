@@ -59,6 +59,7 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
         selectedLocalAgentPid: null,
         logContent: '',
         logNextByte: 0,
+        logTrimmedLines: 0,
 
         fetchProcesses: async (): Promise<void> => {
           try {
@@ -114,7 +115,8 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
           set({
             selectedLocalAgentPid: pid,
             logContent: '',
-            logNextByte: 0
+            logNextByte: 0,
+            logTrimmedLines: 0
           })
         },
 

@@ -16,6 +16,9 @@ export const GATEWAY_DISCONNECT_TOAST_DELAY = 4_000
 export const KILL_UNDO_WINDOW = 5_000
 export const SESSION_ACTIVE_THRESHOLD = 5 * 60 * 1000
 
+// Log limits
+export const MAX_LOG_LINES = 2_000
+
 // Pagination
 export const CHAT_HISTORY_LIMIT = 100
 export const AGENT_HISTORY_LIMIT = 20

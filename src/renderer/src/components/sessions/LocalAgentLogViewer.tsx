@@ -9,12 +9,24 @@ import { chatItemsToMessages } from '../../lib/agent-messages'
 import { ChatThread } from './ChatThread'
 import { formatElapsed, formatDuration, formatTime } from '../../lib/format'
 
+// ── Truncation banner ────────────────────────────────────
+
+function LogTruncationBanner({ trimmedLines }: { trimmedLines: number }): React.JSX.Element | null {
+  if (trimmedLines <= 0) return null
+  return (
+    <div className="agent-log__truncation-banner">
+      [... {trimmedLines.toLocaleString()} earlier lines trimmed ...]
+    </div>
+  )
+}
+
 // ── AgentLogViewer (history-store, by ID) ───────────────
 
 /** Log viewer for a history agent (by ID) */
 export function AgentLogViewer({ agentId }: { agentId: string }): React.JSX.Element {
   const agents = useAgentHistoryStore((s) => s.agents)
   const logContent = useAgentHistoryStore((s) => s.logContent)
+  const logTrimmedLines = useAgentHistoryStore((s) => s.logTrimmedLines)
   const clearSelection = useAgentHistoryStore((s) => s.clearSelection)
 
   const agent = agents.find((a) => a.id === agentId) ?? null
@@ -56,6 +68,7 @@ export function AgentLogViewer({ agentId }: { agentId: string }): React.JSX.Elem
           <span className="agent-log__task-text">{agent.task}</span>
         </div>
       )}
+      <LogTruncationBanner trimmedLines={logTrimmedLines} />
       <ChatThread messages={chatMessages} isStreaming={isRunning && isStreaming} />
     </div>
   )
@@ -68,6 +81,7 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   const processes = useLocalAgentsStore((s) => s.processes)
   const spawnedAgents = useLocalAgentsStore((s) => s.spawnedAgents)
   const localLogContent = useLocalAgentsStore((s) => s.logContent)
+  const localTrimmedLines = useLocalAgentsStore((s) => s.logTrimmedLines)
   const selectLocalAgent = useLocalAgentsStore((s) => s.selectLocalAgent)
   const startLogPolling = useLocalAgentsStore((s) => s.startLogPolling)
   const stopLogPolling = useLocalAgentsStore((s) => s.stopLogPolling)
@@ -77,6 +91,7 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   // Fall back to agent history — match by PID to get logPath + metadata.
   const historyAgents = useAgentHistoryStore((s) => s.agents)
   const historyLogContent = useAgentHistoryStore((s) => s.logContent)
+  const historyTrimmedLines = useAgentHistoryStore((s) => s.logTrimmedLines)
   const selectHistoryAgent = useAgentHistoryStore((s) => s.selectAgent)
 
   const proc = processes.find((p) => p.pid === pid)
@@ -84,6 +99,7 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   const historyAgent = !spawned ? historyAgents.find((a) => a.pid === pid) : null
 
   const logContent = historyAgent ? historyLogContent : localLogContent
+  const trimmedLines = historyAgent ? historyTrimmedLines : localTrimmedLines
   const isAlive = !!proc
   const isInteractive = !!spawned?.interactive && isAlive
 
@@ -183,6 +199,7 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
           </Button>
         </div>
       </div>
+      <LogTruncationBanner trimmedLines={trimmedLines} />
       <ChatThread messages={chatMessages} isStreaming={isAlive && isStreaming} />
 
       {/* Sent message bubbles */}

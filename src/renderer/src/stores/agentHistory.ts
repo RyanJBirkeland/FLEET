@@ -27,6 +27,7 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
     selectedId: null,
     logContent: '',
     logNextByte: 0,
+    logTrimmedLines: 0,
     loading: false,
     isFetching: false,
 
@@ -47,7 +48,8 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
       set({
         selectedId: id,
         logContent: '',
-        logNextByte: 0
+        logNextByte: 0,
+        logTrimmedLines: 0
       })
       if (id) {
         poller.startLogPolling((fromByte) =>
@@ -61,7 +63,8 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
       set({
         selectedId: null,
         logContent: '',
-        logNextByte: 0
+        logNextByte: 0,
+        logTrimmedLines: 0
       })
     },
 
