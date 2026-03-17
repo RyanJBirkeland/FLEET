@@ -138,6 +138,14 @@ const api = {
     ipcRenderer.removeListener('sprint:external-change', cb)
   },
 
+  // Sprint SSE real-time events
+  onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void): void => {
+    ipcRenderer.on('sprint:sse-event', (_e, ev) => cb(ev))
+  },
+  offSprintSseEvent: (): void => {
+    ipcRenderer.removeAllListeners('sprint:sse-event')
+  },
+
   // Terminal PTY
   terminal: {
     create: (opts: { cols: number; rows: number; shell?: string }) =>

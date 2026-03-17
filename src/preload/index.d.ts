@@ -102,6 +102,10 @@ declare global {
       onExternalSprintChange: (cb: () => void) => void
       offExternalSprintChange: (cb: () => void) => void
 
+      // Sprint SSE real-time events
+      onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void) => void
+      offSprintSseEvent: () => void
+
       // Terminal PTY
       terminal: {
         create: (...args: IpcChannelMap['terminal:create']['args']) => Promise<IpcResult<'terminal:create'>>
