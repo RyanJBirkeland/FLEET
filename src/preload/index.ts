@@ -102,6 +102,8 @@ const api = {
       ipcRenderer.invoke('sprint:update', id, patch),
     readLog: (agentId: string): Promise<{ content: string; status: string }> =>
       ipcRenderer.invoke('sprint:readLog', agentId),
+    readSpecFile: (filePath: string): Promise<string> =>
+      ipcRenderer.invoke('sprint:read-spec-file', filePath),
   },
 
   // Gateway tool invocation — proxied through main process to avoid CORS

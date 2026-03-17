@@ -83,6 +83,7 @@ declare global {
         }) => Promise<unknown>
         update: (id: string, patch: Record<string, unknown>) => Promise<unknown>
         readLog: (agentId: string) => Promise<{ content: string; status: string }>
+        readSpecFile: (filePath: string) => Promise<string>
       }
 
       // Gateway RPC
