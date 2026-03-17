@@ -198,7 +198,9 @@ export function registerSprintHandlers(): void {
       const fallback: GeneratePromptResponse = { taskId, spec: '', prompt: title }
 
       try {
-        const { url: gatewayUrl, token: gatewayToken } = getGatewayConfig()
+        const { url: rawGatewayUrl, token: gatewayToken } = getGatewayConfig()
+        // getGatewayConfig may return a ws:// URL — normalize to http:// for REST calls
+        const gatewayUrl = rawGatewayUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://')
 
         const templateScaffold = getTemplateScaffold(templateHint)
         const message = buildQuickSpecPrompt(title, repo, templateHint, templateScaffold)
@@ -211,7 +213,8 @@ export function registerSprintHandlers(): void {
           },
           body: JSON.stringify({
             tool: 'sessions_send',
-            args: { sessionKey: 'bde-spec-gen', message, timeoutSeconds: 45 },
+            // 'bde-spec-gen' session is not configured — send to main session
+            args: { sessionKey: 'main', message, timeoutSeconds: 45 },
           }),
         })
 
