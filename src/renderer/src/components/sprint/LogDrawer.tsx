@@ -130,12 +130,12 @@ export function LogDrawer({ task, onClose, onStop }: LogDrawerProps): React.JSX.
     onClose()
   }, [task?.agent_run_id, onClose])
 
-  if (!task) return null
-
   const handleCopyLog = useCallback(async () => {
     await navigator.clipboard.writeText(logContent)
     toast.success('Copied!')
   }, [logContent])
+
+  if (!task) return null
 
   const shortId = task.agent_run_id?.slice(0, 8) ?? '?'
   const statusLabel =
