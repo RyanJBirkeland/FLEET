@@ -1753,6 +1753,101 @@ tr:hover .bde-task-table__action-btn--done {
 
 .bde-task-section__show-more:hover { color: var(--bde-accent); }
 
+/* ── Priority Cell & Popover ──────────────────────────── */
+
+.bde-task-table__priority-cell {
+  position: relative;
+}
+
+.bde-task-table__priority-cell > button.bde-task-table__priority-dot {
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.bde-priority-popover {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  z-index: 50;
+  background: var(--bde-bg, #1a1a2e);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-md, 6px);
+  padding: 4px 0;
+  min-width: 140px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.bde-priority-popover__option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 12px;
+  font-size: var(--bde-size-xs);
+  font-family: var(--bde-font-ui);
+  color: var(--bde-text);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-align: left;
+}
+
+.bde-priority-popover__option:hover {
+  background: var(--bde-hover);
+}
+
+.bde-priority-popover__option--active {
+  color: var(--bde-accent);
+  font-weight: 600;
+}
+
+/* ── Backlog Search ───────────────────────────────────── */
+
+.bde-backlog-search {
+  position: relative;
+  margin: 8px 16px 0;
+}
+
+.bde-backlog-search__input {
+  width: 100%;
+  padding: 6px 28px 6px 10px;
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+  color: var(--bde-text);
+  background: var(--bde-bg, #1a1a2e);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm, 4px);
+  outline: none;
+  box-sizing: border-box;
+}
+
+.bde-backlog-search__input::placeholder {
+  color: var(--bde-text-dim);
+}
+
+.bde-backlog-search__input:focus {
+  border-color: var(--bde-accent);
+}
+
+.bde-backlog-search__clear {
+  position: absolute;
+  right: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  color: var(--bde-text-muted);
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 2px 6px;
+}
+
+.bde-backlog-search__clear:hover {
+  color: var(--bde-text);
+}
+
 /* ── Conflict Badge (Sprint Header) ─────────────────── */
 
 .conflict-badge-btn {

@@ -42,6 +42,7 @@ export type { SprintTask }
 export default function SprintCenter() {
   const [tasks, setTasks] = useState<SprintTask[]>([])
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  const [backlogSearch, setBacklogSearch] = useState('')
   const [selectedTask, setSelectedTask] = useState<SprintTask | null>(null)
   const [logDrawerTaskId, setLogDrawerTaskId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
@@ -527,6 +528,19 @@ export default function SprintCenter() {
 
   const partition = useMemo(() => partitionSprintTasks(filteredTasks), [filteredTasks])
 
+  const filteredBacklog = useMemo(() => {
+    if (!backlogSearch.trim()) return partition.backlog
+    const q = backlogSearch.trim().toLowerCase()
+    return partition.backlog.filter((t) => t.title.toLowerCase().includes(q))
+  }, [partition.backlog, backlogSearch])
+
+  const handleUpdatePriority = useCallback(
+    (patch: { id: string; priority: number }) => {
+      updateTask(patch.id, { priority: patch.priority })
+    },
+    [updateTask]
+  )
+
   return (
     <div className="sprint-center">
       <div className="sprint-center__header">
@@ -647,14 +661,33 @@ export default function SprintCenter() {
                 onViewOutput={handleViewOutput}
               />
             )}
+            <div className="bde-backlog-search">
+              <input
+                type="text"
+                className="bde-backlog-search__input"
+                placeholder="Search backlog..."
+                value={backlogSearch}
+                onChange={(e) => setBacklogSearch(e.target.value)}
+              />
+              {backlogSearch && (
+                <button
+                  className="bde-backlog-search__clear"
+                  onClick={() => setBacklogSearch('')}
+                  title="Clear search"
+                >
+                  &times;
+                </button>
+              )}
+            </div>
 
             <TaskTable
               section="backlog"
-              tasks={partition.backlog}
+              tasks={filteredBacklog}
               onPushToSprint={handlePushToSprint}
               onViewSpec={setSelectedTask}
               onViewOutput={handleViewOutput}
               onMarkDone={handleMarkDone}
+              onUpdate={handleUpdatePriority}
             />
           </>
         )}

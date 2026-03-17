@@ -1,8 +1,16 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, ChevronRight, ExternalLink, ArrowRight, Eye, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { timeAgo } from '../../lib/format'
 import type { SprintTask } from '../../../../shared/types'
+
+const PRIORITY_OPTIONS = [
+  { value: 1, label: 'P1 Critical' },
+  { value: 2, label: 'P2 High' },
+  { value: 3, label: 'P3 Medium' },
+  { value: 4, label: 'P4 Low' },
+  { value: 5, label: 'P5 Backlog' },
+] as const
 
 type TaskTableProps = {
   section: 'done' | 'backlog' | 'failed'
@@ -13,7 +21,8 @@ type TaskTableProps = {
   onViewSpec: (task: SprintTask) => void
   onViewOutput: (task: SprintTask) => void
   onMarkDone?: (task: SprintTask) => void
-  onRerun?: (task: SprintTask) => void
+onRerun?: (task: SprintTask) => void
+  onUpdate?: (patch: { id: string; priority: number }) => void
 }
 
 const STORAGE_KEY_PREFIX = 'bde-table-'
@@ -57,7 +66,8 @@ export function TaskTable({
   onViewSpec,
   onViewOutput,
   onMarkDone,
-  onRerun,
+onRerun,
+  onUpdate,
 }: TaskTableProps) {
   const [collapsed, setCollapsed] = useState(() => getInitialCollapsed(section, defaultExpanded))
   const [showAll, setShowAll] = useState(false)
@@ -147,6 +157,7 @@ export function TaskTable({
                         onPushToSprint={onPushToSprint}
                         onViewSpec={onViewSpec}
                         onMarkDone={onMarkDone}
+                        onUpdate={onUpdate}
                       />
                     )
                   )}
@@ -290,12 +301,28 @@ function BacklogRow({
   onPushToSprint,
   onViewSpec,
   onMarkDone,
+  onUpdate,
 }: {
   task: SprintTask
   onPushToSprint: (t: SprintTask) => void
   onViewSpec: (t: SprintTask) => void
   onMarkDone?: (t: SprintTask) => void
+  onUpdate?: (patch: { id: string; priority: number }) => void
 }) {
+  const [popoverOpen, setPopoverOpen] = useState(false)
+  const popoverRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!popoverOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (popoverRef.current && !popoverRef.current.contains(e.target as Node)) {
+        setPopoverOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [popoverOpen])
+
   return (
     <tr>
       <td>
@@ -303,8 +330,31 @@ function BacklogRow({
           {task.title}
         </button>
       </td>
-      <td>
-        <span className={`bde-task-table__priority-dot bde-task-table__priority-dot--${priorityVariant(task.priority)}`} title={'P' + task.priority} />
+      <td className="bde-task-table__priority-cell">
+        <button
+          className={`bde-task-table__priority-dot bde-task-table__priority-dot--${priorityVariant(task.priority)}`}
+          title={'P' + task.priority}
+          onClick={() => setPopoverOpen((v) => !v)}
+        />
+        {popoverOpen && (
+          <div className="bde-priority-popover" ref={popoverRef}>
+            {PRIORITY_OPTIONS.map((opt) => (
+              <button
+                key={opt.value}
+                className={`bde-priority-popover__option${opt.value === task.priority ? ' bde-priority-popover__option--active' : ''}`}
+                onClick={() => {
+                  if (opt.value !== task.priority) {
+                    onUpdate?.({ id: task.id, priority: opt.value })
+                  }
+                  setPopoverOpen(false)
+                }}
+              >
+                <span className={`bde-task-table__priority-dot bde-task-table__priority-dot--${priorityVariant(opt.value)}`} />
+                {opt.label}
+              </button>
+            ))}
+          </div>
+        )}
       </td>
       <td>
         <Badge variant={repoBadgeVariant(task.repo)} size="sm">
