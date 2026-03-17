@@ -95,9 +95,13 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
       { role: 'user', content: msg, timestamp: Date.now() }
     ])
     setSteerInput('')
-    const result = await window.api.steerAgent(task.agent_run_id, msg)
-    if (!result.ok) {
-      toast.error(result.error ?? 'Failed to send message to agent')
+    try {
+      const result = await window.api.steerAgent(task.agent_run_id, msg)
+      if (!result.ok) {
+        toast.error(result.error ?? 'Failed to send message to agent')
+      }
+    } catch {
+      toast.error('Failed to send message')
     }
   }, [steerInput, task?.agent_run_id])
 
