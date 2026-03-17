@@ -165,6 +165,19 @@ async function fetchPrStatusRest(pr: PrStatusInput): Promise<PrStatusResult> {
   }
 }
 
+function markTaskDoneOnMerge(prNumber: number): void {
+  try {
+    const completedAt = new Date().toISOString()
+    getDb()
+      .prepare(
+        "UPDATE sprint_tasks SET status='done', completed_at=? WHERE pr_number=? AND status='active'"
+      )
+      .run(completedAt, prNumber)
+  } catch (err) {
+    console.warn(`[git] failed to mark task done for PR #${prNumber}:`, err)
+  }
+}
+
 function markTaskCancelled(prNumber: number): void {
   try {
     getDb()
@@ -173,22 +186,21 @@ function markTaskCancelled(prNumber: number): void {
       )
       .run(new Date().toISOString(), prNumber)
   } catch (err) {
-    console.warn('[pollPrStatuses] Failed to mark task cancelled:', err)
+    console.warn(`[git] failed to mark task cancelled for PR #${prNumber}:`, err)
   }
 }
 
 export async function pollPrStatuses(prs: PrStatusInput[]): Promise<PrStatusResult[]> {
   const results = await Promise.all(prs.map(fetchPrStatusRest))
-
   for (const result of results) {
-    if (result.state === 'CLOSED' && !result.merged) {
-      const input = prs.find((p) => p.taskId === result.taskId)
-      if (!input) continue
-      const parsed = parsePrUrl(input.prUrl)
-      if (!parsed) continue
-      markTaskCancelled(Number(parsed.number))
+    const input = prs.find((p) => p.taskId === result.taskId)
+    const prNumber = input ? parsePrUrl(input.prUrl)?.number : null
+    if (!prNumber) continue
+    if (result.merged) {
+      markTaskDoneOnMerge(parseInt(prNumber, 10))
+    } else if (result.state === 'CLOSED') {
+      markTaskCancelled(parseInt(prNumber, 10))
     }
   }
-
   return results
 }
