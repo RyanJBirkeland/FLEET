@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, ArrowRight, Eye, CheckCircle2 } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, ArrowRight, Eye, CheckCircle2, RefreshCw } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import type { SprintTask } from '../../../../shared/types'
 
@@ -12,6 +12,7 @@ type TaskTableProps = {
   onViewSpec: (task: SprintTask) => void
   onViewOutput: (task: SprintTask) => void
   onMarkDone?: (task: SprintTask) => void
+  onRerun?: (task: SprintTask) => void
 }
 
 const STORAGE_KEY_PREFIX = 'bde-table-'
@@ -55,6 +56,7 @@ export function TaskTable({
   onViewSpec,
   onViewOutput,
   onMarkDone,
+  onRerun,
 }: TaskTableProps) {
   const [collapsed, setCollapsed] = useState(() => getInitialCollapsed(section, defaultExpanded))
   const [showAll, setShowAll] = useState(false)
@@ -134,6 +136,7 @@ export function TaskTable({
                         task={task}
                         onViewSpec={onViewSpec}
                         onViewOutput={onViewOutput}
+                        onRerun={onRerun}
                       />
                     ) : (
                       <BacklogRow
@@ -164,10 +167,12 @@ function DoneRow({
   task,
   onViewSpec,
   onViewOutput,
+  onRerun,
 }: {
   task: SprintTask
   onViewSpec: (t: SprintTask) => void
   onViewOutput: (t: SprintTask) => void
+  onRerun?: (t: SprintTask) => void
 }) {
   return (
     <tr>
@@ -197,7 +202,16 @@ function DoneRow({
           <span className="bde-task-table__muted">—</span>
         )}
       </td>
-      <td>
+      <td className="bde-task-table__actions-cell">
+        {onRerun && !task.pr_url && (
+          <button
+            className="bde-task-table__action-btn"
+            onClick={() => onRerun(task)}
+            title="Re-run"
+          >
+            <RefreshCw size={13} />
+          </button>
+        )}
         <button
           className="bde-task-table__action-btn"
           onClick={() => onViewOutput(task)}
