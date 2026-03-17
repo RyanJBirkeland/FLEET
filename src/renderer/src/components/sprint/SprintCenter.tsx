@@ -10,6 +10,7 @@ import type { CreateTicketData } from './NewTicketModal'
 import { toast } from '../../stores/toasts'
 import { detectTemplate } from '../../../../shared/template-heuristics'
 import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
+import { subscribeSSE, type TaskUpdatedEvent } from '../../lib/taskRunnerSSE'
 import {
   POLL_SPRINT_INTERVAL,
   POLL_SPRINT_ACTIVE_MS,
@@ -34,11 +35,12 @@ export default function SprintCenter() {
   const [tasks, setTasks] = useState<SprintTask[]>([])
   const [repoFilter, setRepoFilter] = useState<string | null>(null)
   const [selectedTask, setSelectedTask] = useState<SprintTask | null>(null)
-  const [logDrawerTask, setLogDrawerTask] = useState<SprintTask | null>(null)
+  const [logDrawerTaskId, setLogDrawerTaskId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [modalOpen, setModalOpen] = useState(false)
   const [prMergedMap, setPrMergedMap] = useState<Record<string, boolean>>({})
   const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
+  const logDrawerTask = logDrawerTaskId ? (tasks.find((t) => t.id === logDrawerTaskId) ?? null) : null
   const prevTasksRef = useRef<SprintTask[]>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
@@ -76,7 +78,7 @@ export default function SprintCenter() {
     return () => window.api.offExternalSprintChange(loadData)
   }, [loadData])
 
-  // SSE real-time task updates — surgical merge + debounced full reload
+  // Real-time task updates via SSE singleton — surgical merge + debounced backstop
   const debouncedLoadRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const debouncedLoadData = useMemo(
     () => () => {
@@ -87,18 +89,13 @@ export default function SprintCenter() {
   )
 
   useEffect(() => {
-    const handler = (event: { type: string; data: unknown }): void => {
-      if (event.type === 'task:updated' && event.data && typeof event.data === 'object') {
-        const patch = event.data as Partial<SprintTask> & { id?: string }
-        if (patch.id) {
-          setTasks((prev) => prev.map((t) => (t.id === patch.id ? { ...t, ...patch } : t)))
-        }
-      }
+    const unsub = subscribeSSE('task:updated', (data: unknown) => {
+      const update = data as TaskUpdatedEvent
+      setTasks((prev) => prev.map((t) => (t.id === update.id ? { ...t, ...update } : t)))
       debouncedLoadData()
-    }
-    window.api.onSprintSseEvent(handler)
+    })
     return () => {
-      window.api.offSprintSseEvent()
+      unsub()
       if (debouncedLoadRef.current) clearTimeout(debouncedLoadRef.current)
     }
   }, [debouncedLoadData])
@@ -296,7 +293,7 @@ export default function SprintCenter() {
   )
 
   const handleViewOutput = useCallback((task: SprintTask) => {
-    setLogDrawerTask(task)
+    setLogDrawerTaskId(task.id)
   }, [])
 
   const filteredTasks = repoFilter
@@ -393,7 +390,7 @@ export default function SprintCenter() {
 
       <NewTicketModal open={modalOpen} onClose={() => setModalOpen(false)} onCreate={createTask} />
 
-      <LogDrawer task={logDrawerTask} onClose={() => setLogDrawerTask(null)} />
+      <LogDrawer task={logDrawerTask} onClose={() => setLogDrawerTaskId(null)} />
     </div>
   )
 }

@@ -5,6 +5,11 @@ import type { SprintTask } from '../../../../../shared/types'
 
 vi.mock('../../../lib/stream-parser', () => ({
   parseStreamJson: vi.fn().mockReturnValue({ items: [{ type: 'text', content: 'hello' }], isStreaming: false }),
+  stripAnsi: vi.fn((s: string) => s),
+}))
+
+vi.mock('../../../lib/taskRunnerSSE', () => ({
+  subscribeSSE: vi.fn().mockReturnValue(() => {}),
 }))
 
 vi.mock('../../../lib/agent-messages', () => ({
@@ -78,18 +83,18 @@ describe('LogDrawer', () => {
 
   it('fetches log content on mount when agent_run_id exists', async () => {
     const readLog = vi.mocked(window.api.sprint.readLog)
-    readLog.mockResolvedValue({ content: 'log data', status: 'done' })
+    readLog.mockResolvedValue({ content: 'log data', status: 'done', nextByte: 8 })
 
     const task = makeTask({ agent_run_id: 'run-456' })
     render(<LogDrawer task={task} onClose={onClose} />)
 
     await waitFor(() => {
-      expect(readLog).toHaveBeenCalledWith('run-456')
+      expect(readLog).toHaveBeenCalledWith('run-456', 0)
     })
   })
 
   it('shows status label for done agent', async () => {
-    vi.mocked(window.api.sprint.readLog).mockResolvedValue({ content: '', status: 'done' })
+    vi.mocked(window.api.sprint.readLog).mockResolvedValue({ content: '', status: 'done', nextByte: 0 })
 
     const task = makeTask({ agent_run_id: 'run-789', status: 'done' })
     render(<LogDrawer task={task} onClose={onClose} />)

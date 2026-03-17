@@ -105,8 +105,8 @@ const api = {
     }): Promise<unknown> => ipcRenderer.invoke('sprint:create', task),
     update: (id: string, patch: Record<string, unknown>): Promise<unknown> =>
       ipcRenderer.invoke('sprint:update', id, patch),
-    readLog: (agentId: string): Promise<{ content: string; status: string }> =>
-      ipcRenderer.invoke('sprint:readLog', agentId),
+    readLog: (agentId: string, fromByte?: number): Promise<{ content: string; status: string; nextByte: number }> =>
+      ipcRenderer.invoke('sprint:readLog', agentId, fromByte),
     readSpecFile: (filePath: string): Promise<string> =>
       ipcRenderer.invoke('sprint:read-spec-file', filePath),
     generatePrompt: (args: {
