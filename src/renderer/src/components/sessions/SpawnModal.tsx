@@ -27,11 +27,22 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const historyRef = useRef<HTMLDivElement>(null)
   const spawnAgent = useLocalAgentsStore((s) => s.spawnAgent)
+  const fetchProcesses = useLocalAgentsStore((s) => s.fetchProcesses)
   const spawning = useLocalAgentsStore((s) => s.isSpawning)
   const [repoPaths, setRepoPaths] = useState<Record<string, string>>({})
+  const [isLoadingRepos, setIsLoadingRepos] = useState(true)
+  const [repoLoadError, setRepoLoadError] = useState<string | null>(null)
 
   useEffect(() => {
-    window.api.getRepoPaths().then(setRepoPaths).catch(() => {})
+    setIsLoadingRepos(true)
+    setRepoLoadError(null)
+    window.api
+      .getRepoPaths()
+      .then(setRepoPaths)
+      .catch((err) => {
+        setRepoLoadError(err instanceof Error ? err.message : 'Failed to load repository paths')
+      })
+      .finally(() => setIsLoadingRepos(false))
     // Load task history
     try {
       const stored = localStorage.getItem(HISTORY_KEY)
@@ -101,25 +112,26 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
         setHistory(newHistory)
         localStorage.setItem(HISTORY_KEY, JSON.stringify(newHistory))
 
+        fetchProcesses()
         toast.success('Agent spawned')
         onClose()
       } catch (err) {
         toast.error(`Spawn failed: ${err instanceof Error ? err.message : String(err)}`)
       }
     },
-    [task, repo, model, spawnAgent, repoPaths, history, onClose, spawning]
+    [task, repo, model, spawnAgent, fetchProcesses, repoPaths, history, onClose, spawning]
   )
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
       if (e.key === 'Enter' && e.metaKey) {
         e.preventDefault()
-        if (task.trim() && !spawning) {
+        if (task.trim() && !spawning && !isLoadingRepos && !repoLoadError) {
           handleSubmit()
         }
       }
     },
-    [task, spawning, handleSubmit]
+    [task, spawning, isLoadingRepos, repoLoadError, handleSubmit]
   )
 
   const selectHistoryItem = useCallback((historyTask: string): void => {
@@ -225,6 +237,10 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
             </div>
           </div>
 
+          {repoLoadError && (
+            <div className="spawn-modal__error">{repoLoadError}</div>
+          )}
+
           <div className="spawn-modal__actions">
             <Button variant="ghost" size="md" type="button" onClick={onClose} disabled={spawning}>
               Cancel
@@ -233,10 +249,10 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
               variant="primary"
               size="md"
               type="submit"
-              disabled={!task.trim() || spawning}
-              loading={spawning}
+              disabled={!task.trim() || spawning || isLoadingRepos || !!repoLoadError}
+              loading={spawning || isLoadingRepos}
             >
-              {spawning ? 'Spawning...' : 'Spawn'}
+              {isLoadingRepos ? 'Loading...' : spawning ? 'Spawning...' : 'Spawn'}
             </Button>
           </div>
         </form>
