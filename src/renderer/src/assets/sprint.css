@@ -766,8 +766,8 @@
 .kanban-col {
   display: flex;
   flex-direction: column;
-  max-height: calc(100vh - 200px);
   min-height: 0;
+  max-height: calc(100vh - 200px);
   background: var(--glass-tint-dark);
   border: 1px solid var(--bde-border);
   border-radius: var(--bde-radius-md);
@@ -787,6 +787,9 @@
   color: var(--bde-text-muted);
   background: var(--glass-tint-mid);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 1;
 }
 
 .kanban-col__cards {
