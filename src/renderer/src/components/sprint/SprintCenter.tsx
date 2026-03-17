@@ -296,6 +296,33 @@ export default function SprintCenter() {
     setLogDrawerTaskId(task.id)
   }, [])
 
+  // Keyboard shortcuts: N → new ticket, Escape → close drawers/modal
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setSelectedTask(null)
+        setLogDrawerTaskId(null)
+        setModalOpen(false)
+        return
+      }
+
+      if (
+        e.key === 'n' &&
+        !e.metaKey &&
+        !e.ctrlKey &&
+        !e.altKey &&
+        document.activeElement?.tagName !== 'INPUT' &&
+        document.activeElement?.tagName !== 'TEXTAREA'
+      ) {
+        e.preventDefault()
+        setModalOpen(true)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [])
+
   const filteredTasks = repoFilter
     ? tasks.filter((t) => t.repo.toLowerCase() === repoFilter.toLowerCase())
     : tasks
@@ -330,6 +357,9 @@ export default function SprintCenter() {
           </div>
         </div>
         <div className="sprint-center__actions">
+          <kbd className="sprint-center__shortcut-hint" title="Keyboard shortcuts">
+            N — New ticket &nbsp; Esc — Close
+          </kbd>
           <Button variant="primary" size="sm" onClick={() => setModalOpen(true)}>
             + New Ticket
           </Button>
