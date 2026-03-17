@@ -1,8 +1,10 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { parseStreamJson } from '../../lib/stream-parser'
 import { chatItemsToMessages } from '../../lib/agent-messages'
+import type { ChatMessage } from '../../lib/agent-messages'
 import { ChatThread } from '../sessions/ChatThread'
 import { Button } from '../ui/Button'
+import { toast } from '../../stores/toasts'
 import type { SprintTask } from './SprintCenter'
 
 const LOG_POLL_INTERVAL = 2_000
@@ -15,6 +17,8 @@ type LogDrawerProps = {
 export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element | null {
   const [logContent, setLogContent] = useState('')
   const [agentStatus, setAgentStatus] = useState('unknown')
+  const [steerInput, setSteerInput] = useState('')
+  const [sentMessages, setSentMessages] = useState<ChatMessage[]>([])
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   useEffect(() => {
@@ -22,6 +26,7 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
 
     setLogContent('')
     setAgentStatus('unknown')
+    setSentMessages([])
 
     const fetchLog = async (): Promise<void> => {
       try {
@@ -51,8 +56,39 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
   const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
   const messages = useMemo(() => chatItemsToMessages(items), [items])
 
+  const allMessages = useMemo(
+    () => [...messages, ...sentMessages],
+    [messages, sentMessages]
+  )
+
   const hasStreamJson = items.length > 0
   const hasPlainText = !hasStreamJson && logContent.trim().length > 0
+
+  const canSteer = task?.status === 'active' && !!task?.agent_run_id
+
+  const handleSteerSend = useCallback(async () => {
+    const msg = steerInput.trim()
+    if (!msg || !task?.agent_run_id) return
+    setSentMessages((prev) => [
+      ...prev,
+      { role: 'user', content: msg, timestamp: Date.now() }
+    ])
+    setSteerInput('')
+    const result = await window.api.steerAgent(task.agent_run_id, msg)
+    if (!result.ok) {
+      toast.error(result.error ?? 'Failed to send message to agent')
+    }
+  }, [steerInput, task?.agent_run_id])
+
+  const handleSteerKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault()
+        handleSteerSend()
+      }
+    },
+    [handleSteerSend]
+  )
 
   const handleOpenInSessions = useCallback(() => {
     if (!task?.agent_run_id) return
@@ -90,7 +126,7 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
       <div className="log-drawer__body">
         {task.agent_run_id ? (
           hasStreamJson ? (
-            <ChatThread messages={messages} isStreaming={agentStatus === 'running' && isStreaming} />
+            <ChatThread messages={allMessages} isStreaming={agentStatus === 'running' && isStreaming} />
           ) : hasPlainText ? (
             <pre className="log-drawer__plain-text">{logContent}</pre>
           ) : (
@@ -100,6 +136,25 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
           <div className="log-drawer__no-session">No agent session linked to this task.</div>
         )}
       </div>
+      {canSteer && (
+        <div className="agent-steer-input">
+          <input
+            className="agent-steer-input__field"
+            type="text"
+            placeholder="Send message to agent\u2026"
+            value={steerInput}
+            onChange={(e) => setSteerInput(e.target.value)}
+            onKeyDown={handleSteerKeyDown}
+          />
+          <button
+            className="agent-steer-input__send"
+            onClick={handleSteerSend}
+            disabled={!steerInput.trim()}
+          >
+            Send {'\u2192'}
+          </button>
+        </div>
+      )}
       <div className="log-drawer__footer">
         <Button variant="ghost" size="sm" onClick={handleOpenInSessions}>
           Open in Sessions
