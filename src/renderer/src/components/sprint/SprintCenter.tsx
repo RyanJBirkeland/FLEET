@@ -303,6 +303,18 @@ export default function SprintCenter() {
     [updateTask]
   )
 
+  const handleMarkDone = useCallback(
+    (task: SprintTask) => {
+      const message = task.pr_url
+        ? 'Mark as done? The open PR will remain open on GitHub.'
+        : 'Mark as done?'
+      if (!confirm(message)) return
+      updateTask(task.id, { status: 'done', completed_at: new Date().toISOString() })
+      toast.success('Marked as done')
+    },
+    [updateTask]
+  )
+
   const handleViewOutput = useCallback((task: SprintTask) => {
     setLogDrawerTaskId(task.id)
   }, [])
@@ -408,6 +420,7 @@ export default function SprintCenter() {
               onLaunch={handleLaunch}
               onViewSpec={setSelectedTask}
               onViewOutput={handleViewOutput}
+              onMarkDone={handleMarkDone}
             />
 
             <TaskTable
@@ -424,6 +437,7 @@ export default function SprintCenter() {
               onPushToSprint={handlePushToSprint}
               onViewSpec={setSelectedTask}
               onViewOutput={handleViewOutput}
+              onMarkDone={handleMarkDone}
             />
           </>
         )}
@@ -437,6 +451,7 @@ export default function SprintCenter() {
         onSave={handleSaveSpec}
         onLaunch={handleLaunch}
         onPushToSprint={handlePushToSprint}
+        onMarkDone={handleMarkDone}
       />
 
       <NewTicketModal open={modalOpen} onClose={() => setModalOpen(false)} onCreate={createTask} />

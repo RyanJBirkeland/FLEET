@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronDown, ChevronRight, ExternalLink, ArrowRight, Eye } from 'lucide-react'
+import { ChevronDown, ChevronRight, ExternalLink, ArrowRight, Eye, CheckCircle2 } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import type { SprintTask } from '../../../../shared/types'
 
@@ -11,6 +11,7 @@ type TaskTableProps = {
   onPushToSprint: (task: SprintTask) => void
   onViewSpec: (task: SprintTask) => void
   onViewOutput: (task: SprintTask) => void
+  onMarkDone?: (task: SprintTask) => void
 }
 
 const STORAGE_KEY_PREFIX = 'bde-table-'
@@ -53,6 +54,7 @@ export function TaskTable({
   onPushToSprint,
   onViewSpec,
   onViewOutput,
+  onMarkDone,
 }: TaskTableProps) {
   const [collapsed, setCollapsed] = useState(() => getInitialCollapsed(section, defaultExpanded))
   const [showAll, setShowAll] = useState(false)
@@ -131,6 +133,7 @@ export function TaskTable({
                         task={task}
                         onPushToSprint={onPushToSprint}
                         onViewSpec={onViewSpec}
+                        onMarkDone={onMarkDone}
                       />
                     )
                   )}
@@ -203,10 +206,12 @@ function BacklogRow({
   task,
   onPushToSprint,
   onViewSpec,
+  onMarkDone,
 }: {
   task: SprintTask
   onPushToSprint: (t: SprintTask) => void
   onViewSpec: (t: SprintTask) => void
+  onMarkDone?: (t: SprintTask) => void
 }) {
   return (
     <tr>
@@ -223,7 +228,16 @@ function BacklogRow({
           {task.repo}
         </Badge>
       </td>
-      <td>
+      <td className="bde-task-table__actions-cell">
+        {onMarkDone && (
+          <button
+            className="bde-task-table__action-btn bde-task-table__action-btn--done"
+            onClick={() => onMarkDone(task)}
+            title="Mark Done"
+          >
+            <CheckCircle2 size={13} />
+          </button>
+        )}
         <button className="bde-task-table__action-btn bde-task-table__action-btn--sprint" onClick={() => onPushToSprint(task)}>
           <ArrowRight size={13} /> Sprint
         </button>
