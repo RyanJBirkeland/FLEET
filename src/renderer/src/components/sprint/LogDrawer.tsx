@@ -1,7 +1,5 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
-import { parseStreamJson } from '../../lib/stream-parser'
-import { chatItemsToMessages } from '../../lib/agent-messages'
-import { ChatThread } from '../sessions/ChatThread'
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { AgentLogViewer } from './AgentLogViewer'
 import { Button } from '../ui/Button'
 import type { SprintTask } from './SprintCenter'
 
@@ -48,12 +46,6 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
     }
   }, [task?.agent_run_id, task?.status])
 
-  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
-  const messages = useMemo(() => chatItemsToMessages(items), [items])
-
-  const hasStreamJson = items.length > 0
-  const hasPlainText = !hasStreamJson && logContent.trim().length > 0
-
   const handleOpenInSessions = useCallback(() => {
     if (!task?.agent_run_id) return
     window.dispatchEvent(
@@ -89,10 +81,8 @@ export function LogDrawer({ task, onClose }: LogDrawerProps): React.JSX.Element 
       </div>
       <div className="log-drawer__body">
         {task.agent_run_id ? (
-          hasStreamJson ? (
-            <ChatThread messages={messages} isStreaming={agentStatus === 'running' && isStreaming} />
-          ) : hasPlainText ? (
-            <pre className="log-drawer__plain-text">{logContent}</pre>
+          logContent.trim() ? (
+            <AgentLogViewer logContent={logContent} />
           ) : (
             <div className="log-drawer__empty">Agent is starting up...</div>
           )

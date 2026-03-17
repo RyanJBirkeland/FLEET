@@ -1224,3 +1224,139 @@
   border-top: 1px solid var(--bde-border);
   flex-shrink: 0;
 }
+
+/* ── Agent Log Viewer ──────────────────────────────────── */
+
+.agent-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.agent-log__empty {
+  padding: 16px;
+  color: var(--bde-text-muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.agent-log__bubble {
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 100%;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.agent-log__bubble--text {
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--bde-text);
+}
+
+.agent-log__text-content { white-space: normal; }
+.agent-log__text-content pre { margin: 4px 0; }
+
+.agent-log__bubble--tool {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--bde-border);
+  padding: 0;
+  white-space: normal;
+}
+
+.agent-log__tool-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 10px;
+  background: none;
+  border: none;
+  color: var(--bde-text);
+  cursor: pointer;
+  font-size: 12px;
+  text-align: left;
+}
+
+.agent-log__tool-header:hover { background: rgba(255, 255, 255, 0.04); }
+
+.agent-log__tool-badge {
+  background: rgba(0, 211, 127, 0.15);
+  color: var(--bde-accent);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.agent-log__tool-arrow { color: var(--bde-text-muted); font-size: 10px; }
+
+.agent-log__tool-input {
+  margin: 0;
+  padding: 8px 10px;
+  font-family: var(--bde-font-mono);
+  font-size: 11px;
+  color: var(--bde-text-muted);
+  border-top: 1px solid var(--bde-border);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow: hidden;
+}
+
+.agent-log__tool-input--collapsed {
+  max-height: 2.8em;
+  overflow: hidden;
+}
+
+.agent-log__result {
+  margin-left: 16px;
+  padding: 4px 8px;
+  border-left: 2px solid var(--bde-border);
+}
+
+.agent-log__result--error {
+  border-left-color: var(--bde-danger);
+  background: rgba(255, 77, 77, 0.06);
+}
+
+.agent-log__result-label {
+  display: block;
+  font-size: 10px;
+  color: var(--bde-text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.agent-log__result-content {
+  margin: 2px 0 0;
+  font-family: var(--bde-font-mono);
+  font-size: 11px;
+  color: var(--bde-text-muted);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.agent-log__result--error .agent-log__result-content { color: var(--bde-danger); }
+
+.agent-log__show-more {
+  background: none;
+  border: none;
+  color: var(--bde-accent);
+  font-size: 11px;
+  cursor: pointer;
+  padding: 2px 0;
+}
+
+.agent-log__show-more:hover { text-decoration: underline; }
+
+.agent-log__system {
+  font-size: 11px;
+  color: var(--bde-text-muted);
+  font-style: italic;
+  padding: 2px 12px;
+}
