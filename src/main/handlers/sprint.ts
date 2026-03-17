@@ -1,4 +1,4 @@
-import { readFile } from 'fs/promises'
+import { readFile, open } from 'fs/promises'
 import { readFileSync } from 'fs'
 import { join, resolve } from 'path'
 import { homedir } from 'os'
@@ -177,15 +177,26 @@ export function registerSprintHandlers(): void {
     return readFile(safePath, 'utf-8')
   })
 
-  safeHandle('sprint:readLog', async (_e, agentId: string) => {
+  safeHandle('sprint:readLog', async (_e, agentId: string, rawFromByte?: number) => {
+    const fromByte = typeof rawFromByte === 'number' ? rawFromByte : 0
     const db = getDb()
     const agent = db.prepare('SELECT log_path, status FROM agent_runs WHERE id = ?').get(agentId) as
       | { log_path: string | null; status: string }
       | undefined
 
-    if (!agent?.log_path) return { content: '', status: agent?.status ?? 'unknown' }
+    if (!agent?.log_path) return { content: '', status: agent?.status ?? 'unknown', nextByte: fromByte }
 
-    const content = await readFile(agent.log_path, 'utf-8').catch(() => '')
-    return { content, status: agent.status }
+    try {
+      const fh = await open(agent.log_path, 'r')
+      const stats = await fh.stat()
+      const size = stats.size
+      if (fromByte >= size) { await fh.close(); return { content: '', status: agent.status, nextByte: fromByte } }
+      const buf = Buffer.alloc(size - fromByte)
+      await fh.read(buf, 0, buf.length, fromByte)
+      await fh.close()
+      return { content: buf.toString('utf-8'), status: agent.status, nextByte: size }
+    } catch {
+      return { content: '', status: agent.status, nextByte: fromByte }
+    }
   })
 }
