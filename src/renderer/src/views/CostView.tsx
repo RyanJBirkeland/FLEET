@@ -32,9 +32,9 @@ interface SessionCost extends SessionWithTokens {
 type SortField = 'cost' | 'inputTokens' | 'outputTokens' | 'updatedAt'
 
 const MODEL_COLORS: Record<ModelKey, string> = {
-  haiku: '#3B82F6',
-  sonnet: '#00D37F',
-  opus: '#F59E0B',
+  haiku: 'var(--color-model-haiku)',
+  sonnet: 'var(--color-model-sonnet)',
+  opus: 'var(--color-model-opus)',
 }
 
 function formatCost(cost: number): string {
