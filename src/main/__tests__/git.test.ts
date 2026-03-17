@@ -9,7 +9,6 @@ import {
   gitStatus,
   gitBranches,
   gitDiffFile,
-  getDiff,
   getRepoPaths,
 } from '../git'
 
@@ -18,14 +17,6 @@ vi.mock('child_process', () => ({
   execFileSync: vi.fn(),
   spawnSync: vi.fn(),
 }))
-
-vi.mock('fs/promises', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('fs/promises')>()
-  return {
-    ...actual,
-    readFile: vi.fn(),
-  }
-})
 
 describe('git.ts', () => {
   beforeEach(() => {
@@ -249,40 +240,6 @@ describe('git.ts', () => {
       vi.mocked(execFileSync).mockImplementationOnce(() => { throw new Error('fail') })
 
       expect(gitDiffFile('/tmp/repo')).toBe('')
-    })
-  })
-
-  describe('getDiff — shell injection via ref parameter', () => {
-    it('passes ref directly into execSync template string (known risk)', () => {
-      vi.mocked(execSync).mockReturnValue('diff output')
-
-      getDiff('/tmp/repo', 'origin/main')
-
-      expect(execSync).toHaveBeenCalledWith(
-        'git diff origin/main...HEAD',
-        expect.any(Object)
-      )
-    })
-
-    it('special chars in ref are interpolated into shell command', () => {
-      // This documents the current behavior: getDiff uses execSync with string
-      // interpolation. A malicious ref like "; rm -rf /" would be passed to the shell.
-      // Since refs come from our own code (not user input), this is acceptable,
-      // but execFileSync would be safer.
-      vi.mocked(execSync).mockReturnValue('')
-
-      getDiff('/tmp/repo', 'refs/with spaces')
-
-      expect(execSync).toHaveBeenCalledWith(
-        'git diff refs/with spaces...HEAD',
-        expect.any(Object)
-      )
-    })
-
-    it('returns empty string on error', () => {
-      vi.mocked(execSync).mockImplementation(() => { throw new Error('fail') })
-
-      expect(getDiff('/tmp/repo')).toBe('')
     })
   })
 

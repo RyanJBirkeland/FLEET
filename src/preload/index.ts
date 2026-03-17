@@ -74,14 +74,10 @@ const api = {
   agents: {
     list: (args: { limit?: number; status?: string }): Promise<AgentMeta[]> =>
       ipcRenderer.invoke('agents:list', args),
-    getMeta: (args: { id: string }): Promise<AgentMeta | null> =>
-      ipcRenderer.invoke('agents:getMeta', args),
     readLog: (args: { id: string; fromByte?: number }): Promise<{ content: string; nextByte: number }> =>
       ipcRenderer.invoke('agents:readLog', args),
     import: (args: { meta: Partial<AgentMeta>; content: string }): Promise<AgentMeta> =>
       ipcRenderer.invoke('agents:import', args),
-    markDone: (args: { id: string; exitCode: number }): Promise<void> =>
-      ipcRenderer.invoke('agents:markDone', args)
   },
 
   // PR status polling
@@ -104,7 +100,6 @@ const api = {
     }): Promise<unknown> => ipcRenderer.invoke('sprint:create', task),
     update: (id: string, patch: Record<string, unknown>): Promise<unknown> =>
       ipcRenderer.invoke('sprint:update', id, patch),
-    delete: (id: string): Promise<{ ok: boolean }> => ipcRenderer.invoke('sprint:delete', id),
     readLog: (agentId: string): Promise<{ content: string; status: string }> =>
       ipcRenderer.invoke('sprint:readLog', agentId),
   },

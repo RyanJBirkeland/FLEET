@@ -1,10 +1,6 @@
 import { safeHandle } from '../ipc-utils'
 import {
   getRepoPaths,
-  readSprintMd,
-  getDiff,
-  getBranch,
-  getLog,
   gitStatus,
   gitDiffFile,
   gitStage,
@@ -19,12 +15,6 @@ import {
 
 export function registerGitHandlers(): void {
   safeHandle('get-repo-paths', () => getRepoPaths())
-  safeHandle('read-sprint-md', (_e, repoPath: string) => readSprintMd(repoPath))
-
-  // --- Git read-only IPC ---
-  safeHandle('get-diff', (_e, repoPath: string, base?: string) => getDiff(repoPath, base))
-  safeHandle('get-branch', (_e, repoPath: string) => getBranch(repoPath))
-  safeHandle('get-log', (_e, repoPath: string, n?: number) => getLog(repoPath, n))
 
   // --- Git client IPC ---
   safeHandle('git:status', (_e, cwd: string) => gitStatus(cwd))
