@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
 import { toast } from '../../stores/toasts'
+import { renderMarkdown } from '../../lib/render-markdown'
 import type { SprintTask } from './SprintCenter'
 
 function extractSpecPath(prompt: string): string | null {
@@ -15,20 +16,6 @@ type SpecDrawerProps = {
   onSave: (taskId: string, spec: string) => void
   onLaunch: (task: SprintTask) => void
   onPushToSprint: (task: SprintTask) => void
-}
-
-function renderMarkdown(md: string): string {
-  return md
-    .replace(/^### (.+)$/gm, '<h3>$1</h3>')
-    .replace(/^## (.+)$/gm, '<h2>$1</h2>')
-    .replace(/^# (.+)$/gm, '<h1>$1</h1>')
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
-    .replace(/\*([^*]+)\*/g, '<em>$1</em>')
-    .replace(/^- (.+)$/gm, '<li>$1</li>')
-    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>')
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[huplo])(.+)$/gm, '<p>$1</p>')
 }
 
 export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint }: SpecDrawerProps) {
