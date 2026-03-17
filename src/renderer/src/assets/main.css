@@ -713,7 +713,7 @@
   bottom: 16px;
   right: 16px;
   background: var(--bde-accent);
-  color: #000;
+  color: var(--bg-void);
   font-size: var(--bde-size-sm);
   font-weight: 600;
   padding: 6px 14px;
@@ -766,16 +766,16 @@
 
 .toast--success {
   background: var(--bde-accent);
-  color: #000;
+  color: var(--bg-void);
 }
 
 .toast--error {
-  background: #ef4444;
-  color: #fff;
+  background: var(--color-error);
+  color: var(--text-primary);
 }
 
 .toast--info {
-  background: #2a2a2a;
+  background: var(--bg-card);
   color: var(--bde-text);
   border: 1px solid var(--bde-border);
 }
@@ -888,7 +888,7 @@
 
 .diff-view__chip--active {
   background: var(--bde-accent);
-  color: #000;
+  color: var(--bg-void);
   border-color: var(--bde-accent);
 }
 
