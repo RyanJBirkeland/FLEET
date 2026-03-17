@@ -87,6 +87,7 @@ declare global {
 
       // Gateway RPC
       invokeTool: (tool: string, args?: Record<string, unknown>) => Promise<unknown>
+      getSessionHistory: (sessionKey: string) => Promise<unknown>
 
       // Terminal PTY
       terminal: {

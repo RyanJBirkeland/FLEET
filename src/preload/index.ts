@@ -107,6 +107,8 @@ const api = {
   // Gateway tool invocation — proxied through main process to avoid CORS
   invokeTool: (tool: string, args?: Record<string, unknown>): Promise<unknown> =>
     ipcRenderer.invoke('gateway:invoke', tool, args ?? {}),
+  getSessionHistory: (sessionKey: string): Promise<unknown> =>
+    ipcRenderer.invoke('gateway:getSessionHistory', sessionKey),
 
   // Terminal PTY
   terminal: {
