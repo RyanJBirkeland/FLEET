@@ -49,8 +49,9 @@ export interface ChatItemError {
 
 export type ChatItem = ChatItemText | ChatItemToolUse | ChatItemToolResult | ChatItemResult | ChatItemPlain | ChatItemError
 
-export function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: boolean } {
-  const lines = stripAnsi(raw).split('\n')
+export function parseStreamJson(raw: string, startLine = 0): { items: ChatItem[]; isStreaming: boolean; lineCount: number } {
+  const allLines = stripAnsi(raw).split('\n')
+  const lines = allLines.slice(startLine)
   const items: ChatItem[] = []
   let currentText = ''
   let hasMessageStop = false
@@ -231,5 +232,5 @@ export function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: 
 
   const isStreaming = !hasMessageStop && !hasResult && items.length > 0
 
-  return { items, isStreaming }
+  return { items, isStreaming, lineCount: startLine + lines.length }
 }
