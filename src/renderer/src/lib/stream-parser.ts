@@ -42,10 +42,15 @@ export interface ChatItemPlain {
   text: string
 }
 
-export type ChatItem = ChatItemText | ChatItemToolUse | ChatItemToolResult | ChatItemResult | ChatItemPlain
+export interface ChatItemError {
+  kind: 'error'
+  text: string
+}
+
+export type ChatItem = ChatItemText | ChatItemToolUse | ChatItemToolResult | ChatItemResult | ChatItemPlain | ChatItemError
 
 export function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: boolean } {
-  const lines = raw.split('\n')
+  const lines = stripAnsi(raw).split('\n')
   const items: ChatItem[] = []
   let currentText = ''
   let hasMessageStop = false
@@ -198,6 +203,18 @@ export function parseStreamJson(raw: string): { items: ChatItem[]; isStreaming: 
             input: inputStr
           })
         }
+        break
+      }
+
+      case 'error': {
+        if (currentText) {
+          items.push({ kind: 'text', text: currentText })
+          currentText = ''
+        }
+        const errObj = parsed.error as Record<string, unknown> | undefined
+        const errMsg = typeof errObj?.message === 'string' ? errObj.message : 'Unknown error'
+        items.push({ kind: 'error', text: errMsg })
+        hasResult = true // stop streaming indicator
         break
       }
 

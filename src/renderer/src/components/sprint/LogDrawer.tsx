@@ -169,7 +169,7 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
           hasStreamJson ? (
             <ChatThread messages={allMessages} isStreaming={agentStatus === AGENT_STATUS.RUNNING && isStreaming} />
           ) : hasPlainText ? (
-            <pre className="log-drawer__plain-text">{logContent}</pre>
+            <pre className="log-drawer__plain-text">{stripAnsi(logContent)}</pre>
           ) : (
             <div className="log-drawer__empty">Agent is starting up...</div>
           )

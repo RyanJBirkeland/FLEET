@@ -31,6 +31,8 @@ export function chatItemsToMessages(items: ChatItem[]): ChatMessage[] {
       }
       case 'plain':
         return item.text.trim() ? [{ role: 'system', content: item.text }] : []
+      case 'error':
+        return [{ role: 'system', content: `\u2717 Error: ${item.text}` }]
       default:
         return []
     }
