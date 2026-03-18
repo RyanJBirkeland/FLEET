@@ -1,138 +1,161 @@
-import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import Database from 'better-sqlite3'
-import { mkdirSync, rmSync } from 'fs'
-import { join } from 'path'
-import { tmpdir } from 'os'
+import { runMigrations, migrations } from '../db'
 
-const TEST_DIR = join(tmpdir(), `bde-db-test-${process.pid}`)
-const TEST_DB_PATH = join(TEST_DIR, 'bde.db')
-
-/**
- * Smoke test: runs the same migration SQL that db.ts uses against an
- * in-memory-style temp database and verifies all expected tables,
- * indexes, and triggers exist.
- */
 describe('db schema migrations', () => {
   let db: Database.Database
 
-  beforeAll(() => {
-    mkdirSync(TEST_DIR, { recursive: true })
-    db = new Database(TEST_DB_PATH)
+  beforeEach(() => {
+    db = new Database(':memory:')
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
-
-    // Run the same migration SQL from db.ts
-    db.exec(`
-      CREATE TABLE IF NOT EXISTS agent_runs (
-        id           TEXT PRIMARY KEY,
-        pid          INTEGER,
-        bin          TEXT NOT NULL DEFAULT 'claude',
-        task         TEXT,
-        repo         TEXT,
-        repo_path    TEXT,
-        model        TEXT,
-        status       TEXT NOT NULL DEFAULT 'running'
-                       CHECK(status IN ('running','done','failed','unknown')),
-        log_path     TEXT,
-        started_at   TEXT NOT NULL,
-        finished_at  TEXT,
-        exit_code    INTEGER
-      );
-
-      CREATE TABLE IF NOT EXISTS sprint_tasks (
-        id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-        title        TEXT NOT NULL,
-        prompt       TEXT NOT NULL DEFAULT '',
-        repo         TEXT NOT NULL DEFAULT 'bde',
-        status       TEXT NOT NULL DEFAULT 'backlog'
-                       CHECK(status IN ('backlog','queued','active','done','cancelled')),
-        priority     INTEGER NOT NULL DEFAULT 1,
-        spec         TEXT,
-        notes        TEXT,
-        pr_url       TEXT,
-        pr_number    INTEGER,
-        pr_status    TEXT,
-        agent_run_id TEXT REFERENCES agent_runs(id),
-        started_at   TEXT,
-        completed_at TEXT,
-        created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-        updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-      );
-
-      CREATE TABLE IF NOT EXISTS settings (
-        key          TEXT PRIMARY KEY,
-        value        TEXT NOT NULL,
-        updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-      );
-
-      CREATE TRIGGER IF NOT EXISTS sprint_tasks_updated_at
-        AFTER UPDATE ON sprint_tasks
-        BEGIN
-          UPDATE sprint_tasks SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-          WHERE id = NEW.id;
-        END;
-
-      CREATE INDEX IF NOT EXISTS idx_sprint_tasks_status ON sprint_tasks(status, priority, created_at);
-      CREATE INDEX IF NOT EXISTS idx_agent_runs_pid      ON agent_runs(pid);
-      CREATE INDEX IF NOT EXISTS idx_agent_runs_status   ON agent_runs(status);
-    `)
   })
 
-  afterAll(() => {
+  afterEach(() => {
     db.close()
-    rmSync(TEST_DIR, { recursive: true, force: true })
   })
 
-  it('creates sprint_tasks table', () => {
-    const row = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='sprint_tasks'")
-      .get() as { name: string } | undefined
-    expect(row?.name).toBe('sprint_tasks')
+  it('fresh DB runs all migrations and sets user_version to latest', () => {
+    runMigrations(db)
+
+    const version = db.pragma('user_version', { simple: true }) as number
+    const latest = migrations[migrations.length - 1].version
+    expect(version).toBe(latest)
   })
 
-  it('creates agent_runs table', () => {
-    const row = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='agent_runs'")
-      .get() as { name: string } | undefined
-    expect(row?.name).toBe('agent_runs')
-  })
+  it('creates all expected tables', () => {
+    runMigrations(db)
 
-  it('creates settings table', () => {
-    const row = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='settings'")
-      .get() as { name: string } | undefined
-    expect(row?.name).toBe('settings')
-  })
+    const tables = (
+      db
+        .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name NOT LIKE 'sqlite_%'")
+        .all() as { name: string }[]
+    )
+      .map((r) => r.name)
+      .sort()
 
-  it('creates sprint_tasks_updated_at trigger', () => {
-    const row = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='sprint_tasks_updated_at'")
-      .get() as { name: string } | undefined
-    expect(row?.name).toBe('sprint_tasks_updated_at')
+    expect(tables).toEqual(['agent_runs', 'cost_events', 'settings', 'sprint_tasks'])
   })
 
   it('creates expected indexes', () => {
-    const indexes = db
-      .prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'")
-      .all() as { name: string }[]
-    const names = indexes.map((i) => i.name).sort()
-    expect(names).toEqual([
+    runMigrations(db)
+
+    const indexes = (
+      db.prepare("SELECT name FROM sqlite_master WHERE type='index' AND name LIKE 'idx_%'").all() as {
+        name: string
+      }[]
+    )
+      .map((i) => i.name)
+      .sort()
+
+    expect(indexes).toEqual([
+      'idx_agent_runs_finished',
       'idx_agent_runs_pid',
       'idx_agent_runs_status',
       'idx_sprint_tasks_status'
     ])
   })
 
+  it('creates sprint_tasks_updated_at trigger', () => {
+    runMigrations(db)
+
+    const row = db
+      .prepare("SELECT name FROM sqlite_master WHERE type='trigger' AND name='sprint_tasks_updated_at'")
+      .get() as { name: string } | undefined
+    expect(row?.name).toBe('sprint_tasks_updated_at')
+  })
+
+  it('adds pr_mergeable_state column to sprint_tasks', () => {
+    runMigrations(db)
+
+    const cols = (db.pragma('table_info(sprint_tasks)') as { name: string }[]).map((c) => c.name)
+    expect(cols).toContain('pr_mergeable_state')
+  })
+
+  it('adds cost columns to agent_runs', () => {
+    runMigrations(db)
+
+    const cols = (db.pragma('table_info(agent_runs)') as { name: string }[]).map((c) => c.name)
+    for (const col of ['cost_usd', 'tokens_in', 'tokens_out', 'cache_read', 'cache_create', 'duration_ms', 'num_turns']) {
+      expect(cols).toContain(col)
+    }
+  })
+
   it('enforces sprint_tasks status CHECK constraint', () => {
+    runMigrations(db)
+
     expect(() => {
-      db.prepare(
-        "INSERT INTO sprint_tasks (id, title, status) VALUES ('test1', 'bad status', 'invalid')"
-      ).run()
+      db.prepare("INSERT INTO sprint_tasks (id, title, status) VALUES ('test1', 'bad status', 'invalid')").run()
     }).toThrow()
   })
 
-  it('sets WAL journal mode', () => {
-    const result = db.pragma('journal_mode') as { journal_mode: string }[]
-    expect(result[0].journal_mode).toBe('wal')
+  it('DB at version 2 only runs migrations 3+', () => {
+    // Run migrations up to version 2
+    runMigrations(db)
+    // Reset to version 2 to simulate a DB that stopped there
+    db.pragma('user_version = 2')
+
+    // Verify no cost columns yet would be the real scenario, but since we
+    // already ran all migrations, let's use a fresh DB instead
+    const db2 = new Database(':memory:')
+    db2.pragma('journal_mode = WAL')
+    db2.pragma('foreign_keys = ON')
+
+    // Manually run only migrations 1 and 2
+    for (const m of migrations.filter((m) => m.version <= 2)) {
+      m.up(db2)
+    }
+    db2.pragma('user_version = 2')
+
+    // Verify cost_events table does not exist yet
+    const before = db2
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cost_events'")
+      .get()
+    expect(before).toBeUndefined()
+
+    // Now run the migration system — should only run 3+
+    runMigrations(db2)
+
+    const version = db2.pragma('user_version', { simple: true }) as number
+    expect(version).toBe(migrations[migrations.length - 1].version)
+
+    // cost_events should now exist (migration 4)
+    const after = db2
+      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cost_events'")
+      .get() as { name: string } | undefined
+    expect(after?.name).toBe('cost_events')
+
+    db2.close()
+  })
+
+  it('is idempotent — running twice does not error', () => {
+    runMigrations(db)
+    runMigrations(db)
+
+    const version = db.pragma('user_version', { simple: true }) as number
+    expect(version).toBe(migrations[migrations.length - 1].version)
+  })
+
+  it('skips all migrations when already at latest version', () => {
+    runMigrations(db)
+
+    const versionBefore = db.pragma('user_version', { simple: true }) as number
+
+    // Running again should be a no-op
+    runMigrations(db)
+
+    const versionAfter = db.pragma('user_version', { simple: true }) as number
+    expect(versionAfter).toBe(versionBefore)
+  })
+
+  it('migrations are sorted by ascending version', () => {
+    const versions = migrations.map((m) => m.version)
+    const sorted = [...versions].sort((a, b) => a - b)
+    expect(versions).toEqual(sorted)
+  })
+
+  it('migration versions are unique', () => {
+    const versions = migrations.map((m) => m.version)
+    expect(new Set(versions).size).toBe(versions.length)
   })
 })
