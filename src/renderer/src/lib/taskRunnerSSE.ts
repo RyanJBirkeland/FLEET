@@ -36,12 +36,27 @@ function connect(): void {
   window.api.offSprintSseEvent()
   connected = true
   window.api.onSprintSseEvent((event: { type: string; data: unknown }) => {
+    if (event.type === '__sse-disconnected') {
+      // Main process signalled that the SSE connection dropped.
+      // Reset so the next subscribeSSE (or reconnect) re-registers.
+      connected = false
+      return
+    }
     emit(event.type, event.data)
   })
 }
 
 function emit(event: string, data: unknown): void {
   listeners.get(event)?.forEach((fn) => fn(data))
+}
+
+/**
+ * Tear down the IPC listener and reset connection state so a subsequent
+ * `subscribeSSE` call will re-establish the bridge.
+ */
+export function disconnect(): void {
+  window.api.offSprintSseEvent()
+  connected = false
 }
 
 export function subscribeSSE(event: string, handler: Handler): () => void {
