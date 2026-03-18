@@ -1,10 +1,10 @@
-import { useEffect, useState, useCallback, useMemo } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { useLocalAgentsStore } from '../../stores/localAgents'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { useTerminalStore } from '../../stores/terminal'
 import { cwdToRepoLabel } from '../../lib/utils'
 import { Button } from '../ui/Button'
-import { parseStreamJson } from '../../lib/stream-parser'
+import { parseStreamJson, type ChatItem } from '../../lib/stream-parser'
 import { chatItemsToMessages } from '../../lib/agent-messages'
 import { ChatThread } from './ChatThread'
 import { formatElapsed, formatDuration, formatTime } from '../../lib/format'
@@ -44,7 +44,21 @@ export function AgentLogViewer({ agentId }: { agentId: string }): React.JSX.Elem
 
   const isRunning = agent?.status === 'running'
 
-  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
+  const lineCountRef = useRef(0)
+  const prevItemsRef = useRef<ChatItem[]>([])
+
+  useEffect(() => {
+    lineCountRef.current = 0
+    prevItemsRef.current = []
+  }, [agentId])
+
+  const { items, isStreaming } = useMemo(() => {
+    const { items: newItems, isStreaming, lineCount } = parseStreamJson(logContent, lineCountRef.current)
+    const merged = [...prevItemsRef.current, ...newItems]
+    prevItemsRef.current = merged
+    lineCountRef.current = lineCount
+    return { items: merged, isStreaming }
+  }, [logContent])
   const chatMessages = useMemo(() => chatItemsToMessages(items), [items])
 
   return (
@@ -116,7 +130,21 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   const [steerInput, setSteerInput] = useState('')
   const [sentMessages, setSentMessages] = useState<string[]>([])
 
-  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
+  const lineCountRef = useRef(0)
+  const prevItemsRef = useRef<ChatItem[]>([])
+
+  useEffect(() => {
+    lineCountRef.current = 0
+    prevItemsRef.current = []
+  }, [pid])
+
+  const { items, isStreaming } = useMemo(() => {
+    const { items: newItems, isStreaming, lineCount } = parseStreamJson(logContent, lineCountRef.current)
+    const merged = [...prevItemsRef.current, ...newItems]
+    prevItemsRef.current = merged
+    lineCountRef.current = lineCount
+    return { items: merged, isStreaming }
+  }, [logContent])
   const chatMessages = useMemo(() => chatItemsToMessages(items), [items])
 
   // Route externally-spawned agents through history store (readLog by ID)

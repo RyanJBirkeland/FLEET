@@ -1,7 +1,7 @@
-import { useEffect, useState, useMemo } from 'react'
+import { useEffect, useState, useMemo, useRef } from 'react'
 import { LocalAgentLogViewer, AgentLogViewer } from '../sessions/LocalAgentLogViewer'
 import { tokens } from '../../design-system/tokens'
-import { parseStreamJson } from '../../lib/stream-parser'
+import { parseStreamJson, type ChatItem } from '../../lib/stream-parser'
 import { chatItemsToMessages } from '../../lib/agent-messages'
 import { ChatThread } from '../sessions/ChatThread'
 
@@ -45,10 +45,22 @@ export function AgentOutputTab({ agentId, agentOutput, sessionKey }: AgentOutput
     }
   }, [sessionKey])
 
+  const lineCountRef = useRef(0)
+  const prevItemsRef = useRef<ChatItem[]>([])
+
+  useEffect(() => {
+    lineCountRef.current = 0
+    prevItemsRef.current = []
+  }, [sessionKey])
+
   // Parse stream-json for gateway sessions
   const { items, isStreaming } = useMemo(() => {
     if (!sessionKey || !historyContent) return { items: [], isStreaming: false }
-    return parseStreamJson(historyContent)
+    const { items: newItems, isStreaming, lineCount } = parseStreamJson(historyContent, lineCountRef.current)
+    const merged = [...prevItemsRef.current, ...newItems]
+    prevItemsRef.current = merged
+    lineCountRef.current = lineCount
+    return { items: merged, isStreaming }
   }, [sessionKey, historyContent])
 
   const chatMessages = useMemo(() => {

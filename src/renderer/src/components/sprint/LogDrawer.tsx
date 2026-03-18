@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { Copy, RefreshCw } from 'lucide-react'
-import { parseStreamJson, stripAnsi } from '../../lib/stream-parser'
+import { parseStreamJson, stripAnsi, type ChatItem } from '../../lib/stream-parser'
 import { chatItemsToMessages } from '../../lib/agent-messages'
 import type { ChatMessage } from '../../lib/agent-messages'
 import { ChatThread } from '../sessions/ChatThread'
@@ -24,10 +24,14 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [sentMessages, setSentMessages] = useState<ChatMessage[]>([])
   const fromByteRef = useRef(0)
+  const lineCountRef = useRef(0)
+  const prevItemsRef = useRef<ChatItem[]>([])
 
   // Effect 1: reset state only when switching to a different agent
   useEffect(() => {
     fromByteRef.current = 0
+    lineCountRef.current = 0
+    prevItemsRef.current = []
     setLogContent('')
     setAgentStatus(AGENT_STATUS.UNKNOWN)
     setExitCode(null)
@@ -88,7 +92,13 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     }
   }, [task?.agent_run_id, task?.status])
 
-  const { items, isStreaming } = useMemo(() => parseStreamJson(logContent), [logContent])
+  const { items, isStreaming } = useMemo(() => {
+    const { items: newItems, isStreaming, lineCount } = parseStreamJson(logContent, lineCountRef.current)
+    const merged = [...prevItemsRef.current, ...newItems]
+    prevItemsRef.current = merged
+    lineCountRef.current = lineCount
+    return { items: merged, isStreaming }
+  }, [logContent])
   const messages = useMemo(() => chatItemsToMessages(items), [items])
 
   const allMessages = useMemo(
