@@ -46,6 +46,7 @@ interface SessionsStore {
   selectedSessionKey: string | null
   runningCount: number
   loading: boolean
+  isFetching: boolean
   fetchError: string | null
   followMode: boolean
   fetchSessions: () => Promise<void>
@@ -73,93 +74,99 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
   selectedSessionKey: null,
   runningCount: 0,
   loading: true,
+  isFetching: false,
   fetchError: null,
   followMode: false,
 
   fetchSessions: async (): Promise<void> => {
-    set({ subAgentsLoading: true })
+    if (get().isFetching) return
+    set({ isFetching: true, subAgentsLoading: true })
 
-    const [sessionsResult, subAgentsResult] = await Promise.allSettled([
-      invokeTool('sessions_list') as Promise<{
-        sessions: AgentSession[]
-        count: number
-      }>,
-      invokeTool('subagents', { action: 'list' }) as Promise<{
-        active?: { sessionKey: string; label?: string; task?: string; status: string; model: string; startedAt: number; endedAt?: number }[]
-        recent?: { sessionKey: string; label?: string; task?: string; status: string; model: string; startedAt: number; endedAt?: number }[]
-      }>
-    ])
+    try {
+      const [sessionsResult, subAgentsResult] = await Promise.allSettled([
+        invokeTool('sessions_list') as Promise<{
+          sessions: AgentSession[]
+          count: number
+        }>,
+        invokeTool('subagents', { action: 'list' }) as Promise<{
+          active?: { sessionKey: string; label?: string; task?: string; status: string; model: string; startedAt: number; endedAt?: number }[]
+          recent?: { sessionKey: string; label?: string; task?: string; status: string; model: string; startedAt: number; endedAt?: number }[]
+        }>
+      ])
 
-    // Handle sessions result
-    if (sessionsResult.status === 'fulfilled') {
-      // Filter out sessions with a pending kill (optimistic removal still in undo window)
-      const sessions = (sessionsResult.value.sessions ?? []).filter(
-        (s) => !_pendingKillTimers.has(s.key)
-      )
-      const fiveMinAgo = Date.now() - SESSION_ACTIVE_THRESHOLD
-      set({
-        sessions,
-        runningCount: sessions.filter((s) => s.updatedAt > fiveMinAgo).length,
-        loading: false,
-        fetchError: null
-      })
-    } else {
-      set({ loading: false, fetchError: 'Could not reach gateway' })
-      toast.error('Failed to fetch sessions')
-    }
-
-    // Handle sub-agents result — failure does not block sessions
-    if (subAgentsResult.status === 'fulfilled') {
-      const subData = subAgentsResult.value
-      const deriveLabel = (entry: { label?: string; sessionKey: string }): string => {
-        if (entry.label) return entry.label
-        const parts = entry.sessionKey.split(':')
-        const last = parts[parts.length - 1] ?? entry.sessionKey
-        return `subagent-${last.slice(-8)}`
+      // Handle sessions result
+      if (sessionsResult.status === 'fulfilled') {
+        // Filter out sessions with a pending kill (optimistic removal still in undo window)
+        const sessions = (sessionsResult.value.sessions ?? []).filter(
+          (s) => !_pendingKillTimers.has(s.key)
+        )
+        const fiveMinAgo = Date.now() - SESSION_ACTIVE_THRESHOLD
+        set({
+          sessions,
+          runningCount: sessions.filter((s) => s.updatedAt > fiveMinAgo).length,
+          loading: false,
+          fetchError: null
+        })
+      } else {
+        set({ loading: false, fetchError: 'Could not reach gateway' })
+        toast.error('Failed to fetch sessions')
       }
-      const normalizeSubAgentStatus = (raw: string): SubAgentStatus => {
-        switch (raw) {
-          case 'running':
-          case 'completed':
-          case 'failed':
-          case 'timeout':
-          case 'done':
-            return raw
-          default:
-            return 'unknown'
+
+      // Handle sub-agents result — failure does not block sessions
+      if (subAgentsResult.status === 'fulfilled') {
+        const subData = subAgentsResult.value
+        const deriveLabel = (entry: { label?: string; sessionKey: string }): string => {
+          if (entry.label) return entry.label
+          const parts = entry.sessionKey.split(':')
+          const last = parts[parts.length - 1] ?? entry.sessionKey
+          return `subagent-${last.slice(-8)}`
+        }
+        const normalizeSubAgentStatus = (raw: string): SubAgentStatus => {
+          switch (raw) {
+            case 'running':
+            case 'completed':
+            case 'failed':
+            case 'timeout':
+            case 'done':
+              return raw
+            default:
+              return 'unknown'
+          }
+        }
+        const active = (subData.active ?? [])
+          .filter((s) => !_pendingKillTimers.has(s.sessionKey))
+          .map((s) => ({
+            ...s,
+            label: deriveLabel(s),
+            task: s.task ?? '',
+            status: normalizeSubAgentStatus(s.status),
+            isActive: true
+          }))
+        const recent = (subData.recent ?? [])
+          .filter((s) => !_pendingKillTimers.has(s.sessionKey))
+          .map((s) => ({
+            ...s,
+            label: deriveLabel(s),
+            task: s.task ?? '',
+            status: normalizeSubAgentStatus(s.status),
+            isActive: false
+          }))
+        set({ subAgents: [...active, ...recent], subAgentsError: null, subAgentsLoading: false })
+      } else {
+        set({ subAgentsError: 'Could not fetch sub-agents', subAgentsLoading: false })
+      }
+
+      // Auto-follow: switch to most recently started active sub-agent
+      if (get().followMode) {
+        const mostRecent = get()
+          .subAgents.filter((a) => a.isActive)
+          .sort((a, b) => b.startedAt - a.startedAt)[0]
+        if (mostRecent && mostRecent.sessionKey !== get().selectedSessionKey) {
+          set({ selectedSessionKey: mostRecent.sessionKey })
         }
       }
-      const active = (subData.active ?? [])
-        .filter((s) => !_pendingKillTimers.has(s.sessionKey))
-        .map((s) => ({
-          ...s,
-          label: deriveLabel(s),
-          task: s.task ?? '',
-          status: normalizeSubAgentStatus(s.status),
-          isActive: true
-        }))
-      const recent = (subData.recent ?? [])
-        .filter((s) => !_pendingKillTimers.has(s.sessionKey))
-        .map((s) => ({
-          ...s,
-          label: deriveLabel(s),
-          task: s.task ?? '',
-          status: normalizeSubAgentStatus(s.status),
-          isActive: false
-        }))
-      set({ subAgents: [...active, ...recent], subAgentsError: null, subAgentsLoading: false })
-    } else {
-      set({ subAgentsError: 'Could not fetch sub-agents', subAgentsLoading: false })
-    }
-
-    // Auto-follow: switch to most recently started active sub-agent
-    if (get().followMode) {
-      const mostRecent = get()
-        .subAgents.filter((a) => a.isActive)
-        .sort((a, b) => b.startedAt - a.startedAt)[0]
-      if (mostRecent && mostRecent.sessionKey !== get().selectedSessionKey) {
-        set({ selectedSessionKey: mostRecent.sessionKey })
-      }
+    } finally {
+      set({ isFetching: false })
     }
   },
 
