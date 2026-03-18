@@ -352,6 +352,7 @@ export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<Spawn
 
   child.on('close', async (code, signal) => {
     activeAgentsById.delete(id)
+    if (child.pid) activeAgentProcesses.delete(child.pid)
     const status = signal === 'SIGTERM' ? 'cancelled' : code === 0 ? 'done' : 'failed'
     await updateAgentMeta(id, {
       finishedAt: new Date().toISOString(),

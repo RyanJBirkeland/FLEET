@@ -515,7 +515,7 @@ describe('local-agents.ts', () => {
       await spawnClaudeAgent({ task: 'test', repoPath: '/tmp/repo' })
       expect(isAgentInteractive(5006)).toBe(true)
 
-      mockChild.emit('exit', 0)
+      mockChild.emit('close', 0)
       await vi.waitFor(() => expect(isAgentInteractive(5006)).toBe(false))
     })
 
@@ -578,7 +578,7 @@ describe('local-agents.ts', () => {
       await spawnClaudeAgent({ task: 'test', repoPath: '/tmp/repo' })
       vi.mocked(updateAgentMeta).mockClear()
 
-      mockChild.emit('exit', 0)
+      mockChild.emit('close', 0)
       await vi.waitFor(() =>
         expect(updateAgentMeta).toHaveBeenCalledWith(
           expect.any(String),
@@ -594,7 +594,7 @@ describe('local-agents.ts', () => {
       await spawnClaudeAgent({ task: 'test', repoPath: '/tmp/repo' })
       vi.mocked(updateAgentMeta).mockClear()
 
-      mockChild.emit('exit', 1)
+      mockChild.emit('close', 1)
       await vi.waitFor(() =>
         expect(updateAgentMeta).toHaveBeenCalledWith(
           expect.any(String),
