@@ -8,7 +8,7 @@ import type { AgentRunCostRow, CostSummary } from '../../../shared/types'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Button } from '../components/ui/Button'
 import { Download, RefreshCw, BarChart, ExternalLink } from 'lucide-react'
-import { POLL_SPRINT_INTERVAL } from '../lib/constants'
+import { POLL_COST_INTERVAL } from '../lib/constants'
 import { useCostDataStore } from '../stores/costData'
 
 // ── Formatting helpers ──────────────────────────────────
@@ -259,7 +259,7 @@ export default function CostView(): React.JSX.Element {
 
   useEffect(() => {
     fetchData()
-    const interval = setInterval(fetchData, POLL_SPRINT_INTERVAL)
+    const interval = setInterval(fetchData, POLL_COST_INTERVAL)
     return () => clearInterval(interval)
   }, [fetchData])
 
