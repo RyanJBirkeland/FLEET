@@ -40,7 +40,7 @@ interface LocalAgentsState extends LogPollerState {
   sendToAgent: (pid: number, message: string) => Promise<void>
   killLocalAgent: (pid: number) => Promise<void>
   selectLocalAgent: (pid: number | null) => void
-  startLogPolling: (logPath: string) => void
+  startLogPolling: (logPath: string) => () => void
   stopLogPolling: () => void
 }
 
@@ -118,8 +118,8 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
           })
         },
 
-        startLogPolling: (logPath): void => {
-          poller.startLogPolling((fromByte) =>
+        startLogPolling: (logPath): (() => void) => {
+          return poller.startLogPolling((fromByte) =>
             window.api.tailAgentLog({ logPath, fromByte })
           )
         },
