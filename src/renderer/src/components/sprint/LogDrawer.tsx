@@ -64,8 +64,11 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     const unsubChunk = subscribeSSE('log:chunk', (data: unknown) => {
       const ev = data as LogChunkEvent
       if (ev.agentId !== agentId) return
-      if (ev.fromByte < fromByteRef.current) return // already covered by catch-up
-      const cleaned = stripAnsi(ev.content)
+      // Handle partial overlap: slice off bytes we already have
+      const overlap = fromByteRef.current - ev.fromByte
+      const text = overlap > 0 ? ev.content.slice(overlap) : ev.content
+      if (text.length === 0) return
+      const cleaned = stripAnsi(text)
       setLogContent((prev) => prev + cleaned)
       fromByteRef.current = ev.fromByte + new TextEncoder().encode(ev.content).length
     })
@@ -169,7 +172,7 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
           hasStreamJson ? (
             <ChatThread messages={allMessages} isStreaming={agentStatus === AGENT_STATUS.RUNNING && isStreaming} />
           ) : hasPlainText ? (
-            <pre className="log-drawer__plain-text">{logContent}</pre>
+            <pre className="log-drawer__plain-text">{stripAnsi(logContent)}</pre>
           ) : (
             <div className="log-drawer__empty">Agent is starting up...</div>
           )
