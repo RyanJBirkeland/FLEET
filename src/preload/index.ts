@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
-import type { AgentCostRecord, AgentMeta, SpawnLocalAgentArgs, SprintTask } from '../shared/types'
+import type { AgentCostRecord, AgentMeta, AgentRunCostRow, CostSummary, SpawnLocalAgentArgs, SprintTask } from '../shared/types'
 import type { IpcChannelMap } from '../shared/ipc-channels'
 
 // Prevent MaxListenersExceededWarning during HMR dev cycles
@@ -90,6 +90,16 @@ const api = {
       ipcRenderer.invoke('agents:import', args),
   },
 
+  // Cost analytics
+  cost: {
+    summary: (): Promise<CostSummary> =>
+      ipcRenderer.invoke('cost:summary'),
+    agentRuns: (limit?: number): Promise<AgentRunCostRow[]> =>
+      ipcRenderer.invoke('cost:agentRuns', { limit: limit ?? 20 }),
+    getAgentHistory: (): Promise<AgentCostRecord[]> =>
+      ipcRenderer.invoke('cost:getAgentHistory'),
+  },
+
   // PR status polling
   pollPrStatuses: (
     prs: { taskId: string; prUrl: string }[]
@@ -133,11 +143,7 @@ const api = {
       ipcRenderer.invoke('sprint:health-check'),
   },
 
-  // Cost analytics
-  cost: {
-    getAgentHistory: (): Promise<AgentCostRecord[]> =>
-      ipcRenderer.invoke('cost:getAgentHistory'),
-  },
+
 
   // File attachments
   openFileDialog: (

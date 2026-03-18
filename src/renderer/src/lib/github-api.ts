@@ -111,6 +111,17 @@ export async function getCheckRuns(owner: string, repo: string, sha: string): Pr
 }
 
 export async function getPRDiff(owner: string, repo: string, number: number): Promise<string> {
+  const token = await getToken()
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${number}`, {
+    headers: {
+      Accept: 'application/vnd.github.diff',
+      Authorization: `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`)
+  return res.text()
+}
+
 /* ── PR detail, files, and individual check runs ── */
 
 export interface PRDetail {
@@ -171,18 +182,6 @@ export async function getCheckRunsList(
   if (!res.ok) return []
   const data = (await res.json()) as { check_runs: CheckRun[] }
   return data.check_runs
-}
-
-export async function mergePR(owner: string, repo: string, number: number): Promise<void> {
-  const token = await getToken()
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${number}`, {
-    headers: {
-      Accept: 'application/vnd.github.diff',
-      Authorization: `Bearer ${token}`
-    }
-  })
-  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`)
-  return res.text()
 }
 
 export type MergeMethod = 'squash' | 'merge' | 'rebase'

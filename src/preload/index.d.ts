@@ -1,5 +1,5 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
-import type { AgentCostRecord, AgentMeta, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask } from '../shared/types'
+import type { AgentCostRecord, AgentMeta, AgentRunCostRow, CostSummary, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask } from '../shared/types'
 import type { IpcChannelMap } from '../shared/ipc-channels'
 
 export type { AgentCostRecord, AgentMeta, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask }
@@ -64,6 +64,13 @@ declare global {
         import: (args: { meta: Partial<AgentMeta>; content: string }) => Promise<AgentMeta>
       }
 
+      // Cost analytics
+      cost: {
+        summary: () => Promise<CostSummary>
+        agentRuns: (limit?: number) => Promise<AgentRunCostRow[]>
+        getAgentHistory: () => Promise<AgentCostRecord[]>
+      }
+
       // PR status polling
       pollPrStatuses: (
         prs: { taskId: string; prUrl: string }[]
@@ -97,11 +104,6 @@ declare global {
         }) => Promise<{ taskId: string; spec: string; prompt: string }>
         delete: (id: string) => Promise<{ ok: boolean }>
         healthCheck: () => Promise<SprintTask[]>
-      }
-
-      // Cost analytics
-      cost: {
-        getAgentHistory: () => Promise<AgentCostRecord[]>
       }
 
       // File attachments
