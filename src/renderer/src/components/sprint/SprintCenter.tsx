@@ -313,12 +313,16 @@ export default function SprintCenter() {
       if (!task.agent_run_id) return
       const confirmed = window.confirm('Stop this agent? The task will be marked cancelled.')
       if (!confirmed) return
-      const result = await window.api.killAgent(task.agent_run_id)
-      if (result.ok) {
-        updateTask(task.id, { status: TASK_STATUS.CANCELLED })
-        toast.success('Agent stopped')
-      } else {
-        toast.error(result.error ?? 'Failed to stop agent')
+      try {
+        const result = await window.api.killAgent(task.agent_run_id)
+        if (result.ok) {
+          updateTask(task.id, { status: TASK_STATUS.CANCELLED })
+          toast.success('Agent stopped')
+        } else {
+          toast.error(result.error ?? 'Failed to stop agent')
+        }
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to stop agent')
       }
     },
     [updateTask]
