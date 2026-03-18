@@ -9,11 +9,10 @@ import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
 import { PRSection } from './PRSection'
 import { NewTicketModal } from './NewTicketModal'
-import type { CreateTicketData } from './NewTicketModal'
 import { toast } from '../../stores/toasts'
 import { usePrConflictsStore } from '../../stores/prConflicts'
 import { useHealthCheckStore } from '../../stores/healthCheck'
-import { detectTemplate } from '../../../../shared/template-heuristics'
+import { useSprintStore } from '../../stores/sprint'
 import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
 import { subscribeSSE, type TaskUpdatedEvent } from '../../lib/taskRunnerSSE'
 import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
@@ -27,32 +26,38 @@ import {
 } from '../../lib/constants'
 import { TASK_STATUS, PR_STATUS } from '../../../../shared/constants'
 
-const REPO_LABEL_TO_ENUM: Record<string, string> = {
-  BDE: 'bde',
-  'life-os': 'life-os',
-  feast: 'feast',
-}
-
-// --- Types ---
-
 import type { SprintTask } from '../../../../shared/types'
 export type { SprintTask }
 
 // --- Component ---
 
 export default function SprintCenter() {
-  const [tasks, setTasks] = useState<SprintTask[]>([])
-  const [repoFilter, setRepoFilter] = useState<string | null>(null)
+  // --- Store state ---
+  const tasks = useSprintStore((s) => s.tasks)
+  const loading = useSprintStore((s) => s.loading)
+  const loadError = useSprintStore((s) => s.loadError)
+  const repoFilter = useSprintStore((s) => s.repoFilter)
+  const selectedTaskId = useSprintStore((s) => s.selectedTaskId)
+  const logDrawerTaskId = useSprintStore((s) => s.logDrawerTaskId)
+  const prMergedMap = useSprintStore((s) => s.prMergedMap)
+  const generatingIds = useSprintStore((s) => s.generatingIds)
+
+  const loadData = useSprintStore((s) => s.loadData)
+  const updateTask = useSprintStore((s) => s.updateTask)
+  const deleteTask = useSprintStore((s) => s.deleteTask)
+  const createTask = useSprintStore((s) => s.createTask)
+  const mergeSseUpdate = useSprintStore((s) => s.mergeSseUpdate)
+  const setRepoFilter = useSprintStore((s) => s.setRepoFilter)
+  const setSelectedTaskId = useSprintStore((s) => s.setSelectedTaskId)
+  const setLogDrawerTaskId = useSprintStore((s) => s.setLogDrawerTaskId)
+  const setPrMergedMap = useSprintStore((s) => s.setPrMergedMap)
+
+  // --- Local UI state ---
   const [backlogSearch, setBacklogSearch] = useState('')
-  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
-  const [logDrawerTaskId, setLogDrawerTaskId] = useState<string | null>(null)
-  const [loading, setLoading] = useState(true)
-  const [loadError, setLoadError] = useState<string | null>(null)
   const [modalOpen, setModalOpen] = useState(false)
-  const [prMergedMap, setPrMergedMap] = useState<Record<string, boolean>>({})
-  const [generatingIds, setGeneratingIds] = useState<Set<string>>(new Set())
   const [conflictDrawerOpen, setConflictDrawerOpen] = useState(false)
   const [healthDrawerOpen, setHealthDrawerOpen] = useState(false)
+
   const selectedTask = useMemo(
     () => (selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null),
     [selectedTaskId, tasks]
@@ -68,29 +73,11 @@ export default function SprintCenter() {
   // In-app toast notifications for agent-done and PR-opened transitions
   const handleViewOutput = useCallback((task: SprintTask) => {
     setLogDrawerTaskId(task.id)
-  }, [])
+  }, [setLogDrawerTaskId])
   useTaskToasts(tasks, logDrawerTaskId, handleViewOutput)
 
-  const prevTasksRef = useRef<SprintTask[]>([])
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
   const prIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
-
-  const loadData = useCallback(async () => {
-    setLoadError(null)
-    setLoading(true)
-    try {
-      const result = (await window.api.sprint.list()) as SprintTask[]
-      const next = Array.isArray(result) ? result : []
-      setTasks((prev) => {
-        prevTasksRef.current = prev
-        return next
-      })
-    } catch (e) {
-      setLoadError('Failed to load tasks — ' + (e instanceof Error ? e.message : String(e)))
-    } finally {
-      setLoading(false)
-    }
-  }, [])
 
   // Adaptive sprint polling — consistency backstop (SSE handles real-time)
   const hasActiveTasks = tasks.some((t) => t.status === TASK_STATUS.ACTIVE)
@@ -132,33 +119,20 @@ export default function SprintCenter() {
 
   useEffect(() => {
     const unsub = subscribeSSE('task:updated', (data: unknown) => {
-      const update = data as TaskUpdatedEvent
-      setTasks((prev) =>
-        prev.map((t) => {
-          if (t.id !== update.id) return t
-          const merged = { ...t, ...update }
-          // Optimistic: when a task becomes done with a pr_url, ensure pr_status='open'
-          // so it immediately appears in Awaiting Review (don't wait for pollPrStatuses)
-          if (merged.status === TASK_STATUS.DONE && merged.pr_url && !merged.pr_status) {
-            merged.pr_status = PR_STATUS.OPEN
-          }
-          return merged
-        })
-      )
+      mergeSseUpdate(data as TaskUpdatedEvent)
       debouncedLoadData()
     })
     return () => {
       unsub()
       if (debouncedLoadRef.current) clearTimeout(debouncedLoadRef.current)
     }
-  }, [debouncedLoadData])
+  }, [mergeSseUpdate, debouncedLoadData])
 
   // PR status polling — check merged status for tasks with a pr_url
   const prMergedRef = useRef(prMergedMap)
   prMergedRef.current = prMergedMap
-  const updateTaskRef = useRef<(taskId: string, patch: Partial<SprintTask>) => Promise<void>>(
-    async () => undefined
-  )
+  const updateTaskRef = useRef(updateTask)
+  updateTaskRef.current = updateTask
 
   const setConflicts = usePrConflictsStore((s) => s.setConflicts)
   const prevConflictIdsRef = useRef<Set<string>>(new Set())
@@ -209,7 +183,7 @@ export default function SprintCenter() {
     } catch {
       // gh CLI unavailable — degrade gracefully
     }
-  }, [setConflicts])
+  }, [setConflicts, setPrMergedMap])
 
   useEffect(() => {
     pollPrStatuses(tasksRef.current)
@@ -220,127 +194,16 @@ export default function SprintCenter() {
   }, [pollPrStatuses])
 
   // Detect active→done transitions and trigger immediate PR poll
+  const prevTasksRef = useRef<SprintTask[]>([])
   useEffect(() => {
     const prev = prevTasksRef.current
+    prevTasksRef.current = tasks
     if (prev.length === 0) return
     const justDone = tasks.filter(
       (t) => t.status === TASK_STATUS.DONE && t.pr_url && prev.find((p) => p.id === t.id)?.status === TASK_STATUS.ACTIVE
     )
     if (justDone.length > 0) pollPrStatuses(justDone)
   }, [tasks, pollPrStatuses])
-
-  const updateTask = useCallback(
-    async (taskId: string, patch: Partial<SprintTask>): Promise<void> => {
-      // Optimistic update — selectedTask derives from tasks automatically
-      setTasks((prev) =>
-        prev.map((t) =>
-          t.id === taskId ? { ...t, ...patch, updated_at: new Date().toISOString() } : t
-        )
-      )
-
-      try {
-        await window.api.sprint.update(taskId, patch)
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to update task')
-        loadData() // revert optimistic on failure
-      }
-    },
-    [loadData]
-  )
-  updateTaskRef.current = updateTask
-
-  const createTask = useCallback(
-    async (data: CreateTicketData) => {
-      const repoEnum = REPO_LABEL_TO_ENUM[data.repo] ?? data.repo.toLowerCase()
-
-      // Optimistic insert so the card appears immediately
-      const optimistic: SprintTask = {
-        id: `temp-${Date.now()}`,
-        title: data.title,
-        repo: repoEnum,
-        priority: data.priority,
-        status: TASK_STATUS.BACKLOG,
-        notes: null,
-        spec: data.spec || null,
-        prompt: data.prompt || data.title,
-        agent_run_id: null,
-        pr_number: null,
-        pr_status: null,
-        pr_mergeable_state: null,
-        pr_url: null,
-        started_at: null,
-        completed_at: null,
-        updated_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-      }
-      setTasks((prev) => [optimistic, ...prev])
-
-      try {
-        const result = (await window.api.sprint.create({
-          title: data.title,
-          repo: repoEnum,
-          prompt: data.prompt || data.title,
-          notes: data.notes || undefined,
-          spec: data.spec || undefined,
-          priority: data.priority,
-          status: TASK_STATUS.BACKLOG,
-        })) as SprintTask
-
-        // Replace optimistic with server row
-        if (result?.id) {
-          setTasks((prev) => prev.map((t) => (t.id === optimistic.id ? result : t)))
-
-          // Trigger background spec generation for Quick Mode tasks (no spec yet)
-          if (!data.spec) {
-            const templateHint = detectTemplate(data.title)
-            setGeneratingIds((prev) => {
-              if (prev.has(result.id)) return prev
-              return new Set(prev).add(result.id)
-            })
-
-            window.api.sprint
-              .generatePrompt({
-                taskId: result.id,
-                title: data.title,
-                repo: repoEnum,
-                templateHint,
-              })
-              .then((genResult) => {
-                setTasks((prev) =>
-                  prev.map((t) =>
-                    t.id === genResult.taskId
-                      ? { ...t, spec: genResult.spec || null, prompt: genResult.prompt }
-                      : t
-                  )
-                )
-                toast.info(`Spec ready for "${data.title}"`, {
-                  action: 'View Spec',
-                  onAction: () => setSelectedTaskId(result.id),
-                  durationMs: 6000,
-                })
-              })
-              .catch((e: unknown) => {
-                toast.error('Spec generation failed: ' + (e instanceof Error ? e.message : String(e)))
-              })
-              .finally(() => {
-                setGeneratingIds((prev) => {
-                  if (!prev.has(result.id)) return prev
-                  const next = new Set(prev)
-                  next.delete(result.id)
-                  return next
-                })
-              })
-          }
-        }
-        toast.success('Ticket created — saved to Backlog')
-      } catch (e) {
-        // Remove optimistic on failure
-        setTasks((prev) => prev.filter((t) => t.id !== optimistic.id))
-        toast.error(e instanceof Error ? e.message : 'Failed to create task')
-      }
-    },
-    []
-  )
 
   const handleDragEnd = useCallback(
     (taskId: string, newStatus: SprintTask['status']) => {
@@ -360,19 +223,19 @@ export default function SprintCenter() {
   )
 
   // Within-column reorder (optimistic only — no column_order column in DB yet)
+  const setTasks = useSprintStore((s) => s.setTasks)
   const handleReorder = useCallback(
     (_status: SprintTask['status'], orderedIds: string[]) => {
-      setTasks((prev) => {
-        const idOrder = new Map(orderedIds.map((id, i) => [id, i]))
-        return [...prev].sort((a, b) => {
-          const ai = idOrder.get(a.id)
-          const bi = idOrder.get(b.id)
-          if (ai !== undefined && bi !== undefined) return ai - bi
-          return 0
-        })
-      })
+      const current = useSprintStore.getState().tasks
+      const idOrder = new Map(orderedIds.map((id, i) => [id, i]))
+      setTasks([...current].sort((a, b) => {
+        const ai = idOrder.get(a.id)
+        const bi = idOrder.get(b.id)
+        if (ai !== undefined && bi !== undefined) return ai - bi
+        return 0
+      }))
     },
-    []
+    [setTasks]
   )
 
   const handlePushToSprint = useCallback(
@@ -422,7 +285,7 @@ export default function SprintCenter() {
 
   const handleViewSpec = useCallback(
     (task: SprintTask) => setSelectedTaskId(task.id),
-    []
+    [setSelectedTaskId]
   )
 
   const handleSaveSpec = useCallback(
@@ -460,7 +323,6 @@ export default function SprintCenter() {
     [updateTask]
   )
 
-
   const handleRerun = useCallback(
     async (task: SprintTask) => {
       try {
@@ -486,20 +348,6 @@ export default function SprintCenter() {
       updateTask(patch.id, { title: patch.title })
     },
     [updateTask]
-  )
-
-  const handleDeleteTask = useCallback(
-    async (taskId: string) => {
-      try {
-        await window.api.sprint.delete(taskId)
-        setTasks((prev) => prev.filter((t) => t.id !== taskId))
-        setSelectedTaskId(null)
-        toast.success('Task deleted')
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to delete task')
-      }
-    },
-    []
   )
 
   // Keyboard shortcuts: N → new ticket, Escape → close drawers/modal
@@ -529,7 +377,7 @@ export default function SprintCenter() {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTaskId])
+  }, [selectedTaskId, setLogDrawerTaskId])
 
   const conflictingTaskIds = usePrConflictsStore((s) => s.conflictingTaskIds)
   const conflictingTasks = useMemo(
@@ -744,7 +592,7 @@ export default function SprintCenter() {
         onPushToSprint={handlePushToSprint}
         onMarkDone={handleMarkDone}
         onUpdate={handleUpdateTitle}
-        onDelete={handleDeleteTask}
+        onDelete={deleteTask}
       />
 
       <NewTicketModal open={modalOpen} onClose={() => setModalOpen(false)} onCreate={createTask} />
