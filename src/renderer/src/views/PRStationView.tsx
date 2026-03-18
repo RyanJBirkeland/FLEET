@@ -23,21 +23,29 @@ export default function PRStationView() {
     []
   )
 
+  const prKey = selectedPr ? `${selectedPr.repo}#${selectedPr.number}` : null
+
   useEffect(() => {
     if (!selectedPr) {
       setMergeability(null)
       return
     }
+    setMergeability(null)
     const repo = REPO_OPTIONS.find((r) => r.label === selectedPr.repo)
     if (!repo) return
-    let cancelled = false
-    getPrMergeability(repo.owner, repo.label, selectedPr.number).then((m) => {
-      if (!cancelled) setMergeability(m)
-    })
+    const controller = new AbortController()
+    getPrMergeability(repo.owner, repo.label, selectedPr.number, controller.signal)
+      .then((m) => {
+        if (!controller.signal.aborted) setMergeability(m)
+      })
+      .catch(() => {
+        // AbortError expected on cleanup; non-abort errors leave mergeability null
+      })
     return () => {
-      cancelled = true
+      controller.abort()
     }
-  }, [selectedPr?.number, selectedPr?.repo])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prKey])
 
   return (
     <div className="pr-station">

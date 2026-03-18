@@ -53,9 +53,10 @@ export interface PrMergeability {
 export async function getPrMergeability(
   owner: string,
   repo: string,
-  prNumber: number
+  prNumber: number,
+  signal?: AbortSignal
 ): Promise<PrMergeability> {
-  const res = await githubFetch(`/repos/${owner}/${repo}/pulls/${prNumber}`)
+  const res = await githubFetch(`/repos/${owner}/${repo}/pulls/${prNumber}`, { signal })
   if (!res.ok) return { number: prNumber, repo, mergeable: null, mergeable_state: null }
   const data = (await res.json()) as { mergeable: boolean | null; mergeable_state: string | null }
   return {
