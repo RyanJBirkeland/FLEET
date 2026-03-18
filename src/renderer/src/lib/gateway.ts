@@ -174,6 +174,7 @@ export class GatewayClient {
       const id = crypto.randomUUID()
       const timer = setTimeout(() => {
         this.pending.delete(id)
+        this.sendQueue = this.sendQueue.filter((f) => !f.includes(id))
         reject(new Error(`RPC timeout: ${method}`))
       }, timeoutMs)
 
