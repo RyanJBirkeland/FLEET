@@ -364,7 +364,19 @@ export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<Spawn
   })
 
   child.unref()
-  return { pid: child.pid!, logPath: meta.logPath, id, interactive: true }
+
+  if (!child.pid) {
+    console.error(`[local-agents] spawn failed for agent ${id} — child.pid is undefined`)
+    activeAgentsById.delete(id)
+    await updateAgentMeta(id, {
+      finishedAt: new Date().toISOString(),
+      exitCode: null,
+      status: 'failed'
+    })
+    return { pid: 0, logPath: meta.logPath, id, interactive: false }
+  }
+
+  return { pid: child.pid, logPath: meta.logPath, id, interactive: true }
 }
 
 // --- Kill a running agent by ID ---
