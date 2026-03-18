@@ -9,6 +9,7 @@ export const POLL_GIT_STATUS_INTERVAL = 30_000
 export const POLL_SPRINT_INTERVAL = 120_000
 export const POLL_SPRINT_ACTIVE_MS = 30_000
 export const POLL_PR_STATUS_MS = 60_000
+export const POLL_COST_INTERVAL = 30_000
 export const POLL_HEALTH_CHECK_MS = 600_000
 
 // Timeouts (ms)
