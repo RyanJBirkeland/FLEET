@@ -156,6 +156,28 @@ describe('GatewayClient', () => {
     await expect(promise).rejects.toThrow('RPC timeout: test.method')
   })
 
+  it('call timeout removes frame from sendQueue so it is not flushed on reconnect', async () => {
+    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    client.connect()
+    lastWs._triggerOpen()
+
+    // Call before auth — frame queued
+    const promise = client.call('stale.method', {}, 100)
+
+    // Let the timeout fire — should reject AND remove the queued frame
+    vi.advanceTimersByTime(100)
+    await expect(promise).rejects.toThrow('RPC timeout: stale.method')
+
+    // Now authenticate — flush should send nothing stale
+    lastWs._triggerMessage({ type: 'event', event: 'connect.challenge' })
+    const connectFrame = JSON.parse(lastWs.send.mock.calls[0][0])
+    lastWs._triggerMessage({ type: 'res', id: connectFrame.id, ok: true, payload: {} })
+    await vi.advanceTimersByTimeAsync(0)
+
+    // Only the connect frame was sent — no stale method frame
+    expect(lastWs.send).toHaveBeenCalledTimes(1)
+  })
+
   it('call rejects when response has error', async () => {
     const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
     client.connect()
