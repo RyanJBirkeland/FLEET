@@ -12,7 +12,7 @@ interface AgentHistoryState extends LogPollerState {
   fetchAgents: () => Promise<void>
   selectAgent: (id: string | null) => void
   clearSelection: () => void
-  startLogPolling: (id: string) => void
+  startLogPolling: (id: string) => () => void
   stopLogPolling: () => void
   importExternal: (meta: Partial<AgentMeta>, content: string) => Promise<void>
 }
@@ -68,8 +68,8 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
       })
     },
 
-    startLogPolling: (id): void => {
-      poller.startLogPolling((fromByte) =>
+    startLogPolling: (id): (() => void) => {
+      return poller.startLogPolling((fromByte) =>
         window.api.agents.readLog({ id, fromByte })
       )
     },

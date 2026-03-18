@@ -95,7 +95,6 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   const localTrimmedLines = useLocalAgentsStore((s) => s.logTrimmedLines)
   const selectLocalAgent = useLocalAgentsStore((s) => s.selectLocalAgent)
   const startLogPolling = useLocalAgentsStore((s) => s.startLogPolling)
-  const stopLogPolling = useLocalAgentsStore((s) => s.stopLogPolling)
   const sendToAgent = useLocalAgentsStore((s) => s.sendToAgent)
 
   // Agents spawned externally (task runner, CLI) aren't in spawnedAgents.
@@ -124,12 +123,13 @@ export function LocalAgentLogViewer({ pid }: { pid: number }): React.JSX.Element
   useEffect(() => {
     if (historyAgent) {
       selectHistoryAgent(historyAgent.id)
-      return
+      const clearSelection = useAgentHistoryStore.getState().clearSelection
+      return () => clearSelection()
     }
     if (!spawned?.logPath) return
-    startLogPolling(spawned.logPath)
-    return () => stopLogPolling()
-  }, [historyAgent?.id, spawned?.logPath, startLogPolling, stopLogPolling, selectHistoryAgent])
+    const stop = startLogPolling(spawned.logPath)
+    return stop
+  }, [historyAgent?.id, spawned?.logPath, startLogPolling, selectHistoryAgent])
 
   const repoLabel = proc
     ? cwdToRepoLabel(proc.cwd)
