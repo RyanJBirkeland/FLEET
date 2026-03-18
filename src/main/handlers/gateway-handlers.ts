@@ -5,7 +5,7 @@ export function registerGatewayHandlers(): void {
   // TODO: AX-S1 — add 'gateway:invoke', 'gateway:getSessionHistory' to IpcChannelMap
   safeHandle('gateway:invoke', async (_e, tool: string, args: Record<string, unknown>) => {
     const { url, token } = getGatewayConfig()
-    const httpUrl = url.replace(/^wss?:\/\//, 'http://').replace(/\/$/, '')
+    const httpUrl = url.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://').replace(/\/$/, '')
     const res = await fetch(`${httpUrl}/tools/invoke`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
@@ -17,7 +17,7 @@ export function registerGatewayHandlers(): void {
 
   safeHandle('gateway:getSessionHistory', async (_e, sessionKey: string) => {
     const { url, token } = getGatewayConfig()
-    const httpUrl = url.replace(/^wss?:\/\//, 'http://').replace(/\/$/, '')
+    const httpUrl = url.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://').replace(/\/$/, '')
     const res = await fetch(`${httpUrl}/tools/invoke`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
