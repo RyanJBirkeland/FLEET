@@ -108,6 +108,17 @@ export async function getCheckRuns(owner: string, repo: string, sha: string): Pr
   const total = data.total_count
   const status: CheckStatus = failed > 0 ? 'fail' : pending > 0 ? 'pending' : 'pass'
   return { status, total, passed, failed, pending }
+
+export async function getPRDiff(owner: string, repo: string, number: number): Promise<string> {
+  const token = await getToken()
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/pulls/${number}`, {
+    headers: {
+      Accept: 'application/vnd.github.diff',
+      Authorization: `Bearer ${token}`
+    }
+  })
+  if (!res.ok) throw new Error(`GitHub API error: ${res.status}`)
+  return res.text()
 }
 
 export async function mergePR(owner: string, repo: string, number: number): Promise<void> {
