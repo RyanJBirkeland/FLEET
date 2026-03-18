@@ -96,11 +96,21 @@ export default function SprintCenter() {
   const hasActiveTasks = tasks.some((t) => t.status === TASK_STATUS.ACTIVE)
 
   useEffect(() => {
+    // Clear any existing interval first to prevent stacking when deps change
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+      intervalRef.current = null
+    }
+
     loadData()
     const ms = hasActiveTasks ? POLL_SPRINT_ACTIVE_MS : POLL_SPRINT_INTERVAL
     intervalRef.current = setInterval(loadData, ms)
+
     return () => {
-      if (intervalRef.current) clearInterval(intervalRef.current)
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+        intervalRef.current = null
+      }
     }
   }, [loadData, hasActiveTasks])
 
