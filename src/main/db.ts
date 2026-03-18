@@ -24,99 +24,147 @@ export function closeDb(): void {
   _db = null
 }
 
-function runMigrations(db: Database.Database): void {
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS agent_runs (
-      id           TEXT PRIMARY KEY,
-      pid          INTEGER,
-      bin          TEXT NOT NULL DEFAULT 'claude',
-      task         TEXT,
-      repo         TEXT,
-      repo_path    TEXT,
-      model        TEXT,
-      status       TEXT NOT NULL DEFAULT 'running'
-                     CHECK(status IN ('running','done','failed','unknown')),
-      log_path     TEXT,
-      started_at   TEXT NOT NULL,
-      finished_at  TEXT,
-      exit_code    INTEGER
-    );
+export interface Migration {
+  version: number
+  description: string
+  up: (db: Database.Database) => void
+}
 
-    CREATE TABLE IF NOT EXISTS sprint_tasks (
-      id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-      title        TEXT NOT NULL,
-      prompt       TEXT NOT NULL DEFAULT '',
-      repo         TEXT NOT NULL DEFAULT 'bde',
-      status       TEXT NOT NULL DEFAULT 'backlog'
-                     CHECK(status IN ('backlog','queued','active','done','cancelled')),
-      priority     INTEGER NOT NULL DEFAULT 1,
-      spec         TEXT,
-      notes        TEXT,
-      pr_url       TEXT,
-      pr_number    INTEGER,
-      pr_status    TEXT,
-      agent_run_id TEXT REFERENCES agent_runs(id),
-      started_at   TEXT,
-      completed_at TEXT,
-      created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
-      updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    );
+// To add a new migration:
+// 1. Add a new entry to the migrations array with version = last + 1
+// 2. Write the `up` function with the schema change
+// 3. Never modify or reorder existing migrations
+export const migrations: Migration[] = [
+  {
+    version: 1,
+    description: 'Create core tables (agent_runs, sprint_tasks, settings)',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS agent_runs (
+          id           TEXT PRIMARY KEY,
+          pid          INTEGER,
+          bin          TEXT NOT NULL DEFAULT 'claude',
+          task         TEXT,
+          repo         TEXT,
+          repo_path    TEXT,
+          model        TEXT,
+          status       TEXT NOT NULL DEFAULT 'running'
+                         CHECK(status IN ('running','done','failed','unknown')),
+          log_path     TEXT,
+          started_at   TEXT NOT NULL,
+          finished_at  TEXT,
+          exit_code    INTEGER
+        );
 
-    CREATE TABLE IF NOT EXISTS settings (
-      key          TEXT PRIMARY KEY,
-      value        TEXT NOT NULL,
-      updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    );
+        CREATE TABLE IF NOT EXISTS sprint_tasks (
+          id           TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+          title        TEXT NOT NULL,
+          prompt       TEXT NOT NULL DEFAULT '',
+          repo         TEXT NOT NULL DEFAULT 'bde',
+          status       TEXT NOT NULL DEFAULT 'backlog'
+                         CHECK(status IN ('backlog','queued','active','done','cancelled')),
+          priority     INTEGER NOT NULL DEFAULT 1,
+          spec         TEXT,
+          notes        TEXT,
+          pr_url       TEXT,
+          pr_number    INTEGER,
+          pr_status    TEXT,
+          agent_run_id TEXT REFERENCES agent_runs(id),
+          started_at   TEXT,
+          completed_at TEXT,
+          created_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+          updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );
 
-    CREATE TRIGGER IF NOT EXISTS sprint_tasks_updated_at
-      AFTER UPDATE ON sprint_tasks
-      BEGIN
-        UPDATE sprint_tasks SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
-        WHERE id = NEW.id;
-      END;
+        CREATE TABLE IF NOT EXISTS settings (
+          key          TEXT PRIMARY KEY,
+          value        TEXT NOT NULL,
+          updated_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );
 
-    CREATE INDEX IF NOT EXISTS idx_sprint_tasks_status ON sprint_tasks(status, priority, created_at);
-    CREATE INDEX IF NOT EXISTS idx_agent_runs_pid      ON agent_runs(pid);
-    CREATE INDEX IF NOT EXISTS idx_agent_runs_status   ON agent_runs(status);
-    CREATE INDEX IF NOT EXISTS idx_agent_runs_finished ON agent_runs(finished_at, started_at DESC);
-  `)
+        CREATE TRIGGER IF NOT EXISTS sprint_tasks_updated_at
+          AFTER UPDATE ON sprint_tasks
+          BEGIN
+            UPDATE sprint_tasks SET updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
+            WHERE id = NEW.id;
+          END;
 
-  // Add pr_mergeable_state column (idempotent)
-  try {
-    db.exec('ALTER TABLE sprint_tasks ADD COLUMN pr_mergeable_state TEXT')
-  } catch {
-    // Column already exists — ignore
-  }
-
-  // Add cost columns to agent_runs (PRAGMA-guarded, idempotent)
-  const agentRunCols = (db.pragma('table_info(agent_runs)') as { name: string }[]).map(
-    (c) => c.name
-  )
-  const costColumns: [string, string][] = [
-    ['cost_usd', 'REAL'],
-    ['tokens_in', 'INTEGER'],
-    ['tokens_out', 'INTEGER'],
-    ['cache_read', 'INTEGER'],
-    ['cache_create', 'INTEGER'],
-    ['duration_ms', 'INTEGER'],
-    ['num_turns', 'INTEGER']
-  ]
-  for (const [col, type] of costColumns) {
-    if (!agentRunCols.includes(col)) {
-      db.exec(`ALTER TABLE agent_runs ADD COLUMN ${col} ${type}`)
+        CREATE INDEX IF NOT EXISTS idx_sprint_tasks_status ON sprint_tasks(status, priority, created_at);
+        CREATE INDEX IF NOT EXISTS idx_agent_runs_pid      ON agent_runs(pid);
+        CREATE INDEX IF NOT EXISTS idx_agent_runs_status   ON agent_runs(status);
+        CREATE INDEX IF NOT EXISTS idx_agent_runs_finished ON agent_runs(finished_at, started_at DESC);
+      `)
+    }
+  },
+  {
+    version: 2,
+    description: 'Add pr_mergeable_state column',
+    up: (db) => {
+      // Column-existence check needed for DBs upgrading from before version tracking
+      const cols = (db.pragma('table_info(sprint_tasks)') as { name: string }[]).map(
+        (c) => c.name
+      )
+      if (!cols.includes('pr_mergeable_state')) {
+        db.exec('ALTER TABLE sprint_tasks ADD COLUMN pr_mergeable_state TEXT')
+      }
+    }
+  },
+  {
+    version: 3,
+    description: 'Add cost columns to agent_runs',
+    up: (db) => {
+      // Column-existence checks needed for DBs upgrading from before version tracking
+      const cols = (db.pragma('table_info(agent_runs)') as { name: string }[]).map(
+        (c) => c.name
+      )
+      for (const [col, type] of [
+        ['cost_usd', 'REAL'],
+        ['tokens_in', 'INTEGER'],
+        ['tokens_out', 'INTEGER'],
+        ['cache_read', 'INTEGER'],
+        ['cache_create', 'INTEGER'],
+        ['duration_ms', 'INTEGER'],
+        ['num_turns', 'INTEGER']
+      ] as const) {
+        if (!cols.includes(col)) {
+          db.exec(`ALTER TABLE agent_runs ADD COLUMN ${col} ${type}`)
+        }
+      }
+    }
+  },
+  {
+    version: 4,
+    description: 'Create cost_events table',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS cost_events (
+          id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+          source        TEXT NOT NULL,
+          session_key   TEXT,
+          model         TEXT NOT NULL,
+          total_tokens  INTEGER NOT NULL DEFAULT 0,
+          cost_usd      REAL,
+          recorded_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+        );
+      `)
     }
   }
+]
 
-  // Create cost_events table for OpenClaw token snapshots (idempotent)
-  db.exec(`
-    CREATE TABLE IF NOT EXISTS cost_events (
-      id            TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
-      source        TEXT NOT NULL,
-      session_key   TEXT,
-      model         TEXT NOT NULL,
-      total_tokens  INTEGER NOT NULL DEFAULT 0,
-      cost_usd      REAL,
-      recorded_at   TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-    );
-  `)
+export function runMigrations(db: Database.Database): void {
+  const currentVersion = db.pragma('user_version', { simple: true }) as number
+
+  const pending = migrations
+    .filter((m) => m.version > currentVersion)
+    .sort((a, b) => a.version - b.version)
+
+  if (pending.length === 0) return
+
+  const runAll = db.transaction(() => {
+    for (const migration of pending) {
+      migration.up(db)
+      db.pragma(`user_version = ${migration.version}`)
+    }
+  })
+  runAll()
 }
