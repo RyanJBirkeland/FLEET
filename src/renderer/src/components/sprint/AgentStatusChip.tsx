@@ -1,4 +1,5 @@
 import { ElapsedTime } from '../ui/ElapsedTime'
+import { AGENT_STATUS } from '../../../../shared/constants'
 
 type AgentStatus = 'idle' | 'running' | 'done' | 'error'
 
@@ -15,11 +16,11 @@ export function AgentStatusChip({ status, startedAt }: AgentStatusChipProps) {
   return (
     <span className={`agent-chip agent-chip--${status}`}>
       <span className="agent-chip__dot" />
-      {status === 'running' && startMs != null
+      {status === AGENT_STATUS.RUNNING && startMs != null
         ? <ElapsedTime startedAtMs={startMs} />
-        : status === 'done'
+        : status === AGENT_STATUS.DONE
           ? 'Done'
-          : status === 'error'
+          : status === AGENT_STATUS.ERROR
             ? 'Error'
             : 'Idle'}
     </span>

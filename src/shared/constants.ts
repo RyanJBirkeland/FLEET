@@ -25,6 +25,7 @@ export type PrStatusValue = (typeof PR_STATUS)[keyof typeof PR_STATUS]
 export const AGENT_STATUS = {
   RUNNING: 'running',
   DONE: 'done',
+  ERROR: 'error',
   FAILED: 'failed',
   CANCELLED: 'cancelled',
   UNKNOWN: 'unknown',
