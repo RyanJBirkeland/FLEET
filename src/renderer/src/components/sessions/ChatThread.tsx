@@ -7,7 +7,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { Spinner } from '../ui/Spinner'
 import { CHAT_HISTORY_LIMIT, CHAT_SCROLL_THRESHOLD, CHAT_COLLAPSE_THRESHOLD, POLL_CHAT_STREAMING_MS, POLL_CHAT_IDLE_MS } from '../../lib/constants'
 import { normalizeContent } from '../../lib/message'
-import { renderContent, renderUserContent } from '../../lib/markdown'
+import { renderContent, renderUserContent } from '../../lib/chat-markdown'
 import type { ChatMessage } from '../../lib/agent-messages'
 import { formatTime } from '../../lib/format'
 
