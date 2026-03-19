@@ -26,7 +26,8 @@
     "pretest:main": "npm rebuild better-sqlite3 --build-from-source",
     "test:main": "vitest run --config src/main/vitest.main.config.ts",
     "posttest:main": "npm rebuild better-sqlite3 --runtime=electron --target=39.8.2 --dist-url=https://electronjs.org/headers --build-from-source",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepare": "husky"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -71,6 +72,7 @@
     "eslint-plugin-react": "^7.37.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "husky": "^9.1.7",
     "jsdom": "^28.1.0",
     "prettier": "^3.7.4",
     "react": "^19.2.1",
