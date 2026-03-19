@@ -1,6 +1,6 @@
 import { mkdir, readdir, readFile, writeFile, stat } from 'fs/promises'
 import { basename, dirname, extname, join, resolve } from 'path'
-import { tmpdir } from 'os'
+import { homedir, tmpdir } from 'os'
 import { dialog } from 'electron'
 import { safeHandle } from './ipc-utils'
 import { OPENCLAW_MEMORY_DIR as MEMORY_ROOT, BDE_AGENT_LOGS_DIR as AGENT_LOGS_ROOT } from './paths'
@@ -102,15 +102,17 @@ const IMAGE_MIME: Record<string, string> = {
   webp: 'image/webp'
 }
 
-/** Validates the path is absolute and not a traversal attack. */
+const HOME_ROOT = resolve(homedir())
+
+/** Validates the resolved path falls under the user's home or temp directory. */
 export function validateSafePath(filePath: string): string {
   const resolved = resolve(filePath)
-  if (resolved !== filePath && resolved !== resolve(filePath)) {
-    throw new Error(`Path traversal blocked: "${filePath}"`)
-  }
-  // Must be absolute
-  if (!resolved.startsWith('/')) {
-    throw new Error(`Path must be absolute: "${filePath}"`)
+  const inHome = resolved.startsWith(HOME_ROOT + '/') || resolved === HOME_ROOT
+  const inTmp = resolved.startsWith(TMP_ROOT + '/') || resolved === TMP_ROOT
+  if (!inHome && !inTmp) {
+    throw new Error(
+      `Path blocked: "${filePath}" is outside allowed directories`
+    )
   }
   return resolved
 }

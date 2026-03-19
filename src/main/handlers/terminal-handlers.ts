@@ -12,6 +12,25 @@ const terminals = new Map<number, ReturnType<NonNullable<typeof pty>['spawn']>>(
 const terminalWindows = new Map<number, number>() // terminalId -> BrowserWindow.id
 let termId = 0
 
+const ALLOWED_SHELLS = new Set([
+  '/bin/bash',
+  '/bin/zsh',
+  '/bin/sh',
+  '/bin/dash',
+  '/bin/fish',
+  '/usr/bin/bash',
+  '/usr/bin/zsh',
+  '/usr/bin/sh',
+  '/usr/bin/dash',
+  '/usr/bin/fish',
+  '/usr/local/bin/bash',
+  '/usr/local/bin/zsh',
+  '/usr/local/bin/fish',
+  '/opt/homebrew/bin/bash',
+  '/opt/homebrew/bin/zsh',
+  '/opt/homebrew/bin/fish',
+])
+
 export function registerTerminalHandlers(): void {
   safeHandle(
     'terminal:create',
@@ -19,6 +38,9 @@ export function registerTerminalHandlers(): void {
       if (!pty) throw new Error('Terminal unavailable: node-pty failed to load')
       const id = ++termId
       const shellPath = shell || process.env.SHELL || '/bin/zsh'
+      if (!ALLOWED_SHELLS.has(shellPath)) {
+        throw new Error(`Shell not allowed: "${shellPath}"`)
+      }
       const p = pty.spawn(shellPath, [], {
         name: 'xterm-256color',
         cols,

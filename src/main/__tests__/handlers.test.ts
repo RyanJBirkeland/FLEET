@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, beforeAll } from 'vitest'
+import { resolve } from 'path'
 
 // ---------------------------------------------------------------------------
 // Electron mock — capture every ipcMain.handle / ipcMain.on registration
@@ -34,6 +35,7 @@ vi.mock('../local-agents', () => ({
   tailAgentLog: vi.fn().mockResolvedValue({ content: 'log data', nextByte: 42 }),
   sendToAgent: vi.fn().mockReturnValue({ ok: true }),
   isAgentInteractive: vi.fn().mockReturnValue(true),
+  isKnownAgentPid: vi.fn().mockReturnValue(true),
   cleanupOldLogs: vi.fn(),
 }))
 
@@ -299,46 +301,46 @@ describe('IPC handler registration', () => {
       expect(result).toEqual({ bde: '/tmp/bde' })
     })
 
-    it('"git:status" passes cwd to gitStatus', async () => {
-      await invoke('git:status', '/home/dev/repo')
-      expect(git.gitStatus).toHaveBeenCalledWith('/home/dev/repo')
+    it('"git:status" passes validated cwd to gitStatus', async () => {
+      await invoke('git:status', '/tmp/bde')
+      expect(git.gitStatus).toHaveBeenCalledWith(resolve('/tmp/bde'))
     })
 
-    it('"git:diff" passes (cwd, file) to gitDiffFile', async () => {
-      await invoke('git:diff', '/repo', 'src/app.ts')
-      expect(git.gitDiffFile).toHaveBeenCalledWith('/repo', 'src/app.ts')
+    it('"git:diff" passes (validated cwd, file) to gitDiffFile', async () => {
+      await invoke('git:diff', '/tmp/bde', 'src/app.ts')
+      expect(git.gitDiffFile).toHaveBeenCalledWith(resolve('/tmp/bde'), 'src/app.ts')
     })
 
-    it('"git:stage" passes (cwd, files) to gitStage', async () => {
-      await invoke('git:stage', '/repo', ['file1.ts', 'file2.ts'])
-      expect(git.gitStage).toHaveBeenCalledWith('/repo', ['file1.ts', 'file2.ts'])
+    it('"git:stage" passes (validated cwd, files) to gitStage', async () => {
+      await invoke('git:stage', '/tmp/bde', ['file1.ts', 'file2.ts'])
+      expect(git.gitStage).toHaveBeenCalledWith(resolve('/tmp/bde'), ['file1.ts', 'file2.ts'])
     })
 
-    it('"git:unstage" passes (cwd, files) to gitUnstage', async () => {
-      await invoke('git:unstage', '/repo', ['file1.ts'])
-      expect(git.gitUnstage).toHaveBeenCalledWith('/repo', ['file1.ts'])
+    it('"git:unstage" passes (validated cwd, files) to gitUnstage', async () => {
+      await invoke('git:unstage', '/tmp/bde', ['file1.ts'])
+      expect(git.gitUnstage).toHaveBeenCalledWith(resolve('/tmp/bde'), ['file1.ts'])
     })
 
-    it('"git:commit" passes (cwd, message) to gitCommit', async () => {
-      await invoke('git:commit', '/repo', 'fix: bug')
-      expect(git.gitCommit).toHaveBeenCalledWith('/repo', 'fix: bug')
+    it('"git:commit" passes (validated cwd, message) to gitCommit', async () => {
+      await invoke('git:commit', '/tmp/bde', 'fix: bug')
+      expect(git.gitCommit).toHaveBeenCalledWith(resolve('/tmp/bde'), 'fix: bug')
     })
 
-    it('"git:push" passes cwd to gitPush', async () => {
-      const result = await invoke('git:push', '/repo')
-      expect(git.gitPush).toHaveBeenCalledWith('/repo')
+    it('"git:push" passes validated cwd to gitPush', async () => {
+      const result = await invoke('git:push', '/tmp/bde')
+      expect(git.gitPush).toHaveBeenCalledWith(resolve('/tmp/bde'))
       expect(result).toBe('push output')
     })
 
-    it('"git:branches" passes cwd to gitBranches', async () => {
-      const result = await invoke('git:branches', '/repo')
-      expect(git.gitBranches).toHaveBeenCalledWith('/repo')
+    it('"git:branches" passes validated cwd to gitBranches', async () => {
+      const result = await invoke('git:branches', '/tmp/bde')
+      expect(git.gitBranches).toHaveBeenCalledWith(resolve('/tmp/bde'))
       expect(result).toEqual({ current: 'main', branches: ['main'] })
     })
 
-    it('"git:checkout" passes (cwd, branch) to gitCheckout', async () => {
-      await invoke('git:checkout', '/repo', 'feat/new')
-      expect(git.gitCheckout).toHaveBeenCalledWith('/repo', 'feat/new')
+    it('"git:checkout" passes (validated cwd, branch) to gitCheckout', async () => {
+      await invoke('git:checkout', '/tmp/bde', 'feat/new')
+      expect(git.gitCheckout).toHaveBeenCalledWith(resolve('/tmp/bde'), 'feat/new')
     })
 
     it('"poll-pr-statuses" passes prs to pollPrStatuses', async () => {
@@ -347,9 +349,15 @@ describe('IPC handler registration', () => {
       expect(git.pollPrStatuses).toHaveBeenCalledWith(prs)
     })
 
+    it('rejects cwd outside known repository paths', async () => {
+      await expect(invoke('git:status', '/etc/evil')).rejects.toThrow(
+        'CWD rejected'
+      )
+    })
+
     it('error in gitStatus propagates via safeHandle', async () => {
       vi.mocked(git.gitStatus).mockRejectedValueOnce(new Error('not a git repo'))
-      await expect(invoke('git:status', '/bad')).rejects.toThrow('not a git repo')
+      await expect(invoke('git:status', '/tmp/bde')).rejects.toThrow('not a git repo')
     })
   })
 
@@ -514,12 +522,22 @@ describe('IPC handler registration', () => {
       expect(onListeners.has('set-title')).toBe(true)
     })
 
-    it('"open-external" calls shell.openExternal with URL', async () => {
+    it('"open-external" calls shell.openExternal with https URL', async () => {
       await invoke('open-external', 'https://example.com')
       expect(shell.openExternal).toHaveBeenCalledWith('https://example.com')
     })
 
-    it('"kill-local-agent" calls process.kill with PID and SIGTERM', async () => {
+    it('"open-external" rejects disallowed URL schemes', async () => {
+      await expect(invoke('open-external', 'file:///etc/passwd')).rejects.toThrow(
+        'Blocked URL scheme'
+      )
+      await expect(invoke('open-external', 'javascript:alert(1)')).rejects.toThrow(
+        'Blocked URL scheme'
+      )
+    })
+
+    it('"kill-local-agent" calls process.kill for known agent PID', async () => {
+      vi.mocked(localAgents.isKnownAgentPid).mockReturnValue(true)
       const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true)
       const result = await invoke('kill-local-agent', 12345)
       expect(killSpy).toHaveBeenCalledWith(12345, 'SIGTERM')
@@ -527,13 +545,10 @@ describe('IPC handler registration', () => {
       killSpy.mockRestore()
     })
 
-    it('"kill-local-agent" returns error for invalid PID', async () => {
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => {
-        throw new Error('ESRCH')
-      })
+    it('"kill-local-agent" rejects unknown PID', async () => {
+      vi.mocked(localAgents.isKnownAgentPid).mockReturnValue(false)
       const result = await invoke('kill-local-agent', 99999)
-      expect(result).toEqual({ ok: false, error: expect.stringContaining('ESRCH') })
-      killSpy.mockRestore()
+      expect(result).toEqual({ ok: false, error: 'PID is not a known agent process' })
     })
 
     it('"set-title" sets window title via ipcMain.on listener', () => {
@@ -570,6 +585,12 @@ describe('IPC handler registration', () => {
       const id = await invoke('terminal:create', { cols: 80, rows: 24 })
       // terminal:write uses ipcMain.on — it should not throw
       expect(() => emit('terminal:write', { id, data: 'ls\n' })).not.toThrow()
+    })
+
+    it('"terminal:create" rejects disallowed shell binary', async () => {
+      await expect(
+        invoke('terminal:create', { cols: 80, rows: 24, shell: '/tmp/evil-shell' })
+      ).rejects.toThrow('Shell not allowed')
     })
 
     it('"terminal:kill" does not throw', async () => {

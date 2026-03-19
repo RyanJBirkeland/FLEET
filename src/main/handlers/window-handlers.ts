@@ -1,11 +1,23 @@
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import { safeHandle } from '../ipc-utils'
+import { isKnownAgentPid } from '../local-agents'
+
+const ALLOWED_URL_SCHEMES = new Set(['https:', 'http:', 'mailto:'])
 
 export function registerWindowHandlers(): void {
   // TODO: AX-S1 — add 'open-external', 'kill-local-agent' to IpcChannelMap
-  safeHandle('open-external', (_e, url: string) => shell.openExternal(url))
+  safeHandle('open-external', (_e, url: string) => {
+    const parsed = new URL(url)
+    if (!ALLOWED_URL_SCHEMES.has(parsed.protocol)) {
+      throw new Error(`Blocked URL scheme: "${parsed.protocol}"`)
+    }
+    return shell.openExternal(url)
+  })
 
   safeHandle('kill-local-agent', async (_event, pid: number) => {
+    if (!isKnownAgentPid(pid)) {
+      return { ok: false, error: 'PID is not a known agent process' }
+    }
     try {
       process.kill(pid, 'SIGTERM')
       return { ok: true }

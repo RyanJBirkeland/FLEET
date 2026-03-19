@@ -509,3 +509,8 @@ export function isAgentInteractive(pid: number): boolean {
   const child = activeAgentProcesses.get(pid)
   return !!(child && child.stdin && !child.stdin.destroyed)
 }
+
+/** Returns true if the given PID belongs to a BDE-spawned agent process. */
+export function isKnownAgentPid(pid: number): boolean {
+  return activeAgentProcesses.has(pid)
+}
