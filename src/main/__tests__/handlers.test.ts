@@ -630,3 +630,5 @@ describe('IPC handler registration', () => {
     })
   })
 })
+
+})
