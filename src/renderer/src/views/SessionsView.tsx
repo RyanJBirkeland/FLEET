@@ -6,6 +6,8 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
+import { useSidebarResize } from '../hooks/useSidebarResize'
+import { useSessionsKeyboardShortcuts } from '../hooks/useSessionsKeyboardShortcuts'
 import { Columns2, Grid2x2, Square, Plus } from 'lucide-react'
 import { AgentList } from '../components/sessions/AgentList'
 import { SpawnModal } from '../components/sessions/SpawnModal'
@@ -23,7 +25,7 @@ import { useAgentHistoryStore } from '../stores/agentHistory'
 import { useUIStore } from '../stores/ui'
 import type { UnifiedAgent } from '../hooks/useUnifiedAgents'
 import { toast } from '../stores/toasts'
-import { POLL_SESSIONS_INTERVAL, SIDEBAR_WIDTH_DEFAULT, SIDEBAR_WIDTH_MIN, SIDEBAR_WIDTH_MAX } from '../lib/constants'
+import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
 
 const SPLIT_MODES: { mode: SplitMode; icon: typeof Square; title: string }[] = [
   { mode: 'single', icon: Square, title: 'Single pane (⌘⇧1)' },
@@ -37,7 +39,6 @@ export function SessionsView(): React.JSX.Element {
   const selectSession = useSessionsStore((s) => s.selectSession)
   const fetchSessions = useSessionsStore((s) => s.fetchSessions)
   const splitMode = useSplitLayoutStore((s) => s.splitMode)
-  const setSplitMode = useSplitLayoutStore((s) => s.setSplitMode)
   const splitPanes = useSplitLayoutStore((s) => s.splitPanes)
   const focusedPaneIndex = useSplitLayoutStore((s) => s.focusedPaneIndex)
   const setFocusedPane = useSplitLayoutStore((s) => s.setFocusedPane)
@@ -56,7 +57,7 @@ export function SessionsView(): React.JSX.Element {
     }
   }, [sessions, selectedKey, selectSession])
 
-  const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_WIDTH_DEFAULT)
+  const { sidebarWidth, onResizeHandleMouseDown } = useSidebarResize()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
   const [optimisticMessages, setOptimisticMessages] = useState<{ role: 'user'; content: string }[]>([])
 
@@ -155,65 +156,7 @@ export function SessionsView(): React.JSX.Element {
     window.dispatchEvent(new CustomEvent('bde:focus-message-input'))
   }, [])
 
-  // Handler that pre-populates pane 0 before switching to split mode
-  const handleSplitModeChange = useCallback((mode: SplitMode): void => {
-    if (mode === 'single') {
-      setSplitMode('single')
-      return
-    }
-    // Pre-populate pane 0 with currently selected session
-    if (selectedKey && splitPanes[0] === null) {
-      setPaneSession(0, selectedKey)
-    }
-    setSplitMode(mode)
-  }, [selectedKey, splitPanes, setSplitMode, setPaneSession])
-
-  // Keyboard shortcuts for split modes and pane focus
-  useEffect(() => {
-    if (activeView !== 'sessions') return
-
-    const handler = (e: KeyboardEvent): void => {
-      const tag = (e.target as HTMLElement).tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return
-
-      // Cmd+Shift+1/2/4 → split mode
-      if (e.metaKey && e.shiftKey && !e.altKey) {
-        if (e.key === '1' || e.key === '!') {
-          e.preventDefault()
-          handleSplitModeChange('single')
-          return
-        }
-        if (e.key === '2' || e.key === '@') {
-          e.preventDefault()
-          handleSplitModeChange('2-pane')
-          return
-        }
-        if (e.key === '4' || e.key === '$') {
-          e.preventDefault()
-          handleSplitModeChange('grid-4')
-          return
-        }
-      }
-
-      // Cmd+Opt+Arrow → focus pane
-      if (e.metaKey && e.altKey) {
-        const maxPanes = splitMode === 'grid-4' ? 4 : splitMode === '2-pane' ? 2 : 1
-        if (e.key === 'ArrowLeft') {
-          e.preventDefault()
-          setFocusedPane(Math.max(0, focusedPaneIndex - 1))
-          return
-        }
-        if (e.key === 'ArrowRight') {
-          e.preventDefault()
-          setFocusedPane(Math.min(maxPanes - 1, focusedPaneIndex + 1))
-          return
-        }
-      }
-    }
-
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [activeView, splitMode, focusedPaneIndex, handleSplitModeChange, setFocusedPane])
+  const { handleSplitModeChange } = useSessionsKeyboardShortcuts(selectedKey)
 
   // Render the main content area based on splitMode
   const renderMainContent = (): React.JSX.Element => {
@@ -336,21 +279,7 @@ export function SessionsView(): React.JSX.Element {
       </div>
       <div
         className="sessions-view__handle"
-        onMouseDown={(e) => {
-          e.preventDefault()
-          const startX = e.clientX
-          const startW = sidebarWidth
-          const onMove = (ev: MouseEvent): void => {
-            const delta = ev.clientX - startX
-            setSidebarWidth(Math.min(SIDEBAR_WIDTH_MAX, Math.max(SIDEBAR_WIDTH_MIN, startW + delta)))
-          }
-          const onUp = (): void => {
-            window.removeEventListener('mousemove', onMove)
-            window.removeEventListener('mouseup', onUp)
-          }
-          window.addEventListener('mousemove', onMove)
-          window.addEventListener('mouseup', onUp)
-        }}
+        onMouseDown={onResizeHandleMouseDown}
       />
       <div className="sessions-chat__main">
         <div className="sessions-main__topbar">
