@@ -132,18 +132,21 @@ app.whenReady().then(() => {
   registerCostHistoryHandlers()
   registerFsHandlers()
 
-  if (!is.dev) {
-    session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-      callback({
-        responseHeaders: {
-          ...details.responseHeaders,
-          'Content-Security-Policy': [
-            "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'self' ws: wss:"
-          ]
-        }
-      })
+  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    callback({
+      responseHeaders: {
+        ...details.responseHeaders,
+        'Content-Security-Policy': [
+          "default-src 'self'; " +
+            "script-src 'self'; " +
+            "style-src 'self' 'unsafe-inline'; " +
+            "img-src 'self' data:; " +
+            "font-src 'self' data:; " +
+            "connect-src 'self' ws://127.0.0.1:18789 wss://127.0.0.1:18789"
+        ]
+      }
     })
-  }
+  })
 
   createWindow()
 
