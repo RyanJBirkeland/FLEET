@@ -1,3 +1,4 @@
+import { resolve } from 'path'
 import { safeHandle } from '../ipc-utils'
 import {
   getRepoPaths,
@@ -18,6 +19,19 @@ import { getLatestPrList, refreshPrList } from '../pr-poller'
 import { getGitHubToken } from '../config'
 import { githubFetch, parseNextLink } from '../github-fetch'
 import type { GitHubFetchInit } from '../../shared/ipc-channels'
+
+/** Ensures cwd is under a known repository root. */
+function validateRepoCwd(cwd: string): string {
+  const resolved = resolve(cwd)
+  const repoPaths = Object.values(getRepoPaths()).map(p => resolve(p))
+  const allowed = repoPaths.some(
+    root => resolved.startsWith(root + '/') || resolved === root
+  )
+  if (!allowed) {
+    throw new Error(`CWD rejected: not under a known repository`)
+  }
+  return resolved
+}
 
 export function registerGitHandlers(): void {
   // --- GitHub API proxy (renderer → main → api.github.com) ---
@@ -55,16 +69,16 @@ export function registerGitHandlers(): void {
   // TODO: AX-S1 — add 'get-repo-paths' to IpcChannelMap
   safeHandle('get-repo-paths', () => getRepoPaths())
 
-  // --- Git client IPC ---
-  safeHandle('git:status', (_e, cwd: string) => gitStatus(cwd))
-  safeHandle('git:diff', (_e, cwd: string, file?: string) => gitDiffFile(cwd, file))
+  // --- Git client IPC (cwd validated against known repo paths) ---
+  safeHandle('git:status', (_e, cwd: string) => gitStatus(validateRepoCwd(cwd)))
+  safeHandle('git:diff', (_e, cwd: string, file?: string) => gitDiffFile(validateRepoCwd(cwd), file))
   // TODO: AX-S1 — add 'git:stage' through 'git:checkout' to IpcChannelMap
-  safeHandle('git:stage', (_e, cwd: string, files: string[]) => gitStage(cwd, files))
-  safeHandle('git:unstage', (_e, cwd: string, files: string[]) => gitUnstage(cwd, files))
-  safeHandle('git:commit', (_e, cwd: string, message: string) => gitCommit(cwd, message))
-  safeHandle('git:push', (_e, cwd: string) => gitPush(cwd))
-  safeHandle('git:branches', (_e, cwd: string) => gitBranches(cwd))
-  safeHandle('git:checkout', (_e, cwd: string, branch: string) => gitCheckout(cwd, branch))
+  safeHandle('git:stage', (_e, cwd: string, files: string[]) => gitStage(validateRepoCwd(cwd), files))
+  safeHandle('git:unstage', (_e, cwd: string, files: string[]) => gitUnstage(validateRepoCwd(cwd), files))
+  safeHandle('git:commit', (_e, cwd: string, message: string) => gitCommit(validateRepoCwd(cwd), message))
+  safeHandle('git:push', (_e, cwd: string) => gitPush(validateRepoCwd(cwd)))
+  safeHandle('git:branches', (_e, cwd: string) => gitBranches(validateRepoCwd(cwd)))
+  safeHandle('git:checkout', (_e, cwd: string, branch: string) => gitCheckout(validateRepoCwd(cwd), branch))
 
   // --- PR status polling ---
   // TODO: AX-S1 — add 'poll-pr-statuses' to IpcChannelMap

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { join, resolve } from 'path'
 import { homedir, tmpdir } from 'os'
-import { validateMemoryPath, validateLogPath, readMemoryFile } from '../fs'
+import { validateMemoryPath, validateLogPath, validateSafePath, readMemoryFile } from '../fs'
 
 vi.mock('fs/promises', async (importOriginal) => {
   const actual = await importOriginal<typeof import('fs/promises')>()
@@ -95,6 +95,36 @@ describe('validateLogPath', () => {
 
   it('rejects /etc/passwd', () => {
     expect(() => validateLogPath('/etc/passwd')).toThrow('Path traversal blocked')
+  })
+})
+
+describe('validateSafePath', () => {
+  const HOME = resolve(homedir())
+  const TMP = resolve(tmpdir())
+
+  it('accepts a path under home directory', () => {
+    const testPath = join(HOME, 'Documents', 'photo.png')
+    expect(validateSafePath(testPath)).toBe(testPath)
+  })
+
+  it('accepts a path under tmpdir()', () => {
+    const testPath = join(TMP, 'upload', 'image.png')
+    expect(validateSafePath(testPath)).toBe(testPath)
+  })
+
+  it('rejects path outside allowed roots', () => {
+    expect(() => validateSafePath('/etc/passwd')).toThrow('Path blocked')
+  })
+
+  it('rejects path with traversal escaping home', () => {
+    const traversal = join(HOME, '..', '..', 'etc', 'shadow')
+    expect(() => validateSafePath(traversal)).toThrow('Path blocked')
+  })
+
+  it('rejects path that is a prefix sibling of home', () => {
+    // e.g. /Users/username-evil/secret (if home is /Users/username)
+    const evilPath = HOME + '-evil/secret'
+    expect(() => validateSafePath(evilPath)).toThrow('Path blocked')
   })
 })
 
