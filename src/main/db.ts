@@ -115,6 +115,16 @@ export const migrations: Migration[] = [
         );
       `)
     }
+  },
+  {
+    version: 5,
+    description: 'Add source column to agent_runs',
+    up: (db) => {
+      const cols = (db.pragma('table_info(agent_runs)') as { name: string }[]).map(c => c.name)
+      if (!cols.includes('source')) {
+        db.exec("ALTER TABLE agent_runs ADD COLUMN source TEXT NOT NULL DEFAULT 'bde'")
+      }
+    }
   }
 ]
 

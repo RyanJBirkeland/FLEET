@@ -68,7 +68,12 @@ export function registerTerminalHandlers(): void {
   )
 
   ipcMain.on('terminal:write', (_e, { id, data }: { id: number; data: string }) => {
-    terminals.get(id)?.write(data)
+    try {
+      if (typeof data !== 'string' || data.length > 65_536) return
+      terminals.get(id)?.write(data)
+    } catch (err) {
+      console.error('[terminal:write]', err)
+    }
   })
 
   safeHandle(

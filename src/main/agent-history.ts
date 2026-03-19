@@ -48,16 +48,6 @@ function rowToMeta(row: AgentRunRow): AgentMeta {
   }
 }
 
-// --- Schema migration: add source column if missing ---
-
-function ensureSourceColumn(): void {
-  const db = getDb()
-  const columns = db.prepare("PRAGMA table_info('agent_runs')").all() as { name: string }[]
-  if (!columns.some((c) => c.name === 'source')) {
-    db.exec("ALTER TABLE agent_runs ADD COLUMN source TEXT DEFAULT 'external'")
-  }
-}
-
 // --- One-time migration from agents.json ---
 
 export async function migrateFromJson(): Promise<void> {
@@ -101,7 +91,6 @@ let _initialized = false
 export function initAgentHistory(): void {
   if (_initialized) return
   _initialized = true
-  ensureSourceColumn()
   // Fire-and-forget async migration
   migrateFromJson().catch(() => {})
 }

@@ -384,10 +384,8 @@ describe('IPC handler registration', () => {
       expect(result).toEqual({ url: 'ws://localhost:18789', hasToken: true })
     })
 
-    it('"config:getGatewayUrl" returns hasToken:false when config throws', async () => {
-      vi.mocked(config.getGatewayConfig).mockImplementationOnce(() => {
-        throw new Error('no config')
-      })
+    it('"config:getGatewayUrl" returns hasToken:false when config is null', async () => {
+      vi.mocked(config.getGatewayConfig).mockReturnValueOnce(null)
       const result = await invoke('config:getGatewayUrl')
       expect(result).toEqual({ url: '', hasToken: false })
     })

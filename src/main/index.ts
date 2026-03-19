@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow, session, dialog } from 'electron'
+import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
 import { watch, type FSWatcher } from 'fs'
 import { BDE_DB_PATH } from './paths'
@@ -12,12 +12,11 @@ import { registerGatewayHandlers } from './handlers/gateway-handlers'
 import { registerWindowHandlers } from './handlers/window-handlers'
 import { registerSprintHandlers } from './handlers/sprint'
 import { registerCostHandlers } from './handlers/cost-handlers'
-import { registerCostHandlers as registerCostHistoryHandlers } from './handlers/cost'
 import { registerFsHandlers } from './fs'
 import { getDb, closeDb } from './db'
 import { startSprintSseClient, stopSprintSseClient } from './sprint-sse'
 import { startPrPoller, stopPrPoller } from './pr-poller'
-import { GatewayConfigError, getGatewayConfig } from './config'
+import { getGatewayConfig } from './config'
 
 const DEBOUNCE_MS = 500
 
@@ -109,19 +108,8 @@ app.whenReady().then(() => {
 
   getDb()
 
-  // Validate gateway config early — show dialog and quit if missing
-  try {
-    getGatewayConfig()
-  } catch (err) {
-    if (err instanceof GatewayConfigError) {
-      dialog.showErrorBox(
-        err.reason === 'missing-token' ? 'BDE — Missing Gateway Token' : 'BDE — Config Not Found',
-        err.message
-      )
-      app.quit()
-      return
-    }
-  }
+  // Gateway config is optional — views degrade gracefully when unavailable.
+  // No startup gate. Config availability is checked per-feature.
 
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
@@ -144,23 +132,26 @@ app.whenReady().then(() => {
   registerWindowHandlers()
   registerSprintHandlers()
   registerCostHandlers()
-  registerCostHistoryHandlers()
   registerFsHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+    // Build connect-src dynamically from gateway config
+    const connectSrc = buildConnectSrc()
+
     const csp = is.dev
       ? "default-src 'self'; " +
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
         "font-src 'self' data:; " +
-        "connect-src 'self' ws://127.0.0.1:* wss://127.0.0.1:* http://localhost:* ws://localhost:*"
+        `connect-src 'self' ${connectSrc} http://localhost:* ws://localhost:*`
       : "default-src 'self'; " +
         "script-src 'self'; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
         "font-src 'self' data:; " +
-        "connect-src 'self' ws://127.0.0.1:18789 wss://127.0.0.1:18789"
+        `connect-src 'self' ${connectSrc} https://api.github.com`
+
     callback({
       responseHeaders: {
         ...details.responseHeaders,
@@ -175,6 +166,19 @@ app.whenReady().then(() => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()
   })
 })
+
+function buildConnectSrc(): string {
+  const config = getGatewayConfig()
+  if (!config) return 'ws://127.0.0.1:* wss://127.0.0.1:*'
+  try {
+    const url = new URL(config.url.replace(/^ws/, 'http'))
+    const wsProto = url.protocol === 'https:' ? 'wss:' : 'ws:'
+    const httpProto = url.protocol === 'https:' ? 'https:' : 'http:'
+    return `${wsProto}//${url.host} ${httpProto}//${url.host}`
+  } catch {
+    return 'ws://127.0.0.1:* wss://127.0.0.1:*'
+  }
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {

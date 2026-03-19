@@ -9,7 +9,7 @@ import type { AgentRunCostRow, CostSummary } from '../../../shared/types'
 import { EmptyState } from '../components/ui/EmptyState'
 import { Button } from '../components/ui/Button'
 import { Download, RefreshCw, BarChart, ExternalLink } from 'lucide-react'
-import { POLL_COST_INTERVAL } from '../lib/constants'
+import { POLL_COST_INTERVAL, AGENT_HISTORY_LIMIT, FLASH_DURATION_MS } from '../lib/constants'
 import { useCostDataStore } from '../stores/costData'
 
 // ── Formatting helpers ──────────────────────────────────
@@ -245,7 +245,7 @@ export default function CostView(): React.JSX.Element {
     try {
       const [s, r] = await Promise.all([
         window.api.cost.summary(),
-        window.api.cost.agentRuns(20),
+        window.api.cost.agentRuns(AGENT_HISTORY_LIMIT),
       ])
       setSummary(s)
       setRuns(r)
@@ -275,7 +275,7 @@ export default function CostView(): React.JSX.Element {
   const handleExport = useCallback(() => {
     exportCsv(sortedRuns)
     setCopied(true)
-    setTimeout(() => setCopied(false), 2000)
+    setTimeout(() => setCopied(false), FLASH_DURATION_MS)
   }, [sortedRuns])
 
   const handleRowClick = useCallback((run: AgentRunCostRow) => {

@@ -12,6 +12,11 @@ export const POLL_PR_STATUS_MS = 60_000
 export const POLL_COST_INTERVAL = 30_000
 export const POLL_HEALTH_CHECK_MS = 600_000
 
+// Debounce / flash durations (ms)
+export const SSE_DEBOUNCE_MS = 300
+export const SEARCH_DEBOUNCE_MS = 150
+export const FLASH_DURATION_MS = 2_000
+
 // Timeouts (ms)
 export const CONNECT_CHALLENGE_TIMEOUT_MS = 12_000
 export const GATEWAY_DISCONNECT_TOAST_DELAY = 4_000

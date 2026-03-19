@@ -1,4 +1,4 @@
-import { MAX_LOG_LINES } from './constants'
+import { MAX_LOG_LINES, POLL_LOG_INTERVAL } from './constants'
 
 export interface LogPollerState {
   logContent: string
@@ -54,7 +54,7 @@ export function createLogPollerActions(
       poll()
       logInterval = setInterval(() => {
         if (!document.hidden) poll()
-      }, 1000)
+      }, POLL_LOG_INTERVAL)
       return stop
     },
 

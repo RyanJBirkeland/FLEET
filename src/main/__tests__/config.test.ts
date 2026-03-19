@@ -14,7 +14,6 @@ import {
   getSupabaseConfig,
   getGitHubToken,
   getGatewayConfig,
-  GatewayConfigError,
   saveGatewayConfig,
   clearConfigCache,
 } from '../config'
@@ -96,37 +95,23 @@ describe('config.ts', () => {
   })
 
   describe('getGatewayConfig', () => {
-    it('throws GatewayConfigError with missing-file reason when config file is missing (ENOENT)', () => {
+    it('returns null when config file is missing (ENOENT)', () => {
       const err = Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
       vi.mocked(readFileSync).mockImplementation(() => { throw err })
 
-      expect(() => getGatewayConfig()).toThrow(GatewayConfigError)
-      try {
-        getGatewayConfig()
-      } catch (e) {
-        expect(e).toBeInstanceOf(GatewayConfigError)
-        expect((e as GatewayConfigError).reason).toBe('missing-file')
-        expect((e as GatewayConfigError).message).toContain('openclaw.json')
-      }
+      expect(getGatewayConfig()).toBeNull()
     })
 
-    it('throws GatewayConfigError with missing-token reason when gatewayToken is missing', () => {
+    it('returns null when gatewayToken is missing', () => {
       vi.mocked(readFileSync).mockReturnValue(JSON.stringify({ gatewayUrl: 'ws://localhost' }))
 
-      expect(() => getGatewayConfig()).toThrow(GatewayConfigError)
-      try {
-        getGatewayConfig()
-      } catch (e) {
-        expect(e).toBeInstanceOf(GatewayConfigError)
-        expect((e as GatewayConfigError).reason).toBe('missing-token')
-        expect((e as GatewayConfigError).message).toContain('gatewayToken')
-      }
+      expect(getGatewayConfig()).toBeNull()
     })
 
-    it('throws with parse error when JSON is corrupt', () => {
+    it('returns null when JSON is corrupt', () => {
       vi.mocked(readFileSync).mockReturnValue('{{not json}}')
 
-      expect(() => getGatewayConfig()).toThrow()
+      expect(getGatewayConfig()).toBeNull()
     })
 
     it('returns url and token on success', () => {
@@ -143,8 +128,8 @@ describe('config.ts', () => {
       )
 
       const result = getGatewayConfig()
-      expect(result.token).toBe('nested_tok')
-      expect(result.url).toBe('ws://127.0.0.1:9999')
+      expect(result!.token).toBe('nested_tok')
+      expect(result!.url).toBe('ws://127.0.0.1:9999')
     })
   })
 

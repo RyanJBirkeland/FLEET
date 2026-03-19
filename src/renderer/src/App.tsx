@@ -26,6 +26,7 @@ const CostView = lazy(() => import('./views/CostView'))
 const SettingsView = lazy(() => import('./views/SettingsView'))
 const PRStationView = lazy(() => import('./views/PRStationView'))
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
+import { DEFAULT_MODEL } from '../../shared/models'
 
 const VIEW_ORDER: View[] = [
   'sessions',
@@ -68,7 +69,7 @@ const SHORTCUTS_RIGHT: { keys: string; description: string }[] = [
 function ViewSkeleton(): React.JSX.Element {
   return (
     <div className="view-enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-      <div className="animate-pulse" style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bde-surface-2)' }} />
+      <div className="animate-pulse" style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bde-surface-high)' }} />
     </div>
   )
 }
@@ -286,7 +287,7 @@ function App(): React.JSX.Element {
       <StatusBar
         status={status}
         sessionCount={runningCount}
-        model="claude-sonnet-4-6"
+        model={DEFAULT_MODEL.modelId}
         onReconnect={() => connect()}
       />
       <CommandPalette open={paletteOpen} onClose={closePalette} />

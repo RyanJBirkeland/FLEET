@@ -25,7 +25,7 @@ import { useAgentHistoryStore } from '../stores/agentHistory'
 import { useUIStore } from '../stores/ui'
 import type { UnifiedAgent } from '../hooks/useUnifiedAgents'
 import { toast } from '../stores/toasts'
-import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
+import { POLL_SESSIONS_INTERVAL, SEARCH_DEBOUNCE_MS } from '../lib/constants'
 
 const SPLIT_MODES: { mode: SplitMode; icon: typeof Square; title: string }[] = [
   { mode: 'single', icon: Square, title: 'Single pane (⌘⇧1)' },
@@ -99,7 +99,7 @@ export function SessionsView(): React.JSX.Element {
   const handleQueryChange = useCallback((value: string) => {
     setQuery(value)
     clearTimeout(debounceRef.current)
-    debounceRef.current = setTimeout(() => setDebouncedQuery(value), 150)
+    debounceRef.current = setTimeout(() => setDebouncedQuery(value), SEARCH_DEBOUNCE_MS)
   }, [])
   const [spawnOpen, setSpawnOpen] = useState(false)
 

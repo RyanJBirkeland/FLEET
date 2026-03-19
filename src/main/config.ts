@@ -87,17 +87,7 @@ export function getTaskRunnerConfig(): TaskRunnerConfig | null {
   return { url, apiKey }
 }
 
-export class GatewayConfigError extends Error {
-  constructor(
-    message: string,
-    public readonly reason: 'missing-token' | 'missing-file'
-  ) {
-    super(message)
-    this.name = 'GatewayConfigError'
-  }
-}
-
-export function getGatewayConfig(): GatewayConfig {
+export function getGatewayConfig(): GatewayConfig | null {
   const now = Date.now()
   if (_configCache && now - _configCachedAt < CONFIG_CACHE_TTL) {
     return _configCache
@@ -106,28 +96,14 @@ export function getGatewayConfig(): GatewayConfig {
   try {
     const raw = readFileSync(OPENCLAW_CONFIG_PATH, 'utf-8')
     const config = JSON.parse(raw)
-
     const token = config.gatewayToken ?? config.gateway?.auth?.token
     const url = config.gatewayUrl ?? `ws://127.0.0.1:${config.gateway?.port ?? 18789}`
-
-    if (!token) {
-      throw new GatewayConfigError(
-        'No gatewayToken found in ~/.openclaw/openclaw.json. Please run `openclaw onboard` first.',
-        'missing-token'
-      )
-    }
+    if (!token) return null
 
     _configCache = { url, token }
     _configCachedAt = now
     return _configCache
-  } catch (err) {
-    if (err instanceof GatewayConfigError) throw err
-    if ((err as NodeJS.ErrnoException).code === 'ENOENT') {
-      throw new GatewayConfigError(
-        'Could not find ~/.openclaw/openclaw.json. Please install and configure OpenClaw first.',
-        'missing-file'
-      )
-    }
-    throw err
+  } catch {
+    return null
   }
 }

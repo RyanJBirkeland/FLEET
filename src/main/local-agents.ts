@@ -287,11 +287,11 @@ export function updateAgentRunCost(agentRunId: string, cost: AgentCost): void {
 
 export type { SpawnLocalAgentArgs, SpawnLocalAgentResult } from '../shared/types'
 import type { SpawnLocalAgentArgs, SpawnLocalAgentResult } from '../shared/types'
+import { CLAUDE_MODELS, DEFAULT_MODEL } from '../shared/models'
 
 function modelToFlag(model?: string): string {
-  if (model === 'haiku') return 'claude-haiku-4-5'
-  if (model === 'opus') return 'claude-opus-4-5'
-  return 'claude-sonnet-4-5'
+  const entry = CLAUDE_MODELS.find((m) => m.id === model)
+  return entry?.modelId ?? DEFAULT_MODEL.modelId
 }
 
 export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<SpawnLocalAgentResult> {

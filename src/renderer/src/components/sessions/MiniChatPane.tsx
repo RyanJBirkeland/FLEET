@@ -6,7 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import { invokeTool } from '../../lib/rpc'
 import { useSessionsStore } from '../../stores/sessions'
-import { POLL_PROCESSES_INTERVAL } from '../../lib/constants'
+import { POLL_PROCESSES_INTERVAL, FLASH_DURATION_MS } from '../../lib/constants'
 import { normalizeContent } from '../../lib/message'
 
 interface ChatMessage {
@@ -62,7 +62,7 @@ export function MiniChatPane({ paneIndex, sessionKey, isFocused, onFocus, onSess
       if (messages.length > prevCountRef.current && prevCountRef.current > 0) {
         setHasNew(true)
         if (newTimerRef.current) clearTimeout(newTimerRef.current)
-        newTimerRef.current = setTimeout(() => setHasNew(false), 2000)
+        newTimerRef.current = setTimeout(() => setHasNew(false), FLASH_DURATION_MS)
       }
       prevCountRef.current = messages.length
     } catch {

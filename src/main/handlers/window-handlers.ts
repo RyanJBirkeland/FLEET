@@ -26,7 +26,11 @@ export function registerWindowHandlers(): void {
   })
 
   ipcMain.on('window:setTitle', (_e, title: string) => {
-    const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0]
-    if (win) win.setTitle(title)
+    try {
+      const win = BrowserWindow.getFocusedWindow()
+      if (win && typeof title === 'string') win.setTitle(title)
+    } catch (err) {
+      console.error('[window:setTitle]', err)
+    }
   })
 }

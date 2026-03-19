@@ -10,6 +10,7 @@ import { useSessionsStore } from '../../stores/sessions'
 import { useLocalAgentsStore } from '../../stores/localAgents'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { useUIStore } from '../../stores/ui'
+import { POLL_PROCESSES_INTERVAL, POLL_AGENTS_INTERVAL } from '../../lib/constants'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
 export interface AgentListProps {
@@ -48,8 +49,8 @@ export function AgentList({
     fetchProcesses()
     fetchAgents()
   }, [fetchProcesses, fetchAgents, isSessionsView])
-  useVisibilityAwareInterval(fetchProcesses, isSessionsView ? 15_000 : null)
-  useVisibilityAwareInterval(fetchAgents, isSessionsView ? 10_000 : null)
+  useVisibilityAwareInterval(fetchProcesses, isSessionsView ? POLL_PROCESSES_INTERVAL : null)
+  useVisibilityAwareInterval(fetchAgents, isSessionsView ? POLL_AGENTS_INTERVAL : null)
 
   const toggleHistory = useCallback(() => setHistoryOpen((v) => !v), [])
   const toggleFollow = useCallback(

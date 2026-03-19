@@ -5,11 +5,7 @@ import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
 import { SPAWN_TASK_MAX_CHARS_SOFT, SPAWN_TASK_MAX_CHARS_HARD, SPAWN_TASK_HISTORY_LIMIT, REPO_OPTIONS } from '../../lib/constants'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
-const MODELS = [
-  { id: 'haiku', label: 'Haiku', claude: 'claude-haiku-4-5-20251001' },
-  { id: 'sonnet', label: 'Sonnet', claude: 'claude-sonnet-4-6' },
-  { id: 'opus', label: 'Opus', claude: 'claude-opus-4-6' }
-] as const
+import { CLAUDE_MODELS } from '../../../../shared/models'
 
 const HISTORY_KEY = 'bde-spawn-history'
 
@@ -222,7 +218,7 @@ export function SpawnModal({ open, onClose }: SpawnModalProps): React.JSX.Elemen
           <div className="spawn-modal__section">
             <label className="spawn-modal__label">Model</label>
             <div className="spawn-modal__chips">
-              {MODELS.map((m) => (
+              {CLAUDE_MODELS.map((m) => (
                 <Button
                   key={m.id}
                   variant="ghost"

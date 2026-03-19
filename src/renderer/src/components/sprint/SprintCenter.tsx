@@ -24,6 +24,7 @@ import {
   POLL_HEALTH_CHECK_MS,
   REPO_OPTIONS,
   WIP_LIMIT_IN_PROGRESS,
+  SSE_DEBOUNCE_MS,
 } from '../../lib/constants'
 import { TASK_STATUS, PR_STATUS } from '../../../../shared/constants'
 
@@ -96,7 +97,7 @@ export function SprintCenter() {
   const debouncedLoadData = useMemo(
     () => () => {
       if (debouncedLoadRef.current) clearTimeout(debouncedLoadRef.current)
-      debouncedLoadRef.current = setTimeout(loadData, 300)
+      debouncedLoadRef.current = setTimeout(loadData, SSE_DEBOUNCE_MS)
     },
     [loadData]
   )

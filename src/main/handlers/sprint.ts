@@ -99,7 +99,9 @@ export function registerSprintHandlers(): void {
       const fallback: GeneratePromptResponse = { taskId, spec: '', prompt: title }
 
       try {
-        const { url: rawGatewayUrl, token: gatewayToken } = getGatewayConfig()
+        const gatewayConfig = getGatewayConfig()
+        if (!gatewayConfig) return fallback
+        const { url: rawGatewayUrl, token: gatewayToken } = gatewayConfig
         const gatewayUrl = rawGatewayUrl.replace(/^ws:\/\//, 'http://').replace(/^wss:\/\//, 'https://')
 
         const templateScaffold = getTemplateScaffold(templateHint)
