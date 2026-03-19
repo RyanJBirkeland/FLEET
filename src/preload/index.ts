@@ -18,12 +18,12 @@ function typedInvoke<K extends keyof IpcChannelMap>(
 }
 
 const api = {
-  getGatewayConfig: () => typedInvoke('get-gateway-config'),
-  getGitHubToken: (): Promise<string | null> => ipcRenderer.invoke('get-github-token'),
-  saveGatewayConfig: (url: string, token: string) =>
+  getGatewayUrl: () => typedInvoke('get-gateway-url'),
+  saveGatewayConfig: (url: string, token?: string) =>
     typedInvoke('save-gateway-config', url, token),
-  getSupabaseConfig: (): Promise<{ url: string; anonKey: string } | null> =>
-    ipcRenderer.invoke('get-supabase-config'),
+  testGatewayConnection: (url: string, token?: string) =>
+    typedInvoke('gateway:test-connection', url, token),
+  signGatewayChallenge: () => typedInvoke('gateway:sign-challenge'),
   getRepoPaths: (): Promise<Record<string, string>> => ipcRenderer.invoke('get-repo-paths'),
   openExternal: (url: string): Promise<void> => ipcRenderer.invoke('open-external', url),
   listMemoryFiles: (): Promise<

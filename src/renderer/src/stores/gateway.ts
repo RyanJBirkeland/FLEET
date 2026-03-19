@@ -39,12 +39,12 @@ export const useGatewayStore = create<GatewayStore>((set, get) => ({
   connect: async (): Promise<void> => {
     if (_gatewayClient) return
 
-    const { url, token } = await window.api.getGatewayConfig()
+    const { url } = await window.api.getGatewayUrl()
 
     let prevStatus: ConnectionStatus = get().status
     let disconnectTimer: ReturnType<typeof setTimeout> | null = null
 
-    _gatewayClient = new GatewayClient(url, token, (status) => {
+    _gatewayClient = new GatewayClient(url, () => window.api.signGatewayChallenge(), (status) => {
       set({ status })
 
       if (status === 'connected') {

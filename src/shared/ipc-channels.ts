@@ -29,13 +29,23 @@ export interface GitHubFetchResult {
 
 export interface IpcChannelMap {
   // --- Config ---
-  'get-gateway-config': {
+  'get-gateway-url': {
     args: []
-    result: { url: string; token: string }
+    result: { url: string; hasToken: boolean }
   }
   'save-gateway-config': {
-    args: [url: string, token: string]
+    args: [url: string, token?: string]
     result: void
+  }
+
+  // --- Gateway auth (tokens stay in main process) ---
+  'gateway:test-connection': {
+    args: [url: string, token?: string]
+    result: { ok: boolean; latencyMs: number }
+  }
+  'gateway:sign-challenge': {
+    args: []
+    result: { auth: { token: string } }
   }
 
   // --- Git ---

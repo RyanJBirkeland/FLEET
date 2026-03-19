@@ -25,7 +25,7 @@ interface EventFrame {
 export class GatewayClient {
   private ws: WebSocket | null = null
   private url: string
-  private token: string
+  private signChallenge: () => Promise<{ auth: { token: string } }>
   private statusListener: StatusListener
   private messageListeners = new Set<MessageListener>()
   private pending = new Map<string, { resolve: (v: unknown) => void; reject: (e: Error) => void }>()
@@ -35,9 +35,9 @@ export class GatewayClient {
   private authenticated = false
   private sendQueue: string[] = []
 
-  constructor(url: string, token: string, onStatus: StatusListener) {
+  constructor(url: string, signChallenge: () => Promise<{ auth: { token: string } }>, onStatus: StatusListener) {
     this.url = url
-    this.token = token
+    this.signChallenge = signChallenge
     this.statusListener = onStatus
   }
 
@@ -114,48 +114,60 @@ export class GatewayClient {
   private sendConnect(): void {
     if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
     console.log('[GatewayClient] sending connect challenge response')
-    const id = crypto.randomUUID()
 
-    const pending = new Promise<unknown>((resolve, reject) => {
-      const timer = setTimeout(() => {
-        this.pending.delete(id)
-        reject(new Error('Connect challenge timeout'))
-      }, CONNECT_CHALLENGE_TIMEOUT_MS)
+    // Fetch auth params from main process (token never stored in renderer)
+    this.signChallenge()
+      .then((authParams) => {
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) return
 
-      this.pending.set(id, {
-        resolve: (v) => { clearTimeout(timer); resolve(v) },
-        reject: (e) => { clearTimeout(timer); reject(e) },
-      })
-    })
+        const id = crypto.randomUUID()
 
-    this.ws.send(JSON.stringify({
-      type: 'req',
-      id,
-      method: 'connect',
-      params: {
-        auth: { token: this.token },
-        minProtocol: 3,
-        maxProtocol: 3,
-        client: {
-          id: 'gateway-client',
-          version: '0.1.0',
-          platform: 'darwin',
-          mode: 'ui'
-        },
-        role: 'operator',
-        scopes: ['operator.admin', 'operator.read', 'operator.write']
-      }
-    }))
+        const pending = new Promise<unknown>((resolve, reject) => {
+          const timer = setTimeout(() => {
+            this.pending.delete(id)
+            reject(new Error('Connect challenge timeout'))
+          }, CONNECT_CHALLENGE_TIMEOUT_MS)
 
-    pending
-      .then(() => {
-        this.authenticated = true
-        console.log('[GatewayClient] authenticated ✓, flushing', this.sendQueue.length, 'queued calls')
-        this.statusListener('connected')
-        this.flushSendQueue()
+          this.pending.set(id, {
+            resolve: (v) => { clearTimeout(timer); resolve(v) },
+            reject: (e) => { clearTimeout(timer); reject(e) },
+          })
+        })
+
+        this.ws.send(JSON.stringify({
+          type: 'req',
+          id,
+          method: 'connect',
+          params: {
+            ...authParams,
+            minProtocol: 3,
+            maxProtocol: 3,
+            client: {
+              id: 'gateway-client',
+              version: '0.1.0',
+              platform: 'darwin',
+              mode: 'ui'
+            },
+            role: 'operator',
+            scopes: ['operator.admin', 'operator.read', 'operator.write']
+          }
+        }))
+
+        pending
+          .then(() => {
+            this.authenticated = true
+            console.log('[GatewayClient] authenticated ✓, flushing', this.sendQueue.length, 'queued calls')
+            this.statusListener('connected')
+            this.flushSendQueue()
+          })
+          .catch((err) => {
+            console.error('[GatewayClient] connect failed:', err?.message)
+            this.statusListener('error')
+            this.ws?.close()
+          })
       })
       .catch((err) => {
-        console.error('[GatewayClient] connect failed:', err?.message)
+        console.error('[GatewayClient] failed to sign challenge:', err?.message)
         this.statusListener('error')
         this.ws?.close()
       })

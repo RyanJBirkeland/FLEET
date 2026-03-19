@@ -133,7 +133,9 @@ vi.mock('../../components/terminal/FindBar', () => ({
 // Mock window.api for views that use it — assign directly to preserve window methods
 Object.defineProperty(window, 'api', {
   value: {
-    getGatewayConfig: vi.fn().mockResolvedValue({ url: 'http://localhost', token: 'tok' }),
+    getGatewayUrl: vi.fn().mockResolvedValue({ url: 'http://localhost', hasToken: true }),
+    testGatewayConnection: vi.fn().mockResolvedValue({ ok: true, latencyMs: 10 }),
+    signGatewayChallenge: vi.fn().mockResolvedValue({ auth: { token: 'tok' } }),
     getRepoPaths: vi.fn().mockResolvedValue({ bde: '/path/to/BDE' }),
     gitStatus: vi.fn().mockResolvedValue({ files: [] }),
     gitBranches: vi.fn().mockResolvedValue({ branches: ['main'], current: 'main' }),
