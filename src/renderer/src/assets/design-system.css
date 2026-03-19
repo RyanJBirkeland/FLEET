@@ -572,11 +572,6 @@
   border-radius: var(--bde-radius-xl);
 }
 
-.badge-glass {
-  background: var(--glass-tint-mid);
-  border: 1px solid var(--bde-border);
-}
-
 /* ════════════════════════════════════════════════════════
    Visual Identity v2 — Glass, Elevation, Glow, Gradients
    ════════════════════════════════════════════════════════ */
@@ -587,14 +582,6 @@
   position: relative;
   background: var(--glass-tint-dark);
   border: 1px solid var(--border);
-}
-
-.glass-elevated {
-  background: var(--glass-tint-mid);
-  border: 1px solid var(--border-light);
-  box-shadow:
-    0 8px 32px rgba(0, 0, 0, 0.40),
-    0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
 }
 
 .glass-modal {
@@ -644,21 +631,6 @@
     var(--bg-void);
 }
 
-.elevation-1 {
-  background: var(--glass-tint-dark);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.20);
-}
-
-.elevation-2 {
-  background: var(--glass-tint-mid);
-  border: 1px solid var(--border-light);
-  border-radius: 12px;
-  box-shadow:
-    0 4px 16px rgba(0, 0, 0, 0.35),
-    0 0 0 0.5px rgba(255, 255, 255, 0.05) inset;
-}
-
 .elevation-3 {
   background: var(--glass-tint-light);
   border: 1px solid var(--border-glow);
@@ -675,16 +647,6 @@
   -webkit-backdrop-filter: blur(8px) saturate(120%);
 }
 
-.elevation-4 {
-  background: var(--glass-tint-ultra);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  border-radius: 16px;
-  box-shadow:
-    0 32px 100px rgba(0, 0, 0, 0.60),
-    0 0 0 1px rgba(255, 255, 255, 0.06) inset,
-    0 0 80px rgba(0, 211, 127, 0.05);
-}
-
 /* ── 6. Glow Effects ─────────────────────────────────── */
 
 /* 6.1 Accent glows */
@@ -693,28 +655,6 @@
     0 0 8px rgba(0, 211, 127, 0.15),
     0 0 0 1px rgba(0, 211, 127, 0.20);
 }
-
-.glow-accent-md {
-  box-shadow:
-    0 0 16px rgba(0, 211, 127, 0.20),
-    0 0 4px rgba(0, 211, 127, 0.30),
-    0 0 0 1px rgba(0, 211, 127, 0.40);
-}
-
-.glow-accent-lg {
-  box-shadow:
-    0 0 40px rgba(0, 211, 127, 0.15),
-    0 0 16px rgba(0, 211, 127, 0.25),
-    0 0 4px rgba(0, 211, 127, 0.35),
-    0 0 0 1px rgba(0, 211, 127, 0.50);
-}
-
-/* 6.2 Status glows */
-.glow-running { box-shadow: 0 0 12px rgba(0, 211, 127, 0.25), 0 0 0 1px rgba(0, 211, 127, 0.30); }
-.glow-error   { box-shadow: 0 0 12px rgba(255, 69, 58, 0.25), 0 0 0 1px rgba(255, 69, 58, 0.30); }
-.glow-warning { box-shadow: 0 0 12px rgba(255, 170, 51, 0.25), 0 0 0 1px rgba(255, 170, 51, 0.30); }
-.glow-info    { box-shadow: 0 0 12px rgba(91, 158, 255, 0.25), 0 0 0 1px rgba(91, 158, 255, 0.30); }
-.glow-ai      { box-shadow: 0 0 12px rgba(167, 139, 250, 0.25), 0 0 0 1px rgba(167, 139, 250, 0.30); }
 
 /* 6.3 Pulsing glow */
 @keyframes pulse-glow {
@@ -735,30 +675,10 @@
   animation: pulse-glow 2.5s ease-in-out infinite;
 }
 
-/* 6.4 Text glows */
-.text-glow-accent {
-  text-shadow:
-    0 0 20px rgba(0, 211, 127, 0.3),
-    0 0 40px rgba(0, 211, 127, 0.1);
-}
-
-.text-glow-electric {
-  text-shadow:
-    0 0 20px rgba(108, 142, 239, 0.3),
-    0 0 40px rgba(167, 139, 250, 0.1);
-}
-
 /* ── 2.4 Gradient Text ───────────────────────────────── */
 
 .text-gradient-aurora {
   background: var(--gradient-aurora);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-gradient-electric {
-  background: var(--gradient-electric);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -785,39 +705,6 @@
   -webkit-mask-composite: xor;
   mask-composite: exclude;
   pointer-events: none;
-}
-
-/* ── 4.3 Heading Treatments ──────────────────────────── */
-
-.heading-section {
-  font-family: var(--font-ui);
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: var(--tracking-widest);
-  text-transform: uppercase;
-  color: var(--text-muted);
-}
-
-.heading-page {
-  font-family: var(--font-display);
-  font-size: 20px;
-  font-weight: 700;
-  letter-spacing: var(--tracking-tight);
-  background: var(--gradient-aurora);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.heading-hero {
-  font-family: var(--font-display);
-  font-size: 36px;
-  font-weight: 800;
-  letter-spacing: -0.03em;
-  background: linear-gradient(135deg, #F5F5F7 0%, #98989F 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 /* ── 4.4 Logotype ────────────────────────────────────── */
