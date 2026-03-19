@@ -302,6 +302,7 @@ describe('git.ts', () => {
     let mockPrepare: ReturnType<typeof vi.fn>
 
     beforeEach(() => {
+      mockFetch.mockReset()
       vi.stubGlobal('fetch', mockFetch)
       mockRun = vi.fn()
       mockPrepare = vi.fn(() => ({ run: mockRun }))
@@ -317,6 +318,7 @@ describe('git.ts', () => {
       it('returns MERGED state when PR is merged', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          headers: { get: (): null => null },
           json: async () => ({ state: 'closed', merged_at: '2024-01-01T00:00:00Z' })
         })
 
@@ -332,6 +334,7 @@ describe('git.ts', () => {
       it('returns OPEN state when PR is open', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          headers: { get: (): null => null },
           json: async () => ({ state: 'open', merged_at: null })
         })
 
@@ -346,6 +349,7 @@ describe('git.ts', () => {
       it('returns CLOSED state when PR is closed but not merged', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          headers: { get: (): null => null },
           json: async () => ({ state: 'closed', merged_at: null })
         })
 
@@ -369,7 +373,7 @@ describe('git.ts', () => {
       })
 
       it('returns error state on non-OK HTTP response', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: false })
+        mockFetch.mockResolvedValueOnce({ ok: false, headers: { get: (): null => null } })
 
         const results = await pollPrStatuses([
           { taskId: 't1', prUrl: 'https://github.com/octocat/repo/pull/1' }
@@ -440,6 +444,7 @@ describe('git.ts', () => {
       it('updates sprint_tasks to done with completed_at on merge', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          headers: { get: (): null => null },
           json: async () => ({ state: 'closed', merged_at: '2024-01-15T12:00:00Z' })
         })
 
@@ -458,6 +463,7 @@ describe('git.ts', () => {
       it('updates sprint_tasks to cancelled with completed_at on close', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          headers: { get: (): null => null },
           json: async () => ({ state: 'closed', merged_at: null })
         })
 
@@ -474,6 +480,7 @@ describe('git.ts', () => {
       it('does not update DB when PR is still open', async () => {
         mockFetch.mockResolvedValueOnce({
           ok: true,
+          headers: { get: (): null => null },
           json: async () => ({ state: 'open', merged_at: null })
         })
 
