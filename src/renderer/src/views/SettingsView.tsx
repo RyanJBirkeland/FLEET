@@ -53,6 +53,7 @@ export default function SettingsView(): React.JSX.Element {
 
   const [url, setUrl] = useState('')
   const [token, setToken] = useState('')
+  const [hasExistingToken, setHasExistingToken] = useState(false)
   const [showToken, setShowToken] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -63,11 +64,11 @@ export default function SettingsView(): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
   const setTheme = useThemeStore((s) => s.setTheme)
 
-  // Load initial config
+  // Load initial config (token is never returned to renderer)
   useEffect(() => {
-    settingsService.loadConfig().then(({ url: u, token: t }) => {
+    settingsService.loadConfig().then(({ url: u, hasToken }) => {
       setUrl(u)
-      setToken(t)
+      setHasExistingToken(hasToken)
     })
     settingsService.getRepoPaths().then(setRepos)
   }, [])
@@ -87,8 +88,11 @@ export default function SettingsView(): React.JSX.Element {
   const handleSave = useCallback(async () => {
     setSaving(true)
     try {
-      await settingsService.saveConfig({ url, token })
+      // Only send token if user entered a new one; otherwise main preserves existing
+      await settingsService.saveConfig(url, token || undefined)
       setDirty(false)
+      if (token) setHasExistingToken(true)
+      setToken('')
       toast.success('Gateway config saved')
       await reconnect()
     } catch {
@@ -102,7 +106,8 @@ export default function SettingsView(): React.JSX.Element {
     setTesting(true)
     setTestResult(null)
     try {
-      await settingsService.testConnection(url, token)
+      // Pass token only if user entered a new one; otherwise main uses stored token
+      await settingsService.testConnection(url, token || undefined)
       setTestResult('success')
       toast.success('Connection successful')
     } catch {
@@ -143,7 +148,7 @@ export default function SettingsView(): React.JSX.Element {
                 type={showToken ? 'text' : 'password'}
                 value={token}
                 onChange={(e) => handleTokenChange(e.target.value)}
-                placeholder="Token from openclaw.json"
+                placeholder={hasExistingToken ? 'Token saved — enter new value to change' : 'Token from openclaw.json'}
               />
               <Button
                 variant="icon"
@@ -173,7 +178,7 @@ export default function SettingsView(): React.JSX.Element {
                 variant="ghost"
                 size="sm"
                 onClick={handleTest}
-                disabled={testing || !url || !token}
+                disabled={testing || !url || (!token && !hasExistingToken)}
                 loading={testing}
                 type="button"
               >
@@ -188,7 +193,7 @@ export default function SettingsView(): React.JSX.Element {
                 variant="primary"
                 size="sm"
                 onClick={handleSave}
-                disabled={!dirty || saving || !url || !token}
+                disabled={!dirty || saving || !url || (!token && !hasExistingToken)}
                 loading={saving}
                 type="button"
               >

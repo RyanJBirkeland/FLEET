@@ -367,68 +367,39 @@ describe('IPC handler registration', () => {
   describe('config-handlers', () => {
     it('registers all expected channel names', () => {
       const expected = [
-        'get-gateway-config',
-        'get-github-token',
+        'get-gateway-url',
         'save-gateway-config',
-        'get-supabase-config',
       ]
       for (const ch of expected) {
         expect(handlers.has(ch), `missing channel: ${ch}`).toBe(true)
       }
+      // Token-exposing channels must NOT be registered
+      expect(handlers.has('get-gateway-config')).toBe(false)
+      expect(handlers.has('get-github-token')).toBe(false)
+      expect(handlers.has('get-supabase-config')).toBe(false)
     })
 
-    it('"get-gateway-config" returns cached gateway config', async () => {
-      const result = await invoke('get-gateway-config')
-      expect(result).toEqual({ url: 'ws://localhost:18789', token: 'test-token' })
+    it('"get-gateway-url" returns url and hasToken flag (no raw token)', async () => {
+      const result = await invoke('get-gateway-url')
+      expect(result).toEqual({ url: 'ws://localhost:18789', hasToken: true })
     })
 
-    it('"get-github-token" calls getGitHubToken', async () => {
-      const result = await invoke('get-github-token')
-      expect(config.getGitHubToken).toHaveBeenCalled()
-      expect(result).toBe('gh-token')
+    it('"get-gateway-url" returns hasToken:false when config throws', async () => {
+      vi.mocked(config.getGatewayConfig).mockImplementationOnce(() => {
+        throw new Error('no config')
+      })
+      const result = await invoke('get-gateway-url')
+      expect(result).toEqual({ url: '', hasToken: false })
     })
 
-    it('"save-gateway-config" calls saveGatewayConfig and refreshes cache', async () => {
+    it('"save-gateway-config" calls saveGatewayConfig with token', async () => {
       await invoke('save-gateway-config', 'ws://new', 'new-token')
       expect(config.saveGatewayConfig).toHaveBeenCalledWith('ws://new', 'new-token')
-
-      // Simulate what real saveGatewayConfig does: next getGatewayConfig returns updated values
-      vi.mocked(config.getGatewayConfig).mockReturnValueOnce({ url: 'ws://new', token: 'new-token' })
-
-      const cached = await invoke('get-gateway-config')
-      expect(cached).toEqual({ url: 'ws://new', token: 'new-token' })
     })
 
-    it('"get-supabase-config" calls getSupabaseConfig', async () => {
-      const result = await invoke('get-supabase-config')
-      expect(config.getSupabaseConfig).toHaveBeenCalled()
-      expect(result).toBeNull()
-    })
-
-    it('handles getGatewayConfig() throw gracefully during registration', async () => {
-      // Save all handlers so we can restore after this test
-      const savedHandlers = new Map(handlers)
-      const savedListeners = new Map(onListeners)
-      handlers.clear()
-      onListeners.clear()
-
-      try {
-        // Registration always succeeds — getGatewayConfig is deferred (called at invocation, not registration)
-        expect(() => registerConfigHandlers()).not.toThrow()
-        expect(handlers.has('get-gateway-config')).toBe(true)
-
-        // The error surfaces when the handler is actually invoked
-        vi.mocked(config.getGatewayConfig).mockImplementationOnce(() => {
-          throw new Error('no config')
-        })
-        await expect(invoke('get-gateway-config')).rejects.toThrow('no config')
-      } finally {
-        // Always restore handlers for subsequent tests
-        handlers.clear()
-        onListeners.clear()
-        for (const [k, v] of savedHandlers) handlers.set(k, v)
-        for (const [k, v] of savedListeners) onListeners.set(k, v)
-      }
+    it('"save-gateway-config" preserves existing token when none provided', async () => {
+      await invoke('save-gateway-config', 'ws://new')
+      expect(config.saveGatewayConfig).toHaveBeenCalledWith('ws://new', 'test-token')
     })
   })
 
@@ -439,6 +410,8 @@ describe('IPC handler registration', () => {
     it('registers expected channel names', () => {
       expect(handlers.has('gateway:invoke')).toBe(true)
       expect(handlers.has('gateway:getSessionHistory')).toBe(true)
+      expect(handlers.has('gateway:test-connection')).toBe(true)
+      expect(handlers.has('gateway:sign-challenge')).toBe(true)
     })
 
     it('"gateway:invoke" proxies HTTP POST with Bearer token', async () => {

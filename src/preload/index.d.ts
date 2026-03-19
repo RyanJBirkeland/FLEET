@@ -11,10 +11,10 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
-      getGatewayConfig: () => Promise<IpcResult<'get-gateway-config'>>
-      getGitHubToken: () => Promise<string | null>
+      getGatewayUrl: () => Promise<IpcResult<'get-gateway-url'>>
       saveGatewayConfig: (...args: IpcChannelMap['save-gateway-config']['args']) => Promise<IpcResult<'save-gateway-config'>>
-      getSupabaseConfig: () => Promise<{ url: string; anonKey: string } | null>
+      testGatewayConnection: (...args: IpcChannelMap['gateway:test-connection']['args']) => Promise<IpcResult<'gateway:test-connection'>>
+      signGatewayChallenge: () => Promise<IpcResult<'gateway:sign-challenge'>>
       getRepoPaths: () => Promise<Record<string, string>>
       openExternal: (url: string) => Promise<void>
       listMemoryFiles: () => Promise<

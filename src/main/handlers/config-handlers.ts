@@ -1,15 +1,27 @@
 import { safeHandle } from '../ipc-utils'
-import { getGatewayConfig, getGitHubToken, saveGatewayConfig, getSupabaseConfig } from '../config'
+import { getGatewayConfig, saveGatewayConfig } from '../config'
 
 export function registerConfigHandlers(): void {
-  safeHandle('get-gateway-config', () => {
-    return getGatewayConfig()
+  safeHandle('get-gateway-url', () => {
+    try {
+      const { url, token } = getGatewayConfig()
+      return { url, hasToken: !!token }
+    } catch {
+      return { url: '', hasToken: false }
+    }
   })
-  // TODO: AX-S1 — add 'get-github-token' to IpcChannelMap
-  safeHandle('get-github-token', () => getGitHubToken())
-  safeHandle('save-gateway-config', (_e, url: string, token: string) => {
-    saveGatewayConfig(url, token)
+  safeHandle('save-gateway-config', (_e, url: string, token?: string) => {
+    if (token) {
+      saveGatewayConfig(url, token)
+    } else {
+      // Preserve existing token when only URL is updated
+      try {
+        const existing = getGatewayConfig()
+        saveGatewayConfig(url, existing.token)
+      } catch {
+        // No existing config — cannot save without a token
+        throw new Error('Cannot save gateway config: no token provided and no existing token found')
+      }
+    }
   })
-  // TODO: AX-S1 — add 'get-supabase-config' to IpcChannelMap
-  safeHandle('get-supabase-config', () => getSupabaseConfig())
 }

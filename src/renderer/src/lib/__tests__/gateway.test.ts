@@ -39,21 +39,27 @@ class MockWebSocket {
 import { GatewayClient, type ConnectionStatus } from '../gateway'
 import { CONNECT_CHALLENGE_TIMEOUT_MS } from '../constants'
 
+const mockSignChallenge = vi.fn().mockResolvedValue({ auth: { token: 'tok' } })
+
 /**
  * The GatewayClient has a challenge/response auth flow:
  * 1. connect() → creates WS
  * 2. onopen → resets retryCount (does NOT emit 'connected' yet)
  * 3. Gateway sends connect.challenge event
- * 4. Client responds with sendConnect (auth token)
- * 5. If auth succeeds (res with ok) → emits 'connected'
+ * 4. Client calls signChallenge() to get auth params from main process
+ * 5. Client responds with connect request (auth params)
+ * 6. If auth succeeds (res with ok) → emits 'connected'
  *
  * Helper to drive a full connect + auth cycle:
  */
-function simulateFullConnect(): void {
+async function simulateFullConnect(): Promise<void> {
   lastWs._triggerOpen()
 
   // Gateway sends challenge
   lastWs._triggerMessage({ type: 'event', event: 'connect.challenge' })
+
+  // signChallenge is async — flush microtask so the connect frame is sent
+  await vi.advanceTimersByTimeAsync(0)
 
   // Client responds with sendConnect — extract the connect request id
   const connectFrame = JSON.parse(lastWs.send.mock.calls[0][0])
@@ -75,6 +81,7 @@ describe('GatewayClient', () => {
     vi.useFakeTimers()
     onStatus = vi.fn() as unknown as ((status: ConnectionStatus) => void) & ReturnType<typeof vi.fn<any>>
     ;(globalThis as unknown as Record<string, unknown>).WebSocket = MockWebSocket
+    mockSignChallenge.mockClear()
   })
 
   afterEach(() => {
@@ -82,16 +89,16 @@ describe('GatewayClient', () => {
   })
 
   it('connect sets status to connecting', () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     expect(onStatus).toHaveBeenCalledWith('connecting')
   })
 
   it('full auth cycle sets status to connected', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
 
-    simulateFullConnect()
+    await simulateFullConnect()
 
     // 'connected' is set via promise.then — need to flush microtasks
     await vi.advanceTimersByTimeAsync(0)
@@ -100,7 +107,7 @@ describe('GatewayClient', () => {
   })
 
   it('send sends JSON when WS is open', () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 
@@ -109,7 +116,7 @@ describe('GatewayClient', () => {
   })
 
   it('send does not throw when WS is not open', () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs.readyState = MockWebSocket.CLOSED
 
@@ -118,7 +125,7 @@ describe('GatewayClient', () => {
   })
 
   it('call queues when not authenticated and sends after auth', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 
@@ -127,6 +134,8 @@ describe('GatewayClient', () => {
 
     // Now authenticate
     lastWs._triggerMessage({ type: 'event', event: 'connect.challenge' })
+    await vi.advanceTimersByTimeAsync(0) // flush signChallenge
+
     const connectFrame = JSON.parse(lastWs.send.mock.calls[0][0])
     lastWs._triggerMessage({ type: 'res', id: connectFrame.id, ok: true, payload: {} })
 
@@ -146,7 +155,7 @@ describe('GatewayClient', () => {
   })
 
   it('call rejects on timeout', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 
@@ -158,7 +167,7 @@ describe('GatewayClient', () => {
   })
 
   it('call timeout removes frame from sendQueue so it is not flushed on reconnect', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 
@@ -171,6 +180,8 @@ describe('GatewayClient', () => {
 
     // Now authenticate — flush should send nothing stale
     lastWs._triggerMessage({ type: 'event', event: 'connect.challenge' })
+    await vi.advanceTimersByTimeAsync(0) // flush signChallenge
+
     const connectFrame = JSON.parse(lastWs.send.mock.calls[0][0])
     lastWs._triggerMessage({ type: 'res', id: connectFrame.id, ok: true, payload: {} })
     await vi.advanceTimersByTimeAsync(0)
@@ -180,11 +191,11 @@ describe('GatewayClient', () => {
   })
 
   it('call rejects when response has error', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
 
     // Do full auth
-    simulateFullConnect()
+    await simulateFullConnect()
     await vi.advanceTimersByTimeAsync(0)
 
     const promise = client.call('test.method')
@@ -197,7 +208,7 @@ describe('GatewayClient', () => {
   })
 
   it('onMessage returns unsubscribe function', () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     const listener = vi.fn()
     const unsub = client.onMessage(listener)
 
@@ -213,7 +224,7 @@ describe('GatewayClient', () => {
   })
 
   it('dispose stops reconnection and emits disconnected', () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 
@@ -222,12 +233,13 @@ describe('GatewayClient', () => {
   })
 
   it('connect challenge times out and triggers reconnection', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 
     // Gateway sends challenge, client responds — but server never replies
     lastWs._triggerMessage({ type: 'event', event: 'connect.challenge' })
+    await vi.advanceTimersByTimeAsync(0) // flush signChallenge
     expect(lastWs.send).toHaveBeenCalledTimes(1)
 
     // Advance past the connect challenge timeout
@@ -239,10 +251,10 @@ describe('GatewayClient', () => {
   })
 
   it('connect challenge timeout is cleared on successful auth', async () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
 
-    simulateFullConnect()
+    await simulateFullConnect()
     await vi.advanceTimersByTimeAsync(0)
 
     // Advance well past timeout — should not trigger error
@@ -255,7 +267,7 @@ describe('GatewayClient', () => {
   })
 
   it('onclose triggers disconnected status', () => {
-    const client = new GatewayClient('http://localhost:18789', 'tok', onStatus)
+    const client = new GatewayClient('http://localhost:18789', mockSignChallenge, onStatus)
     client.connect()
     lastWs._triggerOpen()
 

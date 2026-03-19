@@ -12,7 +12,7 @@ vi.mock('../../lib/gateway', () => {
   GatewayClient.prototype.dispose = vi.fn()
 
   // Capture the onStatus callback in the constructor
-  GatewayClient.mockImplementation(function (this: { _onStatus: (s: string) => void }, _url: string, _token: string, onStatus: (s: string) => void) {
+  GatewayClient.mockImplementation(function (this: { _onStatus: (s: string) => void }, _url: string, _signChallenge: unknown, onStatus: (s: string) => void) {
     this._onStatus = onStatus
   })
 
@@ -33,10 +33,11 @@ describe('gateway store', () => {
     useGatewayStore.setState({ status: 'disconnected' })
     vi.clearAllMocks()
 
-    // Mock window.api.getGatewayConfig — assign directly to preserve window methods
+    // Mock window.api — assign directly to preserve window methods
     Object.defineProperty(window, 'api', {
       value: {
-        getGatewayConfig: vi.fn().mockResolvedValue({ url: 'http://localhost:18789', token: 'test-token' }),
+        getGatewayUrl: vi.fn().mockResolvedValue({ url: 'http://localhost:18789', hasToken: true }),
+        signGatewayChallenge: vi.fn().mockResolvedValue({ auth: { token: 'test-token' } }),
       },
       writable: true,
       configurable: true,

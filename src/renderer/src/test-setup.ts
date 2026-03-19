@@ -6,7 +6,9 @@ afterEach(() => cleanup())
 
 // Global window.api mock (centralized — no more per-file duplication)
 vi.stubGlobal('api', {
-  getGatewayConfig: vi.fn().mockResolvedValue({ url: 'ws://localhost:18789', token: 'test' }),
+  getGatewayUrl: vi.fn().mockResolvedValue({ url: 'ws://localhost:18789', hasToken: true }),
+  testGatewayConnection: vi.fn().mockResolvedValue({ ok: true, latencyMs: 10 }),
+  signGatewayChallenge: vi.fn().mockResolvedValue({ auth: { token: 'test' } }),
   getRepoPaths: vi.fn().mockResolvedValue({
     bde: '/Users/test/Documents/Repositories/BDE',
     'life-os': '/Users/test/Documents/Repositories/life-os',
@@ -33,7 +35,6 @@ vi.stubGlobal('api', {
   getBranch: vi.fn().mockResolvedValue('main'),
   getLog: vi.fn().mockResolvedValue(''),
   readSprintMd: vi.fn().mockResolvedValue(''),
-  getGitHubToken: vi.fn().mockResolvedValue(null),
   saveGatewayConfig: vi.fn().mockResolvedValue(undefined),
   listMemoryFiles: vi.fn().mockResolvedValue([]),
   readMemoryFile: vi.fn().mockResolvedValue(''),
