@@ -4,7 +4,6 @@ import userEvent from '@testing-library/user-event'
 import type { SprintTask } from '../../../../../shared/types'
 
 vi.mock('../../../lib/stream-parser', () => ({
-  parseStreamJson: vi.fn().mockReturnValue({ items: [{ type: 'text', content: 'hello' }], isStreaming: false }),
   stripAnsi: vi.fn((s: string) => s),
 }))
 
@@ -12,13 +11,15 @@ vi.mock('../../../lib/taskRunnerSSE', () => ({
   subscribeSSE: vi.fn().mockReturnValue(() => {}),
 }))
 
-vi.mock('../../../lib/agent-messages', () => ({
-  chatItemsToMessages: vi.fn().mockReturnValue([]),
+vi.mock('../../agents/ChatRenderer', () => ({
+  ChatRenderer: ({ events }: { events: unknown[] }) => (
+    <div data-testid="chat-renderer">Events: {events.length}</div>
+  ),
 }))
 
-vi.mock('../../sessions/ChatThread', () => ({
-  ChatThread: ({ messages }: { messages: unknown[] }) => (
-    <div data-testid="chat-thread">Messages: {messages.length}</div>
+vi.mock('../../../stores/agentEvents', () => ({
+  useAgentEventsStore: vi.fn((selector: (s: { events: Record<string, unknown[]>; loadHistory: () => Promise<void> }) => unknown) =>
+    selector({ events: {}, loadHistory: vi.fn().mockResolvedValue(undefined) })
   ),
 }))
 
@@ -78,11 +79,11 @@ describe('LogDrawer', () => {
     expect(screen.getByText('No agent session linked to this task.')).toBeInTheDocument()
   })
 
-  it('shows ChatThread when agent_run_id is provided', () => {
+  it('shows empty state when agent_run_id is provided but no events or log', () => {
     const task = makeTask({ agent_run_id: 'run-123' })
     render(<LogDrawer task={task} onClose={onClose} />)
 
-    expect(screen.getByTestId('chat-thread')).toBeInTheDocument()
+    expect(screen.getByText('Agent is starting up...')).toBeInTheDocument()
   })
 
   it('fetches log content on mount when agent_run_id exists', async () => {
