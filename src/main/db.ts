@@ -293,6 +293,23 @@ export const migrations: Migration[] = [
         PRAGMA foreign_keys = ON;
       `)
     }
+  },
+  {
+    version: 11,
+    description: 'Create agent_events table for unified event streaming',
+    up: (db) => {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS agent_events (
+          id INTEGER PRIMARY KEY,
+          agent_id TEXT NOT NULL,
+          event_type TEXT NOT NULL,
+          payload TEXT NOT NULL,
+          timestamp INTEGER NOT NULL
+        );
+        CREATE INDEX IF NOT EXISTS idx_agent_events_agent
+          ON agent_events(agent_id, timestamp);
+      `)
+    },
   }
 ]
 

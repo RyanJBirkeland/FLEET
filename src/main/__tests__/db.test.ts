@@ -34,7 +34,7 @@ describe('db schema migrations', () => {
       .map((r) => r.name)
       .sort()
 
-    expect(tables).toEqual(['agent_runs', 'cost_events', 'settings', 'sprint_tasks'])
+    expect(tables).toEqual(['agent_events', 'agent_runs', 'cost_events', 'settings', 'sprint_tasks'])
   })
 
   it('creates expected indexes', () => {
@@ -49,6 +49,7 @@ describe('db schema migrations', () => {
       .sort()
 
     expect(indexes).toEqual([
+      'idx_agent_events_agent',
       'idx_agent_runs_finished',
       'idx_agent_runs_pid',
       'idx_agent_runs_status',
