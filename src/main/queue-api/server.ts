@@ -6,10 +6,12 @@ import { createServer, type Server } from 'http'
 import { getSetting } from '../settings'
 import { handleRequest } from './router'
 import { startSseBroadcaster, stopSseBroadcaster } from './sse'
+import { initEventStoreCleanup } from './event-store'
 
 const DEFAULT_PORT = 18790
 
 let server: Server | null = null
+let cleanupEventStore: (() => void) | null = null
 
 export function startQueueApi(): void {
   const portSetting = getSetting('taskRunner.queuePort')
@@ -25,6 +27,7 @@ export function startQueueApi(): void {
   }
 
   startSseBroadcaster()
+  cleanupEventStore = initEventStoreCleanup()
 
   server = createServer((req, res) => {
     handleRequest(req, res).catch((err) => {
@@ -54,6 +57,11 @@ export function startQueueApi(): void {
 
 export function stopQueueApi(): void {
   stopSseBroadcaster()
+
+  if (cleanupEventStore) {
+    cleanupEventStore()
+    cleanupEventStore = null
+  }
 
   if (server) {
     server.close()

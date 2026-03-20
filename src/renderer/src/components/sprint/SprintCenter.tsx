@@ -69,6 +69,13 @@ export function SprintCenter() {
   )
   const logDrawerTask = logDrawerTaskId ? (tasks.find((t) => t.id === logDrawerTaskId) ?? null) : null
 
+  // Subscribe to live task output events
+  const initTaskOutputListener = useSprintStore((s) => s.initTaskOutputListener)
+  useEffect(() => {
+    const cleanup = initTaskOutputListener()
+    return cleanup
+  }, [initTaskOutputListener])
+
   // Keep notification hook aware of which task's LogDrawer is open
   useEffect(() => {
     setOpenLogDrawerTaskId(logDrawerTaskId)

@@ -4,7 +4,9 @@ import { CSS } from '@dnd-kit/utilities'
 import { Badge } from '../ui/Badge'
 import { Button } from '../ui/Button'
 import { AgentStatusChip } from './AgentStatusChip'
+import { TaskEventSubtitle } from './TaskEventSubtitle'
 import { repoBadgeVariant } from '../../lib/format'
+import { useSprintStore } from '../../stores/sprint'
 
 import { TASK_STATUS } from '../../../../shared/constants'
 import type { SprintTask } from './SprintCenter'
@@ -34,6 +36,8 @@ export const TaskCard = memo(function TaskCard({
   onMarkDone,
   onStop,
 }: TaskCardProps) {
+  const latestEvent = useSprintStore((s) => s.latestEvents[task.id] ?? null)
+
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
     data: { task },
@@ -98,7 +102,10 @@ export const TaskCard = memo(function TaskCard({
       </div>
 
       {task.status === TASK_STATUS.ACTIVE && (
-        <AgentStatusChip status="running" startedAt={task.started_at} />
+        <>
+          <AgentStatusChip status="running" startedAt={task.started_at} />
+          <TaskEventSubtitle event={latestEvent} />
+        </>
       )}
 
       <div className="task-card__actions">

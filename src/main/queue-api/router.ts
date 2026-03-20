@@ -3,6 +3,7 @@
  * Routes requests to sprint-local functions and SSE handler.
  */
 import type { IncomingMessage, ServerResponse } from 'http'
+import { BrowserWindow } from 'electron'
 import {
   getTask,
   listTasks,
@@ -15,6 +16,8 @@ import {
   RUNNER_WRITABLE_STATUSES,
   STATUS_UPDATE_FIELDS,
 } from '../../shared/queue-api-contract'
+import type { TaskOutputEvent } from '../../shared/queue-api-contract'
+import { appendEvents } from './event-store'
 
 const API_VERSION = '0.1.0'
 
@@ -101,6 +104,7 @@ export async function handleRequest(
     const taskIdMatch = pathname.match(/^\/queue\/tasks\/([^/]+)$/)
     const claimMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/claim$/)
     const statusMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/status$/)
+    const outputMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/output$/)
 
     // GET /queue/tasks/:id
     if (method === 'GET' && taskIdMatch) {
@@ -205,6 +209,59 @@ export async function handleRequest(
       } else {
         errorResponse(res, 500, 'Failed to update task')
       }
+      return
+    }
+
+    // POST /queue/tasks/:id/output
+    if (method === 'POST' && outputMatch) {
+      const id = outputMatch[1]
+      let body: unknown
+      try {
+        body = await parseBody(req)
+      } catch {
+        errorResponse(res, 400, 'Invalid JSON')
+        return
+      }
+
+      const payload = body as Record<string, unknown>
+      if (!payload || typeof payload !== 'object' || !Array.isArray(payload.events)) {
+        errorResponse(res, 400, 'Body must contain a non-empty "events" array')
+        return
+      }
+
+      const events = payload.events as TaskOutputEvent[]
+      if (events.length === 0) {
+        errorResponse(res, 400, 'Body must contain a non-empty "events" array')
+        return
+      }
+
+      // Validate each event has required fields and taskId matches URL
+      for (const ev of events) {
+        if (!ev.taskId || !ev.timestamp || !ev.type) {
+          errorResponse(res, 400, 'Each event must have taskId, timestamp, and type')
+          return
+        }
+        if (ev.taskId !== id) {
+          errorResponse(res, 400, `Event taskId "${ev.taskId}" does not match URL taskId "${id}"`)
+          return
+        }
+      }
+
+      // Check task exists
+      const existing = getTask(id)
+      if (!existing) {
+        errorResponse(res, 404, 'Task not found')
+        return
+      }
+
+      appendEvents(id, events)
+
+      // Broadcast to all renderer windows
+      for (const win of BrowserWindow.getAllWindows()) {
+        win.webContents.send('task:output', { taskId: id, events })
+      }
+
+      jsonResponse(res, 200, { received: events.length })
       return
     }
 
