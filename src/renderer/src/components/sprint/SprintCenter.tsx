@@ -363,28 +363,6 @@ export function SprintCenter() {
             />
             </ErrorBoundary>
 
-            <ErrorBoundary name="Done Tasks">
-            <TaskTable
-              section="done"
-              tasks={partition.done}
-              onPushToSprint={handlePushToSprint}
-              onViewSpec={handleViewSpec}
-              onViewOutput={handleViewOutput}
-              onRerun={handleRerun}
-            />
-            </ErrorBoundary>
-
-            {partition.failed.length > 0 && (
-              <ErrorBoundary name="Failed Tasks">
-              <TaskTable
-                section="failed"
-                tasks={partition.failed}
-                onPushToSprint={handlePushToSprint}
-                onViewSpec={handleViewSpec}
-                onViewOutput={handleViewOutput}
-              />
-              </ErrorBoundary>
-            )}
             <div className="bde-backlog-search">
               <input
                 type="text"
@@ -415,6 +393,31 @@ export function SprintCenter() {
               onUpdate={handleUpdatePriority}
             />
             </ErrorBoundary>
+
+            <ErrorBoundary name="Done Tasks">
+            <TaskTable
+              section="done"
+              tasks={partition.done}
+              defaultExpanded={false}
+              onPushToSprint={handlePushToSprint}
+              onViewSpec={handleViewSpec}
+              onViewOutput={handleViewOutput}
+              onRerun={handleRerun}
+            />
+            </ErrorBoundary>
+
+            {partition.failed.length > 0 && (
+              <ErrorBoundary name="Failed Tasks">
+              <TaskTable
+                section="failed"
+                tasks={partition.failed}
+                defaultExpanded={false}
+                onPushToSprint={handlePushToSprint}
+                onViewSpec={handleViewSpec}
+                onViewOutput={handleViewOutput}
+              />
+              </ErrorBoundary>
+            )}
           </>
         )}
       </div>
