@@ -15,6 +15,7 @@ import { getTaskRunnerConfig } from './config'
 import { getDb } from './db'
 import { BDE_AGENT_TMP_DIR as LOG_DIR } from './paths'
 import { createAgentProvider, type AgentHandle } from './agents'
+import { getEventBus } from './agents/event-bus'
 
 // Re-export scanner types and functions for consumers
 export type { LocalAgentProcess, PsCandidate } from './agent-scanner'
@@ -188,8 +189,10 @@ export async function spawnClaudeAgent(args: SpawnLocalAgentArgs): Promise<Spawn
 /** Background event consumer — writes events to log and updates DB on completion. */
 async function consumeEvents(id: string, handle: AgentHandle, logPath: string): Promise<void> {
   try {
+    const bus = getEventBus()
     for await (const event of handle.events) {
       appendFile(logPath, JSON.stringify(event) + '\n', 'utf-8').catch(() => {})
+      bus.emit('agent:event', id, event)
 
       if (event.type === 'agent:completed') {
         activeAgentsById.delete(id)
