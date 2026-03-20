@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { SprintTask } from '../../../shared/types'
+import type { TaskOutputEvent } from '../../../shared/queue-api-contract'
 import { TASK_STATUS, PR_STATUS } from '../../../shared/constants'
 import { toast } from './toasts'
 import { detectTemplate } from '../../../shared/template-heuristics'
@@ -22,6 +23,8 @@ interface SprintState {
   prMergedMap: Record<string, boolean>
   generatingIds: Set<string>
   queueHealth: QueueHealth | null
+  taskEvents: Record<string, TaskOutputEvent[]>
+  latestEvents: Record<string, TaskOutputEvent>
 
   // --- Actions ---
   loadData: () => Promise<void>
@@ -37,6 +40,8 @@ interface SprintState {
   setSelectedTaskId: (id: string | null) => void
   setLogDrawerTaskId: (id: string | null) => void
   setTasks: (tasks: SprintTask[]) => void
+  initTaskOutputListener: () => () => void
+  clearTaskEvents: (taskId: string) => void
 }
 
 export interface CreateTicketInput {
@@ -59,6 +64,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   prMergedMap: {},
   generatingIds: new Set(),
   queueHealth: null,
+  taskEvents: {},
+  latestEvents: {},
 
   loadData: async (): Promise<void> => {
     set({ loadError: null, loading: true })
@@ -260,4 +267,27 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setSelectedTaskId: (id): void => set({ selectedTaskId: id }),
   setLogDrawerTaskId: (id): void => set({ logDrawerTaskId: id }),
   setTasks: (tasks): void => set({ tasks }),
+
+  initTaskOutputListener: (): (() => void) => {
+    const cleanup = window.api.onTaskOutput(({ taskId, events }) => {
+      set((s) => {
+        const existing = s.taskEvents[taskId] ?? []
+        const updated = [...existing, ...events]
+        const latest = events[events.length - 1]
+        return {
+          taskEvents: { ...s.taskEvents, [taskId]: updated },
+          latestEvents: { ...s.latestEvents, [taskId]: latest },
+        }
+      })
+    })
+    return cleanup
+  },
+
+  clearTaskEvents: (taskId): void => {
+    set((s) => {
+      const { [taskId]: _events, ...restEvents } = s.taskEvents
+      const { [taskId]: _latest, ...restLatest } = s.latestEvents
+      return { taskEvents: restEvents, latestEvents: restLatest }
+    })
+  },
 }))

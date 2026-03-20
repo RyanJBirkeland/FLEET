@@ -240,6 +240,10 @@ Object.defineProperty(window, 'api', {
     openDirectoryDialog: vi.fn().mockResolvedValue(null),
     onExternalSprintChange: vi.fn(),
     offExternalSprintChange: vi.fn(),
+    onTaskOutput: vi.fn().mockReturnValue(() => {}),
+    task: {
+      getEvents: vi.fn().mockResolvedValue([]),
+    },
     onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
   },
   writable: true,

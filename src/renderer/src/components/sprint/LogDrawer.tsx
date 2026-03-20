@@ -4,10 +4,14 @@ import { parseStreamJson, stripAnsi, type ChatItem } from '../../lib/stream-pars
 import { chatItemsToMessages } from '../../lib/agent-messages'
 import type { ChatMessage } from '../../lib/agent-messages'
 import { ChatThread } from '../sessions/ChatThread'
+import { EventCard } from './EventCard'
 import { Button } from '../ui/Button'
+import { tokens } from '../../design-system/tokens'
 import { toast } from '../../stores/toasts'
+import { useSprintStore } from '../../stores/sprint'
 import { subscribeSSE, type LogChunkEvent, type LogDoneEvent } from '../../lib/taskRunnerSSE'
 import { TASK_STATUS, AGENT_STATUS } from '../../../../shared/constants'
+import type { TaskOutputEvent } from '../../../../shared/queue-api-contract'
 import type { SprintTask } from './SprintCenter'
 
 type LogDrawerProps = {
@@ -23,9 +27,13 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
   const [steerInput, setSteerInput] = useState('')
   const [exitCode, setExitCode] = useState<number | null>(null)
   const [sentMessages, setSentMessages] = useState<ChatMessage[]>([])
+  const [initialEvents, setInitialEvents] = useState<TaskOutputEvent[]>([])
   const fromByteRef = useRef(0)
   const lineCountRef = useRef(0)
   const prevItemsRef = useRef<ChatItem[]>([])
+
+  // Streaming events from the store
+  const storeEvents = useSprintStore((s) => (task ? s.taskEvents[task.id] : undefined))
 
   // Effect 1: reset state only when switching to a different agent
   useEffect(() => {
@@ -36,7 +44,23 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     setAgentStatus(AGENT_STATUS.UNKNOWN)
     setExitCode(null)
     setSentMessages([])
+    setInitialEvents([])
   }, [task?.agent_run_id])
+
+  // Effect: fetch initial events when opening drawer for a task
+  useEffect(() => {
+    if (!task?.id) return
+    const taskId = task.id
+    let cancelled = false
+    window.api.task.getEvents(taskId).then((events) => {
+      if (!cancelled && events.length > 0) {
+        setInitialEvents(events)
+      }
+    }).catch(() => {
+      // Silently ignore — events may not be available
+    })
+    return () => { cancelled = true }
+  }, [task?.id])
 
   // Effect 2: catch-up read + SSE subscription for live streaming
   useEffect(() => {
@@ -106,6 +130,30 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     [messages, sentMessages]
   )
 
+  // Merge initial events with live store events, deduplicating by timestamp+type
+  const mergedEvents = useMemo(() => {
+    const live = storeEvents ?? []
+    if (initialEvents.length === 0) return live
+    if (live.length === 0) return initialEvents
+    const seen = new Set(live.map((e) => `${e.timestamp}:${e.type}`))
+    const unique = initialEvents.filter((e) => !seen.has(`${e.timestamp}:${e.type}`))
+    return [...unique, ...live]
+  }, [initialEvents, storeEvents])
+
+  // Collapse consecutive thinking events (keep only the latest)
+  const displayEvents = useMemo(() => {
+    const result: TaskOutputEvent[] = []
+    for (const ev of mergedEvents) {
+      if (ev.type === 'agent:thinking' && result.length > 0 && result[result.length - 1].type === 'agent:thinking') {
+        result[result.length - 1] = ev
+      } else {
+        result.push(ev)
+      }
+    }
+    return result
+  }, [mergedEvents])
+
+  const hasEvents = displayEvents.length > 0
   const hasStreamJson = items.length > 0
   const hasPlainText = !hasStreamJson && logContent.trim().length > 0
 
@@ -179,7 +227,13 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
       </div>
       <div className="log-drawer__body">
         {task.agent_run_id ? (
-          hasStreamJson ? (
+          hasEvents ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1], padding: tokens.space[2] }}>
+              {displayEvents.map((ev, i) => (
+                <EventCard key={`${ev.timestamp}-${ev.type}-${i}`} event={ev} />
+              ))}
+            </div>
+          ) : hasStreamJson ? (
             <ChatThread messages={allMessages} isStreaming={agentStatus === AGENT_STATUS.RUNNING && isStreaming} />
           ) : hasPlainText ? (
             <pre className="log-drawer__plain-text">{stripAnsi(logContent)}</pre>

@@ -90,6 +90,10 @@ vi.stubGlobal('api', {
   killAgent: vi.fn().mockResolvedValue({ ok: true }),
   onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
   offExternalSprintChange: vi.fn(),
+  onTaskOutput: vi.fn().mockReturnValue(() => {}),
+  task: {
+    getEvents: vi.fn().mockResolvedValue([]),
+  },
   onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
   terminal: {
     create: vi.fn().mockResolvedValue(1),
