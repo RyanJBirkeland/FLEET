@@ -2,6 +2,7 @@
  * AgentCard — compact card showing agent status, task, model, and cost.
  * Used in the AgentList sidebar.
  */
+import { useState, useEffect } from 'react'
 import { Bot, Cpu, Clock } from 'lucide-react'
 import type { AgentMeta } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
@@ -33,6 +34,14 @@ export function AgentCard({ agent, selected, onClick }: AgentCardProps) {
   const statusColor = STATUS_COLORS[agent.status] ?? tokens.color.textDim
   const isRunning = agent.status === 'running'
   const SourceIcon = agent.source === 'bde' ? Bot : Cpu
+
+  // Live duration ticker for running agents
+  const [, setTick] = useState(0)
+  useEffect(() => {
+    if (!isRunning) return
+    const id = setInterval(() => setTick((t) => t + 1), 1000)
+    return () => clearInterval(id)
+  }, [isRunning])
 
   return (
     <button
