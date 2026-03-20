@@ -33,7 +33,7 @@ vi.mock('../../stores/sessions', () => ({
 
 vi.mock('../../stores/ui', () => ({
   useUIStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ activeView: 'sessions', setView: vi.fn() })
+    selector({ activeView: 'agents', setView: vi.fn() })
   ),
 }))
 

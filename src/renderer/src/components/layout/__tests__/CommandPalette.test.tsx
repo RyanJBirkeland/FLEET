@@ -90,9 +90,9 @@ describe('CommandPalette', () => {
     render(<CommandPalette open={true} onClose={onClose} />)
 
     const input = screen.getByPlaceholderText(/Type a command/)
-    await user.type(input, 'sessions')
+    await user.type(input, 'agents')
 
-    expect(screen.getByText('Go to Sessions')).toBeInTheDocument()
+    expect(screen.getByText('Go to Agents')).toBeInTheDocument()
     expect(screen.queryByText('Go to Cost')).not.toBeInTheDocument()
   })
 

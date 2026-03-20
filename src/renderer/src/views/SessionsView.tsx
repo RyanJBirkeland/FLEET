@@ -40,10 +40,10 @@ export function SessionsView(): React.JSX.Element {
 
   // Single unified polling interval
   useEffect(() => {
-    if (activeView !== 'sessions') return
+    if (activeView !== ('sessions' as string)) return
     fetchAll()
   }, [fetchAll, activeView])
-  useVisibilityAwareInterval(fetchAll, activeView === 'sessions' ? POLL_SESSIONS_INTERVAL : null)
+  useVisibilityAwareInterval(fetchAll, activeView === ('sessions' as string) ? POLL_SESSIONS_INTERVAL : null)
 
   useEffect(() => {
     if (sessions.length > 0 && !selectedKey) {

@@ -10,7 +10,7 @@ import {
 import { useUIStore, View } from '../../stores/ui'
 
 const NAV_ITEMS: { view: View; icon: typeof Terminal; label: string; shortcut: string }[] = [
-  { view: 'sessions', icon: Terminal, label: 'Sessions', shortcut: '⌘1' },
+  { view: 'agents', icon: Terminal, label: 'Agents', shortcut: '⌘1' },
   { view: 'terminal', icon: SquareTerminal, label: 'Terminal', shortcut: '⌘2' },
   { view: 'sprint', icon: GitBranch, label: 'Sprint / PRs', shortcut: '⌘3' },
   { view: 'pr-station', icon: GitPullRequest, label: 'PR Station', shortcut: '⌘4' },

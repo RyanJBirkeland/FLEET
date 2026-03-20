@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 
-export type View = 'sessions' | 'terminal' | 'sprint' | 'pr-station' | 'memory' | 'cost' | 'settings'
+export type View = 'agents' | 'terminal' | 'sprint' | 'pr-station' | 'memory' | 'cost' | 'settings'
 
 interface UIStore {
   activeView: View
@@ -8,6 +8,6 @@ interface UIStore {
 }
 
 export const useUIStore = create<UIStore>((set) => ({
-  activeView: 'sessions',
+  activeView: 'agents',
   setView: (view) => set({ activeView: view })
 }))

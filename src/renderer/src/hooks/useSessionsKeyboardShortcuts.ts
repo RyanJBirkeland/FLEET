@@ -33,7 +33,7 @@ export function useSessionsKeyboardShortcuts(
   }, [selectedKey, splitPanes, setSplitMode, setPaneSession])
 
   useEffect(() => {
-    if (activeView !== 'sessions') return
+    if (activeView !== ('sessions' as string)) return
 
     const handler = (e: KeyboardEvent): void => {
       const tag = (e.target as HTMLElement).tagName
