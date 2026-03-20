@@ -78,6 +78,8 @@ const UPDATE_ALLOWLIST = new Set([
   'pr_status',
   'pr_mergeable_state',
   'agent_run_id',
+  'retry_count',
+  'fast_fail_count',
   'started_at',
   'completed_at',
   'template_name',
@@ -187,11 +189,18 @@ export function getDoneTodayCount(): number {
 export function markTaskDoneByPrNumber(prNumber: number): void {
   try {
     const completedAt = new Date().toISOString()
+    // Transition active tasks to done
     getDb()
       .prepare(
         "UPDATE sprint_tasks SET status='done', completed_at=? WHERE pr_number=? AND status='active'"
       )
       .run(completedAt, prNumber)
+    // Also update pr_status to merged for tasks already marked done (by task runner)
+    getDb()
+      .prepare(
+        "UPDATE sprint_tasks SET pr_status='merged' WHERE pr_number=? AND status='done' AND pr_status='open'"
+      )
+      .run(prNumber)
   } catch (err) {
     console.warn(`[sprint-local] failed to mark task done for PR #${prNumber}:`, err)
   }
@@ -199,14 +208,47 @@ export function markTaskDoneByPrNumber(prNumber: number): void {
 
 export function markTaskCancelledByPrNumber(prNumber: number): void {
   try {
+    // Transition active tasks to cancelled
     getDb()
       .prepare(
         "UPDATE sprint_tasks SET status='cancelled', completed_at=? WHERE pr_number=? AND status='active'"
       )
       .run(new Date().toISOString(), prNumber)
+    // Also update pr_status to closed for tasks already marked done
+    getDb()
+      .prepare(
+        "UPDATE sprint_tasks SET pr_status='closed' WHERE pr_number=? AND status='done' AND pr_status='open'"
+      )
+      .run(prNumber)
   } catch (err) {
     console.warn(`[sprint-local] failed to mark task cancelled for PR #${prNumber}:`, err)
   }
+}
+
+export function releaseTask(id: string): SprintTask | null {
+  const result = getDb()
+    .prepare(
+      `UPDATE sprint_tasks
+       SET status = 'queued', claimed_by = NULL, started_at = NULL, agent_run_id = NULL
+       WHERE id = ? AND status = 'active'
+       RETURNING *`
+    )
+    .get(id) as SprintTask | undefined
+
+  if (result) {
+    const final = getTask(id)!
+    notifyMutation('updated', final)
+    return final
+  }
+  return null
+}
+
+export function listTasksWithOpenPrs(): SprintTask[] {
+  return getDb()
+    .prepare(
+      "SELECT * FROM sprint_tasks WHERE pr_number IS NOT NULL AND pr_status = 'open'"
+    )
+    .all() as SprintTask[]
 }
 
 export function updateTaskMergeableState(prNumber: number, mergeableState: string | null): void {

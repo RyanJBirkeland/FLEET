@@ -126,6 +126,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       claimed_by: null,
       started_at: null,
       completed_at: null,
+      retry_count: 0,
+      fast_fail_count: 0,
       template_name: data.template_name ?? null,
       updated_at: new Date().toISOString(),
       created_at: new Date().toISOString(),

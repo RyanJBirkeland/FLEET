@@ -58,6 +58,9 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
       case TASK_STATUS.FAILED:
         failed.push(task)
         break
+      case TASK_STATUS.ERROR:
+        failed.push(task)
+        break
     }
   }
 

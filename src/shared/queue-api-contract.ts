@@ -21,16 +21,19 @@ export interface ClaimRequest {
 }
 
 export interface StatusUpdateRequest {
-  status: 'active' | 'done' | 'failed' | 'cancelled'
+  status: 'active' | 'done' | 'failed' | 'cancelled' | 'error'
   pr_url?: string
   pr_number?: number
   pr_status?: 'open' | 'merged' | 'closed' | 'draft'
   completed_at?: string
   agent_run_id?: string
+  retry_count?: number
+  fast_fail_count?: number
+  notes?: string
 }
 
 /** Runner-writable status values for PATCH /queue/tasks/:id/status */
-export const RUNNER_WRITABLE_STATUSES = new Set(['active', 'done', 'failed', 'cancelled'])
+export const RUNNER_WRITABLE_STATUSES = new Set(['active', 'done', 'failed', 'cancelled', 'error'])
 
 /** Allowed fields in a status update patch */
 export const STATUS_UPDATE_FIELDS = new Set([
@@ -40,6 +43,9 @@ export const STATUS_UPDATE_FIELDS = new Set([
   'pr_status',
   'completed_at',
   'agent_run_id',
+  'retry_count',
+  'fast_fail_count',
+  'notes',
 ])
 
 // --- Streaming Visibility Event Types ---

@@ -18,6 +18,7 @@ import { getDb, closeDb } from './db'
 import { migrateFromOpenClawConfig } from './settings'
 import { startSprintSseClient, stopSprintSseClient } from './sprint-sse'
 import { startPrPoller, stopPrPoller } from './pr-poller'
+import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
 import { getGatewayConfig } from './config'
 import { startQueueApi, stopQueueApi } from './queue-api/server'
 
@@ -120,6 +121,9 @@ app.whenReady().then(() => {
 
   startPrPoller()
   app.on('will-quit', stopPrPoller)
+
+  startSprintPrPoller()
+  app.on('will-quit', stopSprintPrPoller)
 
   startQueueApi()
   app.on('will-quit', stopQueueApi)

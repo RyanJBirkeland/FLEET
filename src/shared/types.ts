@@ -25,9 +25,11 @@ export interface SprintTask {
   repo: string
   prompt: string | null
   priority: number
-  status: 'backlog' | 'queued' | 'active' | 'done' | 'cancelled' | 'failed'
+  status: 'backlog' | 'queued' | 'active' | 'done' | 'cancelled' | 'failed' | 'error'
   notes: string | null
   spec: string | null
+  retry_count: number
+  fast_fail_count: number
   agent_run_id: string | null
   pr_number: number | null
   pr_status: 'open' | 'merged' | 'closed' | 'draft' | null

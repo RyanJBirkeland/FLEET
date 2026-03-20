@@ -9,6 +9,7 @@ import {
   listTasks,
   claimTask,
   updateTask,
+  releaseTask,
   getQueueStats,
 } from '../handlers/sprint-local'
 import { addSseClient } from './sse'
@@ -103,6 +104,7 @@ export async function handleRequest(
     // Match /queue/tasks/:id routes
     const taskIdMatch = pathname.match(/^\/queue\/tasks\/([^/]+)$/)
     const claimMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/claim$/)
+    const releaseMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/release$/)
     const statusMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/status$/)
     const outputMatch = pathname.match(/^\/queue\/tasks\/([^/]+)\/output$/)
 
@@ -147,6 +149,27 @@ export async function handleRequest(
         errorResponse(res, 404, 'Task not found')
       } else {
         errorResponse(res, 409, `Task is not claimable (current status: ${existing.status})`)
+      }
+      return
+    }
+
+    // POST /queue/tasks/:id/release — release an active task back to queued
+    if (method === 'POST' && releaseMatch) {
+      const id = releaseMatch[1]
+      const existing = getTask(id)
+      if (!existing) {
+        errorResponse(res, 404, 'Task not found')
+        return
+      }
+      if (existing.status !== 'active') {
+        errorResponse(res, 409, `Cannot release task with status '${existing.status}' (must be active)`)
+        return
+      }
+      const released = releaseTask(id)
+      if (released) {
+        jsonResponse(res, 200, released)
+      } else {
+        errorResponse(res, 500, 'Failed to release task')
       }
       return
     }
