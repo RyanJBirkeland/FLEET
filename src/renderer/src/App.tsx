@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGatewayStore } from './stores/gateway'
 import { useUIStore, type View } from './stores/ui'
@@ -15,15 +15,8 @@ import { Kbd } from './components/ui/Kbd'
 import { useAgentHistoryStore } from './stores/agentHistory'
 import { useTaskNotifications } from './hooks/useTaskNotifications'
 import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
-import { ErrorBoundary } from './components/ui/ErrorBoundary'
-import { AgentsView } from './views/AgentsView'
-import { TerminalView } from './views/TerminalView'    // always-mounted
-
-const SprintView = lazy(() => import('./views/SprintView'))
-const MemoryView = lazy(() => import('./views/MemoryView'))
-const CostView = lazy(() => import('./views/CostView'))
-const SettingsView = lazy(() => import('./views/SettingsView'))
-const PRStationView = lazy(() => import('./views/PRStationView'))
+import { PanelRenderer } from './components/panels/PanelRenderer'
+import { usePanelLayoutStore, findLeaf } from './stores/panelLayout'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
 import { DEFAULT_MODEL } from '../../shared/models'
 
@@ -63,63 +56,6 @@ const SHORTCUTS_RIGHT: { keys: string; description: string }[] = [
   { keys: '[ / ]', description: 'Prev / next diff file' }
 ]
 
-function ViewSkeleton(): React.JSX.Element {
-  return (
-    <div className="view-enter" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 1 }}>
-      <div className="animate-pulse" style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--bde-surface-high)' }} />
-    </div>
-  )
-}
-
-function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
-  const reduced = useReducedMotion()
-
-  const onDemandView = (() => {
-    switch (activeView) {
-      case 'sprint': return <ErrorBoundary name="Sprint"><SprintView /></ErrorBoundary>
-      case 'pr-station': return <ErrorBoundary name="PR Station"><PRStationView /></ErrorBoundary>
-      case 'memory': return <ErrorBoundary name="Memory"><MemoryView /></ErrorBoundary>
-      case 'cost': return <ErrorBoundary name="Cost"><CostView /></ErrorBoundary>
-      case 'settings': return <ErrorBoundary name="Settings"><SettingsView /></ErrorBoundary>
-      default: return null
-    }
-  })()
-
-  return (
-    <>
-      {/* Terminal and Agents stay mounted so PTY sessions and agent state survive navigation */}
-      <div className="view-enter" style={{ display: activeView === 'terminal' ? 'flex' : 'none' }}>
-        <ErrorBoundary name="Terminal"><TerminalView /></ErrorBoundary>
-      </div>
-      <div className="view-enter" style={{ display: activeView === 'agents' ? 'flex' : 'none' }}>
-        <ErrorBoundary name="Agents"><AgentsView /></ErrorBoundary>
-      </div>
-      {/* On-demand views animate in/out */}
-      <AnimatePresence mode="popLayout">
-        {onDemandView && (
-          <motion.div
-            key={activeView}
-            className="view-enter"
-            variants={VARIANTS.fadeIn}
-            initial="initial"
-            animate="animate"
-            exit="exit"
-            transition={reduced ? REDUCED_TRANSITION : SPRINGS.gentle}
-          >
-            <Suspense fallback={<ViewSkeleton />}>
-              {onDemandView}
-            </Suspense>
-          </motion.div>
-        )}
-      </AnimatePresence>
-      {!['terminal','agents','sprint','pr-station','memory','cost','settings'].includes(activeView) && (
-        <div className="view-router">
-          <span className="view-router__placeholder">{String(activeView)} — coming soon</span>
-        </div>
-      )}
-    </>
-  )
-}
 
 function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Element {
   const reduced = useReducedMotion()
@@ -180,6 +116,7 @@ function App(): React.JSX.Element {
   const connect = useGatewayStore((s) => s.connect)
   const activeView = useUIStore((s) => s.activeView)
   const setView = useUIStore((s) => s.setView)
+  const root = usePanelLayoutStore((s) => s.root)
   const runningCount = useSessionsStore((s) => s.runningCount)
   const totalCost = useCostDataStore((s) => s.totalCost)
   const fetchLocalAgents = useCostDataStore((s) => s.fetchLocalAgents)
@@ -189,6 +126,8 @@ function App(): React.JSX.Element {
   const closePalette = useCommandPaletteStore((s) => s.close)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
+  const loadLayout = usePanelLayoutStore((s) => s.loadSavedLayout)
+
   useEffect(() => {
     connect()
   }, [connect])
@@ -196,6 +135,10 @@ function App(): React.JSX.Element {
   useEffect(() => {
     fetchLocalAgents()
   }, [fetchLocalAgents])
+
+  useEffect(() => {
+    loadLayout()
+  }, [loadLayout])
 
   useTaskNotifications()
   useGitHubRateLimitWarning()
@@ -242,6 +185,40 @@ function App(): React.JSX.Element {
         return
       }
 
+      // Cmd+\ — Split focused panel right
+      if (e.metaKey && e.key === '\\') {
+        e.preventDefault()
+        const { focusedPanelId, splitPanel } = usePanelLayoutStore.getState()
+        if (focusedPanelId) splitPanel(focusedPanelId, 'horizontal', 'agents')
+        return
+      }
+
+      // Cmd+W — Close focused panel's active tab
+      if (e.metaKey && e.key === 'w') {
+        e.preventDefault()
+        const { focusedPanelId, root } = usePanelLayoutStore.getState()
+        if (focusedPanelId) {
+          const leaf = findLeaf(root, focusedPanelId)
+          if (leaf) usePanelLayoutStore.getState().closeTab(focusedPanelId, leaf.activeTab)
+        }
+        return
+      }
+
+      // Cmd+Shift+[ / ] — Cycle tabs within focused panel
+      if (e.metaKey && e.shiftKey && (e.key === '[' || e.key === ']')) {
+        e.preventDefault()
+        const { focusedPanelId, root, setActiveTab } = usePanelLayoutStore.getState()
+        if (focusedPanelId) {
+          const leaf = findLeaf(root, focusedPanelId)
+          if (leaf && leaf.tabs.length > 1) {
+            const delta = e.key === ']' ? 1 : -1
+            const next = (leaf.activeTab + delta + leaf.tabs.length) % leaf.tabs.length
+            setActiveTab(focusedPanelId, next)
+          }
+        }
+        return
+      }
+
       if (e.metaKey && e.key === 'p') {
         e.preventDefault()
         togglePalette()
@@ -277,7 +254,7 @@ function App(): React.JSX.Element {
       <div className="app-shell__body">
         <ActivityBar connectionStatus={status} />
         <div className="app-shell__content">
-          <ViewRouter activeView={activeView} />
+          <PanelRenderer node={root} />
         </div>
       </div>
       <StatusBar
