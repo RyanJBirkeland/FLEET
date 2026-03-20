@@ -73,6 +73,10 @@ export function startSseBroadcaster(): void {
   }, HEARTBEAT_INTERVAL_MS)
 }
 
+export function getSseClientCount(): number {
+  return clients.size
+}
+
 export function stopSseBroadcaster(): void {
   if (unsubscribe) {
     unsubscribe()

@@ -17,13 +17,15 @@ export function useSprintPolling(): void {
   const tasks = useSprintStore((s) => s.tasks)
   const loadData = useSprintStore((s) => s.loadData)
   const mergeSseUpdate = useSprintStore((s) => s.mergeSseUpdate)
+  const fetchQueueHealth = useSprintStore((s) => s.fetchQueueHealth)
 
   // Adaptive sprint polling — consistency backstop (SSE handles real-time)
   const hasActiveTasks = tasks.some((t) => t.status === TASK_STATUS.ACTIVE)
   const sprintPollMs = hasActiveTasks ? POLL_SPRINT_ACTIVE_MS : POLL_SPRINT_INTERVAL
 
-  useEffect(() => { loadData() }, [loadData])
+  useEffect(() => { loadData(); fetchQueueHealth() }, [loadData, fetchQueueHealth])
   useVisibilityAwareInterval(loadData, sprintPollMs)
+  useVisibilityAwareInterval(fetchQueueHealth, sprintPollMs)
 
   // Instant refresh when an external process writes to bde.db
   useEffect(() => {

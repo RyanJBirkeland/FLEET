@@ -5,6 +5,12 @@ import { toast } from './toasts'
 import { detectTemplate } from '../../../shared/template-heuristics'
 import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 
+export interface QueueHealth {
+  queue: Record<string, number>
+  doneToday: number
+  connectedRunners: number
+}
+
 interface SprintState {
   // --- Data ---
   tasks: SprintTask[]
@@ -15,6 +21,7 @@ interface SprintState {
   logDrawerTaskId: string | null
   prMergedMap: Record<string, boolean>
   generatingIds: Set<string>
+  queueHealth: QueueHealth | null
 
   // --- Actions ---
   loadData: () => Promise<void>
@@ -22,6 +29,7 @@ interface SprintState {
   deleteTask: (taskId: string) => Promise<void>
   createTask: (data: CreateTicketInput) => Promise<void>
   launchTask: (task: SprintTask) => Promise<void>
+  fetchQueueHealth: () => Promise<void>
   mergeSseUpdate: (update: { taskId: string; [key: string]: unknown }) => void
   setPrMergedMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void
   setGeneratingIds: (updater: (prev: Set<string>) => Set<string>) => void
@@ -49,6 +57,7 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   logDrawerTaskId: null,
   prMergedMap: {},
   generatingIds: new Set(),
+  queueHealth: null,
 
   loadData: async (): Promise<void> => {
     set({ loadError: null, loading: true })
@@ -211,6 +220,15 @@ export const useSprintStore = create<SprintState>((set, get) => ({
       toast.success('Agent launched')
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to launch agent')
+    }
+  },
+
+  fetchQueueHealth: async (): Promise<void> => {
+    try {
+      const health = await window.api.queue.health()
+      set({ queueHealth: health })
+    } catch {
+      set({ queueHealth: null })
     }
   },
 

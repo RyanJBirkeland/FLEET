@@ -137,6 +137,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
 }
 
 export interface QueueStats {
+  [key: string]: number
   backlog: number
   queued: number
   active: number
@@ -164,6 +165,15 @@ export function getQueueStats(): QueueStats {
     }
   }
   return stats
+}
+
+export function getDoneTodayCount(): number {
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const row = getDb()
+    .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'done' AND completed_at >= ?")
+    .get(today.toISOString()) as { count: number }
+  return row.count
 }
 
 // --- Exported helper functions (used by git-handlers, agent-history) ---
