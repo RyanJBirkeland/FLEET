@@ -16,7 +16,7 @@ import { useAgentHistoryStore } from './stores/agentHistory'
 import { useTaskNotifications } from './hooks/useTaskNotifications'
 import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
 import { PanelRenderer } from './components/panels/PanelRenderer'
-import { usePanelLayoutStore } from './stores/panelLayout'
+import { usePanelLayoutStore, findLeaf } from './stores/panelLayout'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
 import { DEFAULT_MODEL } from '../../shared/models'
 
@@ -176,6 +176,40 @@ function App(): React.JSX.Element {
       if (e.metaKey && e.key >= '1' && e.key <= '7') {
         e.preventDefault()
         setView(VIEW_ORDER[Number(e.key) - 1])
+        return
+      }
+
+      // Cmd+\ — Split focused panel right
+      if (e.metaKey && e.key === '\\') {
+        e.preventDefault()
+        const { focusedPanelId, splitPanel } = usePanelLayoutStore.getState()
+        if (focusedPanelId) splitPanel(focusedPanelId, 'horizontal', 'agents')
+        return
+      }
+
+      // Cmd+W — Close focused panel's active tab
+      if (e.metaKey && e.key === 'w') {
+        e.preventDefault()
+        const { focusedPanelId, root } = usePanelLayoutStore.getState()
+        if (focusedPanelId) {
+          const leaf = findLeaf(root, focusedPanelId)
+          if (leaf) usePanelLayoutStore.getState().closeTab(focusedPanelId, leaf.activeTab)
+        }
+        return
+      }
+
+      // Cmd+Shift+[ / ] — Cycle tabs within focused panel
+      if (e.metaKey && e.shiftKey && (e.key === '[' || e.key === ']')) {
+        e.preventDefault()
+        const { focusedPanelId, root, setActiveTab } = usePanelLayoutStore.getState()
+        if (focusedPanelId) {
+          const leaf = findLeaf(root, focusedPanelId)
+          if (leaf && leaf.tabs.length > 1) {
+            const delta = e.key === ']' ? 1 : -1
+            const next = (leaf.activeTab + delta + leaf.tabs.length) % leaf.tabs.length
+            setActiveTab(focusedPanelId, next)
+          }
+        }
         return
       }
 
