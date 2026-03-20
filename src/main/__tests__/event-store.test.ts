@@ -8,7 +8,6 @@ vi.mock('../handlers/sprint-local', () => ({
 import {
   appendEvents,
   getEvents,
-  getLatestEvent,
   clearTask,
   MAX_EVENTS_PER_TASK,
 } from '../queue-api/event-store'
@@ -46,20 +45,6 @@ describe('event-store', () => {
     appendEvents('task-1', [makeEvent()])
     appendEvents('task-1', [makeEvent({ type: 'agent:completed' })])
     expect(getEvents('task-1')).toHaveLength(2)
-  })
-
-  it('getLatestEvent returns last event', () => {
-    appendEvents('task-1', [
-      makeEvent({ type: 'agent:started' }),
-      makeEvent({ type: 'agent:tool_call' }),
-    ])
-    const latest = getLatestEvent('task-1')
-    expect(latest).not.toBeNull()
-    expect(latest!.type).toBe('agent:tool_call')
-  })
-
-  it('getLatestEvent returns null for unknown taskId', () => {
-    expect(getLatestEvent('nonexistent')).toBeNull()
   })
 
   it('clearTask removes all events for a task', () => {

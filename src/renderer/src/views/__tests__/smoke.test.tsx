@@ -192,8 +192,7 @@ Object.defineProperty(window, 'api', {
       fetch: vi.fn().mockResolvedValue({ ok: true, status: 200, body: {}, linkNext: null }),
     },
     openDirectoryDialog: vi.fn().mockResolvedValue(null),
-    onExternalSprintChange: vi.fn(),
-    offExternalSprintChange: vi.fn(),
+    onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
     onTaskOutput: vi.fn().mockReturnValue(() => {}),
     task: {
       getEvents: vi.fn().mockResolvedValue([]),

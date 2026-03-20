@@ -1,8 +1,7 @@
 import { AgentSession, SubAgent } from '../../stores/sessions'
 import { Badge } from '../ui/Badge'
 import { timeAgo, modelBadgeLabel, shortKey } from '../../lib/format'
-
-const FIVE_MINUTES = 5 * 60 * 1000
+import { SESSION_ACTIVE_THRESHOLD } from '../../lib/constants'
 
 interface SessionHeaderProps {
   session: AgentSession | null
@@ -19,7 +18,7 @@ export function SessionHeader({ session, subAgent }: SessionHeaderProps): React.
   // Status dot
   const isRunning = isSubAgentView
     ? subAgent.isActive
-    : Date.now() - session!.updatedAt < FIVE_MINUTES
+    : Date.now() - session!.updatedAt < SESSION_ACTIVE_THRESHOLD
   const isBlocked = !isSubAgentView && session!.abortedLastRun && !isRunning
 
   let dotClass = 'session-header__dot'

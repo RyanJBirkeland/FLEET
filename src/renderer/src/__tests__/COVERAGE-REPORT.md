@@ -48,7 +48,6 @@
 | **Views** | | | |
 | `views/SessionsView.tsx` | **Now** | P1 | Smoke test — renders without crash |
 | `views/SprintView.tsx` | **Now** | P1 | Smoke test |
-| `views/DiffView.tsx` | **Now** | P1 | Smoke test |
 | `views/MemoryView.tsx` | **Now** | P1 | Smoke test |
 | `views/CostView.tsx` | **Now** | P1 | Smoke test |
 | `views/SettingsView.tsx` | **Now** | P1 | Smoke test |

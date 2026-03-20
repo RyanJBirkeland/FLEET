@@ -124,8 +124,7 @@ declare global {
       refreshPrList: () => Promise<IpcResult<'pr:refreshList'>>
 
       // Sprint DB file-watcher push events
-      onExternalSprintChange: (cb: () => void) => void
-      offExternalSprintChange: (cb: () => void) => void
+      onExternalSprintChange: (cb: () => void) => () => void
 
       // Task output streaming events
       onTaskOutput: (

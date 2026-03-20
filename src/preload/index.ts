@@ -177,11 +177,9 @@ const api = {
   refreshPrList: () => typedInvoke('pr:refreshList'),
 
   // Sprint DB file-watcher push events
-  onExternalSprintChange: (cb: () => void): void => {
+  onExternalSprintChange: (cb: () => void): (() => void) => {
     ipcRenderer.on('sprint:externalChange', cb)
-  },
-  offExternalSprintChange: (cb: () => void): void => {
-    ipcRenderer.removeListener('sprint:externalChange', cb)
+    return () => ipcRenderer.removeListener('sprint:externalChange', cb)
   },
 
   // Task output streaming events

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { groupUnifiedAgents, getStaleLevel, type UnifiedAgent } from '../../hooks/useUnifiedAgents'
 
 const ONE_HOUR = 60 * 60 * 1000
@@ -24,6 +24,10 @@ describe('groupUnifiedAgents', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-16T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('active contains running agents', () => {
@@ -73,14 +77,16 @@ describe('groupUnifiedAgents', () => {
     expect(groups.recent[0].id).toBe('b')
     expect(groups.recent[1].id).toBe('a')
   })
-
-  vi.useRealTimers()
 })
 
 describe('getStaleLevel', () => {
   beforeEach(() => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-03-16T12:00:00Z'))
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   it('returns fresh for agents updated less than 1 hour ago', () => {
@@ -102,6 +108,4 @@ describe('getStaleLevel', () => {
     const agent = makeAgent({ updatedAt: Date.now() - SEVEN_DAYS - 1000 })
     expect(getStaleLevel(agent)).toBe('dead')
   })
-
-  vi.useRealTimers()
 })

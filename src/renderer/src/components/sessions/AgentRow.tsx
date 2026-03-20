@@ -7,6 +7,7 @@ import { getStaleLevel } from '../../hooks/useUnifiedAgents'
 import { timeAgo, modelBadgeLabel } from '../../lib/format'
 import { TRANSITIONS, useReducedMotion } from '../../lib/motion'
 import { useTerminalStore } from '../../stores/terminal'
+import { SESSION_ACTIVE_THRESHOLD } from '../../lib/constants'
 
 export interface AgentRowProps {
   agent: UnifiedAgent
@@ -16,13 +17,11 @@ export interface AgentRowProps {
   onSteer: () => void
 }
 
-const FIVE_MINUTES = 5 * 60 * 1000
-
 function dotClass(agent: UnifiedAgent): string {
   if (agent.isBlocked) return 'agent-row__dot dot--blocked'
   if (agent.status === 'running') {
     const age = Date.now() - agent.updatedAt
-    return age < FIVE_MINUTES ? 'agent-row__dot dot--active' : 'agent-row__dot dot--stale-running'
+    return age < SESSION_ACTIVE_THRESHOLD ? 'agent-row__dot dot--active' : 'agent-row__dot dot--stale-running'
   }
   if (agent.status === 'failed') return 'agent-row__dot dot--failed'
   if (agent.status === 'done' || agent.status === 'timeout') return 'agent-row__dot dot--done'

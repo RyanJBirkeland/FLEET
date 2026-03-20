@@ -130,8 +130,7 @@ export function useTaskNotifications(): void {
     // Seed seen IDs on mount
     handleChange()
 
-    window.api.onExternalSprintChange(handleChange)
-    return () => window.api.offExternalSprintChange(handleChange)
+    return window.api.onExternalSprintChange(handleChange)
   }, [])
 
   // Watch for agent done/failed via SSE log:done events

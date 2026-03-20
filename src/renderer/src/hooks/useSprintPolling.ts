@@ -29,8 +29,7 @@ export function useSprintPolling(): void {
 
   // Instant refresh when an external process writes to bde.db
   useEffect(() => {
-    window.api.onExternalSprintChange(loadData)
-    return () => window.api.offExternalSprintChange(loadData)
+    return window.api.onExternalSprintChange(loadData)
   }, [loadData])
 
   // Real-time task updates via SSE singleton — surgical merge + debounced backstop

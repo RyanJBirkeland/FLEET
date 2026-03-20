@@ -101,37 +101,6 @@ function ClaudeCodePanel({ summary }: { summary: CostSummary }): React.JSX.Eleme
   )
 }
 
-// ── OpenClaw API Panel ──────────────────────────────────
-
-function OpenClawPanel(): React.JSX.Element {
-  return (
-    <div className="cost-panel cost-panel--amber">
-      <h3 className="cost-panel__title">OpenClaw API</h3>
-      <span className="cost-panel__badge cost-panel__badge--amber">Real Spend</span>
-
-      <div className="cost-panel__stats">
-        <div className="cost-panel__stat">
-          <span className="cost-panel__stat-note">
-            Token usage — API cost tracking coming in v2
-          </span>
-        </div>
-        <div className="cost-panel__stat cost-panel__stat--muted">
-          <span className="cost-panel__stat-label">Total tokens today</span>
-          <span className="cost-panel__stat-value">--</span>
-        </div>
-        <div className="cost-panel__stat cost-panel__stat--muted">
-          <span className="cost-panel__stat-label">By model (Sonnet / Haiku)</span>
-          <span className="cost-panel__stat-value">-- / --</span>
-        </div>
-      </div>
-
-      <p className="cost-panel__placeholder">
-        cost_events table not yet available. Input/output split coming in v2.
-      </p>
-    </div>
-  )
-}
-
 // ── Task Table ──────────────────────────────────────────
 
 type SortField = 'cost_usd' | 'duration_ms' | 'started_at'
@@ -321,7 +290,6 @@ export default function CostView(): React.JSX.Element {
       <div className="cost-view__scroll">
         <div className="cost-view__panels">
           {summary && <ClaudeCodePanel summary={summary} />}
-          <OpenClawPanel />
         </div>
 
         {sortedRuns.length === 0 ? (
