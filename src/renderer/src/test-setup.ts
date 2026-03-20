@@ -78,6 +78,10 @@ vi.stubGlobal('api', {
     fetch: vi.fn().mockResolvedValue({ ok: true, status: 200, body: {}, linkNext: null }),
   },
   openDirectoryDialog: vi.fn().mockResolvedValue(null),
+  pollPrStatuses: vi.fn().mockResolvedValue([]),
+  killAgent: vi.fn().mockResolvedValue({ ok: true }),
+  onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
+  offExternalSprintChange: vi.fn(),
   onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
   terminal: {
     create: vi.fn().mockResolvedValue(1),

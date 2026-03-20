@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
+import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { toast } from '../../stores/toasts'
 import { renderMarkdown } from '../../lib/render-markdown'
 import { TASK_STATUS } from '../../../../shared/constants'
@@ -24,6 +25,7 @@ type SpecDrawerProps = {
 }
 
 export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, onMarkDone, onUpdate, onDelete }: SpecDrawerProps) {
+  const { confirm, confirmProps } = useConfirm()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [dirty, setDirty] = useState(false)
@@ -92,22 +94,24 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
     }
   }, [task, titleDraft, onUpdate])
 
-  const handleDelete = useCallback(() => {
+  const handleDelete = useCallback(async () => {
     if (!task || !onDelete) return
-    if (!window.confirm('Delete this task? This cannot be undone.')) return
+    const ok = await confirm({ message: 'Delete this task? This cannot be undone.', confirmLabel: 'Delete', variant: 'danger' })
+    if (!ok) return
     onDelete(task.id)
-  }, [task, onDelete])
+  }, [task, onDelete, confirm])
 
   useEffect(() => {
     if (!task) return
-    const handler = (e: KeyboardEvent) => {
+    const handler = async (e: KeyboardEvent) => {
       if (e.key === 's' && e.metaKey && editing) {
         e.preventDefault()
         save()
       }
       if (e.key === 'Escape') {
         if (editing && dirty) {
-          if (confirm('Discard unsaved changes?')) {
+          const ok = await confirm({ message: 'Discard unsaved changes?', confirmLabel: 'Discard' })
+          if (ok) {
             setEditing(false)
             setDraft(resolvedContentRef.current)
             setDirty(false)
@@ -119,7 +123,7 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
     }
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
-  }, [task, editing, dirty, save, onClose])
+  }, [task, editing, dirty, save, onClose, confirm])
 
   useEffect(() => {
     if (editing) editorRef.current?.focus()
@@ -164,6 +168,7 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
 
   return (
     <>
+      <ConfirmModal {...confirmProps} />
       {isOpen && <div className="spec-drawer__overlay" onClick={onClose} />}
       <div className={`spec-drawer ${isOpen ? 'spec-drawer--open' : ''}`}>
         {task && (

@@ -9,12 +9,6 @@ vi.mock('../../../stores/ui', () => ({
   ),
 }))
 
-vi.mock('../../../stores/gateway', () => ({
-  useGatewayStore: vi.fn((selector: (s: { connect: () => void }) => unknown) =>
-    selector({ connect: vi.fn() })
-  ),
-}))
-
 vi.mock('../../../stores/sessions', () => ({
   useSessionsStore: Object.assign(
     vi.fn((selector: (s: { selectSession: () => void }) => unknown) =>

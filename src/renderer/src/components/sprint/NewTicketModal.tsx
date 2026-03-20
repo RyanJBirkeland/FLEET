@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from '../ui/Button'
+import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { REPO_OPTIONS } from '../../lib/constants'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { toast } from '../../stores/toasts'
@@ -67,6 +68,7 @@ const TEMPLATES: Record<string, { label: string; spec: string }> = {
 }
 
 export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps) {
+  const { confirm, confirmProps } = useConfirm()
   const reduced = useReducedMotion()
   const [mode, setMode] = useState<TicketMode>('quick')
   const [title, setTitle] = useState('')
@@ -90,13 +92,14 @@ export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps)
     }
   }, [open])
 
-  const handleClose = useCallback(() => {
+  const handleClose = useCallback(async () => {
     if (mode === 'design') {
-      if (window.confirm('Discard this design conversation?')) onClose()
+      const ok = await confirm({ message: 'Discard this design conversation?', confirmLabel: 'Discard' })
+      if (ok) onClose()
       return
     }
     onClose()
-  }, [mode, onClose])
+  }, [mode, onClose, confirm])
 
   useEffect(() => {
     if (!open) return
@@ -110,15 +113,16 @@ export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps)
     return () => window.removeEventListener('keydown', handler)
   }, [open, handleClose])
 
-  const handleSelectTemplate = (key: string) => {
+  const handleSelectTemplate = async (key: string) => {
     if (selectedTemplate === key) {
       setSelectedTemplate(null)
       setSpec('')
       return
     }
     const hasUserContent = spec.trim() !== '' && spec !== (selectedTemplate ? TEMPLATES[selectedTemplate].spec : '')
-    if (hasUserContent && !window.confirm('Replace your current spec content with this template?')) {
-      return
+    if (hasUserContent) {
+      const ok = await confirm({ message: 'Replace your current spec content with this template?', confirmLabel: 'Replace' })
+      if (!ok) return
     }
     setSelectedTemplate(key)
     setSpec(TEMPLATES[key].spec)
@@ -192,6 +196,8 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
   }
 
   return (
+    <>
+    <ConfirmModal {...confirmProps} />
     <AnimatePresence>
       {open && (
     <>
@@ -395,5 +401,6 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
     </>
       )}
     </AnimatePresence>
+    </>
   )
 }

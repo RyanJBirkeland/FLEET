@@ -1,7 +1,7 @@
-import { useState, useEffect, useCallback, useRef, useMemo } from 'react'
-import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
+import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { KanbanBoard } from './KanbanBoard'
 import { TaskTable } from './TaskTable'
 import { SpecDrawer } from './SpecDrawer'
@@ -15,18 +15,17 @@ import { usePrConflictsStore } from '../../stores/prConflicts'
 import { useHealthCheckStore } from '../../stores/healthCheck'
 import { useSprintStore } from '../../stores/sprint'
 import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
-import { subscribeSSE } from '../../lib/taskRunnerSSE'
 import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
+import { useSprintPolling } from '../../hooks/useSprintPolling'
+import { usePrStatusPolling } from '../../hooks/usePrStatusPolling'
+import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcuts'
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import {
-  POLL_SPRINT_INTERVAL,
-  POLL_SPRINT_ACTIVE_MS,
-  POLL_PR_STATUS_MS,
   POLL_HEALTH_CHECK_MS,
   REPO_OPTIONS,
   WIP_LIMIT_IN_PROGRESS,
-  SSE_DEBOUNCE_MS,
 } from '../../lib/constants'
-import { TASK_STATUS, PR_STATUS } from '../../../../shared/constants'
+import { TASK_STATUS } from '../../../../shared/constants'
 
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 import type { SprintTask } from '../../../../shared/types'
@@ -49,11 +48,12 @@ export function SprintCenter() {
   const updateTask = useSprintStore((s) => s.updateTask)
   const deleteTask = useSprintStore((s) => s.deleteTask)
   const createTask = useSprintStore((s) => s.createTask)
-  const mergeSseUpdate = useSprintStore((s) => s.mergeSseUpdate)
+  const launchTask = useSprintStore((s) => s.launchTask)
   const setRepoFilter = useSprintStore((s) => s.setRepoFilter)
   const setSelectedTaskId = useSprintStore((s) => s.setSelectedTaskId)
   const setLogDrawerTaskId = useSprintStore((s) => s.setLogDrawerTaskId)
-  const setPrMergedMap = useSprintStore((s) => s.setPrMergedMap)
+
+  const { confirm, confirmProps } = useConfirm()
 
   // --- Local UI state ---
   const [backlogSearch, setBacklogSearch] = useState('')
@@ -79,113 +79,10 @@ export function SprintCenter() {
   }, [setLogDrawerTaskId])
   useTaskToasts(tasks, logDrawerTaskId, handleViewOutput)
 
-  // Adaptive sprint polling — consistency backstop (SSE handles real-time)
-  const hasActiveTasks = tasks.some((t) => t.status === TASK_STATUS.ACTIVE)
-  const sprintPollMs = hasActiveTasks ? POLL_SPRINT_ACTIVE_MS : POLL_SPRINT_INTERVAL
-
-  useEffect(() => { loadData() }, [loadData])
-  useVisibilityAwareInterval(loadData, sprintPollMs)
-
-  // Instant refresh when an external process writes to bde.db
-  useEffect(() => {
-    window.api.onExternalSprintChange(loadData)
-    return () => window.api.offExternalSprintChange(loadData)
-  }, [loadData])
-
-  // Real-time task updates via SSE singleton — surgical merge + debounced backstop
-  const debouncedLoadRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const debouncedLoadData = useMemo(
-    () => () => {
-      if (debouncedLoadRef.current) clearTimeout(debouncedLoadRef.current)
-      debouncedLoadRef.current = setTimeout(loadData, SSE_DEBOUNCE_MS)
-    },
-    [loadData]
-  )
-
-  useEffect(() => {
-    const unsub = subscribeSSE('task:updated', (data: unknown) => {
-      const raw = data as Record<string, unknown>
-      mergeSseUpdate({ ...raw, taskId: (raw.taskId ?? raw.id) as string })
-      debouncedLoadData()
-    })
-    return () => {
-      unsub()
-      if (debouncedLoadRef.current) clearTimeout(debouncedLoadRef.current)
-    }
-  }, [mergeSseUpdate, debouncedLoadData])
-
-  // PR status polling — check merged status for tasks with a pr_url
-  const prMergedRef = useRef(prMergedMap)
-  prMergedRef.current = prMergedMap
-  const updateTaskRef = useRef(updateTask)
-  updateTaskRef.current = updateTask
-
-  const setConflicts = usePrConflictsStore((s) => s.setConflicts)
-  const prevConflictIdsRef = useRef<Set<string>>(new Set())
-  const tasksRef = useRef(tasks)
-  tasksRef.current = tasks
-
-  const pollPrStatuses = useCallback(async (taskList: SprintTask[]) => {
-    const withPr = taskList.filter((t) => t.pr_url && !prMergedRef.current[t.id])
-    if (withPr.length === 0) return
-    try {
-      const results = await window.api.pollPrStatuses(
-        withPr.map((t) => ({ taskId: t.id, prUrl: t.pr_url! }))
-      )
-      setPrMergedMap((prev) => {
-        let changed = false
-        for (const r of results) {
-          if (prev[r.taskId] !== r.merged) { changed = true; break }
-        }
-        if (!changed) return prev
-        const next = { ...prev }
-        for (const r of results) next[r.taskId] = r.merged
-        return next
-      })
-      // Write pr_status='merged' back so tasks leave Awaiting Review
-      for (const r of results) {
-        if (r.merged) updateTaskRef.current(r.taskId, { pr_status: PR_STATUS.MERGED })
-      }
-
-      // Track merge conflicts
-      const conflicting = results.filter((r) => r.mergeableState === 'dirty' && !r.merged)
-      const conflictIds = conflicting.map((r) => r.taskId)
-      setConflicts(conflictIds)
-
-      // Toast when NEW conflicts appear
-      const prev = prevConflictIdsRef.current
-      const newConflicts = conflictIds.filter((id) => !prev.has(id))
-      if (newConflicts.length > 0) {
-        toast.error(`${newConflicts.length} PR${newConflicts.length > 1 ? 's have' : ' has'} merge conflicts`)
-      }
-      prevConflictIdsRef.current = new Set(conflictIds)
-
-      // Persist mergeable state to SQLite
-      for (const r of results) {
-        if (r.mergeableState) {
-          updateTaskRef.current(r.taskId, { pr_mergeable_state: r.mergeableState as SprintTask['pr_mergeable_state'] })
-        }
-      }
-    } catch {
-      // gh CLI unavailable — degrade gracefully
-    }
-  }, [setConflicts, setPrMergedMap])
-
-  const pollPrStatusesCurrent = useCallback(() => pollPrStatuses(tasksRef.current), [pollPrStatuses])
-  useEffect(() => { pollPrStatusesCurrent() }, [pollPrStatusesCurrent])
-  useVisibilityAwareInterval(pollPrStatusesCurrent, POLL_PR_STATUS_MS)
-
-  // Detect active→done transitions and trigger immediate PR poll
-  const prevTasksRef = useRef<SprintTask[]>([])
-  useEffect(() => {
-    const prev = prevTasksRef.current
-    prevTasksRef.current = tasks
-    if (prev.length === 0) return
-    const justDone = tasks.filter(
-      (t) => t.status === TASK_STATUS.DONE && t.pr_url && prev.find((p) => p.id === t.id)?.status === TASK_STATUS.ACTIVE
-    )
-    if (justDone.length > 0) pollPrStatuses(justDone)
-  }, [tasks, pollPrStatuses])
+  // Extracted polling hooks
+  useSprintPolling()
+  usePrStatusPolling()
+  useSprintKeyboardShortcuts({ setModalOpen, setConflictDrawerOpen })
 
   const handleDragEnd = useCallback(
     (taskId: string, newStatus: SprintTask['status']) => {
@@ -228,43 +125,6 @@ export function SprintCenter() {
     [updateTask]
   )
 
-  const handleLaunch = useCallback(
-    async (task: SprintTask) => {
-      // Block launch when WIP limit reached (unless task is already active)
-      if (task.status !== TASK_STATUS.ACTIVE) {
-        const activeCount = tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
-        if (activeCount >= WIP_LIMIT_IN_PROGRESS) {
-          toast.error(`In Progress is full (${WIP_LIMIT_IN_PROGRESS}/${WIP_LIMIT_IN_PROGRESS}) — finish or stop a task first`)
-          return
-        }
-      }
-
-      try {
-        const repoPaths = await window.api.getRepoPaths()
-        const repoPath = repoPaths[task.repo.toLowerCase()] ?? repoPaths[task.repo]
-        if (!repoPath) {
-          toast.error(`No repo path configured for "${task.repo}"`)
-          return
-        }
-
-        const result = await window.api.spawnLocalAgent({
-          task: task.spec ?? task.title,
-          repoPath,
-        })
-
-        updateTask(task.id, {
-          status: TASK_STATUS.ACTIVE,
-          agent_run_id: result.id,
-          started_at: new Date().toISOString(),
-        })
-        toast.success('Agent launched')
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to launch agent')
-      }
-    },
-    [tasks, updateTask]
-  )
-
   const handleViewSpec = useCallback(
     (task: SprintTask) => setSelectedTaskId(task.id),
     [setSelectedTaskId]
@@ -278,22 +138,27 @@ export function SprintCenter() {
   )
 
   const handleMarkDone = useCallback(
-    (task: SprintTask) => {
+    async (task: SprintTask) => {
       const message = task.pr_url
         ? 'Mark as done? The open PR will remain open on GitHub.'
         : 'Mark as done?'
-      if (!confirm(message)) return
+      const ok = await confirm({ message, confirmLabel: 'Mark Done' })
+      if (!ok) return
       updateTask(task.id, { status: TASK_STATUS.DONE, completed_at: new Date().toISOString() })
       toast.success('Marked as done')
     },
-    [updateTask]
+    [updateTask, confirm]
   )
 
   const handleStop = useCallback(
     async (task: SprintTask) => {
       if (!task.agent_run_id) return
-      const confirmed = window.confirm('Stop this agent? The task will be marked cancelled.')
-      if (!confirmed) return
+      const ok = await confirm({
+        message: 'Stop this agent? The task will be marked cancelled.',
+        confirmLabel: 'Stop Agent',
+        variant: 'danger',
+      })
+      if (!ok) return
       try {
         const result = await window.api.killAgent(task.agent_run_id)
         if (result.ok) {
@@ -306,7 +171,7 @@ export function SprintCenter() {
         toast.error(e instanceof Error ? e.message : 'Failed to stop agent')
       }
     },
-    [updateTask]
+    [updateTask, confirm]
   )
 
   const handleRerun = useCallback(
@@ -335,35 +200,6 @@ export function SprintCenter() {
     },
     [updateTask]
   )
-
-  // Keyboard shortcuts: N → new ticket, Escape → close drawers/modal
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        // If SpecDrawer is open, let it handle Escape (unsaved-changes guard)
-        if (selectedTaskId) return
-        setLogDrawerTaskId(null)
-        setModalOpen(false)
-        setConflictDrawerOpen(false)
-        return
-      }
-
-      if (
-        e.key === 'n' &&
-        !e.metaKey &&
-        !e.ctrlKey &&
-        !e.altKey &&
-        document.activeElement?.tagName !== 'INPUT' &&
-        document.activeElement?.tagName !== 'TEXTAREA'
-      ) {
-        e.preventDefault()
-        setModalOpen(true)
-      }
-    }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTaskId, setLogDrawerTaskId])
 
   const conflictingTaskIds = usePrConflictsStore((s) => s.conflictingTaskIds)
   const conflictingTasks = useMemo(
@@ -509,7 +345,7 @@ export function SprintCenter() {
               onDragEnd={handleDragEnd}
               onReorder={handleReorder}
               onPushToSprint={handlePushToSprint}
-              onLaunch={handleLaunch}
+              onLaunch={launchTask}
               onViewSpec={handleViewSpec}
               onViewOutput={handleViewOutput}
               onMarkDone={handleMarkDone}
@@ -581,7 +417,7 @@ export function SprintCenter() {
         task={selectedTask}
         onClose={() => setSelectedTaskId(null)}
         onSave={handleSaveSpec}
-        onLaunch={handleLaunch}
+        onLaunch={launchTask}
         onPushToSprint={handlePushToSprint}
         onMarkDone={handleMarkDone}
         onUpdate={handleUpdateTitle}
@@ -604,6 +440,8 @@ export function SprintCenter() {
         onClose={() => setHealthDrawerOpen(false)}
         onDismiss={dismissTask}
       />
+
+      <ConfirmModal {...confirmProps} />
     </div>
   )
 }

@@ -1,5 +1,9 @@
 /* ── Settings View — Glass Treatment ───────────────────── */
 
+.settings-view--column {
+  flex-direction: column;
+}
+
 .settings-view__header {
   height: 36px;
   display: flex;

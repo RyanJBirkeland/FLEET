@@ -41,6 +41,47 @@ export interface SubAgent {
 const _pendingKillTimers = new Map<string, ReturnType<typeof setTimeout>>()
 let _fetchInProgress = false
 
+/** Normalize raw sub-agent status strings to the closed SubAgentStatus union. */
+function normalizeSubAgentStatus(raw: string): SubAgentStatus {
+  switch (raw) {
+    case 'running':
+      return 'running'
+    case 'done':
+    case 'completed':
+      return 'done'
+    case 'failed':
+      return 'failed'
+    case 'timeout':
+      return 'timeout'
+    default:
+      return 'unknown'
+  }
+}
+
+/** Derive a human-readable label from a sub-agent entry. */
+function deriveLabel(entry: { label?: string; sessionKey: string }): string {
+  if (entry.label) return entry.label
+  const parts = entry.sessionKey.split(':')
+  const last = parts[parts.length - 1] ?? entry.sessionKey
+  return `subagent-${last.slice(-8)}`
+}
+
+/** Map raw sub-agent data into typed SubAgent records with pending-kill filtering. */
+function processSubAgentData(
+  items: { sessionKey: string; label?: string; task?: string; status: string; model: string; startedAt: number; endedAt?: number }[],
+  isActive: boolean
+): SubAgent[] {
+  return items
+    .filter((s) => !_pendingKillTimers.has(s.sessionKey))
+    .map((s) => ({
+      ...s,
+      label: deriveLabel(s),
+      task: s.task ?? '',
+      status: normalizeSubAgentStatus(s.status),
+      isActive,
+    }))
+}
+
 interface SessionsStore {
   sessions: AgentSession[]
   subAgents: SubAgent[]
@@ -117,45 +158,8 @@ export const useSessionsStore = create<SessionsStore>((set, get) => ({
       // Handle sub-agents result — failure does not block sessions
       if (subAgentsResult.status === 'fulfilled') {
         const subData = subAgentsResult.value
-        const deriveLabel = (entry: { label?: string; sessionKey: string }): string => {
-          if (entry.label) return entry.label
-          const parts = entry.sessionKey.split(':')
-          const last = parts[parts.length - 1] ?? entry.sessionKey
-          return `subagent-${last.slice(-8)}`
-        }
-        const normalizeSubAgentStatus = (raw: string): SubAgentStatus => {
-          switch (raw) {
-            case 'running':
-              return 'running'
-            case 'done':
-            case 'completed':
-              return 'done'
-            case 'failed':
-              return 'failed'
-            case 'timeout':
-              return 'timeout'
-            default:
-              return 'unknown'
-          }
-        }
-        const active = (subData.active ?? [])
-          .filter((s) => !_pendingKillTimers.has(s.sessionKey))
-          .map((s) => ({
-            ...s,
-            label: deriveLabel(s),
-            task: s.task ?? '',
-            status: normalizeSubAgentStatus(s.status),
-            isActive: true
-          }))
-        const recent = (subData.recent ?? [])
-          .filter((s) => !_pendingKillTimers.has(s.sessionKey))
-          .map((s) => ({
-            ...s,
-            label: deriveLabel(s),
-            task: s.task ?? '',
-            status: normalizeSubAgentStatus(s.status),
-            isActive: false
-          }))
+        const active = processSubAgentData(subData.active ?? [], true)
+        const recent = processSubAgentData(subData.recent ?? [], false)
         set({ subAgents: [...active, ...recent], subAgentsError: null, subAgentsLoading: false })
       } else {
         set({ subAgentsError: 'Could not fetch sub-agents', subAgentsLoading: false })

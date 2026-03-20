@@ -33,31 +33,61 @@ function statusLabel(status: string): string {
 }
 
 function DiffView(): React.JSX.Element {
-  const store = useDiffViewStore()
+  // Extract individual selectors to avoid re-rendering on unrelated state changes
+  const repos = useDiffViewStore((s) => s.repos)
+  const selectedRepo = useDiffViewStore((s) => s.selectedRepo)
+  const branches = useDiffViewStore((s) => s.branches)
+  const currentBranch = useDiffViewStore((s) => s.currentBranch)
+  const files = useDiffViewStore((s) => s.files)
+  const selectedFile = useDiffViewStore((s) => s.selectedFile)
+  const diffFiles = useDiffViewStore((s) => s.diffFiles)
+  const stagedSet = useDiffViewStore((s) => s.stagedSet)
+  const commitMsg = useDiffViewStore((s) => s.commitMsg)
+  const loading = useDiffViewStore((s) => s.loading)
+  const pushing = useDiffViewStore((s) => s.pushing)
+  const committing = useDiffViewStore((s) => s.committing)
+  const pushOutput = useDiffViewStore((s) => s.pushOutput)
+  const error = useDiffViewStore((s) => s.error)
+  const diffSizeWarning = useDiffViewStore((s) => s.diffSizeWarning)
+
+  const loadRepos = useDiffViewStore((s) => s.loadRepos)
+  const selectRepo = useDiffViewStore((s) => s.selectRepo)
+  const setSelectedFile = useDiffViewStore((s) => s.setSelectedFile)
+  const setCommitMsg = useDiffViewStore((s) => s.setCommitMsg)
+  const setPushOutput = useDiffViewStore((s) => s.setPushOutput)
+  const refresh = useDiffViewStore((s) => s.refresh)
+  const loadDiff = useDiffViewStore((s) => s.loadDiff)
+  const toggleStage = useDiffViewStore((s) => s.toggleStage)
+  const stageAll = useDiffViewStore((s) => s.stageAll)
+  const unstageAll = useDiffViewStore((s) => s.unstageAll)
+  const commit = useDiffViewStore((s) => s.commit)
+  const push = useDiffViewStore((s) => s.push)
+  const switchBranch = useDiffViewStore((s) => s.switchBranch)
+  const forceLoadLargeDiff = useDiffViewStore((s) => s.forceLoadLargeDiff)
 
   useEffect(() => {
-    store.loadRepos()
-  }, [])
+    loadRepos()
+  }, [loadRepos])
   useEffect(() => {
-    store.refresh()
-  }, [store.selectedRepo])
+    refresh()
+  }, [selectedRepo, refresh])
   useEffect(() => {
-    store.loadDiff()
-  }, [store.selectedRepo, store.selectedFile])
+    loadDiff()
+  }, [selectedRepo, selectedFile, loadDiff])
 
-  useVisibilityAwareInterval(() => store.refresh(), POLL_GIT_STATUS_INTERVAL)
+  useVisibilityAwareInterval(refresh, POLL_GIT_STATUS_INTERVAL)
 
   useEffect(() => {
     const handler = (): void => {
-      store.refresh()
-      store.loadDiff()
+      refresh()
+      loadDiff()
     }
     window.addEventListener('bde:refresh', handler)
     return () => window.removeEventListener('bde:refresh', handler)
-  }, [])
+  }, [refresh, loadDiff])
 
-  const repoNames = Object.keys(store.repos)
-  const stagedCount = store.files.filter((f) => store.stagedSet.has(f.path)).length
+  const repoNames = Object.keys(repos)
+  const stagedCount = files.filter((f) => stagedSet.has(f.path)).length
 
   return (
     <div className="diff-view">
@@ -66,21 +96,21 @@ function DiffView(): React.JSX.Element {
           {repoNames.map((name) => (
             <button
               key={name}
-              className={`diff-view__chip ${store.selectedRepo === name ? 'diff-view__chip--active' : ''}`}
-              onClick={() => store.selectRepo(name)}
+              className={`diff-view__chip ${selectedRepo === name ? 'diff-view__chip--active' : ''}`}
+              onClick={() => selectRepo(name)}
             >
               {name}
             </button>
           ))}
         </div>
         <div className="diff-view__meta">
-          {store.branches.length > 0 && (
+          {branches.length > 0 && (
             <select
               className="git-branch-select"
-              value={store.currentBranch}
-              onChange={(e) => store.switchBranch(e.target.value)}
+              value={currentBranch}
+              onChange={(e) => switchBranch(e.target.value)}
             >
-              {store.branches.map((b) => (
+              {branches.map((b) => (
                 <option key={b} value={b}>
                   {b}
                 </option>
@@ -91,10 +121,10 @@ function DiffView(): React.JSX.Element {
             variant="icon"
             size="sm"
             onClick={() => {
-              store.refresh()
-              store.loadDiff()
+              refresh()
+              loadDiff()
             }}
-            disabled={store.loading}
+            disabled={loading}
             title="Refresh"
           >
             &#x21bb;
@@ -102,17 +132,17 @@ function DiffView(): React.JSX.Element {
         </div>
       </div>
 
-      <ErrorBanner message={store.error} className="diff-view__error" />
-      {store.pushOutput && (
+      <ErrorBanner message={error} className="diff-view__error" />
+      {pushOutput && (
         <div className="git-push-output">
-          <pre>{store.pushOutput}</pre>
-          <button className="git-push-output__close" onClick={() => store.setPushOutput(null)}>
+          <pre>{pushOutput}</pre>
+          <button className="git-push-output__close" onClick={() => setPushOutput(null)}>
             &times;
           </button>
         </div>
       )}
 
-      {store.loading && store.files.length === 0 ? (
+      {loading && files.length === 0 ? (
         <div className="diff-view__loading">
           <div className="diff-view__loading-grid">
             <div className="bde-skeleton diff-view__loading-sidebar" />
@@ -124,13 +154,13 @@ function DiffView(): React.JSX.Element {
           <div className="git-sidebar">
             <div className="git-sidebar__header">
               <span className="git-sidebar__title">Changes</span>
-              <span className="git-sidebar__count bde-count-badge">{store.files.length}</span>
+              <span className="git-sidebar__count bde-count-badge">{files.length}</span>
             </div>
 
             <div className="git-sidebar__actions">
               <button
                 className="git-sidebar__action"
-                onClick={() => store.stageAll()}
+                onClick={() => stageAll()}
                 title="Stage all"
               >
                 Stage All
@@ -138,7 +168,7 @@ function DiffView(): React.JSX.Element {
               {stagedCount > 0 && (
                 <button
                   className="git-sidebar__action"
-                  onClick={() => store.unstageAll()}
+                  onClick={() => unstageAll()}
                   title="Unstage all"
                 >
                   Unstage All
@@ -147,12 +177,12 @@ function DiffView(): React.JSX.Element {
             </div>
 
             <div className="git-sidebar__list">
-              {store.files.map((f) => {
-                const isStaged = store.stagedSet.has(f.path)
+              {files.map((f) => {
+                const isStaged = stagedSet.has(f.path)
                 return (
                   <div
                     key={f.path}
-                    className={`git-file-item ${store.selectedFile === f.path ? 'git-file-item--active' : ''}`}
+                    className={`git-file-item ${selectedFile === f.path ? 'git-file-item--active' : ''}`}
                   >
                     <label
                       className="git-file-item__checkbox"
@@ -161,13 +191,13 @@ function DiffView(): React.JSX.Element {
                       <input
                         type="checkbox"
                         checked={isStaged}
-                        onChange={() => store.toggleStage(f.path)}
+                        onChange={() => toggleStage(f.path)}
                       />
                     </label>
                     <button
                       className="git-file-item__name"
                       onClick={() =>
-                        store.setSelectedFile(store.selectedFile === f.path ? null : f.path)
+                        setSelectedFile(selectedFile === f.path ? null : f.path)
                       }
                     >
                       {f.path.split('/').pop()}
@@ -181,7 +211,7 @@ function DiffView(): React.JSX.Element {
                   </div>
                 )
               })}
-              {store.files.length === 0 && (
+              {files.length === 0 && (
                 <EmptyState
                   icon={<GitBranch size={24} />}
                   title="Working tree clean"
@@ -194,13 +224,13 @@ function DiffView(): React.JSX.Element {
               <textarea
                 className="git-commit-panel__input"
                 placeholder="Commit message..."
-                value={store.commitMsg}
-                onChange={(e) => store.setCommitMsg(e.target.value)}
+                value={commitMsg}
+                onChange={(e) => setCommitMsg(e.target.value)}
                 rows={3}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && e.metaKey) {
                     e.preventDefault()
-                    store.commit()
+                    commit()
                   }
                 }}
               />
@@ -208,18 +238,18 @@ function DiffView(): React.JSX.Element {
                 <Button
                   variant="primary"
                   size="sm"
-                  onClick={() => store.commit()}
-                  disabled={!store.commitMsg.trim() || stagedCount === 0 || store.committing}
-                  loading={store.committing}
+                  onClick={() => commit()}
+                  disabled={!commitMsg.trim() || stagedCount === 0 || committing}
+                  loading={committing}
                 >
                   Commit ({stagedCount})
                 </Button>
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => store.push()}
-                  disabled={store.pushing}
-                  loading={store.pushing}
+                  onClick={() => push()}
+                  disabled={pushing}
+                  loading={pushing}
                 >
                   Push
                 </Button>
@@ -228,18 +258,18 @@ function DiffView(): React.JSX.Element {
           </div>
 
           <div className="git-diff-pane">
-            {store.selectedFile && (
+            {selectedFile && (
               <div className="git-diff-pane__file-header">
-                <span className="git-diff-pane__file-path">{store.selectedFile}</span>
+                <span className="git-diff-pane__file-path">{selectedFile}</span>
               </div>
             )}
-            {store.diffSizeWarning ? (
+            {diffSizeWarning ? (
               <DiffSizeWarning
-                sizeBytes={store.diffSizeWarning}
-                onLoadAnyway={() => store.forceLoadLargeDiff()}
+                sizeBytes={diffSizeWarning}
+                onLoadAnyway={() => forceLoadLargeDiff()}
               />
             ) : (
-              <DiffViewer files={store.diffFiles} />
+              <DiffViewer files={diffFiles} />
             )}
           </div>
         </div>

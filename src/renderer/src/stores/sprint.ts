@@ -3,6 +3,7 @@ import type { SprintTask } from '../../../shared/types'
 import { TASK_STATUS, PR_STATUS } from '../../../shared/constants'
 import { toast } from './toasts'
 import { detectTemplate } from '../../../shared/template-heuristics'
+import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 
 interface SprintState {
   // --- Data ---
@@ -20,6 +21,7 @@ interface SprintState {
   updateTask: (taskId: string, patch: Partial<SprintTask>) => Promise<void>
   deleteTask: (taskId: string) => Promise<void>
   createTask: (data: CreateTicketInput) => Promise<void>
+  launchTask: (task: SprintTask) => Promise<void>
   mergeSseUpdate: (update: { taskId: string; [key: string]: unknown }) => void
   setPrMergedMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void
   setGeneratingIds: (updater: (prev: Set<string>) => Set<string>) => void
@@ -173,6 +175,41 @@ export const useSprintStore = create<SprintState>((set, get) => ({
     } catch (e) {
       set((s) => ({ tasks: s.tasks.filter((t) => t.id !== optimistic.id) }))
       toast.error(e instanceof Error ? e.message : 'Failed to create task')
+    }
+  },
+
+  launchTask: async (task): Promise<void> => {
+    const { tasks, updateTask } = get()
+    // Block launch when WIP limit reached (unless task is already active)
+    if (task.status !== TASK_STATUS.ACTIVE) {
+      const activeCount = tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
+      if (activeCount >= WIP_LIMIT_IN_PROGRESS) {
+        toast.error(`In Progress is full (${WIP_LIMIT_IN_PROGRESS}/${WIP_LIMIT_IN_PROGRESS}) — finish or stop a task first`)
+        return
+      }
+    }
+
+    try {
+      const repoPaths = await window.api.getRepoPaths()
+      const repoPath = repoPaths[task.repo.toLowerCase()] ?? repoPaths[task.repo]
+      if (!repoPath) {
+        toast.error(`No repo path configured for "${task.repo}"`)
+        return
+      }
+
+      const result = await window.api.spawnLocalAgent({
+        task: task.spec ?? task.title,
+        repoPath,
+      })
+
+      await updateTask(task.id, {
+        status: TASK_STATUS.ACTIVE,
+        agent_run_id: result.id,
+        started_at: new Date().toISOString(),
+      })
+      toast.success('Agent launched')
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to launch agent')
     }
   },
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { LayoutGroup } from 'framer-motion'
 import {
   DndContext,
@@ -14,6 +14,7 @@ import {
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable'
 import { KanbanColumn } from './KanbanColumn'
 import { TaskCard } from './TaskCard'
+import { ConfirmModal } from '../ui/ConfirmModal'
 import { WIP_LIMIT_IN_PROGRESS } from '../../lib/constants'
 import { TASK_STATUS } from '../../../../shared/constants'
 import type { SprintTask } from './SprintCenter'
@@ -72,6 +73,7 @@ export function KanbanBoard({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   )
   const [activeTask, setActiveTask] = useState<SprintTask | null>(null)
+  const [pendingDrag, setPendingDrag] = useState<{ taskId: string; targetStatus: SprintTask['status'] } | null>(null)
 
   const wipFull = activeTasks.length >= WIP_LIMIT_IN_PROGRESS
 
@@ -125,20 +127,37 @@ export function KanbanBoard({
       return
     }
 
-    // Guard: active→queued requires confirmation
+    // Guard: active->queued requires confirmation
     if (sourceTask.status === TASK_STATUS.ACTIVE && targetStatus === TASK_STATUS.QUEUED) {
-      const ok = window.confirm(
-        'Move back to queue? This won\u2019t stop the running agent.'
-      )
-      if (!ok) return
+      setPendingDrag({ taskId, targetStatus })
+      return
     }
 
     onDragEnd(taskId, targetStatus)
   }
 
+  const handleConfirmDrag = useCallback(() => {
+    if (pendingDrag) {
+      onDragEnd(pendingDrag.taskId, pendingDrag.targetStatus)
+      setPendingDrag(null)
+    }
+  }, [pendingDrag, onDragEnd])
+
+  const handleCancelDrag = useCallback(() => {
+    setPendingDrag(null)
+  }, [])
+
   const noop = () => {}
 
   return (
+    <>
+    <ConfirmModal
+      open={pendingDrag !== null}
+      message="Move back to queue? This won't stop the running agent."
+      confirmLabel="Move to Queue"
+      onConfirm={handleConfirmDrag}
+      onCancel={handleCancelDrag}
+    />
     <LayoutGroup>
     <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
       <div className="kanban-board">
@@ -199,5 +218,6 @@ export function KanbanBoard({
       </DragOverlay>
     </DndContext>
     </LayoutGroup>
+    </>
   )
 }

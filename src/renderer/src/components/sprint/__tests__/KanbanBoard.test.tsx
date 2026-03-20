@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, act } from '@testing-library/react'
 import type { SprintTask } from '../../../../../shared/types'
 
 // Capture DndContext's onDragEnd so we can invoke it manually
@@ -186,37 +186,58 @@ describe('KanbanBoard', () => {
     expect(defaultProps.onDragEnd).not.toHaveBeenCalled()
   })
 
-  it('shows confirm dialog when dragging active task back to queued', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false)
+  it('shows confirm modal when dragging active task back to queued', () => {
     const task = makeTask({ id: 'task-active', status: 'active' })
     render(<KanbanBoard {...defaultProps} activeTasks={[task]} />)
 
-    capturedOnDragEnd?.({
-      active: { id: 'task-active' },
-      over: { id: 'queued' },
+    act(() => {
+      capturedOnDragEnd?.({
+        active: { id: 'task-active' },
+        over: { id: 'queued' },
+      })
     })
 
-    expect(confirmSpy).toHaveBeenCalledWith(
-      expect.stringContaining('Move back to queue')
-    )
-    // User cancelled — onDragEnd should NOT be called
+    // ConfirmModal should be shown — onDragEnd not called yet
+    expect(screen.getByText(/Move back to queue/)).toBeInTheDocument()
     expect(defaultProps.onDragEnd).not.toHaveBeenCalled()
-    confirmSpy.mockRestore()
   })
 
-  it('allows active→queued drag when user confirms', () => {
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
+  it('cancels active→queued drag when user dismisses confirm modal', () => {
     const task = makeTask({ id: 'task-active', status: 'active' })
     render(<KanbanBoard {...defaultProps} activeTasks={[task]} />)
 
-    capturedOnDragEnd?.({
-      active: { id: 'task-active' },
-      over: { id: 'queued' },
+    act(() => {
+      capturedOnDragEnd?.({
+        active: { id: 'task-active' },
+        over: { id: 'queued' },
+      })
     })
 
-    expect(confirmSpy).toHaveBeenCalled()
+    // Click Cancel
+    act(() => {
+      screen.getByRole('button', { name: 'Cancel' }).click()
+    })
+
+    expect(defaultProps.onDragEnd).not.toHaveBeenCalled()
+  })
+
+  it('allows active→queued drag when user confirms via modal', () => {
+    const task = makeTask({ id: 'task-active', status: 'active' })
+    render(<KanbanBoard {...defaultProps} activeTasks={[task]} />)
+
+    act(() => {
+      capturedOnDragEnd?.({
+        active: { id: 'task-active' },
+        over: { id: 'queued' },
+      })
+    })
+
+    // Click confirm button
+    act(() => {
+      screen.getByRole('button', { name: 'Move to Queue' }).click()
+    })
+
     expect(defaultProps.onDragEnd).toHaveBeenCalledWith('task-active', 'queued')
-    confirmSpy.mockRestore()
   })
 
   it('does not allow drops into review column', () => {
