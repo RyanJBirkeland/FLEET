@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore, type View } from '../../stores/ui'
+import { usePanelLayoutStore, findLeaf } from '../../stores/panelLayout'
 import { useLocalAgentsStore } from '../../stores/localAgents'
 import { useAgentHistoryStore, type AgentMeta } from '../../stores/agentHistory'
 import { toast } from '../../stores/toasts'
@@ -8,7 +9,7 @@ import { Kbd } from '../ui/Kbd'
 import { timeAgo } from '../../lib/format'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
-type CommandCategory = 'navigation' | 'action' | 'session'
+type CommandCategory = 'navigation' | 'action' | 'panel' | 'session'
 
 interface Command {
   id: string
@@ -21,6 +22,7 @@ interface Command {
 const CATEGORY_LABELS: Record<CommandCategory, string> = {
   navigation: 'Navigate',
   action: 'Agent Actions',
+  panel: 'Panels',
   session: 'Recent Agents'
 }
 
@@ -134,6 +136,53 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       }
     ]
 
+    const panelCommands: Command[] = [
+      {
+        id: 'panel-split-right',
+        label: 'Split Right',
+        category: 'panel',
+        hint: '\u2318\\',
+        action: () => {
+          const { focusedPanelId, splitPanel } = usePanelLayoutStore.getState()
+          if (focusedPanelId) splitPanel(focusedPanelId, 'horizontal', 'agents')
+          onClose()
+        },
+      },
+      {
+        id: 'panel-split-below',
+        label: 'Split Below',
+        category: 'panel',
+        action: () => {
+          const { focusedPanelId, splitPanel } = usePanelLayoutStore.getState()
+          if (focusedPanelId) splitPanel(focusedPanelId, 'vertical', 'agents')
+          onClose()
+        },
+      },
+      {
+        id: 'panel-close',
+        label: 'Close Panel',
+        category: 'panel',
+        hint: '\u2318W',
+        action: () => {
+          const { focusedPanelId, root, closeTab } = usePanelLayoutStore.getState()
+          if (focusedPanelId) {
+            const leaf = findLeaf(root, focusedPanelId)
+            if (leaf) closeTab(focusedPanelId, leaf.activeTab)
+          }
+          onClose()
+        },
+      },
+      {
+        id: 'panel-reset',
+        label: 'Reset Layout',
+        category: 'panel',
+        action: () => {
+          usePanelLayoutStore.getState().resetLayout()
+          onClose()
+        },
+      },
+    ]
+
     const agentItems: Command[] = recentAgents.map((agent) => {
       return {
         id: `agent-${agent.id}`,
@@ -148,7 +197,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       }
     })
 
-    return [...nav, ...actions, ...agentItems]
+    return [...nav, ...actions, ...panelCommands, ...agentItems]
   }, [setView, onClose, selectAgent, recentAgents])
 
   const filtered = useMemo(() => {
@@ -158,7 +207,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
 
   // Group filtered items by category for rendering
   const groups = useMemo(() => {
-    const order: CommandCategory[] = ['navigation', 'action', 'session']
+    const order: CommandCategory[] = ['navigation', 'action', 'panel', 'session']
     return order
       .map((cat) => ({
         category: cat,
