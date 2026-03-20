@@ -203,11 +203,11 @@ export default function MemoryView(): React.JSX.Element {
   const isDirty = content !== savedContent
 
   return (
-    <div className="memory-view" style={{ flexDirection: 'column' }}>
+    <div className="memory-view memory-view--column">
       <div className="memory-view__header">
         <span className="memory-view__title">Memory</span>
       </div>
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      <div className="memory-view__content">
       <div className="memory-sidebar">
         <div className="memory-sidebar__header">
           <span className="memory-sidebar__title">Files</span>

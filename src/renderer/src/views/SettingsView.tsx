@@ -610,7 +610,7 @@ export default function SettingsView(): React.JSX.Element {
   }, [agentBinary, agentPermissionMode])
 
   return (
-    <div className="settings-view" style={{ flexDirection: 'column' }}>
+    <div className="settings-view settings-view--column">
       <div className="settings-view__header">
         <span className="settings-view__header-title">Settings</span>
       </div>

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { forwardRef, type ReactNode } from 'react'
 
 type ButtonProps = {
   variant?: 'primary' | 'ghost' | 'danger' | 'icon'
@@ -12,17 +12,20 @@ type ButtonProps = {
   type?: 'button' | 'submit' | 'reset'
 }
 
-export function Button({
-  variant = 'ghost',
-  size = 'md',
-  loading = false,
-  disabled = false,
-  onClick,
-  children,
-  title,
-  className,
-  type,
-}: ButtonProps) {
+export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button(
+  {
+    variant = 'ghost',
+    size = 'md',
+    loading = false,
+    disabled = false,
+    onClick,
+    children,
+    title,
+    className,
+    type,
+  },
+  ref
+) {
   const classes = [
     'bde-btn',
     `bde-btn--${variant}`,
@@ -37,6 +40,7 @@ export function Button({
 
   return (
     <button
+      ref={ref}
       className={classes}
       onClick={onClick}
       disabled={disabled || loading}
@@ -47,4 +51,4 @@ export function Button({
       {children}
     </button>
   )
-}
+})

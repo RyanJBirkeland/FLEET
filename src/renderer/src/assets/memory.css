@@ -1,5 +1,15 @@
 /* ── Memory View — Glass Treatment ─────────────────────── */
 
+.memory-view--column {
+  flex-direction: column;
+}
+
+.memory-view__content {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
 .memory-view__header {
   height: 36px;
   display: flex;

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore, type View } from '../../stores/ui'
-import { useGatewayStore } from '../../stores/gateway'
 import { useLocalAgentsStore } from '../../stores/localAgents'
 import { useAgentHistoryStore, type AgentMeta } from '../../stores/agentHistory'
 import { toast } from '../../stores/toasts'
@@ -48,7 +47,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
   const inputRef = useRef<HTMLInputElement>(null)
   const listRef = useRef<HTMLDivElement>(null)
   const setView = useUIStore((s) => s.setView)
-  const connect = useGatewayStore((s) => s.connect)
   const selectAgent = useAgentHistoryStore((s) => s.selectAgent)
 
   // Fetch recent agents when palette opens
@@ -151,7 +149,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     })
 
     return [...nav, ...actions, ...agentItems]
-  }, [setView, onClose, connect, selectAgent, recentAgents])
+  }, [setView, onClose, selectAgent, recentAgents])
 
   const filtered = useMemo(() => {
     if (!query) return commands
@@ -170,8 +168,18 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       .filter((g) => g.items.length > 0)
   }, [filtered])
 
-  // Flat list for keyboard navigation
+  // Flat list for keyboard navigation + stable index lookup for rendering
   const flatItems = useMemo(() => groups.flatMap((g) => g.items), [groups])
+  const flatIndexMap = useMemo(() => {
+    const map = new Map<string, number>()
+    let idx = 0
+    for (const g of groups) {
+      for (const cmd of g.items) {
+        map.set(cmd.id, idx++)
+      }
+    }
+    return map
+  }, [groups])
 
   const runSelected = useCallback(() => {
     if (flatItems[selectedIndex]) {
@@ -211,8 +219,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
     [onClose, flatItems.length, runSelected]
   )
 
-  let flatIndex = 0
-
   return (
     <AnimatePresence>
       {open && (
@@ -240,7 +246,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
             <div key={group.category} className="command-palette__group">
               <div className="command-palette__group-header">{group.label}</div>
               {group.items.map((cmd) => {
-                const idx = flatIndex++
+                const idx = flatIndexMap.get(cmd.id) ?? 0
                 return (
                   <button
                     key={cmd.id}

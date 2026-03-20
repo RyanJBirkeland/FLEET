@@ -4,6 +4,7 @@ import { FitAddon } from 'xterm-addon-fit'
 import { SearchAddon } from 'xterm-addon-search'
 import { WebLinksAddon } from 'xterm-addon-web-links'
 import { useTerminalStore } from '../../stores/terminal'
+import { tokens } from '../../design-system/tokens'
 import 'xterm/css/xterm.css'
 
 /** Module-level map so TerminalView can call clear() on the active instance */
@@ -34,16 +35,16 @@ export function TerminalPane({ tabId, shell, visible }: TerminalPaneProps): Reac
     if (!containerRef.current) return
 
     const term = new Terminal({
-      /* intentional: xterm theme requires literal color strings */
+      /* xterm theme requires literal color strings — sourced from design tokens */
       theme: {
-        background: '#0A0A0A',
-        foreground: '#E8E8E8',
-        cursor: '#00D37F',
-        selectionBackground: 'rgba(0, 211, 127, 0.3)',
+        background: tokens.color.bg,
+        foreground: tokens.color.text,
+        cursor: tokens.color.accent,
+        selectionBackground: tokens.color.accentDim,
         black: '#1A1A1A',
-        brightBlack: '#555555'
+        brightBlack: tokens.color.textDim,
       },
-      fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+      fontFamily: tokens.font.code,
       fontSize: 13,
       lineHeight: 1.5,
       cursorBlink: true
@@ -112,7 +113,7 @@ export function TerminalPane({ tabId, shell, visible }: TerminalPaneProps): Reac
       style={{
         width: '100%',
         height: '100%',
-        padding: '8px',
+        padding: tokens.space[2],
         boxSizing: 'border-box',
         display: visible ? 'block' : 'none'
       }}
