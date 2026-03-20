@@ -82,6 +82,11 @@ declare global {
       // Conflict file detection
       checkConflictFiles: (...args: IpcArgs<'pr:checkConflictFiles'>) => Promise<IpcResult<'pr:checkConflictFiles'>>
 
+      // Queue health
+      queue: {
+        health: () => Promise<IpcResult<'queue:health'>>
+      }
+
       // Sprint tasks — SQLite-backed Kanban
       sprint: {
         list: () => Promise<IpcResult<'sprint:list'>>

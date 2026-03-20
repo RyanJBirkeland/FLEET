@@ -50,6 +50,13 @@ vi.stubGlobal('api', {
   gitPush: vi.fn().mockResolvedValue(''),
   gitBranches: vi.fn().mockResolvedValue({ current: 'main', branches: ['main'] }),
   gitCheckout: vi.fn().mockResolvedValue(undefined),
+  queue: {
+    health: vi.fn().mockResolvedValue({
+      queue: { backlog: 0, queued: 0, active: 0, done: 0, failed: 0, cancelled: 0 },
+      doneToday: 0,
+      connectedRunners: 0,
+    }),
+  },
   sprint: {
     list: vi.fn().mockResolvedValue([]),
     create: vi.fn().mockResolvedValue({}),

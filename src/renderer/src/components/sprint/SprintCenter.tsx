@@ -8,6 +8,7 @@ import { SpecDrawer } from './SpecDrawer'
 import { LogDrawer } from './LogDrawer'
 import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
+import { QueueDashboard } from './QueueDashboard'
 import { PRSection } from './PRSection'
 import { NewTicketModal } from './NewTicketModal'
 import { toast } from '../../stores/toasts'
@@ -43,6 +44,7 @@ export function SprintCenter() {
   const logDrawerTaskId = useSprintStore((s) => s.logDrawerTaskId)
   const prMergedMap = useSprintStore((s) => s.prMergedMap)
   const generatingIds = useSprintStore((s) => s.generatingIds)
+  const queueHealth = useSprintStore((s) => s.queueHealth)
 
   const loadData = useSprintStore((s) => s.loadData)
   const updateTask = useSprintStore((s) => s.updateTask)
@@ -310,6 +312,8 @@ export function SprintCenter() {
           </Button>
         </div>
       </div>
+
+      <QueueDashboard health={queueHealth} />
 
       <div className="sprint-center__body">
         {loadError && tasks.length === 0 ? (

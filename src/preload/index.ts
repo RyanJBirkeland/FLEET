@@ -103,6 +103,11 @@ const api = {
   checkConflictFiles: (input: { owner: string; repo: string; prNumber: number }) =>
     typedInvoke('pr:checkConflictFiles', input),
 
+  // Queue health
+  queue: {
+    health: () => typedInvoke('queue:health'),
+  },
+
   // Sprint tasks — SQLite-backed Kanban
   sprint: {
     list: () => typedInvoke('sprint:list'),

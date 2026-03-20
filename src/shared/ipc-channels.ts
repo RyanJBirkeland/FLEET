@@ -199,6 +199,12 @@ export interface IpcChannelMap {
     result: AgentCostRecord[]
   }
 
+  // --- Queue ---
+  'queue:health': {
+    args: []
+    result: { queue: Record<string, number>; doneToday: number; connectedRunners: number }
+  }
+
   // --- Sprint ---
   'sprint:list': {
     args: []

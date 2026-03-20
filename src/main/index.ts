@@ -12,6 +12,7 @@ import { registerGatewayHandlers } from './handlers/gateway-handlers'
 import { registerWindowHandlers } from './handlers/window-handlers'
 import { registerSprintLocalHandlers } from './handlers/sprint-local'
 import { registerCostHandlers } from './handlers/cost-handlers'
+import { registerQueueHandlers } from './handlers/queue-handlers'
 import { registerFsHandlers } from './fs'
 import { getDb, closeDb } from './db'
 import { migrateFromOpenClawConfig } from './settings'
@@ -135,6 +136,7 @@ app.whenReady().then(() => {
   registerWindowHandlers()
   registerSprintLocalHandlers()
   registerCostHandlers()
+  registerQueueHandlers()
   registerFsHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
