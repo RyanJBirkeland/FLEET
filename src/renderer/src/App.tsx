@@ -209,7 +209,7 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const handler = (e: CustomEvent): void => {
       const { view, sessionId } = e.detail
-      if (view === 'sessions' || view === 'agents') {
+      if (view === 'agents') {
         setView('agents')
         if (sessionId) {
           useAgentHistoryStore.getState().selectAgent(sessionId)

@@ -14,7 +14,7 @@ import { AgentList } from '../components/agents/AgentList'
 import { AgentDetail } from '../components/agents/AgentDetail'
 import { HealthBar } from '../components/agents/HealthBar'
 import { useSprintStore } from '../stores/sprint'
-import { SpawnModal } from '../components/sessions/SpawnModal'
+import { SpawnModal } from '../components/agents/SpawnModal'
 import { tokens } from '../design-system/tokens'
 import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
 

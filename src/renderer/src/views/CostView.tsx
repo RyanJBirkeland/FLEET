@@ -250,7 +250,7 @@ export default function CostView(): React.JSX.Element {
   const handleRowClick = useCallback((run: AgentRunCostRow) => {
     window.dispatchEvent(
       new CustomEvent('bde:navigate', {
-        detail: { view: 'sessions', sessionId: run.id },
+        detail: { view: 'agents', sessionId: run.id },
       })
     )
   }, [])
