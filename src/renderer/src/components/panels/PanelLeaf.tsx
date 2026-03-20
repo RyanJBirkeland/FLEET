@@ -1,8 +1,8 @@
 import React, { Suspense } from 'react'
-import { X } from 'lucide-react'
 import { PanelLeafNode, View, usePanelLayoutStore } from '../../stores/panelLayout'
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { tokens } from '../../design-system/tokens'
+import { PanelTabBar } from './PanelTabBar'
 import { AgentsView } from '../../views/AgentsView'
 import { TerminalView } from '../../views/TerminalView'
 
@@ -74,78 +74,6 @@ function ViewSkeleton(): React.ReactElement {
 }
 
 // ---------------------------------------------------------------------------
-// Tab bar
-// ---------------------------------------------------------------------------
-
-interface TabBarProps {
-  node: PanelLeafNode
-  onTabClick: (index: number) => void
-  onTabClose: (index: number, e: React.MouseEvent) => void
-}
-
-function TabBar({ node, onTabClick, onTabClose }: TabBarProps): React.ReactElement {
-  return (
-    <div
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        height: '28px',
-        background: tokens.color.surface,
-        borderBottom: `1px solid ${tokens.color.border}`,
-        flexShrink: 0,
-        overflow: 'hidden',
-      }}
-    >
-      {node.tabs.map((tab, index) => {
-        const isActive = index === node.activeTab
-        return (
-          <div
-            key={`${tab.viewKey}-${index}`}
-            onClick={() => onTabClick(index)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: tokens.space[1],
-              padding: `0 ${tokens.space[2]}`,
-              height: '100%',
-              cursor: 'pointer',
-              background: isActive ? tokens.color.surfaceHigh : 'transparent',
-              color: isActive ? tokens.color.text : tokens.color.textMuted,
-              fontSize: tokens.size.sm,
-              fontFamily: tokens.font.ui,
-              borderRight: `1px solid ${tokens.color.border}`,
-              userSelect: 'none',
-              whiteSpace: 'nowrap',
-              transition: `color ${tokens.transition.fast}`,
-            }}
-          >
-            <span>{tab.label}</span>
-            <button
-              onClick={(e) => onTabClose(index, e)}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'none',
-                border: 'none',
-                padding: '0',
-                cursor: 'pointer',
-                color: 'inherit',
-                opacity: 0.6,
-                lineHeight: 1,
-              }}
-              aria-label={`Close ${tab.label}`}
-            >
-              <X size={11} />
-            </button>
-          </div>
-        )
-      })}
-    </div>
-  )
-}
-
-// ---------------------------------------------------------------------------
 // PanelLeaf
 // ---------------------------------------------------------------------------
 
@@ -156,20 +84,8 @@ interface PanelLeafProps {
 export function PanelLeaf({ node }: PanelLeafProps): React.ReactElement {
   const focusedPanelId = usePanelLayoutStore((s) => s.focusedPanelId)
   const focusPanel = usePanelLayoutStore((s) => s.focusPanel)
-  const setActiveTab = usePanelLayoutStore((s) => s.setActiveTab)
-  const closeTab = usePanelLayoutStore((s) => s.closeTab)
 
   const isFocused = focusedPanelId === node.panelId
-
-  function handleTabClick(index: number): void {
-    focusPanel(node.panelId)
-    setActiveTab(node.panelId, index)
-  }
-
-  function handleTabClose(index: number, e: React.MouseEvent): void {
-    e.stopPropagation()
-    closeTab(node.panelId, index)
-  }
 
   function handlePanelClick(): void {
     focusPanel(node.panelId)
@@ -189,9 +105,7 @@ export function PanelLeaf({ node }: PanelLeafProps): React.ReactElement {
         boxSizing: 'border-box',
       }}
     >
-      {node.tabs.length > 1 && (
-        <TabBar node={node} onTabClick={handleTabClick} onTabClose={handleTabClose} />
-      )}
+      {node.tabs.length > 1 && <PanelTabBar node={node} />}
       <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
         {node.tabs.map((tab, index) => {
           const isActive = index === node.activeTab
