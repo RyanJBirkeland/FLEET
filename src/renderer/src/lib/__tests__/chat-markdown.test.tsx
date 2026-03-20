@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import { renderContent } from '../chat-markdown'
 
 // Mock TicketEditor to avoid pulling in full component tree
-vi.mock('../../components/sessions/TicketEditor', () => ({
+vi.mock('../../components/sprint/TicketEditor', () => ({
   TicketEditor: ({ initialTickets }: { initialTickets: Array<{ title: string }> }) => (
     <div data-testid="ticket-editor">
       {initialTickets.map((t, i) => (
