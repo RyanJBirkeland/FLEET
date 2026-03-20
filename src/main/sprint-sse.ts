@@ -7,12 +7,15 @@ const RECONNECT_MAX_MS = 30_000
 let abortController: AbortController | null = null
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null
 let reconnectAttempt = 0
+let stopped = true
 
 export function startSprintSseClient(): void {
+  stopped = false
   connect()
 }
 
 export function stopSprintSseClient(): void {
+  stopped = true
   if (reconnectTimer) {
     clearTimeout(reconnectTimer)
     reconnectTimer = null
@@ -79,6 +82,7 @@ async function connect(): Promise<void> {
 }
 
 function scheduleReconnect(): void {
+  if (stopped) return
   const delay = Math.min(RECONNECT_BASE_MS * 2 ** reconnectAttempt, RECONNECT_MAX_MS)
   reconnectAttempt++
   reconnectTimer = setTimeout(connect, delay)

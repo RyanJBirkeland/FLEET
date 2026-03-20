@@ -116,13 +116,19 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     }
   }, [task?.agent_run_id, task?.status])
 
-  const { items, isStreaming } = useMemo(() => {
-    const { items: newItems, isStreaming, lineCount } = parseStreamJson(logContent, lineCountRef.current)
+  const [parsedItems, setParsedItems] = useState<ChatItem[]>([])
+  const [isStreaming, setIsStreaming] = useState(false)
+
+  useEffect(() => {
+    const { items: newItems, isStreaming: streaming, lineCount } = parseStreamJson(logContent, lineCountRef.current)
     const merged = [...prevItemsRef.current, ...newItems]
     prevItemsRef.current = merged
     lineCountRef.current = lineCount
-    return { items: merged, isStreaming }
+    setParsedItems(merged)
+    setIsStreaming(streaming)
   }, [logContent])
+
+  const items = parsedItems
   const messages = useMemo(() => chatItemsToMessages(items), [items])
 
   const allMessages = useMemo(

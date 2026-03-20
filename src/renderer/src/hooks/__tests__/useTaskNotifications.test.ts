@@ -17,7 +17,6 @@ vi.stubGlobal('Notification', MockNotification)
 vi.stubGlobal('api', {
   ...((globalThis as Record<string, unknown>).api as Record<string, unknown>),
   onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
-  offExternalSprintChange: vi.fn(),
   onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
 })
 

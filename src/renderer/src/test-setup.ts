@@ -89,7 +89,6 @@ vi.stubGlobal('api', {
   pollPrStatuses: vi.fn().mockResolvedValue([]),
   killAgent: vi.fn().mockResolvedValue({ ok: true }),
   onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
-  offExternalSprintChange: vi.fn(),
   onTaskOutput: vi.fn().mockReturnValue(() => {}),
   task: {
     getEvents: vi.fn().mockResolvedValue([]),

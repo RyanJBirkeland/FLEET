@@ -148,6 +148,7 @@ export interface QueueStats {
   done: number
   failed: number
   cancelled: number
+  error: number
 }
 
 export function getQueueStats(): QueueStats {
@@ -162,6 +163,7 @@ export function getQueueStats(): QueueStats {
     done: 0,
     failed: 0,
     cancelled: 0,
+    error: 0,
   }
   for (const row of rows) {
     if (row.status in stats) {
@@ -270,7 +272,7 @@ export function getTemplateScaffold(templateHint: string): string {
 export function registerSprintLocalHandlers(): void {
   safeHandle('sprint:list', () => {
     return getDb()
-      .prepare('SELECT * FROM sprint_tasks ORDER BY priority ASC, created_at DESC')
+      .prepare('SELECT * FROM sprint_tasks ORDER BY priority ASC, created_at ASC')
       .all() as SprintTask[]
   })
 
@@ -365,10 +367,8 @@ export function registerSprintLocalHandlers(): void {
         const text = data.result?.content?.[0]?.text ?? ''
         if (!text) return fallback
 
-        // Persist generated spec locally via direct SQLite update
-        getDb()
-          .prepare('UPDATE sprint_tasks SET spec = ?, prompt = ? WHERE id = ?')
-          .run(text, text, taskId)
+        // Persist generated spec — use updateTask() to notify SSE subscribers
+        updateTask(taskId, { spec: text, prompt: text })
 
         return { taskId, spec: text, prompt: text }
       } catch {
@@ -394,10 +394,14 @@ export function registerSprintLocalHandlers(): void {
   })
 
   safeHandle('sprint:healthCheck', () => {
-    // Local health check — just verify the table is accessible
+    // Returns tasks stuck in 'active' for >1 hour with no recent agent activity
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     return getDb()
-      .prepare('SELECT * FROM sprint_tasks LIMIT 1')
-      .all() as SprintTask[]
+      .prepare(
+        `SELECT * FROM sprint_tasks
+         WHERE status = 'active' AND started_at < ?`
+      )
+      .all(oneHourAgo) as SprintTask[]
   })
 
   safeHandle('sprint:readLog', async (_e, agentId: string, rawFromByte?: number) => {

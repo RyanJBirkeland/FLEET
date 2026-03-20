@@ -24,12 +24,6 @@ export function getEvents(taskId: string): TaskOutputEvent[] {
   return eventStore.get(taskId) ?? []
 }
 
-export function getLatestEvent(taskId: string): TaskOutputEvent | null {
-  const events = eventStore.get(taskId)
-  if (!events || events.length === 0) return null
-  return events[events.length - 1]
-}
-
 export function clearTask(taskId: string): void {
   eventStore.delete(taskId)
 }
