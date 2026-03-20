@@ -385,7 +385,7 @@ export function registerSprintLocalHandlers(): void {
 
     let templatePromptPrefix: string | null = null
     if (task.template_name) {
-      const templates = getSettingJson<TaskTemplate[]>('task.templates') ?? DEFAULT_TASK_TEMPLATES as unknown as TaskTemplate[]
+      const templates = getSettingJson<TaskTemplate[]>('task.templates') ?? [...DEFAULT_TASK_TEMPLATES]
       const match = templates.find((t) => t.name === task.template_name)
       templatePromptPrefix = match?.promptPrefix ?? null
     }
