@@ -10,7 +10,7 @@ import { toast } from '../../stores/toasts'
 import { useSprintEvents } from '../../stores/sprintEvents'
 import { subscribeSSE, type LogChunkEvent, type LogDoneEvent } from '../../lib/taskRunnerSSE'
 import { TASK_STATUS, AGENT_STATUS } from '../../../../shared/constants'
-import type { TaskOutputEvent } from '../../../../shared/queue-api-contract'
+import type { AnyTaskEvent } from '../../stores/sprintEvents'
 import type { SprintTask } from './SprintCenter'
 
 type LogDrawerProps = {
@@ -25,7 +25,7 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
   const [agentStatus, setAgentStatus] = useState('unknown')
   const [steerInput, setSteerInput] = useState('')
   const [exitCode, setExitCode] = useState<number | null>(null)
-  const [initialEvents, setInitialEvents] = useState<TaskOutputEvent[]>([])
+  const [initialEvents, setInitialEvents] = useState<AnyTaskEvent[]>([])
   const fromByteRef = useRef(0)
 
   // Streaming events from the store
@@ -134,7 +134,7 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
 
   // Collapse consecutive thinking events (keep only the latest)
   const displayEvents = useMemo(() => {
-    const result: TaskOutputEvent[] = []
+    const result: AnyTaskEvent[] = []
     for (const ev of mergedEvents) {
       if (ev.type === 'agent:thinking' && result.length > 0 && result[result.length - 1].type === 'agent:thinking') {
         result[result.length - 1] = ev

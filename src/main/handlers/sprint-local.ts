@@ -140,7 +140,11 @@ export function registerSprintLocalHandlers(): void {
   safeHandle(
     'sprint:generatePrompt',
     async (_e, args: GeneratePromptRequest): Promise<GeneratePromptResponse> => {
-      return generatePrompt(args)
+      const result = await generatePrompt(args)
+      if (result.spec) {
+        updateTask(args.taskId, { spec: result.spec, prompt: result.prompt })
+      }
+      return result
     }
   )
 

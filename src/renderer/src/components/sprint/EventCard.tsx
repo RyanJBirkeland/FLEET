@@ -16,7 +16,6 @@ import {
 } from 'lucide-react'
 import { tokens } from '../../design-system/tokens'
 import type {
-  TaskOutputEvent,
   AgentStartedEvent,
   AgentToolCallEvent,
   AgentToolResultEvent,
@@ -25,12 +24,16 @@ import type {
   AgentErrorEvent,
   AgentCompletedEvent,
 } from '../../../../shared/queue-api-contract'
+import type { AnyTaskEvent } from '../../stores/sprintEvents'
 
 type Props = {
-  event: TaskOutputEvent
+  event: AnyTaskEvent
 }
 
-function formatTime(timestamp: string): string {
+/** Widens the timestamp field to accept both ISO string (TaskOutputEvent) and epoch ms (AgentEvent). */
+type WithFlexTimestamp<T extends { timestamp: string }> = Omit<T, 'timestamp'> & { timestamp: string | number }
+
+function formatTime(timestamp: string | number): string {
   try {
     return new Date(timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   } catch {
@@ -62,7 +65,7 @@ const cardBase: React.CSSProperties = {
   borderLeft: `3px solid ${tokens.color.border}`,
 }
 
-function StartedCard({ event }: { event: AgentStartedEvent }) {
+function StartedCard({ event }: { event: WithFlexTimestamp<AgentStartedEvent> }) {
   return (
     <div style={{ ...cardBase, borderLeftColor: tokens.color.info }} data-testid="event-card-started">
       <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[2], color: tokens.color.textMuted }}>
@@ -75,7 +78,7 @@ function StartedCard({ event }: { event: AgentStartedEvent }) {
   )
 }
 
-function ToolCallCard({ event }: { event: AgentToolCallEvent }) {
+function ToolCallCard({ event }: { event: WithFlexTimestamp<AgentToolCallEvent> }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -138,7 +141,7 @@ function ToolCallCard({ event }: { event: AgentToolCallEvent }) {
   )
 }
 
-function ToolResultCard({ event }: { event: AgentToolResultEvent }) {
+function ToolResultCard({ event }: { event: WithFlexTimestamp<AgentToolResultEvent> }) {
   const isSuccess = event.success
 
   return (
@@ -163,7 +166,7 @@ function ToolResultCard({ event }: { event: AgentToolResultEvent }) {
   )
 }
 
-function ThinkingCard({ event }: { event: AgentThinkingEvent }) {
+function ThinkingCard({ event }: { event: WithFlexTimestamp<AgentThinkingEvent> }) {
   return (
     <div style={{ ...cardBase, borderLeftColor: tokens.color.info }} data-testid="event-card-thinking">
       <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[2], color: tokens.color.textMuted }}>
@@ -175,7 +178,7 @@ function ThinkingCard({ event }: { event: AgentThinkingEvent }) {
   )
 }
 
-function RateLimitedCard({ event }: { event: AgentRateLimitedEvent }) {
+function RateLimitedCard({ event }: { event: WithFlexTimestamp<AgentRateLimitedEvent> }) {
   return (
     <div
       style={{ ...cardBase, borderLeftColor: tokens.color.warning, background: tokens.color.warningDim }}
@@ -189,7 +192,7 @@ function RateLimitedCard({ event }: { event: AgentRateLimitedEvent }) {
   )
 }
 
-function ErrorCard({ event }: { event: AgentErrorEvent }) {
+function ErrorCard({ event }: { event: WithFlexTimestamp<AgentErrorEvent> }) {
   return (
     <div
       style={{ ...cardBase, borderLeftColor: tokens.color.danger, background: tokens.color.dangerDim }}
@@ -203,7 +206,7 @@ function ErrorCard({ event }: { event: AgentErrorEvent }) {
   )
 }
 
-function CompletedCard({ event }: { event: AgentCompletedEvent }) {
+function CompletedCard({ event }: { event: WithFlexTimestamp<AgentCompletedEvent> }) {
   const isSuccess = event.exitCode === 0
 
   return (
@@ -231,19 +234,19 @@ function CompletedCard({ event }: { event: AgentCompletedEvent }) {
 export function EventCard({ event }: Props): React.JSX.Element {
   switch (event.type) {
     case 'agent:started':
-      return <StartedCard event={event as AgentStartedEvent} />
+      return <StartedCard event={event as WithFlexTimestamp<AgentStartedEvent>} />
     case 'agent:tool_call':
-      return <ToolCallCard event={event as AgentToolCallEvent} />
+      return <ToolCallCard event={event as WithFlexTimestamp<AgentToolCallEvent>} />
     case 'agent:tool_result':
-      return <ToolResultCard event={event as AgentToolResultEvent} />
+      return <ToolResultCard event={event as WithFlexTimestamp<AgentToolResultEvent>} />
     case 'agent:thinking':
-      return <ThinkingCard event={event as AgentThinkingEvent} />
+      return <ThinkingCard event={event as WithFlexTimestamp<AgentThinkingEvent>} />
     case 'agent:rate_limited':
-      return <RateLimitedCard event={event as AgentRateLimitedEvent} />
+      return <RateLimitedCard event={event as WithFlexTimestamp<AgentRateLimitedEvent>} />
     case 'agent:error':
-      return <ErrorCard event={event as AgentErrorEvent} />
+      return <ErrorCard event={event as WithFlexTimestamp<AgentErrorEvent>} />
     case 'agent:completed':
-      return <CompletedCard event={event as AgentCompletedEvent} />
+      return <CompletedCard event={event as WithFlexTimestamp<AgentCompletedEvent>} />
     default:
       return (
         <div style={cardBase} data-testid="event-card-unknown">

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
-import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
+import { ConfirmModal } from '../ui/ConfirmModal'
 import { KanbanBoard } from './KanbanBoard'
 import { TaskTable } from './TaskTable'
 import { SpecDrawer } from './SpecDrawer'
@@ -10,9 +10,7 @@ import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
 import { QueueDashboard } from './QueueDashboard'
 import { NewTicketModal } from './NewTicketModal'
-import { toast } from '../../stores/toasts'
 import { usePrConflictsStore } from '../../stores/prConflicts'
-import { useHealthCheckStore } from '../../stores/healthCheck'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintUI } from '../../stores/sprintUI'
 import { useSprintEvents } from '../../stores/sprintEvents'
@@ -21,13 +19,9 @@ import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifi
 import { useSprintPolling } from '../../hooks/useSprintPolling'
 import { usePrStatusPolling } from '../../hooks/usePrStatusPolling'
 import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcuts'
-import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
-import {
-  POLL_HEALTH_CHECK_MS,
-  REPO_OPTIONS,
-  WIP_LIMIT_IN_PROGRESS,
-} from '../../lib/constants'
-import { TASK_STATUS } from '../../../../shared/constants'
+import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
+import { useHealthCheck } from '../../hooks/useHealthCheck'
+import { REPO_OPTIONS } from '../../lib/constants'
 
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 import type { SprintTask } from '../../../../shared/types'
@@ -36,34 +30,41 @@ export type { SprintTask }
 // --- Component ---
 
 export function SprintCenter() {
-  // --- Task store state ---
+  // --- Store state ---
   const tasks = useSprintTasks((s) => s.tasks)
   const loading = useSprintTasks((s) => s.loading)
   const loadError = useSprintTasks((s) => s.loadError)
-  const prMergedMap = useSprintTasks((s) => s.prMergedMap)
-
-  const loadData = useSprintTasks((s) => s.loadData)
-  const updateTask = useSprintTasks((s) => s.updateTask)
-  const deleteTask = useSprintTasks((s) => s.deleteTask)
-  const createTask = useSprintTasks((s) => s.createTask)
-  const launchTask = useSprintTasks((s) => s.launchTask)
-
-  // --- UI store state ---
   const repoFilter = useSprintUI((s) => s.repoFilter)
   const selectedTaskId = useSprintUI((s) => s.selectedTaskId)
   const logDrawerTaskId = useSprintUI((s) => s.logDrawerTaskId)
+  const prMergedMap = useSprintTasks((s) => s.prMergedMap)
   const generatingIds = useSprintUI((s) => s.generatingIds)
+  const queueHealth = useSprintEvents((s) => s.queueHealth)
 
+  const loadData = useSprintTasks((s) => s.loadData)
+  const createTask = useSprintTasks((s) => s.createTask)
   const setRepoFilter = useSprintUI((s) => s.setRepoFilter)
   const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
   const setLogDrawerTaskId = useSprintUI((s) => s.setLogDrawerTaskId)
-  const setGeneratingIds = useSprintUI((s) => s.setGeneratingIds)
 
-  // --- Events store state ---
-  const queueHealth = useSprintEvents((s) => s.queueHealth)
-  const initTaskOutputListener = useSprintEvents((s) => s.initTaskOutputListener)
+  // --- Extracted hooks ---
+  const {
+    handleDragEnd,
+    handleReorder,
+    handlePushToSprint,
+    handleViewSpec,
+    handleSaveSpec,
+    handleMarkDone,
+    handleStop,
+    handleRerun,
+    handleUpdateTitle,
+    handleUpdatePriority,
+    launchTask,
+    deleteTask,
+    confirmProps,
+  } = useSprintTaskActions()
 
-  const { confirm, confirmProps } = useConfirm()
+  const { visibleStuckTasks, dismissTask } = useHealthCheck(tasks)
 
   // --- Local UI state ---
   const [backlogSearch, setBacklogSearch] = useState('')
@@ -78,45 +79,11 @@ export function SprintCenter() {
   const logDrawerTask = logDrawerTaskId ? (tasks.find((t) => t.id === logDrawerTaskId) ?? null) : null
 
   // Subscribe to live task output events
+  const initTaskOutputListener = useSprintEvents((s) => s.initTaskOutputListener)
   useEffect(() => {
     const cleanup = initTaskOutputListener()
     return cleanup
   }, [initTaskOutputListener])
-
-  // Bridge custom events from sprintTasks store to sprintUI store
-  useEffect(() => {
-    const handleGenerating = (e: Event) => {
-      const { taskId, generating } = (e as CustomEvent).detail
-      setGeneratingIds((prev) => {
-        if (generating) {
-          if (prev.has(taskId)) return prev
-          return new Set(prev).add(taskId)
-        } else {
-          if (!prev.has(taskId)) return prev
-          const next = new Set(prev)
-          next.delete(taskId)
-          return next
-        }
-      })
-    }
-    const handleSelectTask = (e: Event) => {
-      const { taskId } = (e as CustomEvent).detail
-      setSelectedTaskId(taskId)
-    }
-    const handleTaskDeleted = (e: Event) => {
-      const { taskId } = (e as CustomEvent).detail
-      const current = useSprintUI.getState().selectedTaskId
-      if (current === taskId) setSelectedTaskId(null)
-    }
-    window.addEventListener('sprint:generating', handleGenerating)
-    window.addEventListener('sprint:select-task', handleSelectTask)
-    window.addEventListener('sprint:task-deleted', handleTaskDeleted)
-    return () => {
-      window.removeEventListener('sprint:generating', handleGenerating)
-      window.removeEventListener('sprint:select-task', handleSelectTask)
-      window.removeEventListener('sprint:task-deleted', handleTaskDeleted)
-    }
-  }, [setGeneratingIds, setSelectedTaskId])
 
   // Keep notification hook aware of which task's LogDrawer is open
   useEffect(() => {
@@ -135,150 +102,10 @@ export function SprintCenter() {
   usePrStatusPolling()
   useSprintKeyboardShortcuts({ setModalOpen, setConflictDrawerOpen })
 
-  const handleDragEnd = useCallback(
-    (taskId: string, newStatus: SprintTask['status']) => {
-      const task = tasks.find((t) => t.id === taskId)
-      if (!task || task.status === newStatus) return
-      // Block transitions into In Progress when WIP limit reached
-      if (newStatus === TASK_STATUS.ACTIVE && task.status !== TASK_STATUS.ACTIVE) {
-        const activeCount = tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
-        if (activeCount >= WIP_LIMIT_IN_PROGRESS) {
-          toast.error(`In Progress is full (${WIP_LIMIT_IN_PROGRESS}/${WIP_LIMIT_IN_PROGRESS})`)
-          return
-        }
-      }
-      updateTask(taskId, { status: newStatus })
-    },
-    [tasks, updateTask]
-  )
-
-  // Within-column reorder (optimistic only — no column_order column in DB yet)
-  const setTasks = useSprintTasks((s) => s.setTasks)
-  const handleReorder = useCallback(
-    (_status: SprintTask['status'], orderedIds: string[]) => {
-      const current = useSprintTasks.getState().tasks
-      const idOrder = new Map(orderedIds.map((id, i) => [id, i]))
-      setTasks([...current].sort((a, b) => {
-        const ai = idOrder.get(a.id)
-        const bi = idOrder.get(b.id)
-        if (ai !== undefined && bi !== undefined) return ai - bi
-        return 0
-      }))
-    },
-    [setTasks]
-  )
-
-  const handlePushToSprint = useCallback(
-    (task: SprintTask) => {
-      updateTask(task.id, { status: TASK_STATUS.QUEUED })
-      toast.success('Pushed to Sprint')
-    },
-    [updateTask]
-  )
-
-  const handleViewSpec = useCallback(
-    (task: SprintTask) => setSelectedTaskId(task.id),
-    [setSelectedTaskId]
-  )
-
-  const handleSaveSpec = useCallback(
-    (taskId: string, spec: string) => {
-      updateTask(taskId, { spec })
-    },
-    [updateTask]
-  )
-
-  const handleMarkDone = useCallback(
-    async (task: SprintTask) => {
-      const message = task.pr_url
-        ? 'Mark as done? The open PR will remain open on GitHub.'
-        : 'Mark as done?'
-      const ok = await confirm({ message, confirmLabel: 'Mark Done' })
-      if (!ok) return
-      updateTask(task.id, { status: TASK_STATUS.DONE, completed_at: new Date().toISOString() })
-      toast.success('Marked as done')
-    },
-    [updateTask, confirm]
-  )
-
-  const handleStop = useCallback(
-    async (task: SprintTask) => {
-      if (!task.agent_run_id) return
-      const ok = await confirm({
-        message: 'Stop this agent? The task will be marked cancelled.',
-        confirmLabel: 'Stop Agent',
-        variant: 'danger',
-      })
-      if (!ok) return
-      try {
-        const result = await window.api.killAgent(task.agent_run_id)
-        if (result.ok) {
-          updateTask(task.id, { status: TASK_STATUS.CANCELLED })
-          toast.success('Agent stopped')
-        } else {
-          toast.error(result.error ?? 'Failed to stop agent')
-        }
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to stop agent')
-      }
-    },
-    [updateTask, confirm]
-  )
-
-  const handleRerun = useCallback(
-    async (task: SprintTask) => {
-      try {
-        await window.api.sprint.create({
-          title: task.title,
-          repo: task.repo,
-          prompt: task.prompt || task.title,
-          spec: task.spec || undefined,
-          priority: task.priority,
-          status: TASK_STATUS.QUEUED,
-        })
-        toast.success('Task re-queued as new ticket')
-        loadData()
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to re-queue task')
-      }
-    },
-    [loadData]
-  )
-
-  const handleUpdateTitle = useCallback(
-    (patch: { id: string; title: string }) => {
-      updateTask(patch.id, { title: patch.title })
-    },
-    [updateTask]
-  )
-
   const conflictingTaskIds = usePrConflictsStore((s) => s.conflictingTaskIds)
   const conflictingTasks = useMemo(
     () => tasks.filter((t) => conflictingTaskIds.has(t.id)),
     [tasks, conflictingTaskIds]
-  )
-
-  // Health check — detect stuck active tasks
-  const setStuckTasks = useHealthCheckStore((s) => s.setStuckTasks)
-  const stuckTaskIds = useHealthCheckStore((s) => s.stuckTaskIds)
-  const dismissedIds = useHealthCheckStore((s) => s.dismissedIds)
-  const dismissTask = useHealthCheckStore((s) => s.dismiss)
-
-  const runHealthCheck = useCallback(async () => {
-    try {
-      const stuck = await window.api.sprint.healthCheck()
-      setStuckTasks(stuck.map((t) => t.id))
-    } catch {
-      // silent
-    }
-  }, [setStuckTasks])
-
-  useEffect(() => { runHealthCheck() }, [runHealthCheck])
-  useVisibilityAwareInterval(runHealthCheck, POLL_HEALTH_CHECK_MS)
-
-  const visibleStuckTasks = useMemo(
-    () => tasks.filter((t) => stuckTaskIds.has(t.id) && !dismissedIds.has(t.id)),
-    [tasks, stuckTaskIds, dismissedIds]
   )
 
   const filteredTasks = repoFilter
@@ -292,13 +119,6 @@ export function SprintCenter() {
     const q = backlogSearch.trim().toLowerCase()
     return partition.backlog.filter((t) => t.title.toLowerCase().includes(q))
   }, [partition.backlog, backlogSearch])
-
-  const handleUpdatePriority = useCallback(
-    (patch: { id: string; priority: number }) => {
-      updateTask(patch.id, { priority: patch.priority })
-    },
-    [updateTask]
-  )
 
   return (
     <div className="sprint-center">
@@ -395,7 +215,7 @@ export function SprintCenter() {
               awaitingReviewTasks={partition.awaitingReview}
               prMergedMap={prMergedMap}
               generatingIds={generatingIds}
-              onDragEnd={handleDragEnd}
+              onDragEnd={(taskId, newStatus) => handleDragEnd(taskId, newStatus, tasks)}
               onReorder={handleReorder}
               onPushToSprint={handlePushToSprint}
               onLaunch={launchTask}
