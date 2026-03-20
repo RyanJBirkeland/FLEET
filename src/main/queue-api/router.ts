@@ -19,6 +19,8 @@ import {
 } from '../../shared/queue-api-contract'
 import type { TaskOutputEvent } from '../../shared/queue-api-contract'
 import { appendEvents } from './event-store'
+import { getEventBus } from '../agents/event-bus'
+import type { AgentEvent } from '../agents/types'
 import { getConfiguredRepos } from '../paths'
 import type { SprintTask } from '../../shared/types'
 
@@ -296,9 +298,19 @@ export async function handleRequest(
 
       appendEvents(id, events)
 
-      // Broadcast to all renderer windows
+      // Broadcast to all renderer windows (legacy path)
       for (const win of BrowserWindow.getAllWindows()) {
         win.webContents.send('task:output', { taskId: id, events })
+      }
+
+      // Also emit through the unified event bus (Phase 2)
+      const bus = getEventBus()
+      for (const ev of events) {
+        const agentEvent = {
+          ...ev,
+          timestamp: new Date(ev.timestamp).getTime(),
+        } as unknown as AgentEvent
+        bus.emit('agent:event', id, agentEvent)
       }
 
       jsonResponse(res, 200, { received: events.length })

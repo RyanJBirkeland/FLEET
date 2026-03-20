@@ -271,7 +271,8 @@ export const useSprintStore = create<SprintState>((set, get) => ({
   setTasks: (tasks): void => set({ tasks }),
 
   initTaskOutputListener: (): (() => void) => {
-    const cleanup = window.api.onTaskOutput(({ taskId, events }) => {
+    // Legacy path: task:output events from queue API
+    const cleanupLegacy = window.api.onTaskOutput(({ taskId, events }) => {
       set((s) => {
         const existing = s.taskEvents[taskId] ?? []
         const updated = [...existing, ...events]
@@ -282,7 +283,25 @@ export const useSprintStore = create<SprintState>((set, get) => ({
         }
       })
     })
-    return cleanup
+
+    // Phase 2 dual-write: agent:event stream populates legacy fields
+    const cleanupAgent = window.api.agentEvents?.onEvent(({ agentId, event }) => {
+      set((s) => ({
+        taskEvents: {
+          ...s.taskEvents,
+          [agentId]: [...(s.taskEvents[agentId] ?? []), event as never],
+        },
+        latestEvents: {
+          ...s.latestEvents,
+          [agentId]: event as never,
+        },
+      }))
+    })
+
+    return () => {
+      cleanupLegacy()
+      cleanupAgent?.()
+    }
   },
 
   clearTaskEvents: (taskId): void => {
