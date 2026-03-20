@@ -3,6 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
 import type { TaskOutputEvent } from '../shared/queue-api-contract'
+import type { AgentEvent } from '../main/agents/types'
 
 // Prevent MaxListenersExceededWarning during HMR dev cycles
 ipcRenderer.setMaxListeners(25)
@@ -195,6 +196,19 @@ const api = {
   // Task events — fetch current event history
   task: {
     getEvents: (taskId: string) => typedInvoke('task:getEvents', taskId),
+  },
+
+  // Agent event streaming (Phase 2)
+  agentEvents: {
+    onEvent: (
+      callback: (payload: { agentId: string; event: AgentEvent }) => void
+    ): (() => void) => {
+      const handler = (_e: IpcRendererEvent, payload: { agentId: string; event: AgentEvent }): void =>
+        callback(payload)
+      ipcRenderer.on('agent:event', handler)
+      return () => ipcRenderer.removeListener('agent:event', handler)
+    },
+    getHistory: (agentId: string) => typedInvoke('agent:history', agentId),
   },
 
   // Sprint SSE real-time events

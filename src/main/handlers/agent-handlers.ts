@@ -18,6 +18,7 @@ import {
   pruneOldAgents
 } from '../agent-history'
 import type { AgentMeta } from '../agent-history'
+import { getHistory } from '../agents/event-store'
 import {
   getAgentBinary,
   getAgentPermissionMode,
@@ -45,6 +46,9 @@ export function registerAgentHandlers(): void {
   )
   safeHandle('agent:kill', (_e, agentId: string) =>
     killAgent(agentId)
+  )
+  safeHandle('agent:history', (_e, agentId: string) =>
+    getHistory(agentId)
   )
   cleanupOldLogs()
 

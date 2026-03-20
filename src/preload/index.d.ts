@@ -2,6 +2,7 @@ import { ElectronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
 import type { TaskOutputEvent } from '../shared/queue-api-contract'
+import type { AgentEvent } from '../main/agents/types'
 
 export type { AgentMeta, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask }
 
@@ -52,6 +53,12 @@ declare global {
       killLocalAgent: (...args: IpcArgs<'agent:killLocal'>) => Promise<IpcResult<'agent:killLocal'>>
       killAgent: (...args: IpcArgs<'agent:kill'>) => Promise<IpcResult<'agent:kill'>>
       tailAgentLog: (...args: IpcArgs<'local:tailAgentLog'>) => Promise<IpcResult<'local:tailAgentLog'>>
+
+      // Agent event streaming (Phase 2)
+      agentEvents: {
+        onEvent: (callback: (payload: { agentId: string; event: AgentEvent }) => void) => () => void
+        getHistory: (agentId: string) => Promise<AgentEvent[]>
+      }
 
       // Git client
       gitStatus: (...args: IpcArgs<'git:status'>) => Promise<IpcResult<'git:status'>>
