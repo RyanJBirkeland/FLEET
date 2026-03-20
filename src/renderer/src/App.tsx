@@ -16,7 +16,6 @@ import { useAgentHistoryStore } from './stores/agentHistory'
 import { useTaskNotifications } from './hooks/useTaskNotifications'
 import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
-// SessionsView kept but no longer mounted — removed in Task 22
 import { AgentsView } from './views/AgentsView'
 import { TerminalView } from './views/TerminalView'    // always-mounted
 
