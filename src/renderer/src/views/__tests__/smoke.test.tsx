@@ -123,9 +123,6 @@ vi.mock('../../components/sessions/SessionList', () => ({
   SessionList: () => <div data-testid="session-list" />,
 }))
 
-vi.mock('../../components/sessions/ChatThread', () => ({
-  ChatThread: () => <div data-testid="chat-thread" />,
-}))
 
 vi.mock('../../components/sessions/MessageInput', () => ({
   MessageInput: () => <div data-testid="message-input" />,
