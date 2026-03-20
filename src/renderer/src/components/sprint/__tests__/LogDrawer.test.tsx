@@ -119,19 +119,19 @@ describe('LogDrawer', () => {
     expect(onClose).toHaveBeenCalled()
   })
 
-  it('Open in Sessions button dispatches bde:navigate event', async () => {
+  it('Open in Agents button dispatches bde:navigate event', async () => {
     const user = userEvent.setup()
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
 
     const task = makeTask({ agent_run_id: 'session-abc' })
     render(<LogDrawer task={task} onClose={onClose} />)
 
-    await user.click(screen.getByRole('button', { name: 'Open in Sessions' }))
+    await user.click(screen.getByRole('button', { name: 'Open in Agents' }))
 
     expect(dispatchSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         type: 'bde:navigate',
-        detail: { view: 'sessions', sessionId: 'session-abc' },
+        detail: { view: 'agents', sessionId: 'session-abc' },
       })
     )
     expect(onClose).toHaveBeenCalled()

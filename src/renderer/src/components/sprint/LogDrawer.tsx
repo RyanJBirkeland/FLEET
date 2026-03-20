@@ -193,11 +193,11 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     [handleSteerSend]
   )
 
-  const handleOpenInSessions = useCallback(() => {
+  const handleOpenInAgents = useCallback(() => {
     if (!task?.agent_run_id) return
     window.dispatchEvent(
       new CustomEvent('bde:navigate', {
-        detail: { view: 'sessions', sessionId: task.agent_run_id },
+        detail: { view: 'agents', sessionId: task.agent_run_id },
       })
     )
     onClose()
@@ -280,8 +280,8 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
             <RefreshCw size={14} /> Re-run
           </Button>
         )}
-        <Button variant="ghost" size="sm" onClick={handleOpenInSessions}>
-          Open in Sessions
+        <Button variant="ghost" size="sm" onClick={handleOpenInAgents}>
+          Open in Agents
         </Button>
         <Button variant="ghost" size="sm" onClick={handleCopyLog} title="Copy log to clipboard">
           <Copy size={14} /> Copy Log
