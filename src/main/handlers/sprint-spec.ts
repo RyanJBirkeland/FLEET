@@ -7,7 +7,6 @@ import { readFile } from 'fs/promises'
 import { resolve } from 'path'
 import { getGatewayConfig } from '../config'
 import { getSpecsRoot } from '../paths'
-import { updateTask } from './sprint-local'
 
 // --- Types ---
 
@@ -133,9 +132,6 @@ export async function generatePrompt(
     }
     const text = data.result?.content?.[0]?.text ?? ''
     if (!text) return fallback
-
-    // Persist generated spec — use updateTask() to notify SSE subscribers
-    updateTask(taskId, { spec: text, prompt: text })
 
     return { taskId, spec: text, prompt: text }
   } catch {

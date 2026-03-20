@@ -13,41 +13,49 @@ import {
   Flag,
 } from 'lucide-react'
 import { tokens } from '../../design-system/tokens'
-import type { TaskOutputEvent } from '../../../../shared/queue-api-contract'
+import type { AnyTaskEvent } from '../../stores/sprintEvents'
+import type {
+  AgentStartedEvent,
+  AgentToolCallEvent,
+  AgentToolResultEvent,
+  AgentThinkingEvent,
+  AgentErrorEvent,
+  AgentCompletedEvent,
+} from '../../../../shared/queue-api-contract'
 
 type Props = {
-  event: TaskOutputEvent | null
+  event: AnyTaskEvent | null
 }
 
-function getIconAndText(event: TaskOutputEvent): { icon: React.ReactNode; text: string } {
+function getIconAndText(event: AnyTaskEvent): { icon: React.ReactNode; text: string } {
   switch (event.type) {
     case 'agent:started': {
-      const e = event as TaskOutputEvent & { model: string }
+      const e = event as AgentStartedEvent
       return { icon: <Play size={12} />, text: `Agent started (${e.model})` }
     }
     case 'agent:tool_call': {
-      const e = event as TaskOutputEvent & { summary: string }
+      const e = event as AgentToolCallEvent
       return { icon: <Wrench size={12} />, text: e.summary }
     }
     case 'agent:tool_result': {
-      const e = event as TaskOutputEvent & { success: boolean; summary: string }
+      const e = event as AgentToolResultEvent
       return {
         icon: e.success ? <Check size={12} /> : <X size={12} />,
         text: e.summary,
       }
     }
     case 'agent:thinking': {
-      const e = event as TaskOutputEvent & { tokenCount: number }
+      const e = event as AgentThinkingEvent
       return { icon: <Brain size={12} />, text: `${e.tokenCount} tokens` }
     }
     case 'agent:rate_limited':
       return { icon: <Clock size={12} />, text: 'Rate limited, retrying...' }
     case 'agent:error': {
-      const e = event as TaskOutputEvent & { message: string }
+      const e = event as AgentErrorEvent
       return { icon: <AlertTriangle size={12} />, text: e.message }
     }
     case 'agent:completed': {
-      const e = event as TaskOutputEvent & { exitCode: number }
+      const e = event as AgentCompletedEvent
       return { icon: <Flag size={12} />, text: `Completed (exit ${e.exitCode})` }
     }
     default:

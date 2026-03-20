@@ -1,5 +1,9 @@
 import { create } from 'zustand'
 import type { TaskOutputEvent } from '../../../shared/queue-api-contract'
+import type { AgentEvent } from '../../../main/agents/types'
+
+/** Union of both event sources during dual-write migration. */
+export type AnyTaskEvent = TaskOutputEvent | AgentEvent
 
 export interface QueueHealth {
   queue: Record<string, number>
@@ -9,8 +13,8 @@ export interface QueueHealth {
 
 interface SprintEventsState {
   // --- State ---
-  taskEvents: Record<string, TaskOutputEvent[]>
-  latestEvents: Record<string, TaskOutputEvent>
+  taskEvents: Record<string, AnyTaskEvent[]>
+  latestEvents: Record<string, AnyTaskEvent>
   queueHealth: QueueHealth | null
 
   // --- Actions ---
@@ -43,11 +47,11 @@ export const useSprintEvents = create<SprintEventsState>((set) => ({
       set((s) => ({
         taskEvents: {
           ...s.taskEvents,
-          [agentId]: [...(s.taskEvents[agentId] ?? []), event as never],
+          [agentId]: [...(s.taskEvents[agentId] ?? []), event],
         },
         latestEvents: {
           ...s.latestEvents,
-          [agentId]: event as never,
+          [agentId]: event,
         },
       }))
     })

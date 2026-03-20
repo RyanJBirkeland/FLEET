@@ -1,22 +1,85 @@
-/**
- * useSprintTaskActions — task lifecycle callbacks extracted from SprintCenter.
- * Handles mark-done, stop, rerun, and delete with confirmation dialogs.
- */
 import { useCallback } from 'react'
 import { useSprintTasks } from '../stores/sprintTasks'
+import { useSprintUI } from '../stores/sprintUI'
 import { useConfirm } from '../components/ui/ConfirmModal'
 import { toast } from '../stores/toasts'
 import { TASK_STATUS } from '../../../shared/constants'
+import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 import type { SprintTask } from '../../../shared/types'
 
+/**
+ * useSprintTaskActions — all task mutation callbacks for SprintCenter.
+ * Owns the confirm modal state so callers just spread `confirmProps` onto <ConfirmModal />.
+ */
 export function useSprintTaskActions() {
   const updateTask = useSprintTasks((s) => s.updateTask)
   const deleteTask = useSprintTasks((s) => s.deleteTask)
   const launchTask = useSprintTasks((s) => s.launchTask)
   const loadData = useSprintTasks((s) => s.loadData)
+  const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
+  const setTasks = useSprintTasks((s) => s.setTasks)
 
   const { confirm, confirmProps } = useConfirm()
 
+  // --- Drag-and-drop status change (needs current tasks for WIP check) ---
+  const handleDragEnd = useCallback(
+    (taskId: string, newStatus: SprintTask['status'], tasks: SprintTask[]) => {
+      const task = tasks.find((t) => t.id === taskId)
+      if (!task || task.status === newStatus) return
+      // Block transitions into In Progress when WIP limit reached
+      if (newStatus === TASK_STATUS.ACTIVE && task.status !== TASK_STATUS.ACTIVE) {
+        const activeCount = tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
+        if (activeCount >= WIP_LIMIT_IN_PROGRESS) {
+          toast.error(`In Progress is full (${WIP_LIMIT_IN_PROGRESS}/${WIP_LIMIT_IN_PROGRESS})`)
+          return
+        }
+      }
+      updateTask(taskId, { status: newStatus })
+    },
+    [updateTask]
+  )
+
+  // --- Within-column reorder (optimistic only — no column_order column in DB yet) ---
+  const handleReorder = useCallback(
+    (_status: SprintTask['status'], orderedIds: string[]) => {
+      const current = useSprintTasks.getState().tasks
+      const idOrder = new Map(orderedIds.map((id, i) => [id, i]))
+      setTasks(
+        [...current].sort((a, b) => {
+          const ai = idOrder.get(a.id)
+          const bi = idOrder.get(b.id)
+          if (ai !== undefined && bi !== undefined) return ai - bi
+          return 0
+        })
+      )
+    },
+    [setTasks]
+  )
+
+  // --- Push backlog task to sprint queue ---
+  const handlePushToSprint = useCallback(
+    (task: SprintTask) => {
+      updateTask(task.id, { status: TASK_STATUS.QUEUED })
+      toast.success('Pushed to Sprint')
+    },
+    [updateTask]
+  )
+
+  // --- Open spec drawer ---
+  const handleViewSpec = useCallback(
+    (task: SprintTask) => setSelectedTaskId(task.id),
+    [setSelectedTaskId]
+  )
+
+  // --- Save spec from drawer ---
+  const handleSaveSpec = useCallback(
+    (taskId: string, spec: string) => {
+      updateTask(taskId, { spec })
+    },
+    [updateTask]
+  )
+
+  // --- Mark task done (with confirm) ---
   const handleMarkDone = useCallback(
     async (task: SprintTask) => {
       const message = task.pr_url
@@ -30,6 +93,7 @@ export function useSprintTaskActions() {
     [updateTask, confirm]
   )
 
+  // --- Stop running agent (with confirm) ---
   const handleStop = useCallback(
     async (task: SprintTask) => {
       if (!task.agent_run_id) return
@@ -54,6 +118,7 @@ export function useSprintTaskActions() {
     [updateTask, confirm]
   )
 
+  // --- Re-queue a done/failed task as new ticket ---
   const handleRerun = useCallback(
     async (task: SprintTask) => {
       try {
@@ -74,25 +139,35 @@ export function useSprintTaskActions() {
     [loadData]
   )
 
-  const handleDelete = useCallback(
-    async (taskId: string) => {
-      const ok = await confirm({
-        message: 'Delete this task? This cannot be undone.',
-        confirmLabel: 'Delete',
-        variant: 'danger',
-      })
-      if (!ok) return
-      deleteTask(taskId)
+  // --- Inline title edit ---
+  const handleUpdateTitle = useCallback(
+    (patch: { id: string; title: string }) => {
+      updateTask(patch.id, { title: patch.title })
     },
-    [deleteTask, confirm]
+    [updateTask]
+  )
+
+  // --- Inline priority edit ---
+  const handleUpdatePriority = useCallback(
+    (patch: { id: string; priority: number }) => {
+      updateTask(patch.id, { priority: patch.priority })
+    },
+    [updateTask]
   )
 
   return {
+    handleDragEnd,
+    handleReorder,
+    handlePushToSprint,
+    handleViewSpec,
+    handleSaveSpec,
     handleMarkDone,
     handleStop,
     handleRerun,
-    handleDelete,
-    handleLaunch: launchTask,
+    handleUpdateTitle,
+    handleUpdatePriority,
+    launchTask,
+    deleteTask,
     confirmProps,
   }
 }
