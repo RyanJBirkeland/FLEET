@@ -5,13 +5,12 @@
  * theme switching, accent color presets, agent runtime config, and about info.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { Eye, EyeOff, ExternalLink, Trash2, Plus, FolderOpen } from 'lucide-react'
+import { Eye, EyeOff, ExternalLink, Trash2, Plus, FolderOpen, RotateCcw } from 'lucide-react'
 import { useGatewayStore } from '../stores/gateway'
 import { useThemeStore } from '../stores/theme'
 import { toast } from '../stores/toasts'
 import { Button } from '../components/ui/Button'
 import { Badge } from '../components/ui/Badge'
-import { DEFAULT_TASK_TEMPLATES } from '../../../shared/constants'
 import type { TaskTemplate } from '../../../shared/types'
 
 /* intentional: literal color values for accent color picker swatches */
@@ -243,51 +242,54 @@ function TaskTemplatesSection(): React.JSX.Element {
   const [loaded, setLoaded] = useState(false)
 
   useEffect(() => {
-    window.api.settings.getJson('task.templates').then((raw) => {
-      if (Array.isArray(raw)) {
-        setTemplates(raw as TaskTemplate[])
-      } else {
-        const defaults = DEFAULT_TASK_TEMPLATES.map((t) => ({ ...t }))
-        setTemplates(defaults)
-        window.api.settings.setJson('task.templates', defaults)
-      }
+    window.api.templates.list().then((list) => {
+      setTemplates(list)
       setLoaded(true)
     })
   }, [])
 
-  const saveTemplates = useCallback(async (updated: TaskTemplate[]) => {
-    await window.api.settings.setJson('task.templates', updated)
-    setTemplates(updated)
+  const saveTemplate = useCallback(async (template: TaskTemplate) => {
+    await window.api.templates.save(template)
+    const list = await window.api.templates.list()
+    setTemplates(list)
   }, [])
 
   const handleNameChange = useCallback(
     (index: number, name: string) => {
-      const updated = templates.map((t, i) => (i === index ? { ...t, name } : t))
-      saveTemplates(updated)
+      const t = templates[index]
+      saveTemplate({ ...t, name })
     },
-    [templates, saveTemplates]
+    [templates, saveTemplate]
   )
 
   const handlePrefixChange = useCallback(
     (index: number, promptPrefix: string) => {
-      const updated = templates.map((t, i) => (i === index ? { ...t, promptPrefix } : t))
-      saveTemplates(updated)
+      const t = templates[index]
+      saveTemplate({ ...t, promptPrefix })
     },
-    [templates, saveTemplates]
+    [templates, saveTemplate]
   )
 
-  const handleAdd = useCallback(() => {
-    const updated = [...templates, { name: '', promptPrefix: '' }]
-    saveTemplates(updated)
-  }, [templates, saveTemplates])
+  const handleAdd = useCallback(async () => {
+    await window.api.templates.save({ name: '', promptPrefix: '' })
+    const list = await window.api.templates.list()
+    setTemplates(list)
+  }, [])
 
   const handleRemove = useCallback(
-    (index: number) => {
-      const updated = templates.filter((_, i) => i !== index)
-      saveTemplates(updated)
-      toast.success('Template removed')
+    async (index: number) => {
+      const t = templates[index]
+      if (t.isBuiltIn) {
+        await window.api.templates.reset(t.name)
+        toast.success('Template reset to default')
+      } else {
+        await window.api.templates.delete(t.name)
+        toast.success('Template removed')
+      }
+      const list = await window.api.templates.list()
+      setTemplates(list)
     },
-    [templates, saveTemplates]
+    [templates]
   )
 
   if (!loaded) return <section className="settings-section" />
@@ -303,16 +305,20 @@ function TaskTemplatesSection(): React.JSX.Element {
                 className="settings-field__input"
                 placeholder="Template name"
                 value={t.name}
+                disabled={!!t.isBuiltIn}
                 onChange={(e) => handleNameChange(i, e.target.value)}
               />
+              {t.isBuiltIn && (
+                <span style={{ fontSize: '11px', padding: '2px 6px', borderRadius: '9999px', background: 'rgba(59, 130, 246, 0.15)', color: '#3B82F6' }}>Built-in</span>
+              )}
               <Button
                 variant="icon"
                 size="sm"
                 onClick={() => handleRemove(i)}
-                title="Remove template"
+                title={t.isBuiltIn ? 'Reset to default' : 'Remove template'}
                 type="button"
               >
-                <Trash2 size={14} />
+                {t.isBuiltIn ? <RotateCcw size={14} /> : <Trash2 size={14} />}
               </Button>
             </div>
             <textarea

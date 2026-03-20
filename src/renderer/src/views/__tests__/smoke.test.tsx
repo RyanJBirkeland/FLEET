@@ -207,6 +207,12 @@ Object.defineProperty(window, 'api', {
       getEvents: vi.fn().mockResolvedValue([]),
     },
     onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
+    templates: {
+      list: vi.fn().mockResolvedValue([]),
+      save: vi.fn().mockResolvedValue(undefined),
+      delete: vi.fn().mockResolvedValue(undefined),
+      reset: vi.fn().mockResolvedValue(undefined),
+    },
   },
   writable: true,
   configurable: true,
