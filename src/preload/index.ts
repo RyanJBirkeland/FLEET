@@ -3,6 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
 import type { TaskOutputEvent } from '../shared/queue-api-contract'
+import type { AgentEvent } from '../main/agents/types'
 
 // Prevent MaxListenersExceededWarning during HMR dev cycles
 ipcRenderer.setMaxListeners(25)
@@ -197,11 +198,32 @@ const api = {
     getEvents: (taskId: string) => typedInvoke('task:getEvents', taskId),
   },
 
+  // Agent event streaming (Phase 2)
+  agentEvents: {
+    onEvent: (
+      callback: (payload: { agentId: string; event: AgentEvent }) => void
+    ): (() => void) => {
+      const handler = (_e: IpcRendererEvent, payload: { agentId: string; event: AgentEvent }): void =>
+        callback(payload)
+      ipcRenderer.on('agent:event', handler)
+      return () => ipcRenderer.removeListener('agent:event', handler)
+    },
+    getHistory: (agentId: string) => typedInvoke('agent:history', agentId),
+  },
+
   // Sprint SSE real-time events
   onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void): (() => void) => {
     const listener = (_e: unknown, ev: { type: string; data: unknown }): void => cb(ev)
     ipcRenderer.on('sprint:sseEvent', listener)
     return () => ipcRenderer.removeListener('sprint:sseEvent', listener)
+  },
+
+  // Template CRUD (Phase 2)
+  templates: {
+    list: () => typedInvoke('templates:list'),
+    save: (template: import('../shared/types').TaskTemplate) => typedInvoke('templates:save', template),
+    delete: (name: string) => typedInvoke('templates:delete', name),
+    reset: (name: string) => typedInvoke('templates:reset', name),
   },
 
   // Terminal PTY

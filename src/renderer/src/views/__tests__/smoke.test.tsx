@@ -33,7 +33,7 @@ vi.mock('../../stores/sessions', () => ({
 
 vi.mock('../../stores/ui', () => ({
   useUIStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ activeView: 'sessions', setView: vi.fn() })
+    selector({ activeView: 'agents', setView: vi.fn() })
   ),
 }))
 
@@ -55,6 +55,18 @@ vi.mock('../../stores/unifiedAgents', () => ({
       steer: vi.fn().mockResolvedValue(undefined),
       kill: vi.fn().mockResolvedValue(undefined),
     })
+  ),
+}))
+
+vi.mock('../../stores/agentHistory', () => ({
+  useAgentHistoryStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
+    selector({ agents: [], selectedId: null, fetchAgents: vi.fn().mockResolvedValue(undefined), selectAgent: vi.fn() })
+  ),
+}))
+
+vi.mock('../../stores/agentEvents', () => ({
+  useAgentEventsStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
+    selector({ events: {}, init: vi.fn().mockReturnValue(() => {}), loadHistory: vi.fn().mockResolvedValue(undefined), clear: vi.fn() })
   ),
 }))
 
@@ -205,7 +217,7 @@ Object.defineProperty(window, 'api', {
 
 // ---------- Imports ----------
 
-import { SessionsView } from '../SessionsView'
+import { AgentsView } from '../AgentsView'
 import SprintView from '../SprintView'
 import MemoryView from '../MemoryView'
 import CostView from '../CostView'
@@ -215,8 +227,8 @@ import { TerminalView } from '../TerminalView'
 // ---------- Tests ----------
 
 describe('View smoke tests', () => {
-  it('SessionsView renders without crashing', () => {
-    const { container } = render(<SessionsView />)
+  it('AgentsView renders without crashing', () => {
+    const { container } = render(<AgentsView />)
     expect(container.firstChild).toBeInTheDocument()
     expect(container.innerHTML).not.toBe('')
   })

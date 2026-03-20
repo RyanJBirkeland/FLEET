@@ -73,7 +73,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
 
   const commands = useMemo<Command[]>(() => {
     const navCommands: { view: View; label: string; hint: string }[] = [
-      { view: 'sessions', label: 'Go to Sessions', hint: '\u23181' },
+      { view: 'agents', label: 'Go to Agents', hint: '\u23181' },
       { view: 'terminal', label: 'Go to Terminal', hint: '\u23182' },
       { view: 'sprint', label: 'Go to Sprint', hint: '\u23183' },
       { view: 'pr-station', label: 'Go to PR Station', hint: '\u23184' },
@@ -100,7 +100,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
         category: 'action',
         hint: 'Open spawn modal',
         action: () => {
-          setView('sessions')
+          setView('agents')
           onClose()
           // Trigger spawn modal after navigation renders
           requestAnimationFrame(() => {
@@ -141,7 +141,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
         category: 'session',
         hint: `${agent.model} ${timeAgo(agent.startedAt)}`,
         action: () => {
-          setView('sessions')
+          setView('agents')
           selectAgent(agent.id)
           onClose()
         }

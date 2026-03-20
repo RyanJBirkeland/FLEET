@@ -16,7 +16,7 @@ import { useAgentHistoryStore } from './stores/agentHistory'
 import { useTaskNotifications } from './hooks/useTaskNotifications'
 import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
 import { ErrorBoundary } from './components/ui/ErrorBoundary'
-import { SessionsView } from './views/SessionsView'   // always-mounted
+import { AgentsView } from './views/AgentsView'
 import { TerminalView } from './views/TerminalView'    // always-mounted
 
 const SprintView = lazy(() => import('./views/SprintView'))
@@ -28,7 +28,7 @@ import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/m
 import { DEFAULT_MODEL } from '../../shared/models'
 
 const VIEW_ORDER: View[] = [
-  'sessions',
+  'agents',
   'terminal',
   'sprint',
   'pr-station',
@@ -38,7 +38,7 @@ const VIEW_ORDER: View[] = [
 ]
 
 const VIEW_TITLES: Record<View, string> = {
-  sessions: 'Sessions',
+  agents: 'Agents',
   terminal: 'Terminal',
   sprint: 'Planning',
   'pr-station': 'PR Station',
@@ -87,12 +87,12 @@ function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
 
   return (
     <>
-      {/* Terminal and Sessions stay mounted so PTY sessions and chat state survive navigation */}
+      {/* Terminal and Agents stay mounted so PTY sessions and agent state survive navigation */}
       <div className="view-enter" style={{ display: activeView === 'terminal' ? 'flex' : 'none' }}>
         <ErrorBoundary name="Terminal"><TerminalView /></ErrorBoundary>
       </div>
-      <div className="view-enter" style={{ display: activeView === 'sessions' ? 'flex' : 'none' }}>
-        <ErrorBoundary name="Sessions"><SessionsView /></ErrorBoundary>
+      <div className="view-enter" style={{ display: activeView === 'agents' ? 'flex' : 'none' }}>
+        <ErrorBoundary name="Agents"><AgentsView /></ErrorBoundary>
       </div>
       {/* On-demand views animate in/out */}
       <AnimatePresence mode="popLayout">
@@ -112,7 +112,7 @@ function ViewRouter({ activeView }: { activeView: View }): React.JSX.Element {
           </motion.div>
         )}
       </AnimatePresence>
-      {!['terminal','sessions','sprint','pr-station','memory','cost','settings'].includes(activeView) && (
+      {!['terminal','agents','sprint','pr-station','memory','cost','settings'].includes(activeView) && (
         <div className="view-router">
           <span className="view-router__placeholder">{String(activeView)} — coming soon</span>
         </div>
@@ -209,8 +209,8 @@ function App(): React.JSX.Element {
   useEffect(() => {
     const handler = (e: CustomEvent): void => {
       const { view, sessionId } = e.detail
-      if (view === 'sessions') {
-        setView('sessions')
+      if (view === 'sessions' || view === 'agents') {
+        setView('agents')
         if (sessionId) {
           useAgentHistoryStore.getState().selectAgent(sessionId)
         }

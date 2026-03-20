@@ -14,6 +14,7 @@ import { registerSprintLocalHandlers } from './handlers/sprint-local'
 import { registerCostHandlers } from './handlers/cost-handlers'
 import { registerQueueHandlers } from './handlers/queue-handlers'
 import { registerFsHandlers } from './fs'
+import { registerTemplateHandlers } from './handlers/template-handlers'
 import { getDb, closeDb } from './db'
 import { migrateFromOpenClawConfig } from './settings'
 import { startSprintSseClient, stopSprintSseClient } from './sprint-sse'
@@ -21,6 +22,8 @@ import { startPrPoller, stopPrPoller } from './pr-poller'
 import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
 import { getGatewayConfig } from './config'
 import { startQueueApi, stopQueueApi } from './queue-api/server'
+import { pruneOldEvents } from './agents/event-store'
+import { getEventRetentionDays } from './config'
 
 const DEBOUNCE_MS = 500
 
@@ -128,6 +131,8 @@ app.whenReady().then(() => {
   startQueueApi()
   app.on('will-quit', stopQueueApi)
 
+  pruneOldEvents(getEventRetentionDays())
+
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
@@ -141,6 +146,7 @@ app.whenReady().then(() => {
   registerSprintLocalHandlers()
   registerCostHandlers()
   registerQueueHandlers()
+  registerTemplateHandlers()
   registerFsHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

@@ -1,5 +1,7 @@
 import { broadcast } from './broadcast'
 import { getTaskRunnerConfig } from './config'
+import { getEventBus } from './agents/event-bus'
+import type { AgentEvent } from './agents/types'
 
 const RECONNECT_BASE_MS = 1000
 const RECONNECT_MAX_MS = 30_000
@@ -122,6 +124,22 @@ export function parseSSE(buffer: string): {
 
 function notifyRenderer(event: { type: string; data: unknown }): void {
   broadcast('sprint:sseEvent', event)
+
+  // Route agent-level events through the unified event bus
+  if (event.type.startsWith('agent:') && event.data && typeof event.data === 'object') {
+    const d = event.data as Record<string, unknown>
+    const agentId = (d.taskId ?? d.agentId ?? '') as string
+    if (agentId) {
+      const agentEvent: AgentEvent = {
+        ...d,
+        type: event.type,
+        timestamp: typeof d.timestamp === 'string'
+          ? new Date(d.timestamp as string).getTime()
+          : typeof d.timestamp === 'number' ? d.timestamp : Date.now(),
+      } as AgentEvent
+      getEventBus().emit('agent:event', agentId, agentEvent)
+    }
+  }
 }
 
 /**

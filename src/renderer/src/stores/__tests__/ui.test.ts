@@ -3,11 +3,11 @@ import { useUIStore } from '../ui'
 
 describe('ui store', () => {
   beforeEach(() => {
-    useUIStore.setState({ activeView: 'sessions' })
+    useUIStore.setState({ activeView: 'agents' })
   })
 
   it('initial state has activeView sessions', () => {
-    expect(useUIStore.getState().activeView).toBe('sessions')
+    expect(useUIStore.getState().activeView).toBe('agents')
   })
 
   it('setView updates activeView', () => {
@@ -16,7 +16,7 @@ describe('ui store', () => {
   })
 
   it('setView to each valid view works', () => {
-    const views = ['sessions', 'terminal', 'sprint', 'pr-station', 'memory', 'cost', 'settings'] as const
+    const views = ['agents', 'terminal', 'sprint', 'pr-station', 'memory', 'cost', 'settings'] as const
     for (const v of views) {
       useUIStore.getState().setView(v)
       expect(useUIStore.getState().activeView).toBe(v)
