@@ -76,7 +76,8 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Agent spawning**: `src/main/local-agents.ts` delegates to `src/main/agents/` provider factory (SDK or CLI). Event bus persists `AgentEvent` stream to SQLite and broadcasts via IPC.
 - **DB sync**: File watcher on `bde.db` pushes `sprint:external-change` IPC events to renderer (500ms debounce)
 - **Design tokens**: `src/renderer/src/design-system/tokens.ts` — use these instead of hardcoded values
-- **Views**: 7 views in `src/renderer/src/views/` — Agents, Terminal, Sprint, PR Station, Memory, Cost, Settings
+- **Panel system**: `src/renderer/src/stores/panelLayout.ts` — recursive PanelNode tree (leaf/split), `src/renderer/src/components/panels/` — PanelRenderer, PanelLeaf, PanelTabBar, PanelDropOverlay. Layout persists to `panel.layout` setting. Views rendered inside panels; drag-and-drop docking with 5-zone hit testing.
+- **Views**: 7 views in `src/renderer/src/views/` — Agents, Terminal, Sprint, PR Station, Memory, Cost, Settings. Rendered inside panels (no longer single-view-at-a-time).
 - **Full architecture**: See `docs/architecture.md`
 
 ## Gotchas
