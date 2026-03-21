@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { TaskOutputEvent } from '../../../shared/queue-api-contract'
+import type { TaskOutputEvent, RecentHealth } from '../../../shared/queue-api-contract'
 import type { AgentEvent } from '../../../main/agents/types'
 
 /** Union of both event sources during dual-write migration. */
@@ -9,6 +9,7 @@ export interface QueueHealth {
   queue: Record<string, number>
   doneToday: number
   connectedRunners: number
+  recentHealth: RecentHealth | null
 }
 
 interface SprintEventsState {
