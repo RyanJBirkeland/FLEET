@@ -8,6 +8,7 @@ import { TitleBar } from './components/layout/TitleBar'
 import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
 import { ToastContainer } from './components/layout/ToastContainer'
+import { Onboarding } from './components/Onboarding'
 import { Button } from './components/ui/Button'
 import { Kbd } from './components/ui/Kbd'
 import { useAgentHistoryStore } from './stores/agentHistory'
@@ -110,6 +111,8 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Eleme
 }
 
 function App(): React.JSX.Element {
+  const [ready, setReady] = useState(false)
+
   const activeView = useUIStore((s) => s.activeView)
   const setView = useUIStore((s) => s.setView)
   const root = usePanelLayoutStore((s) => s.root)
@@ -234,6 +237,10 @@ function App(): React.JSX.Element {
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
+
+  if (!ready) {
+    return <Onboarding onReady={() => setReady(true)} />
+  }
 
   return (
     <div className="app-shell elevation-0">

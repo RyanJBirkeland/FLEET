@@ -139,6 +139,9 @@ declare global {
         getEvents: (taskId: string) => Promise<IpcResult<'task:getEvents'>>
       }
 
+      // Auth status
+      authStatus: () => Promise<IpcResult<'auth:status'>>
+
       // Terminal PTY
       terminal: {
         create: (...args: IpcArgs<'terminal:create'>) => Promise<IpcResult<'terminal:create'>>

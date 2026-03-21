@@ -133,6 +133,7 @@ app.whenReady().then(() => {
 
   registerConfigHandlers()
   registerAgentHandlers()
+  registerAuthHandlers()
   registerGitHandlers()
   registerTerminalHandlers()
   registerWindowHandlers()

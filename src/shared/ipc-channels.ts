@@ -307,12 +307,6 @@ export interface IpcChannelMap {
     result: boolean
   }
 
-  // --- Auth ---
-  'auth:status': {
-    args: []
-    result: { cliFound: boolean; tokenFound: boolean; tokenExpired: boolean; expiresAt?: string }
-  }
-
   // --- Terminal ---
   'terminal:create': {
     args: [opts: { cols: number; rows: number; shell?: string }]
