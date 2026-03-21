@@ -93,6 +93,8 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Native module rebuild**: After `npm install`, run `npm run postinstall` to rebuild `better-sqlite3` for Electron. Without this, the app crashes with `NODE_MODULE_VERSION` mismatch.
 - **Zustand selector gotcha**: Never call a function that returns a new array/object inside a Zustand selector (e.g., `useSomeStore(s => s.getList())`). This creates a new reference every render → infinite loop. Derive with `useMemo` from stable state instead.
 - **DB migrations**: Schema changes go through `src/main/db.ts` — add a new entry to the `migrations` array. Never modify existing migrations.
+- **Test noise from `release/`**: If a DMG has been built, `npm test` picks up `node-pty` tests inside `release/mac-arm64/BDE.app/` — these always fail and are not project tests. Ignore them or delete `release/` before running tests.
+- **AgentManager config requires restart**: Settings for max concurrent agents, worktree base, and max runtime are read once at startup. Changes via Settings UI take effect on next app launch.
 
 ## Packaging
 
