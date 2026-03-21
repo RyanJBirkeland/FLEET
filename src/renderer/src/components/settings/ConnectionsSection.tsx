@@ -1,111 +1,122 @@
 /**
- * ConnectionsSection — gateway, GitHub, and task runner credential management.
+ * ConnectionsSection — auth status, agent-manager settings, and GitHub credential management.
  */
 import { useCallback, useEffect, useState } from 'react'
-import { useGatewayStore } from '../../stores/gateway'
+import { RefreshCw } from 'lucide-react'
 import { toast } from '../../stores/toasts'
+import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { CredentialForm, type CredentialField } from './CredentialForm'
 
-const GATEWAY_FIELDS: CredentialField[] = [
-  { key: 'url', label: 'URL', type: 'url', placeholder: 'ws://127.0.0.1:18789' },
-  { key: 'token', label: 'Token', type: 'token', placeholder: 'Paste gateway token', savedPlaceholder: 'Token saved — enter new value to change' },
-]
+// --- Auth Status types ---
+interface AuthStatus {
+  cliFound: boolean
+  tokenFound: boolean
+  tokenExpired: boolean
+  expiresAt?: string
+}
+
+// --- Agent Manager settings ---
+interface AgentManagerSettings {
+  maxConcurrent: string
+  worktreeBase: string
+  maxRuntimeMinutes: string
+}
+
+const DEFAULTS: AgentManagerSettings = {
+  maxConcurrent: '3',
+  worktreeBase: '/tmp/worktrees/bde',
+  maxRuntimeMinutes: '60',
+}
 
 const GITHUB_FIELDS: CredentialField[] = [
   { key: 'token', label: 'Personal Access Token', type: 'token', placeholder: 'ghp_...', savedPlaceholder: 'Token saved — enter new value to change' },
 ]
 
-const TASK_RUNNER_FIELDS: CredentialField[] = [
-  { key: 'url', label: 'URL', type: 'url', placeholder: 'http://127.0.0.1:18799' },
-  { key: 'key', label: 'API Key', type: 'token', placeholder: 'Paste API key', savedPlaceholder: 'Key saved — enter new value to change' },
-]
+function formatExpiry(iso: string): string {
+  try {
+    return new Date(iso).toLocaleString()
+  } catch {
+    return iso
+  }
+}
 
 export function ConnectionsSection(): React.JSX.Element {
-  const status = useGatewayStore((s) => s.status)
-  const reconnect = useGatewayStore((s) => s.reconnect)
+  // --- Auth status state ---
+  const [authStatus, setAuthStatus] = useState<AuthStatus | null>(null)
+  const [authLoading, setAuthLoading] = useState(false)
 
-  // Gateway state
-  const [gwUrl, setGwUrl] = useState('')
-  const [gwToken, setGwToken] = useState('')
-  const [hasExistingGwToken, setHasExistingGwToken] = useState(false)
-  const [gwDirty, setGwDirty] = useState(false)
-  const [gwSaving, setGwSaving] = useState(false)
-  const [gwTesting, setGwTesting] = useState(false)
-  const [gwTestResult, setGwTestResult] = useState<'success' | 'error' | null>(null)
+  const refreshAuth = useCallback(async () => {
+    setAuthLoading(true)
+    try {
+      const status = await window.api.authStatus()
+      setAuthStatus(status)
+    } catch {
+      toast.error('Failed to check auth status')
+    } finally {
+      setAuthLoading(false)
+    }
+  }, [])
 
-  // GitHub state
+  useEffect(() => { refreshAuth() }, [refreshAuth])
+
+  // --- Agent Manager settings state ---
+  const [amSettings, setAmSettings] = useState<AgentManagerSettings>(DEFAULTS)
+  const [amDirty, setAmDirty] = useState(false)
+  const [amSaving, setAmSaving] = useState(false)
+
+  useEffect(() => {
+    Promise.all([
+      window.api.settings.get('agentManager.maxConcurrent'),
+      window.api.settings.get('agentManager.worktreeBase'),
+      window.api.settings.get('agentManager.maxRuntimeMinutes'),
+    ]).then(([maxConcurrent, worktreeBase, maxRuntimeMinutes]) => {
+      setAmSettings({
+        maxConcurrent: maxConcurrent || DEFAULTS.maxConcurrent,
+        worktreeBase: worktreeBase || DEFAULTS.worktreeBase,
+        maxRuntimeMinutes: maxRuntimeMinutes || DEFAULTS.maxRuntimeMinutes,
+      })
+    })
+  }, [])
+
+  const handleAmChange = useCallback(
+    (key: keyof AgentManagerSettings, value: string) => {
+      setAmSettings((prev) => ({ ...prev, [key]: value }))
+      setAmDirty(true)
+    },
+    [],
+  )
+
+  const handleAmSave = useCallback(async () => {
+    setAmSaving(true)
+    try {
+      await Promise.all([
+        window.api.settings.set('agentManager.maxConcurrent', amSettings.maxConcurrent),
+        window.api.settings.set('agentManager.worktreeBase', amSettings.worktreeBase),
+        window.api.settings.set('agentManager.maxRuntimeMinutes', amSettings.maxRuntimeMinutes),
+      ])
+      setAmDirty(false)
+      toast.success('Agent manager settings saved')
+    } catch {
+      toast.error('Failed to save agent manager settings')
+    } finally {
+      setAmSaving(false)
+    }
+  }, [amSettings])
+
+  // --- GitHub token state ---
   const [ghToken, setGhToken] = useState('')
   const [hasExistingGhToken, setHasExistingGhToken] = useState(false)
   const [ghDirty, setGhDirty] = useState(false)
   const [ghTesting, setGhTesting] = useState(false)
   const [ghTestResult, setGhTestResult] = useState<'success' | 'error' | null>(null)
 
-  // Task Runner state
-  const [trUrl, setTrUrl] = useState('')
-  const [trKey, setTrKey] = useState('')
-  const [hasExistingTrKey, setHasExistingTrKey] = useState(false)
-  const [trDirty, setTrDirty] = useState(false)
-  const [trTesting, setTrTesting] = useState(false)
-  const [trTestResult, setTrTestResult] = useState<'success' | 'error' | null>(null)
-
-  // Load initial values
   useEffect(() => {
-    window.api.getGatewayUrl().then(({ url, hasToken }) => {
-      setGwUrl(url)
-      setHasExistingGwToken(hasToken)
-    })
     window.api.settings.get('github.token').then((v) => {
       setHasExistingGhToken(!!v)
     })
-    window.api.settings.get('taskRunner.url').then((v) => {
-      setTrUrl(v ?? 'http://127.0.0.1:18799')
-    })
-    window.api.settings.get('taskRunner.apiKey').then((v) => {
-      setHasExistingTrKey(!!v)
-    })
   }, [])
 
-  // Gateway handlers
-  const handleGwChange = useCallback((key: string, value: string) => {
-    if (key === 'url') setGwUrl(value)
-    else setGwToken(value)
-    setGwDirty(true)
-    setGwTestResult(null)
-  }, [])
-
-  const handleGwSave = useCallback(async () => {
-    setGwSaving(true)
-    try {
-      await window.api.saveGatewayConfig(gwUrl, gwToken || undefined)
-      setGwDirty(false)
-      if (gwToken) setHasExistingGwToken(true)
-      setGwToken('')
-      toast.success('Gateway config saved')
-      await reconnect()
-    } catch {
-      toast.error('Failed to save gateway config')
-    } finally {
-      setGwSaving(false)
-    }
-  }, [gwUrl, gwToken, reconnect])
-
-  const handleGwTest = useCallback(async () => {
-    setGwTesting(true)
-    setGwTestResult(null)
-    try {
-      await window.api.testGatewayConnection(gwUrl, gwToken || undefined)
-      setGwTestResult('success')
-      toast.success('Gateway connection OK')
-    } catch {
-      setGwTestResult('error')
-      toast.error('Gateway connection failed')
-    } finally {
-      setGwTesting(false)
-    }
-  }, [gwUrl, gwToken])
-
-  // GitHub handlers
   const handleGhChange = useCallback((_key: string, value: string) => {
     setGhToken(value)
     setGhDirty(true)
@@ -140,68 +151,109 @@ export function ConnectionsSection(): React.JSX.Element {
     }
   }, [])
 
-  // Task Runner handlers
-  const handleTrChange = useCallback((key: string, value: string) => {
-    if (key === 'url') setTrUrl(value)
-    else setTrKey(value)
-    setTrDirty(true)
-    setTrTestResult(null)
-  }, [])
-
-  const handleTrSave = useCallback(async () => {
-    await window.api.settings.set('taskRunner.url', trUrl)
-    if (trKey) {
-      await window.api.settings.set('taskRunner.apiKey', trKey)
-      setHasExistingTrKey(true)
-      setTrKey('')
+  // --- Derive auth badge ---
+  let authBadgeVariant: 'success' | 'warning' | 'danger' = 'danger'
+  let authBadgeLabel = 'Not Configured'
+  if (authStatus) {
+    if (authStatus.tokenFound && !authStatus.tokenExpired) {
+      authBadgeVariant = 'success'
+      authBadgeLabel = 'Connected'
+    } else if (authStatus.tokenFound && authStatus.tokenExpired) {
+      authBadgeVariant = 'warning'
+      authBadgeLabel = 'Token Expired'
     }
-    setTrDirty(false)
-    toast.success('Task runner config saved')
-  }, [trUrl, trKey])
-
-  const handleTrTest = useCallback(async () => {
-    setTrTesting(true)
-    setTrTestResult(null)
-    try {
-      await window.api.sprint.healthCheck()
-      setTrTestResult('success')
-      toast.success('Task runner reachable')
-    } catch {
-      setTrTestResult('error')
-      toast.error('Task runner unreachable')
-    } finally {
-      setTrTesting(false)
-    }
-  }, [])
+  }
 
   return (
     <section className="settings-section">
       <h2 className="settings-section__title bde-section-title">Connections</h2>
 
-      <CredentialForm
-        title="Gateway"
-        fields={GATEWAY_FIELDS}
-        values={{ url: gwUrl, token: gwToken }}
-        hasExisting={{ token: hasExistingGwToken }}
-        onChange={handleGwChange}
-        onSave={handleGwSave}
-        onTest={handleGwTest}
-        dirty={gwDirty}
-        saveDisabled={!gwDirty || gwSaving || !gwUrl || (!gwToken && !hasExistingGwToken)}
-        testDisabled={gwTesting || !gwUrl || (!gwToken && !hasExistingGwToken)}
-        saving={gwSaving}
-        testing={gwTesting}
-        testResult={gwTestResult}
-        statusBadge={
-          <Badge
-            variant={status === 'connected' ? 'success' : status === 'error' ? 'danger' : status === 'connecting' ? 'warning' : 'muted'}
-            size="sm"
-          >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
-          </Badge>
-        }
-      />
+      {/* Auth Status */}
+      <div className="settings-connection">
+        <span className="settings-connection__label">Claude CLI Auth</span>
 
+        <div className="settings-field__row" style={{ marginTop: 0, marginBottom: 12 }}>
+          <div className="settings-field__status">
+            <Badge variant={authBadgeVariant} size="sm">{authBadgeLabel}</Badge>
+            {authStatus?.expiresAt && (
+              <span style={{ fontSize: 'var(--bde-size-sm)', color: 'var(--bde-text-muted)' }}>
+                Expires: {formatExpiry(authStatus.expiresAt)}
+              </span>
+            )}
+          </div>
+          <div className="settings-field__actions">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={refreshAuth}
+              disabled={authLoading}
+              loading={authLoading}
+              type="button"
+            >
+              <RefreshCw size={12} style={{ marginRight: 4 }} />
+              Refresh
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* Agent Manager Settings */}
+      <div className="settings-connection" style={{ marginTop: 8 }}>
+        <span className="settings-connection__label">Agent Manager</span>
+
+        <label className="settings-field">
+          <span className="settings-field__label">Max Concurrent Agents</span>
+          <input
+            className="settings-field__input"
+            type="number"
+            min={1}
+            max={10}
+            value={amSettings.maxConcurrent}
+            onChange={(e) => handleAmChange('maxConcurrent', e.target.value)}
+          />
+        </label>
+
+        <label className="settings-field">
+          <span className="settings-field__label">Worktree Base Path</span>
+          <input
+            className="settings-field__input"
+            type="text"
+            value={amSettings.worktreeBase}
+            onChange={(e) => handleAmChange('worktreeBase', e.target.value)}
+            placeholder="/tmp/worktrees/bde"
+          />
+        </label>
+
+        <label className="settings-field">
+          <span className="settings-field__label">Max Runtime (minutes)</span>
+          <input
+            className="settings-field__input"
+            type="number"
+            min={1}
+            max={480}
+            value={amSettings.maxRuntimeMinutes}
+            onChange={(e) => handleAmChange('maxRuntimeMinutes', e.target.value)}
+          />
+        </label>
+
+        <div className="settings-field__row">
+          <div className="settings-field__status" />
+          <div className="settings-field__actions">
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleAmSave}
+              disabled={!amDirty || amSaving}
+              loading={amSaving}
+              type="button"
+            >
+              {amSaving ? 'Saving...' : 'Save'}
+            </Button>
+          </div>
+        </div>
+      </div>
+
+      {/* GitHub Token */}
       <CredentialForm
         title="GitHub"
         fields={GITHUB_FIELDS}
@@ -216,22 +268,6 @@ export function ConnectionsSection(): React.JSX.Element {
         saving={false}
         testing={ghTesting}
         testResult={ghTestResult}
-      />
-
-      <CredentialForm
-        title="Task Runner"
-        fields={TASK_RUNNER_FIELDS}
-        values={{ url: trUrl, key: trKey }}
-        hasExisting={{ key: hasExistingTrKey }}
-        onChange={handleTrChange}
-        onSave={handleTrSave}
-        onTest={handleTrTest}
-        dirty={trDirty}
-        saveDisabled={!trDirty}
-        testDisabled={trTesting || !hasExistingTrKey}
-        saving={false}
-        testing={trTesting}
-        testResult={trTestResult}
       />
     </section>
   )

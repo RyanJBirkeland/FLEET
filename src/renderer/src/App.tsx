@@ -1,8 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useGatewayStore } from './stores/gateway'
 import { useUIStore, type View } from './stores/ui'
-import { useSessionsStore } from './stores/sessions'
 import { useCommandPaletteStore } from './stores/commandPalette'
 import { useCostDataStore } from './stores/costData'
 import { ActivityBar } from './components/layout/ActivityBar'
@@ -10,6 +8,7 @@ import { TitleBar } from './components/layout/TitleBar'
 import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
 import { ToastContainer } from './components/layout/ToastContainer'
+import { Onboarding } from './components/Onboarding'
 import { Button } from './components/ui/Button'
 import { Kbd } from './components/ui/Kbd'
 import { useAgentHistoryStore } from './stores/agentHistory'
@@ -112,12 +111,11 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Eleme
 }
 
 function App(): React.JSX.Element {
-  const status = useGatewayStore((s) => s.status)
-  const connect = useGatewayStore((s) => s.connect)
+  const [ready, setReady] = useState(false)
+
   const activeView = useUIStore((s) => s.activeView)
   const setView = useUIStore((s) => s.setView)
   const root = usePanelLayoutStore((s) => s.root)
-  const runningCount = useSessionsStore((s) => s.runningCount)
   const totalCost = useCostDataStore((s) => s.totalCost)
   const fetchLocalAgents = useCostDataStore((s) => s.fetchLocalAgents)
 
@@ -127,10 +125,6 @@ function App(): React.JSX.Element {
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   const loadLayout = usePanelLayoutStore((s) => s.loadSavedLayout)
-
-  useEffect(() => {
-    connect()
-  }, [connect])
 
   useEffect(() => {
     fetchLocalAgents()
@@ -244,24 +238,25 @@ function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
+  if (!ready) {
+    return <Onboarding onReady={() => setReady(true)} />
+  }
+
   return (
     <div className="app-shell elevation-0">
       <TitleBar
-        sessionCount={runningCount}
+        sessionCount={0}
         totalCost={totalCost}
         onConflictClick={() => setView('sprint')}
       />
       <div className="app-shell__body">
-        <ActivityBar connectionStatus={status} />
+        <ActivityBar />
         <div className="app-shell__content">
           <PanelRenderer node={root} />
         </div>
       </div>
       <StatusBar
-        status={status}
-        sessionCount={runningCount}
         model={DEFAULT_MODEL.modelId}
-        onReconnect={() => connect()}
       />
       <CommandPalette open={paletteOpen} onClose={closePalette} />
       <AnimatePresence>

@@ -10,36 +10,9 @@ Element.prototype.scrollIntoView = vi.fn()
 
 // ---------- Shared mocks ----------
 
-vi.mock('../../stores/sessions', () => ({
-  useSessionsStore: Object.assign(
-    vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-      selector({
-        sessions: [],
-        subAgents: [],
-        subAgentsError: null,
-        selectedSessionKey: null,
-        loading: false,
-        fetchError: null,
-        selectSession: vi.fn(),
-        fetchSessions: vi.fn().mockResolvedValue(undefined),
-        killSession: vi.fn().mockResolvedValue(undefined),
-        steerSubAgent: vi.fn().mockResolvedValue(undefined),
-        runTask: vi.fn().mockResolvedValue(undefined),
-      })
-    ),
-    { getState: () => ({ sessions: [], subAgents: [], fetchSessions: vi.fn().mockResolvedValue(undefined) }) }
-  ),
-}))
-
 vi.mock('../../stores/ui', () => ({
   useUIStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
     selector({ activeView: 'agents', setView: vi.fn() })
-  ),
-}))
-
-vi.mock('../../stores/gateway', () => ({
-  useGatewayStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({ status: 'disconnected', client: null, connect: vi.fn(), reconnect: vi.fn() })
   ),
 }))
 
@@ -109,10 +82,6 @@ vi.mock('../../stores/chat', () => ({
   ),
 }))
 
-vi.mock('../../lib/rpc', () => ({
-  invokeTool: vi.fn().mockResolvedValue({ sessions: [], count: 0 }),
-}))
-
 vi.mock('../../lib/github-api', () => ({
   listOpenPRs: vi.fn().mockResolvedValue([]),
   mergePR: vi.fn().mockResolvedValue(undefined),
@@ -159,9 +128,6 @@ vi.mock('../../components/terminal/FindBar', () => ({
 // Mock window.api for views that use it — assign directly to preserve window methods
 Object.defineProperty(window, 'api', {
   value: {
-    getGatewayUrl: vi.fn().mockResolvedValue({ url: 'http://localhost', hasToken: true }),
-    testGatewayConnection: vi.fn().mockResolvedValue({ ok: true, latencyMs: 10 }),
-    signGatewayChallenge: vi.fn().mockResolvedValue({ auth: { token: 'tok' } }),
     getRepoPaths: vi.fn().mockResolvedValue({ bde: '/path/to/BDE' }),
     gitStatus: vi.fn().mockResolvedValue({ files: [] }),
     gitBranches: vi.fn().mockResolvedValue({ branches: ['main'], current: 'main' }),
@@ -174,7 +140,6 @@ Object.defineProperty(window, 'api', {
     listMemoryFiles: vi.fn().mockResolvedValue([]),
     readMemoryFile: vi.fn().mockResolvedValue(''),
     writeMemoryFile: vi.fn().mockResolvedValue(undefined),
-    saveGatewayConfig: vi.fn().mockResolvedValue(undefined),
     getAgentConfig: vi.fn().mockResolvedValue({ binary: 'claude', permissionMode: 'bypassPermissions' }),
     saveAgentConfig: vi.fn().mockResolvedValue(undefined),
     openExternal: vi.fn(),
@@ -202,16 +167,15 @@ Object.defineProperty(window, 'api', {
     },
     openDirectoryDialog: vi.fn().mockResolvedValue(null),
     onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
-    onTaskOutput: vi.fn().mockReturnValue(() => {}),
-    task: {
-      getEvents: vi.fn().mockResolvedValue([]),
-    },
-    onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
     templates: {
       list: vi.fn().mockResolvedValue([]),
       save: vi.fn().mockResolvedValue(undefined),
       delete: vi.fn().mockResolvedValue(undefined),
       reset: vi.fn().mockResolvedValue(undefined),
+    },
+    agentManager: {
+      status: vi.fn().mockResolvedValue({ activeCount: 0, availableSlots: 4 }),
+      kill: vi.fn().mockResolvedValue(true),
     },
   },
   writable: true,

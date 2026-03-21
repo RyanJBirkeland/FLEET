@@ -8,7 +8,6 @@ import { Button } from '../ui/Button'
 import { tokens } from '../../design-system/tokens'
 import { toast } from '../../stores/toasts'
 import { useSprintEvents } from '../../stores/sprintEvents'
-import { subscribeSSE, type LogChunkEvent, type LogDoneEvent } from '../../lib/taskRunnerSSE'
 import { TASK_STATUS, AGENT_STATUS } from '../../../../shared/constants'
 import type { AnyTaskEvent } from '../../stores/sprintEvents'
 import type { SprintTask } from './SprintCenter'
@@ -25,7 +24,6 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
   const [agentStatus, setAgentStatus] = useState('unknown')
   const [steerInput, setSteerInput] = useState('')
   const [exitCode, setExitCode] = useState<number | null>(null)
-  const [initialEvents, setInitialEvents] = useState<AnyTaskEvent[]>([])
   const fromByteRef = useRef(0)
 
   // Streaming events from the store
@@ -43,25 +41,9 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     setLogContent('')
     setAgentStatus(AGENT_STATUS.UNKNOWN)
     setExitCode(null)
-    setInitialEvents([])
   }, [task?.agent_run_id])
 
-  // Effect: fetch initial events when opening drawer for a task
-  useEffect(() => {
-    if (!task?.id) return
-    const taskId = task.id
-    let cancelled = false
-    window.api.task.getEvents(taskId).then((events) => {
-      if (!cancelled && events.length > 0) {
-        setInitialEvents(events)
-      }
-    }).catch(() => {
-      // Silently ignore — events may not be available
-    })
-    return () => { cancelled = true }
-  }, [task?.id])
-
-  // Effect 2: catch-up read + SSE subscription for live streaming
+  // Effect 2: catch-up read for log content (polls via readLog IPC)
   useEffect(() => {
     if (!task?.agent_run_id) return
     const agentId = task.agent_run_id
@@ -85,33 +67,14 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
 
     catchUp()
 
+    // For active tasks, poll periodically for new log content
     if (!isActive) return () => { cancelled = true }
 
-    // Real-time SSE for active tasks
-    const unsubChunk = subscribeSSE('log:chunk', (data: unknown) => {
-      const ev = data as LogChunkEvent
-      if (ev.agentId !== agentId) return
-      // Handle partial overlap: slice off bytes we already have
-      const overlap = fromByteRef.current - ev.fromByte
-      const text = overlap > 0 ? ev.content.slice(overlap) : ev.content
-      if (text.length === 0) return
-      const cleaned = stripAnsi(text)
-      setLogContent((prev) => prev + cleaned)
-      fromByteRef.current = ev.fromByte + new TextEncoder().encode(ev.content).length
-    })
-
-    const unsubDone = subscribeSSE('log:done', (data: unknown) => {
-      const ev = data as LogDoneEvent
-      if (ev.agentId !== agentId) return
-      setExitCode(ev.exitCode)
-      setAgentStatus(ev.exitCode === 0 ? AGENT_STATUS.DONE : AGENT_STATUS.FAILED)
-      catchUp() // final catch-up in case we missed chunks
-    })
+    const interval = setInterval(catchUp, 2000)
 
     return () => {
       cancelled = true
-      unsubChunk()
-      unsubDone()
+      clearInterval(interval)
     }
   }, [task?.agent_run_id, task?.status])
 
@@ -122,15 +85,7 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     }
   }, [task?.agent_run_id, loadHistory])
 
-  // Merge initial events with live store events, deduplicating by timestamp+type
-  const mergedEvents = useMemo(() => {
-    const live = storeEvents ?? []
-    if (initialEvents.length === 0) return live
-    if (live.length === 0) return initialEvents
-    const seen = new Set(live.map((e) => `${e.timestamp}:${e.type}`))
-    const unique = initialEvents.filter((e) => !seen.has(`${e.timestamp}:${e.type}`))
-    return [...unique, ...live]
-  }, [initialEvents, storeEvents])
+  const mergedEvents = useMemo(() => storeEvents ?? [], [storeEvents])
 
   // Collapse consecutive thinking events (keep only the latest)
   const displayEvents = useMemo(() => {

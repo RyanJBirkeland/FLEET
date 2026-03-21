@@ -1,7 +1,6 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
-import type { TaskOutputEvent } from '../shared/queue-api-contract'
 import type { AgentEvent } from '../main/agents/types'
 
 export type { AgentMeta, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask }
@@ -15,10 +14,6 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
-      getGatewayUrl: () => Promise<IpcResult<'config:getGatewayUrl'>>
-      saveGatewayConfig: (...args: IpcArgs<'config:saveGateway'>) => Promise<IpcResult<'config:saveGateway'>>
-      testGatewayConnection: (...args: IpcArgs<'gateway:test-connection'>) => Promise<IpcResult<'gateway:test-connection'>>
-      signGatewayChallenge: () => Promise<IpcResult<'gateway:sign-challenge'>>
       getRepoPaths: () => Promise<IpcResult<'git:getRepoPaths'>>
       openExternal: (...args: IpcArgs<'window:openExternal'>) => Promise<IpcResult<'window:openExternal'>>
       listMemoryFiles: () => Promise<IpcResult<'memory:listFiles'>>
@@ -98,11 +93,6 @@ declare global {
       // Conflict file detection
       checkConflictFiles: (...args: IpcArgs<'pr:checkConflictFiles'>) => Promise<IpcResult<'pr:checkConflictFiles'>>
 
-      // Queue health
-      queue: {
-        health: () => Promise<IpcResult<'queue:health'>>
-      }
-
       // Sprint tasks — SQLite-backed Kanban
       sprint: {
         list: () => Promise<IpcResult<'sprint:list'>>
@@ -122,10 +112,6 @@ declare global {
       readFileAsText: (...args: IpcArgs<'fs:readFileAsText'>) => Promise<IpcResult<'fs:readFileAsText'>>
       openDirectoryDialog: () => Promise<IpcResult<'fs:openDirectoryDialog'>>
 
-      // Gateway RPC
-      invokeTool: (tool: string, args?: Record<string, unknown>) => Promise<IpcResult<'gateway:invoke'>>
-      getSessionHistory: (...args: IpcArgs<'gateway:getSessionHistory'>) => Promise<IpcResult<'gateway:getSessionHistory'>>
-
       // GitHub rate-limit warning push events
       onGitHubRateLimitWarning: (
         cb: (data: { remaining: number; limit: number; resetEpoch: number }) => void
@@ -142,18 +128,14 @@ declare global {
       // Sprint DB file-watcher push events
       onExternalSprintChange: (cb: () => void) => () => void
 
-      // Task output streaming events
-      onTaskOutput: (
-        callback: (data: { taskId: string; events: TaskOutputEvent[] }) => void
-      ) => () => void
+      // Auth status
+      authStatus: () => Promise<IpcResult<'auth:status'>>
 
-      // Task events — fetch current event history
-      task: {
-        getEvents: (taskId: string) => Promise<IpcResult<'task:getEvents'>>
+      // Agent Manager
+      agentManager: {
+        status: () => Promise<IpcResult<'agent-manager:status'>>
+        kill: (taskId: string) => Promise<IpcResult<'agent-manager:kill'>>
       }
-
-      // Sprint SSE real-time events
-      onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void) => (() => void)
 
       // Terminal PTY
       terminal: {

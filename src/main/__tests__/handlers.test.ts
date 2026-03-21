@@ -62,9 +62,7 @@ vi.mock('../git', () => ({
 }))
 
 vi.mock('../config', () => ({
-  getGatewayConfig: vi.fn().mockReturnValue({ url: 'ws://localhost:18789', token: 'test-token' }),
   getGitHubToken: vi.fn().mockReturnValue('gh-token'),
-  getSupabaseConfig: vi.fn().mockReturnValue(null),
 }))
 
 vi.mock('../db', () => ({
@@ -77,10 +75,13 @@ vi.mock('../db', () => ({
   }),
 }))
 
+const { mockGetSetting } = vi.hoisted(() => ({
+  mockGetSetting: vi.fn().mockReturnValue(null),
+}))
 vi.mock('../settings', () => ({
   getAgentBinary: vi.fn().mockReturnValue('claude'),
   getAgentPermissionMode: vi.fn().mockReturnValue('bypassPermissions'),
-  getSetting: vi.fn().mockReturnValue(null),
+  getSetting: mockGetSetting,
   setSetting: vi.fn(),
   getSettingJson: vi.fn().mockReturnValue(null),
   setSettingJson: vi.fn(),
@@ -125,11 +126,9 @@ import { shell } from 'electron'
 import * as localAgents from '../local-agents'
 import * as agentHistory from '../agent-history'
 import * as git from '../git'
-import * as config from '../config'
 import { registerAgentHandlers } from '../handlers/agent-handlers'
 import { registerGitHandlers } from '../handlers/git-handlers'
 import { registerConfigHandlers } from '../handlers/config-handlers'
-import { registerGatewayHandlers } from '../handlers/gateway-handlers'
 import { registerWindowHandlers } from '../handlers/window-handlers'
 import { registerTerminalHandlers, _setPty } from '../handlers/terminal-handlers'
 import { registerFsHandlers } from '../fs'
@@ -171,7 +170,6 @@ describe('IPC handler registration', () => {
     registerAgentHandlers()
     registerGitHandlers()
     registerConfigHandlers()
-    registerGatewayHandlers()
     registerWindowHandlers()
     registerTerminalHandlers()
     registerFsHandlers()
@@ -396,43 +394,12 @@ describe('IPC handler registration', () => {
   // config-handlers.ts
   // -------------------------------------------------------------------------
   describe('config-handlers', () => {
-    it('registers all expected channel names', () => {
-      const expected = [
-        'config:getGatewayUrl',
-        'config:saveGateway',
-      ]
-      for (const ch of expected) {
-        expect(handlers.has(ch), `missing channel: ${ch}`).toBe(true)
-      }
-      // Token-exposing channels must NOT be registered
+    it('does not register removed gateway channels', () => {
+      expect(handlers.has('config:getGatewayUrl')).toBe(false)
+      expect(handlers.has('config:saveGateway')).toBe(false)
       expect(handlers.has('config:getGateway')).toBe(false)
       expect(handlers.has('config:getGithubToken')).toBe(false)
       expect(handlers.has('config:getSupabase')).toBe(false)
-    })
-
-    it('"config:getGatewayUrl" returns url and hasToken flag (no raw token)', async () => {
-      const result = await invoke('config:getGatewayUrl')
-      expect(result).toEqual({ url: 'ws://localhost:18789', hasToken: true })
-    })
-
-    it('"config:getGatewayUrl" returns hasToken:false when config is null', async () => {
-      vi.mocked(config.getGatewayConfig).mockReturnValueOnce(null)
-      const result = await invoke('config:getGatewayUrl')
-      expect(result).toEqual({ url: '', hasToken: false })
-    })
-
-    it('"config:saveGateway" saves url and token via settings', async () => {
-      const settings = await import('../settings')
-      await invoke('config:saveGateway', 'ws://new', 'new-token')
-      expect(settings.setSetting).toHaveBeenCalledWith('gateway.url', 'ws://new')
-      expect(settings.setSetting).toHaveBeenCalledWith('gateway.token', 'new-token')
-    })
-
-    it('"config:saveGateway" saves only url when no token provided', async () => {
-      const settings = await import('../settings')
-      await invoke('config:saveGateway', 'ws://new')
-      expect(settings.setSetting).toHaveBeenCalledWith('gateway.url', 'ws://new')
-      expect(settings.setSetting).not.toHaveBeenCalledWith('gateway.token', expect.anything())
     })
 
     it('registers settings CRUD channels', () => {
@@ -441,110 +408,6 @@ describe('IPC handler registration', () => {
       expect(handlers.has('settings:getJson')).toBe(true)
       expect(handlers.has('settings:setJson')).toBe(true)
       expect(handlers.has('settings:delete')).toBe(true)
-    })
-  })
-
-  // -------------------------------------------------------------------------
-  // gateway-handlers.ts
-  // -------------------------------------------------------------------------
-  describe('gateway-handlers', () => {
-    it('registers expected channel names', () => {
-      expect(handlers.has('gateway:invoke')).toBe(true)
-      expect(handlers.has('gateway:getSessionHistory')).toBe(true)
-      expect(handlers.has('gateway:test-connection')).toBe(true)
-      expect(handlers.has('gateway:sign-challenge')).toBe(true)
-    })
-
-    it('"gateway:invoke" proxies HTTP POST with Bearer token', async () => {
-      const mockResponse = { ok: true, json: vi.fn().mockResolvedValue({ result: 'ok' }), text: vi.fn() }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
-
-      const result = await invoke('gateway:invoke', 'sessions_list', { key: 'value' })
-
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:18789/tools/invoke',
-        expect.objectContaining({
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: 'Bearer test-token',
-          },
-          body: JSON.stringify({ tool: 'sessions_list', args: { key: 'value' } }),
-        })
-      )
-      expect(result).toEqual({ result: 'ok' })
-    })
-
-    it('converts ws:// to http:// in gateway URL', async () => {
-      const mockResponse = { ok: true, json: vi.fn().mockResolvedValue({}), text: vi.fn() }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
-
-      await invoke('gateway:invoke', 'sessions_list', {})
-
-      const calledUrl = vi.mocked(fetch).mock.calls[0][0] as string
-      expect(calledUrl).toMatch(/^http:\/\//)
-      expect(calledUrl).not.toMatch(/^ws:\/\//)
-    })
-
-    it('throws on non-ok response (e.g. 401)', async () => {
-      vi.stubGlobal(
-        'fetch',
-        vi.fn().mockResolvedValue({
-          ok: false,
-          status: 401,
-          text: vi.fn().mockResolvedValue('Unauthorized'),
-        })
-      )
-
-      await expect(invoke('gateway:invoke', 'sessions_list', {})).rejects.toThrow(
-        'Gateway error 401: Unauthorized'
-      )
-    })
-
-    it('throws on network error', async () => {
-      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('fetch failed')))
-
-      await expect(invoke('gateway:invoke', 'sessions_list', {})).rejects.toThrow('fetch failed')
-    })
-
-    it('rejects tools not in the allowlist', async () => {
-      await expect(invoke('gateway:invoke', 'dangerous_tool', {})).rejects.toThrow(
-        'Tool "dangerous_tool" is not in the renderer allowlist'
-      )
-    })
-
-    it('rejects empty tool name', async () => {
-      await expect(invoke('gateway:invoke', '', {})).rejects.toThrow(
-        'is not in the renderer allowlist'
-      )
-    })
-
-    it('allows all tools in the allowlist', async () => {
-      const mockResponse = { ok: true, json: vi.fn().mockResolvedValue({}), text: vi.fn() }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
-
-      const allowedTools = ['sessions_list', 'sessions_send', 'sessions_spawn', 'sessions_history', 'subagents']
-      for (const tool of allowedTools) {
-        await expect(invoke('gateway:invoke', tool, {})).resolves.not.toThrow()
-      }
-    })
-
-    it('"gateway:getSessionHistory" sends correct request', async () => {
-      const mockResponse = { ok: true, json: vi.fn().mockResolvedValue({ history: [] }), text: vi.fn() }
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(mockResponse))
-
-      const result = await invoke('gateway:getSessionHistory', 'session-key-1')
-
-      expect(fetch).toHaveBeenCalledWith(
-        'http://localhost:18789/tools/invoke',
-        expect.objectContaining({
-          body: JSON.stringify({
-            tool: 'sessions_get_history',
-            args: { sessionKey: 'session-key-1' },
-          }),
-        })
-      )
-      expect(result).toEqual({ history: [] })
     })
   })
 

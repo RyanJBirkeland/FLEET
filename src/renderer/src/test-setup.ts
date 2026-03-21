@@ -6,9 +6,6 @@ afterEach(() => cleanup())
 
 // Global window.api mock (centralized — no more per-file duplication)
 vi.stubGlobal('api', {
-  getGatewayUrl: vi.fn().mockResolvedValue({ url: 'ws://localhost:18789', hasToken: true }),
-  testGatewayConnection: vi.fn().mockResolvedValue({ ok: true, latencyMs: 10 }),
-  signGatewayChallenge: vi.fn().mockResolvedValue({ auth: { token: 'test' } }),
   getRepoPaths: vi.fn().mockResolvedValue({
     bde: '/Users/test/Documents/Repositories/BDE',
     'life-os': '/Users/test/Documents/Repositories/life-os',
@@ -40,18 +37,15 @@ vi.stubGlobal('api', {
   isAgentInteractive: vi.fn().mockResolvedValue(false),
   killLocalAgent: vi.fn().mockResolvedValue({ ok: true }),
   tailAgentLog: vi.fn().mockResolvedValue({ content: '', nextByte: 0 }),
-  invokeTool: vi.fn().mockResolvedValue({}),
   setTitle: vi.fn(),
   openExternal: vi.fn().mockResolvedValue(undefined),
   getDiff: vi.fn().mockResolvedValue(''),
   getBranch: vi.fn().mockResolvedValue('main'),
   getLog: vi.fn().mockResolvedValue(''),
   readSprintMd: vi.fn().mockResolvedValue(''),
-  saveGatewayConfig: vi.fn().mockResolvedValue(undefined),
   listMemoryFiles: vi.fn().mockResolvedValue([]),
   readMemoryFile: vi.fn().mockResolvedValue(''),
   writeMemoryFile: vi.fn().mockResolvedValue(undefined),
-  getSessionHistory: vi.fn().mockResolvedValue([]),
   gitStatus: vi.fn().mockResolvedValue({ files: [] }),
   gitDiff: vi.fn().mockResolvedValue(''),
   gitStage: vi.fn().mockResolvedValue(undefined),
@@ -60,13 +54,6 @@ vi.stubGlobal('api', {
   gitPush: vi.fn().mockResolvedValue(''),
   gitBranches: vi.fn().mockResolvedValue({ current: 'main', branches: ['main'] }),
   gitCheckout: vi.fn().mockResolvedValue(undefined),
-  queue: {
-    health: vi.fn().mockResolvedValue({
-      queue: { backlog: 0, queued: 0, active: 0, done: 0, failed: 0, cancelled: 0 },
-      doneToday: 0,
-      connectedRunners: 0,
-    }),
-  },
   sprint: {
     list: vi.fn().mockResolvedValue([]),
     create: vi.fn().mockResolvedValue({}),
@@ -99,11 +86,10 @@ vi.stubGlobal('api', {
   pollPrStatuses: vi.fn().mockResolvedValue([]),
   killAgent: vi.fn().mockResolvedValue({ ok: true }),
   onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
-  onTaskOutput: vi.fn().mockReturnValue(() => {}),
-  task: {
-    getEvents: vi.fn().mockResolvedValue([]),
+  agentManager: {
+    status: vi.fn().mockResolvedValue({ activeCount: 0, availableSlots: 4 }),
+    kill: vi.fn().mockResolvedValue(true),
   },
-  onSprintSseEvent: vi.fn().mockReturnValue(() => {}),
   terminal: {
     create: vi.fn().mockResolvedValue(1),
     write: vi.fn(),

@@ -2,12 +2,10 @@
  * Shared agent normalization utilities — used by both the useUnifiedAgents hook
  * and the useUnifiedAgentsStore Zustand store.
  *
- * Single source of truth for converting raw session/process/history data
+ * Single source of truth for converting raw process/history data
  * into UnifiedAgent objects.
  */
 import type { UnifiedAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
-import { SESSION_ACTIVE_THRESHOLD } from './constants'
-import type { AgentSession, SubAgent } from '../stores/sessions'
 import type { LocalAgentProcess } from '../stores/localAgents'
 import type { AgentMeta } from '../../../shared/types'
 
@@ -33,8 +31,6 @@ export function normalizeSource(raw: string): UnifiedAgentSource {
   switch (raw) {
     case 'bde':
       return 'local'
-    case 'openclaw':
-      return 'gateway'
     default:
       return 'history'
   }
@@ -53,52 +49,13 @@ export function safeTimestamp(value: string | number | null | undefined): number
 }
 
 /**
- * Build a unified agent list from the raw data of all four sources.
+ * Build a unified agent list from local processes and history.
  */
 export function buildUnifiedAgentList(
-  sessions: AgentSession[],
-  subAgents: SubAgent[],
   processes: LocalAgentProcess[],
   historyAgents: AgentMeta[]
 ): UnifiedAgent[] {
-  const now = Date.now()
   const agents: UnifiedAgent[] = []
-
-  // Gateway sessions (openclaw)
-  for (const s of sessions) {
-    const isRunning = (s.updatedAt ?? 0) > now - SESSION_ACTIVE_THRESHOLD
-    agents.push({
-      id: s.key,
-      label: s.displayName || s.key,
-      source: 'gateway',
-      status: isRunning ? 'running' : 'done',
-      model: s.model ?? '',
-      updatedAt: s.updatedAt ?? 0,
-      startedAt: s.updatedAt ?? 0,
-      canSteer: true,
-      canKill: isRunning,
-      isBlocked: s.abortedLastRun === true && !isRunning,
-      sessionKey: s.key
-    })
-  }
-
-  // Sub-agents (gateway)
-  for (const a of subAgents) {
-    agents.push({
-      id: `sub:${a.sessionKey}`,
-      label: a.label || a.sessionKey,
-      source: 'gateway',
-      status: normalizeStatus(a.status),
-      model: a.model ?? '',
-      updatedAt: a.endedAt ?? a.startedAt ?? 0,
-      startedAt: a.startedAt ?? 0,
-      canSteer: !!a.isActive,
-      canKill: !!a.isActive,
-      isBlocked: false,
-      task: truncateTask(a.task, 80),
-      sessionKey: a.sessionKey
-    })
-  }
 
   // Local running processes
   for (const p of processes) {

@@ -2,7 +2,6 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
-import type { TaskOutputEvent } from '../shared/queue-api-contract'
 import type { AgentEvent } from '../main/agents/types'
 
 // Prevent MaxListenersExceededWarning during HMR dev cycles
@@ -20,12 +19,6 @@ function typedInvoke<K extends keyof IpcChannelMap>(
 }
 
 const api = {
-  getGatewayUrl: () => typedInvoke('config:getGatewayUrl'),
-  saveGatewayConfig: (url: string, token?: string) =>
-    typedInvoke('config:saveGateway', url, token),
-  testGatewayConnection: (url: string, token?: string) =>
-    typedInvoke('gateway:test-connection', url, token),
-  signGatewayChallenge: () => typedInvoke('gateway:sign-challenge'),
   getRepoPaths: () => typedInvoke('git:getRepoPaths'),
   openExternal: (url: string) => typedInvoke('window:openExternal', url),
   listMemoryFiles: () => typedInvoke('memory:listFiles'),
@@ -105,11 +98,6 @@ const api = {
   checkConflictFiles: (input: { owner: string; repo: string; prNumber: number }) =>
     typedInvoke('pr:checkConflictFiles', input),
 
-  // Queue health
-  queue: {
-    health: () => typedInvoke('queue:health'),
-  },
-
   // Sprint tasks — SQLite-backed Kanban
   sprint: {
     list: () => typedInvoke('sprint:list'),
@@ -146,12 +134,6 @@ const api = {
   readFileAsText: (path: string) => typedInvoke('fs:readFileAsText', path),
   openDirectoryDialog: () => typedInvoke('fs:openDirectoryDialog'),
 
-  // Gateway tool invocation — proxied through main process to avoid CORS
-  invokeTool: (tool: string, args?: Record<string, unknown>) =>
-    typedInvoke('gateway:invoke', tool, args ?? {}),
-  getSessionHistory: (sessionKey: string) =>
-    typedInvoke('gateway:getSessionHistory', sessionKey),
-
   // GitHub rate-limit warning push events
   onGitHubRateLimitWarning: (
     cb: (data: { remaining: number; limit: number; resetEpoch: number }) => void
@@ -183,21 +165,6 @@ const api = {
     return () => ipcRenderer.removeListener('sprint:externalChange', cb)
   },
 
-  // Task output streaming events
-  onTaskOutput: (
-    callback: (data: { taskId: string; events: TaskOutputEvent[] }) => void
-  ): (() => void) => {
-    const handler = (_e: IpcRendererEvent, data: { taskId: string; events: TaskOutputEvent[] }): void =>
-      callback(data)
-    ipcRenderer.on('task:output', handler)
-    return () => ipcRenderer.removeListener('task:output', handler)
-  },
-
-  // Task events — fetch current event history
-  task: {
-    getEvents: (taskId: string) => typedInvoke('task:getEvents', taskId),
-  },
-
   // Agent event streaming (Phase 2)
   agentEvents: {
     onEvent: (
@@ -211,11 +178,13 @@ const api = {
     getHistory: (agentId: string) => typedInvoke('agent:history', agentId),
   },
 
-  // Sprint SSE real-time events
-  onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void): (() => void) => {
-    const listener = (_e: unknown, ev: { type: string; data: unknown }): void => cb(ev)
-    ipcRenderer.on('sprint:sseEvent', listener)
-    return () => ipcRenderer.removeListener('sprint:sseEvent', listener)
+  // Auth status
+  authStatus: () => typedInvoke('auth:status'),
+
+  // Agent Manager
+  agentManager: {
+    status: () => typedInvoke('agent-manager:status'),
+    kill: (taskId: string) => typedInvoke('agent-manager:kill', taskId),
   },
 
   // Template CRUD (Phase 2)

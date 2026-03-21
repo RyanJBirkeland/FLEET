@@ -13,7 +13,6 @@ import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
 import { AgentList } from '../components/agents/AgentList'
 import { AgentDetail } from '../components/agents/AgentDetail'
 import { HealthBar } from '../components/agents/HealthBar'
-import { useSprintEvents } from '../stores/sprintEvents'
 import { SpawnModal } from '../components/agents/SpawnModal'
 import { tokens } from '../design-system/tokens'
 import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
@@ -147,14 +146,24 @@ export function AgentsView() {
 }
 
 function HealthBarWrapper() {
-  const queueHealth = useSprintEvents((s) => s.queueHealth)
-  const connected = queueHealth !== null
-  const stats = queueHealth ? {
-    queued: queueHealth.queue.queued ?? 0,
-    active: queueHealth.queue.active ?? 0,
-    doneToday: queueHealth.doneToday ?? 0,
-    failed: queueHealth.queue.failed ?? 0,
-  } : null
+  const [status, setStatus] = useState<{ activeCount: number; availableSlots: number } | null>(null)
+
+  useEffect(() => {
+    let cancelled = false
+    const poll = (): void => {
+      window.api.agentManager.status().then((s) => {
+        if (!cancelled) setStatus(s)
+      }).catch(() => {})
+    }
+    poll()
+    const interval = setInterval(poll, 5000)
+    return () => { cancelled = true; clearInterval(interval) }
+  }, [])
+
+  const connected = status !== null
+  const stats = status
+    ? { queued: 0, active: status.activeCount, doneToday: 0, failed: 0 }
+    : null
 
   return <HealthBar connected={connected} stats={stats} />
 }

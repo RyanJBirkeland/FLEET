@@ -8,20 +8,22 @@ import { registerAgentHandlers } from './handlers/agent-handlers'
 import { registerGitHandlers } from './handlers/git-handlers'
 import { registerTerminalHandlers } from './handlers/terminal-handlers'
 import { registerConfigHandlers } from './handlers/config-handlers'
-import { registerGatewayHandlers } from './handlers/gateway-handlers'
 import { registerWindowHandlers } from './handlers/window-handlers'
 import { registerSprintLocalHandlers } from './handlers/sprint-local'
 import { registerCostHandlers } from './handlers/cost-handlers'
-import { registerQueueHandlers } from './handlers/queue-handlers'
 import { registerFsHandlers } from './fs'
 import { registerTemplateHandlers } from './handlers/template-handlers'
+import { registerAuthHandlers } from './handlers/auth-handlers'
+import { registerAgentManagerHandlers } from './handlers/agent-manager-handlers'
+import { AgentManager, createWorktree, handleAgentCompletion, type QueuedTask, type CompletionContext } from './agent-manager'
+import { SdkProvider } from './agents'
+import { ensureSubscriptionAuth } from './auth-guard'
+import { getEventBus } from './agents/event-bus'
+import type { AgentEvent } from './agents/types'
+import { getMaxConcurrent, getWorktreeBase, getMaxRuntimeMinutes, getSettingJson } from './settings'
 import { getDb, closeDb } from './db'
-import { migrateFromOpenClawConfig } from './settings'
-import { startSprintSseClient, stopSprintSseClient } from './sprint-sse'
 import { startPrPoller, stopPrPoller } from './pr-poller'
 import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
-import { getGatewayConfig } from './config'
-import { startQueueApi, stopQueueApi } from './queue-api/server'
 import { pruneOldEvents } from './agents/event-store'
 import { getEventRetentionDays } from './config'
 
@@ -114,22 +116,15 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.bde')
 
   getDb()
-  migrateFromOpenClawConfig()
 
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
-
-  startSprintSseClient()
-  app.on('will-quit', stopSprintSseClient)
 
   startPrPoller()
   app.on('will-quit', stopPrPoller)
 
   startSprintPrPoller()
   app.on('will-quit', stopSprintPrPoller)
-
-  startQueueApi()
-  app.on('will-quit', stopQueueApi)
 
   pruneOldEvents(getEventRetentionDays())
 
@@ -141,16 +136,75 @@ app.whenReady().then(() => {
   registerAgentHandlers()
   registerGitHandlers()
   registerTerminalHandlers()
-  registerGatewayHandlers()
   registerWindowHandlers()
   registerSprintLocalHandlers()
   registerCostHandlers()
-  registerQueueHandlers()
   registerTemplateHandlers()
   registerFsHandlers()
 
+  // Agent Manager setup
+  const sdkProvider = new SdkProvider()
+  const eventBus = getEventBus()
+
+  const agentManager = new AgentManager({
+    getQueuedTasks: async () => {
+      const db = getDb()
+      const rows = db.prepare(
+        "SELECT * FROM sprint_tasks WHERE status = 'queued' ORDER BY priority ASC, created_at ASC"
+      ).all()
+      return rows as QueuedTask[]
+    },
+    updateTask: async (taskId: string, update: Record<string, unknown>) => {
+      const db = getDb()
+      const keys = Object.keys(update)
+      const sets = keys.map(k => `${k} = ?`).join(', ')
+      const values = keys.map(k => update[k])
+      db.prepare(`UPDATE sprint_tasks SET ${sets}, updated_at = datetime('now') WHERE id = ?`).run(...values, taskId)
+    },
+    ensureAuth: () => ensureSubscriptionAuth(),
+    spawnAgent: async (opts) => {
+      return sdkProvider.spawn({
+        prompt: opts.prompt,
+        workingDirectory: opts.cwd,
+        model: opts.model,
+      })
+    },
+    createWorktree: (repoPath, taskId, worktreeBase) => createWorktree(repoPath, taskId, worktreeBase),
+    handleCompletion: async (ctx) => {
+      await handleAgentCompletion({
+        ...ctx,
+        updateTask: async (update) => {
+          const db = getDb()
+          const keys = Object.keys(update)
+          const sets = keys.map(k => `${k} = ?`).join(', ')
+          const values = keys.map(k => update[k])
+          db.prepare(`UPDATE sprint_tasks SET ${sets}, updated_at = datetime('now') WHERE id = ?`).run(...values, ctx.taskId as string)
+        },
+      } as CompletionContext)
+    },
+    emitEvent: (agentId, event) => eventBus.emit('agent:event', agentId, event as AgentEvent),
+    getRepoInfo: (repoName) => {
+      const repos = getSettingJson<Array<{ name: string; localPath: string; githubOwner: string; githubRepo: string }>>('repos') ?? []
+      const repo = repos.find(r => r.name === repoName)
+      if (!repo) return null
+      return { repoPath: repo.localPath, ghRepo: `${repo.githubOwner}/${repo.githubRepo}` }
+    },
+    config: {
+      maxConcurrent: getMaxConcurrent(),
+      worktreeBase: getWorktreeBase(),
+      maxRuntimeMs: getMaxRuntimeMinutes() * 60_000,
+      idleMs: 15 * 60_000,
+      drainIntervalMs: 5_000,
+    },
+  })
+
+  agentManager.start()
+  app.on('will-quit', () => agentManager.stop())
+
+  registerAuthHandlers()
+  registerAgentManagerHandlers(agentManager)
+
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    // Build connect-src dynamically from gateway config
     const connectSrc = buildConnectSrc()
 
     const csp = is.dev
@@ -183,16 +237,7 @@ app.whenReady().then(() => {
 })
 
 function buildConnectSrc(): string {
-  const config = getGatewayConfig()
-  if (!config) return 'ws://127.0.0.1:* wss://127.0.0.1:*'
-  try {
-    const url = new URL(config.url.replace(/^ws/, 'http'))
-    const wsProto = url.protocol === 'https:' ? 'wss:' : 'ws:'
-    const httpProto = url.protocol === 'https:' ? 'https:' : 'http:'
-    return `${wsProto}//${url.host} ${httpProto}//${url.host}`
-  } catch {
-    return 'ws://127.0.0.1:* wss://127.0.0.1:*'
-  }
+  return 'https://api.github.com'
 }
 
 app.on('window-all-closed', () => {
