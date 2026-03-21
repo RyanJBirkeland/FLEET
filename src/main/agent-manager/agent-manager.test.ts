@@ -334,6 +334,33 @@ describe('AgentManager', () => {
       manager.stop()
     })
 
+    it('calls handleCompletion when event stream throws', async () => {
+      const deps = makeDeps()
+      const task = makeTask()
+      vi.mocked(deps.getQueuedTasks).mockResolvedValueOnce([task])
+
+      // Mock agent with a throwing event stream
+      vi.mocked(deps.spawnAgent).mockResolvedValue({
+        id: 'agent-1',
+        events: (async function* () {
+          throw new Error('stream died')
+        })(),
+        steer: vi.fn(),
+        stop: vi.fn(),
+      })
+
+      const manager = new AgentManager(deps)
+      manager.start()
+      await vi.advanceTimersByTimeAsync(deps.config.drainIntervalMs)
+      // Allow microtasks to settle
+      await vi.advanceTimersByTimeAsync(100)
+
+      expect(deps.handleCompletion).toHaveBeenCalledWith(
+        expect.objectContaining({ taskId: task.id, exitCode: 1 }),
+      )
+      manager.stop()
+    })
+
     it('emits events via deps.emitEvent as they arrive', async () => {
       const task = makeTask()
       const textEvent: AgentEvent = {
@@ -458,9 +485,10 @@ describe('AgentManager', () => {
 
       await vi.advanceTimersByTimeAsync(deps.config.drainIntervalMs)
 
-      // First call to updateTask should set status to 'active'
+      // First call to updateTask should set status to 'active' with started_at
       expect(deps.updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({
         status: 'active',
+        started_at: expect.any(String),
       }))
 
       manager.stop()

@@ -58,6 +58,7 @@ export class AgentManager {
   private readonly deps: AgentManagerDeps
   private readonly active = new Map<string, ActiveAgent>()
   private drainInterval: ReturnType<typeof setInterval> | null = null
+  private draining = false
 
   constructor(deps: AgentManagerDeps) {
     this.deps = deps
@@ -101,14 +102,20 @@ export class AgentManager {
   }
 
   private async drain(): Promise<void> {
-    const slots = this.availableSlots
-    if (slots <= 0) return
+    if (this.draining) return
+    this.draining = true
+    try {
+      const slots = this.availableSlots
+      if (slots <= 0) return
 
-    const tasks = await this.deps.getQueuedTasks()
-    const toRun = tasks.slice(0, slots)
+      const tasks = await this.deps.getQueuedTasks()
+      const toRun = tasks.slice(0, slots)
 
-    for (const task of toRun) {
-      void this.runTask(task)
+      for (const task of toRun) {
+        void this.runTask(task)
+      }
+    } finally {
+      this.draining = false
     }
   }
 
@@ -127,6 +134,7 @@ export class AgentManager {
 
       await this.deps.updateTask(task.id, {
         status: 'active',
+        started_at: new Date().toISOString(),
       })
 
       const { worktreePath } = await this.deps.createWorktree(
@@ -168,6 +176,10 @@ export class AgentManager {
     repoInfo: { repoPath: string; ghRepo: string },
     worktreePath: string,
   ): Promise<void> {
+    let exitCode = 1
+    let durationMs = 0
+    const startTime = Date.now()
+
     try {
       for await (const event of handle.events) {
         const entry = this.active.get(task.id)
@@ -179,27 +191,28 @@ export class AgentManager {
 
         if (event.type === 'agent:completed') {
           const completedEvent = event as Extract<AgentEvent, { type: 'agent:completed' }>
-
-          this.active.delete(task.id)
-          entry?.watchdog.stop()
-
-          await this.deps.handleCompletion({
-            taskId: task.id,
-            agentId: handle.id,
-            repoPath: repoInfo.repoPath,
-            worktreePath,
-            ghRepo: repoInfo.ghRepo,
-            exitCode: completedEvent.exitCode,
-            worktreeBase: this.deps.config.worktreeBase,
-            retryCount: task.retry_count,
-            fastFailCount: task.fast_fail_count,
-            durationMs: completedEvent.durationMs,
-          })
+          exitCode = completedEvent.exitCode
+          durationMs = completedEvent.durationMs
+          break
         }
       }
-    } catch {
-      // Event stream ended unexpectedly — clean up
+    } catch (err) {
+      console.error(`[agent-manager] Stream error for task ${task.id}:`, err)
+      durationMs = Date.now() - startTime
+    } finally {
       this.active.delete(task.id)
+      await this.deps.handleCompletion({
+        taskId: task.id,
+        agentId: handle.id,
+        repoPath: repoInfo.repoPath,
+        worktreePath,
+        ghRepo: repoInfo.ghRepo,
+        exitCode,
+        worktreeBase: this.deps.config.worktreeBase,
+        retryCount: task.retry_count,
+        fastFailCount: task.fast_fail_count,
+        durationMs,
+      })
     }
   }
 }
