@@ -14,18 +14,12 @@ import { registerFsHandlers } from './fs'
 import { registerTemplateHandlers } from './handlers/template-handlers'
 import { registerAuthHandlers } from './handlers/auth-handlers'
 import { registerAgentManagerHandlers } from './handlers/agent-manager-handlers'
-import { AgentManager, createWorktree, handleAgentCompletion, type CompletionContext } from './agent-manager'
-import { SdkProvider } from './agents'
-import { ensureSubscriptionAuth } from './auth-guard'
-import { getEventBus } from './agents/event-bus'
-import { getMaxConcurrent, getWorktreeBase, getMaxRuntimeMinutes, getSettingJson } from './settings'
 import { getDb, closeDb } from './db'
-import { getQueuedTasks as _getQueuedTasks, updateTask as _updateTask } from './data/sprint-queries'
 import { startPrPoller, stopPrPoller } from './pr-poller'
 import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
-import { pruneOldEvents } from './agents/event-store'
-import { getEventRetentionDays } from './config'
 import { startQueueApi, stopQueueApi } from './queue-api'
+import { pruneOldEvents } from './data/event-queries'
+import { getEventRetentionDays } from './config'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -96,7 +90,7 @@ app.whenReady().then(() => {
   startQueueApi({ port: 18790 })
   app.on('will-quit', () => stopQueueApi())
 
-  pruneOldEvents(getEventRetentionDays())
+  pruneOldEvents(getDb(), getEventRetentionDays())
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -111,54 +105,8 @@ app.whenReady().then(() => {
   registerCostHandlers()
   registerTemplateHandlers()
   registerFsHandlers()
-
-  // Agent Manager setup
-  const sdkProvider = new SdkProvider()
-  const eventBus = getEventBus()
-
-  const agentManager = new AgentManager({
-    getQueuedTasks: async () => _getQueuedTasks(),
-    updateTask: async (taskId, update) => {
-      await _updateTask(taskId, update as Record<string, unknown>)
-    },
-    ensureAuth: () => ensureSubscriptionAuth(),
-    spawnAgent: async (opts) => {
-      return sdkProvider.spawn({
-        prompt: opts.prompt,
-        workingDirectory: opts.cwd,
-        model: opts.model,
-      })
-    },
-    createWorktree: (repoPath, taskId, worktreeBase) => createWorktree(repoPath, taskId, worktreeBase),
-    handleCompletion: async (ctx) => {
-      await handleAgentCompletion({
-        ...ctx,
-        updateTask: async (update) => {
-          await _updateTask(ctx.taskId, update)
-        },
-      } as CompletionContext)
-    },
-    emitEvent: (agentId, event) => eventBus.emit('agent:event', agentId, event),
-    getRepoInfo: (repoName) => {
-      const repos = getSettingJson<Array<{ name: string; localPath: string; githubOwner: string; githubRepo: string }>>('repos') ?? []
-      const repo = repos.find(r => r.name === repoName)
-      if (!repo) return null
-      return { repoPath: repo.localPath, ghRepo: `${repo.githubOwner}/${repo.githubRepo}` }
-    },
-    config: {
-      maxConcurrent: getMaxConcurrent(),
-      worktreeBase: getWorktreeBase(),
-      maxRuntimeMs: getMaxRuntimeMinutes() * 60_000,
-      idleMs: 15 * 60_000,
-      drainIntervalMs: 5_000,
-    },
-  })
-
-  agentManager.start()
-  app.on('will-quit', () => agentManager.stop())
-
   registerAuthHandlers()
-  registerAgentManagerHandlers(agentManager)
+  registerAgentManagerHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const connectSrc = buildConnectSrc()

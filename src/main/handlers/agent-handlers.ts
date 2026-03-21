@@ -1,16 +1,15 @@
+/**
+ * Agent IPC handlers — proxies agent lifecycle operations through the
+ * task-runner's Runner API and provides local history/log access from SQLite.
+ */
 import { safeHandle } from '../ipc-utils'
-import { validateRepoPath } from '../validation'
 import {
-  getAgentProcesses,
-  spawnClaudeAgent,
-  tailAgentLog,
-  cleanupOldLogs,
-  sendToAgent,
-  isAgentInteractive,
   steerAgent,
-  killAgent
-} from '../local-agents'
-import type { SpawnLocalAgentArgs, TailLogArgs } from '../local-agents'
+  killAgent,
+  listAgents as listRunnerAgents,
+} from '../runner-client'
+import { tailAgentLog, cleanupOldLogs } from '../agent-log-manager'
+import type { TailLogArgs } from '../agent-log-manager'
 import {
   listAgents,
   readLog,
@@ -18,7 +17,6 @@ import {
   pruneOldAgents
 } from '../agent-history'
 import type { AgentMeta } from '../agent-history'
-import { getHistory } from '../agents/event-store'
 import {
   getAgentBinary,
   getAgentPermissionMode,
@@ -28,28 +26,38 @@ import {
 } from '../settings'
 
 export function registerAgentHandlers(): void {
-  // --- Local agent process detection + spawning ---
-  safeHandle('local:getAgentProcesses', () => getAgentProcesses())
-  safeHandle('local:spawnClaudeAgent', (_e, args: SpawnLocalAgentArgs) => {
-    validateRepoPath(args.repoPath)
-    return spawnClaudeAgent(args)
+  // --- Runner-proxied agent operations ---
+  safeHandle('local:getAgentProcesses', async () => {
+    // Process scanning removed — return runner agents instead
+    try {
+      const agents = await listRunnerAgents()
+      return Array.isArray(agents) ? agents : []
+    } catch {
+      return []
+    }
+  })
+  safeHandle('local:spawnClaudeAgent', async () => {
+    // Agent spawning removed from BDE — dispatch tasks through the queue API instead
+    throw new Error('Agent spawning is no longer supported in BDE. Use the task queue to dispatch work to the task-runner.')
   })
   safeHandle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))
-  safeHandle('local:sendToAgent', (_e, { pid, message }: { pid: number; message: string }) =>
-    sendToAgent(pid, message)
-  )
-  safeHandle('local:isInteractive', (_e, pid: number) =>
-    isAgentInteractive(pid)
-  )
-  safeHandle('agent:steer', (_e, { agentId, message }: { agentId: string; message: string }) =>
+  safeHandle('local:sendToAgent', async (_e, { pid: _pid, message: _message }: { pid: number; message: string }) => {
+    return { ok: false, error: 'Direct PID-based messaging removed. Use agent:steer with an agent ID instead.' } as const
+  })
+  safeHandle('local:isInteractive', () => false)
+  safeHandle('agent:steer', async (_e, { agentId, message }: { agentId: string; message: string }) =>
     steerAgent(agentId, message)
   )
-  safeHandle('agent:kill', (_e, agentId: string) =>
+  safeHandle('agent:kill', async (_e, agentId: string) =>
     killAgent(agentId)
   )
-  safeHandle('agent:history', (_e, agentId: string) =>
-    getHistory(agentId)
-  )
+  safeHandle('agent:history', async (_e, agentId: string) => {
+    // Event history from local SQLite — kept for viewing historical runs
+    const { getEventHistory } = await import('../data/event-queries')
+    const { getDb } = await import('../db')
+    const rows = getEventHistory(getDb(), agentId)
+    return rows.map((r) => JSON.parse(r.payload))
+  })
   cleanupOldLogs()
 
   // --- Agent config IPC ---

@@ -29,12 +29,14 @@ vi.mock('electron', () => ({
 // Mock underlying modules — we're testing wiring, not business logic
 // ---------------------------------------------------------------------------
 
-vi.mock('../local-agents', () => ({
-  getAgentProcesses: vi.fn().mockResolvedValue([]),
-  spawnClaudeAgent: vi.fn().mockResolvedValue({ pid: 123, logPath: '/tmp/log', id: 'abc' }),
+vi.mock('../runner-client', () => ({
+  listAgents: vi.fn().mockResolvedValue([]),
+  steerAgent: vi.fn().mockResolvedValue({ ok: true }),
+  killAgent: vi.fn().mockResolvedValue({ ok: true }),
+}))
+
+vi.mock('../agent-log-manager', () => ({
   tailAgentLog: vi.fn().mockResolvedValue({ content: 'log data', nextByte: 42 }),
-  sendToAgent: vi.fn().mockReturnValue({ ok: true }),
-  isAgentInteractive: vi.fn().mockReturnValue(true),
   cleanupOldLogs: vi.fn(),
 }))
 
@@ -45,6 +47,10 @@ vi.mock('../agent-history', () => ({
   importAgent: vi.fn().mockResolvedValue({ id: 'imported-1' }),
   updateAgentMeta: vi.fn(),
   pruneOldAgents: vi.fn(),
+}))
+
+vi.mock('../data/event-queries', () => ({
+  getEventHistory: vi.fn().mockReturnValue([]),
 }))
 
 vi.mock('../git', () => ({
@@ -129,7 +135,7 @@ const mockPtySpawn = vi.fn().mockReturnValue(mockPtyProcess)
 // Import the registration functions AFTER mocks are set up
 // ---------------------------------------------------------------------------
 import { shell } from 'electron'
-import * as localAgents from '../local-agents'
+import * as agentLogManager from '../agent-log-manager'
 import * as agentHistory from '../agent-history'
 import * as git from '../git'
 import * as githubPrStatus from '../github-pr-status'
@@ -182,7 +188,7 @@ describe('IPC handler registration', () => {
     registerFsHandlers()
 
     // Capture startup side-effect state before beforeEach clears mocks
-    startupCleanupCalled = vi.mocked(localAgents.cleanupOldLogs).mock.calls.length > 0
+    startupCleanupCalled = vi.mocked(agentLogManager.cleanupOldLogs).mock.calls.length > 0
     startupPruneCalled = vi.mocked(agentHistory.pruneOldAgents).mock.calls.length > 0
   })
 
@@ -204,20 +210,17 @@ describe('IPC handler registration', () => {
     })
 
     it('re-throws errors to the renderer (does not swallow)', async () => {
-      vi.mocked(localAgents.getAgentProcesses).mockRejectedValueOnce(
-        new Error('boom')
+      // local:spawnClaudeAgent always throws — use it to test safeHandle error propagation
+      await expect(invoke('local:spawnClaudeAgent', { repoPath: '/tmp/r', task: 'x' })).rejects.toThrow(
+        'no longer supported'
       )
-      await expect(invoke('local:getAgentProcesses')).rejects.toThrow('boom')
     })
 
     it('logs errors to console on handler throw', async () => {
       const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-      vi.mocked(localAgents.getAgentProcesses).mockRejectedValueOnce(
-        new Error('logged error')
-      )
-      await expect(invoke('local:getAgentProcesses')).rejects.toThrow()
+      await expect(invoke('local:spawnClaudeAgent', { repoPath: '/tmp/r', task: 'x' })).rejects.toThrow()
       expect(consoleSpy).toHaveBeenCalledWith(
-        expect.stringContaining('[IPC:local:getAgentProcesses]'),
+        expect.stringContaining('[IPC:local:spawnClaudeAgent]'),
         expect.any(Error)
       )
       consoleSpy.mockRestore()
@@ -251,16 +254,9 @@ describe('IPC handler registration', () => {
       expect(agentHistory.listAgents).toHaveBeenCalledWith(10, 'running')
     })
 
-    it('"local:spawnClaudeAgent" calls spawnClaudeAgent with args', async () => {
-      const args = { repoPath: '/tmp/bde', task: 'fix bug', model: 'sonnet' }
-      await invoke('local:spawnClaudeAgent', args)
-      expect(localAgents.spawnClaudeAgent).toHaveBeenCalledWith(args)
-    })
-
-    it('"local:spawnClaudeAgent" rejects repoPath outside configured repos', async () => {
-      const args = { repoPath: '/etc/evil', task: 'fix bug', model: 'sonnet' }
-      await expect(invoke('local:spawnClaudeAgent', args)).rejects.toThrow(
-        'Path rejected'
+    it('"local:spawnClaudeAgent" rejects (spawning removed from BDE)', async () => {
+      await expect(invoke('local:spawnClaudeAgent', { repoPath: '/tmp/bde', task: 'fix bug' })).rejects.toThrow(
+        'no longer supported'
       )
     })
 
@@ -272,19 +268,18 @@ describe('IPC handler registration', () => {
     it('"local:tailAgentLog" calls tailAgentLog with args', async () => {
       const args = { logPath: '/tmp/log.txt', fromByte: 0 }
       const result = await invoke('local:tailAgentLog', args)
-      expect(localAgents.tailAgentLog).toHaveBeenCalledWith(args)
+      expect(agentLogManager.tailAgentLog).toHaveBeenCalledWith(args)
       expect(result).toEqual({ content: 'log data', nextByte: 42 })
     })
 
-    it('"local:sendToAgent" calls sendToAgent with (pid, message)', async () => {
-      await invoke('local:sendToAgent', { pid: 123, message: 'hello' })
-      expect(localAgents.sendToAgent).toHaveBeenCalledWith(123, 'hello')
+    it('"local:sendToAgent" returns error (PID-based messaging removed)', async () => {
+      const result = await invoke('local:sendToAgent', { pid: 123, message: 'hello' })
+      expect(result).toEqual(expect.objectContaining({ ok: false }))
     })
 
-    it('"local:isInteractive" calls isAgentInteractive with pid', async () => {
+    it('"local:isInteractive" always returns false (local agents removed)', async () => {
       const result = await invoke('local:isInteractive', 999)
-      expect(localAgents.isAgentInteractive).toHaveBeenCalledWith(999)
-      expect(result).toBe(true)
+      expect(result).toBe(false)
     })
 
     it('"agents:readLog" calls readLog with (id, fromByte)', async () => {
@@ -442,19 +437,9 @@ describe('IPC handler registration', () => {
       )
     })
 
-    it('"agent:killLocal" calls process.kill for known agent PID', async () => {
-      vi.mocked(localAgents.isAgentInteractive).mockReturnValue(true)
-      const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true)
+    it('"agent:killLocal" returns error (local PID kill removed)', async () => {
       const result = await invoke('agent:killLocal', 12345)
-      expect(killSpy).toHaveBeenCalledWith(12345, 'SIGTERM')
-      expect(result).toEqual({ ok: true })
-      killSpy.mockRestore()
-    })
-
-    it('"agent:killLocal" rejects unknown PID', async () => {
-      vi.mocked(localAgents.isAgentInteractive).mockReturnValue(false)
-      const result = await invoke('agent:killLocal', 99999)
-      expect(result).toEqual({ ok: false, error: 'PID is not a known agent process' })
+      expect(result).toEqual(expect.objectContaining({ ok: false }))
     })
 
     it('"window:setTitle" sets window title via ipcMain.on listener', () => {

@@ -329,7 +329,7 @@ export interface AuthChannels {
 export interface AgentManagerChannels {
   'agent-manager:status': {
     args: []
-    result: { activeCount: number; availableSlots: number }
+    result: { activeCount: number; availableSlots: number | null }
   }
   'agent-manager:kill': {
     args: [taskId: string]

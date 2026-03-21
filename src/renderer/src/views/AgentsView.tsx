@@ -146,7 +146,7 @@ export function AgentsView() {
 }
 
 function HealthBarWrapper() {
-  const [status, setStatus] = useState<{ activeCount: number; availableSlots: number } | null>(null)
+  const [status, setStatus] = useState<{ activeCount: number; availableSlots: number | null } | null>(null)
 
   useEffect(() => {
     let cancelled = false
