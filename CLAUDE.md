@@ -10,6 +10,7 @@ npm run dev          # Dev server with HMR
 npm run build        # Type-check + production build (must pass before PR)
 npm run typecheck    # TypeScript type checking (also runs in CI)
 npm test             # Unit tests via vitest (must pass before PR)
+npm run test:main    # Main process tests (separate vitest config)
 npm run lint         # ESLint
 npm run format       # Prettier
 ```
@@ -74,6 +75,7 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **RPC**: Renderer talks to OpenClaw gateway via WebSocket (`src/renderer/src/lib/gateway.ts`)
 - **PR polling**: `pollPrStatuses` in `src/main/git.ts` — GitHub REST API, 60s interval, auto-marks tasks done on merge or cancelled on close
 - **Agent spawning**: `src/main/local-agents.ts` delegates to `src/main/agents/` provider factory (SDK or CLI). Event bus persists `AgentEvent` stream to SQLite and broadcasts via IPC.
+- **Agent event pipeline**: `local-agents.ts` → `consumeEvents()` → event bus (`getEventBus().emit()`) → SQLite `agent_events` table + IPC broadcast to renderer. If events don't appear in the Agents view, check that `bus.emit('agent:event', id, event)` is called in the consume loop.
 - **DB sync**: File watcher on `bde.db` pushes `sprint:external-change` IPC events to renderer (500ms debounce)
 - **Design tokens**: `src/renderer/src/design-system/tokens.ts` — use these instead of hardcoded values
 - **Panel system**: `src/renderer/src/stores/panelLayout.ts` — recursive PanelNode tree (leaf/split), `src/renderer/src/components/panels/` — PanelRenderer, PanelLeaf, PanelTabBar, PanelDropOverlay. Layout persists to `panel.layout` setting. Views rendered inside panels; drag-and-drop docking with 5-zone hit testing.
@@ -86,6 +88,9 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Queue API auth**: No authentication on queue API (localhost-only security model). Task runner authenticates to its OWN API via `SPRINT_API_KEY`, not to BDE's queue API.
 - **Pre-push hook**: Husky runs `npm run typecheck && npm test` before every push. Fix failures before retrying.
 - **Native modules**: `better-sqlite3` is rebuilt for Electron in `postinstall`. If `npm install` fails, check native build tools. `test:main` has pre/post scripts to swap between Node/Electron builds.
+- **Native module rebuild**: After `npm install`, run `npm run postinstall` to rebuild `better-sqlite3` for Electron. Without this, the app crashes with `NODE_MODULE_VERSION` mismatch.
+- **Zustand selector gotcha**: Never call a function that returns a new array/object inside a Zustand selector (e.g., `useSomeStore(s => s.getList())`). This creates a new reference every render → infinite loop. Derive with `useMemo` from stable state instead.
+- **Task runner connection**: Task runner polls BDE's queue API (`GET /queue/tasks`) — does NOT hold an SSE connection. `connectedRunners` in health check falls back to pinging the task runner's `/health` endpoint directly.
 - **DB migrations**: Schema changes go through `src/main/db.ts` — add a new entry to the `migrations` array. Never modify existing migrations.
 
 ## Key Conventions
