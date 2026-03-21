@@ -1,0 +1,56 @@
+/**
+ * Queue API HTTP server — lightweight Supabase proxy on port 18790.
+ * Allows external runners (without Supabase credentials) to consume
+ * the sprint task queue via a simple REST interface.
+ */
+import http from 'node:http'
+import { route } from './router'
+
+export interface QueueApiOptions {
+  port?: number
+  host?: string
+}
+
+let server: http.Server | null = null
+
+export function startQueueApi(opts: QueueApiOptions = {}): http.Server {
+  const port = opts.port ?? 18790
+  const host = opts.host ?? '127.0.0.1'
+
+  if (server) {
+    console.warn('[queue-api] Server already running — skipping start')
+    return server
+  }
+
+  server = http.createServer(async (req, res) => {
+    try {
+      await route(req, res)
+    } catch (err) {
+      console.error('[queue-api] Unhandled error:', err)
+      if (!res.headersSent) {
+        res.writeHead(500, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Internal server error' }))
+      }
+    }
+  })
+
+  server.listen(port, host, () => {
+    console.log(`[queue-api] Listening on http://${host}:${port}`)
+  })
+
+  return server
+}
+
+export function stopQueueApi(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if (!server) {
+      resolve()
+      return
+    }
+    server.close((err) => {
+      server = null
+      if (err) reject(err)
+      else resolve()
+    })
+  })
+}

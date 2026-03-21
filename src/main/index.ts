@@ -25,6 +25,7 @@ import { startPrPoller, stopPrPoller } from './pr-poller'
 import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
 import { pruneOldEvents } from './agents/event-store'
 import { getEventRetentionDays } from './config'
+import { startQueueApi, stopQueueApi } from './queue-api'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -91,6 +92,9 @@ app.whenReady().then(() => {
 
   startSprintPrPoller()
   app.on('will-quit', stopSprintPrPoller)
+
+  startQueueApi({ port: 18790 })
+  app.on('will-quit', () => stopQueueApi())
 
   pruneOldEvents(getEventRetentionDays())
 
