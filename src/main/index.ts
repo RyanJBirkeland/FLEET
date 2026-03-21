@@ -113,9 +113,9 @@ app.whenReady().then(() => {
   const eventBus = getEventBus()
 
   const agentManager = new AgentManager({
-    getQueuedTasks: async () => _getQueuedTasks(getDb()),
+    getQueuedTasks: async () => _getQueuedTasks(),
     updateTask: async (taskId, update) => {
-      _updateTask(getDb(), taskId, update)
+      await _updateTask(taskId, update as Record<string, unknown>)
     },
     ensureAuth: () => ensureSubscriptionAuth(),
     spawnAgent: async (opts) => {
@@ -130,7 +130,7 @@ app.whenReady().then(() => {
       await handleAgentCompletion({
         ...ctx,
         updateTask: async (update) => {
-          _updateTask(getDb(), ctx.taskId, update)
+          await _updateTask(ctx.taskId, update)
         },
       } as CompletionContext)
     },

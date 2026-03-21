@@ -30,6 +30,8 @@ export function setSettingJson<T>(key: string, value: T): void {
 // Well-known setting keys
 export const SETTING_AGENT_BINARY = 'agent.binary'
 export const SETTING_AGENT_PERMISSION_MODE = 'agent.permissionMode'
+export const SETTING_SUPABASE_URL = 'supabase.url'
+export const SETTING_SUPABASE_KEY = 'supabase.serviceKey'
 
 // Defaults
 export const DEFAULT_AGENT_BINARY = 'claude'

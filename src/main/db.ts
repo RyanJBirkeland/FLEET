@@ -310,6 +310,16 @@ export const migrations: Migration[] = [
           ON agent_events(agent_id, timestamp);
       `)
     },
+  },
+  {
+    version: 12,
+    description: 'Drop sprint_tasks table — tasks now live in Supabase',
+    up: (db) => {
+      db.exec(`
+        DROP TABLE IF EXISTS sprint_tasks;
+        DROP TRIGGER IF EXISTS sprint_tasks_updated_at;
+      `)
+    },
   }
 ]
 

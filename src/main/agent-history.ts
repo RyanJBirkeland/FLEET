@@ -195,9 +195,14 @@ export async function pruneOldAgents(maxCount = 500): Promise<void> {
   const toRemove = getAgentsToRemove(db, maxCount)
   if (toRemove.length === 0) return
 
+  // Clear Supabase sprint task FKs first (async)
+  for (const row of toRemove) {
+    await clearSprintTaskFk(row.id)
+  }
+
+  // Then delete agents from local SQLite in a transaction
   const tx = db.transaction(() => {
     for (const row of toRemove) {
-      clearSprintTaskFk(row.id)
       deleteAgent(db, row.id)
     }
   })

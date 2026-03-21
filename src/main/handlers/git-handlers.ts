@@ -91,11 +91,11 @@ export function registerGitHandlers(): void {
       const prNumber = input ? parsePrUrl(input.prUrl)?.number : undefined
       if (!prNumber) continue
       if (result.merged) {
-        markTaskDoneByPrNumber(prNumber)
+        await markTaskDoneByPrNumber(prNumber)
       } else if (result.state === 'CLOSED') {
-        markTaskCancelledByPrNumber(prNumber)
+        await markTaskCancelledByPrNumber(prNumber)
       }
-      updateTaskMergeableState(prNumber, result.mergeableState)
+      await updateTaskMergeableState(prNumber, result.mergeableState)
     }
     return results
   })

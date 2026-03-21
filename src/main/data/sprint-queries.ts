@@ -1,9 +1,9 @@
 /**
- * Sprint task query functions — extracted from handlers/sprint-local.ts.
- * All functions take `db: Database.Database` as first parameter for testability.
+ * Sprint task query functions — Supabase edition.
+ * All functions are async and use the Supabase client singleton.
  */
-import type Database from 'better-sqlite3'
 import type { SprintTask } from '../../shared/types'
+import { getSupabaseClient } from './supabase-client'
 
 // --- Field allowlist for updates ---
 
@@ -39,19 +39,37 @@ export interface QueueStats {
   error: number
 }
 
-export function getTask(db: Database.Database, id: string): SprintTask | null {
-  return db.prepare('SELECT * FROM sprint_tasks WHERE id = ?').get(id) as SprintTask | null
+export async function getTask(id: string): Promise<SprintTask | null> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+
+  if (error) {
+    console.warn(`[sprint-queries] getTask failed for id=${id}:`, error)
+    return null
+  }
+  return data as SprintTask | null
 }
 
-export function listTasks(db: Database.Database, status?: string): SprintTask[] {
+export async function listTasks(status?: string): Promise<SprintTask[]> {
+  let query = getSupabaseClient()
+    .from('sprint_tasks')
+    .select('*')
+    .order('priority', { ascending: true })
+    .order('created_at', { ascending: true })
+
   if (status) {
-    return db
-      .prepare('SELECT * FROM sprint_tasks WHERE status = ? ORDER BY priority ASC, created_at ASC')
-      .all(status) as SprintTask[]
+    query = query.eq('status', status)
   }
-  return db
-    .prepare('SELECT * FROM sprint_tasks ORDER BY priority ASC, created_at ASC')
-    .all() as SprintTask[]
+
+  const { data, error } = await query
+  if (error) {
+    console.warn('[sprint-queries] listTasks failed:', error)
+    return []
+  }
+  return (data ?? []) as SprintTask[]
 }
 
 export interface CreateTaskInput {
@@ -65,14 +83,10 @@ export interface CreateTaskInput {
   template_name?: string
 }
 
-export function createTask(db: Database.Database, input: CreateTaskInput): SprintTask {
-  return db
-    .prepare(
-      `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name)
-       VALUES (@title, @repo, @prompt, @spec, @notes, @priority, @status, @template_name)
-       RETURNING *`
-    )
-    .get({
+export async function createTask(input: CreateTaskInput): Promise<SprintTask> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .insert({
       title: input.title,
       repo: input.repo,
       prompt: input.prompt ?? input.spec ?? input.title,
@@ -81,78 +95,89 @@ export function createTask(db: Database.Database, input: CreateTaskInput): Sprin
       priority: input.priority ?? 0,
       status: input.status ?? 'backlog',
       template_name: input.template_name ?? null,
-    }) as SprintTask
+    })
+    .select()
+    .single()
+
+  if (error) {
+    throw new Error(`[sprint-queries] createTask failed: ${error.message}`)
+  }
+  return data as SprintTask
 }
 
-export function updateTask(
-  db: Database.Database,
+export async function updateTask(
   id: string,
   patch: Record<string, unknown>
-): SprintTask | null {
+): Promise<SprintTask | null> {
   const entries = Object.entries(patch).filter(([k]) => UPDATE_ALLOWLIST.has(k))
   if (entries.length === 0) return null
 
-  const setClauses = entries.map(([k]) => `${k} = ?`).join(', ')
-  const values = entries.map(([, v]) => v)
-
-  const row = db
-    .prepare(`UPDATE sprint_tasks SET ${setClauses} WHERE id = ? RETURNING *`)
-    .get(...values, id) as SprintTask | undefined
-
-  if (row) {
-    // Re-fetch for correct updated_at (trigger fires after RETURNING)
-    return getTask(db, id)!
+  const updateObj: Record<string, unknown> = {}
+  for (const [k, v] of entries) {
+    updateObj[k] = v
   }
-  return null
+
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .update(updateObj)
+    .eq('id', id)
+    .select()
+    .single()
+
+  if (error) {
+    console.warn(`[sprint-queries] updateTask failed for id=${id}:`, error)
+    return null
+  }
+  return data as SprintTask
 }
 
-export function deleteTask(db: Database.Database, id: string): void {
-  db.prepare('DELETE FROM sprint_tasks WHERE id = ?').run(id)
+export async function deleteTask(id: string): Promise<void> {
+  const { error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .delete()
+    .eq('id', id)
+
+  if (error) {
+    console.warn(`[sprint-queries] deleteTask failed for id=${id}:`, error)
+  }
 }
 
-export function claimTask(
-  db: Database.Database,
+export async function claimTask(
   id: string,
   claimedBy: string
-): SprintTask | null {
+): Promise<SprintTask | null> {
   const now = new Date().toISOString()
-  const result = db
-    .prepare(
-      `UPDATE sprint_tasks
-       SET status = 'active', claimed_by = ?, started_at = ?
-       WHERE id = ? AND status = 'queued'
-       RETURNING *`
-    )
-    .get(claimedBy, now, id) as SprintTask | undefined
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .update({ status: 'active', claimed_by: claimedBy, started_at: now })
+    .eq('id', id)
+    .eq('status', 'queued')
+    .select()
+    .single()
 
-  if (result) {
-    // Re-fetch to get the correct updated_at (trigger fires after RETURNING)
-    return getTask(db, id)!
+  if (error) {
+    // No matching row (not queued or doesn't exist) is not a real error
+    return null
   }
-  return null
+  return data as SprintTask
 }
 
-export function releaseTask(db: Database.Database, id: string): SprintTask | null {
-  const result = db
-    .prepare(
-      `UPDATE sprint_tasks
-       SET status = 'queued', claimed_by = NULL, started_at = NULL, agent_run_id = NULL
-       WHERE id = ? AND status = 'active'
-       RETURNING *`
-    )
-    .get(id) as SprintTask | undefined
+export async function releaseTask(id: string): Promise<SprintTask | null> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .update({ status: 'queued', claimed_by: null, started_at: null, agent_run_id: null })
+    .eq('id', id)
+    .eq('status', 'active')
+    .select()
+    .single()
 
-  if (result) {
-    return getTask(db, id)!
+  if (error) {
+    return null
   }
-  return null
+  return data as SprintTask
 }
 
-export function getQueueStats(db: Database.Database): QueueStats {
-  const rows = db
-    .prepare('SELECT status, COUNT(*) as count FROM sprint_tasks GROUP BY status')
-    .all() as { status: string; count: number }[]
-
+export async function getQueueStats(): Promise<QueueStats> {
   const stats: QueueStats = {
     backlog: 0,
     queued: 0,
@@ -162,75 +187,110 @@ export function getQueueStats(db: Database.Database): QueueStats {
     cancelled: 0,
     error: 0,
   }
-  for (const row of rows) {
-    if (row.status in stats) {
-      stats[row.status as keyof QueueStats] = row.count
+
+  // Supabase doesn't have native GROUP BY in the client — fetch statuses
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('status')
+
+  if (error) {
+    console.warn('[sprint-queries] getQueueStats failed:', error)
+    return stats
+  }
+
+  for (const row of data ?? []) {
+    const s = (row as { status: string }).status
+    if (s in stats) {
+      stats[s as keyof QueueStats]++
     }
   }
   return stats
 }
 
-export function getDoneTodayCount(db: Database.Database): number {
+export async function getDoneTodayCount(): Promise<number> {
   const today = new Date()
   today.setHours(0, 0, 0, 0)
-  const row = db
-    .prepare(
-      "SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'done' AND completed_at >= ?"
-    )
-    .get(today.toISOString()) as { count: number }
-  return row.count
+
+  const { count, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('*', { count: 'exact', head: true })
+    .eq('status', 'done')
+    .gte('completed_at', today.toISOString())
+
+  if (error) {
+    console.warn('[sprint-queries] getDoneTodayCount failed:', error)
+    return 0
+  }
+  return count ?? 0
 }
 
-export function markTaskDoneByPrNumber(db: Database.Database, prNumber: number): void {
+export async function markTaskDoneByPrNumber(prNumber: number): Promise<void> {
   try {
     const completedAt = new Date().toISOString()
     // Transition active tasks to done
-    db.prepare(
-      "UPDATE sprint_tasks SET status='done', completed_at=? WHERE pr_number=? AND status='active'"
-    ).run(completedAt, prNumber)
-    // Also update pr_status to merged for tasks already marked done (by task runner)
-    db.prepare(
-      "UPDATE sprint_tasks SET pr_status='merged' WHERE pr_number=? AND status='done' AND pr_status='open'"
-    ).run(prNumber)
+    await getSupabaseClient()
+      .from('sprint_tasks')
+      .update({ status: 'done', completed_at: completedAt })
+      .eq('pr_number', prNumber)
+      .eq('status', 'active')
+
+    // Also update pr_status to merged for tasks already marked done
+    await getSupabaseClient()
+      .from('sprint_tasks')
+      .update({ pr_status: 'merged' })
+      .eq('pr_number', prNumber)
+      .eq('status', 'done')
+      .eq('pr_status', 'open')
   } catch (err) {
     console.warn(`[sprint-queries] failed to mark task done for PR #${prNumber}:`, err)
   }
 }
 
-export function markTaskCancelledByPrNumber(db: Database.Database, prNumber: number): void {
+export async function markTaskCancelledByPrNumber(prNumber: number): Promise<void> {
   try {
     // Transition active tasks to cancelled
-    db.prepare(
-      "UPDATE sprint_tasks SET status='cancelled', completed_at=? WHERE pr_number=? AND status='active'"
-    ).run(new Date().toISOString(), prNumber)
+    await getSupabaseClient()
+      .from('sprint_tasks')
+      .update({ status: 'cancelled', completed_at: new Date().toISOString() })
+      .eq('pr_number', prNumber)
+      .eq('status', 'active')
+
     // Also update pr_status to closed for tasks already marked done
-    db.prepare(
-      "UPDATE sprint_tasks SET pr_status='closed' WHERE pr_number=? AND status='done' AND pr_status='open'"
-    ).run(prNumber)
+    await getSupabaseClient()
+      .from('sprint_tasks')
+      .update({ pr_status: 'closed' })
+      .eq('pr_number', prNumber)
+      .eq('status', 'done')
+      .eq('pr_status', 'open')
   } catch (err) {
     console.warn(`[sprint-queries] failed to mark task cancelled for PR #${prNumber}:`, err)
   }
 }
 
-export function listTasksWithOpenPrs(db: Database.Database): SprintTask[] {
-  return db
-    .prepare(
-      "SELECT * FROM sprint_tasks WHERE pr_number IS NOT NULL AND pr_status = 'open'"
-    )
-    .all() as SprintTask[]
+export async function listTasksWithOpenPrs(): Promise<SprintTask[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('*')
+    .not('pr_number', 'is', null)
+    .eq('pr_status', 'open')
+
+  if (error) {
+    console.warn('[sprint-queries] listTasksWithOpenPrs failed:', error)
+    return []
+  }
+  return (data ?? []) as SprintTask[]
 }
 
-export function updateTaskMergeableState(
-  db: Database.Database,
+export async function updateTaskMergeableState(
   prNumber: number,
   mergeableState: string | null
-): void {
+): Promise<void> {
   if (!mergeableState) return
   try {
-    db.prepare('UPDATE sprint_tasks SET pr_mergeable_state = ? WHERE pr_number = ?').run(
-      mergeableState,
-      prNumber
-    )
+    await getSupabaseClient()
+      .from('sprint_tasks')
+      .update({ pr_mergeable_state: mergeableState })
+      .eq('pr_number', prNumber)
   } catch (err) {
     console.warn(
       `[sprint-queries] failed to update mergeable_state for PR #${prNumber}:`,
@@ -239,21 +299,46 @@ export function updateTaskMergeableState(
   }
 }
 
-export function getQueuedTasks(db: Database.Database): SprintTask[] {
-  return db
-    .prepare("SELECT * FROM sprint_tasks WHERE status = 'queued' ORDER BY priority ASC, created_at ASC")
-    .all() as SprintTask[]
+export async function getQueuedTasks(): Promise<SprintTask[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('*')
+    .eq('status', 'queued')
+    .order('priority', { ascending: true })
+    .order('created_at', { ascending: true })
+
+  if (error) {
+    console.warn('[sprint-queries] getQueuedTasks failed:', error)
+    return []
+  }
+  return (data ?? []) as SprintTask[]
 }
 
-export function clearSprintTaskFk(db: Database.Database, agentRunId: string): void {
+export async function clearSprintTaskFk(agentRunId: string): Promise<void> {
   try {
-    db.prepare('UPDATE sprint_tasks SET agent_run_id = NULL WHERE agent_run_id = ?').run(
-      agentRunId
-    )
+    await getSupabaseClient()
+      .from('sprint_tasks')
+      .update({ agent_run_id: null })
+      .eq('agent_run_id', agentRunId)
   } catch (err) {
     console.warn(
       `[sprint-queries] failed to clear FK for agent_run_id=${agentRunId}:`,
       err
     )
   }
+}
+
+export async function getHealthCheckTasks(): Promise<SprintTask[]> {
+  const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('*')
+    .eq('status', 'active')
+    .lt('started_at', oneHourAgo)
+
+  if (error) {
+    console.warn('[sprint-queries] getHealthCheckTasks failed:', error)
+    return []
+  }
+  return (data ?? []) as SprintTask[]
 }

@@ -27,6 +27,7 @@ import {
   listTasksWithOpenPrs as _listTasksWithOpenPrs,
   updateTaskMergeableState as _updateTaskMergeableState,
   clearSprintTaskFk as _clearSprintTaskFk,
+  getHealthCheckTasks as _getHealthCheckTasks,
   UPDATE_ALLOWLIST,
 } from '../data/sprint-queries'
 import type { CreateTaskInput, QueueStats } from '../data/sprint-queries'
@@ -50,82 +51,82 @@ function validateSpecPath(relativePath: string): string {
   return resolved
 }
 
-// --- Thin wrappers that delegate to data layer with getDb() ---
+// --- Thin async wrappers that delegate to data layer (Supabase) ---
 
-export function getTask(id: string): SprintTask | null {
-  return _getTask(getDb(), id)
+export async function getTask(id: string): Promise<SprintTask | null> {
+  return _getTask(id)
 }
 
-export function listTasks(status?: string): SprintTask[] {
-  return _listTasks(getDb(), status)
+export async function listTasks(status?: string): Promise<SprintTask[]> {
+  return _listTasks(status)
 }
 
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
-  const result = _claimTask(getDb(), id, claimedBy)
+export async function claimTask(id: string, claimedBy: string): Promise<SprintTask | null> {
+  const result = await _claimTask(id, claimedBy)
   if (result) notifySprintMutation('updated', result)
   return result
 }
 
-export function updateTask(id: string, patch: Record<string, unknown>): SprintTask | null {
-  const result = _updateTask(getDb(), id, patch)
+export async function updateTask(id: string, patch: Record<string, unknown>): Promise<SprintTask | null> {
+  const result = await _updateTask(id, patch)
   if (result) notifySprintMutation('updated', result)
   return result
 }
 
-export function releaseTask(id: string): SprintTask | null {
-  const result = _releaseTask(getDb(), id)
+export async function releaseTask(id: string): Promise<SprintTask | null> {
+  const result = await _releaseTask(id)
   if (result) notifySprintMutation('updated', result)
   return result
 }
 
-export function getQueueStats(): QueueStats {
-  return _getQueueStats(getDb())
+export async function getQueueStats(): Promise<QueueStats> {
+  return _getQueueStats()
 }
 
-export function getDoneTodayCount(): number {
-  return _getDoneTodayCount(getDb())
+export async function getDoneTodayCount(): Promise<number> {
+  return _getDoneTodayCount()
 }
 
-export function markTaskDoneByPrNumber(prNumber: number): void {
-  _markTaskDoneByPrNumber(getDb(), prNumber)
+export async function markTaskDoneByPrNumber(prNumber: number): Promise<void> {
+  await _markTaskDoneByPrNumber(prNumber)
 }
 
-export function markTaskCancelledByPrNumber(prNumber: number): void {
-  _markTaskCancelledByPrNumber(getDb(), prNumber)
+export async function markTaskCancelledByPrNumber(prNumber: number): Promise<void> {
+  await _markTaskCancelledByPrNumber(prNumber)
 }
 
-export function listTasksWithOpenPrs(): SprintTask[] {
-  return _listTasksWithOpenPrs(getDb())
+export async function listTasksWithOpenPrs(): Promise<SprintTask[]> {
+  return _listTasksWithOpenPrs()
 }
 
-export function updateTaskMergeableState(prNumber: number, mergeableState: string | null): void {
-  _updateTaskMergeableState(getDb(), prNumber, mergeableState)
+export async function updateTaskMergeableState(prNumber: number, mergeableState: string | null): Promise<void> {
+  await _updateTaskMergeableState(prNumber, mergeableState)
 }
 
-export function clearSprintTaskFk(agentRunId: string): void {
-  _clearSprintTaskFk(getDb(), agentRunId)
+export async function clearSprintTaskFk(agentRunId: string): Promise<void> {
+  await _clearSprintTaskFk(agentRunId)
 }
 
 // --- Handler registration ---
 
 export function registerSprintLocalHandlers(): void {
-  safeHandle('sprint:list', () => {
-    return _listTasks(getDb())
+  safeHandle('sprint:list', async () => {
+    return _listTasks()
   })
 
-  safeHandle('sprint:create', (_e, task: CreateTaskInput) => {
-    const row = _createTask(getDb(), task)
+  safeHandle('sprint:create', async (_e, task: CreateTaskInput) => {
+    const row = await _createTask(task)
     notifySprintMutation('created', row)
     return row
   })
 
-  safeHandle('sprint:update', (_e, id: string, patch: Record<string, unknown>) => {
+  safeHandle('sprint:update', async (_e, id: string, patch: Record<string, unknown>) => {
     return updateTask(id, patch)
   })
 
-  safeHandle('sprint:delete', (_e, id: string) => {
-    const task = getTask(id)
-    _deleteTask(getDb(), id)
+  safeHandle('sprint:delete', async (_e, id: string) => {
+    const task = await getTask(id)
+    await _deleteTask(id)
     if (task) {
       notifySprintMutation('deleted', task)
     }
@@ -142,14 +143,14 @@ export function registerSprintLocalHandlers(): void {
     async (_e, args: GeneratePromptRequest): Promise<GeneratePromptResponse> => {
       const result = await generatePrompt(args)
       if (result.spec) {
-        updateTask(args.taskId, { spec: result.spec, prompt: result.prompt })
+        await updateTask(args.taskId, { spec: result.spec, prompt: result.prompt })
       }
       return result
     }
   )
 
-  safeHandle('sprint:claimTask', (_e, taskId: string): ClaimedTask | null => {
-    const task = _getTask(getDb(), taskId)
+  safeHandle('sprint:claimTask', async (_e, taskId: string): Promise<ClaimedTask | null> => {
+    const task = await _getTask(taskId)
     if (!task) return null
 
     let templatePromptPrefix: string | null = null
@@ -162,15 +163,8 @@ export function registerSprintLocalHandlers(): void {
     return { ...task, templatePromptPrefix }
   })
 
-  safeHandle('sprint:healthCheck', () => {
-    // Returns tasks stuck in 'active' for >1 hour with no recent agent activity
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    return getDb()
-      .prepare(
-        `SELECT * FROM sprint_tasks
-         WHERE status = 'active' AND started_at < ?`
-      )
-      .all(oneHourAgo) as SprintTask[]
+  safeHandle('sprint:healthCheck', async () => {
+    return _getHealthCheckTasks()
   })
 
   safeHandle('sprint:readLog', async (_e, agentId: string, rawFromByte?: number) => {
