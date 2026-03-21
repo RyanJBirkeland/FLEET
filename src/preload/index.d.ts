@@ -1,7 +1,7 @@
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
-import type { AgentEvent } from '../main/agents/types'
+import type { AgentEvent } from '../shared/types'
 
 export type { AgentMeta, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask }
 

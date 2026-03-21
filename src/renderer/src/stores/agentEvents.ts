@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { AgentEvent } from '../../../main/agents/types'
+import type { AgentEvent } from '../../../shared/types'
 
 interface AgentEventsState {
   events: Record<string, AgentEvent[]>

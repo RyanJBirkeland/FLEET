@@ -4,10 +4,14 @@
  * Each entry maps a channel name to its `args` tuple and `result` type.
  * Both `safeHandle()` (main) and `typedInvoke()` (preload) derive their
  * types from this map, giving end-to-end compile-time safety.
+ *
+ * Channels are organised into domain-specific interfaces that are composed
+ * into the final `IpcChannelMap` intersection type.  Consumers can import
+ * the narrow domain type when they only need a subset.
  */
 
 import type { SpawnLocalAgentArgs, SpawnLocalAgentResult, AgentMeta, AgentCostRecord, AgentRunCostRow, CostSummary, SprintTask, ClaimedTask, PrListPayload, TaskTemplate } from './types'
-import type { AgentEvent } from '../main/agents/types'
+import type { AgentEvent } from './types'
 
 /** Serialisable subset of RequestInit for the github:fetch IPC proxy. */
 export interface GitHubFetchInit {
@@ -25,8 +29,12 @@ export interface GitHubFetchResult {
   linkNext: string | null
 }
 
-export interface IpcChannelMap {
-  // --- Settings CRUD ---
+// ---------------------------------------------------------------------------
+// Domain-specific channel maps
+// ---------------------------------------------------------------------------
+
+/** Settings CRUD */
+export interface SettingsChannels {
   'settings:get': {
     args: [key: string]
     result: string | null
@@ -47,8 +55,10 @@ export interface IpcChannelMap {
     args: [key: string]
     result: void
   }
+}
 
-  // --- Git ---
+/** Git operations */
+export interface GitChannels {
   'git:status': {
     args: [cwd: string]
     result: { files: { path: string; status: string; staged: boolean }[] }
@@ -85,8 +95,10 @@ export interface IpcChannelMap {
     args: [cwd: string, branch: string]
     result: void
   }
+}
 
-  // --- PR ---
+/** Pull request operations */
+export interface PrChannels {
   'pr:pollStatuses': {
     args: [prs: { taskId: string; prUrl: string }[]]
     result: { taskId: string; merged: boolean; state: string; mergedAt: string | null; mergeableState: string | null }[]
@@ -103,8 +115,10 @@ export interface IpcChannelMap {
     args: []
     result: PrListPayload
   }
+}
 
-  // --- Agent config ---
+/** Agent configuration */
+export interface AgentConfigChannels {
   'config:getAgentConfig': {
     args: []
     result: { binary: string; permissionMode: string }
@@ -113,8 +127,10 @@ export interface IpcChannelMap {
     args: [config: { binary: string; permissionMode: string }]
     result: void
   }
+}
 
-  // --- Agents ---
+/** Agent lifecycle and interaction */
+export interface AgentChannels {
   'local:spawnClaudeAgent': {
     args: [args: SpawnLocalAgentArgs]
     result: SpawnLocalAgentResult
@@ -159,14 +175,18 @@ export interface IpcChannelMap {
     args: [args: { meta: Partial<AgentMeta>; content: string }]
     result: AgentMeta
   }
+}
 
-  // --- GitHub API proxy ---
+/** GitHub API proxy */
+export interface GitHubApiChannels {
   'github:fetch': {
     args: [path: string, init?: GitHubFetchInit]
     result: GitHubFetchResult
   }
+}
 
-  // --- Cost ---
+/** Cost tracking */
+export interface CostChannels {
   'cost:summary': {
     args: []
     result: CostSummary
@@ -179,8 +199,10 @@ export interface IpcChannelMap {
     args: [args?: { limit?: number; offset?: number }]
     result: AgentCostRecord[]
   }
+}
 
-  // --- Sprint ---
+/** Sprint task management */
+export interface SprintChannels {
   'sprint:list': {
     args: []
     result: SprintTask[]
@@ -217,14 +239,18 @@ export interface IpcChannelMap {
     args: [agentId: string, fromByte?: number]
     result: { content: string; status: string; nextByte: number }
   }
+}
 
-  // --- Window ---
+/** Window shell integration */
+export interface WindowChannels {
   'window:openExternal': {
     args: [url: string]
     result: void
   }
+}
 
-  // --- Memory ---
+/** Memory file operations */
+export interface MemoryChannels {
   'memory:listFiles': {
     args: []
     result: { path: string; name: string; size: number; modifiedAt: number }[]
@@ -237,8 +263,10 @@ export interface IpcChannelMap {
     args: [path: string, content: string]
     result: void
   }
+}
 
-  // --- File system ---
+/** File system dialogs and reading */
+export interface FsChannels {
   'fs:openFileDialog': {
     args: [opts?: { filters?: { name: string; extensions: string[] }[] }]
     result: string[] | null
@@ -255,8 +283,10 @@ export interface IpcChannelMap {
     args: []
     result: string | null
   }
+}
 
-  // --- Agent Event Streaming (Phase 2) ---
+/** Agent event streaming */
+export interface AgentEventChannels {
   'agent:event': {
     args: [payload: { agentId: string; event: AgentEvent }]
     result: void
@@ -265,8 +295,10 @@ export interface IpcChannelMap {
     args: [agentId: string]
     result: AgentEvent[]
   }
+}
 
-  // --- Template CRUD (Phase 2) ---
+/** Task template CRUD */
+export interface TemplateChannels {
   'templates:list': {
     args: []
     result: TaskTemplate[]
@@ -283,14 +315,18 @@ export interface IpcChannelMap {
     args: [name: string]
     result: void
   }
+}
 
-  // --- Auth ---
+/** Auth status */
+export interface AuthChannels {
   'auth:status': {
     args: []
     result: { cliFound: boolean; tokenFound: boolean; tokenExpired: boolean; expiresAt?: string }
   }
+}
 
-  // --- Agent Manager ---
+/** Agent manager orchestration */
+export interface AgentManagerChannels {
   'agent-manager:status': {
     args: []
     result: { activeCount: number; availableSlots: number }
@@ -299,8 +335,10 @@ export interface IpcChannelMap {
     args: [taskId: string]
     result: boolean
   }
+}
 
-  // --- Terminal ---
+/** Terminal PTY management */
+export interface TerminalChannels {
   'terminal:create': {
     args: [opts: { cols: number; rows: number; shell?: string }]
     result: number
@@ -314,3 +352,9 @@ export interface IpcChannelMap {
     result: void
   }
 }
+
+// ---------------------------------------------------------------------------
+// Composite channel map — intersection of all domain maps
+// ---------------------------------------------------------------------------
+
+export type IpcChannelMap = SettingsChannels & GitChannels & PrChannels & AgentConfigChannels & AgentChannels & GitHubApiChannels & CostChannels & SprintChannels & WindowChannels & MemoryChannels & FsChannels & AgentEventChannels & TemplateChannels & AuthChannels & AgentManagerChannels & TerminalChannels

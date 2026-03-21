@@ -28,8 +28,8 @@ import {
   gitBranches,
   gitDiffFile,
   getRepoPaths,
-  pollPrStatuses,
 } from '../git'
+import { pollPrStatuses } from '../github-pr-status'
 import { parsePrUrl } from '../../shared/github'
 import { getGitHubToken } from '../config'
 import { getDb } from '../db'

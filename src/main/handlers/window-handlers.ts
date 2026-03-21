@@ -1,6 +1,6 @@
 import { BrowserWindow, ipcMain, shell } from 'electron'
 import { safeHandle } from '../ipc-utils'
-import { isKnownAgentPid } from '../local-agents'
+import { isAgentInteractive } from '../local-agents'
 
 const ALLOWED_URL_SCHEMES = new Set(['https:', 'http:', 'mailto:'])
 
@@ -14,7 +14,7 @@ export function registerWindowHandlers(): void {
   })
 
   safeHandle('agent:killLocal', async (_event, pid: number) => {
-    if (!isKnownAgentPid(pid)) {
+    if (!isAgentInteractive(pid)) {
       return { ok: false, error: 'PID is not a known agent process' }
     }
     try {

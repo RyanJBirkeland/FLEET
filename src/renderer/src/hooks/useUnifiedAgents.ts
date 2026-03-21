@@ -7,10 +7,10 @@
 import { useMemo } from 'react'
 import { useLocalAgentsStore } from '../stores/localAgents'
 import { useAgentHistoryStore } from '../stores/agentHistory'
-import type { UnifiedAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
+import type { UnifiedAgent, LocalAgent, HistoryAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
 import { buildUnifiedAgentList } from '../lib/agentNormalizers'
 
-export type { UnifiedAgent, UnifiedAgentSource, UnifiedAgentStatus }
+export type { UnifiedAgent, LocalAgent, HistoryAgent, UnifiedAgentSource, UnifiedAgentStatus }
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = 24 * ONE_HOUR

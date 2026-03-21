@@ -5,7 +5,7 @@
  */
 import { useRef, useEffect, useMemo } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import type { AgentEvent } from '../../../../main/agents/types'
+import type { AgentEvent } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
 import { ChatBubble } from './ChatBubble'
 import { ThinkingBlock } from './ThinkingBlock'

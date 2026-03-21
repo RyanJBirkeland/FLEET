@@ -2,7 +2,7 @@ import { contextBridge, ipcRenderer, type IpcRendererEvent } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
-import type { AgentEvent } from '../main/agents/types'
+import type { AgentEvent } from '../shared/types'
 
 // Prevent MaxListenersExceededWarning during HMR dev cycles
 ipcRenderer.setMaxListeners(25)

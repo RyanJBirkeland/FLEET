@@ -9,16 +9,23 @@ export interface AgentEventBus {
   off(channel: 'agent:event', handler: (agentId: string, event: AgentEvent) => void): void
 }
 
-export function createEventBus(opts?: { persist?: boolean }): AgentEventBus {
+export interface EventBusOptions {
+  persist?: boolean
+  /** Override the default broadcast function (Electron BrowserWindow.send). */
+  notify?: (channel: string, data: unknown) => void
+}
+
+export function createEventBus(opts?: EventBusOptions): AgentEventBus {
   const emitter = new EventEmitter()
   const persist = opts?.persist ?? true
+  const notify = opts?.notify ?? broadcast
 
   return {
     emit(channel, agentId, event) {
       if (persist) {
         appendEvent(agentId, event)
       }
-      broadcast('agent:event', { agentId, event })
+      notify('agent:event', { agentId, event })
       emitter.emit(channel, agentId, event)
     },
     on(channel, handler) {

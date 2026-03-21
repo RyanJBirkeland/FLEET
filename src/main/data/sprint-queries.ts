@@ -25,6 +25,7 @@ export const UPDATE_ALLOWLIST = new Set([
   'started_at',
   'completed_at',
   'template_name',
+  'claimed_by',
 ])
 
 export interface QueueStats {
@@ -236,6 +237,12 @@ export function updateTaskMergeableState(
       err
     )
   }
+}
+
+export function getQueuedTasks(db: Database.Database): SprintTask[] {
+  return db
+    .prepare("SELECT * FROM sprint_tasks WHERE status = 'queued' ORDER BY priority ASC, created_at ASC")
+    .all() as SprintTask[]
 }
 
 export function clearSprintTaskFk(db: Database.Database, agentRunId: string): void {

@@ -22,38 +22,53 @@ export interface AuthStatus {
   expiresAt?: Date
 }
 
-const CLI_SEARCH_PATHS = ['/usr/local/bin', '/opt/homebrew/bin', join(homedir(), '.local', 'bin')]
-
-function detectClaudeCli(): boolean {
-  return CLI_SEARCH_PATHS.some((dir) => existsSync(join(dir, 'claude')))
-}
-
-interface KeychainOAuth {
+export interface KeychainOAuth {
   accessToken?: string
   expiresAt?: string
 }
 
-interface KeychainPayload {
+export interface KeychainPayload {
   claudeAiOauth?: KeychainOAuth
 }
 
-async function readKeychainToken(): Promise<KeychainPayload | null> {
-  try {
-    const { stdout } = await execFileAsync('security', [
-      'find-generic-password',
-      '-s',
-      'Claude Code-credentials',
-      '-w',
-    ])
-    return JSON.parse(stdout.trim()) as KeychainPayload
-  } catch {
-    return null
+// ── CredentialStore abstraction ─────────────────────────────────────
+
+export interface CredentialStore {
+  readToken(): Promise<KeychainPayload | null>
+  detectCli(): boolean
+}
+
+const CLI_SEARCH_PATHS = ['/usr/local/bin', '/opt/homebrew/bin', join(homedir(), '.local', 'bin')]
+
+export class MacOSCredentialStore implements CredentialStore {
+  async readToken(): Promise<KeychainPayload | null> {
+    try {
+      const { stdout } = await execFileAsync('security', [
+        'find-generic-password',
+        '-s',
+        'Claude Code-credentials',
+        '-w',
+      ])
+      return JSON.parse(stdout.trim()) as KeychainPayload
+    } catch {
+      return null
+    }
+  }
+
+  detectCli(): boolean {
+    return CLI_SEARCH_PATHS.some((dir) => existsSync(join(dir, 'claude')))
   }
 }
 
-export async function checkAuthStatus(): Promise<AuthStatus> {
-  const cliFound = detectClaudeCli()
-  const payload = await readKeychainToken()
+const defaultCredentialStore = new MacOSCredentialStore()
+
+// ── Public API ──────────────────────────────────────────────────────
+
+export async function checkAuthStatus(
+  store: CredentialStore = defaultCredentialStore
+): Promise<AuthStatus> {
+  const cliFound = store.detectCli()
+  const payload = await store.readToken()
 
   const oauth = payload?.claudeAiOauth
   if (!oauth?.accessToken) {
@@ -66,8 +81,10 @@ export async function checkAuthStatus(): Promise<AuthStatus> {
   return { cliFound, tokenFound: true, tokenExpired, expiresAt }
 }
 
-export async function ensureSubscriptionAuth(): Promise<void> {
-  const status = await checkAuthStatus()
+export async function ensureSubscriptionAuth(
+  store: CredentialStore = defaultCredentialStore
+): Promise<void> {
+  const status = await checkAuthStatus(store)
 
   if (!status.tokenFound) {
     throw new Error('No Claude subscription token found — run: claude login')

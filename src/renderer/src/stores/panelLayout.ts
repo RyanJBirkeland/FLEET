@@ -225,7 +225,7 @@ export function moveTab(
       return treeAfterClose
     }
     const newLeaf = createLeaf(movedTab.viewKey)
-    const splitResult = replacLeafWithSplit(treeAfterClose, targetPanelId, direction, newLeaf, 'first')
+    const splitResult = replaceLeafWithSplit(treeAfterClose, targetPanelId, direction, newLeaf, 'first')
     return splitResult ?? treeAfterClose
   }
 
@@ -233,7 +233,7 @@ export function moveTab(
   const targetLeaf = findLeaf(treeAfterClose, targetPanelId)
   if (!targetLeaf) return treeAfterClose
   const newLeaf = createLeaf(movedTab.viewKey)
-  const splitResult = replacLeafWithSplit(treeAfterClose, targetPanelId, direction, newLeaf, 'second')
+  const splitResult = replaceLeafWithSplit(treeAfterClose, targetPanelId, direction, newLeaf, 'second')
   return splitResult ?? treeAfterClose
 }
 
@@ -241,7 +241,7 @@ export function moveTab(
  * Replaces the leaf at targetId with a split containing [newLeaf, targetLeaf]
  * or [targetLeaf, newLeaf] depending on `newPosition`.
  */
-function replacLeafWithSplit(
+function replaceLeafWithSplit(
   root: PanelNode,
   targetId: string,
   direction: 'horizontal' | 'vertical',
@@ -261,12 +261,12 @@ function replacLeafWithSplit(
     return split
   }
 
-  const left = replacLeafWithSplit(root.children[0], targetId, direction, newLeaf, newPosition)
+  const left = replaceLeafWithSplit(root.children[0], targetId, direction, newLeaf, newPosition)
   if (left !== null) {
     return { ...root, children: [left, root.children[1]] }
   }
 
-  const right = replacLeafWithSplit(root.children[1], targetId, direction, newLeaf, newPosition)
+  const right = replaceLeafWithSplit(root.children[1], targetId, direction, newLeaf, newPosition)
   if (right !== null) {
     return { ...root, children: [root.children[0], right] }
   }

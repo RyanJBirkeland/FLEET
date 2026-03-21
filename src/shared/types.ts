@@ -152,23 +152,35 @@ export type UnifiedAgentSource = 'local' | 'history'
 /** Status of a unified agent. */
 export type UnifiedAgentStatus = 'running' | 'done' | 'failed' | 'cancelled' | 'timeout' | 'unknown'
 
-/** Normalized agent representation across all sources. */
-export interface UnifiedAgent {
+/** Shared fields across all unified agent variants. */
+interface UnifiedAgentBase {
   id: string
   label: string
-  source: UnifiedAgentSource
   status: UnifiedAgentStatus
   model: string
   updatedAt: number
   startedAt: number
+}
+
+/** A locally-running agent with a live process. */
+export interface LocalAgent extends UnifiedAgentBase {
+  source: 'local'
+  pid: number
   canSteer: boolean
   canKill: boolean
   isBlocked?: boolean
   task?: string
-  pid?: number
-  sessionKey?: string
-  historyId?: string
 }
+
+/** An agent from CLI history (past or remote). */
+export interface HistoryAgent extends UnifiedAgentBase {
+  source: 'history'
+  historyId: string
+  sessionKey?: string
+}
+
+/** Discriminated union — narrow via `agent.source`. */
+export type UnifiedAgent = LocalAgent | HistoryAgent
 
 /** A file attachment queued for sending with a chat message. */
 export interface Attachment {
@@ -187,3 +199,51 @@ export interface Attachment {
 
 /** Lightweight result type for expected failures. */
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
+
+// --- Agent Events (unified event stream for local + remote agents) ---
+
+export type AgentEventType =
+  | 'agent:started'
+  | 'agent:text'
+  | 'agent:user_message'
+  | 'agent:thinking'
+  | 'agent:tool_call'
+  | 'agent:tool_result'
+  | 'agent:rate_limited'
+  | 'agent:error'
+  | 'agent:completed'
+
+export type AgentEvent =
+  | { type: 'agent:started'; model: string; timestamp: number }
+  | { type: 'agent:text'; text: string; timestamp: number }
+  | { type: 'agent:user_message'; text: string; timestamp: number }
+  | { type: 'agent:thinking'; tokenCount: number; text?: string; timestamp: number }
+  | { type: 'agent:tool_call'; tool: string; summary: string; input?: unknown; timestamp: number }
+  | { type: 'agent:tool_result'; tool: string; success: boolean; summary: string; output?: unknown; timestamp: number }
+  | { type: 'agent:rate_limited'; retryDelayMs: number; attempt: number; timestamp: number }
+  | { type: 'agent:error'; message: string; timestamp: number }
+  | { type: 'agent:completed'; exitCode: number; costUsd: number; tokensIn: number; tokensOut: number; durationMs: number; timestamp: number }
+
+// --- Agent Provider Interface ---
+
+export interface AgentSpawnOptions {
+  prompt: string
+  workingDirectory: string
+  model?: string
+  maxTokens?: number
+  templatePrefix?: string
+  agentId?: string
+}
+
+export interface AgentHandle {
+  id: string
+  pid?: number
+  logPath?: string
+  events: AsyncIterable<AgentEvent>
+  steer(message: string): Promise<void>
+  stop(): Promise<void>
+}
+
+export interface AgentProvider {
+  spawn(opts: AgentSpawnOptions): Promise<AgentHandle>
+}

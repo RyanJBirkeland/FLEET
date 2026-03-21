@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { TaskOutputEvent } from '../../../shared/queue-api-contract'
-import type { AgentEvent } from '../../../main/agents/types'
+import type { AgentEvent } from '../../../shared/types'
 
 /** Union of event sources used in the sprint event pipeline. */
 export type AnyTaskEvent = TaskOutputEvent | AgentEvent

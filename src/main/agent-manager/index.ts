@@ -1,4 +1,4 @@
-export { AgentManager, type AgentManagerConfig, type AgentManagerDeps, type QueuedTask } from './agent-manager'
+export { AgentManager, type AgentManagerConfig, type AgentManagerDeps, type QueuedTask, type TaskPatch, type CompletionInput } from './agent-manager'
 export { Watchdog } from './watchdog'
 export { createWorktree, removeWorktree, getActualBranch, acquireRepoLock, releaseRepoLock } from './worktree-ops'
-export { handleAgentCompletion, type CompletionContext } from './completion-handler'
+export { handleAgentCompletion, defaultVcsOps, type CompletionContext, type VcsOps } from './completion-handler'

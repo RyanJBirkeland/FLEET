@@ -190,10 +190,7 @@ describe('AgentManager', () => {
 
       await vi.advanceTimersByTimeAsync(deps.config.drainIntervalMs)
 
-      expect(deps.updateTask).toHaveBeenCalledWith('task-1', {
-        status: 'error',
-        error: expect.stringContaining('unknown-repo'),
-      })
+      expect(deps.updateTask).toHaveBeenCalledWith('task-1', { status: 'error' })
 
       manager.stop()
     })

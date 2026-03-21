@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { AgentEvent } from '../../../../../main/agents/types'
+import type { AgentEvent } from '../../../../../shared/types'
 import { pairEvents } from '../ChatRenderer'
 
 describe('pairEvents', () => {
