@@ -346,4 +346,59 @@ describe('Queue API', () => {
       expect(status).toBe(204)
     })
   })
+
+  describe('Error handling — sprint-queries throws', () => {
+    it('returns 500 when getQueueStats throws', async () => {
+      mockGetQueueStats.mockRejectedValue(new Error('Supabase connection failed'))
+
+      const { status, body } = await request('GET', '/queue/health')
+      expect(status).toBe(500)
+      expect((body as { error: string }).error).toMatch(/internal server error/i)
+    })
+
+    it('returns 500 when listTasks throws', async () => {
+      mockListTasks.mockRejectedValue(new Error('Supabase timeout'))
+
+      const { status, body } = await request('GET', '/queue/tasks')
+      expect(status).toBe(500)
+      expect((body as { error: string }).error).toMatch(/internal server error/i)
+    })
+
+    it('returns 500 when getTask throws', async () => {
+      mockGetTask.mockRejectedValue(new Error('network error'))
+
+      const { status, body } = await request('GET', '/queue/tasks/abc')
+      expect(status).toBe(500)
+      expect((body as { error: string }).error).toMatch(/internal server error/i)
+    })
+
+    it('returns 500 when createTask throws', async () => {
+      mockCreateTask.mockRejectedValue(new Error('insert failed'))
+
+      const { status, body } = await request('POST', '/queue/tasks', {
+        title: 'New task',
+        repo: 'my-repo',
+      })
+      expect(status).toBe(500)
+      expect((body as { error: string }).error).toMatch(/internal server error/i)
+    })
+
+    it('returns 500 when claimTask throws', async () => {
+      mockClaimTask.mockRejectedValue(new Error('lock contention'))
+
+      const { status, body } = await request('POST', '/queue/tasks/abc/claim', {
+        executorId: 'runner-1',
+      })
+      expect(status).toBe(500)
+      expect((body as { error: string }).error).toMatch(/internal server error/i)
+    })
+
+    it('returns 500 when releaseTask throws', async () => {
+      mockReleaseTask.mockRejectedValue(new Error('constraint violation'))
+
+      const { status, body } = await request('POST', '/queue/tasks/abc/release')
+      expect(status).toBe(500)
+      expect((body as { error: string }).error).toMatch(/internal server error/i)
+    })
+  })
 })
