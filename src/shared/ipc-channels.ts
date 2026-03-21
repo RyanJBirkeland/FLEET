@@ -7,7 +7,7 @@
  */
 
 import type { SpawnLocalAgentArgs, SpawnLocalAgentResult, AgentMeta, AgentCostRecord, AgentRunCostRow, CostSummary, SprintTask, ClaimedTask, PrListPayload, TaskTemplate } from './types'
-import type { TaskOutputEvent, RecentHealth } from './queue-api-contract'
+import type { TaskOutputEvent } from './queue-api-contract'
 import type { AgentEvent } from '../main/agents/types'
 
 /** Serialisable subset of RequestInit for the github:fetch IPC proxy. */
@@ -27,16 +27,6 @@ export interface GitHubFetchResult {
 }
 
 export interface IpcChannelMap {
-  // --- Config ---
-  'config:getGatewayUrl': {
-    args: []
-    result: { url: string; hasToken: boolean }
-  }
-  'config:saveGateway': {
-    args: [url: string, token?: string]
-    result: void
-  }
-
   // --- Settings CRUD ---
   'settings:get': {
     args: [key: string]
@@ -57,16 +47,6 @@ export interface IpcChannelMap {
   'settings:delete': {
     args: [key: string]
     result: void
-  }
-
-  // --- Gateway auth (tokens stay in main process) ---
-  'gateway:test-connection': {
-    args: [url: string, token?: string]
-    result: { ok: boolean; latencyMs: number }
-  }
-  'gateway:sign-challenge': {
-    args: []
-    result: { auth: { token: string } }
   }
 
   // --- Git ---
@@ -201,12 +181,6 @@ export interface IpcChannelMap {
     result: AgentCostRecord[]
   }
 
-  // --- Queue ---
-  'queue:health': {
-    args: []
-    result: { queue: Record<string, number>; doneToday: number; connectedRunners: number; recentHealth: RecentHealth | null }
-  }
-
   // --- Task Events (streaming visibility) ---
   'task:getEvents': {
     args: [taskId: string]
@@ -287,16 +261,6 @@ export interface IpcChannelMap {
   'fs:openDirectoryDialog': {
     args: []
     result: string | null
-  }
-
-  // --- Gateway RPC ---
-  'gateway:invoke': {
-    args: [tool: string, args: Record<string, unknown>]
-    result: unknown
-  }
-  'gateway:getSessionHistory': {
-    args: [sessionKey: string]
-    result: unknown
   }
 
   // --- Agent Event Streaming (Phase 2) ---

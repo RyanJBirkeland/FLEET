@@ -7,10 +7,6 @@ vi.mock('../../../lib/stream-parser', () => ({
   stripAnsi: vi.fn((s: string) => s),
 }))
 
-vi.mock('../../../lib/taskRunnerSSE', () => ({
-  subscribeSSE: vi.fn().mockReturnValue(() => {}),
-}))
-
 vi.mock('../../agents/ChatRenderer', () => ({
   ChatRenderer: ({ events }: { events: unknown[] }) => (
     <div data-testid="chat-renderer">Events: {events.length}</div>

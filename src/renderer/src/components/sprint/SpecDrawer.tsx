@@ -29,7 +29,6 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
   const [dirty, setDirty] = useState(false)
-  const [generating, setGenerating] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
   const editorRef = useRef<HTMLTextAreaElement>(null)
@@ -41,7 +40,6 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
 
     setEditing(false)
     setDirty(false)
-    setGenerating(false)
     setShowPrompt(false)
     setTitleDraft(task.title)
 
@@ -129,41 +127,6 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
     if (editing) editorRef.current?.focus()
   }, [editing])
 
-  const handleAskPaul = async () => {
-    if (!task) return
-    setGenerating(true)
-    try {
-      const prompt = `You are a senior engineer writing a coding agent spec for BDE (Birkeland Development Environment).
-
-Task title: "${task.title}"
-Repo: ${task.repo}
-Agent prompt: ${task.prompt || '(none)'}
-Current notes: ${draft || '(none)'}
-
-Write a complete, spec-ready prompt for a Claude Code agent to implement this task. Follow the spec format in memory/spec-template.md. Include: Problem, Solution, Data shapes (if applicable), Files to Change, Out of Scope. Be specific and technical. Output only the spec markdown, no commentary.`
-
-      const result = (await window.api.invokeTool('sessions_send', {
-        sessionKey: 'main',
-        message: prompt,
-        timeoutSeconds: 30,
-      })) as {
-        ok?: boolean
-        result?: { content?: Array<{ type: string; text: string }> }
-      } | null
-
-      const text = result?.result?.content?.[0]?.text ?? ''
-      if (text) {
-        setDraft(text)
-        setDirty(true)
-        setEditing(true)
-      }
-    } catch {
-      toast.error('Failed to generate spec')
-    } finally {
-      setGenerating(false)
-    }
-  }
-
   const isOpen = task !== null
 
   return (
@@ -229,12 +192,11 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
                 <textarea
                   ref={editorRef}
                   className="spec-drawer__editor"
-                  value={generating ? 'Paul is writing your spec...' : draft}
+                  value={draft}
                   onChange={(e) => {
                     setDraft(e.target.value)
                     setDirty(true)
                   }}
-                  disabled={generating}
                   placeholder="Write your spec in markdown..."
                 />
               ) : draft ? (
@@ -294,14 +256,6 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
                   Launch Agent
                 </Button>
               ) : null}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleAskPaul}
-                disabled={generating}
-              >
-                {generating ? 'Generating...' : 'Ask Paul'}
-              </Button>
               {onMarkDone && task.status !== TASK_STATUS.DONE && (
                 <Button variant="ghost" size="sm" onClick={() => onMarkDone(task)}>
                   ✓ Mark Done

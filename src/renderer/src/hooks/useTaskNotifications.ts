@@ -1,17 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { useSessionsStore } from '../stores/sessions'
-import { SESSION_ACTIVE_THRESHOLD } from '../lib/constants'
-import { subscribeSSE, type LogDoneEvent, type TaskUpdatedEvent } from '../lib/taskRunnerSSE'
 import { toast } from '../stores/toasts'
 import type { SprintTask } from '../../../shared/types'
 
-// --- LogDrawer awareness (module-level so SSE handlers can read it) ---
-
-let _openLogDrawerTaskId: string | null = null
-
-/** Call from SprintCenter whenever logDrawerTaskId changes. */
-export function setOpenLogDrawerTaskId(id: string | null): void {
-  _openLogDrawerTaskId = id
+/** No-op — previously tracked which LogDrawer was open for SSE notification suppression. */
+export function setOpenLogDrawerTaskId(_id: string | null): void {
+  // Kept as export for SprintCenter compatibility; SSE handlers removed.
 }
 
 // --- Shared dedup — single source of truth across all notification sources ---
@@ -66,36 +59,12 @@ function requestPermissionOnce(): void {
 
 export function useTaskNotifications(): void {
   const seenDoneIds = useRef<Set<string>>(new Set())
-  const seenBlockedKeys = useRef<Set<string>>(new Set())
-  const seenLogDoneIds = useRef<Set<string>>(new Set())
-  const seenPrTaskIds = useRef<Set<string>>(new Set())
   const initialized = useRef(false)
-  const sessions = useSessionsStore((s) => s.sessions)
 
   // Request notification permission on mount
   useEffect(() => {
     requestPermissionOnce()
   }, [])
-
-  // Watch for blocked sessions
-  useEffect(() => {
-    for (const session of sessions) {
-      const fiveMinAgo = Date.now() - SESSION_ACTIVE_THRESHOLD
-      const isRunning = session.updatedAt > fiveMinAgo
-      if (session.abortedLastRun && !isRunning && !seenBlockedKeys.current.has(session.key)) {
-        seenBlockedKeys.current.add(session.key)
-        boundSet(seenBlockedKeys.current, MAX_SEEN_IDS)
-        notify(
-          '\u26A0\uFE0F Agent needs attention',
-          `Session "${session.displayName || session.key}" aborted and may need input.`
-        )
-      }
-      // Clear from seen if it starts running again
-      if (isRunning && seenBlockedKeys.current.has(session.key)) {
-        seenBlockedKeys.current.delete(session.key)
-      }
-    }
-  }, [sessions])
 
   // Watch for completed sprint tasks via local SQLite change events
   useEffect(() => {
@@ -131,46 +100,6 @@ export function useTaskNotifications(): void {
     handleChange()
 
     return window.api.onExternalSprintChange(handleChange)
-  }, [])
-
-  // Watch for agent done/failed via SSE log:done events
-  useEffect(() => {
-    const unsub = subscribeSSE('log:done', (data: unknown) => {
-      const event = data as LogDoneEvent
-      if (seenLogDoneIds.current.has(event.taskId)) return
-      seenLogDoneIds.current.add(event.taskId)
-      boundSet(seenLogDoneIds.current, MAX_SEEN_IDS)
-
-      // Skip notification if user is watching this task's LogDrawer
-      if (_openLogDrawerTaskId === event.taskId) return
-
-      // Use shared dedup — if Source 1 already fired, this is a no-op
-      if (event.exitCode === 0) {
-        notifyOnce(event.taskId, 'Agent finished', 'Task completed successfully.')
-      } else {
-        notifyOnce(event.taskId, 'Agent failed', `Exit code ${event.exitCode}`)
-      }
-    })
-    return unsub
-  }, [])
-
-  // Watch for PR opened via SSE task:updated events
-  useEffect(() => {
-    const unsub = subscribeSSE('task:updated', (data: unknown) => {
-      const raw = data as Record<string, unknown>
-      const update: TaskUpdatedEvent = { ...raw, taskId: (raw.taskId ?? raw.id) as string }
-      const prUrl = update.pr_url as string | undefined
-      if (!prUrl || seenPrTaskIds.current.has(update.taskId)) return
-      seenPrTaskIds.current.add(update.taskId)
-      boundSet(seenPrTaskIds.current, MAX_SEEN_IDS)
-
-      // Skip if user is watching this task
-      if (_openLogDrawerTaskId === update.taskId) return
-
-      const title = (update.title as string) || 'Sprint task'
-      notify('PR opened', `${title}\n${prUrl}`)
-    })
-    return unsub
   }, [])
 }
 

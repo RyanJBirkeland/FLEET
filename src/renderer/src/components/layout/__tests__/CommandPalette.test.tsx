@@ -9,20 +9,6 @@ vi.mock('../../../stores/ui', () => ({
   ),
 }))
 
-vi.mock('../../../stores/sessions', () => ({
-  useSessionsStore: Object.assign(
-    vi.fn((selector: (s: { selectSession: () => void }) => unknown) =>
-      selector({ selectSession: vi.fn() })
-    ),
-    {
-      getState: () => ({
-        sessions: [],
-        fetchSessions: vi.fn().mockResolvedValue(undefined),
-      }),
-    }
-  ),
-}))
-
 vi.mock('../../../stores/localAgents', () => ({
   useLocalAgentsStore: Object.assign(
     vi.fn((selector: (s: { processes: [] }) => unknown) =>

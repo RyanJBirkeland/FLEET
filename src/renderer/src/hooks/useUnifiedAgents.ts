@@ -1,11 +1,10 @@
 /**
- * Unified agents derived hook — merges sessions, sub-agents, local processes,
- * and agent history into a single flat list of UnifiedAgent objects.
+ * Unified agents derived hook — merges local processes and agent history
+ * into a single flat list of UnifiedAgent objects.
  *
  * Re-exports the shared UnifiedAgent type from shared/types.ts.
  */
 import { useMemo } from 'react'
-import { useSessionsStore } from '../stores/sessions'
 import { useLocalAgentsStore } from '../stores/localAgents'
 import { useAgentHistoryStore } from '../stores/agentHistory'
 import type { UnifiedAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
@@ -18,14 +17,12 @@ const ONE_DAY = 24 * ONE_HOUR
 const SEVEN_DAYS = 7 * ONE_DAY
 
 export function useUnifiedAgents(): UnifiedAgent[] {
-  const sessions = useSessionsStore((s) => s.sessions)
-  const subAgents = useSessionsStore((s) => s.subAgents)
   const processes = useLocalAgentsStore((s) => s.processes)
   const historyAgents = useAgentHistoryStore((s) => s.agents)
 
   return useMemo(
-    () => buildUnifiedAgentList(sessions, subAgents, processes, historyAgents),
-    [sessions, subAgents, processes, historyAgents]
+    () => buildUnifiedAgentList([], [], processes, historyAgents),
+    [processes, historyAgents]
   )
 }
 

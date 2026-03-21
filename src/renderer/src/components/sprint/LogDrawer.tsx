@@ -8,7 +8,6 @@ import { Button } from '../ui/Button'
 import { tokens } from '../../design-system/tokens'
 import { toast } from '../../stores/toasts'
 import { useSprintEvents } from '../../stores/sprintEvents'
-import { subscribeSSE, type LogChunkEvent, type LogDoneEvent } from '../../lib/taskRunnerSSE'
 import { TASK_STATUS, AGENT_STATUS } from '../../../../shared/constants'
 import type { AnyTaskEvent } from '../../stores/sprintEvents'
 import type { SprintTask } from './SprintCenter'
@@ -61,7 +60,7 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
     return () => { cancelled = true }
   }, [task?.id])
 
-  // Effect 2: catch-up read + SSE subscription for live streaming
+  // Effect 2: catch-up read for log content (polls via readLog IPC)
   useEffect(() => {
     if (!task?.agent_run_id) return
     const agentId = task.agent_run_id
@@ -85,33 +84,14 @@ export function LogDrawer({ task, onClose, onStop, onRerun }: LogDrawerProps): R
 
     catchUp()
 
+    // For active tasks, poll periodically for new log content
     if (!isActive) return () => { cancelled = true }
 
-    // Real-time SSE for active tasks
-    const unsubChunk = subscribeSSE('log:chunk', (data: unknown) => {
-      const ev = data as LogChunkEvent
-      if (ev.agentId !== agentId) return
-      // Handle partial overlap: slice off bytes we already have
-      const overlap = fromByteRef.current - ev.fromByte
-      const text = overlap > 0 ? ev.content.slice(overlap) : ev.content
-      if (text.length === 0) return
-      const cleaned = stripAnsi(text)
-      setLogContent((prev) => prev + cleaned)
-      fromByteRef.current = ev.fromByte + new TextEncoder().encode(ev.content).length
-    })
-
-    const unsubDone = subscribeSSE('log:done', (data: unknown) => {
-      const ev = data as LogDoneEvent
-      if (ev.agentId !== agentId) return
-      setExitCode(ev.exitCode)
-      setAgentStatus(ev.exitCode === 0 ? AGENT_STATUS.DONE : AGENT_STATUS.FAILED)
-      catchUp() // final catch-up in case we missed chunks
-    })
+    const interval = setInterval(catchUp, 2000)
 
     return () => {
       cancelled = true
-      unsubChunk()
-      unsubDone()
+      clearInterval(interval)
     }
   }, [task?.agent_run_id, task?.status])
 

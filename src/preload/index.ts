@@ -20,12 +20,6 @@ function typedInvoke<K extends keyof IpcChannelMap>(
 }
 
 const api = {
-  getGatewayUrl: () => typedInvoke('config:getGatewayUrl'),
-  saveGatewayConfig: (url: string, token?: string) =>
-    typedInvoke('config:saveGateway', url, token),
-  testGatewayConnection: (url: string, token?: string) =>
-    typedInvoke('gateway:test-connection', url, token),
-  signGatewayChallenge: () => typedInvoke('gateway:sign-challenge'),
   getRepoPaths: () => typedInvoke('git:getRepoPaths'),
   openExternal: (url: string) => typedInvoke('window:openExternal', url),
   listMemoryFiles: () => typedInvoke('memory:listFiles'),
@@ -105,11 +99,6 @@ const api = {
   checkConflictFiles: (input: { owner: string; repo: string; prNumber: number }) =>
     typedInvoke('pr:checkConflictFiles', input),
 
-  // Queue health
-  queue: {
-    health: () => typedInvoke('queue:health'),
-  },
-
   // Sprint tasks — SQLite-backed Kanban
   sprint: {
     list: () => typedInvoke('sprint:list'),
@@ -145,12 +134,6 @@ const api = {
   readFileAsBase64: (path: string) => typedInvoke('fs:readFileAsBase64', path),
   readFileAsText: (path: string) => typedInvoke('fs:readFileAsText', path),
   openDirectoryDialog: () => typedInvoke('fs:openDirectoryDialog'),
-
-  // Gateway tool invocation — proxied through main process to avoid CORS
-  invokeTool: (tool: string, args?: Record<string, unknown>) =>
-    typedInvoke('gateway:invoke', tool, args ?? {}),
-  getSessionHistory: (sessionKey: string) =>
-    typedInvoke('gateway:getSessionHistory', sessionKey),
 
   // GitHub rate-limit warning push events
   onGitHubRateLimitWarning: (
@@ -209,13 +192,6 @@ const api = {
       return () => ipcRenderer.removeListener('agent:event', handler)
     },
     getHistory: (agentId: string) => typedInvoke('agent:history', agentId),
-  },
-
-  // Sprint SSE real-time events
-  onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void): (() => void) => {
-    const listener = (_e: unknown, ev: { type: string; data: unknown }): void => cb(ev)
-    ipcRenderer.on('sprint:sseEvent', listener)
-    return () => ipcRenderer.removeListener('sprint:sseEvent', listener)
   },
 
   // Template CRUD (Phase 2)

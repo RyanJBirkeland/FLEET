@@ -395,49 +395,12 @@ describe('IPC handler registration', () => {
   // config-handlers.ts
   // -------------------------------------------------------------------------
   describe('config-handlers', () => {
-    it('registers all expected channel names', () => {
-      const expected = [
-        'config:getGatewayUrl',
-        'config:saveGateway',
-      ]
-      for (const ch of expected) {
-        expect(handlers.has(ch), `missing channel: ${ch}`).toBe(true)
-      }
-      // Token-exposing channels must NOT be registered
+    it('does not register removed gateway channels', () => {
+      expect(handlers.has('config:getGatewayUrl')).toBe(false)
+      expect(handlers.has('config:saveGateway')).toBe(false)
       expect(handlers.has('config:getGateway')).toBe(false)
       expect(handlers.has('config:getGithubToken')).toBe(false)
       expect(handlers.has('config:getSupabase')).toBe(false)
-    })
-
-    it('"config:getGatewayUrl" returns url and hasToken flag (no raw token)', async () => {
-      // config-handlers now reads directly from settings
-      mockGetSetting.mockImplementation((key: string) => {
-        if (key === 'gateway.url') return 'ws://localhost:18789'
-        if (key === 'gateway.token') return 'test-token'
-        return null
-      })
-      const result = await invoke('config:getGatewayUrl')
-      expect(result).toEqual({ url: 'ws://localhost:18789', hasToken: true })
-    })
-
-    it('"config:getGatewayUrl" returns hasToken:false when settings are empty', async () => {
-      mockGetSetting.mockReturnValue(null)
-      const result = await invoke('config:getGatewayUrl')
-      expect(result).toEqual({ url: '', hasToken: false })
-    })
-
-    it('"config:saveGateway" saves url and token via settings', async () => {
-      const settings = await import('../settings')
-      await invoke('config:saveGateway', 'ws://new', 'new-token')
-      expect(settings.setSetting).toHaveBeenCalledWith('gateway.url', 'ws://new')
-      expect(settings.setSetting).toHaveBeenCalledWith('gateway.token', 'new-token')
-    })
-
-    it('"config:saveGateway" saves only url when no token provided', async () => {
-      const settings = await import('../settings')
-      await invoke('config:saveGateway', 'ws://new')
-      expect(settings.setSetting).toHaveBeenCalledWith('gateway.url', 'ws://new')
-      expect(settings.setSetting).not.toHaveBeenCalledWith('gateway.token', expect.anything())
     })
 
     it('registers settings CRUD channels', () => {

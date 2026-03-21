@@ -15,10 +15,6 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
-      getGatewayUrl: () => Promise<IpcResult<'config:getGatewayUrl'>>
-      saveGatewayConfig: (...args: IpcArgs<'config:saveGateway'>) => Promise<IpcResult<'config:saveGateway'>>
-      testGatewayConnection: (...args: IpcArgs<'gateway:test-connection'>) => Promise<IpcResult<'gateway:test-connection'>>
-      signGatewayChallenge: () => Promise<IpcResult<'gateway:sign-challenge'>>
       getRepoPaths: () => Promise<IpcResult<'git:getRepoPaths'>>
       openExternal: (...args: IpcArgs<'window:openExternal'>) => Promise<IpcResult<'window:openExternal'>>
       listMemoryFiles: () => Promise<IpcResult<'memory:listFiles'>>
@@ -98,11 +94,6 @@ declare global {
       // Conflict file detection
       checkConflictFiles: (...args: IpcArgs<'pr:checkConflictFiles'>) => Promise<IpcResult<'pr:checkConflictFiles'>>
 
-      // Queue health
-      queue: {
-        health: () => Promise<IpcResult<'queue:health'>>
-      }
-
       // Sprint tasks — SQLite-backed Kanban
       sprint: {
         list: () => Promise<IpcResult<'sprint:list'>>
@@ -121,10 +112,6 @@ declare global {
       readFileAsBase64: (...args: IpcArgs<'fs:readFileAsBase64'>) => Promise<IpcResult<'fs:readFileAsBase64'>>
       readFileAsText: (...args: IpcArgs<'fs:readFileAsText'>) => Promise<IpcResult<'fs:readFileAsText'>>
       openDirectoryDialog: () => Promise<IpcResult<'fs:openDirectoryDialog'>>
-
-      // Gateway RPC
-      invokeTool: (tool: string, args?: Record<string, unknown>) => Promise<IpcResult<'gateway:invoke'>>
-      getSessionHistory: (...args: IpcArgs<'gateway:getSessionHistory'>) => Promise<IpcResult<'gateway:getSessionHistory'>>
 
       // GitHub rate-limit warning push events
       onGitHubRateLimitWarning: (
@@ -151,9 +138,6 @@ declare global {
       task: {
         getEvents: (taskId: string) => Promise<IpcResult<'task:getEvents'>>
       }
-
-      // Sprint SSE real-time events
-      onSprintSseEvent: (cb: (event: { type: string; data: unknown }) => void) => (() => void)
 
       // Terminal PTY
       terminal: {

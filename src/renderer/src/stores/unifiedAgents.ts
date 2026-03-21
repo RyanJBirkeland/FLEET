@@ -1,5 +1,5 @@
 /**
- * Unified agents store — composes sessions, localAgents, and agentHistory
+ * Unified agents store — composes localAgents and agentHistory
  * stores into a single normalized list of UnifiedAgent objects.
  *
  * Delegates to existing stores for data fetching and actions.
@@ -7,7 +7,6 @@
  */
 import { create } from 'zustand'
 import type { UnifiedAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
-import { useSessionsStore } from './sessions'
 import { useLocalAgentsStore } from './localAgents'
 import { useAgentHistoryStore } from './agentHistory'
 import { toast } from './toasts'
@@ -50,11 +49,9 @@ interface UnifiedAgentsStore {
 
 /** Build the unified agent list from underlying store state. */
 function buildAgentList(): UnifiedAgent[] {
-  const sessions = useSessionsStore.getState().sessions
-  const subAgents = useSessionsStore.getState().subAgents
   const processes = useLocalAgentsStore.getState().processes
   const historyAgents = useAgentHistoryStore.getState().agents
-  return buildUnifiedAgentList(sessions, subAgents, processes, historyAgents)
+  return buildUnifiedAgentList([], [], processes, historyAgents)
 }
 
 export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
@@ -67,7 +64,6 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
 
     // Delegate to underlying stores in parallel
     await Promise.allSettled([
-      useSessionsStore.getState().fetchSessions(),
       useLocalAgentsStore.getState().fetchProcesses(),
       useAgentHistoryStore.getState().fetchAgents()
     ])
@@ -81,7 +77,6 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
     // Sync selection to underlying stores
     const agentHistory = useAgentHistoryStore.getState()
     const localAgents = useLocalAgentsStore.getState()
-    const sessions = useSessionsStore.getState()
 
     // Clear all first
     agentHistory.selectAgent(null)
@@ -95,8 +90,6 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
     } else if (id.startsWith('history:')) {
       const historyId = id.substring(8)
       agentHistory.selectAgent(historyId)
-    } else {
-      sessions.selectSession(id)
     }
   },
 
@@ -125,8 +118,6 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
       } catch (err) {
         toast.error(`Failed to send: ${err instanceof Error ? err.message : String(err)}`)
       }
-    } else if (agent.sessionKey) {
-      await useSessionsStore.getState().steerSubAgent(agent.sessionKey, message)
     }
   },
 
@@ -134,8 +125,6 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
     if (agent.source === 'local' && agent.pid) {
       await useLocalAgentsStore.getState().killLocalAgent(agent.pid)
       toast.success('Agent killed')
-    } else if (agent.sessionKey) {
-      await useSessionsStore.getState().killSession(agent.sessionKey)
     }
   }
 }))

@@ -8,7 +8,6 @@ import { SpecDrawer } from './SpecDrawer'
 import { LogDrawer } from './LogDrawer'
 import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
-import { QueueDashboard } from './QueueDashboard'
 import { NewTicketModal } from './NewTicketModal'
 import { usePrConflictsStore } from '../../stores/prConflicts'
 import { useSprintTasks } from '../../stores/sprintTasks'
@@ -39,7 +38,6 @@ export function SprintCenter() {
   const logDrawerTaskId = useSprintUI((s) => s.logDrawerTaskId)
   const prMergedMap = useSprintTasks((s) => s.prMergedMap)
   const generatingIds = useSprintUI((s) => s.generatingIds)
-  const queueHealth = useSprintEvents((s) => s.queueHealth)
 
   const loadData = useSprintTasks((s) => s.loadData)
   const createTask = useSprintTasks((s) => s.createTask)
@@ -181,8 +179,6 @@ export function SprintCenter() {
           </Button>
         </div>
       </div>
-
-      <QueueDashboard health={queueHealth} />
 
       <div className="sprint-center__body">
         {loadError && tasks.length === 0 ? (

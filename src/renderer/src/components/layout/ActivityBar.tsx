@@ -23,7 +23,7 @@ const NAV_ITEMS: { view: View; icon: typeof Terminal; label: string; shortcut: s
 ]
 
 interface ActivityBarProps {
-  connectionStatus: string
+  // Reserved for future auth status
 }
 
 interface ContextMenuState {
@@ -32,7 +32,7 @@ interface ContextMenuState {
   view: View
 }
 
-export function ActivityBar({ connectionStatus }: ActivityBarProps): React.JSX.Element {
+export function ActivityBar(_props: ActivityBarProps): React.JSX.Element {
   // Keep legacy view switching for fallback compatibility
   const setView = useUIStore((s) => s.setView)
 
@@ -48,8 +48,6 @@ export function ActivityBar({ connectionStatus }: ActivityBarProps): React.JSX.E
 
   const focusedLeaf = focusedPanelId ? findLeaf(root, focusedPanelId) : null
   const focusedView = focusedLeaf?.tabs[focusedLeaf.activeTab]?.viewKey
-
-  const isConnected = connectionStatus === 'connected'
 
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
 
@@ -136,18 +134,6 @@ export function ActivityBar({ connectionStatus }: ActivityBarProps): React.JSX.E
             )}
           </button>
         ))}
-      </div>
-
-      <div className="activity-bar__bottom">
-        <div
-          className={
-            'activity-bar__status ' +
-            (isConnected
-              ? 'activity-bar__status--connected'
-              : 'activity-bar__status--disconnected')
-          }
-          title={isConnected ? 'Connected to gateway' : 'Disconnected from gateway'}
-        />
       </div>
 
       {contextMenu && (

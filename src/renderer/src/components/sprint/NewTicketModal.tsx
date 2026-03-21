@@ -4,12 +4,10 @@ import { Button } from '../ui/Button'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { REPO_OPTIONS } from '../../lib/constants'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
-import { toast } from '../../stores/toasts'
-import { DesignModeContent } from './DesignModeContent'
 import { DEFAULT_TASK_TEMPLATES } from '../../../../shared/constants'
 import type { TaskTemplate } from '../../../../shared/types'
 
-type TicketMode = 'quick' | 'template' | 'design'
+type TicketMode = 'quick' | 'template'
 
 export type CreateTicketData = {
   title: string
@@ -79,7 +77,6 @@ export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps)
   const [priority, setPriority] = useState(3)
   const [selectedTemplate, setSelectedTemplate] = useState<string | null>(null)
   const [spec, setSpec] = useState('')
-  const [generating, setGenerating] = useState(false)
   const titleRef = useRef<HTMLInputElement>(null)
   const [taskTemplateNames, setTaskTemplateNames] = useState<string[]>([])
   const [taskTemplateName, setTaskTemplateName] = useState('')
@@ -100,20 +97,14 @@ export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps)
       setPriority(3)
       setSelectedTemplate(null)
       setSpec('')
-      setGenerating(false)
       setTaskTemplateName('')
       setTimeout(() => titleRef.current?.focus(), 100)
     }
   }, [open])
 
-  const handleClose = useCallback(async () => {
-    if (mode === 'design') {
-      const ok = await confirm({ message: 'Discard this design conversation?', confirmLabel: 'Discard' })
-      if (ok) onClose()
-      return
-    }
+  const handleClose = useCallback(() => {
     onClose()
-  }, [mode, onClose, confirm])
+  }, [onClose])
 
   useEffect(() => {
     if (!open) return
@@ -140,44 +131,6 @@ export function NewTicketModal({ open, onClose, onCreate }: NewTicketModalProps)
     }
     setSelectedTemplate(key)
     setSpec(TEMPLATES[key].spec)
-  }
-
-  const handleAskPaul = async () => {
-    if (!title.trim()) return
-    setGenerating(true)
-    try {
-      const templateInstruction = selectedTemplate
-        ? `\n\nIMPORTANT: Use the following template structure. Fill in each section with specific, technical content — do not remove or rename sections:\n\n${TEMPLATES[selectedTemplate].spec}`
-        : ''
-
-      const prompt = `You are a senior engineer writing a coding agent spec for BDE (Birkeland Development Environment).
-
-Task title: "${title}"
-Repo: ${repo}
-Current notes: ${spec || '(none)'}${templateInstruction}
-
-Write a complete, spec-ready prompt for a Claude Code agent to implement this task. Follow the spec format in memory/spec-template.md. Include: Problem, Solution, Data shapes (if applicable), Files to Change, Out of Scope. Be specific and technical. Output only the spec markdown, no commentary.`
-
-      const result = (await window.api.invokeTool('sessions_send', {
-        sessionKey: 'main',
-        message: prompt,
-        timeoutSeconds: 30,
-      })) as {
-        ok?: boolean
-        result?: { content?: Array<{ type: string; text: string }> }
-      } | null
-
-      const text = result?.result?.content?.[0]?.text ?? ''
-      if (!text) {
-        toast.error('Paul returned an empty response — try again')
-        return
-      }
-      setSpec(text)
-    } catch {
-      toast.error('Ask Paul failed — check your connection and try again')
-    } finally {
-      setGenerating(false)
-    }
   }
 
   const handleSubmit = () => {
@@ -248,13 +201,6 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
             type="button"
           >
             Template
-          </button>
-          <button
-            className={`new-ticket-modal__tab ${mode === 'design' ? 'new-ticket-modal__tab--active' : ''}`}
-            onClick={() => setMode('design')}
-            type="button"
-          >
-            Design with Paul
           </button>
         </div>
 
@@ -388,50 +334,20 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
                 ))}
               </div>
 
-              <div className="new-ticket-modal__spec-header">
-                <label className="new-ticket-modal__label">Spec</label>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={handleAskPaul}
-                  disabled={generating || !title.trim()}
-                >
-                  {generating ? 'Generating...' : 'Ask Paul'}
-                </Button>
-              </div>
+              <label className="new-ticket-modal__label">Spec</label>
               <textarea
                 className="new-ticket-modal__spec-editor"
-                value={generating ? 'Paul is writing your spec...' : spec}
+                value={spec}
                 onChange={(e) => setSpec(e.target.value)}
-                disabled={generating}
                 placeholder="Write your spec in markdown or pick a template above..."
                 rows={10}
               />
             </>
           )}
 
-          {mode === 'design' && (
-            <DesignModeContent
-              repo={repo}
-              priority={priority}
-              onSave={(args) => {
-                onCreate({
-                  title: args.title,
-                  repo: args.repo,
-                  notes: '',
-                  prompt: args.prompt,
-                  spec: args.spec,
-                  priority: args.priority,
-                })
-                onClose()
-              }}
-            />
-          )}
-
         </div>
 
-        {mode !== 'design' && (
-          <div className="new-ticket-modal__footer">
+        <div className="new-ticket-modal__footer">
             <Button variant="ghost" size="sm" onClick={handleClose}>
               Cancel
             </Button>
@@ -443,8 +359,7 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
             >
               {mode === 'quick' ? 'Save — Paul writes the spec' : 'Save to Backlog'}
             </Button>
-          </div>
-        )}
+        </div>
       </motion.div>
     </>
       )}

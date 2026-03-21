@@ -1,33 +1,23 @@
 import { create } from 'zustand'
-import type { TaskOutputEvent, RecentHealth } from '../../../shared/queue-api-contract'
+import type { TaskOutputEvent } from '../../../shared/queue-api-contract'
 import type { AgentEvent } from '../../../main/agents/types'
 
 /** Union of both event sources during dual-write migration. */
 export type AnyTaskEvent = TaskOutputEvent | AgentEvent
 
-export interface QueueHealth {
-  queue: Record<string, number>
-  doneToday: number
-  connectedRunners: number
-  recentHealth: RecentHealth | null
-}
-
 interface SprintEventsState {
   // --- State ---
   taskEvents: Record<string, AnyTaskEvent[]>
   latestEvents: Record<string, AnyTaskEvent>
-  queueHealth: QueueHealth | null
 
   // --- Actions ---
   initTaskOutputListener: () => () => void
-  fetchQueueHealth: () => Promise<void>
   clearTaskEvents: (taskId: string) => void
 }
 
 export const useSprintEvents = create<SprintEventsState>((set) => ({
   taskEvents: {},
   latestEvents: {},
-  queueHealth: null,
 
   initTaskOutputListener: (): (() => void) => {
     // Legacy path: task:output events from queue API
@@ -60,15 +50,6 @@ export const useSprintEvents = create<SprintEventsState>((set) => ({
     return () => {
       cleanupLegacy()
       cleanupAgent?.()
-    }
-  },
-
-  fetchQueueHealth: async (): Promise<void> => {
-    try {
-      const health = await window.api.queue.health()
-      set({ queueHealth: health })
-    } catch {
-      set({ queueHealth: null })
     }
   },
 
