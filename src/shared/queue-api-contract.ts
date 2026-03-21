@@ -117,3 +117,24 @@ export interface AgentCompletedEvent extends TaskOutputEvent {
   tokensOut: number | null
   durationMs: number
 }
+
+// --- Health Monitoring Types ---
+
+export type HealthCondition = 'healthy' | 'degraded' | 'unhealthy'
+
+export interface RecentHealth {
+  windowMinutes: number
+  agentExits: { total: number; done: number; failed: number; error: number }
+  successRate: number | null
+  avgDurationMs: number | null
+  rateLimits: number
+  stalls: number
+  fastFails: number
+  condition: HealthCondition
+}
+
+export interface HealthDegradedPayload {
+  previousCondition: HealthCondition
+  currentCondition: HealthCondition
+  recentHealth: RecentHealth
+}

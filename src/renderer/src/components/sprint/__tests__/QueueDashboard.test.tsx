@@ -2,12 +2,14 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { QueueDashboard } from '../QueueDashboard'
 import type { QueueHealth } from '../../../stores/sprintEvents'
+import type { RecentHealth } from '../../../../../shared/queue-api-contract'
 
 function makeHealth(overrides: Partial<QueueHealth> = {}): QueueHealth {
   return {
     queue: { backlog: 0, queued: 0, active: 0, done: 0, failed: 0, cancelled: 0 },
     doneToday: 0,
     connectedRunners: 0,
+    recentHealth: null,
     ...overrides,
   }
 }
@@ -18,9 +20,9 @@ describe('QueueDashboard', () => {
     expect(screen.getByText('Queue API inactive')).toBeInTheDocument()
   })
 
-  it('shows "Runner connected" when connectedRunners > 0', () => {
+  it('shows "Healthy" when connectedRunners > 0 and no recentHealth', () => {
     render(<QueueDashboard health={makeHealth({ connectedRunners: 1 })} />)
-    expect(screen.getByText('Runner connected')).toBeInTheDocument()
+    expect(screen.getByText('Healthy')).toBeInTheDocument()
   })
 
   it('shows "No runner connected" when connectedRunners is 0', () => {
@@ -96,5 +98,58 @@ describe('QueueDashboard', () => {
   it('has the queue-dashboard test id', () => {
     render(<QueueDashboard health={null} />)
     expect(screen.getByTestId('queue-dashboard')).toBeInTheDocument()
+  })
+
+  it('shows "Degraded" with warning dot when recentHealth condition is degraded', () => {
+    const recentHealth: RecentHealth = {
+      windowMinutes: 60,
+      agentExits: { total: 5, done: 3, failed: 1, error: 1 },
+      successRate: 0.6,
+      avgDurationMs: 120000,
+      rateLimits: 3,
+      stalls: 1,
+      fastFails: 0,
+      condition: 'degraded',
+    }
+    render(<QueueDashboard health={makeHealth({ connectedRunners: 1, recentHealth })} />)
+    expect(screen.getByText('Degraded')).toBeInTheDocument()
+    const dot = screen.getByTestId('runner-dot')
+    // #F59E0B -> rgb(245, 158, 11)
+    expect(dot.style.backgroundColor).toBe('rgb(245, 158, 11)')
+  })
+
+  it('shows "Unhealthy" with danger dot when recentHealth condition is unhealthy', () => {
+    const recentHealth: RecentHealth = {
+      windowMinutes: 60,
+      agentExits: { total: 5, done: 1, failed: 2, error: 2 },
+      successRate: 0.2,
+      avgDurationMs: 30000,
+      rateLimits: 10,
+      stalls: 3,
+      fastFails: 2,
+      condition: 'unhealthy',
+    }
+    render(<QueueDashboard health={makeHealth({ connectedRunners: 1, recentHealth })} />)
+    expect(screen.getByText('Unhealthy')).toBeInTheDocument()
+    const dot = screen.getByTestId('runner-dot')
+    // #FF4D4D -> rgb(255, 77, 77)
+    expect(dot.style.backgroundColor).toBe('rgb(255, 77, 77)')
+  })
+
+  it('renders subtitle with success rate, avg duration, and rate limits when recentHealth is present', () => {
+    const recentHealth: RecentHealth = {
+      windowMinutes: 60,
+      agentExits: { total: 10, done: 9, failed: 1, error: 0 },
+      successRate: 0.9,
+      avgDurationMs: 45000,
+      rateLimits: 2,
+      stalls: 0,
+      fastFails: 0,
+      condition: 'healthy',
+    }
+    render(<QueueDashboard health={makeHealth({ connectedRunners: 1, recentHealth })} />)
+    expect(screen.getByText(/90% success/)).toBeInTheDocument()
+    expect(screen.getByText(/45s avg/)).toBeInTheDocument()
+    expect(screen.getByText(/2 rate limits/)).toBeInTheDocument()
   })
 })
