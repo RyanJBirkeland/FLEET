@@ -4,7 +4,7 @@
 import { useMemo, useState, useEffect } from 'react'
 import { Bot, Clock, Zap, DollarSign } from 'lucide-react'
 import type { AgentMeta } from '../../../../shared/types'
-import type { AgentEvent } from '../../../../main/agents/types'
+import type { AgentEvent } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
 import { ChatRenderer } from './ChatRenderer'
 import { SteerInput } from './SteerInput'

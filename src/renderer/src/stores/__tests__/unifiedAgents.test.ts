@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { groupUnifiedAgents, getStaleLevel, type UnifiedAgent } from '../../hooks/useUnifiedAgents'
+import type { LocalAgent } from '../../../../shared/types'
 
 const ONE_HOUR = 60 * 60 * 1000
 const ONE_DAY = 24 * ONE_HOUR
 const SEVEN_DAYS = 7 * ONE_DAY
 
-function makeAgent(overrides: Partial<UnifiedAgent> = {}): UnifiedAgent {
+function makeAgent(overrides: Partial<LocalAgent> = {}): UnifiedAgent {
   return {
     id: 'test-1',
     label: 'Test Agent',
@@ -16,6 +17,7 @@ function makeAgent(overrides: Partial<UnifiedAgent> = {}): UnifiedAgent {
     startedAt: Date.now(),
     canSteer: false,
     canKill: false,
+    pid: 1234,
     ...overrides,
   }
 }

@@ -4,7 +4,70 @@
  * are detected even when no BDE window is open.
  */
 import { parsePrUrl } from '../shared/github'
-import { pollPrStatuses, type PrStatusInput } from './git'
+import type { SprintTask } from '../shared/types'
+import type { PrStatusInput, PrStatusResult } from './github-pr-status'
+
+const POLL_INTERVAL_MS = 60_000
+
+export interface SprintPrPollerDeps {
+  listTasksWithOpenPrs: () => SprintTask[]
+  pollPrStatuses: (prs: PrStatusInput[]) => Promise<PrStatusResult[]>
+  markTaskDoneByPrNumber: (prNumber: number) => void
+  markTaskCancelledByPrNumber: (prNumber: number) => void
+  updateTaskMergeableState: (prNumber: number, state: string | null) => void
+}
+
+export interface SprintPrPollerInstance {
+  start: () => void
+  stop: () => void
+}
+
+export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerInstance {
+  let timer: ReturnType<typeof setInterval> | null = null
+
+  async function poll(): Promise<void> {
+    const tasks = deps.listTasksWithOpenPrs()
+    if (tasks.length === 0) return
+
+    const inputs: PrStatusInput[] = tasks
+      .map((t) => ({ taskId: t.id, prUrl: t.pr_url! }))
+      .filter((t) => t.prUrl)
+
+    if (inputs.length === 0) return
+
+    const results = await deps.pollPrStatuses(inputs)
+
+    for (const result of results) {
+      const input = inputs.find((i) => i.taskId === result.taskId)
+      const prNumber = input ? parsePrUrl(input.prUrl)?.number : undefined
+      if (!prNumber) continue
+
+      if (result.merged) {
+        deps.markTaskDoneByPrNumber(prNumber)
+      } else if (result.state === 'CLOSED') {
+        deps.markTaskCancelledByPrNumber(prNumber)
+      }
+      deps.updateTaskMergeableState(prNumber, result.mergeableState)
+    }
+  }
+
+  return {
+    start() {
+      poll()
+      timer = setInterval(poll, POLL_INTERVAL_MS)
+    },
+    stop() {
+      if (timer) {
+        clearInterval(timer)
+        timer = null
+      }
+    },
+  }
+}
+
+// --- Legacy API (backwards compat) ---
+
+import { pollPrStatuses } from './github-pr-status'
 import {
   listTasksWithOpenPrs,
   markTaskDoneByPrNumber,
@@ -12,44 +75,20 @@ import {
   updateTaskMergeableState,
 } from './handlers/sprint-local'
 
-const POLL_INTERVAL_MS = 60_000
-
-let timer: ReturnType<typeof setInterval> | null = null
-
-async function poll(): Promise<void> {
-  const tasks = listTasksWithOpenPrs()
-  if (tasks.length === 0) return
-
-  const inputs: PrStatusInput[] = tasks
-    .map((t) => ({ taskId: t.id, prUrl: t.pr_url! }))
-    .filter((t) => t.prUrl)
-
-  if (inputs.length === 0) return
-
-  const results = await pollPrStatuses(inputs)
-
-  for (const result of results) {
-    const input = inputs.find((i) => i.taskId === result.taskId)
-    const prNumber = input ? parsePrUrl(input.prUrl)?.number : undefined
-    if (!prNumber) continue
-
-    if (result.merged) {
-      markTaskDoneByPrNumber(prNumber)
-    } else if (result.state === 'CLOSED') {
-      markTaskCancelledByPrNumber(prNumber)
-    }
-    updateTaskMergeableState(prNumber, result.mergeableState)
-  }
-}
+let _instance: SprintPrPollerInstance | null = null
 
 export function startSprintPrPoller(): void {
-  poll()
-  timer = setInterval(poll, POLL_INTERVAL_MS)
+  _instance = createSprintPrPoller({
+    listTasksWithOpenPrs,
+    pollPrStatuses,
+    markTaskDoneByPrNumber,
+    markTaskCancelledByPrNumber,
+    updateTaskMergeableState,
+  })
+  _instance.start()
 }
 
 export function stopSprintPrPoller(): void {
-  if (timer) {
-    clearInterval(timer)
-    timer = null
-  }
+  _instance?.stop()
+  _instance = null
 }

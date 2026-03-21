@@ -7,154 +7,160 @@
 
 ## Executive Summary
 
-- **Overall architectural health: B-**
-- **High Cohesion, Low Coupling status:** Strong at boundaries (main/preload/renderer), weak in middle layers (use cases scattered across handlers, stores, and components)
+- **Overall architectural health: B+**
+- **Guiding principle (High Cohesion, Low Coupling):** Strong foundations — process boundaries are textbook, core orchestration (AgentManager) is exemplary. Specific modules need decoupling.
 - **Top 3 wins:**
-  1. Shared types layer (`src/shared/`) is pure — zero framework imports, type-safe IPC contracts
-  2. Process boundaries (main/preload/renderer) are well-respected with clean preload bridge
-  3. Zustand stores are isolated (no inter-store dependencies), UI primitives are pure
+  1. AgentManager is fully dependency-injected with 100% mockable deps — best-in-class for an Electron app
+  2. End-to-end typed IPC via `IpcChannelMap` + `safeHandle()` + `typedInvoke()` — single source of truth for 64 channels
+  3. Data layer (`src/main/data/`) follows repository pattern perfectly — all functions accept `db` as parameter, testable with in-memory SQLite
 - **Top 3 priorities:**
-  1. Extract use case layer — business logic scattered across IPC handlers, Zustand stores, and React components
-  2. Decompose god modules — SettingsView (841 LOC), SprintCenter (458 LOC), sprint-local.ts (469 LOC)
-  3. Fix `AgentEvent` type placement — shared layer imports from main, breaking dependency direction
+  1. Move `AgentEvent` type to `src/shared/types.ts` — fixes the only dependency direction violation (cascades to 8 files)
+  2. Extract raw SQL from `src/main/index.ts` into `data/sprint-queries.ts` — the composition root has absorbed query logic
+  3. Split `git.ts` (4 concerns) and `local-agents.ts` (6 concerns) — these are the codebase's two god files
 
 ---
 
 ## Structural Overview
 
-| Metric | Value |
-|--------|-------|
-| Total source LOC | ~33,500 |
-| TypeScript files | 243 |
-| Test files | 63 |
-| Zustand stores | 16 |
-| IPC handler modules | 10 |
-| Views | 7 |
-| Files > 300 LOC | 13 (source only) |
+**262 TypeScript/TSX files** across 4 process boundaries:
 
-**Organization:** By process boundary (main/preload/renderer/shared) with domain grouping within renderer (stores, components, views, lib, hooks). Main process organized by concern (handlers, agents, queue-api).
+```
+src/
+├── main/                    (21 root files + 4 subdirs)
+│   ├── agent-manager/       (9 files) — task orchestration engine
+│   ├── agents/              (5 files) — SDK integration, event pipeline
+│   ├── handlers/            (12 files) — IPC handler adapters
+│   └── data/                (5 files) — SQL query functions
+├── renderer/src/
+│   ├── components/          (~76 files) — feature UI: sprint, agents, terminal, panels, ui
+│   ├── stores/              (16 files) — Zustand state, one per domain
+│   ├── views/               (7 files) — top-level view containers
+│   ├── lib/                 (15 files) — utilities
+│   └── hooks/               (11 files) — custom React hooks
+├── shared/                  (8 files) — cross-process types and constants
+└── preload/                 (2 files) — Electron context bridge
+```
 
-**Recent activity:** Phase 3 (Pluggable Panels) just merged. Sprint UI and agent system see highest churn.
+**Organization pattern:** Hybrid layer-based (main/renderer/preload/shared) with feature-based nesting within each layer.
+
+**Largest non-test files:** `DiffViewer.tsx` (456), `TicketEditor.tsx` (436), `panelLayout.ts` (428), `TaskTable.tsx` (373), `local-agents.ts` (333), `db.ts` (332).
+
+**Churn hotspots (last 50 commits):** Renderer (47%), integration tests (8%), handlers (7%), AgentManager (6%).
 
 ---
 
 ## Dependency Direction Map
 
-### Expected Flow (Clean Architecture)
-
 ```
-renderer →(IPC)→ preload →(types)→ shared ←(imports)← main
+                    ┌──────────────┐
+                    │   shared/    │  ← Pure types, zero runtime deps
+                    │ types.ts     │
+                    │ ipc-channels │
+                    └──────┬───────┘
+                           │ (imported by all layers)
+              ┌────────────┼────────────┐
+              ▼            ▼            ▼
+      ┌───────────┐ ┌──────────┐ ┌──────────────┐
+      │  preload/  │ │  main/   │ │  renderer/   │
+      │  bridge    │ │  process │ │  process     │
+      └─────┬─────┘ └────┬─────┘ └──────┬───────┘
+            │             │              │
+            └─────────────┘              │
+              IPC boundary               │
+              (typed channels)           │
+                                         │
+                          window.api ─────┘
 ```
 
-### Violations Found: 3 (Single Root Cause)
+### Violations (1 root cause, 8 affected files)
 
-All violations stem from `AgentEvent` type being placed in `src/main/agents/types.ts` instead of `src/shared/types.ts`.
+**Root cause:** `AgentEvent` type defined in `src/main/agents/types.ts` instead of `src/shared/types.ts`.
 
-| # | File | Line | Violation |
-|---|------|------|-----------|
-| 1 | `src/shared/ipc-channels.ts` | 11 | Shared layer imports from `../main/agents/types` |
-| 2 | `src/preload/index.ts` + `index.d.ts` | 6, 5 | Preload imports from `../main/agents/types` |
-| 3 | `src/renderer/src/stores/agentEvents.ts`, `components/agents/AgentDetail.tsx`, `ChatRenderer.tsx` | various | Renderer imports from main process types |
+| Violation | File | Line | Direction |
+|-----------|------|------|-----------|
+| shared → main | `src/shared/ipc-channels.ts` | 10 | `import type { AgentEvent } from '../main/agents/types'` |
+| preload → main | `src/preload/index.ts` | 5 | Same import |
+| preload → main | `src/preload/index.d.ts` | 4 | Same import |
+| renderer → main | `src/renderer/src/stores/agentEvents.ts` | 2 | Same import |
+| renderer → main | `src/renderer/src/stores/sprintEvents.ts` | 3 | Same import |
+| renderer → main | `src/renderer/src/components/agents/AgentDetail.tsx` | — | Same import |
+| renderer → main | `src/renderer/src/components/agents/ChatRenderer.tsx` | — | Same import |
+| renderer → main | `src/renderer/src/components/agents/__tests__/ChatRenderer.test.tsx` | — | Same import |
 
-**Fix:** Move `AgentEvent` and `AgentEventType` to `src/shared/types.ts`. Update 7 import statements. Low complexity.
+**Fix:** Move `AgentEvent` and `AgentEventType` to `src/shared/types.ts`, update 8 imports. ~15 minutes, zero logic changes.
 
-### Healthy Boundaries
-
-- **React isolation:** Zero React imports in main, shared, or preload
-- **Database isolation:** `better-sqlite3` only in `src/main/db.ts` (+ tests)
-- **Electron isolation:** 10 files import Electron, all in main process or preload
-- **Type abstraction:** DB row types (`AgentRunRow`) mapped to shared types (`AgentMeta`) before crossing IPC boundary
-
-### Swap Test Results
-
-| Framework | If Swapped... | Files Affected | Business Logic Impact |
-|-----------|---------------|----------------|----------------------|
-| React | → Vue/Svelte | Renderer only | None |
-| better-sqlite3 | → PostgreSQL | ~5 files in main | None (queries isolated) |
-| Electron | → Tauri | ~10 files in main | ~30% of main process |
-| Zustand | → Redux/Jotai | 16 store files | None (stores isolated) |
+**No circular dependencies found.** Verified all major import chains.
 
 ---
 
 ## Layer Boundary Analysis
 
-| Layer | Status | Location | Grade |
-|-------|--------|----------|-------|
-| **Entities/Domain** | Excellent | `src/shared/` | A+ |
-| **Use Cases** | Missing/Scattered | Handlers + stores + components | D |
-| **Interface Adapters** | Partial | `src/main/handlers/`, `src/preload/`, `src/main/queue-api/` | C+ |
-| **Frameworks & Drivers** | Well-contained | `src/renderer/`, `src/main/index.ts`, `src/main/db.ts` | B |
+| Layer | Location | Status |
+|-------|----------|--------|
+| **Entities/Domain** | `src/shared/types.ts`, `src/shared/models.ts` | Clean — pure data structures, no framework deps |
+| **Use Cases** | `src/main/agent-manager/`, `src/main/agents/event-bus.ts` | Clean — AgentManager fully DI, event bus is mediator pattern |
+| **Interface Adapters** | `src/main/handlers/`, `src/preload/index.ts` | Clean — handlers are thin adapters using `safeHandle()` |
+| **Frameworks & Drivers** | `src/main/db.ts`, `src/main/git.ts`, `src/renderer/src/` | Mostly clean — 3 SQL leak points (see below) |
 
-### Key Issues
+### Layer Violations
 
-**1. No Use Case Layer**
-
-Business logic is scattered across three locations:
-- **IPC Handlers** (`sprint-local.ts:125-143`): Task CRUD with direct SQL
-- **Zustand Stores** (`sprint.ts:82-94`): Optimistic updates, error recovery, polling
-- **React Components** (`SprintCenter.tsx:86-200`): Event handlers with business logic
-
-No single place owns "update a sprint task" — the operation spans 3 files in 2 processes.
-
-**2. No Repository Pattern**
-
-Database queries live in handler files:
-```typescript
-// src/main/handlers/sprint-local.ts:90-92
-export function getTask(id: string): SprintTask | null {
-  return getDb().prepare('SELECT * FROM sprint_tasks WHERE id = ?').get(id) as SprintTask | null
-}
-```
-
-Both IPC handlers and queue-api router call these functions directly. No abstraction boundary between business logic and data access.
-
-**3. Zustand Stores Double as Use Case Orchestrators**
-
-Stores mix state management (Zustand concern) with business orchestration (use case concern):
-```typescript
-// sprint.ts — mixes framework state with business logic
-loadData: async () => {
-  set({ loading: true })                    // Framework: Zustand state
-  const result = await window.api.sprint.list()  // Business: IPC call
-  set({ tasks: result })                    // Framework: Zustand state
-}
-```
+1. **Raw SQL in composition root:** `src/main/index.ts:151-181` — two `db.prepare()` lambdas bypass `data/sprint-queries.ts`
+2. **Raw SQL in handler:** `src/main/handlers/cost-handlers.ts:63` — `getDb().prepare()` call instead of using `data/cost-queries.ts`
+3. **Raw SQL in handler:** `src/main/handlers/sprint-local.ts:178` — inline `getDb().prepare()` instead of calling a data function
+4. **Poller depends on handler layer:** `src/main/sprint-pr-poller.ts:7-13` imports from `handlers/sprint-local.ts` — should import from `data/` directly
 
 ---
 
 ## SOLID Violations
 
-### Summary
+### High Severity (7)
 
-| Principle | HIGH | MEDIUM | LOW | Total |
-|-----------|------|--------|-----|-------|
-| Single Responsibility | 4 | 10 | 2 | 16 |
-| Open/Closed | 1 | 2 | 3 | 6 |
-| Liskov Substitution | 0 | 0 | 0 | 0 |
-| Interface Segregation | 1 | 5 | 1 | 7 |
-| Dependency Inversion | 0 | 8 | 2 | 10 |
+| Principle | File:Line | Description |
+|-----------|-----------|-------------|
+| SRP | `src/main/index.ts:149-198` | `app.whenReady()` is a god-function: DB init, file-watcher, poller lifecycle, handler registration, inline AgentManager construction with raw SQL |
+| SRP | `src/main/index.ts:150-181` | Two duplicate raw-SQL `updateTask` closures inlined — belong in `data/sprint-queries.ts` |
+| ISP | `src/main/agent-manager/agent-manager.ts:33` | `handleCompletion` accepts `Record<string, unknown>` — deliberately untyped. Should be typed to `CompletionContext` |
+| ISP | `src/main/agent-manager/agent-manager.ts:29` | `updateTask` accepts `Record<string, unknown>` — erases type safety on field names, risky near dynamic SQL |
+| DIP | `src/main/local-agents.ts:152` | `new SdkProvider()` instantiated per call — concrete dep, not injectable |
+| DIP | `src/main/auth-guard.ts:1-82` | Directly invokes `execFileAsync('security', ...)` — no abstraction over credential store |
+| DIP | `src/main/sprint-pr-poller.ts:7-13` | Imports from handler layer — business service depends on IPC adapter |
+| DIP | `src/main/agent-manager/completion-handler.ts:29-46` | `pushBranchAndOpenPr` hardcodes `execFileAsync('git'/'gh')` — inconsistent with DI pattern of parent AgentManager |
 
-### HIGH Severity Violations
+### Medium Severity (16)
 
-| Principle | File | Description |
-|-----------|------|-------------|
-| **SRP** | `views/SettingsView.tsx` (841 LOC) | 6+ responsibilities: appearance, gateway config, GitHub auth, repos CRUD, templates CRUD, agent config |
-| **SRP** | `handlers/sprint-local.ts` (469 LOC) | Task CRUD, mutation broadcasting, file I/O, gateway RPC, queue stats — 10+ concerns |
-| **SRP** | `components/sprint/SprintCenter.tsx` (458 LOC) | Task state, repo filtering, log drawer, PR conflicts, health checks, keyboard shortcuts, DnD, modals |
-| **SRP** | `views/SettingsView.tsx:352-687` | ConnectionsSection (335 LOC): 3x copy-pasted credential test/save/show logic |
-| **OCP** | `views/SettingsView.tsx:352-687` | Adding a new credential type requires ~120 LOC copy-paste |
-| **ISP** | `stores/sprint.ts:15-45` | SprintState: 28 properties bundling tasks, UI state, PR state, output events, queue health |
+| Principle | File:Line | Description |
+|-----------|-----------|-------------|
+| SRP | `src/main/index.ts:32-60` | `startDbWatcher` lives in app entry point — should be `db-watcher.ts` |
+| SRP | `src/main/local-agents.ts:54-112` | `extractAgentCost` is a log parser in an agent lifecycle module |
+| SRP | `src/main/local-agents.ts:187-227` | `consumeEvents` does 3 things: file append, bus emit, DB update |
+| SRP | `src/main/handlers/sprint-local.ts:111-196` | Mixes IPC wiring with ad-hoc SQL and log-reading logic |
+| SRP | `src/main/handlers/agent-handlers.ts:30-78` | Three handler domains in one file + side-effecting cleanup calls |
+| SRP | `src/renderer/src/components/sprint/TicketEditor.tsx:32-291` | Three responsibilities: form state, multi-state UI, inline submission |
+| OCP | `src/main/agents/sdk-provider.ts:20-96` | `mapSdkMessage` switch — closed to extension for new SDK event types |
+| OCP | `src/main/agent-manager/completion-handler.ts:61-103` | Retry policy hardcoded — adding new strategy requires modification |
+| OCP | `src/renderer/src/components/sprint/TaskTable.tsx:128-155` | Section row renderer — ternary chains closed to new section types |
+| OCP | `src/preload/index.ts:21-216` | Flat manual registry — every new IPC channel requires editing |
+| ISP | `src/shared/ipc-channels.ts:28-316` | Monolithic `IpcChannelMap` with ~50 entries — should be segregated by domain |
+| ISP | `src/shared/types.ts:156-171` | `UnifiedAgent` carries all fields from both `local` and `history` sources — fat optional interface |
+| DIP | `src/main/agent-manager/completion-handler.ts:49` | `getActualBranch()` from concrete `worktree-ops` import |
+| DIP | `src/main/sprint-pr-poller.ts:8` | `pollPrStatuses` imported directly from `git.ts` |
+| DIP | `src/renderer/src/stores/ui.ts:22-36` | `setView` calls `usePanelLayoutStore.getState()` — cross-store concrete coupling |
+| DIP | `src/main/auth-guard.ts:25-28` | `CLI_SEARCH_PATHS` hardcoded to macOS/Linux — not configurable |
 
-### Notable MEDIUM Violations
+### Low Severity (10)
 
-| Principle | File | Description |
-|-----------|------|-------------|
-| **SRP** | `components/sprint/NewTicketModal.tsx` (454 LOC) | 3 mode tabs, spec generation, template selection, form state, focus management |
-| **SRP** | `components/sprint/TicketEditor.tsx` (436 LOC) | JSON parsing, CRUD, prompt expansion, inline styles (294 LOC) |
-| **SRP** | `stores/panelLayout.ts` (428 LOC) | Tree mutation + persistence + debounced saves + ID generation |
-| **DIP** | `handlers/sprint-local.ts:369-420` | Handler manually constructs fetch URL + AbortController for gateway HTTP |
-| **DIP** | `stores/panelLayout.ts:378-386` | Store directly calls `window.api.settings.setJson()` — persistence baked in |
-| **DIP** | `main/db.ts:7-20` | `getDb()` singleton with no injection — all callers depend on hardcoded instance |
+| Principle | File:Line | Description |
+|-----------|-----------|-------------|
+| SRP | `src/main/index.ts:207-230` | CSP header construction inlined in entry point |
+| SRP | `src/main/db.ts:37-314` | Migrations array growing — approaching 300 LOC ceiling |
+| SRP | `src/renderer/src/components/diff/DiffViewer.tsx:271-454` | Virtualization + keyboard nav + scroll logic in one component |
+| OCP | `src/renderer/src/components/sprint/TaskTable.tsx:95` | Section header labels hardcoded to 3 known types |
+| OCP | `src/main/handlers/sprint-spec.ts:70-81` | `SCAFFOLDS` hardcoded — should be part of template records |
+| ISP | `src/shared/types.ts:173-186` | `Attachment` mixes image and text fields — should be discriminated union |
+| ISP | `src/preload/index.ts:21-216` | Entire IPC surface exposed as single `window.api` — no capability boundaries |
+| LSP | `src/main/agent-manager/agent-manager.ts:192-194` | Special handling of `agent:completed` — if new terminal events are added, the break will be missed |
+| LSP | `src/renderer/src/components/diff/DiffViewer.tsx:75-79` | `rowHeight` switches on `row.kind` — subtypes not substitutable |
+| DIP | `src/renderer/src/components/sprint/TicketEditor.tsx:47` | Direct `window.api` call from component — not injectable |
 
 ---
 
@@ -162,105 +168,147 @@ loadData: async () => {
 
 ### Naming
 
-| Finding | Location | Severity |
-|---------|----------|----------|
-| Inconsistent getter verbs | `getTask` vs `listTasks` vs `loadData` vs `fetchProcesses` vs `fetchSessions` | Low |
-| Opaque dual maps | `local-agents.ts:36-39` — `activeAgentProcesses` + `activeAgentsById` unclear relationship | Low |
-| Magic numbers | `git.ts:164` — `timeoutMs: 10_000`, `KanbanBoard.tsx:18` — `distance: 5` | Low |
+| Issue | Location | Severity |
+|-------|----------|----------|
+| Inconsistent vocabulary: `fetchLocalAgents` / `fetchAgents` / `loadData` for the same concept | `stores/costData.ts:8`, `stores/agentHistory.ts:11`, `stores/sprintTasks.ts:26` | Medium |
+| Typo: `replacLeafWithSplit` (missing 'e') | `stores/panelLayout.ts:244` — called in 4 places | Medium |
+| Dead prop: `sessionCount={0}` always hardcoded | `App.tsx:248` | Low |
+| Duplicate functions: `isAgentInteractive` and `isKnownAgentPid` are identical | `local-agents.ts:326,331` | Low |
+| Magic number `10 * 1024 * 1024` repeated 8 times | `git.ts:27,55,69,78,86,94,106,130` — `fs.ts` defines `MAX_READ_BYTES` for same value | Medium |
+| Priority default mismatch: renderer uses `3`, DB schema defaults to `1` | `TicketEditor.tsx:39,63` vs `db.ts:140` | Medium |
+| Inconsistent term: `update` / `patch` for partial field updates | `agent-manager.ts:29`, `sprint-local.ts:69`, `index.ts:157` | Low |
 
 ### Functions
 
-| Finding | Location | Severity |
-|---------|----------|----------|
-| Mixed abstraction levels | `KanbanBoard.tsx:56-220` — DnD orchestration mixed with string filtering and array manipulation | Medium |
-| Mixed abstraction levels | `git.ts:21-48` — `gitStatus()` mixes high-level fetch with low-level string slicing | Medium |
-| Side effects hidden in name | `local-agents.ts:183` — `consumeEvents()` is fire-and-forget `.catch(() => {})` | Medium |
-| Side effects cascade | `SprintCenter.tsx:161-184` — `handleStop()` does 5 things: confirm, kill, update, notify, toast | Medium |
+| Issue | Location | Severity |
+|-------|----------|----------|
+| `createTask` — 89 LOC, 4+ responsibilities (optimistic insert, spec generation, DOM events, toasts) | `stores/sprintTasks.ts:83-172` | High |
+| `runTask` — 49 LOC, auth + repo lookup + DB update + worktree + spawn + watchdog + consumer | `agent-manager.ts:122-171` | Medium |
+| `spawnClaudeAgent` — 54 LOC, DB record + spawn + PID update + map registration + event consumer | `local-agents.ts:130-184` | Medium |
+| Duplicated SQL UPDATE builder — appears twice in `index.ts`, bypasses allowlist in `sprint-queries.ts` | `index.ts:157-162,176-181` | High |
+| CQS violations — `claimTask`, `updateTask`, `releaseTask` mutate DB + fire IPC + return row | `sprint-local.ts:63-79` | Medium |
+| `moveTab` — boolean-disguised flag argument (`zone === 'center'` triggers entirely different logic) | `panelLayout.ts:191-238` | Low |
 
 ### Error Handling
 
-| Finding | Location | Severity |
-|---------|----------|----------|
-| Empty catches (silent failures) | `git.ts:45-47, 58-60, 120-122, 234-236` — 4 git operations swallow errors | High |
-| Fire-and-forget | `local-agents.ts:183` — `.catch(() => {})` swallows all errors | High |
-| Inconsistent patterns | `sprint-local.ts` — same operation uses throw in one place, return null in another | Medium |
-| Error messages lack context | `git-handlers.ts:33` — "GitHub token not configured" doesn't say how to fix it | Low |
+| Issue | Location | Severity |
+|-------|----------|----------|
+| `.catch(() => {})` — stale agent reconciliation failure silently dropped | `agent-scanner.ts:182` | Medium |
+| `.catch(() => {})` — layout persistence failures silently dropped (2 locations) | `panelLayout.ts:379,426` | Medium |
+| `.catch(() => {})` — AgentsView status poll swallowed | `AgentsView.tsx:156` | Medium |
+| `parseInt(oauth.expiresAt!, 10)` — non-null assertion on user data; `NaN` silently treated as valid | `auth-guard.ts:63` | High |
+| `void this.consumeEvents(...)` — unhandled rejection if `handle.events` is not iterable | `agent-manager.ts:164` | Medium |
+| `catch {}` in `gitBranches`, `fetchPrStatusRest`, `checkConflictFiles` — return defaults with no log | `git.ts:121-123,179-181,235-237` | Medium |
+| Cost fetch failure logged to devtools only — UI shows stale `$0.00` | `costData.ts:24` | Low |
+| `contextBridge.exposeInMainWorld` failure logged but app continues broken | `preload/index.ts:223` | Low |
 
-### Dead Code / Smells
+### Comments
 
-| Finding | Location | Severity |
-|---------|----------|----------|
-| `as never` type escape | `sprint.ts:292-296` — `event as never` hides type mismatch | Medium |
-| Noop callbacks | `KanbanBoard.tsx:150` — `const noop = () => {}` used 5 times for DragOverlay | Low |
-| Module-scope mutable state | `panelLayout.ts:420-428` — `_saveTimeout` outside Zustand store | Medium |
-| Leaked test utilities | `local-agents.ts:19-31` — `_resetProcessCache()` exported in production | Low |
+| Issue | Location | Severity |
+|-------|----------|----------|
+| TODO: sandbox:false security migration (well-documented, dated) | `index.ts:76-78` | — (tracked) |
+| TODO: copy all scrollback — no owner, no date | `TerminalView.tsx:147` | Low |
+| TODO: CWD polling — no owner, no date | `PaneStatusBar.tsx:13` | Low |
+| Vague catch comment: "Non-critical" (2 locations) | `agentHistory.ts:37-39,81-83` | Low |
+| `prompt` silently aliased to `spec` with no comment explaining the duplication | `TicketEditor.tsx:97` | Medium |
 
 ---
 
 ## Module Scorecard
 
-| Module | Grade | Cohesion | Coupling | Evidence |
-|--------|-------|----------|----------|----------|
-| `src/shared/types` | **A** | Very High | Low | Pure read-only contracts, zero deps |
-| `src/shared/ipc-channels` | **A** | Very High | Low | Single source of truth for IPC |
-| `src/preload/index` | **A** | Very High | Low | Clean bridge, no business logic |
-| `src/renderer/src/components/ui/` | **A** | Very High | Low | 14 pure primitives |
-| `src/renderer/src/lib/` | **A** | High | Low | Pure utility functions |
-| `src/renderer/src/hooks/` | **A** | High | Low | Reusable logic extraction |
-| `src/renderer/src/stores/` | **A** | High | Low | Each store single-concern, no inter-deps |
-| `src/main/db.ts` | **B** | High | Medium | Well-encapsulated singleton, 10 callers |
-| `src/main/handlers/` (most) | **B** | High | Medium | Thin wrappers via safeHandle() |
-| `src/main/agents/` | **B** | High | Medium | Clean factory pattern |
-| `src/main/queue-api/` | **B** | High | Medium | Well-isolated HTTP layer |
-| `src/renderer/src/components/panels/` | **B** | High | Medium | Tight internal cohesion |
-| `src/main/index.ts` | **C** | Medium | High | Hub bootloader: 26 imports, registers all services |
-| `src/main/handlers/sprint-local.ts` | **C** | Medium | High | 469 LOC: CRUD + listeners + spec I/O + SQL |
-| `src/main/local-agents.ts` | **C** | Medium | Medium | 355 LOC: spawn + kill + cost + logs |
-| `src/renderer/src/components/sprint/` | **D** | Low | High | 4,141 LOC total, SprintCenter orchestrates 9+ sub-components |
-| `src/renderer/src/views/SettingsView.tsx` | **D** | Low | High | 841 LOC monolith, 30 useState hooks, 6 feature domains |
+| Module | Ca | Ce | Cohesion | Score | Notes |
+|--------|----|----|----------|-------|-------|
+| `main/agent-manager/` | 2 | 3 | Excellent | **A** | Fully DI, single-purpose files, exemplary |
+| `main/data/` | 6 | 1 | Excellent | **A** | Pure query functions, all accept `db` param |
+| `shared/` | 12+ | 0 | Excellent | **A** | Pure types, no runtime deps |
+| `renderer/components/ui/` | High | 0-1 | Excellent | **A** | Zero business logic, pure design system |
+| `renderer/components/panels/` | 2 | 1-2 | Excellent | **A** | Recursive tree manipulation, clear interfaces |
+| `main/agents/` | 5 | 4 | Good | **B** | event-bus mixes persistence + broadcast |
+| `renderer/stores/` | High | 1-3 | Good | **B** | One-domain-per-store; `unifiedAgents` cross-couples |
+| `renderer/components/sprint/` | 2-3 | 2-5 | Good | **B** | Cohesive domain; `TicketEditor` overloaded |
+| `renderer/components/agents/` | 2-3 | 2-4 | Good | **B** | Cohesive; `AgentDetail` highest fan-out |
+| `renderer/components/terminal/` | 1-2 | 1-3 | Good | **B** | Clean IPC via window.api |
+| `renderer/lib/` | Moderate | 0-2 | Good | **B** | `chat-markdown.tsx` imports component — boundary violation |
+| `main/handlers/` | 1 | 12+ | Mixed | **C** | Mostly thin adapters; `sprint-local` and `cost-handlers` leak SQL |
+| `main/` root files | Varies | Varies | Mixed | **C** | `git.ts` and `local-agents.ts` are god files |
 
 ---
 
 ## Framework Independence
 
-| Framework | Files Importing | Coupling Level | Business Logic Impact |
-|-----------|----------------|----------------|-----------------------|
-| **Electron** | 10 files | High (main process) | Preload sandbox=false, PTY lifecycle tied to BrowserWindow |
-| **React** | Renderer only | Low | Zero React in business logic, pure UI layer |
-| **better-sqlite3** | ~10 files (all main) | Medium | No DAO abstraction, but queries isolated to main process |
-| **Zustand** | 16 store files | Low | Stores mix state + business logic, but swappable |
+### The Swap Test
 
-### Electron-Specific Concerns
+| Framework | Properly Isolated? | Files to Change | Business Logic Impacted? |
+|-----------|-------------------|----------------|------------------------|
+| **React** | Yes — contained to `renderer/` | ~76 component + 16 store + 11 hook files | No — zero React in main/shared/preload |
+| **Electron** | Mostly — 4 leaks beyond expected entry points | `fs.ts` (dialog), `terminal-handlers.ts`, `window-handlers.ts` bypass `broadcast.ts`; sandbox:false | No business logic coupled |
+| **SQLite** | Mostly — 3 leak points | `data/` (6 files) + `index.ts`, `cost-handlers.ts`, `sprint-local.ts` | Leak points contain business-adjacent SQL |
+| **Zustand** | Yes — renderer only | 16 stores + consumers | No cross-process coupling |
+| **Claude Agent SDK** | Yes — wrapped in `sdk-provider.ts` | 1 file to swap | Clean adapter boundary |
 
-- `sandbox: false` required because preload exposes Node.js APIs via contextBridge
-- PTY terminal lifecycle coupled to `BrowserWindow.fromWebContents()`
-- `queue-api/router.ts` imports BrowserWindow just for broadcasting (presentation leaking into HTTP API)
-- File dialogs (`dialog.showOpenDialog`) not abstracted
+### Framework Coupling Heat Map
+
+```
+MODULE                          ELECTRON  SQLITE  REACT  ZUSTAND
+────────────────────────────────────────────────────────────────
+main/agent-manager/*             -         -       -      -      CLEAN
+main/agents/sdk-provider.ts      -         -       -      -      CLEAN
+main/agents/event-bus.ts         MED*      MED     -      -
+main/data/*                      -         TYPE    -      -      IDEAL
+main/handlers/ (most)            -         -       -      -      CLEAN
+main/handlers/terminal-*         HIGH*     -       -      -
+main/handlers/window-*           HIGH*     -       -      -
+main/handlers/cost-*             -         MED*    -      -
+main/handlers/sprint-local       -         MED*    -      -
+main/index.ts                    HIGH      MED*    -      -
+main/db.ts                       -         HIGH    -      -
+main/git.ts                      -         -       -      -      CLEAN
+main/auth-guard.ts               -         -       -      -      CLEAN
+main/fs.ts                       MED*      -       -      -
+shared/*                         -         -       -      -      CLEAN
+preload/index.ts                 HIGH      -       -      -      JUSTIFIED
+renderer/stores/*                -         -       -      HIGH   EXPECTED
+renderer/lib/chat-markdown.tsx   -         -       LOW*   -
+
+* = unexpected coupling or layer violation
+```
 
 ---
 
 ## Testability Assessment
 
-### Coverage by Layer
+### Test Infrastructure
 
-| Layer | Testable? | Coverage | Quality | Notes |
-|-------|-----------|----------|---------|-------|
-| **Shared types/utils** | Yes | ~80% | A+ | Pure functions, no mocking needed |
-| **DB schema/migrations** | Yes | ~100% | A+ | In-memory SQLite testing |
-| **DB queries** | Indirect | ~30% | B- | Only tested via mocked IPC handlers |
-| **IPC handlers** | Via mocks | ~60% | B | Tests wiring, not business logic |
-| **Zustand stores** | Yes | ~70% | B+ | Happy path covered, edge cases missing |
-| **React components** | Shallow | ~40% | C+ | Heavy library mocking, miss real interactions |
-| **Terminal/PTY** | Hard | ~10% | D | Tight Electron coupling, lazy CJS require |
-| **Real-time events** | Hard | ~20% | D | Mocks hide complexity |
-| **E2E** | None | 0% | F | No end-to-end tests |
+- **45 test files** across 3 vitest configs (renderer/jsdom, main/node, integration)
+- **Coverage thresholds:** 40% statements/lines, 30% branches, 35% functions (renderer)
+- **Test data patterns:** In-memory SQLite for data tests, `vi.mock` for external deps, `vi.useFakeTimers()` for time-dependent code
+
+### Testability Grades
+
+| Module | Grade | Notes |
+|--------|-------|-------|
+| `agent-manager/` | A | Full DI, comprehensive unit + integration tests |
+| `auth-guard.ts` | A | Simple deps, both unit and integration covered |
+| `data/*.ts` | A | In-memory SQLite, all CRUD tested |
+| `watchdog.ts` | A | Pure timer logic, fully deterministic |
+| `sdk-provider.ts` | A- | All event mappings, minor model alias gap |
+| `git.ts` | B+ | Good coverage, fragile promisify mock, 3 known failures |
+| `local-agents.ts` | B | Comprehensive except `extractAgentCost` untested |
+| Renderer stores (pure) | B+ | Well-tested where mutations are pure |
+| Renderer stores (polling) | D | `sprintTasks`, `sprintEvents`, `costData` — zero tests |
+| `sprint-pr-poller.ts` | D | Not tested, module-level deps prevent injection |
+| `pr-poller.ts` | D | Not tested, same coupling issue |
+| Renderer views | D | Smoke-only (render-without-crash) |
+| Handler business logic | C | Registration tested, behavior mostly not |
+| `github:fetch` URL allowlist | F | Security-relevant, zero dedicated tests |
 
 ### Key Testability Gaps
 
-1. **Query logic untested in isolation** — queries live in handlers, only tested indirectly through mocked IPC
-2. **Components require heavy mocking** — dnd-kit, lucide-react, window.api all must be stubbed
-3. **Terminal untestable** — node-pty lazy-loaded via CJS require, PTY events wired to BrowserWindow
-4. **No integration tests** — no tests for handler → DB → response flow with real database
+1. **`sprint-pr-poller.ts` / `pr-poller.ts`** — Module-level state + direct imports make injection impossible. Apply AgentManager DI pattern.
+2. **`github:fetch` URL allowlist** — Security guarantee in `git-handlers.ts` with no behavior test.
+3. **`extractAgentCost`** — Complex multi-format JSON parser in `local-agents.ts` with no test.
+4. **Renderer polling stores** — `sprintTasks.ts` is the primary data store with no tests.
+5. **View-level behavior** — All 7 views have smoke-only tests.
 
 ---
 
@@ -268,116 +316,134 @@ loadData: async () => {
 
 ### Tier 1: High Impact, Low Effort (Do First)
 
-#### Move AgentEvent to Shared Types
-- **What:** Move `AgentEvent` and `AgentEventType` from `src/main/agents/types.ts` to `src/shared/types.ts`
-- **Why:** Shared layer imports from main, breaking dependency direction — the only import rule violation
-- **Coupling impact:** Eliminates all 3 dependency direction violations
-- **Files affected:** 7 files (import path changes only)
-- **Complexity:** Very Low (~30 minutes)
+#### Move AgentEvent to shared/types.ts
+- **What:** Move `AgentEvent`, `AgentEventType`, and `AgentHandle` from `src/main/agents/types.ts` to `src/shared/types.ts`
+- **Why:** Single root cause of all 8 dependency direction violations
+- **Coupling impact:** Restores shared/ as truly process-neutral; eliminates all renderer → main imports
+- **Files affected:** 8 import updates
+- **Complexity:** Low (~15 min)
 
-#### Split SprintState Store
-- **What:** Partition `sprint.ts` (28 properties) into: `useSprintTasks` (CRUD), `useSprintUI` (selection, drawers), `useSprintEvents` (SSE, output)
-- **Why:** Single store bundles 5+ unrelated concerns; all sprint components subscribe to everything
-- **Coupling impact:** Reduces unnecessary re-renders, isolates concerns
-- **Files affected:** ~8 files
+#### Type the AgentManagerDeps contract
+- **What:** Replace `Record<string, unknown>` in `updateTask` and `handleCompletion` with proper typed interfaces
+- **Why:** Untyped contracts erase safety near dynamic SQL construction — correctness risk
+- **Coupling impact:** Makes the DI contract explicit and verifiable at compile time
+- **Files affected:** 2 (agent-manager.ts, index.ts)
 - **Complexity:** Low
 
-#### Extract Query Functions for Testability
-- **What:** Move raw SQL queries from `sprint-local.ts` into `src/main/data/sprint-queries.ts`, parameterize with `db` argument
-- **Why:** Queries only tested indirectly through mocked IPC — can't catch SQL bugs
-- **Coupling impact:** Enables real in-memory DB testing for all queries
-- **Files affected:** ~4 files
+#### Extract raw SQL from index.ts
+- **What:** Move the two `db.prepare()` lambdas from `src/main/index.ts:151-181` into `data/sprint-queries.ts`
+- **Why:** Composition root has absorbed query logic; duplicates bypass the allowlist in sprint-queries
+- **Coupling impact:** Restores index.ts to pure wiring; consolidates all SQL in data layer
+- **Files affected:** 2 (index.ts, sprint-queries.ts)
 - **Complexity:** Low
+
+#### Fix the `replacLeafWithSplit` typo
+- **What:** Rename to `replaceLeafWithSplit` across `panelLayout.ts`
+- **Why:** Typo in a function called from 4 locations; appears in stack traces
+- **Files affected:** 1
+- **Complexity:** Trivial
+
+#### Extract `MAX_BUFFER` constant in git.ts
+- **What:** Replace 8 instances of `10 * 1024 * 1024` with a named constant (reuse `MAX_READ_BYTES` from fs.ts or define shared)
+- **Why:** Magic number repeated 8 times
+- **Files affected:** 1
+- **Complexity:** Trivial
 
 ### Tier 2: High Impact, Medium Effort
 
-#### Decompose SettingsView
-- **What:** Split 841 LOC into: `SettingsView` (tab container, 50 LOC), `AppearanceSettings`, `ConnectionSettings`, `RepositorySettings`, `TemplateSettings`, `AgentSettings`
-- **Why:** 6 feature domains in one file, 30 useState hooks, impossible to test sections independently
-- **Coupling impact:** Each section becomes independently testable and maintainable
-- **Files affected:** 1 file → 6 files
+#### Split git.ts into focused modules
+- **What:** Extract into `git-local.ts` (status, branches, diff), `github-fetch.ts` (REST API), `pr-polling.ts` (PR status), `conflict-check.ts`
+- **Why:** 4 distinct concerns in one file; high churn area
+- **Coupling impact:** Reduces Ce by ~4 per consumer; enables targeted testing
+- **Files affected:** ~8
 - **Complexity:** Medium
 
-#### Decompose SprintCenter
-- **What:** Extract from 458 LOC into: `SprintCenter` (layout, 150 LOC), `SprintToolbar` (filters, create), custom hooks (`useSprintPolling`, `useSprintKeyboardShortcuts`)
-- **Why:** 53 hook/store accesses in one component; shotgun surgery on task model changes
-- **Coupling impact:** Reduces store selectors from 53 to ~10 per component
-- **Files affected:** ~4 files
+#### Split local-agents.ts into focused modules
+- **What:** Extract `agent-cost-parser.ts` (extractAgentCost), `agent-event-consumer.ts` (consumeEvents), `agent-log-manager.ts` (log cleanup/tailing)
+- **Why:** 6 concerns in 333 LOC; enables independent testing of cost parser
+- **Coupling impact:** Each new module has 1-2 deps instead of 6+
+- **Files affected:** ~5
 - **Complexity:** Medium
 
-#### Extract Sprint Handler Concerns
-- **What:** Split `sprint-local.ts` (469 LOC) into: `sprint-crud.ts` (CRUD operations), `sprint-spec.ts` (spec file I/O + generation), `sprint-listeners.ts` (mutation observer)
-- **Why:** Handler file mixes CRUD, file I/O, gateway RPC, and event subscription
-- **Coupling impact:** Queue API router imports specific module instead of monolith
-- **Files affected:** ~5 files
+#### Inject deps into sprint-pr-poller.ts
+- **What:** Apply AgentManager DI pattern — accept `SprintPrPollerDeps` interface
+- **Why:** Currently untestable (grade D); imports from handler layer (layering violation)
+- **Coupling impact:** Fixes layering violation; enables unit testing
+- **Files affected:** 3
 - **Complexity:** Medium
 
-#### Introduce Credential Form Component
-- **What:** Replace 3x copy-pasted credential sections in ConnectionsSection with data-driven `CredentialForm` component
-- **Why:** Adding a new credential type currently requires ~120 LOC copy-paste
-- **Coupling impact:** Eliminates 240 LOC duplication
-- **Files affected:** 1 file
-- **Complexity:** Low-Medium
+#### Inject broadcast into event-bus.ts
+- **What:** Accept a `notify: (channel, payload) => void` callback instead of importing `broadcast.ts`
+- **Why:** Couples event bus permanently to Electron's BrowserWindow
+- **Coupling impact:** Enables headless agent execution and testing
+- **Files affected:** 3
+- **Complexity:** Medium
+
+#### Inject VCS abstraction into completion-handler.ts
+- **What:** Define `interface VcsClient { pushBranch(): Promise<void>; createPr(): Promise<{ prUrl: string }> }`
+- **Why:** Hardcodes `execFileAsync('git'/'gh')` — inconsistent with parent AgentManager's DI
+- **Coupling impact:** Enables testing without git repos; consistent DI throughout agent pipeline
+- **Files affected:** 3
+- **Complexity:** Medium
 
 ### Tier 3: Structural (Plan For)
 
-#### Introduce Repository Pattern
-- **What:** Create `src/main/repositories/` with `SprintTaskRepository`, `AgentRunRepository`, `CostRepository` interfaces + SQLite implementations
-- **Why:** 10 files directly call `getDb()` — no abstraction between business logic and data access
-- **Coupling impact:** Enables DB swapping, caching layer, transaction boundaries
-- **Files affected:** ~10 files
-- **Complexity:** Medium-High
+#### Segregate IpcChannelMap by domain
+- **What:** Split monolithic `IpcChannelMap` into `SettingsChannels & GitChannels & SprintChannels & AgentChannels & ...`
+- **Why:** All consumers pull entire 50-channel map; makes capability boundaries explicit
+- **Files affected:** ~15
+- **Complexity:** High (mechanical)
 
-#### Create Use Case Layer
-- **What:** Add `src/main/use-cases/` with: `CreateTask`, `LaunchTask`, `UpdateTaskStatus`, `GenerateSpec`
-- **Why:** Business rules split across IPC handlers, Zustand stores, and components — no single owner
-- **Coupling impact:** Single place for business rules; handlers become thin dispatchers, stores become pure state machines
-- **Files affected:** ~15 files
-- **Complexity:** High
-
-#### Decouple Terminal from Electron
-- **What:** Extract `createPtyProcess()` and `attachPtyDataListener()` as pure functions, wire to Electron in handler registration only
-- **Why:** Terminal logic untestable due to tight BrowserWindow coupling
-- **Coupling impact:** Enables PTY unit testing without Electron
-- **Files affected:** ~3 files
+#### Extract bootstrap module from index.ts
+- **What:** Move DB init, file-watcher setup, poller lifecycle, CSP construction out of `app.whenReady()` into `bootstrap.ts`
+- **Why:** Entry point has 5 distinct responsibilities
+- **Files affected:** 2-3
 - **Complexity:** Medium
 
-### Dependency Graph: Current vs Target
+#### Convert UnifiedAgent to discriminated union
+- **What:** Replace fat optional interface with `{ source: 'local'; ... } | { source: 'history'; ... }`
+- **Why:** Consumers guard against fields that can't exist for their source type
+- **Files affected:** ~10
+- **Complexity:** Medium
 
-**Current:**
+#### Add auth abstraction for credential storage
+- **What:** Define `interface CredentialStore { getToken(): Promise<TokenResult> }` with macOS Keychain implementation
+- **Why:** `auth-guard.ts` is hardcoded to macOS `security` command; can't unit test or port
+- **Files affected:** 3
+- **Complexity:** Medium
+
+### Dependency Graph: Before → After
+
+**Before:**
 ```
-Component → Store → window.api → IPC Handler → getDb() → SQL
-              ↓                       ↓
-         business logic          business logic
+index.ts ──→ db.prepare() (raw SQL)
+           ──→ handlers/sprint-local (SQL + handlers mixed)
+sprint-pr-poller ──→ handlers/sprint-local (wrong layer)
+event-bus ──→ broadcast.ts (Electron coupled)
+completion-handler ──→ execFileAsync('git'/'gh') (hardcoded)
+local-agents ──→ new SdkProvider() (hardcoded)
+shared/ ──→ main/agents/types (direction violation)
 ```
 
-**Target:**
+**After (Tier 1+2):**
 ```
-Component → Store (pure state) → window.api → IPC Handler (thin)
-                                                    ↓
-                                              Use Case (business logic)
-                                                    ↓
-                                              Repository (data access)
-                                                    ↓
-                                                   SQL
+index.ts ──→ data/sprint-queries (clean delegation)
+           ──→ handlers/ (pure adapters)
+sprint-pr-poller ──→ SprintPrPollerDeps interface (injectable)
+event-bus ──→ notify callback (injectable)
+completion-handler ──→ VcsClient interface (injectable)
+local-agents ──→ SdkProvider interface (injectable)
+shared/ ──→ (self-contained, all types here)
 ```
 
 ---
 
-## Appendix: Files Over 300 LOC
+## What BDE Does Well
 
-| File | LOC | Primary Concern |
-|------|-----|-----------------|
-| `views/SettingsView.tsx` | 841 | Settings UI (6 domains) |
-| `handlers/sprint-local.ts` | 469 | Sprint task operations |
-| `components/sprint/SprintCenter.tsx` | 458 | Sprint orchestrator |
-| `components/diff/DiffViewer.tsx` | 456 | Git diff viewer |
-| `components/sprint/NewTicketModal.tsx` | 454 | Task creation modal |
-| `components/sprint/TicketEditor.tsx` | 436 | Task inline editor |
-| `stores/panelLayout.ts` | 428 | Panel tree state |
-| `components/sprint/TaskTable.tsx` | 373 | Task table view |
-| `main/local-agents.ts` | 355 | Agent process management |
-| `shared/ipc-channels.ts` | 343 | IPC type map |
-| `components/terminal/TerminalTabBar.tsx` | 341 | Terminal tab management |
-| `views/MemoryView.tsx` | 337 | Memory file browser |
-| `main/db.ts` | 332 | Database schema + migrations |
+1. **Process boundary discipline** — Zero direct cross-process references; all IPC typed end-to-end
+2. **AgentManager** — Textbook dependency injection; the integration test suite proves the pattern works
+3. **Data layer** — Repository pattern with `db` parameter injection; in-memory SQLite tests
+4. **Type safety** — `IpcChannelMap` + `safeHandle()` + `typedInvoke()` eliminate an entire class of IPC bugs
+5. **UI component design** — `components/ui/` is a clean design system with zero business logic; panels are well-abstracted
+6. **Path validation** — `validateRepoPath` prevents path traversal at the IPC boundary
+7. **Test infrastructure** — 3 vitest configs, 45 test files, comprehensive integration tests for the agent pipeline

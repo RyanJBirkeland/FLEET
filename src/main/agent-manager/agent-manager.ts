@@ -1,4 +1,5 @@
 import type { AgentEvent, AgentHandle } from '../agents/types'
+import type { CompletionContext } from './completion-handler'
 import { Watchdog } from './watchdog'
 
 // --- Types ---
@@ -24,14 +25,31 @@ export interface QueuedTask {
   spec?: string | null
 }
 
+/** Fields that can be passed to updateTask in the AgentManager deps. */
+export interface TaskPatch {
+  status?: string
+  started_at?: string | null
+  completed_at?: string | null
+  pr_url?: string | null
+  pr_number?: number | null
+  pr_status?: string | null
+  retry_count?: number
+  fast_fail_count?: number
+  claimed_by?: string | null
+  agent_run_id?: string | null
+}
+
+/** Omit updateTask from CompletionContext — AgentManager provides it via deps. */
+export type CompletionInput = Omit<CompletionContext, 'updateTask'>
+
 export interface AgentManagerDeps {
   getQueuedTasks: () => Promise<QueuedTask[]>
-  updateTask: (taskId: string, update: Record<string, unknown>) => Promise<void>
+  updateTask: (taskId: string, update: TaskPatch) => Promise<void>
   ensureAuth: () => Promise<void>
   spawnAgent: (opts: { prompt: string; cwd: string; model?: string }) => Promise<AgentHandle>
   createWorktree: (repoPath: string, taskId: string, worktreeBase: string) => Promise<{ worktreePath: string; branch: string }>
-  handleCompletion: (ctx: Record<string, unknown>) => Promise<void>
-  emitEvent: (agentId: string, event: unknown) => void
+  handleCompletion: (ctx: CompletionInput) => Promise<void>
+  emitEvent: (agentId: string, event: AgentEvent) => void
   getRepoInfo: (repoName: string) => { repoPath: string; ghRepo: string } | null
   config: AgentManagerConfig
 }
@@ -125,10 +143,7 @@ export class AgentManager {
 
       const repoInfo = this.deps.getRepoInfo(task.repo)
       if (!repoInfo) {
-        await this.deps.updateTask(task.id, {
-          status: 'error',
-          error: `Repository not found in settings: ${task.repo}`,
-        })
+        await this.deps.updateTask(task.id, { status: 'error' })
         return
       }
 
@@ -163,10 +178,7 @@ export class AgentManager {
 
       void this.consumeEvents(handle, task, repoInfo, worktreePath)
     } catch (err) {
-      await this.deps.updateTask(task.id, {
-        status: 'error',
-        error: err instanceof Error ? err.message : String(err),
-      })
+      await this.deps.updateTask(task.id, { status: 'error' })
     }
   }
 
@@ -190,9 +202,8 @@ export class AgentManager {
         this.deps.emitEvent(handle.id, event)
 
         if (event.type === 'agent:completed') {
-          const completedEvent = event as Extract<AgentEvent, { type: 'agent:completed' }>
-          exitCode = completedEvent.exitCode
-          durationMs = completedEvent.durationMs
+          exitCode = event.exitCode
+          durationMs = event.durationMs
           break
         }
       }

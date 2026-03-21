@@ -111,7 +111,7 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
     const agent = get().agents.find((a) => a.id === id)
     if (!agent) return
 
-    if (agent.source === 'local' && agent.pid) {
+    if (agent.source === 'local') {
       try {
         await useLocalAgentsStore.getState().sendToAgent(agent.pid, message)
         toast.success('Message sent')
@@ -122,7 +122,7 @@ export const useUnifiedAgentsStore = create<UnifiedAgentsStore>((set, get) => ({
   },
 
   kill: async (agent): Promise<void> => {
-    if (agent.source === 'local' && agent.pid) {
+    if (agent.source === 'local') {
       await useLocalAgentsStore.getState().killLocalAgent(agent.pid)
       toast.success('Agent killed')
     }

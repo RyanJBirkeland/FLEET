@@ -1,19 +1,18 @@
 /**
- * Local agent management — spawn, kill, steer, and tail agent processes.
+ * Local agent management — spawn, kill, steer, and manage agent processes.
  * Delegates to SdkProvider for agent spawning.
  * Process scanning logic lives in agent-scanner.ts.
+ * Cost extraction lives in agent-cost-parser.ts.
+ * Log tailing and cleanup lives in agent-log-manager.ts.
  */
 import { randomUUID } from 'crypto'
-import { readdir, stat, unlink, appendFile, open, readFile } from 'fs/promises'
-import { join, basename as pathBasename } from 'path'
-import { validateLogPath } from './fs'
+import { appendFile } from 'fs/promises'
+import { basename as pathBasename } from 'path'
 import {
   createAgentRecord,
   updateAgentMeta,
 } from './agent-history'
-import { getDb } from './db'
-import { updateAgentRunCost as _updateAgentRunCost } from './data/agent-queries'
-import { BDE_AGENT_TMP_DIR as LOG_DIR } from './paths'
+import { updateAgentRunCost } from './agent-cost-parser'
 import { SdkProvider, type AgentHandle } from './agents'
 import { getEventBus } from './agents/event-bus'
 
@@ -31,7 +30,11 @@ export {
   _resetProcessCache,
 } from './agent-scanner'
 
-const LOG_MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000 // 7 days
+// Re-export cost and log types/functions so existing consumers can still import from here
+export type { AgentCost } from './agent-cost-parser'
+export { extractAgentCost, updateAgentRunCost } from './agent-cost-parser'
+export type { TailLogArgs, TailLogResult } from './agent-log-manager'
+export { tailAgentLog, cleanupOldLogs } from './agent-log-manager'
 
 // Track active agent handles for PID-based interactive messaging
 const activeAgentProcesses = new Map<number, AgentHandle>()
@@ -39,86 +42,10 @@ const activeAgentProcesses = new Map<number, AgentHandle>()
 // Track active agent handles by agent ID for steering from Sprint LogDrawer
 const activeAgentsById = new Map<string, AgentHandle>()
 
-// --- Cost extraction from agent log files ---
-
-export interface AgentCost {
-  costUsd: number
-  tokensIn: number
-  tokensOut: number
-  cacheRead: number
-  cacheCreate: number
-  durationMs: number
-  numTurns: number
-}
-
-export async function extractAgentCost(logPath: string): Promise<Result<AgentCost | null>> {
-  try {
-    const content = await readFile(logPath, 'utf-8')
-    const lines = content.split('\n')
-
-    for (let i = lines.length - 1; i >= 0; i--) {
-      const line = lines[i].trim()
-      if (!line) continue
-
-      let parsed: Record<string, unknown>
-      try {
-        parsed = JSON.parse(line) as Record<string, unknown>
-      } catch {
-        continue
-      }
-
-      // Unwrap stream_event wrapper if present
-      if (parsed.type === 'stream_event' && parsed.event && typeof parsed.event === 'object') {
-        parsed = parsed.event as Record<string, unknown>
-      }
-
-      // Support both legacy result events and new agent:completed events
-      if (parsed.type === 'result') {
-        const usage = parsed.usage as Record<string, number> | undefined
-        return {
-          ok: true,
-          data: {
-            costUsd: typeof parsed.total_cost_usd === 'number' ? parsed.total_cost_usd : 0,
-            tokensIn: usage?.input_tokens ?? 0,
-            tokensOut: usage?.output_tokens ?? 0,
-            cacheRead: usage?.cache_read_input_tokens ?? 0,
-            cacheCreate: usage?.cache_creation_input_tokens ?? 0,
-            durationMs: typeof parsed.duration_ms === 'number' ? parsed.duration_ms : 0,
-            numTurns: typeof parsed.num_turns === 'number' ? parsed.num_turns : 0,
-          },
-        }
-      }
-
-      if (parsed.type === 'agent:completed') {
-        return {
-          ok: true,
-          data: {
-            costUsd: typeof parsed.costUsd === 'number' ? parsed.costUsd : 0,
-            tokensIn: typeof parsed.tokensIn === 'number' ? parsed.tokensIn : 0,
-            tokensOut: typeof parsed.tokensOut === 'number' ? parsed.tokensOut : 0,
-            cacheRead: 0,
-            cacheCreate: 0,
-            durationMs: typeof parsed.durationMs === 'number' ? parsed.durationMs : 0,
-            numTurns: 0,
-          },
-        }
-      }
-    }
-
-    return { ok: true, data: null }
-  } catch (err) {
-    return { ok: false, error: `Failed to extract agent cost from ${logPath}: ${(err as Error).message}` }
-  }
-}
-
-export function updateAgentRunCost(agentRunId: string, cost: AgentCost): void {
-  _updateAgentRunCost(getDb(), agentRunId, cost)
-}
-
 // --- Spawn an agent via SdkProvider ---
 
 export type { SpawnLocalAgentArgs, SpawnLocalAgentResult } from '../shared/types'
-import type { SpawnLocalAgentArgs, SpawnLocalAgentResult, Result } from '../shared/types'
+import type { SpawnLocalAgentArgs, SpawnLocalAgentResult } from '../shared/types'
 import { CLAUDE_MODELS, DEFAULT_MODEL } from '../shared/models'
 import { getAgentBinary } from './settings'
 
@@ -270,64 +197,8 @@ export async function steerAgent(agentId: string, message: string): Promise<{ ok
   return { ok: false, error: `Agent ${agentId} not found — may have already exited` }
 }
 
-// --- Tail agent log file ---
-
-export interface TailLogArgs {
-  logPath: string
-  fromByte?: number
-}
-
-export interface TailLogResult {
-  content: string
-  nextByte: number
-}
-
-export async function tailAgentLog(args: TailLogArgs): Promise<TailLogResult> {
-  const safePath = validateLogPath(args.logPath)
-  const fromByte = args.fromByte ?? 0
-  let fh: import('fs/promises').FileHandle | undefined
-  try {
-    fh = await open(safePath, 'r')
-    const stats = await fh.stat()
-    const size = stats.size
-    if (fromByte >= size) return { content: '', nextByte: fromByte }
-    const buf = Buffer.alloc(size - fromByte)
-    await fh.read(buf, 0, buf.length, fromByte)
-    return { content: buf.toString('utf-8'), nextByte: size }
-  } catch {
-    return { content: '', nextByte: fromByte }
-  } finally {
-    await fh?.close()
-  }
-}
-
-// --- Cleanup old log files on startup ---
-
-export async function cleanupOldLogs(): Promise<void> {
-  try {
-    const entries = await readdir(LOG_DIR)
-    const now = Date.now()
-    await Promise.all(
-      entries
-        .filter((f) => f.endsWith('.log'))
-        .map(async (f) => {
-          const fullPath = join(LOG_DIR, f)
-          const s = await stat(fullPath)
-          if (now - s.mtimeMs > LOG_MAX_AGE_MS) await unlink(fullPath)
-        })
-    )
-  } catch {
-    // Dir may not exist yet — that's fine
-  }
-}
-
 // --- Check if a PID has an interactive agent handle ---
 
 export function isAgentInteractive(pid: number): boolean {
-  return activeAgentProcesses.has(pid)
-}
-
-/** Returns true if the given PID belongs to a BDE-spawned agent process. */
-export function isKnownAgentPid(pid: number): boolean {
   return activeAgentProcesses.has(pid)
 }

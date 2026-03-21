@@ -35,7 +35,6 @@ vi.mock('../local-agents', () => ({
   tailAgentLog: vi.fn().mockResolvedValue({ content: 'log data', nextByte: 42 }),
   sendToAgent: vi.fn().mockReturnValue({ ok: true }),
   isAgentInteractive: vi.fn().mockReturnValue(true),
-  isKnownAgentPid: vi.fn().mockReturnValue(true),
   cleanupOldLogs: vi.fn(),
 }))
 
@@ -58,7 +57,14 @@ vi.mock('../git', () => ({
   gitPush: vi.fn().mockResolvedValue('push output'),
   gitBranches: vi.fn().mockResolvedValue({ current: 'main', branches: ['main'] }),
   gitCheckout: vi.fn().mockResolvedValue(undefined),
+}))
+
+vi.mock('../github-pr-status', () => ({
   pollPrStatuses: vi.fn().mockResolvedValue([]),
+}))
+
+vi.mock('../github-conflict-check', () => ({
+  checkConflictFiles: vi.fn().mockResolvedValue({ prNumber: 0, files: [], baseBranch: '', headBranch: '' }),
 }))
 
 vi.mock('../config', () => ({
@@ -126,6 +132,7 @@ import { shell } from 'electron'
 import * as localAgents from '../local-agents'
 import * as agentHistory from '../agent-history'
 import * as git from '../git'
+import * as githubPrStatus from '../github-pr-status'
 import { registerAgentHandlers } from '../handlers/agent-handlers'
 import { registerGitHandlers } from '../handlers/git-handlers'
 import { registerConfigHandlers } from '../handlers/config-handlers'
@@ -375,7 +382,7 @@ describe('IPC handler registration', () => {
     it('"pr:pollStatuses" passes prs to pollPrStatuses', async () => {
       const prs = [{ owner: 'o', repo: 'r', prNumber: 1 }]
       await invoke('pr:pollStatuses', prs)
-      expect(git.pollPrStatuses).toHaveBeenCalledWith(prs)
+      expect(githubPrStatus.pollPrStatuses).toHaveBeenCalledWith(prs)
     })
 
     it('rejects cwd outside known repository paths', async () => {
@@ -436,7 +443,7 @@ describe('IPC handler registration', () => {
     })
 
     it('"agent:killLocal" calls process.kill for known agent PID', async () => {
-      vi.mocked(localAgents.isKnownAgentPid).mockReturnValue(true)
+      vi.mocked(localAgents.isAgentInteractive).mockReturnValue(true)
       const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true)
       const result = await invoke('agent:killLocal', 12345)
       expect(killSpy).toHaveBeenCalledWith(12345, 'SIGTERM')
@@ -445,7 +452,7 @@ describe('IPC handler registration', () => {
     })
 
     it('"agent:killLocal" rejects unknown PID', async () => {
-      vi.mocked(localAgents.isKnownAgentPid).mockReturnValue(false)
+      vi.mocked(localAgents.isAgentInteractive).mockReturnValue(false)
       const result = await invoke('agent:killLocal', 99999)
       expect(result).toEqual({ ok: false, error: 'PID is not a known agent process' })
     })

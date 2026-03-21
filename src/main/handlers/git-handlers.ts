@@ -11,11 +11,9 @@ import {
   gitPush,
   gitBranches,
   gitCheckout,
-  pollPrStatuses,
-  checkConflictFiles,
-  type PrStatusInput,
-  type ConflictFilesInput
 } from '../git'
+import { pollPrStatuses, type PrStatusInput } from '../github-pr-status'
+import { checkConflictFiles, type ConflictFilesInput } from '../github-conflict-check'
 import { getLatestPrList, refreshPrList } from '../pr-poller'
 import { getGitHubToken } from '../config'
 import { githubFetch, parseNextLink } from '../github-fetch'

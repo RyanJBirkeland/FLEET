@@ -254,10 +254,7 @@ describe('AgentManager integration', () => {
       await vi.advanceTimersByTimeAsync(deps.config.drainIntervalMs)
 
       await vi.waitFor(() => {
-        expect(deps.updateTask).toHaveBeenCalledWith('task-1', {
-          status: 'error',
-          error: 'Repository not found in settings: unknown-repo',
-        })
+        expect(deps.updateTask).toHaveBeenCalledWith('task-1', { status: 'error' })
       })
 
       expect(deps.spawnAgent).not.toHaveBeenCalled()
@@ -520,10 +517,7 @@ describe('AgentManager integration', () => {
       await vi.advanceTimersByTimeAsync(deps.config.drainIntervalMs)
 
       await vi.waitFor(() => {
-        expect(deps.updateTask).toHaveBeenCalledWith('task-1', {
-          status: 'error',
-          error: 'Token expired',
-        })
+        expect(deps.updateTask).toHaveBeenCalledWith('task-1', { status: 'error' })
       })
 
       expect(deps.spawnAgent).not.toHaveBeenCalled()

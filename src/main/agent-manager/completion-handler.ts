@@ -8,6 +8,38 @@ export const MAX_RETRIES = 3
 export const FAST_FAIL_THRESHOLD_MS = 30_000
 export const MAX_FAST_FAILS = 3
 
+/** Abstraction over git/gh CLI operations for testability. */
+export interface VcsOps {
+  pushBranch: (cwd: string, branch: string) => Promise<void>
+  createPr: (cwd: string, ghRepo: string, branch: string) => Promise<{ prUrl: string | null; prNumber: number | null }>
+  getActualBranch: (cwd: string) => Promise<string>
+  removeWorktree: (repoPath: string, worktreePath: string) => Promise<void>
+}
+
+/** Default VcsOps implementation using git/gh CLI. */
+export const defaultVcsOps: VcsOps = {
+  async pushBranch(cwd, branch) {
+    await execFileAsync('git', ['push', '-u', 'origin', branch], { cwd })
+  },
+  async createPr(cwd, ghRepo, branch) {
+    try {
+      const { stdout } = await execFileAsync(
+        'gh',
+        ['pr', 'create', '--repo', ghRepo, '--head', branch, '--fill'],
+        { cwd },
+      )
+      const prUrl = stdout.trim()
+      const match = prUrl.match(/\/pull\/(\d+)/)
+      const prNumber = match ? Number(match[1]) : null
+      return { prUrl, prNumber }
+    } catch {
+      return { prUrl: null, prNumber: null }
+    }
+  },
+  getActualBranch,
+  removeWorktree,
+}
+
 export interface CompletionContext {
   taskId: string
   agentId: string
@@ -22,32 +54,11 @@ export interface CompletionContext {
   updateTask: (update: Record<string, unknown>) => Promise<void>
 }
 
-async function pushBranchAndOpenPr(
-  ctx: CompletionContext,
-  branch: string,
-): Promise<{ prUrl: string | null; prNumber: number | null }> {
-  await execFileAsync('git', ['push', '-u', 'origin', branch], {
-    cwd: ctx.worktreePath,
-  })
+async function handleSuccess(ctx: CompletionContext, vcs: VcsOps): Promise<void> {
+  const branch = await vcs.getActualBranch(ctx.worktreePath)
 
-  try {
-    const { stdout } = await execFileAsync(
-      'gh',
-      ['pr', 'create', '--repo', ctx.ghRepo, '--head', branch, '--fill'],
-      { cwd: ctx.worktreePath },
-    )
-    const prUrl = stdout.trim()
-    const match = prUrl.match(/\/pull\/(\d+)/)
-    const prNumber = match ? Number(match[1]) : null
-    return { prUrl, prNumber }
-  } catch {
-    return { prUrl: null, prNumber: null }
-  }
-}
-
-async function handleSuccess(ctx: CompletionContext): Promise<void> {
-  const branch = await getActualBranch(ctx.worktreePath)
-  const { prUrl, prNumber } = await pushBranchAndOpenPr(ctx, branch)
+  await vcs.pushBranch(ctx.worktreePath, branch)
+  const { prUrl, prNumber } = await vcs.createPr(ctx.worktreePath, ctx.ghRepo, branch)
 
   await ctx.updateTask({
     status: 'done',
@@ -104,16 +115,17 @@ async function handleFailure(ctx: CompletionContext): Promise<void> {
 
 export async function handleAgentCompletion(
   ctx: CompletionContext,
+  vcs: VcsOps = defaultVcsOps,
 ): Promise<void> {
   try {
     if (ctx.exitCode === 0) {
-      await handleSuccess(ctx)
+      await handleSuccess(ctx, vcs)
     } else {
       await handleFailure(ctx)
     }
   } finally {
     try {
-      await removeWorktree(ctx.repoPath, ctx.worktreePath)
+      await vcs.removeWorktree(ctx.repoPath, ctx.worktreePath)
     } catch {
       // Swallow cleanup errors — don't rethrow
     }

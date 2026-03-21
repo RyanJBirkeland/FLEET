@@ -5,7 +5,7 @@
  * Single source of truth for converting raw process/history data
  * into UnifiedAgent objects.
  */
-import type { UnifiedAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
+import type { UnifiedAgent, LocalAgent, HistoryAgent, UnifiedAgentSource, UnifiedAgentStatus } from '../../../shared/types'
 import type { LocalAgentProcess } from '../stores/localAgents'
 import type { AgentMeta } from '../../../shared/types'
 
@@ -60,7 +60,7 @@ export function buildUnifiedAgentList(
   // Local running processes
   for (const p of processes) {
     const label = p.cwd ? p.cwd.split('/').pop() ?? p.bin : p.bin
-    agents.push({
+    const local: LocalAgent = {
       id: `local:${p.pid}`,
       label,
       source: 'local',
@@ -72,10 +72,11 @@ export function buildUnifiedAgentList(
       canKill: true,
       isBlocked: false,
       pid: p.pid
-    })
+    }
+    agents.push(local)
   }
 
-  // History agents (all statuses — running ones shown with canKill)
+  // History agents (all statuses)
   const localPids = new Set(processes.map((p) => p.pid))
   for (const a of historyAgents) {
     const started = safeTimestamp(a.startedAt)
@@ -83,21 +84,38 @@ export function buildUnifiedAgentList(
     const isRunning = a.status === 'running'
     // Skip if already represented by a live ps-aux process row
     if (isRunning && a.pid && localPids.has(a.pid)) continue
-    agents.push({
-      id: `history:${a.id}`,
-      label: a.repo || a.bin || a.id,
-      source: normalizeSource(a.source),
-      status: normalizeStatus(a.status),
-      model: a.model ?? '',
-      updatedAt: finished || started,
-      startedAt: started,
-      canSteer: false,
-      canKill: isRunning && !!a.pid,
-      isBlocked: false,
-      task: truncateTask(a.task, 80),
-      historyId: a.id,
-      pid: a.pid ?? undefined
-    })
+
+    const source = normalizeSource(a.source)
+    if (source === 'local') {
+      // History entry from a BDE-spawned agent — treat as local
+      const local: LocalAgent = {
+        id: `history:${a.id}`,
+        label: a.repo || a.bin || a.id,
+        source: 'local',
+        status: normalizeStatus(a.status),
+        model: a.model ?? '',
+        updatedAt: finished || started,
+        startedAt: started,
+        canSteer: false,
+        canKill: isRunning && !!a.pid,
+        isBlocked: false,
+        task: truncateTask(a.task, 80),
+        pid: a.pid ?? 0,
+      }
+      agents.push(local)
+    } else {
+      const history: HistoryAgent = {
+        id: `history:${a.id}`,
+        label: a.repo || a.bin || a.id,
+        source: 'history',
+        status: normalizeStatus(a.status),
+        model: a.model ?? '',
+        updatedAt: finished || started,
+        startedAt: started,
+        historyId: a.id,
+      }
+      agents.push(history)
+    }
   }
 
   return agents
