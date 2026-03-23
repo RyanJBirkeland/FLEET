@@ -64,10 +64,12 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
   }
 
   // 4. Update task with PR info (task stays active; SprintPrPoller handles done on merge)
-  const patch: Record<string, unknown> = { pr_status: 'open' }
-  if (prUrl !== null) patch.pr_url = prUrl
-  if (prNumber !== null) patch.pr_number = prNumber
-  await updateTask(taskId, patch)
+  if (prUrl !== null && prNumber !== null) {
+    await updateTask(taskId, { pr_status: 'open', pr_url: prUrl, pr_number: prNumber })
+  } else {
+    // Push succeeded but PR creation failed — record branch name so user can create PR manually
+    await updateTask(taskId, { notes: `Branch ${branch} pushed but PR creation failed` })
+  }
 }
 
 export async function resolveFailure(opts: ResolveFailureOpts): Promise<void> {
