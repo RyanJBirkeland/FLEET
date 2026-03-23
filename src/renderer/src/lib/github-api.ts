@@ -1,5 +1,5 @@
 import type { GitHubFetchInit, GitHubFetchResult } from '../../../shared/ipc-channels'
-import type { PrReview } from '../../../shared/types'
+import type { PrReview, PrComment, PrIssueComment } from '../../../shared/types'
 
 /**
  * All GitHub REST API calls are proxied through the main process via IPC.
@@ -214,6 +214,26 @@ export async function getReviews(
 ): Promise<PrReview[]> {
   return fetchAllPages<PrReview>(
     `/repos/${owner}/${repo}/pulls/${number}/reviews?per_page=100`
+  )
+}
+
+export async function getReviewComments(
+  owner: string,
+  repo: string,
+  number: number
+): Promise<PrComment[]> {
+  return fetchAllPages<PrComment>(
+    `/repos/${owner}/${repo}/pulls/${number}/comments?per_page=100`
+  )
+}
+
+export async function getIssueComments(
+  owner: string,
+  repo: string,
+  number: number
+): Promise<PrIssueComment[]> {
+  return fetchAllPages<PrIssueComment>(
+    `/repos/${owner}/${repo}/issues/${number}/comments?per_page=100`
   )
 }
 

@@ -161,6 +161,32 @@ export interface PrReview {
   html_url: string
 }
 
+export interface PrComment {
+  id: number
+  user: { login: string; avatar_url: string }
+  body: string
+  created_at: string
+  updated_at: string
+  html_url: string
+  path?: string
+  line?: number | null
+  original_line?: number | null
+  side?: 'LEFT' | 'RIGHT'
+  start_line?: number | null
+  start_side?: 'LEFT' | 'RIGHT'
+  diff_hunk?: string
+  in_reply_to_id?: number | null
+  pull_request_review_id?: number | null
+}
+
+export interface PrIssueComment {
+  id: number
+  user: { login: string; avatar_url: string }
+  body: string
+  created_at: string
+  html_url: string
+}
+
 /** Source of a unified agent — used by the unified agents store. */
 export type UnifiedAgentSource = 'local' | 'history'
 
