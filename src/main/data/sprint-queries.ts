@@ -299,19 +299,23 @@ export async function updateTaskMergeableState(
   }
 }
 
-export async function getQueuedTasks(): Promise<SprintTask[]> {
+export async function getQueuedTasks(limit: number): Promise<SprintTask[]> {
   const { data, error } = await getSupabaseClient()
-    .from('sprint_tasks')
-    .select('*')
-    .eq('status', 'queued')
+    .from('sprint_tasks').select('*')
+    .eq('status', 'queued').is('claimed_by', null)
     .order('priority', { ascending: true })
     .order('created_at', { ascending: true })
+    .limit(limit)
+  if (error) throw error
+  return data ?? []
+}
 
-  if (error) {
-    console.warn('[sprint-queries] getQueuedTasks failed:', error)
-    return []
-  }
-  return (data ?? []) as SprintTask[]
+export async function getOrphanedTasks(claimedBy: string): Promise<SprintTask[]> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks').select('*')
+    .eq('status', 'active').eq('claimed_by', claimedBy)
+  if (error) throw error
+  return data ?? []
 }
 
 export async function clearSprintTaskFk(agentRunId: string): Promise<void> {
