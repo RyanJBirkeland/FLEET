@@ -1,0 +1,38 @@
+import { describe, it, expect } from 'vitest'
+import { toCamelCase, toSnakeCase } from '../field-mapper'
+
+describe('field-mapper', () => {
+  const snakeRow = {
+    id: 'abc', title: 'Test', prompt: 'Do thing', repo: 'bde',
+    status: 'queued', priority: 1, spec: null, notes: null,
+    depends_on: null, pr_url: null, pr_number: null, pr_status: null,
+    pr_mergeable_state: null, agent_run_id: null, retry_count: 0,
+    fast_fail_count: 0, repo_path: '/tmp/repo', gh_repo: 'org/repo',
+    started_at: null, completed_at: null, claimed_by: null,
+    template_name: null, created_at: '2026-01-01', updated_at: '2026-01-01',
+  }
+
+  it('converts snake_case row to camelCase SprintTask', () => {
+    const result = toCamelCase(snakeRow)
+    expect(result.agentRunId).toBeNull()
+    expect(result.prUrl).toBeNull()
+    expect(result.retryCount).toBe(0)
+    expect(result.fastFailCount).toBe(0)
+    expect(result.repoPath).toBe('/tmp/repo')
+    expect(result.ghRepo).toBe('org/repo')
+    expect(result.dependsOn).toBeNull()
+    expect(result.prMergeableState).toBeNull()
+  })
+
+  it('converts camelCase fields to snake_case', () => {
+    const result = toSnakeCase({ prUrl: 'https://...', retryCount: 2, fastFailCount: 1 })
+    expect(result).toEqual({ pr_url: 'https://...', retry_count: 2, fast_fail_count: 1 })
+  })
+
+  it('round-trips correctly', () => {
+    const camel = toCamelCase(snakeRow)
+    const snake = toSnakeCase(camel)
+    expect(snake.pr_url).toBe(snakeRow.pr_url)
+    expect(snake.agent_run_id).toBe(snakeRow.agent_run_id)
+  })
+})
