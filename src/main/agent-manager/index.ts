@@ -299,6 +299,15 @@ export function createAgentManager(
       return
     }
 
+    // Refresh dependency index each drain cycle to pick up tasks created
+    // since startup or since the last drain. Rebuild is O(n) and cheap.
+    try {
+      const allTasks = await getTasksWithDependencies()
+      depIndex.rebuild(allTasks)
+    } catch (err) {
+      logger.warn(`[agent-manager] Failed to refresh dependency index: ${err}`)
+    }
+
     const available = availableSlots(concurrency)
     if (available <= 0) return
 
