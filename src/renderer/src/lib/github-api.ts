@@ -237,6 +237,58 @@ export async function getIssueComments(
   )
 }
 
+export interface CreateReviewBody {
+  body?: string
+  event: 'APPROVE' | 'REQUEST_CHANGES' | 'COMMENT'
+  comments?: Array<{
+    path: string
+    line: number
+    side: 'RIGHT' | 'LEFT'
+    start_line?: number
+    start_side?: 'RIGHT' | 'LEFT'
+    body: string
+  }>
+}
+
+export async function createReview(
+  owner: string,
+  repo: string,
+  number: number,
+  review: CreateReviewBody
+): Promise<void> {
+  const res = await githubFetchRaw(`/repos/${owner}/${repo}/pulls/${number}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(review)
+  })
+  if (!res.ok) {
+    const err = (res.body ?? {}) as { message?: string }
+    throw new Error(`Review failed: ${res.status} — ${err.message ?? 'unknown'}`)
+  }
+}
+
+export async function replyToComment(
+  owner: string,
+  repo: string,
+  number: number,
+  commentId: number,
+  body: string
+): Promise<PrComment> {
+  const res = await githubFetchRaw(
+    `/repos/${owner}/${repo}/pulls/${number}/comments/${commentId}/replies`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ body })
+    }
+  )
+  if (!res.ok) {
+    const err = (res.body ?? {}) as { message?: string }
+    throw new Error(`Reply failed: ${res.status} — ${err.message ?? 'unknown'}`)
+  }
+  return res.body as PrComment
+}
+
 export async function closePR(owner: string, repo: string, number: number): Promise<void> {
   const res = await githubFetchRaw(`/repos/${owner}/${repo}/pulls/${number}`, {
     method: 'PATCH',

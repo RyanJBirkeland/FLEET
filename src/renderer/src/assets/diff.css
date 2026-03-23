@@ -698,3 +698,52 @@
   border-radius: 2px;
 }
 
+/* -- Comment Composer -- */
+.diff-comment-composer {
+  margin: 4px 0 4px 96px;
+  border: 1px solid var(--bde-accent);
+  border-radius: var(--bde-radius-md);
+  background: var(--bde-bg);
+  overflow: hidden;
+}
+
+.diff-comment-composer__input {
+  width: 100%;
+  padding: 8px 12px;
+  font-family: var(--bde-font-code);
+  font-size: var(--bde-size-sm);
+  color: var(--bde-text);
+  background: var(--bde-surface);
+  border: none;
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+}
+
+.diff-comment-composer__input::placeholder {
+  color: var(--bde-text-dim);
+}
+
+.diff-comment-composer__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 6px 10px;
+  border-top: 1px solid var(--bde-border);
+}
+
+/* -- Pending comment badge -- */
+.diff-comment-widget--pending {
+  border-color: var(--bde-warning);
+}
+
+.diff-comment-widget__pending-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--bde-warning);
+  background: color-mix(in srgb, var(--bde-warning) 15%, transparent);
+  padding: 0 6px;
+  border-radius: 9999px;
+  margin-left: auto;
+}
+

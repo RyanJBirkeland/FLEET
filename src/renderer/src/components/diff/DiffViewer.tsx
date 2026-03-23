@@ -6,6 +6,8 @@ import { EmptyState } from '../ui/EmptyState'
 import { DIFF_VIRTUALIZE_THRESHOLD } from '../../lib/constants'
 import type { PrComment } from '../../../../shared/types'
 import { DiffCommentWidget } from './DiffCommentWidget'
+import { DiffCommentComposer } from './DiffCommentComposer'
+import type { PendingComment } from '../../stores/pendingReview'
 
 export interface LineRange {
   file: string
@@ -217,13 +219,17 @@ function PlainDiffContent({
   fileRefs,
   hunkRefs,
   commentsByPosition,
+  pendingByPosition,
   selectedRange,
   selectionStart,
   isSelecting,
+  composerRange,
   setSelectionStart,
   setIsSelecting,
+  setComposerRange,
   onSelectRange,
-  onCommentTrigger,
+  onAddComment,
+  onRemovePendingComment,
   isLineSelected
 }: {
   files: DiffFile[]
@@ -232,13 +238,17 @@ function PlainDiffContent({
   fileRefs: React.RefObject<Map<string, HTMLDivElement>>
   hunkRefs: React.RefObject<Map<string, HTMLDivElement>>
   commentsByPosition: Map<string, PrComment[]>
+  pendingByPosition: Map<string, PendingComment[]>
   selectedRange: LineRange | null
   selectionStart: { file: string; line: number; side: 'LEFT' | 'RIGHT' } | null
   isSelecting: boolean
+  composerRange: LineRange | null
   setSelectionStart: (v: { file: string; line: number; side: 'LEFT' | 'RIGHT' } | null) => void
   setIsSelecting: (v: boolean) => void
+  setComposerRange: (v: LineRange | null) => void
   onSelectRange?: (range: LineRange | null) => void
-  onCommentTrigger?: (range: LineRange) => void
+  onAddComment?: (range: LineRange, body: string) => void
+  onRemovePendingComment?: (commentId: string) => void
   isLineSelected: (filePath: string, lineNo: number | undefined) => boolean
 }): React.JSX.Element {
   return (
@@ -280,13 +290,13 @@ function PlainDiffContent({
                 return (
                   <React.Fragment key={li}>
                     {selectedRange && selectedRange.file === file.path &&
-                      line.lineNo.new === selectedRange.startLine && onCommentTrigger && (
+                      line.lineNo.new === selectedRange.startLine && onAddComment && (
                       <div style={{ position: 'relative' }}>
                         <button
                           className="diff-selection-trigger"
                           onClick={(e) => {
                             e.stopPropagation()
-                            onCommentTrigger(selectedRange)
+                            setComposerRange(selectedRange)
                           }}
                           title="Add comment"
                         >
@@ -327,6 +337,47 @@ function PlainDiffContent({
                     {lineComments && lineComments.length > 0 && (
                       <DiffCommentWidget comments={lineComments} />
                     )}
+                    {composerRange && composerRange.file === file.path &&
+                      line.lineNo.new === composerRange.endLine && (
+                      <DiffCommentComposer
+                        onSubmit={(body) => {
+                          onAddComment?.(composerRange, body)
+                          setComposerRange(null)
+                          onSelectRange?.(null)
+                        }}
+                        onCancel={() => {
+                          setComposerRange(null)
+                          onSelectRange?.(null)
+                        }}
+                      />
+                    )}
+                    {(() => {
+                      const pendingKey = lineNum ? `${file.path}:${lineNum}` : null
+                      const pending = pendingKey ? pendingByPosition.get(pendingKey) : undefined
+                      if (!pending || pending.length === 0) return null
+                      return pending.map((pc) => (
+                        <div key={pc.id} className="diff-comment-widget diff-comment-widget--pending">
+                          <div className="diff-comment-widget__toggle">
+                            <span>Pending comment</span>
+                            <span className="diff-comment-widget__pending-badge">Pending</span>
+                          </div>
+                          <div className="diff-comment-widget__thread">
+                            <div className="diff-comment-widget__comment">
+                              <div className="diff-comment-widget__body">{pc.body}</div>
+                              {onRemovePendingComment && (
+                                <button
+                                  className="diff-selection-trigger"
+                                  style={{ position: 'static', width: 'auto', height: 'auto', borderRadius: 'var(--bde-radius-sm)', fontSize: 'var(--bde-size-xs)', padding: '2px 8px', background: 'transparent', color: 'var(--bde-danger-text)', cursor: 'pointer' }}
+                                  onClick={() => onRemovePendingComment(pc.id)}
+                                >
+                                  Remove
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    })()}
                   </React.Fragment>
                 )
               })}
@@ -343,17 +394,23 @@ function PlainDiffContent({
 interface DiffViewerProps {
   files: DiffFile[]
   comments?: PrComment[]
+  pendingComments?: PendingComment[]
   selectedRange?: LineRange | null
   onSelectRange?: (range: LineRange | null) => void
   onCommentTrigger?: (range: LineRange) => void
+  onAddComment?: (range: LineRange, body: string) => void
+  onRemovePendingComment?: (commentId: string) => void
 }
 
 function DiffViewer({
   files,
   comments = [],
+  pendingComments,
   selectedRange = null,
   onSelectRange,
-  onCommentTrigger
+  onCommentTrigger: _onCommentTrigger,
+  onAddComment,
+  onRemovePendingComment
 }: DiffViewerProps): React.JSX.Element {
   const containerRef = useRef<HTMLDivElement>(null)
   const fileRefs = useRef<Map<string, HTMLDivElement>>(new Map())
@@ -378,6 +435,21 @@ function DiffViewer({
     }
     return map
   }, [comments])
+
+  // Composer state
+  const [composerRange, setComposerRange] = useState<LineRange | null>(null)
+
+  // Build pending-by-position map
+  const pendingByPosition = useMemo(() => {
+    const map = new Map<string, PendingComment[]>()
+    for (const c of (pendingComments ?? [])) {
+      const key = `${c.path}:${c.line}`
+      const arr = map.get(key) ?? []
+      arr.push(c)
+      map.set(key, arr)
+    }
+    return map
+  }, [pendingComments])
 
   // Selection state for line range picking
   const [selectionStart, setSelectionStart] = useState<{ file: string; line: number; side: 'LEFT' | 'RIGHT' } | null>(null)
@@ -564,13 +636,17 @@ function DiffViewer({
             fileRefs={fileRefs}
             hunkRefs={hunkRefs}
             commentsByPosition={commentsByPosition}
+            pendingByPosition={pendingByPosition}
             selectedRange={selectedRange}
             selectionStart={selectionStart}
             isSelecting={isSelecting}
+            composerRange={composerRange}
             setSelectionStart={setSelectionStart}
             setIsSelecting={setIsSelecting}
+            setComposerRange={setComposerRange}
             onSelectRange={onSelectRange}
-            onCommentTrigger={onCommentTrigger}
+            onAddComment={onAddComment}
+            onRemovePendingComment={onRemovePendingComment}
             isLineSelected={isLineSelected}
           />
         )}
