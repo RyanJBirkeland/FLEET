@@ -26,6 +26,7 @@ export const UPDATE_ALLOWLIST = new Set([
   'completed_at',
   'template_name',
   'claimed_by',
+  'depends_on',
 ])
 
 export interface QueueStats {
@@ -37,6 +38,7 @@ export interface QueueStats {
   failed: number
   cancelled: number
   error: number
+  blocked: number
 }
 
 export async function getTask(id: string): Promise<SprintTask | null> {
@@ -81,6 +83,7 @@ export interface CreateTaskInput {
   priority?: number
   status?: string
   template_name?: string
+  depends_on?: Array<{ id: string; type: 'hard' | 'soft' }> | null
 }
 
 export async function createTask(input: CreateTaskInput): Promise<SprintTask> {
@@ -95,6 +98,7 @@ export async function createTask(input: CreateTaskInput): Promise<SprintTask> {
       priority: input.priority ?? 0,
       status: input.status ?? 'backlog',
       template_name: input.template_name ?? null,
+      depends_on: input.depends_on ?? null,
     })
     .select()
     .single()
@@ -186,6 +190,7 @@ export async function getQueueStats(): Promise<QueueStats> {
     failed: 0,
     cancelled: 0,
     error: 0,
+    blocked: 0,
   }
 
   // Supabase doesn't have native GROUP BY in the client — fetch statuses
@@ -224,46 +229,64 @@ export async function getDoneTodayCount(): Promise<number> {
   return count ?? 0
 }
 
-export async function markTaskDoneByPrNumber(prNumber: number): Promise<void> {
+export async function markTaskDoneByPrNumber(prNumber: number): Promise<string[]> {
   try {
+    const { data: affected } = await getSupabaseClient()
+      .from('sprint_tasks')
+      .select('id')
+      .eq('pr_number', prNumber)
+      .eq('status', 'active')
+
+    const affectedIds = (affected ?? []).map((r: { id: string }) => r.id)
+
     const completedAt = new Date().toISOString()
-    // Transition active tasks to done
     await getSupabaseClient()
       .from('sprint_tasks')
       .update({ status: 'done', completed_at: completedAt })
       .eq('pr_number', prNumber)
       .eq('status', 'active')
 
-    // Also update pr_status to merged for tasks already marked done
     await getSupabaseClient()
       .from('sprint_tasks')
       .update({ pr_status: 'merged' })
       .eq('pr_number', prNumber)
       .eq('status', 'done')
       .eq('pr_status', 'open')
+
+    return affectedIds
   } catch (err) {
     console.warn(`[sprint-queries] failed to mark task done for PR #${prNumber}:`, err)
+    return []
   }
 }
 
-export async function markTaskCancelledByPrNumber(prNumber: number): Promise<void> {
+export async function markTaskCancelledByPrNumber(prNumber: number): Promise<string[]> {
   try {
-    // Transition active tasks to cancelled
+    const { data: affected } = await getSupabaseClient()
+      .from('sprint_tasks')
+      .select('id')
+      .eq('pr_number', prNumber)
+      .eq('status', 'active')
+
+    const affectedIds = (affected ?? []).map((r: { id: string }) => r.id)
+
     await getSupabaseClient()
       .from('sprint_tasks')
       .update({ status: 'cancelled', completed_at: new Date().toISOString() })
       .eq('pr_number', prNumber)
       .eq('status', 'active')
 
-    // Also update pr_status to closed for tasks already marked done
     await getSupabaseClient()
       .from('sprint_tasks')
       .update({ pr_status: 'closed' })
       .eq('pr_number', prNumber)
       .eq('status', 'done')
       .eq('pr_status', 'open')
+
+    return affectedIds
   } catch (err) {
     console.warn(`[sprint-queries] failed to mark task cancelled for PR #${prNumber}:`, err)
+    return []
   }
 }
 
@@ -345,4 +368,15 @@ export async function getHealthCheckTasks(): Promise<SprintTask[]> {
     return []
   }
   return (data ?? []) as SprintTask[]
+}
+
+export async function getTasksWithDependencies(): Promise<
+  Array<{ id: string; depends_on: Array<{ id: string; type: 'hard' | 'soft' }> | null; status: string }>
+> {
+  const { data, error } = await getSupabaseClient()
+    .from('sprint_tasks')
+    .select('id, depends_on, status')
+    .not('depends_on', 'is', null)
+  if (error) throw error
+  return data ?? []
 }
