@@ -15,6 +15,7 @@ import {
 } from '../data/sprint-queries'
 import type { StatusUpdateRequest, ClaimRequest } from '../../shared/queue-api-contract'
 import { STATUS_UPDATE_FIELDS, RUNNER_WRITABLE_STATUSES } from '../../shared/queue-api-contract'
+import { toCamelCase, toSnakeCase } from './field-mapper'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -200,7 +201,7 @@ async function handleListTasks(
 ): Promise<void> {
   const status = query.get('status') ?? undefined
   const tasks = await listTasks(status)
-  sendJson(res, 200, tasks)
+  sendJson(res, 200, tasks.map(toCamelCase))
 }
 
 async function handleGetTask(
@@ -212,7 +213,7 @@ async function handleGetTask(
     sendJson(res, 404, { error: `Task ${id} not found` })
     return
   }
-  sendJson(res, 200, task)
+  sendJson(res, 200, toCamelCase(task))
 }
 
 async function handleCreateTask(
@@ -243,7 +244,7 @@ async function handleCreateTask(
   }
 
   const task = await createTask(body as Parameters<typeof createTask>[0])
-  sendJson(res, 201, task)
+  sendJson(res, 201, toCamelCase(task))
 }
 
 async function handleUpdateStatus(
@@ -283,12 +284,12 @@ async function handleUpdateStatus(
     return
   }
 
-  const updated = await updateTask(id, filtered)
+  const updated = await updateTask(id, toSnakeCase(filtered))
   if (!updated) {
     sendJson(res, 404, { error: `Task ${id} not found` })
     return
   }
-  sendJson(res, 200, updated)
+  sendJson(res, 200, toCamelCase(updated))
 }
 
 async function handleClaim(
@@ -320,7 +321,7 @@ async function handleClaim(
     sendJson(res, 409, { error: `Task ${id} is not claimable (not queued or does not exist)` })
     return
   }
-  sendJson(res, 200, claimed)
+  sendJson(res, 200, toCamelCase(claimed))
 }
 
 async function handleRelease(
@@ -332,7 +333,7 @@ async function handleRelease(
     sendJson(res, 409, { error: `Task ${id} is not releasable (not active or does not exist)` })
     return
   }
-  sendJson(res, 200, released)
+  sendJson(res, 200, toCamelCase(released))
 }
 
 async function handleEvents(res: http.ServerResponse): Promise<void> {
