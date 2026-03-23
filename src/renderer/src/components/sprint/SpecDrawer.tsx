@@ -70,7 +70,14 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
     }
 
     return () => { cancelled = true }
-  }, [task?.id])
+  }, [task?.id, task?.spec])
+
+  // When task.spec changes externally and the user hasn't made local edits, sync content
+  useEffect(() => {
+    if (!task?.spec || dirty || editing) return
+    resolvedContentRef.current = task.spec
+    setDraft(task.spec)
+  }, [task?.spec]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = useCallback(() => {
     if (!task) return
@@ -132,7 +139,21 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
   return (
     <>
       <ConfirmModal {...confirmProps} />
-      {isOpen && <div className="spec-drawer__overlay" onClick={onClose} />}
+      {isOpen && (
+        <div
+          className="spec-drawer__overlay"
+          onClick={async () => {
+            if (editing && dirty) {
+              const ok = await confirm({ message: 'Discard unsaved changes?', confirmLabel: 'Discard' })
+              if (!ok) return
+              setEditing(false)
+              setDraft(resolvedContentRef.current)
+              setDirty(false)
+            }
+            onClose()
+          }}
+        />
+      )}
       <div className={`spec-drawer ${isOpen ? 'spec-drawer--open' : ''}`}>
         {task && (
           <>

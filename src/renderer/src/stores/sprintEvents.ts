@@ -5,6 +5,9 @@ import type { AgentEvent } from '../../../shared/types'
 /** Union of event sources used in the sprint event pipeline. */
 export type AnyTaskEvent = TaskOutputEvent | AgentEvent
 
+/** Maximum number of events to retain per agent to prevent memory leaks. */
+const MAX_EVENTS_PER_AGENT = 500
+
 interface SprintEventsState {
   // --- State ---
   taskEvents: Record<string, AnyTaskEvent[]>
@@ -21,16 +24,23 @@ export const useSprintEvents = create<SprintEventsState>((set) => ({
 
   initTaskOutputListener: (): (() => void) => {
     const cleanup = window.api.agentEvents?.onEvent(({ agentId, event }) => {
-      set((s) => ({
-        taskEvents: {
-          ...s.taskEvents,
-          [agentId]: [...(s.taskEvents[agentId] ?? []), event],
-        },
-        latestEvents: {
-          ...s.latestEvents,
-          [agentId]: event,
-        },
-      }))
+      set((s) => {
+        const existing = s.taskEvents[agentId] ?? []
+        let updated = [...existing, event]
+        if (updated.length > MAX_EVENTS_PER_AGENT) {
+          updated = updated.slice(updated.length - MAX_EVENTS_PER_AGENT)
+        }
+        return {
+          taskEvents: {
+            ...s.taskEvents,
+            [agentId]: updated,
+          },
+          latestEvents: {
+            ...s.latestEvents,
+            [agentId]: event,
+          },
+        }
+      })
     })
 
     return () => {

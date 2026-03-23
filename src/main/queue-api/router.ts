@@ -36,13 +36,26 @@ function checkAuth(req: http.IncomingMessage, res: http.ServerResponse): boolean
     return true
   }
 
+  // Accept token from Authorization header or ?token= query parameter
   const authHeader = req.headers['authorization']
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+  let token: string | undefined
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.slice(7)
+  } else {
+    // Fall back to ?token= query param (used by SSE clients)
+    const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
+    const queryToken = url.searchParams.get('token')
+    if (queryToken) {
+      token = queryToken
+    }
+  }
+
+  if (!token) {
     sendJson(res, 401, { error: 'Missing or invalid Authorization header' })
     return false
   }
 
-  const token = authHeader.slice(7)
   if (token !== apiKey) {
     sendJson(res, 403, { error: 'Invalid API key' })
     return false
@@ -56,10 +69,24 @@ function sendJson(res: http.ServerResponse, status: number, body: unknown): void
   res.end(JSON.stringify(body))
 }
 
-function parseBody(req: http.IncomingMessage): Promise<unknown> {
+const MAX_BODY_SIZE = 5 * 1024 * 1024 // 5 MB
+
+function parseBody(req: http.IncomingMessage, res?: http.ServerResponse): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
-    req.on('data', (chunk: Buffer) => chunks.push(chunk))
+    let totalSize = 0
+    req.on('data', (chunk: Buffer) => {
+      totalSize += chunk.length
+      if (totalSize > MAX_BODY_SIZE) {
+        req.destroy()
+        if (res) {
+          sendJson(res, 413, { error: 'Payload too large' })
+        }
+        reject(new Error('Payload too large'))
+        return
+      }
+      chunks.push(chunk)
+    })
     req.on('end', () => {
       const raw = Buffer.concat(chunks).toString('utf8')
       if (!raw) {
@@ -175,6 +202,12 @@ export async function route(
     return handleRelease(res, params['id'])
   }
 
+  // POST /queue/tasks/:id/output
+  params = matchRoute('/queue/tasks/:id/output', path)
+  if (method === 'POST' && params) {
+    return handleTaskOutput(req, res, params['id'])
+  }
+
   // 404
   sendJson(res, 404, { error: 'Not found' })
 }
@@ -226,7 +259,7 @@ async function handleCreateTask(
 ): Promise<void> {
   let body: unknown
   try {
-    body = await parseBody(req)
+    body = await parseBody(req, res)
   } catch {
     sendJson(res, 400, { error: 'Invalid JSON body' })
     return
@@ -258,7 +291,7 @@ async function handleUpdateStatus(
 ): Promise<void> {
   let body: unknown
   try {
-    body = await parseBody(req)
+    body = await parseBody(req, res)
   } catch {
     sendJson(res, 400, { error: 'Invalid JSON body' })
     return
@@ -303,7 +336,7 @@ async function handleClaim(
 ): Promise<void> {
   let body: unknown
   try {
-    body = await parseBody(req)
+    body = await parseBody(req, res)
   } catch {
     sendJson(res, 400, { error: 'Invalid JSON body' })
     return
@@ -342,4 +375,39 @@ async function handleRelease(
 
 async function handleEvents(_req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   sseBroadcaster.addClient(res)
+}
+
+async function handleTaskOutput(
+  req: http.IncomingMessage,
+  res: http.ServerResponse,
+  taskId: string
+): Promise<void> {
+  let body: unknown
+  try {
+    body = await parseBody(req, res)
+  } catch {
+    // parseBody already sent 413 if payload too large
+    if (!res.writableEnded) {
+      sendJson(res, 400, { error: 'Invalid JSON body' })
+    }
+    return
+  }
+
+  if (!body || typeof body !== 'object') {
+    sendJson(res, 400, { error: 'Request body must be a JSON object' })
+    return
+  }
+
+  const { events } = body as { events?: unknown[] }
+  if (!Array.isArray(events)) {
+    sendJson(res, 400, { error: 'events must be an array' })
+    return
+  }
+
+  // Broadcast each event to connected SSE clients
+  for (const event of events) {
+    sseBroadcaster.broadcast('task:output', { taskId, ...event as Record<string, unknown> })
+  }
+
+  sendJson(res, 200, { ok: true })
 }

@@ -2,9 +2,11 @@ import { useEffect, useRef } from 'react'
 import { toast } from '../stores/toasts'
 import type { SprintTask } from '../../../shared/types'
 
-/** No-op — previously tracked which LogDrawer was open for SSE notification suppression. */
-export function setOpenLogDrawerTaskId(_id: string | null): void {
-  // Kept as export for SprintCenter compatibility; SSE handlers removed.
+/** Tracks which LogDrawer is currently open so OS notifications can be suppressed. */
+let openLogDrawerTaskId: string | null = null
+
+export function setOpenLogDrawerTaskId(id: string | null): void {
+  openLogDrawerTaskId = id
 }
 
 // --- Shared dedup — single source of truth across all notification sources ---
@@ -31,6 +33,8 @@ export function _resetNotifiedTaskIds(): void {
 
 export function notifyOnce(taskId: string, title: string, body: string): boolean {
   if (notifiedTaskIds.has(taskId)) return false
+  // Suppress OS notification when user is already watching this task's LogDrawer
+  if (openLogDrawerTaskId === taskId) return false
   notifiedTaskIds.add(taskId)
   boundSet(notifiedTaskIds, MAX_SEEN_IDS)
   notify(title, body)

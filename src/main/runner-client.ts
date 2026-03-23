@@ -30,6 +30,9 @@ async function runnerFetch(path: string, opts?: RequestInit) {
 
 export async function listAgents() {
   const res = await runnerFetch('/agents')
+  if (!res.ok) {
+    throw new Error(`listAgents failed: ${res.status} ${await res.text()}`)
+  }
   return res.json()
 }
 
@@ -44,11 +47,17 @@ export async function steerAgent(agentId: string, message: string) {
     method: 'POST',
     body: JSON.stringify({ message }),
   })
+  if (!res.ok) {
+    throw new Error(`steerAgent failed: ${res.status} ${await res.text()}`)
+  }
   return res.json()
 }
 
 export async function killAgent(agentId: string) {
   const res = await runnerFetch(`/agents/${agentId}/kill`, { method: 'POST' })
+  if (!res.ok) {
+    throw new Error(`killAgent failed: ${res.status} ${await res.text()}`)
+  }
   return res.json()
 }
 

@@ -34,7 +34,9 @@ export function useSprintKeyboardShortcuts({
         !e.ctrlKey &&
         !e.altKey &&
         document.activeElement?.tagName !== 'INPUT' &&
-        document.activeElement?.tagName !== 'TEXTAREA'
+        document.activeElement?.tagName !== 'TEXTAREA' &&
+        document.activeElement?.tagName !== 'SELECT' &&
+        !(document.activeElement as HTMLElement)?.isContentEditable
       ) {
         e.preventDefault()
         setModalOpen(true)
