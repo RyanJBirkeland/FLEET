@@ -3,12 +3,13 @@
  * Each tab renders a self-contained section component.
  */
 import { useState } from 'react'
-import { Palette, Plug, GitBranch, FileText, Bot, Info } from 'lucide-react'
+import { Palette, Plug, GitBranch, FileText, Bot, Info, Cpu } from 'lucide-react'
 import { AppearanceSection } from '../components/settings/AppearanceSection'
 import { ConnectionsSection } from '../components/settings/ConnectionsSection'
 import { RepositoriesSection } from '../components/settings/RepositoriesSection'
 import { TaskTemplatesSection } from '../components/settings/TaskTemplatesSection'
 import { AgentRuntimeSection } from '../components/settings/AgentRuntimeSection'
+import { AgentManagerSection } from '../components/settings/AgentManagerSection'
 import { AboutSection } from '../components/settings/AboutSection'
 
 const TABS = [
@@ -16,6 +17,7 @@ const TABS = [
   { id: 'repositories', label: 'Repositories', icon: GitBranch },
   { id: 'templates', label: 'Templates', icon: FileText },
   { id: 'agent', label: 'Agent', icon: Bot },
+  { id: 'agentManager', label: 'Agent Manager', icon: Cpu },
   { id: 'appearance', label: 'Appearance', icon: Palette },
   { id: 'about', label: 'About', icon: Info },
 ] as const
@@ -27,6 +29,7 @@ const SECTION_MAP: Record<TabId, () => React.JSX.Element> = {
   repositories: RepositoriesSection,
   templates: TaskTemplatesSection,
   agent: AgentRuntimeSection,
+  agentManager: AgentManagerSection,
   appearance: AppearanceSection,
   about: AboutSection,
 }
