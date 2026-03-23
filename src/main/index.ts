@@ -112,6 +112,10 @@ app.whenReady().then(() => {
 
   // Start agent manager immediately — auth is checked inside the drain loop
   if (autoStart) {
+    // Pre-read OAuth token from Keychain while we still can (before Electron's sandbox may block it)
+    const { preloadOAuthToken } = require('./agent-manager/sdk-adapter')
+    preloadOAuthToken()
+
     fs.appendFileSync('/tmp/bde-agent-manager.log', `[${new Date().toISOString()}] Creating agent manager (autoStart=true)\n`)
     const am = createAgentManager(amConfig)
     am.start()

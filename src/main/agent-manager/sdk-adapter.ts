@@ -2,13 +2,32 @@ import type { AgentHandle } from './types'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
+// Cache the OAuth token at module load time — reading from Keychain may hang later
+let cachedOAuthToken: string | null = null
+
+export function preloadOAuthToken(): void {
+  try {
+    const { execFileSync } = require('node:child_process')
+    const raw = execFileSync('security', ['find-generic-password', '-s', 'Claude Code-credentials', '-w'], { encoding: 'utf8', timeout: 5000 })
+    const payload = JSON.parse(raw.trim())
+    cachedOAuthToken = payload?.claudeAiOauth?.accessToken ?? null
+  } catch {
+    cachedOAuthToken = null
+  }
+}
+
 export async function spawnAgent(opts: {
   prompt: string
   cwd: string
   model: string
 }): Promise<AgentHandle> {
   const env = { ...process.env }
-  delete env.ANTHROPIC_API_KEY // force subscription billing
+
+  // Use the pre-loaded OAuth token as ANTHROPIC_API_KEY.
+  // This avoids the Keychain access hang inside Electron.
+  if (cachedOAuthToken) {
+    env.ANTHROPIC_API_KEY = cachedOAuthToken
+  }
 
   // Ensure common tool paths are in PATH — Electron's PATH is often minimal
   const extraPaths = ['/usr/local/bin', '/opt/homebrew/bin', `${process.env.HOME}/.local/bin`]
