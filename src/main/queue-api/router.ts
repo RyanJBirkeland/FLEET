@@ -340,6 +340,6 @@ async function handleRelease(
   sendJson(res, 200, toCamelCase(released))
 }
 
-async function handleEvents(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
+async function handleEvents(_req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
   sseBroadcaster.addClient(res)
 }

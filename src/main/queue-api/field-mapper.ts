@@ -12,7 +12,7 @@ const SNAKE_TO_CAMEL = Object.fromEntries(
   Object.entries(CAMEL_TO_SNAKE).map(([c, s]) => [s, c])
 )
 
-export function toCamelCase(row: Record<string, unknown>): Record<string, unknown> {
+export function toCamelCase<T extends object>(row: T): Record<string, unknown> {
   const result: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(row)) {
     result[SNAKE_TO_CAMEL[key] ?? key] = value
@@ -20,7 +20,7 @@ export function toCamelCase(row: Record<string, unknown>): Record<string, unknow
   return result
 }
 
-export function toSnakeCase(fields: Record<string, unknown>): Record<string, unknown> {
+export function toSnakeCase<T extends object>(fields: T): Record<string, unknown> {
   const result: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(fields)) {
     result[CAMEL_TO_SNAKE[key] ?? key] = value
