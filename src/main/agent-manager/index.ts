@@ -5,6 +5,9 @@ import {
   WATCHDOG_INTERVAL_MS,
   ORPHAN_CHECK_INTERVAL_MS,
   WORKTREE_PRUNE_INTERVAL_MS,
+  SPAWN_TIMEOUT_MS,
+  QUEUE_TIMEOUT_MS,
+  INITIAL_DRAIN_DEFER_MS,
 } from './types'
 import {
   makeConcurrencyState,
@@ -34,7 +37,7 @@ async function fetchQueuedTasks(limit: number): Promise<Array<Record<string, unk
   // Wrap with timeout to prevent infinite hang
   const result = await Promise.race([
     _getQueuedTasks(limit),
-    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('getQueuedTasks timeout')), 10_000)),
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('getQueuedTasks timeout')), QUEUE_TIMEOUT_MS)),
   ])
   return result as unknown as Array<Record<string, unknown>>
 }
@@ -42,7 +45,7 @@ async function fetchQueuedTasks(limit: number): Promise<Array<Record<string, unk
 async function claimTaskViaApi(taskId: string): Promise<boolean> {
   const result = await Promise.race([
     _claimTask(taskId, EXECUTOR_ID),
-    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('claimTask timeout')), 10_000)),
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('claimTask timeout')), QUEUE_TIMEOUT_MS)),
   ])
   return result !== null
 }
@@ -177,7 +180,7 @@ export function createAgentManager(
           cwd: worktree.worktreePath,
           model: config.defaultModel,
         }),
-        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Spawn timed out after 60s')), 60_000)),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Spawn timed out after ${SPAWN_TIMEOUT_MS / 1000}s`)), SPAWN_TIMEOUT_MS)),
       ])
     } catch (err) {
       logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
@@ -458,7 +461,7 @@ export function createAgentManager(
     // Defer initial drain to let the event loop process (Supabase fetch needs this)
     setTimeout(() => {
       drainInFlight = drainLoop().catch((err) => logger.warn(`[agent-manager] Initial drain error: ${err}`)).finally(() => { drainInFlight = null })
-    }, 5_000)
+    }, INITIAL_DRAIN_DEFER_MS)
 
     logger.info('[agent-manager] Started')
   }
