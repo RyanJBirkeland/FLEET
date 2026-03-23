@@ -143,11 +143,14 @@ export function createAgentManager(
 
     let handle: AgentHandle
     try {
-      handle = await spawnAgent({
-        prompt,
-        cwd: worktree.worktreePath,
-        model: config.defaultModel,
-      })
+      handle = await Promise.race([
+        spawnAgent({
+          prompt,
+          cwd: worktree.worktreePath,
+          model: config.defaultModel,
+        }),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('Spawn timed out after 60s')), 60_000)),
+      ])
     } catch (err) {
       logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
       await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: `Spawn failed: ${err instanceof Error ? err.message : String(err)}` }).catch(() => {})
@@ -172,6 +175,7 @@ export function createAgentManager(
     concurrency = { ...concurrency, activeCount: concurrency.activeCount + 1 }
 
     // Consume messages
+    let exitCode: number | undefined
     try {
       for await (const msg of handle.messages) {
         agent.lastOutputAt = Date.now()
@@ -185,6 +189,8 @@ export function createAgentManager(
         if (typeof m.cost_usd === 'number') agent.costUsd = m.cost_usd as number
         if (typeof m.tokens_in === 'number') agent.tokensIn = m.tokens_in as number
         if (typeof m.tokens_out === 'number') agent.tokensOut = m.tokens_out as number
+        // Track exit code if present (typically in last message)
+        if (typeof m.exit_code === 'number') exitCode = m.exit_code as number
       }
     } catch (err) {
       logger.error(`[agent-manager] Error consuming messages for task ${task.id}: ${err}`)
@@ -192,11 +198,23 @@ export function createAgentManager(
 
     // Agent exited
     const exitedAt = Date.now()
+
+    // Check if watchdog already cleaned up this agent
+    if (!activeAgents.has(task.id)) {
+      logger.info(`[agent-manager] Agent ${task.id} already cleaned up by watchdog`)
+      cleanupWorktree({
+        repoPath,
+        worktreePath: worktree.worktreePath,
+        branch: worktree.branch,
+      })
+      return
+    }
+
     activeAgents.delete(task.id)
     concurrency = { ...concurrency, activeCount: Math.max(0, concurrency.activeCount - 1) }
 
-    // Classify exit
-    const ffResult = classifyExit(agent.startedAt, exitedAt, task.fast_fail_count ?? 0)
+    // Classify exit (default to exit code 1 if not available, assuming failure)
+    const ffResult = classifyExit(agent.startedAt, exitedAt, exitCode ?? 1, task.fast_fail_count ?? 0)
     const now = new Date().toISOString()
 
     if (ffResult === 'fast-fail-exhausted') {
@@ -316,6 +334,10 @@ export function createAgentManager(
 
       logger.warn(`[agent-manager] Watchdog killing task ${agent.taskId}: ${verdict}`)
       agent.handle.abort()
+
+      // Delete agent and decrement concurrency immediately to prevent race with runAgent cleanup
+      activeAgents.delete(agent.taskId)
+      concurrency = { ...concurrency, activeCount: Math.max(0, concurrency.activeCount - 1) }
 
       // Update task based on verdict
       const now = new Date().toISOString()

@@ -21,7 +21,6 @@ import { startQueueApi, stopQueueApi } from './queue-api'
 import { pruneOldEvents } from './data/event-queries'
 import { getEventRetentionDays } from './config'
 import { createAgentManager } from './agent-manager'
-import { checkAuthStatus } from './auth-guard'
 import { getSetting, getSettingJson } from './settings'
 
 function createWindow(): void {

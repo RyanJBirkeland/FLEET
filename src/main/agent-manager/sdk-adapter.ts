@@ -86,6 +86,7 @@ function spawnViaSdk(
       abortController.abort()
     },
     async steer(message: string) {
+      console.warn(`[agent-manager] Steer in SDK mode is limited — message may not reach agent: "${message.slice(0, 100)}"`)
       await queryResult.interrupt()
       // Re-send via streamInput is not straightforward for a single query.
       // The interrupt signals the agent, then we log the steer message intention.
