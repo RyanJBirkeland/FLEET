@@ -256,11 +256,7 @@ export function createAgentManager(
     } else {
       // Normal exit — attempt success resolution
       try {
-        // Derive ghRepo from configured repos
-        const repoPaths = getRepoPaths()
-        const ghRepo = Object.entries(repoPaths).find(
-          ([, p]) => p === repoPath,
-        )?.[0] ?? task.repo
+        const ghRepo = getGhRepo(task.repo) ?? task.repo
 
         await resolveSuccess({
           taskId: task.id,
@@ -321,8 +317,8 @@ export function createAgentManager(
             prompt: raw.prompt ?? null,
             spec: raw.spec ?? null,
             repo: raw.repo as string,
-            retry_count: raw.retryCount ?? 0,
-            fast_fail_count: raw.fastFailCount ?? 0,
+            retry_count: Number(raw.retryCount) || 0,
+            fast_fail_count: Number(raw.fastFailCount) || 0,
           }
 
           const repoPath = resolveRepoPath(task.repo)
