@@ -2,6 +2,7 @@ import { execFile } from 'node:child_process'
 import { mkdirSync, existsSync, readdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
 import { promisify } from 'node:util'
 import path from 'node:path'
+import type { Logger } from './types'
 
 const execFileAsync = promisify(execFile)
 
@@ -40,7 +41,7 @@ function lockPath(worktreeBase: string, repoPath: string): string {
   return path.join(worktreeBase, '.locks', `${repoSlug(repoPath)}.lock`)
 }
 
-function acquireLock(worktreeBase: string, repoPath: string): void {
+function acquireLock(worktreeBase: string, repoPath: string, logger?: Logger): void {
   const locksDir = path.join(worktreeBase, '.locks')
   mkdirSync(locksDir, { recursive: true })
 
@@ -50,7 +51,7 @@ function acquireLock(worktreeBase: string, repoPath: string): void {
     const raw = readFileSync(lockFile, 'utf-8').trim()
     const pid = parseInt(raw, 10)
     if (isNaN(pid)) {
-      console.warn(`[worktree] Corrupted lock file for ${repoPath} — removing`)
+      ;(logger ?? console).warn(`[worktree] Corrupted lock file for ${repoPath} — removing`)
       rmSync(lockFile)
     } else {
       let alive = false
@@ -78,15 +79,15 @@ function releaseLock(worktreeBase: string, repoPath: string): void {
   }
 }
 
-export async function setupWorktree(opts: SetupWorktreeOpts): Promise<SetupWorktreeResult> {
-  const { repoPath, worktreeBase, taskId, title } = opts
+export async function setupWorktree(opts: SetupWorktreeOpts & { logger?: Logger }): Promise<SetupWorktreeResult> {
+  const { repoPath, worktreeBase, taskId, title, logger } = opts
   const branch = branchNameForTask(title)
   const repoDir = path.join(worktreeBase, repoSlug(repoPath))
   const worktreePath = path.join(repoDir, taskId)
 
   mkdirSync(repoDir, { recursive: true })
 
-  acquireLock(worktreeBase, repoPath)
+  acquireLock(worktreeBase, repoPath, logger)
 
   // Validate repo path exists and is a git repository
   if (!existsSync(repoPath) || !existsSync(path.join(repoPath, '.git'))) {

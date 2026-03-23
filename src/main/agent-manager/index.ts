@@ -1,4 +1,4 @@
-import type { AgentManagerConfig, ActiveAgent, AgentHandle } from './types'
+import type { AgentManagerConfig, ActiveAgent, AgentHandle, Logger } from './types'
 import {
   EXECUTOR_ID,
   MAX_RETRIES,
@@ -53,12 +53,6 @@ async function claimTaskViaApi(taskId: string): Promise<boolean> {
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to console
 // ---------------------------------------------------------------------------
-
-interface Logger {
-  info(msg: string): void
-  warn(msg: string): void
-  error(msg: string): void
-}
 
 import { appendFileSync } from 'node:fs'
 import { BDE_AGENT_LOG_PATH } from '../paths'
@@ -127,7 +121,7 @@ export function createAgentManager(
 
   async function onTaskTerminal(taskId: string, status: string): Promise<void> {
     try {
-      await resolveDependents(taskId, status, depIndex, getTask, updateTask)
+      await resolveDependents(taskId, status, depIndex, getTask, updateTask, logger)
     } catch (err) {
       logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${err}`)
     }
@@ -179,6 +173,7 @@ export function createAgentManager(
           prompt,
           cwd: worktree.worktreePath,
           model: config.defaultModel,
+          logger,
         }),
         new Promise<never>((_, reject) => setTimeout(() => reject(new Error(`Spawn timed out after ${SPAWN_TIMEOUT_MS / 1000}s`)), SPAWN_TIMEOUT_MS)),
       ])
@@ -267,7 +262,7 @@ export function createAgentManager(
           worktreePath: worktree.worktreePath,
           title: task.title,
           ghRepo,
-        })
+        }, logger)
       } catch (err) {
         logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
         await resolveFailure({ taskId: task.id, retryCount: task.retry_count ?? 0 })
@@ -353,6 +348,7 @@ export function createAgentManager(
               worktreeBase: config.worktreeBase,
               taskId: task.id,
               title: task.title,
+              logger,
             })
           } catch (err) {
             logger.error(`[agent-manager] setupWorktree failed for task ${task.id}: ${err}`)

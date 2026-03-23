@@ -45,6 +45,8 @@ function resetMocks() {
   updateTaskMock.mockResolvedValue(null)
 }
 
+const noopLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+
 describe('resolveSuccess', () => {
   const opts = {
     taskId: 'task-1',
@@ -62,7 +64,7 @@ describe('resolveSuccess', () => {
       { stdout: 'https://github.com/owner/repo/pull/42\n' },   // gh pr create
     ])
 
-    await resolveSuccess(opts)
+    await resolveSuccess(opts, noopLogger)
 
     const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
 
@@ -111,7 +113,7 @@ describe('resolveSuccess', () => {
     ])
 
     // Should not throw — user can create PR manually
-    await resolveSuccess(opts)
+    await resolveSuccess(opts, noopLogger)
 
     expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
       pr_status: 'open',
