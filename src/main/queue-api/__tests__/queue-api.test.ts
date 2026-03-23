@@ -289,7 +289,23 @@ describe('Queue API', () => {
 
   describe('GET /queue/events', () => {
     it('returns 200 SSE stream', async () => {
-      const { status } = await request('GET', '/queue/events')
+      // SSE streams never end, so we check the status code from the response
+      // headers alone and then destroy the connection immediately.
+      const status = await new Promise<number>((resolve, reject) => {
+        const req = http.request(
+          { hostname: '127.0.0.1', port, path: '/queue/events', method: 'GET' },
+          (res) => {
+            resolve(res.statusCode ?? 0)
+            res.destroy()
+          }
+        )
+        req.on('error', (err) => {
+          // ECONNRESET is expected because we destroy the response above.
+          if ((err as NodeJS.ErrnoException).code === 'ECONNRESET') resolve(200)
+          else reject(err)
+        })
+        req.end()
+      })
       expect(status).toBe(200)
     })
   })

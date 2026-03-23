@@ -47,6 +47,9 @@ export function stopQueueApi(): Promise<void> {
       resolve()
       return
     }
+    // closeAllConnections() destroys keep-alive and SSE connections so that
+    // server.close() can complete without waiting for them to idle out.
+    server.closeAllConnections()
     server.close((err) => {
       server = null
       if (err) reject(err)
