@@ -8,17 +8,24 @@ interface ThemeStore {
   setTheme: (t: Theme) => void
 }
 
-const saved = localStorage.getItem('bde-theme') as Theme | null
-
 function applyTheme(t: Theme): void {
   if (t === 'light') document.documentElement.classList.add('theme-light')
   else document.documentElement.classList.remove('theme-light')
 }
 
-applyTheme(saved ?? 'dark')
+function loadSavedTheme(): Theme {
+  try {
+    return (localStorage.getItem('bde-theme') as Theme | null) ?? 'dark'
+  } catch {
+    return 'dark'
+  }
+}
+
+const initialTheme = loadSavedTheme()
+applyTheme(initialTheme)
 
 export const useThemeStore = create<ThemeStore>((set) => ({
-  theme: saved ?? 'dark',
+  theme: initialTheme,
   toggleTheme: () =>
     set((s) => {
       const next = s.theme === 'dark' ? 'light' : 'dark'

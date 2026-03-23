@@ -1,4 +1,4 @@
-import type { AgentHandle } from './types'
+import type { AgentHandle, Logger } from './types'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
@@ -26,6 +26,7 @@ export async function spawnAgent(opts: {
   prompt: string
   cwd: string
   model: string
+  logger?: Logger
 }): Promise<AgentHandle> {
   const env = { ...process.env }
 
@@ -43,18 +44,19 @@ export async function spawnAgent(opts: {
   // Try SDK first, fall back to CLI
   try {
     const sdk = await import('@anthropic-ai/claude-agent-sdk')
-    return spawnViaSdk(sdk, opts, env)
+    return spawnViaSdk(sdk, opts, env, opts.logger)
   } catch {
     // SDK not available — use CLI fallback
   }
 
-  return spawnViaCli(opts, env)
+  return spawnViaCli(opts, env, opts.logger)
 }
 
 function spawnViaSdk(
   sdk: typeof import('@anthropic-ai/claude-agent-sdk'),
   opts: { prompt: string; cwd: string; model: string },
   env: NodeJS.ProcessEnv,
+  logger?: Logger,
 ): AgentHandle {
   const abortController = new AbortController()
 
@@ -94,12 +96,11 @@ function spawnViaSdk(
       abortController.abort()
     },
     async steer(message: string) {
-      console.warn(`[agent-manager] Steer in SDK mode is limited — message may not reach agent: "${message.slice(0, 100)}"`)
+      ;(logger ?? console).warn(`[agent-manager] Steer in SDK mode is limited — message may not reach agent: "${message.slice(0, 100)}"`)
       await queryResult.interrupt()
       // Re-send via streamInput is not straightforward for a single query.
       // The interrupt signals the agent, then we log the steer message intention.
       // Full steer support requires streaming input mode; this is best-effort.
-      void message
     },
   }
 }
@@ -107,6 +108,7 @@ function spawnViaSdk(
 function spawnViaCli(
   opts: { prompt: string; cwd: string; model: string },
   env: NodeJS.ProcessEnv,
+  _logger?: Logger,
 ): AgentHandle {
   const child = spawn(
     'claude',
@@ -126,6 +128,9 @@ function spawnViaCli(
       stdio: ['pipe', 'pipe', 'pipe'],
     },
   )
+
+  // Drain stderr to prevent pipe buffer backpressure
+  child.stderr.resume()
 
   const sessionId = randomUUID()
 
@@ -163,6 +168,7 @@ function spawnViaCli(
       child.kill('SIGTERM')
     },
     async steer(message: string) {
+      if (!child.stdin.writable) return
       child.stdin.write(
         JSON.stringify({
           type: 'user',

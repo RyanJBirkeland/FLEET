@@ -45,6 +45,8 @@ function resetMocks() {
   updateTaskMock.mockResolvedValue(null)
 }
 
+const noopLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+
 describe('resolveSuccess', () => {
   const opts = {
     taskId: 'task-1',
@@ -62,7 +64,7 @@ describe('resolveSuccess', () => {
       { stdout: 'https://github.com/owner/repo/pull/42\n' },   // gh pr create
     ])
 
-    await resolveSuccess(opts)
+    await resolveSuccess(opts, noopLogger)
 
     const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
 
@@ -103,7 +105,7 @@ describe('resolveSuccess', () => {
     })
   })
 
-  it('pushes branch and updates task without PR info when gh pr create fails', async () => {
+  it('pushes branch and records notes when gh pr create fails (does not set pr_status=open)', async () => {
     mockExecFileSequence([
       { stdout: 'agent/add-login-page\n' },             // git rev-parse
       { stdout: '' },                                    // git push
@@ -111,16 +113,16 @@ describe('resolveSuccess', () => {
     ])
 
     // Should not throw — user can create PR manually
-    await resolveSuccess(opts)
+    await resolveSuccess(opts, noopLogger)
 
-    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
-      pr_status: 'open',
-    })
-
-    // PR url and number should not be included in the patch
+    // Should NOT set pr_status=open when PR creation failed
     const patch = updateTaskMock.mock.calls[0][1] as Record<string, unknown>
+    expect(patch.pr_status).toBeUndefined()
     expect(patch.pr_url).toBeUndefined()
     expect(patch.pr_number).toBeUndefined()
+
+    // Should record branch name in notes so user can create PR manually
+    expect(patch.notes).toBe('Branch agent/add-login-page pushed but PR creation failed')
   })
 })
 

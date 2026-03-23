@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolveDependents } from '../resolve-dependents'
+import { createDependencyIndex } from '../dependency-index'
 import type { DependencyIndex } from '../dependency-index'
 import type { TaskDependency } from '../../../shared/types'
 
@@ -18,8 +19,6 @@ function makeIndex(dependentsMap: Record<string, string[]>): DependencyIndex {
   const TERMINAL = new Set(['done', 'cancelled', 'failed', 'error'])
   return {
     rebuild: () => {},
-    update: () => {},
-    remove: () => {},
     getDependents(taskId: string): Set<string> {
       return new Set(dependentsMap[taskId] ?? [])
     },
@@ -179,5 +178,65 @@ describe('resolveDependents', () => {
     ).resolves.not.toThrow()
 
     expect(updateTask).not.toHaveBeenCalled()
+  })
+
+  it('skips dependents that are not in blocked status', async () => {
+    const index = createDependencyIndex()
+    index.rebuild([
+      { id: 'A', depends_on: [{ id: 'B', type: 'hard' }] },
+    ])
+    const getTask = vi.fn().mockResolvedValue({ id: 'A', status: 'done', depends_on: [{ id: 'B', type: 'hard' }] })
+    const update = vi.fn()
+
+    await resolveDependents('B', 'done', index, getTask, update)
+    expect(update).not.toHaveBeenCalled() // A is 'done', not 'blocked'
+  })
+
+  it('handles getTask throwing without crashing', async () => {
+    const index = createDependencyIndex()
+    index.rebuild([
+      { id: 'A', depends_on: [{ id: 'B', type: 'hard' }] },
+    ])
+    const getTask = vi.fn().mockRejectedValue(new Error('DB error'))
+    const update = vi.fn()
+
+    await resolveDependents('B', 'done', index, getTask, update)
+    expect(update).not.toHaveBeenCalled()
+  })
+
+  it('handles updateTask throwing during unblock without crashing', async () => {
+    const index = createDependencyIndex()
+    index.rebuild([
+      { id: 'A', depends_on: [{ id: 'B', type: 'hard' }] },
+      { id: 'C', depends_on: [{ id: 'B', type: 'soft' }] },
+    ])
+    // B is the completedTaskId so its status is seeded in the cache;
+    // getTask is only called once per dependent (A and C), not for B itself.
+    const getTask = vi.fn()
+      .mockResolvedValueOnce({ id: 'A', status: 'blocked', depends_on: [{ id: 'B', type: 'hard' }] })
+      .mockResolvedValueOnce({ id: 'C', status: 'blocked', depends_on: [{ id: 'B', type: 'soft' }] })
+    const update = vi.fn()
+      .mockRejectedValueOnce(new Error('DB error'))
+      .mockResolvedValueOnce(null)
+
+    await resolveDependents('B', 'done', index, getTask, update)
+    expect(update).toHaveBeenCalledTimes(2)
+  })
+
+  it('treats deleted dependency as satisfied', async () => {
+    const index = createDependencyIndex()
+    index.rebuild([
+      { id: 'A', depends_on: [{ id: 'B', type: 'hard' }, { id: 'DELETED', type: 'hard' }] },
+    ])
+    const getTask = vi.fn()
+      .mockImplementation((id: string) => {
+        if (id === 'A') return Promise.resolve({ id: 'A', status: 'blocked', depends_on: [{ id: 'B', type: 'hard' }, { id: 'DELETED', type: 'hard' }] })
+        if (id === 'B') return Promise.resolve({ id: 'B', status: 'done', depends_on: null })
+        return Promise.resolve(null)
+      })
+    const update = vi.fn()
+
+    await resolveDependents('B', 'done', index, getTask, update)
+    expect(update).toHaveBeenCalledWith('A', { status: 'queued' })
   })
 })

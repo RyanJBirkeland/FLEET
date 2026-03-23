@@ -1,4 +1,11 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+
+vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => '/tmp'), getName: vi.fn(() => 'BDE'), getVersion: vi.fn(() => '0.0.0') },
+  BrowserWindow: { getAllWindows: vi.fn(() => []) },
+  ipcMain: { handle: vi.fn(), on: vi.fn() },
+  dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn(), showMessageBox: vi.fn() },
+}))
 import Database from 'better-sqlite3'
 import { mkdirSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'

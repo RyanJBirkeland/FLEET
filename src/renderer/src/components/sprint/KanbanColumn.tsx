@@ -71,63 +71,44 @@ export const KanbanColumn = memo(function KanbanColumn({
   const setNodeRef = (readOnly || wipFull) ? undefined : droppable.setNodeRef
   const ids = tasks.map((t) => t.id)
 
+  const renderTasks = () => {
+    if (tasks.length === 0) {
+      return (
+        <div className="kanban-col__empty">
+          <EmptyState title={EMPTY_LABELS[status]} />
+          {!readOnly && <span className="kanban-col__drop-hint">Drop cards here</span>}
+        </div>
+      )
+    }
+    return tasks.map((task, i) => (
+      <motion.div
+        key={task.id}
+        layoutId={reduced || tasks.length > 10 ? undefined : task.id}
+        transition={reduced ? REDUCED_TRANSITION : SPRINGS.default}
+      >
+        <TaskCard
+          task={task}
+          index={i}
+          prMerged={prMergedMap[task.id] ?? false}
+          isGenerating={!readOnly ? (generatingIds?.has(task.id) ?? false) : undefined}
+          onPushToSprint={onPushToSprint}
+          onLaunch={onLaunch}
+          onViewSpec={onViewSpec}
+          onViewOutput={onViewOutput}
+          onMarkDone={onMarkDone}
+          onStop={onStop}
+        />
+      </motion.div>
+    ))
+  }
+
   const content = (
     <div className="kanban-col__cards">
       {readOnly ? (
-        tasks.length === 0 ? (
-          <div className="kanban-col__empty">
-            <EmptyState title={EMPTY_LABELS[status]} />
-          </div>
-        ) : (
-          tasks.map((task, i) => (
-            <motion.div
-              key={task.id}
-              layoutId={reduced || tasks.length > 10 ? undefined : task.id}
-              transition={reduced ? REDUCED_TRANSITION : SPRINGS.default}
-            >
-              <TaskCard
-                task={task}
-                index={i}
-                prMerged={prMergedMap[task.id] ?? false}
-                onPushToSprint={onPushToSprint}
-                onLaunch={onLaunch}
-                onViewSpec={onViewSpec}
-                onViewOutput={onViewOutput}
-                onMarkDone={onMarkDone}
-                onStop={onStop}
-              />
-            </motion.div>
-          ))
-        )
+        renderTasks()
       ) : (
         <SortableContext items={ids} strategy={verticalListSortingStrategy}>
-          {tasks.length === 0 ? (
-            <div className="kanban-col__empty">
-              <EmptyState title={EMPTY_LABELS[status]} />
-              <span className="kanban-col__drop-hint">Drop cards here</span>
-            </div>
-          ) : (
-            tasks.map((task, i) => (
-              <motion.div
-                key={task.id}
-                layoutId={reduced || tasks.length > 10 ? undefined : task.id}
-                transition={reduced ? REDUCED_TRANSITION : SPRINGS.default}
-              >
-                <TaskCard
-                  task={task}
-                  index={i}
-                  prMerged={prMergedMap[task.id] ?? false}
-                  isGenerating={generatingIds?.has(task.id) ?? false}
-                  onPushToSprint={onPushToSprint}
-                  onLaunch={onLaunch}
-                  onViewSpec={onViewSpec}
-                  onViewOutput={onViewOutput}
-                  onMarkDone={onMarkDone}
-                  onStop={onStop}
-                />
-              </motion.div>
-            ))
-          )}
+          {renderTasks()}
         </SortableContext>
       )}
     </div>

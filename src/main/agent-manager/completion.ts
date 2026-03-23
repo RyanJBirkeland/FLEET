@@ -2,6 +2,7 @@ import { execFile as execFileCb } from 'node:child_process'
 import { promisify } from 'node:util'
 import { updateTask } from '../data/sprint-queries'
 import { MAX_RETRIES } from './types'
+import type { Logger } from './types'
 
 const execFile = promisify(execFileCb)
 
@@ -30,7 +31,7 @@ function parsePrOutput(stdout: string): { prUrl: string | null; prNumber: number
   return { prUrl: urlMatch[0], prNumber: parseInt(urlMatch[1], 10) }
 }
 
-export async function resolveSuccess(opts: ResolveSuccessOpts): Promise<void> {
+export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): Promise<void> {
   const { taskId, worktreePath, title, ghRepo } = opts
 
   // 1. Detect current branch
@@ -40,7 +41,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts): Promise<void> {
     { cwd: worktreePath, env: EXEC_ENV }
   )
   const branch = branchOut.trim()
-  console.log(`[completion] Task ${taskId}: pushing branch ${branch}`)
+  logger.info(`[completion] Task ${taskId}: pushing branch ${branch}`)
 
   // 2. Push branch to origin (skip pre-push hooks — agent code is reviewed via PR)
   await execFile('git', ['push', '--no-verify', 'origin', branch], { cwd: worktreePath, env: EXEC_ENV })
@@ -58,15 +59,17 @@ export async function resolveSuccess(opts: ResolveSuccessOpts): Promise<void> {
     prUrl = parsed.prUrl
     prNumber = parsed.prNumber
   } catch (err) {
-    console.error(`[completion] gh pr create failed for task ${taskId}:`, err)
+    logger.warn(`[completion] gh pr create failed for task ${taskId}: ${err}`)
     // User can create PR manually from the pushed branch — do not throw
   }
 
   // 4. Update task with PR info (task stays active; SprintPrPoller handles done on merge)
-  const patch: Record<string, unknown> = { pr_status: 'open' }
-  if (prUrl !== null) patch.pr_url = prUrl
-  if (prNumber !== null) patch.pr_number = prNumber
-  await updateTask(taskId, patch)
+  if (prUrl !== null && prNumber !== null) {
+    await updateTask(taskId, { pr_status: 'open', pr_url: prUrl, pr_number: prNumber })
+  } else {
+    // Push succeeded but PR creation failed — record branch name so user can create PR manually
+    await updateTask(taskId, { notes: `Branch ${branch} pushed but PR creation failed` })
+  }
 }
 
 export async function resolveFailure(opts: ResolveFailureOpts): Promise<void> {

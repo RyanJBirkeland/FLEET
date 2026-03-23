@@ -92,8 +92,10 @@ describe('listTasks', () => {
   it('returns all tasks when no status filter', async () => {
     const tasks = [{ id: '1', title: 'A' }, { id: '2', title: 'B' }]
     const chain = chainable()
-    // The terminal call (last in chain) resolves the data
-    ;(chain.order as ReturnType<typeof vi.fn>).mockResolvedValue({ data: tasks, error: null })
+    // First .order() returns the chain; second .order() resolves the data
+    ;(chain.order as ReturnType<typeof vi.fn>)
+      .mockReturnValueOnce(chain)
+      .mockResolvedValue({ data: tasks, error: null })
     mockSelect.mockReturnValue(chain)
 
     const result = await listTasks()
@@ -103,7 +105,8 @@ describe('listTasks', () => {
   it('returns only tasks matching status filter', async () => {
     const tasks = [{ id: '2', title: 'B', status: 'queued' }]
     const chain = chainable()
-    ;(chain.order as ReturnType<typeof vi.fn>).mockResolvedValue({ data: tasks, error: null })
+    // Both .order() calls return the chain; .eq() is the terminal call
+    ;(chain.eq as ReturnType<typeof vi.fn>).mockResolvedValue({ data: tasks, error: null })
     mockSelect.mockReturnValue(chain)
 
     const result = await listTasks('queued')

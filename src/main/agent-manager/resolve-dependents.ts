@@ -1,5 +1,6 @@
 import type { DependencyIndex } from './dependency-index'
 import type { SprintTask, TaskDependency } from '../../shared/types'
+import type { Logger } from './types'
 
 /**
  * When a task reaches a terminal status, check all tasks that depend on it.
@@ -17,6 +18,7 @@ export async function resolveDependents(
     id: string,
   ) => Promise<(Pick<SprintTask, 'id' | 'status'> & { depends_on: TaskDependency[] | null }) | null>,
   updateTask: (id: string, patch: Record<string, unknown>) => Promise<unknown>,
+  logger?: Logger,
 ): Promise<void> {
   const dependents = index.getDependents(completedTaskId)
   if (dependents.size === 0) return
@@ -49,7 +51,7 @@ export async function resolveDependents(
         await updateTask(depId, { status: 'queued' })
       }
     } catch (err) {
-      console.warn(`[resolve-dependents] Error resolving dependent ${depId}:`, err)
+      ;(logger ?? console).warn(`[resolve-dependents] Error resolving dependent ${depId}: ${err}`)
     }
   }
 }

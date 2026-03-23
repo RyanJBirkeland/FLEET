@@ -1,4 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+
+vi.mock('electron', () => ({
+  app: { getPath: vi.fn(() => '/tmp'), getName: vi.fn(() => 'BDE'), getVersion: vi.fn(() => '0.0.0') },
+  BrowserWindow: { getAllWindows: vi.fn(() => []) },
+  ipcMain: { handle: vi.fn(), on: vi.fn() },
+  dialog: { showOpenDialog: vi.fn(), showSaveDialog: vi.fn(), showMessageBox: vi.fn() },
+}))
 import { join, resolve } from 'path'
 import { homedir, tmpdir } from 'os'
 import { validateMemoryPath, validateLogPath, validateSafePath, readMemoryFile } from '../fs'
@@ -17,7 +24,7 @@ vi.mock('fs/promises', async (importOriginal) => {
 
 import { stat, readFile } from 'fs/promises'
 
-const MEMORY_ROOT = resolve(homedir(), '.openclaw/workspace/memory')
+const MEMORY_ROOT = resolve(homedir(), '.bde/memory')
 const AGENT_LOGS_ROOT = resolve(homedir(), '.bde/agent-logs')
 
 describe('validateMemoryPath', () => {

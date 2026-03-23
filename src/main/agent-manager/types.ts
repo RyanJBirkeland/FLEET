@@ -26,6 +26,9 @@ export const SIGTERM_GRACE_MS = 5_000
 export const RATE_LIMIT_COOLDOWN_MS = 60_000
 export const ORPHAN_CHECK_INTERVAL_MS = 60_000
 export const WORKTREE_PRUNE_INTERVAL_MS = 5 * 60 * 1000
+export const SPAWN_TIMEOUT_MS = 60_000
+export const QUEUE_TIMEOUT_MS = 10_000
+export const INITIAL_DRAIN_DEFER_MS = 5_000
 
 export interface AgentHandle {
   messages: AsyncIterable<unknown>
@@ -45,4 +48,10 @@ export interface ActiveAgent {
   costUsd: number
   tokensIn: number
   tokensOut: number
+}
+
+export interface Logger {
+  info(msg: string): void
+  warn(msg: string): void
+  error(msg: string): void
 }

@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { Pencil, Trash2 } from 'lucide-react'
 import { Button } from '../ui/Button'
-import { EmptyState } from '../ui/EmptyState'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { toast } from '../../stores/toasts'
-import { renderMarkdown } from '../../lib/render-markdown'
 import { TASK_STATUS } from '../../../../shared/constants'
 import type { SprintTask } from './SprintCenter'
+import { SpecEditor } from './SpecEditor'
+import { SpecViewer } from './SpecViewer'
 
 function extractSpecPath(prompt: string): string | null {
   const match = prompt.match(/docs\/specs\/[\w-]+\.md/)
@@ -31,7 +31,6 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
   const [dirty, setDirty] = useState(false)
   const [showPrompt, setShowPrompt] = useState(false)
   const [titleDraft, setTitleDraft] = useState('')
-  const editorRef = useRef<HTMLTextAreaElement>(null)
   const resolvedContentRef = useRef('')
 
   useEffect(() => {
@@ -130,10 +129,6 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
     return () => window.removeEventListener('keydown', handler)
   }, [task, editing, dirty, save, onClose, confirm])
 
-  useEffect(() => {
-    if (editing) editorRef.current?.focus()
-  }, [editing])
-
   const isOpen = task !== null
 
   return (
@@ -210,27 +205,12 @@ export function SpecDrawer({ task, onClose, onSave, onLaunch, onPushToSprint, on
 
             <div className="spec-drawer__body">
               {editing ? (
-                <textarea
-                  ref={editorRef}
-                  className="spec-drawer__editor"
+                <SpecEditor
                   value={draft}
-                  onChange={(e) => {
-                    setDraft(e.target.value)
-                    setDirty(true)
-                  }}
-                  placeholder="Write your spec in markdown..."
-                />
-              ) : draft ? (
-                <div
-                  className="spec-drawer__rendered"
-                  dangerouslySetInnerHTML={{ __html: renderMarkdown(draft) }}
+                  onChange={(v) => { setDraft(v); setDirty(true) }}
                 />
               ) : (
-                <EmptyState
-                  title="No spec yet"
-                  description="Write a spec to guide the agent"
-                  action={{ label: 'Write Spec', onClick: () => setEditing(true) }}
-                />
+                <SpecViewer content={draft} onEdit={() => setEditing(true)} />
               )}
             </div>
 
