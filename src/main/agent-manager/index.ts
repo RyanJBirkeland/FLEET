@@ -199,6 +199,10 @@ export function createAgentManager(
       tokensOut: 0,
     }
     activeAgents.set(task.id, agent)
+    // Persist agent_run_id so LogDrawer can find logs after restart
+    await updateTask(task.id, { agent_run_id: agentRunId }).catch((err) =>
+      logger.warn(`[agent-manager] Failed to persist agent_run_id for task ${task.id}: ${err}`)
+    )
     concurrency = { ...concurrency, activeCount: concurrency.activeCount + 1 }
 
     // Consume messages
@@ -461,7 +465,7 @@ export function createAgentManager(
     }, config.pollIntervalMs)
     watchdogTimer = setInterval(watchdogLoop, WATCHDOG_INTERVAL_MS)
     orphanTimer = setInterval(() => { orphanLoop().catch((err) => logger.warn(`[agent-manager] Orphan loop error: ${err}`)) }, ORPHAN_CHECK_INTERVAL_MS)
-    pruneTimer = setInterval(() => { pruneLoop().catch(() => {}) }, WORKTREE_PRUNE_INTERVAL_MS)
+    pruneTimer = setInterval(() => { pruneLoop().catch((err) => logger.warn(`[agent-manager] Prune loop error: ${err}`)) }, WORKTREE_PRUNE_INTERVAL_MS)
 
     // Defer initial drain to let the event loop process (Supabase fetch needs this)
     setTimeout(() => {
