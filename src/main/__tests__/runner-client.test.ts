@@ -238,21 +238,14 @@ describe('runner-client', () => {
       })
     })
 
-    it('returns parsed JSON from a non-200 response (listAgents)', async () => {
-      // runner-client.listAgents() calls res.json() regardless of status
+    it('throws on a non-200 response (listAgents)', async () => {
       resetMock(500, { error: 'internal server error' })
-
-      const result = await listAgents()
-
-      expect(result).toEqual({ error: 'internal server error' })
+      await expect(listAgents()).rejects.toThrow('listAgents failed: 500')
     })
 
-    it('returns parsed JSON from a non-200 response (steerAgent)', async () => {
+    it('throws on a non-200 response (steerAgent)', async () => {
       resetMock(503, { error: 'runner overloaded' })
-
-      const result = await steerAgent('a1', 'nudge')
-
-      expect(result).toEqual({ error: 'runner overloaded' })
+      await expect(steerAgent('a1', 'hello')).rejects.toThrow('steerAgent failed: 503')
     })
   })
 })
