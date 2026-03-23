@@ -130,6 +130,7 @@ describe('Queue API', () => {
           done: 10,
           failed: 0,
           cancelled: 1,
+          error: 0,
         },
       })
     })
@@ -248,7 +249,7 @@ describe('Queue API', () => {
         executorId: 'runner-1',
       })
       expect(status).toBe(200)
-      expect(body).toEqual(claimed)
+      expect(body).toEqual({ id: 'abc', status: 'active', claimedBy: 'runner-1' })
       expect(mockClaimTask).toHaveBeenCalledWith('abc', 'runner-1')
     })
 
@@ -274,7 +275,7 @@ describe('Queue API', () => {
 
       const { status, body } = await request('POST', '/queue/tasks/abc/release')
       expect(status).toBe(200)
-      expect(body).toEqual(released)
+      expect(body).toEqual({ id: 'abc', status: 'queued', claimedBy: null })
       expect(mockReleaseTask).toHaveBeenCalledWith('abc')
     })
 
