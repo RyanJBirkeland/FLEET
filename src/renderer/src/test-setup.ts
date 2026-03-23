@@ -2,6 +2,21 @@ import '@testing-library/jest-dom'
 import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
 
+// Ensure localStorage is available before any store modules load.
+// jsdom provides localStorage but it may not be fully functional when the
+// --localstorage-file flag is used without a valid path.
+if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localStorage.getItem !== 'function') {
+  const store: Record<string, string> = {}
+  globalThis.localStorage = {
+    getItem: (key: string) => store[key] ?? null,
+    setItem: (key: string, value: string) => { store[key] = value },
+    removeItem: (key: string) => { delete store[key] },
+    clear: () => { Object.keys(store).forEach(k => delete store[k]) },
+    get length() { return Object.keys(store).length },
+    key: (i: number) => Object.keys(store)[i] ?? null,
+  } as Storage
+}
+
 afterEach(() => cleanup())
 
 // Global window.api mock (centralized — no more per-file duplication)
