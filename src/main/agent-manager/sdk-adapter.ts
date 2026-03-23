@@ -2,41 +2,21 @@ import type { AgentHandle } from './types'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
-// Cache the OAuth token — Keychain access via execFileSync hangs Electron's
-// main process. Read from Claude Code's credentials file on disk instead,
-// with async execFile fallback.
+// Cache the OAuth token from ~/.bde/oauth-token (written by BDE startup scripts
+// or `claude login`). Keychain access (security CLI) hangs in Electron's main
+// process, so we use a file-based approach instead.
+import { readFileSync, existsSync } from 'node:fs'
+import { join } from 'node:path'
+import { homedir } from 'node:os'
+
 let cachedOAuthToken: string | null = null
 
 export function preloadOAuthToken(): void {
+  const tokenPath = join(homedir(), '.bde', 'oauth-token')
   try {
-    const { readFileSync, existsSync } = require('node:fs')
-    const { join } = require('node:path')
-    const { homedir } = require('node:os')
-
-    // Check for cached credentials file
-    const credPaths = [
-      join(homedir(), '.claude', 'credentials.json'),
-      join(homedir(), '.claude', '.credentials.json'),
-    ]
-
-    for (const p of credPaths) {
-      if (existsSync(p)) {
-        const raw = readFileSync(p, 'utf8')
-        const payload = JSON.parse(raw)
-        cachedOAuthToken = payload?.claudeAiOauth?.accessToken ?? null
-        if (cachedOAuthToken) return
-      }
+    if (existsSync(tokenPath)) {
+      cachedOAuthToken = readFileSync(tokenPath, 'utf8').trim()
     }
-
-    // Fallback: read from Keychain asynchronously (non-blocking)
-    const { execFile: execFileCb } = require('node:child_process')
-    execFileCb('security', ['find-generic-password', '-s', 'Claude Code-credentials', '-w'], { timeout: 5000 }, (err: Error | null, stdout: string) => {
-      if (err || !stdout) return
-      try {
-        const payload = JSON.parse(stdout.trim())
-        cachedOAuthToken = payload?.claudeAiOauth?.accessToken ?? null
-      } catch { /* ignore */ }
-    })
   } catch {
     cachedOAuthToken = null
   }
