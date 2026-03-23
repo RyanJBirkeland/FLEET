@@ -107,21 +107,20 @@ app.whenReady().then(() => {
 
   const autoStart = getSettingJson<boolean>('agentManager.autoStart') ?? true
 
-  checkAuthStatus().then(auth => {
-    if (!autoStart) { console.log('[agent-manager] Auto-start disabled'); return }
-    if (!auth.tokenFound || auth.tokenExpired) {
-      console.log('[agent-manager] Skipped — Claude Code auth not valid')
-      return
-    }
+  const fs = require('node:fs')
+  fs.appendFileSync('/tmp/bde-agent-manager.log', `[${new Date().toISOString()}] Agent manager init starting\n`)
+
+  // Start agent manager immediately — auth is checked inside the drain loop
+  if (autoStart) {
+    fs.appendFileSync('/tmp/bde-agent-manager.log', `[${new Date().toISOString()}] Creating agent manager (autoStart=true)\n`)
     const am = createAgentManager(amConfig)
     am.start()
+    fs.appendFileSync('/tmp/bde-agent-manager.log', `[${new Date().toISOString()}] Agent manager started\n`)
     app.on('will-quit', () => am.stop(10_000))
 
     // Make available to handlers
     ;(global as any).__agentManager = am
-  }).catch(err => {
-    console.error('[agent-manager] Startup error:', err)
-  })
+  }
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

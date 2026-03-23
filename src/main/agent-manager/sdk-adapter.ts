@@ -46,7 +46,7 @@ function spawnViaSdk(
   async function* wrapMessages(): AsyncIterable<unknown> {
     for await (const msg of queryResult) {
       const m = msg as { session_id?: string }
-      if (m.session_id && resolvedSessionId === resolvedSessionId) {
+      if (m.session_id && resolvedSessionId !== m.session_id) {
         resolvedSessionId = m.session_id as ReturnType<typeof randomUUID>
       }
       yield msg

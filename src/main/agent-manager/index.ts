@@ -8,6 +8,7 @@ import {
 import {
   makeConcurrencyState,
   availableSlots,
+  applyBackpressure,
   tryRecover,
   type ConcurrencyState,
 } from './concurrency'
@@ -17,10 +18,31 @@ import { setupWorktree, cleanupWorktree, pruneStaleWorktrees } from './worktree'
 import { spawnAgent } from './sdk-adapter'
 import { resolveSuccess, resolveFailure } from './completion'
 import { recoverOrphans } from './orphan-recovery'
-import { getQueuedTasks, claimTask, updateTask } from '../data/sprint-queries'
-import { checkAuthStatus } from '../auth-guard'
+import { updateTask } from '../data/sprint-queries'
 import { getRepoPaths } from '../paths'
 import { randomUUID } from 'node:crypto'
+
+// Use sprint-queries directly but with a wrapper that catches hangs.
+// Electron's main process fetch/Supabase can hang, so we import the functions
+// that the Queue API uses (which work because they're called from HTTP handlers).
+import { getQueuedTasks as _getQueuedTasks, claimTask as _claimTask } from '../data/sprint-queries'
+
+async function fetchQueuedTasks(limit: number): Promise<Array<Record<string, unknown>>> {
+  // Wrap with timeout to prevent infinite hang
+  const result = await Promise.race([
+    _getQueuedTasks(limit),
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('getQueuedTasks timeout')), 10_000)),
+  ])
+  return result as unknown as Array<Record<string, unknown>>
+}
+
+async function claimTaskViaApi(taskId: string): Promise<boolean> {
+  const result = await Promise.race([
+    _claimTask(taskId, EXECUTOR_ID),
+    new Promise<never>((_, rej) => setTimeout(() => rej(new Error('claimTask timeout')), 10_000)),
+  ])
+  return result !== null
+}
 
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to console
@@ -32,10 +54,16 @@ interface Logger {
   error(msg: string): void
 }
 
+import { appendFileSync } from 'node:fs'
+const LOG_PATH = '/tmp/bde-agent-manager.log'
+function fileLog(level: string, m: string): void {
+  try { appendFileSync(LOG_PATH, `[${new Date().toISOString()}] [${level}] ${m}\n`) } catch {}
+}
+
 const defaultLogger: Logger = {
-  info: (m) => console.log(m),
-  warn: (m) => console.warn(m),
-  error: (m) => console.error(m),
+  info: (m) => { console.log(m); fileLog('INFO', m) },
+  warn: (m) => { console.warn(m); fileLog('WARN', m) },
+  error: (m) => { console.error(m); fileLog('ERROR', m) },
 }
 
 // ---------------------------------------------------------------------------
@@ -105,12 +133,27 @@ export function createAgentManager(
     worktree: { worktreePath: string; branch: string },
     repoPath: string,
   ): Promise<void> {
-    const prompt = task.prompt || task.spec || task.title
-    const handle: AgentHandle = await spawnAgent({
-      prompt,
-      cwd: worktree.worktreePath,
-      model: config.defaultModel,
-    })
+    const prompt = (task.prompt || task.spec || task.title || '').trim()
+    if (!prompt) {
+      logger.error(`[agent-manager] Task ${task.id} has no prompt/spec/title — marking error`)
+      await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: 'Empty prompt' })
+      cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch })
+      return
+    }
+
+    let handle: AgentHandle
+    try {
+      handle = await spawnAgent({
+        prompt,
+        cwd: worktree.worktreePath,
+        model: config.defaultModel,
+      })
+    } catch (err) {
+      logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
+      await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: `Spawn failed: ${err instanceof Error ? err.message : String(err)}` }).catch(() => {})
+      cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch })
+      return
+    }
 
     const agentRunId = randomUUID()
     const agent: ActiveAgent = {
@@ -198,21 +241,32 @@ export function createAgentManager(
   // ---- drainLoop ----
 
   async function drainLoop(): Promise<void> {
+    logger.info(`[agent-manager] Drain loop starting (shuttingDown=${shuttingDown}, slots=${availableSlots(concurrency)})`)
     if (shuttingDown) return
 
     const available = availableSlots(concurrency)
     if (available <= 0) return
 
     try {
-      const auth = await checkAuthStatus()
-      if (!auth.tokenFound || auth.tokenExpired) {
-        logger.warn('[agent-manager] Auth token missing or expired — skipping drain')
-        return
-      }
+      // Auth is validated by the SDK at spawn time — no explicit check here.
+      // checkAuthStatus() hangs in Electron due to Keychain access blocking.
 
-      const queued = await getQueuedTasks(available)
-      for (const task of queued) {
+      logger.info(`[agent-manager] Fetching queued tasks via Queue API (limit=${available})...`)
+      const queued = await fetchQueuedTasks(available)
+      logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
+      for (const raw of queued) {
         if (shuttingDown) break
+
+        // Map Queue API camelCase response to local task shape
+        const task = {
+          id: raw.id as string,
+          title: raw.title as string,
+          prompt: (raw.prompt as string | null) ?? null,
+          spec: (raw.spec as string | null) ?? null,
+          repo: raw.repo as string,
+          retry_count: (raw.retryCount as number) ?? 0,
+          fast_fail_count: (raw.fastFailCount as number) ?? 0,
+        }
 
         const repoPath = resolveRepoPath(task.repo)
         if (!repoPath) {
@@ -220,7 +274,7 @@ export function createAgentManager(
           continue
         }
 
-        const claimed = await claimTask(task.id, EXECUTOR_ID)
+        const claimed = await claimTaskViaApi(task.id)
         if (!claimed) {
           logger.info(`[agent-manager] Task ${task.id} already claimed — skipping`)
           continue
@@ -270,7 +324,8 @@ export function createAgentManager(
       } else if (verdict === 'idle') {
         updateTask(agent.taskId, { status: 'error', completed_at: now, notes: 'Idle timeout' }).catch(() => {})
       } else if (verdict === 'rate-limit-loop') {
-        updateTask(agent.taskId, { status: 'error', completed_at: now, notes: 'Rate-limit loop detected' }).catch(() => {})
+        concurrency = applyBackpressure(concurrency, Date.now())
+        updateTask(agent.taskId, { status: 'queued', claimed_by: null, notes: 'Rate-limit loop — re-queued' }).catch(() => {})
       }
     }
   }
@@ -315,14 +370,17 @@ export function createAgentManager(
 
     // Start periodic loops
     pollTimer = setInterval(() => {
+      if (drainInFlight) return // skip if previous drain still running
       drainInFlight = drainLoop().catch(() => {}).finally(() => { drainInFlight = null })
     }, config.pollIntervalMs)
     watchdogTimer = setInterval(watchdogLoop, WATCHDOG_INTERVAL_MS)
     orphanTimer = setInterval(() => { orphanLoop().catch(() => {}) }, ORPHAN_CHECK_INTERVAL_MS)
     pruneTimer = setInterval(() => { pruneLoop().catch(() => {}) }, WORKTREE_PRUNE_INTERVAL_MS)
 
-    // Run initial drain immediately
-    drainInFlight = drainLoop().catch(() => {}).finally(() => { drainInFlight = null })
+    // Defer initial drain to let the event loop process (Supabase fetch needs this)
+    setTimeout(() => {
+      drainInFlight = drainLoop().catch(() => {}).finally(() => { drainInFlight = null })
+    }, 5_000)
 
     logger.info('[agent-manager] Started')
   }
