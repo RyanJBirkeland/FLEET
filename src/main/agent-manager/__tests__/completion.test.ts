@@ -1,0 +1,161 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { promisify } from 'node:util'
+
+// Mock node:child_process before importing module under test.
+// We attach util.promisify.custom so that promisify(execFile) resolves to { stdout, stderr }
+// (matching real execFile behaviour) rather than the raw second callback argument.
+vi.mock('node:child_process', () => {
+  const execFile = vi.fn() as ReturnType<typeof vi.fn> & { [k: symbol]: unknown }
+  execFile[promisify.custom] = vi.fn()
+  return { execFile }
+})
+
+// Mock sprint-queries
+vi.mock('../../data/sprint-queries', () => ({
+  updateTask: vi.fn(),
+}))
+
+import { execFile } from 'node:child_process'
+import { updateTask } from '../../data/sprint-queries'
+import { resolveSuccess, resolveFailure } from '../completion'
+import { MAX_RETRIES } from '../types'
+
+const execFileMock = vi.mocked(execFile)
+const updateTaskMock = vi.mocked(updateTask)
+
+// completion.ts uses promisify(execFile). Because execFile[promisify.custom] is set,
+// promisify will delegate to the custom fn. We track calls there.
+function getCustomMock(): ReturnType<typeof vi.fn> {
+  return (execFileMock as unknown as Record<symbol, ReturnType<typeof vi.fn>>)[promisify.custom]
+}
+
+function mockExecFileSequence(responses: Array<{ stdout?: string; error?: Error }>) {
+  let callIndex = 0
+  getCustomMock().mockImplementation((..._args: unknown[]) => {
+    const resp = responses[callIndex] ?? { stdout: '' }
+    callIndex++
+    if (resp.error) return Promise.reject(resp.error)
+    return Promise.resolve({ stdout: resp.stdout ?? '', stderr: '' })
+  })
+}
+
+function resetMocks() {
+  getCustomMock().mockReset()
+  updateTaskMock.mockReset()
+  updateTaskMock.mockResolvedValue(null)
+}
+
+describe('resolveSuccess', () => {
+  const opts = {
+    taskId: 'task-1',
+    worktreePath: '/tmp/worktrees/task-1',
+    title: 'Add login page',
+    ghRepo: 'owner/repo',
+  }
+
+  beforeEach(resetMocks)
+
+  it('pushes the branch and creates PR, then updates task with PR info', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' },                    // git rev-parse
+      { stdout: '' },                                           // git push
+      { stdout: 'https://github.com/owner/repo/pull/42\n' },   // gh pr create
+    ])
+
+    await resolveSuccess(opts)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify git rev-parse was called with correct cwd
+    const revParseCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('rev-parse')
+    )
+    expect(revParseCall).toBeDefined()
+    expect((revParseCall![2] as { cwd: string }).cwd).toBe(opts.worktreePath)
+
+    // Verify git push with branch
+    const pushCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('push')
+    )
+    expect(pushCall).toBeDefined()
+    const pushArgs = pushCall![1] as string[]
+    expect(pushArgs).toContain('origin')
+    expect(pushArgs).toContain('agent/add-login-page')
+
+    // Verify gh pr create with correct arguments
+    const prCall = calls.find(
+      (c) => c[0] === 'gh' && Array.isArray(c[1]) && c[1].includes('create')
+    )
+    expect(prCall).toBeDefined()
+    const prArgs = prCall![1] as string[]
+    expect(prArgs).toContain('--title')
+    expect(prArgs).toContain(opts.title)
+    expect(prArgs).toContain('--head')
+    expect(prArgs).toContain('agent/add-login-page')
+    expect(prArgs).toContain('--repo')
+    expect(prArgs).toContain(opts.ghRepo)
+
+    // Verify updateTask called with PR info
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      pr_status: 'open',
+      pr_url: 'https://github.com/owner/repo/pull/42',
+      pr_number: 42,
+    })
+  })
+
+  it('pushes branch and updates task without PR info when gh pr create fails', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' },             // git rev-parse
+      { stdout: '' },                                    // git push
+      { error: new Error('gh: authentication error') }, // gh pr create fails
+    ])
+
+    // Should not throw — user can create PR manually
+    await resolveSuccess(opts)
+
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      pr_status: 'open',
+    })
+
+    // PR url and number should not be included in the patch
+    const patch = updateTaskMock.mock.calls[0][1] as Record<string, unknown>
+    expect(patch.pr_url).toBeUndefined()
+    expect(patch.pr_number).toBeUndefined()
+  })
+})
+
+describe('resolveFailure', () => {
+  beforeEach(() => {
+    updateTaskMock.mockReset()
+    updateTaskMock.mockResolvedValue(null)
+  })
+
+  it('re-queues task with incremented retry count when retries remain', async () => {
+    await resolveFailure({ taskId: 'task-2', retryCount: 1 })
+
+    expect(updateTaskMock).toHaveBeenCalledWith('task-2', {
+      status: 'queued',
+      retry_count: 2,
+      claimed_by: null,
+    })
+  })
+
+  it('marks task failed when retry count is exhausted', async () => {
+    await resolveFailure({ taskId: 'task-3', retryCount: MAX_RETRIES })
+
+    expect(updateTaskMock).toHaveBeenCalledOnce()
+    const patch = updateTaskMock.mock.calls[0][1] as Record<string, unknown>
+    expect(patch.status).toBe('failed')
+    expect(typeof patch.completed_at).toBe('string')
+  })
+
+  it('re-queues when retryCount is one below MAX_RETRIES', async () => {
+    await resolveFailure({ taskId: 'task-4', retryCount: MAX_RETRIES - 1 })
+
+    expect(updateTaskMock).toHaveBeenCalledWith('task-4', {
+      status: 'queued',
+      retry_count: MAX_RETRIES,
+      claimed_by: null,
+    })
+  })
+})
