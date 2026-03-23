@@ -174,8 +174,8 @@ Object.defineProperty(window, 'api', {
       reset: vi.fn().mockResolvedValue(undefined),
     },
     agentManager: {
-      status: vi.fn().mockResolvedValue({ activeCount: 0, availableSlots: 4 }),
-      kill: vi.fn().mockResolvedValue(true),
+      status: vi.fn().mockResolvedValue({ running: false, concurrency: null, activeAgents: [] }),
+      kill: vi.fn().mockResolvedValue({ ok: true }),
     },
   },
   writable: true,

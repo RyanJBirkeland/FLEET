@@ -20,6 +20,9 @@ import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
 import { startQueueApi, stopQueueApi } from './queue-api'
 import { pruneOldEvents } from './data/event-queries'
 import { getEventRetentionDays } from './config'
+import { createAgentManager } from './agent-manager'
+import { checkAuthStatus } from './auth-guard'
+import { getSetting, getSettingJson } from './settings'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -91,6 +94,34 @@ app.whenReady().then(() => {
   app.on('will-quit', () => stopQueueApi())
 
   pruneOldEvents(getDb(), getEventRetentionDays())
+
+  // --- Agent Manager initialization ---
+  const amConfig = {
+    maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
+    worktreeBase: getSetting('agentManager.worktreeBase') ?? '/tmp/worktrees/bde',
+    maxRuntimeMs: getSettingJson<number>('agentManager.maxRuntimeMs') ?? 3_600_000,
+    idleTimeoutMs: 900_000,
+    pollIntervalMs: 30_000,
+    defaultModel: getSetting('agentManager.defaultModel') ?? 'claude-sonnet-4-5',
+  }
+
+  const autoStart = getSettingJson<boolean>('agentManager.autoStart') ?? true
+
+  checkAuthStatus().then(auth => {
+    if (!autoStart) { console.log('[agent-manager] Auto-start disabled'); return }
+    if (!auth.tokenFound || auth.tokenExpired) {
+      console.log('[agent-manager] Skipped — Claude Code auth not valid')
+      return
+    }
+    const am = createAgentManager(amConfig)
+    am.start()
+    app.on('will-quit', () => am.stop(10_000))
+
+    // Make available to handlers
+    ;(global as any).__agentManager = am
+  }).catch(err => {
+    console.error('[agent-manager] Startup error:', err)
+  })
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

@@ -153,6 +153,7 @@ describe('IPC handlers integration', () => {
 
     beforeEach(() => {
       vi.clearAllMocks()
+      ;(global as any).__agentManager = undefined
     })
 
     it('registers agent-manager:status channel', () => {
@@ -163,41 +164,51 @@ describe('IPC handlers integration', () => {
       expect(handlers.has('agent-manager:kill')).toBe(true)
     })
 
-    it('agent-manager:status returns { activeCount, availableSlots } from runner', async () => {
-      mockListAgents.mockResolvedValue([{ id: 'a1' }, { id: 'a2' }])
+    it('agent-manager:status returns not-running when AgentManager is not set', async () => {
+      ;(global as any).__agentManager = undefined
 
       const result = (await invoke('agent-manager:status')) as {
-        activeCount: number
-        availableSlots: number | null
+        running: boolean
+        concurrency: unknown
+        activeAgents: unknown[]
       }
 
       expect(result).toEqual({
-        activeCount: 2,
-        availableSlots: null,
+        running: false,
+        concurrency: null,
+        activeAgents: [],
       })
     })
 
-    it('agent-manager:status returns zero when runner is unreachable', async () => {
-      mockListAgents.mockRejectedValue(new Error('Connection refused'))
-
-      const result = (await invoke('agent-manager:status')) as {
-        activeCount: number
-        availableSlots: number | null
+    it('agent-manager:status delegates to AgentManager when available', async () => {
+      const mockStatus = {
+        running: true,
+        shuttingDown: false,
+        concurrency: { maxSlots: 2, activeCount: 1, cooldownUntil: 0 },
+        activeAgents: [{ taskId: 't1', agentRunId: 'r1', model: 'claude-sonnet-4-5', startedAt: 0, lastOutputAt: 0, rateLimitCount: 0, costUsd: 0, tokensIn: 0, tokensOut: 0 }],
       }
+      ;(global as any).__agentManager = { getStatus: () => mockStatus }
 
-      expect(result).toEqual({
-        activeCount: 0,
-        availableSlots: null,
-      })
+      const result = await invoke('agent-manager:status')
+      expect(result).toEqual(mockStatus)
     })
 
-    it('agent-manager:kill calls killAgent on runner', async () => {
-      mockKillAgent.mockResolvedValue({ ok: true })
+    it('agent-manager:kill delegates to AgentManager when available', async () => {
+      const mockKillAgentFn = vi.fn()
+      ;(global as any).__agentManager = { killAgent: mockKillAgentFn }
 
-      const result = await invoke('agent-manager:kill', 'agent-123')
+      const result = await invoke('agent-manager:kill', 'task-123')
 
-      expect(mockKillAgent).toHaveBeenCalledWith('agent-123')
+      expect(mockKillAgentFn).toHaveBeenCalledWith('task-123')
       expect(result).toEqual({ ok: true })
+    })
+
+    it('agent-manager:kill throws when AgentManager is not available', async () => {
+      ;(global as any).__agentManager = undefined
+
+      await expect(invoke('agent-manager:kill', 'task-123')).rejects.toThrow(
+        'Agent manager not available'
+      )
     })
   })
 })

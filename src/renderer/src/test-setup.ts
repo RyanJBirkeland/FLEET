@@ -87,8 +87,8 @@ vi.stubGlobal('api', {
   killAgent: vi.fn().mockResolvedValue({ ok: true }),
   onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
   agentManager: {
-    status: vi.fn().mockResolvedValue({ activeCount: 0, availableSlots: 4 }),
-    kill: vi.fn().mockResolvedValue(true),
+    status: vi.fn().mockResolvedValue({ running: false, concurrency: null, activeAgents: [] }),
+    kill: vi.fn().mockResolvedValue({ ok: true }),
   },
   terminal: {
     create: vi.fn().mockResolvedValue(1),

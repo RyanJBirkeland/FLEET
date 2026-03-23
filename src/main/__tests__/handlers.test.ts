@@ -209,7 +209,7 @@ describe('IPC handler registration', () => {
     it('re-throws errors to the renderer (does not swallow)', async () => {
       // local:spawnClaudeAgent always throws — use it to test safeHandle error propagation
       await expect(invoke('local:spawnClaudeAgent', { repoPath: '/tmp/r', task: 'x' })).rejects.toThrow(
-        'no longer supported'
+        'Sprint board'
       )
     })
 
@@ -253,7 +253,7 @@ describe('IPC handler registration', () => {
 
     it('"local:spawnClaudeAgent" rejects (spawning removed from BDE)', async () => {
       await expect(invoke('local:spawnClaudeAgent', { repoPath: '/tmp/bde', task: 'fix bug' })).rejects.toThrow(
-        'no longer supported'
+        'Sprint board'
       )
     })
 

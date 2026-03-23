@@ -329,11 +329,25 @@ export interface AuthChannels {
 export interface AgentManagerChannels {
   'agent-manager:status': {
     args: []
-    result: { activeCount: number; availableSlots: number | null }
+    result: {
+      running: boolean
+      concurrency: { maxSlots: number; activeCount: number; cooldownUntil: number } | null
+      activeAgents: Array<{
+        taskId: string
+        agentRunId: string
+        model: string
+        startedAt: number
+        lastOutputAt: number
+        rateLimitCount: number
+        costUsd: number
+        tokensIn: number
+        tokensOut: number
+      }>
+    }
   }
   'agent-manager:kill': {
     args: [taskId: string]
-    result: boolean
+    result: { ok: boolean }
   }
 }
 

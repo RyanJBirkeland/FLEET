@@ -30,20 +30,31 @@ export function registerAgentHandlers(): void {
     }
   })
   safeHandle('local:spawnClaudeAgent', async () => {
-    // Agent spawning removed from BDE — dispatch tasks through the queue API instead
-    throw new Error('Agent spawning is no longer supported in BDE. Use the task queue to dispatch work to the task-runner.')
+    // Agent spawning is handled by the AgentManager drain loop.
+    // Manual spawn is not supported — queue the task instead.
+    throw new Error('Use the Sprint board to queue tasks. The Agent Manager will pick them up automatically.')
   })
   safeHandle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))
   safeHandle('local:sendToAgent', async (_e, { pid: _pid, message: _message }: { pid: number; message: string }) => {
     return { ok: false, error: 'Direct PID-based messaging removed. Use agent:steer with an agent ID instead.' } as const
   })
   safeHandle('local:isInteractive', () => false)
-  safeHandle('agent:steer', async (_e, { agentId, message }: { agentId: string; message: string }) =>
-    steerAgent(agentId, message)
-  )
-  safeHandle('agent:kill', async (_e, agentId: string) =>
-    killAgent(agentId)
-  )
+  safeHandle('agent:steer', async (_e, { agentId, message }: { agentId: string; message: string }) => {
+    // Try local AgentManager first
+    const am = (global as any).__agentManager
+    if (am) {
+      try { await am.steerAgent(agentId, message); return { ok: true } } catch { /* fall through */ }
+    }
+    // Fall back to runner-client
+    return steerAgent(agentId, message)
+  })
+  safeHandle('agent:kill', async (_e, agentId: string) => {
+    const am = (global as any).__agentManager
+    if (am) {
+      try { am.killAgent(agentId); return { ok: true } } catch { /* fall through */ }
+    }
+    return killAgent(agentId)
+  })
   safeHandle('agent:history', async (_e, agentId: string) => {
     // Event history from local SQLite — kept for viewing historical runs
     const { getEventHistory } = await import('../data/event-queries')

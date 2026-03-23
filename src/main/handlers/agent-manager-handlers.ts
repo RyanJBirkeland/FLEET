@@ -1,20 +1,19 @@
 /**
- * Agent manager IPC handlers — proxied through the task-runner's Runner API.
+ * Agent manager IPC handlers — delegates to the in-process AgentManager.
  */
 import { safeHandle } from '../ipc-utils'
-import { listAgents, killAgent } from '../runner-client'
 
 export function registerAgentManagerHandlers(): void {
   safeHandle('agent-manager:status', async () => {
-    try {
-      const agents = await listAgents()
-      return { activeCount: Array.isArray(agents) ? agents.length : 0, availableSlots: null }
-    } catch {
-      return { activeCount: 0, availableSlots: null }
-    }
+    const am = (global as any).__agentManager
+    if (!am) return { running: false, concurrency: null, activeAgents: [] }
+    return am.getStatus()
   })
 
-  safeHandle('agent-manager:kill', async (_e, agentId: string) => {
-    return killAgent(agentId)
+  safeHandle('agent-manager:kill', async (_e, taskId: string) => {
+    const am = (global as any).__agentManager
+    if (!am) throw new Error('Agent manager not available')
+    am.killAgent(taskId)
+    return { ok: true }
   })
 }

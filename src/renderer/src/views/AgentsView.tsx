@@ -146,7 +146,11 @@ export function AgentsView() {
 }
 
 function HealthBarWrapper() {
-  const [status, setStatus] = useState<{ activeCount: number; availableSlots: number | null } | null>(null)
+  const [status, setStatus] = useState<{
+    running: boolean
+    concurrency: { maxSlots: number; activeCount: number; cooldownUntil: number } | null
+    activeAgents: Array<unknown>
+  } | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -160,9 +164,9 @@ function HealthBarWrapper() {
     return () => { cancelled = true; clearInterval(interval) }
   }, [])
 
-  const connected = status !== null
+  const connected = status !== null && status.running
   const stats = status
-    ? { queued: 0, active: status.activeCount, doneToday: 0, failed: 0 }
+    ? { queued: 0, active: status.activeAgents.length, doneToday: 0, failed: 0 }
     : null
 
   return <HealthBar connected={connected} stats={stats} />
