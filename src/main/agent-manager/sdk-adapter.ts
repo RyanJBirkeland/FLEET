@@ -75,9 +75,11 @@ function spawnViaSdk(
 
   async function* wrapMessages(): AsyncIterable<unknown> {
     for await (const msg of queryResult) {
-      const m = msg as { session_id?: string }
-      if (m.session_id && resolvedSessionId !== m.session_id) {
-        resolvedSessionId = m.session_id as ReturnType<typeof randomUUID>
+      if (typeof msg === 'object' && msg !== null && 'session_id' in msg) {
+        const sid = (msg as Record<string, unknown>).session_id
+        if (typeof sid === 'string' && sid !== resolvedSessionId) {
+          resolvedSessionId = sid as ReturnType<typeof randomUUID>
+        }
       }
       yield msg
     }

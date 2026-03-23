@@ -117,6 +117,18 @@ export function createAgentManager(
 
   // ---- Helpers ----
 
+  function isRateLimitMessage(msg: unknown): boolean {
+    if (typeof msg !== 'object' || msg === null) return false
+    const m = msg as Record<string, unknown>
+    return m.type === 'system' && m.subtype === 'rate_limit'
+  }
+
+  function getNumericField(msg: unknown, field: string): number | undefined {
+    if (typeof msg !== 'object' || msg === null) return undefined
+    const val = (msg as Record<string, unknown>)[field]
+    return typeof val === 'number' ? val : undefined
+  }
+
   function isActive(taskId: string): boolean {
     return activeAgents.has(taskId)
   }
@@ -181,16 +193,15 @@ export function createAgentManager(
         agent.lastOutputAt = Date.now()
 
         // Track rate-limit events
-        const m = msg as Record<string, unknown>
-        if (m.type === 'system' && m.subtype === 'rate_limit') {
+        if (isRateLimitMessage(msg)) {
           agent.rateLimitCount++
         }
         // Track cost / tokens if present
-        if (typeof m.cost_usd === 'number') agent.costUsd = m.cost_usd as number
-        if (typeof m.tokens_in === 'number') agent.tokensIn = m.tokens_in as number
-        if (typeof m.tokens_out === 'number') agent.tokensOut = m.tokens_out as number
+        agent.costUsd = getNumericField(msg, 'cost_usd') ?? agent.costUsd
+        agent.tokensIn = getNumericField(msg, 'tokens_in') ?? agent.tokensIn
+        agent.tokensOut = getNumericField(msg, 'tokens_out') ?? agent.tokensOut
         // Track exit code if present (typically in last message)
-        if (typeof m.exit_code === 'number') exitCode = m.exit_code as number
+        exitCode = getNumericField(msg, 'exit_code') ?? exitCode
       }
     } catch (err) {
       logger.error(`[agent-manager] Error consuming messages for task ${task.id}: ${err}`)
