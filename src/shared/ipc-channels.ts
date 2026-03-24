@@ -410,7 +410,7 @@ export interface WorkbenchChannels {
     result: {
       clarity: { status: 'pass' | 'warn' | 'fail'; message: string }
       scope: { status: 'pass' | 'warn' | 'fail'; message: string }
-      filesExist: { status: 'pass' | 'warn'; message: string; missingFiles?: string[] }
+      filesExist: { status: 'pass' | 'warn' | 'fail'; message: string; missingFiles?: string[] }
     }
   }
   'workbench:checkOperational': {
