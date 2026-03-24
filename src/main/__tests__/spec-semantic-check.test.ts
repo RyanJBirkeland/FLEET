@@ -1,5 +1,4 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { ChildProcess } from 'child_process'
 import { EventEmitter } from 'events'
 
 // Mock env-utils
@@ -7,25 +6,20 @@ vi.mock('../env-utils', () => ({
   buildAgentEnv: () => ({ ...process.env }),
 }))
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type MockChild = any
+
 // Create mock child process factory
-function createMockChild(): ChildProcess & {
-  stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }
-  stdout: EventEmitter
-  stderr: EventEmitter
-} {
-  const child = new EventEmitter() as ChildProcess & {
-    stdin: { write: ReturnType<typeof vi.fn>; end: ReturnType<typeof vi.fn> }
-    stdout: EventEmitter
-    stderr: EventEmitter
-  }
-  child.stdin = { write: vi.fn(), end: vi.fn() }
-  child.stdout = new EventEmitter()
-  child.stderr = new EventEmitter()
-  child.kill = vi.fn()
+function createMockChild(): MockChild {
+  const child = new EventEmitter()
+  ;(child as MockChild).stdin = { write: vi.fn(), end: vi.fn() }
+  ;(child as MockChild).stdout = new EventEmitter()
+  ;(child as MockChild).stderr = new EventEmitter()
+  ;(child as MockChild).kill = vi.fn()
   return child
 }
 
-let mockChild: ReturnType<typeof createMockChild>
+let mockChild: MockChild
 
 vi.mock('child_process', () => ({
   spawn: () => mockChild,
