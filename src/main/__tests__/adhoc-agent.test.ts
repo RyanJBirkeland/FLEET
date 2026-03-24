@@ -18,7 +18,7 @@ vi.mock('../broadcast', () => ({
   broadcast: vi.fn(),
 }))
 
-import { spawnAdhocAgent, getAdhocHandle } from '../adhoc-agent'
+import { spawnAdhocAgent } from '../adhoc-agent'
 import { spawnAgent } from '../agent-manager/sdk-adapter'
 import { importAgent, updateAgentMeta } from '../agent-history'
 import { broadcast } from '../broadcast'
