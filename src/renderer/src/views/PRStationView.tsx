@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { FileCode2 } from 'lucide-react'
+import { EmptyState } from '../components/ui/EmptyState'
 import { PRStationList } from '../components/pr-station/PRStationList'
 import { PRStationDetail } from '../components/pr-station/PRStationDetail'
 import { PRStationActions } from '../components/pr-station/PRStationActions'
@@ -154,10 +155,10 @@ export default function PRStationView() {
             )}
           </>
         ) : (
-          <div className="pr-station__empty-detail">
-            <FileCode2 size={32} strokeWidth={1} />
-            <span>Select a PR to view details</span>
-          </div>
+          <EmptyState
+            icon={<FileCode2 size={32} strokeWidth={1} />}
+            title="Select a PR to view details"
+          />
         )}
       </div>
       {showReviewDialog && selectedPr && (
