@@ -85,8 +85,10 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **DB sync**: File watcher on `bde.db` pushes `sprint:externalChange` IPC events to renderer (500ms debounce)
 - **Design tokens**: `src/renderer/src/design-system/tokens.ts` — use these instead of hardcoded values
 - **Panel system**: `src/renderer/src/stores/panelLayout.ts` — recursive PanelNode tree (leaf/split), `src/renderer/src/components/panels/` — PanelRenderer, PanelLeaf, PanelTabBar, PanelDropOverlay. Layout persists to `panel.layout` setting. Views rendered inside panels; drag-and-drop docking with 5-zone hit testing.
-- **Views**: 7 views in `src/renderer/src/views/` — Agents, Terminal, Sprint, PR Station, Memory, Cost, Settings. Rendered inside panels (no longer single-view-at-a-time).
-- **PR Station**: Full code review tool in `src/renderer/src/components/pr-station/` (9 components) + `src/renderer/src/components/diff/` (DiffViewer, DiffCommentWidget, DiffCommentComposer). Features: PR list with CI badges, detail panel (reviews, conversation timeline, changed files, conflict detection), diff viewer with line selection and inline comments, batch review submission (approve/request changes/comment). `pendingReview` Zustand store tracks pending comments per PR. All GitHub API calls in `src/renderer/src/lib/github-api.ts` proxied through `github:fetch` IPC.
+- **Views**: 10 views in `src/renderer/src/views/` — Dashboard (⌘1, default), Agents (⌘2), Terminal (⌘3), Sprint (⌘4), PR Station (⌘5), Source Control (⌘6), Memory (⌘7), Cost (⌘8), Settings (⌘9), Task Workbench. View type union and `VIEW_LABELS` live in `panelLayout.ts`. Keyboard shortcuts mapped in `App.tsx` via `VIEW_SHORTCUT_MAP`.
+- **PR Station**: Full code review tool in `src/renderer/src/components/pr-station/` (11 components) + `src/renderer/src/components/diff/` (DiffViewer, DiffCommentWidget, DiffCommentComposer). Features: PR list with filter bar (repo chips, sort), CI badges, detail panel with MergeButton (squash/merge/rebase), reviews, conversation timeline, changed files, conflict detection, diff viewer with inline comments, batch review submission. `pendingReview` Zustand store tracks pending comments per PR (persisted to localStorage, restored on app init). All GitHub API calls in `src/renderer/src/lib/github-api.ts` proxied through `github:fetch` IPC.
+- **Source Control**: `src/renderer/src/views/GitTreeView.tsx` + `src/renderer/src/components/git-tree/` (6 components: GitFileRow, FileTreeSection, CommitBox, BranchSelector, InlineDiffDrawer). `gitTree` Zustand store in `src/renderer/src/stores/gitTree.ts`. Uses existing git IPC channels (`git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit`, `git:push`, `git:branches`). Polls at `POLL_GIT_STATUS_INTERVAL` (30s).
+- **Dashboard**: `src/renderer/src/views/DashboardView.tsx` + `src/renderer/src/components/dashboard/` (5 components: DashboardCard, ActiveTasksCard, RecentCompletionsCard, CostSummaryCard, OpenPRsCard). Aggregates data from `sprintTasks`, `costData` stores and PR list IPC. Default landing view.
 - **Full architecture**: See `docs/architecture.md`
 
 ## Gotchas
@@ -105,11 +107,13 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **DB migrations**: Schema changes go through `src/main/db.ts` — add a new entry to the `migrations` array. Never modify existing migrations.
 - **Test noise from `release/`**: `vitest.config.ts` excludes `**/release/**`, but if a new exclude pattern is needed, add it there. Delete `release/` if the directory causes other issues.
 - **AgentManager config requires restart**: Settings for max concurrent agents, worktree base, and max runtime are read once at startup. Changes via Settings UI take effect on next app launch.
-- **Integration tests**: `src/main/__tests__/integration/` — covers AgentManager pipeline, AuthGuard, IPC handlers, Queue API, and CompletionHandler. Run with `npm run test:main`. All tests passing (~577 main, ~1271 renderer, 36 E2E). Coverage threshold enforced at 68%.
+- **Integration tests**: `src/main/__tests__/integration/` — covers AgentManager pipeline, AuthGuard, IPC handlers, Queue API, and CompletionHandler. Run with `npm run test:main`. All tests passing (~577 main, ~1464 renderer, 36 E2E). Coverage threshold enforced at 68%.
 - **Electron PATH**: Electron's main process has a minimal PATH. Use `buildAgentEnv()` from `src/main/env-utils.ts` which prepends `/usr/local/bin`, `/opt/homebrew/bin`, `~/.local/bin` to PATH (cached after first call).
 - **OAuth token file**: Agent manager reads `~/.bde/oauth-token` (plain text, one line). Keychain access via `security` CLI hangs in Electron — never use `execFileSync('security', ...)` in the main process.
 - **Supabase setup**: BDE needs `supabase.url` and `supabase.serviceKey` in the SQLite `settings` table. Also needs `repos` JSON setting with `name`, `localPath`, `githubOwner`, `githubRepo` per configured repo.
 - **Agent branch stale cleanup**: Before re-running a task, delete stale `agent/*` branches with `git branch -D agent/<slug>` and run `git worktree prune`. Otherwise `git worktree add` fails.
+- **react-resizable-panels exports**: Exports are `Group`, `Panel`, `Separator` — NOT `PanelGroup`/`PanelResizeHandle`. Use `orientation` prop on `Group` (not `direction`).
+- **useConfirm API**: `useConfirm()` from `components/ui/ConfirmModal` returns `{ confirm, confirmProps }`. Render as `<ConfirmModal {...confirmProps} />` — NOT `<ConfirmDialog />`.
 
 ## Packaging
 
@@ -120,7 +124,7 @@ npm run package      # Alias for build:mac
 
 - **Prerequisites for users**: Claude Code CLI installed + `claude login`, `git`, `gh` CLI
 - **Unsigned**: `identity: null` in electron-builder.yml — users right-click → Open to bypass Gatekeeper
-- **Onboarding**: App shows auth check screen on first launch; auto-skips for returning users with valid token
+- **Onboarding**: App shows auth check screen on first launch with checks for CLI, token, git, repos (optional), Supabase (optional). Optional checks warn but don't block. Auto-skips for returning users with valid token.
 
 ## Key Conventions
 

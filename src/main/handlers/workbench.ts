@@ -4,7 +4,7 @@
 import { safeHandle } from '../ipc-utils'
 import { checkAuthStatus } from '../auth-guard'
 import { getRepoPaths } from '../git'
-import { execFile } from 'child_process'
+import { execFile, spawn } from 'child_process'
 import { promisify } from 'util'
 import { getSupabaseClient } from '../data/supabase-client'
 import { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
@@ -12,6 +12,41 @@ import { buildAgentEnv } from '../env-utils'
 import type { AgentManager } from '../agent-manager'
 
 const execFileAsync = promisify(execFile)
+
+/** Run `claude -p` with prompt piped via stdin (execFileAsync doesn't support `input`). */
+function runClaudePrint(prompt: string, timeoutMs = 120_000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('claude', ['-p', '--output-format', 'text'], {
+      env: buildAgentEnv(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+
+    let stdout = ''
+    let stderr = ''
+    const timer = setTimeout(() => {
+      child.kill()
+      reject(new Error('Claude CLI timed out'))
+    }, timeoutMs)
+
+    child.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+    child.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (code === 0) {
+        resolve(stdout.trim())
+      } else {
+        reject(new Error(stderr.trim() || `claude exited with code ${code}`))
+      }
+    })
+    child.on('error', (err) => {
+      clearTimeout(timer)
+      reject(err)
+    })
+
+    child.stdin.write(prompt)
+    child.stdin.end()
+  })
+}
 
 export function buildChatPrompt(
   messages: Array<{ role: string; content: string }>,
@@ -217,12 +252,8 @@ export function registerWorkbenchHandlers(am?: AgentManager): void {
   }) => {
     const prompt = buildChatPrompt(input.messages, input.formContext)
     try {
-      const { stdout } = await execFileAsync('claude', ['-p', prompt, '--output-format', 'text'], {
-        encoding: 'utf-8',
-        timeout: 60_000,
-        env: buildAgentEnv(),
-      })
-      return { content: stdout.trim() || 'No response received.' }
+      const result = await runClaudePrint(prompt)
+      return { content: result || 'No response received.' }
     } catch (err) {
       return { content: `Error: ${(err as Error).message}` }
     }
@@ -232,12 +263,8 @@ export function registerWorkbenchHandlers(am?: AgentManager): void {
   safeHandle('workbench:generateSpec', async (_e, input: { title: string; repo: string; templateHint: string }) => {
     const prompt = buildSpecGenerationPrompt(input)
     try {
-      const { stdout } = await execFileAsync('claude', ['-p', prompt, '--output-format', 'text'], {
-        encoding: 'utf-8',
-        timeout: 60_000,
-        env: buildAgentEnv(),
-      })
-      return { spec: stdout.trim() || `# ${input.title}\n\n(No spec generated)` }
+      const result = await runClaudePrint(prompt)
+      return { spec: result || `# ${input.title}\n\n(No spec generated)` }
     } catch (err) {
       return { spec: `# ${input.title}\n\nError generating spec: ${(err as Error).message}` }
     }
@@ -261,12 +288,8 @@ Assess the spec on three dimensions. For each, return status ("pass", "warn", or
 Return JSON: {"clarity":{"status":"...","message":"..."},"scope":{"status":"...","message":"..."},"filesExist":{"status":"...","message":"..."}}`
 
     try {
-      const { stdout } = await execFileAsync('claude', ['-p', prompt, '--output-format', 'text'], {
-        encoding: 'utf-8',
-        timeout: 45_000,
-        env: buildAgentEnv(),
-      })
-      const parsed = JSON.parse(stdout.trim())
+      const result = await runClaudePrint(prompt)
+      const parsed = JSON.parse(result)
       return {
         clarity: parsed.clarity ?? { status: 'warn', message: 'Unable to assess clarity' },
         scope: parsed.scope ?? { status: 'warn', message: 'Unable to assess scope' },
