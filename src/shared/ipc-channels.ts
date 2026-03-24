@@ -271,6 +271,13 @@ export interface MemoryChannels {
     args: [path: string, content: string]
     result: void
   }
+  'memory:search': {
+    args: [query: string]
+    result: Array<{
+      path: string
+      matches: Array<{ line: number; content: string }>
+    }>
+  }
 }
 
 /** File system dialogs and reading */

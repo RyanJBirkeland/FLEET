@@ -15,6 +15,7 @@ import { registerTemplateHandlers } from './handlers/template-handlers'
 import { registerAuthHandlers } from './handlers/auth-handlers'
 import { registerAgentManagerHandlers } from './handlers/agent-manager-handlers'
 import { registerWorkbenchHandlers } from './handlers/workbench'
+import { registerMemorySearchHandler } from './handlers/memory-search'
 import { getDb, closeDb } from './db'
 import { startPrPoller, stopPrPoller } from './pr-poller'
 import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
@@ -137,6 +138,7 @@ app.whenReady().then(() => {
   registerCostHandlers()
   registerTemplateHandlers()
   registerFsHandlers()
+  registerMemorySearchHandler()
   registerAuthHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
