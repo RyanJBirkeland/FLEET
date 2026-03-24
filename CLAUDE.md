@@ -104,6 +104,7 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Subagent branch safety**: When dispatching subagents, explicitly tell them which branch to commit to. Subagents may default to `main` if not told otherwise.
 - **Pre-push hook**: Husky runs `npm run typecheck && npm test` before every push. Fix failures before retrying.
 - **Native modules**: `better-sqlite3` is rebuilt for Electron via `electron-rebuild` in `postinstall`. The main test config (`vitest.main.config.ts`) has a `globalSetup` that auto-detects and rebuilds for Node.js if needed — so `npx vitest run --config src/main/vitest.main.config.ts` works without `npm run test:main`. npm 11+ silently ignores `--runtime=electron` flags on `npm rebuild`.
+- **Native module rebuild after tests**: `npm test` rebuilds `better-sqlite3` for Node.js via vitest globalSetup. After running tests, run `npx electron-rebuild -f -w better-sqlite3` before `npm run dev`, or the Electron app will crash with `NODE_MODULE_VERSION` mismatch.
 - **Zustand selector gotcha**: Never call a function that returns a new array/object inside a Zustand selector (e.g., `useSomeStore(s => s.getList())`). This creates a new reference every render → infinite loop. Derive with `useMemo` from stable state instead.
 - **DB migrations**: Schema changes go through `src/main/db.ts` — add a new entry to the `migrations` array. Never modify existing migrations.
 - **Test noise from `release/`**: `vitest.config.ts` excludes `**/release/**`, but if a new exclude pattern is needed, add it there. Delete `release/` if the directory causes other issues.
@@ -113,6 +114,11 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **OAuth token file**: Agent manager reads `~/.bde/oauth-token` (plain text, one line). Keychain access via `security` CLI hangs in Electron — never use `execFileSync('security', ...)` in the main process.
 - **Supabase setup**: BDE needs `supabase.url` and `supabase.serviceKey` in the SQLite `settings` table. Also needs `repos` JSON setting with `name`, `localPath`, `githubOwner`, `githubRepo` per configured repo.
 - **Agent branch stale cleanup**: Before re-running a task, delete stale `agent/*` branches with `git branch -D agent/<slug>` and run `git worktree prune`. Otherwise `git worktree add` fails.
+- **Push before queuing tasks**: Always `git push origin main` before queuing tasks. AgentManager branches from local repo — unpushed commits or untracked files (like spec docs) end up in the agent's worktree or are missing entirely.
+- **Agents default to main branch**: When spawning agents via AgentManager, the agent prompt must explicitly specify which branch to commit to and push. Without explicit instructions, agents push directly to `main`.
+- **Workbench AI uses spawn**: `src/main/handlers/workbench.ts` uses `runClaudePrint()` helper (spawn-based) to pipe prompts via stdin to `claude -p`. Do NOT use `execFileAsync` with `input` option — it's only supported by sync variants.
+- **Zustand aggregate selectors**: When a component needs 5+ fields from one store, use `useShallow` from `zustand/react/shallow`: `const { a, b, c } = useStore(useShallow(s => ({ a: s.a, b: s.b, c: s.c })))`. Single-field selectors for stable function refs are fine.
+- **GitHub API cache**: `src/renderer/src/lib/github-cache.ts` — TTL cache wrapping `github-api.ts` functions (30s TTL). Use `cachedGetPRDetail`, `cachedGetPRFiles`, etc. in components. Call `invalidateCache()` after mutations.
 - **react-resizable-panels exports**: Exports are `Group`, `Panel`, `Separator` — NOT `PanelGroup`/`PanelResizeHandle`. Use `orientation` prop on `Group` (not `direction`).
 - **useConfirm API**: `useConfirm()` from `components/ui/ConfirmModal` returns `{ confirm, confirmProps }`. Render as `<ConfirmModal {...confirmProps} />` — NOT `<ConfirmDialog />`.
 
