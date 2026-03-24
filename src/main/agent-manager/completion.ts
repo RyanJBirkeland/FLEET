@@ -31,16 +31,42 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
   const { taskId, worktreePath, title, ghRepo } = opts
 
   // 1. Detect current branch
-  const { stdout: branchOut } = await execFile(
-    'git',
-    ['rev-parse', '--abbrev-ref', 'HEAD'],
-    { cwd: worktreePath, env: buildAgentEnv() }
-  )
-  const branch = branchOut.trim()
+  let branch: string
+  try {
+    const { stdout: branchOut } = await execFile(
+      'git',
+      ['rev-parse', '--abbrev-ref', 'HEAD'],
+      { cwd: worktreePath, env: buildAgentEnv() }
+    )
+    branch = branchOut.trim()
+  } catch (err) {
+    logger.error(`[completion] Failed to detect branch for task ${taskId}: ${err}`)
+    await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Failed to detect branch' }).catch((e) =>
+      logger.warn(`[completion] Failed to update task ${taskId} after branch detection error: ${e}`)
+    )
+    return
+  }
+
+  if (!branch) {
+    logger.error(`[completion] Empty branch name for task ${taskId}`)
+    await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Empty branch name' }).catch((e) =>
+      logger.warn(`[completion] Failed to update task ${taskId} after empty branch: ${e}`)
+    )
+    return
+  }
+
   logger.info(`[completion] Task ${taskId}: pushing branch ${branch}`)
 
   // 2. Push branch to origin (skip pre-push hooks — agent code is reviewed via PR)
-  await execFile('git', ['push', '--no-verify', 'origin', branch], { cwd: worktreePath, env: buildAgentEnv() })
+  try {
+    await execFile('git', ['push', '--no-verify', 'origin', branch], { cwd: worktreePath, env: buildAgentEnv() })
+  } catch (err) {
+    logger.error(`[completion] git push failed for task ${taskId} (branch ${branch}): ${err}`)
+    await updateTask(taskId, { notes: `git push failed for branch ${branch}: ${err}` }).catch((e) =>
+      logger.warn(`[completion] Failed to update task ${taskId} after push error: ${e}`)
+    )
+    return
+  }
 
   // 3. Open PR via gh CLI
   let prUrl: string | null = null
@@ -60,27 +86,35 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
   }
 
   // 4. Update task with PR info (task stays active; SprintPrPoller handles done on merge)
-  if (prUrl !== null && prNumber !== null) {
-    await updateTask(taskId, { pr_status: 'open', pr_url: prUrl, pr_number: prNumber })
-  } else {
-    // Push succeeded but PR creation failed — record branch name so user can create PR manually
-    await updateTask(taskId, { notes: `Branch ${branch} pushed but PR creation failed` })
+  try {
+    if (prUrl !== null && prNumber !== null) {
+      await updateTask(taskId, { pr_status: 'open', pr_url: prUrl, pr_number: prNumber })
+    } else {
+      // Push succeeded but PR creation failed — record branch name so user can create PR manually
+      await updateTask(taskId, { notes: `Branch ${branch} pushed but PR creation failed` })
+    }
+  } catch (err) {
+    logger.error(`[completion] Failed to update task ${taskId} with PR info: ${err}`)
   }
 }
 
-export async function resolveFailure(opts: ResolveFailureOpts): Promise<void> {
+export async function resolveFailure(opts: ResolveFailureOpts, logger?: Logger): Promise<void> {
   const { taskId, retryCount } = opts
 
-  if (retryCount < MAX_RETRIES) {
-    await updateTask(taskId, {
-      status: 'queued',
-      retry_count: retryCount + 1,
-      claimed_by: null,
-    })
-  } else {
-    await updateTask(taskId, {
-      status: 'failed',
-      completed_at: new Date().toISOString(),
-    })
+  try {
+    if (retryCount < MAX_RETRIES) {
+      await updateTask(taskId, {
+        status: 'queued',
+        retry_count: retryCount + 1,
+        claimed_by: null,
+      })
+    } else {
+      await updateTask(taskId, {
+        status: 'failed',
+        completed_at: new Date().toISOString(),
+      })
+    }
+  } catch (err) {
+    logger?.error(`[completion] Failed to update task ${taskId} during failure resolution: ${err}`)
   }
 }

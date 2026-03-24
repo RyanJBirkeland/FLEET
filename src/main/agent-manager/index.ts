@@ -235,7 +235,9 @@ export function createAgentManager(
       if (verdict === 'ok') continue
 
       logger.warn(`[agent-manager] Watchdog killing task ${agent.taskId}: ${verdict}`)
-      agent.handle.abort()
+      try { agent.handle.abort() } catch (err) {
+        logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
+      }
 
       // Delete agent — activeCount is derived from activeAgents.size
       activeAgents.delete(agent.taskId)
@@ -339,7 +341,9 @@ export function createAgentManager(
 
     // Abort all active agents
     for (const agent of activeAgents.values()) {
-      agent.handle.abort()
+      try { agent.handle.abort() } catch (err) {
+        logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId} during shutdown: ${err}`)
+      }
     }
 
     // Wait for all agent promises to settle (with timeout)

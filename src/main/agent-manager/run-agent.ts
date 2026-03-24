@@ -183,13 +183,14 @@ export async function runAgent(
 
   if (ffResult === 'fast-fail-exhausted') {
     await updateTask(task.id, { status: 'error', completed_at: now, notes: 'Fast-fail exhausted' })
+      .catch((err) => logger.error(`[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`))
     await onTaskTerminal(task.id, 'error')
   } else if (ffResult === 'fast-fail-requeue') {
     await updateTask(task.id, {
       status: 'queued',
       fast_fail_count: (task.fast_fail_count ?? 0) + 1,
       claimed_by: null,
-    })
+    }).catch((err) => logger.error(`[agent-manager] Failed to requeue fast-fail task ${task.id}: ${err}`))
   } else {
     // Normal exit — attempt success resolution
     try {
@@ -203,7 +204,7 @@ export async function runAgent(
       }, logger)
     } catch (err) {
       logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
-      await resolveFailure({ taskId: task.id, retryCount: task.retry_count ?? 0 })
+      await resolveFailure({ taskId: task.id, retryCount: task.retry_count ?? 0 }, logger)
       if ((task.retry_count ?? 0) >= MAX_RETRIES) {
         await onTaskTerminal(task.id, 'failed')
       }

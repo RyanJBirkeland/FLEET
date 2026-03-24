@@ -119,7 +119,13 @@ export async function handleUpdateTask(
   }
 
   const snaked = toSnakeCase(filtered)
-  const updated = await updateTask(id, snaked)
+  let updated: Awaited<ReturnType<typeof updateTask>>
+  try {
+    updated = await updateTask(id, snaked)
+  } catch (err) {
+    sendJson(res, 500, { error: `Failed to update task ${id}: ${err instanceof Error ? err.message : String(err)}` })
+    return
+  }
   if (!updated) {
     sendJson(res, 404, { error: `Task ${id} not found` })
     return
@@ -164,7 +170,13 @@ export async function handleUpdateStatus(
     return
   }
 
-  const updated = await updateTask(id, toSnakeCase(filtered))
+  let updated: Awaited<ReturnType<typeof updateTask>>
+  try {
+    updated = await updateTask(id, toSnakeCase(filtered))
+  } catch (err) {
+    sendJson(res, 500, { error: `Failed to update task status ${id}: ${err instanceof Error ? err.message : String(err)}` })
+    return
+  }
   if (!updated) {
     sendJson(res, 404, { error: `Task ${id} not found` })
     return
