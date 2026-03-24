@@ -19,6 +19,15 @@ if (typeof globalThis.localStorage === 'undefined' || typeof globalThis.localSto
 
 afterEach(() => cleanup())
 
+// ResizeObserver is not available in jsdom
+if (typeof globalThis.ResizeObserver === 'undefined') {
+  globalThis.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  }
+}
+
 // Global window.api mock (centralized — no more per-file duplication)
 vi.stubGlobal('api', {
   getRepoPaths: vi.fn().mockResolvedValue({
