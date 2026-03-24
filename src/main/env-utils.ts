@@ -53,6 +53,12 @@ export function buildAgentEnvWithAuth(): Record<string, string | undefined> {
   return env
 }
 
+/** Force next getOAuthToken() call to re-read from disk. */
+export function invalidateOAuthToken(): void {
+  _tokenLoadedAt = 0
+  _cachedOAuthToken = null
+}
+
 /** Reset caches — for testing only. */
 export function _resetEnvCache(): void {
   _cachedEnv = null

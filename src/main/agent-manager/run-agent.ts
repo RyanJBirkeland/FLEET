@@ -245,6 +245,13 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
     }
   } catch (err) {
     logger.error(`[agent-manager] Error consuming messages for task ${task.id}: ${err}`)
+    // Invalidate cached OAuth token on auth errors so next agent gets a fresh token
+    const errMsg = err instanceof Error ? err.message : String(err)
+    if (errMsg.includes('Invalid API key') || errMsg.includes('invalid_api_key') || errMsg.includes('authentication')) {
+      const { invalidateOAuthToken } = await import('../env-utils')
+      invalidateOAuthToken()
+      logger.warn(`[agent-manager] Auth failure detected — OAuth token cache invalidated`)
+    }
   }
 
   // Agent exited
