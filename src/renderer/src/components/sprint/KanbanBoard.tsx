@@ -24,7 +24,7 @@ type KanbanBoardProps = {
   activeTasks: SprintTask[]
   awaitingReviewTasks: SprintTask[]
   prMergedMap: Record<string, boolean>
-  generatingIds?: Set<string>
+  generatingIds?: string[]
   onDragEnd: (taskId: string, newStatus: SprintTask['status']) => void
   onReorder?: (status: SprintTask['status'], orderedIds: string[]) => void
   onPushToSprint: (task: SprintTask) => void
@@ -51,14 +51,14 @@ function resolveTargetStatus(
   return null
 }
 
-const EMPTY_SET = new Set<string>()
+const EMPTY_ARRAY: string[] = []
 
 export function KanbanBoard({
   todoTasks,
   activeTasks,
   awaitingReviewTasks,
   prMergedMap,
-  generatingIds = EMPTY_SET,
+  generatingIds = EMPTY_ARRAY,
   onDragEnd,
   onReorder,
   onPushToSprint,
