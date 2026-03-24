@@ -13,6 +13,44 @@ import { useUnsavedDialog, UnsavedDialogModal } from '../components/ide/UnsavedD
 import { clearTerminal } from '../components/terminal/TerminalPane'
 
 export function IDEView(): React.JSX.Element {
+  useEffect(() => {
+    const restore = async (): Promise<void> => {
+      try {
+        const saved = await window.api.settings.getJson('ide.state')
+        if (!saved || typeof saved !== 'object') return
+        const state = saved as {
+          rootPath?: string
+          openTabs?: { filePath: string }[]
+          activeFilePath?: string
+          sidebarCollapsed?: boolean
+          terminalCollapsed?: boolean
+          recentFolders?: string[]
+        }
+        useIDEStore.setState({
+          rootPath: state.rootPath ?? null,
+          sidebarCollapsed: state.sidebarCollapsed ?? false,
+          terminalCollapsed: state.terminalCollapsed ?? false,
+          recentFolders: state.recentFolders ?? [],
+        })
+        if (state.openTabs) {
+          for (const tab of state.openTabs) {
+            useIDEStore.getState().openTab(tab.filePath)
+          }
+          if (state.activeFilePath) {
+            const match = useIDEStore
+              .getState()
+              .openTabs.find((t) => t.filePath === state.activeFilePath)
+            if (match) useIDEStore.getState().setActiveTab(match.id)
+          }
+        }
+        if (state.rootPath) await window.api.watchDir(state.rootPath)
+      } catch (err) {
+        console.error('Failed to restore IDE state:', err)
+      }
+    }
+    void restore()
+  }, [])
+
   const {
     rootPath, openTabs, activeTabId, sidebarCollapsed, terminalCollapsed, focusedPanel,
     setRootPath, openTab, closeTab, setDirty, setFocusedPanel, toggleSidebar, toggleTerminal,

@@ -205,3 +205,24 @@ export const useIDEStore = create<IDEState>((set) => ({
     set({ terminalHeight: height })
   },
 }))
+
+// ---------------------------------------------------------------------------
+// Persistence subscriber (debounced, 2s)
+// ---------------------------------------------------------------------------
+
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+
+useIDEStore.subscribe((state) => {
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    const toSave = {
+      rootPath: state.rootPath,
+      openTabs: state.openTabs.map((t) => ({ filePath: t.filePath })),
+      activeFilePath: state.openTabs.find((t) => t.id === state.activeTabId)?.filePath ?? null,
+      sidebarCollapsed: state.sidebarCollapsed,
+      terminalCollapsed: state.terminalCollapsed,
+      recentFolders: state.recentFolders,
+    }
+    window.api.settings.setJson('ide.state', toSave)
+  }, 2000)
+})
