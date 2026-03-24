@@ -1008,11 +1008,10 @@ Remove source icon (Bot/Cpu), use CSS classes instead of inline styles. Keep the
 
 The card should use the new CSS classes: `agent-card`, `agent-card--selected`, `agent-card__dot`, `agent-card__dot--{status}`, `agent-card__title`, `agent-card__meta`.
 
-Map status to dot class:
-- `running` → `agent-card__dot--running` (for adhoc) or `agent-card__dot--active` (for queue)
+Map status to dot class (same for all agents — sidebar sections provide visual distinction):
+- `running` → `agent-card__dot--running` (green pulse)
 - `done` → `agent-card__dot--done`
 - `failed` → `agent-card__dot--failed`
-- `queued` → `agent-card__dot--queued` (if applicable from agent status)
 - default → `agent-card__dot--done`
 
 - [ ] **Step 5: Verify typecheck + tests**
@@ -1036,11 +1035,19 @@ git commit -m "feat(agents): add CSS foundation, SessionList, QueueList, simplif
 
 - [ ] **Step 1: Create `NewSessionForm.tsx`**
 
-Centered form with greeting, textarea, repo select, model chips, send button. Reuses `useRepoOptions` hook and `CLAUDE_MODELS` from shared. Calls `localAgentsStore.spawnAgent()` on submit.
+Centered form with greeting, textarea, repo select, model chips, send button.
 
 Key props: `onSessionCreated: (id: string) => void` — called after spawn succeeds so AgentsView can set `selectedId`.
 
-Include task history from localStorage (same `HISTORY_KEY` as SpawnModal).
+**Repo path resolution** (same pattern as current SpawnModal):
+1. On mount, call `window.api.getRepoPaths()` → `Record<string, string>` (lowercase name → path)
+2. Use `useRepoOptions()` hook for select labels
+3. On submit, look up `repoPaths[repo.toLowerCase()]` for filesystem path
+4. If path not found, show error toast
+
+**Model:** `CLAUDE_MODELS` from `src/shared/models.ts`, default `'sonnet'`.
+**Spawn:** `useLocalAgentsStore.getState().spawnAgent({ task, repoPath, model })`.
+Task history from localStorage (`HISTORY_KEY = 'bde-spawn-history'`).
 
 - [ ] **Step 2: Verify typecheck**
 
@@ -1116,16 +1123,19 @@ Collapsible: click toggles expanded state. When expanded, shows input/output JSO
 
 Main chat stream component. Takes `events: AgentEvent[]`. Transforms events into renderable blocks using a `groupEvents()` function:
 
-**Grouping algorithm:**
-1. Iterate events, building output blocks
-2. For `agent:text` → push `AgentText`
-3. For `agent:user_message` → push `UserMessage`
-4. For `agent:tool_call` / `agent:tool_result` → accumulate into current tool group. When a non-tool event arrives, flush the group as a `ToolBlock`.
-5. For `agent:started` → push started text
-6. For `agent:completed` → push completion text
-7. For `agent:error` → push error block
-8. For `agent:rate_limited` → push rate limit text
-9. For `agent:thinking` → push `ThinkingBlock` (existing, restyled)
+**Grouping algorithm — merges N consecutive tool events into one ToolBlock:**
+
+Maintain a `toolGroup: ToolEntry[]` accumulator. Tool events add to the group. Non-tool events flush the group as a `ToolBlock`, then render themselves. Tool pairing: on `agent:tool_call`, look ahead — if next event is `agent:tool_result` with same `tool` name, pair them and skip the result. Otherwise, add without result (shown as "running...").
+
+```
+for each event:
+  if tool_call → look ahead for matching result, add to toolGroup
+  if tool_result (orphaned) → add to toolGroup
+  else → flush toolGroup as ToolBlock, then render event
+flush any remaining toolGroup
+```
+
+Non-tool events map 1:1: text→AgentText, user_message→UserMessage, started/completed/error/rate_limited→styled divs, thinking→ThinkingBlock.
 
 Auto-scroll: track `isAtBottom` ref, scroll to bottom when new events arrive and user is near bottom.
 
@@ -1248,8 +1258,11 @@ Key state:
 - Remove auto-select-first-agent logic
 - Keep existing polling, event init, sidebar resize hooks
 - Remove HealthBarWrapper (queue section header replaces it)
+- Listen for `bde:open-spawn-modal` event (from CommandPalette) → set `selectedId = null` to show NewSessionForm
 
 Import `agents-view.css` instead of `agents.css`.
+
+**Note:** Tasks 2-5 create components that won't be visually testable until this task. Typecheck confirms they compile; visual verification happens here.
 
 - [ ] **Step 3: Polish `SteerInput.tsx`**
 
@@ -1290,9 +1303,10 @@ Delete all 7 files listed above. These are no longer imported by any component a
 
 - [ ] **Step 2: Remove any lingering imports**
 
-Search for imports of removed components across the codebase. The `CommandPalette` dispatches `bde:open-spawn-modal` event — update it to dispatch `bde:new-session` or similar if AgentsView still listens, or remove the handler if the "+" button is the only entry point.
-
-Check `App.tsx` for any SpawnModal references.
+Search for imports of removed components across the codebase:
+- `CommandPalette` dispatches `bde:open-spawn-modal` — keep this event. AgentsView listens for it (Task 6) and sets `selectedId = null`.
+- Check `App.tsx` for any SpawnModal references — remove if found.
+- Check smoke tests (`src/renderer/src/views/__tests__/smoke.test.tsx`) — mock path may be `../../components/sessions/SpawnModal` (old path). Remove stale mocks.
 
 - [ ] **Step 3: Remove old test files**
 
@@ -1306,7 +1320,8 @@ Expected: PASS with no references to removed files.
 - [ ] **Step 5: Commit**
 
 ```bash
-git add -u
+git rm src/renderer/src/components/agents/SpawnModal.tsx src/renderer/src/components/agents/ChatRenderer.tsx src/renderer/src/components/agents/ChatBubble.tsx src/renderer/src/components/agents/AgentList.tsx src/renderer/src/components/agents/AgentDetail.tsx src/renderer/src/components/agents/HealthBar.tsx src/renderer/src/assets/agents.css
+git add -u  # stage updated test/import files
 git commit -m "chore(agents): remove old components — SpawnModal, ChatRenderer, ChatBubble, AgentList, AgentDetail, HealthBar"
 ```
 
