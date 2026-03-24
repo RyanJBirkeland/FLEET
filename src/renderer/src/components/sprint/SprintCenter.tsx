@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
+import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { ConfirmModal } from '../ui/ConfirmModal'
@@ -291,11 +291,11 @@ export function SprintCenter() {
   return (
     <div className="sprint-center">
       {logDrawerTask ? (
-        <PanelGroup orientation="horizontal" style={{ height: '100%' }}>
+        <Group orientation="horizontal" style={{ height: '100%' }}>
           <Panel defaultSize={65} minSize={40}>
             {kanbanContent}
           </Panel>
-          <PanelResizeHandle
+          <Separator
             style={{
               width: '4px',
               background: 'var(--bde-border, #333)',
@@ -311,7 +311,7 @@ export function SprintCenter() {
               onRerun={handleRerun}
             />
           </Panel>
-        </PanelGroup>
+        </Group>
       ) : (
         kanbanContent
       )}

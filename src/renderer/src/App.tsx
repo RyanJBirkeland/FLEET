@@ -45,7 +45,6 @@ const VIEW_TITLES: Record<View, string> = {
   cost: 'Cost',
   settings: 'Settings',
   'task-workbench': 'Task Workbench',
-  git: 'Source Control',
 }
 
 const SHORTCUTS_LEFT: { keys: string; description: string }[] = [
