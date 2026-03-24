@@ -194,4 +194,133 @@ describe('TaskCard', () => {
     const { container } = render(<TaskCard {...defaultProps} task={task} />)
     expect(container.querySelector('.bde-badge--success')).toBeInTheDocument()
   })
+
+  // Priority badge tests
+  it('shows P1 badge with danger variant for priority 1 task', () => {
+    const task = makeTask({ priority: 1 })
+    render(<TaskCard {...defaultProps} task={task} />)
+    expect(screen.getByText('P1')).toBeInTheDocument()
+  })
+
+  it('shows P2 badge with warning variant for priority 2 task', () => {
+    const task = makeTask({ priority: 2 })
+    render(<TaskCard {...defaultProps} task={task} />)
+    expect(screen.getByText('P2')).toBeInTheDocument()
+  })
+
+  it('does not show priority badge for priority 3 task', () => {
+    const task = makeTask({ priority: 3 })
+    render(<TaskCard {...defaultProps} task={task} />)
+    expect(screen.queryByText('P3')).not.toBeInTheDocument()
+  })
+
+  // Conflict detection
+  it('shows Conflict badge when pr_mergeable_state is dirty and not merged', () => {
+    const task = makeTask({
+      pr_url: 'https://github.com/org/repo/pull/1',
+      pr_mergeable_state: 'dirty',
+    })
+    render(<TaskCard {...defaultProps} task={task} prMerged={false} />)
+    expect(screen.getByText('Conflict')).toBeInTheDocument()
+  })
+
+  it('does not show Conflict badge when pr is merged', () => {
+    const task = makeTask({
+      pr_url: 'https://github.com/org/repo/pull/1',
+      pr_mergeable_state: 'dirty',
+    })
+    render(<TaskCard {...defaultProps} task={task} prMerged={true} />)
+    expect(screen.queryByText('Conflict')).not.toBeInTheDocument()
+  })
+
+  // Blocked status
+  it('shows Blocked badge for blocked task', () => {
+    const task = makeTask({ status: 'blocked' })
+    render(<TaskCard {...defaultProps} task={task} />)
+    expect(screen.getByText('Blocked')).toBeInTheDocument()
+  })
+
+  it('blocked task has task-card--blocked class', () => {
+    const task = makeTask({ status: 'blocked' })
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card--blocked')).toBeInTheDocument()
+  })
+
+  // Dependency chips
+  it('renders dependency chips when task has depends_on', () => {
+    const task = makeTask({
+      depends_on: [
+        { id: 'abcdef123456', type: 'hard' },
+        { id: 'fedcba654321', type: 'soft' },
+      ],
+    })
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    // Hard dep chip has --hard modifier
+    expect(container.querySelector('.task-card__dep-chip--hard')).toBeInTheDocument()
+    expect(container.querySelector('.task-card__dep-chip:not(.task-card__dep-chip--hard)')).toBeInTheDocument()
+  })
+
+  it('does not render dependency chips when depends_on is null', () => {
+    const task = makeTask({ depends_on: null })
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card__deps')).not.toBeInTheDocument()
+  })
+
+  // isGenerating badge
+  it('shows Writing spec... badge when isGenerating is true', () => {
+    const task = makeTask({ status: 'backlog' })
+    render(<TaskCard {...defaultProps} task={task} isGenerating={true} />)
+    expect(screen.getByText('Writing spec...')).toBeInTheDocument()
+  })
+
+  it('does not show Writing spec... when isGenerating is false', () => {
+    const task = makeTask({ status: 'backlog' })
+    render(<TaskCard {...defaultProps} task={task} isGenerating={false} />)
+    expect(screen.queryByText('Writing spec...')).not.toBeInTheDocument()
+  })
+
+  // onMarkDone and onStop callbacks
+  it('queued task with onMarkDone shows Done button', () => {
+    const task = makeTask({ status: 'queued' })
+    const onMarkDone = vi.fn()
+    render(<TaskCard {...defaultProps} task={task} onMarkDone={onMarkDone} />)
+    expect(screen.getByRole('button', { name: '✓ Done' })).toBeInTheDocument()
+  })
+
+  it('active task with onStop shows Stop button', () => {
+    const task = makeTask({ status: 'active', started_at: new Date().toISOString() })
+    const onStop = vi.fn()
+    render(<TaskCard {...defaultProps} task={task} onStop={onStop} />)
+    expect(screen.getByRole('button', { name: 'Stop' })).toBeInTheDocument()
+  })
+
+  it('clicking Stop calls onStop with task', async () => {
+    const user = userEvent.setup()
+    const onStop = vi.fn()
+    const task = makeTask({ status: 'active', started_at: new Date().toISOString() })
+    render(<TaskCard {...defaultProps} task={task} onStop={onStop} />)
+    await user.click(screen.getByRole('button', { name: 'Stop' }))
+    expect(onStop).toHaveBeenCalledWith(task)
+  })
+
+  it('clicking Done in queued state calls onMarkDone with task', async () => {
+    const user = userEvent.setup()
+    const onMarkDone = vi.fn()
+    const task = makeTask({ status: 'queued' })
+    render(<TaskCard {...defaultProps} task={task} onMarkDone={onMarkDone} />)
+    await user.click(screen.getByRole('button', { name: '✓ Done' }))
+    expect(onMarkDone).toHaveBeenCalledWith(task)
+  })
+
+  it('high priority task has task-card--high-priority class', () => {
+    const task = makeTask({ priority: 1 })
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card--high-priority')).toBeInTheDocument()
+  })
+
+  it('normal priority task does not have task-card--high-priority class', () => {
+    const task = makeTask({ priority: 5 })
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card--high-priority')).not.toBeInTheDocument()
+  })
 })

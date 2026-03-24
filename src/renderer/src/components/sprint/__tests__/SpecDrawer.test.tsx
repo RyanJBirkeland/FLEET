@@ -1,9 +1,35 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, act } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import type { SprintTask } from '../../../../../shared/types'
 
 vi.mock('../../../lib/render-markdown', () => ({
   renderMarkdown: (md: string) => md,
+}))
+
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) => {
+      const { createElement } = require('react')
+      return createElement('div', props, children)
+    },
+  },
+  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
+vi.mock('../../../lib/motion', () => ({
+  VARIANTS: { scaleIn: {} },
+  SPRINGS: { snappy: {} },
+  REDUCED_TRANSITION: { duration: 0 },
+  useReducedMotion: () => false,
+}))
+
+vi.mock('../../../stores/toasts', () => ({
+  toast: {
+    success: vi.fn(),
+    error: vi.fn(),
+    info: vi.fn(),
+  },
 }))
 
 function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
@@ -78,11 +104,9 @@ describe('SpecDrawer', () => {
 
     const readSpecFile = vi.mocked(window.api.sprint.readSpecFile)
 
-    // First call: slow — will be cancelled
     readSpecFile.mockImplementationOnce(
       () => new Promise<string>((resolve) => { resolveFirst = resolve })
     )
-    // Second call: also deferred so we control timing
     readSpecFile.mockImplementationOnce(
       () => new Promise<string>((resolve) => { resolveSecond = resolve })
     )
@@ -98,23 +122,17 @@ describe('SpecDrawer', () => {
       spec: null,
     })
 
-    // Render with task A — kicks off slow fetch
     const { rerender } = render(<SpecDrawer {...defaultProps} task={taskA} />)
-
-    // Rapidly switch to task B — should cancel task A's fetch
     rerender(<SpecDrawer {...defaultProps} task={taskB} />)
 
-    // Resolve task B first (the current task)
     await act(async () => { resolveSecond('# Task B Spec') })
 
     await waitFor(() => {
       expect(screen.getByText('# Task B Spec')).toBeInTheDocument()
     })
 
-    // Now the stale task A resolves — should NOT overwrite task B's content
     await act(async () => { resolveFirst('# Task A Spec (STALE)') })
 
-    // Task B content must still be displayed, not task A's stale content
     expect(screen.getByText('# Task B Spec')).toBeInTheDocument()
     expect(screen.queryByText('# Task A Spec (STALE)')).not.toBeInTheDocument()
   })
@@ -131,12 +149,120 @@ describe('SpecDrawer', () => {
     })
   })
 
+  it('shows Edit button in view mode', () => {
+    const task = makeTask({ spec: '## My Spec' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+  })
+
+  it('clicking Edit button switches to edit mode (shows Save and Cancel)', async () => {
+    const user = userEvent.setup()
+    const task = makeTask({ spec: '## My Spec' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+
+    expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+  })
+
+  it('clicking Cancel reverts to view mode without saving', async () => {
+    const user = userEvent.setup()
+    const task = makeTask({ spec: 'Original spec' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    expect(defaultProps.onSave).not.toHaveBeenCalled()
+  })
+
+  it('clicking Save calls onSave with task id and draft content', async () => {
+    const user = userEvent.setup()
+    const task = makeTask({ spec: '## Original' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(defaultProps.onSave).toHaveBeenCalledWith(task.id, '## Original')
+  })
+
+  it('shows toast on save', async () => {
+    const { toast } = await import('../../../stores/toasts')
+    const user = userEvent.setup()
+    const task = makeTask({ spec: '## Content' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+
+    expect(toast.success).toHaveBeenCalledWith('Spec saved')
+  })
+
+  it('shows Push to Sprint button for backlog tasks with no spec', () => {
+    const task = makeTask({ status: 'backlog', spec: null })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+    expect(screen.getByRole('button', { name: /Push to Sprint/ })).toBeInTheDocument()
+  })
+
+  it('shows Launch button for backlog tasks with spec', () => {
+    const task = makeTask({ status: 'backlog', spec: '## Spec' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+    expect(screen.getByRole('button', { name: 'Launch' })).toBeInTheDocument()
+  })
+
+  it('shows Launch Agent button for queued tasks', () => {
+    const task = makeTask({ status: 'queued' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+    expect(screen.getByRole('button', { name: 'Launch Agent' })).toBeInTheDocument()
+  })
+
+  it('shows Mark Done button when onMarkDone is provided and task is not done', () => {
+    const task = makeTask({ status: 'active' })
+    render(<SpecDrawer {...defaultProps} task={task} onMarkDone={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /Mark Done/ })).toBeInTheDocument()
+  })
+
+  it('does not show Mark Done button when task is already done', () => {
+    const task = makeTask({ status: 'done' })
+    render(<SpecDrawer {...defaultProps} task={task} onMarkDone={vi.fn()} />)
+    expect(screen.queryByRole('button', { name: /Mark Done/ })).not.toBeInTheDocument()
+  })
+
+  it('shows Delete button when onDelete is provided', () => {
+    const task = makeTask()
+    render(<SpecDrawer {...defaultProps} task={task} onDelete={vi.fn()} />)
+    expect(screen.getByRole('button', { name: /Delete/ })).toBeInTheDocument()
+  })
+
+  it('close button calls onClose', async () => {
+    const user = userEvent.setup()
+    const task = makeTask({ spec: '## Spec' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+
+    await user.click(screen.getByTitle('Close'))
+
+    expect(defaultProps.onClose).toHaveBeenCalled()
+  })
+
+  it('shows prompt toggle button when task has prompt', async () => {
+    const user = userEvent.setup()
+    const task = makeTask({ prompt: 'My full prompt text' })
+    render(<SpecDrawer {...defaultProps} task={task} />)
+
+    expect(screen.getByText(/View Full Prompt/)).toBeInTheDocument()
+    await user.click(screen.getByText(/View Full Prompt/))
+    expect(screen.getAllByText('My full prompt text').length).toBeGreaterThanOrEqual(1)
+  })
+
   it('does not apply error fallback for a cancelled task', async () => {
     let rejectFirst!: (reason: Error) => void
 
     const readSpecFile = vi.mocked(window.api.sprint.readSpecFile)
 
-    // First call: will reject after task switch
     readSpecFile.mockImplementationOnce(
       () => new Promise<string>((_, reject) => { rejectFirst = reject })
     )
@@ -151,16 +277,11 @@ describe('SpecDrawer', () => {
       spec: '# Inline Task B',
     })
 
-    // Render with task A — kicks off fetch
     const { rerender } = render(<SpecDrawer {...defaultProps} task={taskA} />)
-
-    // Switch to task B (inline spec, no fetch needed)
     rerender(<SpecDrawer {...defaultProps} task={taskB} />)
 
-    // Task A's fetch rejects after switch — should be ignored
     await act(async () => { rejectFirst(new Error('File not found')) })
 
-    // Task B's inline content must remain
     expect(screen.getByText('# Inline Task B')).toBeInTheDocument()
   })
 })

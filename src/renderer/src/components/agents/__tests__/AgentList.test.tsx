@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest'
-import { groupAgents } from '../AgentList'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { groupAgents, AgentList } from '../AgentList'
 import type { AgentMeta } from '../../../../../shared/types'
 
 const base: Omit<AgentMeta, 'id' | 'status' | 'startedAt' | 'finishedAt'> = {
@@ -43,5 +45,152 @@ describe('groupAgents', () => {
     const groups = groupAgents(agents)
     expect(groups.running).toHaveLength(0)
     expect(groups.recent).toHaveLength(1)
+  })
+
+  it('puts agents without finishedAt in history bucket', () => {
+    const agents: AgentMeta[] = [
+      { ...base, id: '1', status: 'done', startedAt: new Date(0).toISOString(), finishedAt: null },
+    ]
+    const groups = groupAgents(agents)
+    expect(groups.history).toHaveLength(1)
+  })
+})
+
+// AgentList renders and interaction tests
+
+function makeAgent(overrides: Partial<AgentMeta> = {}): AgentMeta {
+  return {
+    ...base,
+    id: crypto.randomUUID(),
+    status: 'done',
+    startedAt: new Date(Date.now() - 3600_000).toISOString(),
+    finishedAt: new Date(Date.now() - 1800_000).toISOString(),
+    ...overrides,
+  }
+}
+
+// Mock AgentCard to keep tests simple
+vi.mock('../AgentCard', () => ({
+  AgentCard: ({ agent, selected, onClick }: { agent: AgentMeta; selected: boolean; onClick: () => void }) => (
+    <button
+      data-testid={`agent-card-${agent.id}`}
+      data-selected={selected}
+      onClick={onClick}
+    >
+      {agent.task}
+    </button>
+  ),
+}))
+
+describe('AgentList', () => {
+  const defaultProps = {
+    agents: [],
+    selectedId: null,
+    onSelect: vi.fn(),
+  }
+
+  it('renders filter input', () => {
+    render(<AgentList {...defaultProps} />)
+    expect(screen.getByPlaceholderText('Filter agents...')).toBeInTheDocument()
+  })
+
+  it('shows no agents message when list is empty', () => {
+    render(<AgentList {...defaultProps} />)
+    expect(screen.getByText('No agents found')).toBeInTheDocument()
+  })
+
+  it('renders running group header when running agents exist', () => {
+    const agents = [makeAgent({ status: 'running', finishedAt: null })]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    expect(screen.getByText(/Running/)).toBeInTheDocument()
+  })
+
+  it('renders recent group header when recent agents exist', () => {
+    const agents = [makeAgent({ status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() })]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    expect(screen.getByText(/Recent/)).toBeInTheDocument()
+  })
+
+  it('renders history group header when old agents exist', () => {
+    const agents = [makeAgent({ status: 'done', finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString() })]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    expect(screen.getByText(/History/)).toBeInTheDocument()
+  })
+
+  it('filters agents by task text', async () => {
+    const user = userEvent.setup()
+    const agents = [
+      makeAgent({ task: 'Fix login bug', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() }),
+      makeAgent({ task: 'Add dark mode', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() }),
+    ]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    await user.type(screen.getByPlaceholderText('Filter agents...'), 'login')
+    expect(screen.getByText('Fix login bug')).toBeInTheDocument()
+    expect(screen.queryByText('Add dark mode')).not.toBeInTheDocument()
+  })
+
+  it('filters agents by repo name', async () => {
+    const user = userEvent.setup()
+    const agents = [
+      makeAgent({ task: 'Task A', repo: 'BDE', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() }),
+      makeAgent({ task: 'Task B', repo: 'feast', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() }),
+    ]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    await user.type(screen.getByPlaceholderText('Filter agents...'), 'feast')
+    expect(screen.getByText('Task B')).toBeInTheDocument()
+    expect(screen.queryByText('Task A')).not.toBeInTheDocument()
+  })
+
+  it('shows no agents found when filter matches nothing', async () => {
+    const user = userEvent.setup()
+    const agents = [makeAgent({ task: 'Fix bug', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() })]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    await user.type(screen.getByPlaceholderText('Filter agents...'), 'xyzzy')
+    expect(screen.getByText('No agents found')).toBeInTheDocument()
+  })
+
+  it('calls onSelect when an agent card is clicked', async () => {
+    const user = userEvent.setup()
+    const onSelect = vi.fn()
+    const agent = makeAgent({ id: 'my-agent', task: 'Some task', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() })
+    render(<AgentList {...defaultProps} agents={[agent]} onSelect={onSelect} />)
+    await user.click(screen.getByText('Some task'))
+    expect(onSelect).toHaveBeenCalledWith('my-agent')
+  })
+
+  it('history group agents are hidden when collapsed', () => {
+    const agent = makeAgent({ id: 'old-agent', task: 'Old task', status: 'done', finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString() })
+    render(<AgentList {...defaultProps} agents={[agent]} />)
+    // History is collapsed by default
+    expect(screen.queryByText('Old task')).not.toBeInTheDocument()
+  })
+
+  it('history group expands when header is clicked', async () => {
+    const user = userEvent.setup()
+    const agent = makeAgent({ id: 'old-agent', task: 'Old task', status: 'done', finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString() })
+    render(<AgentList {...defaultProps} agents={[agent]} />)
+    // Click the history header to expand
+    await user.click(screen.getByText(/History/))
+    expect(screen.getByText('Old task')).toBeInTheDocument()
+  })
+
+  it('uses initial filter prop to pre-populate search', () => {
+    const agents = [
+      makeAgent({ task: 'Fix login', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() }),
+      makeAgent({ task: 'Add feature', status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() }),
+    ]
+    render(<AgentList {...defaultProps} agents={agents} filter="Fix" />)
+    expect(screen.getByDisplayValue('Fix')).toBeInTheDocument()
+    expect(screen.getByText('Fix login')).toBeInTheDocument()
+    expect(screen.queryByText('Add feature')).not.toBeInTheDocument()
+  })
+
+  it('shows count in group headers', () => {
+    const agents = [
+      makeAgent({ status: 'running', finishedAt: null }),
+      makeAgent({ status: 'running', finishedAt: null }),
+    ]
+    render(<AgentList {...defaultProps} agents={agents} />)
+    expect(screen.getByText('(2)')).toBeInTheDocument()
   })
 })
