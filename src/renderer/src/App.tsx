@@ -20,18 +20,21 @@ import { usePanelLayoutStore, findLeaf } from './stores/panelLayout'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
 import { DEFAULT_MODEL } from '../../shared/models'
 
-const VIEW_ORDER: View[] = [
-  'agents',
-  'terminal',
-  'sprint',
-  'pr-station',
-  'memory',
-  'cost',
-  'settings',
-  'task-workbench'
-]
+// Keyboard shortcut order: ⌘1=dashboard, ⌘2=agents, ⌘3=terminal, ⌘4=sprint,
+// ⌘5=pr-station, ⌘6=unassigned (reserved for Git Tree), ⌘7=memory, ⌘8=cost, ⌘9=settings
+const VIEW_SHORTCUT_MAP: Partial<Record<string, View>> = {
+  '1': 'dashboard',
+  '2': 'agents',
+  '3': 'terminal',
+  '4': 'sprint',
+  '5': 'pr-station',
+  '7': 'memory',
+  '8': 'cost',
+  '9': 'settings',
+}
 
 const VIEW_TITLES: Record<View, string> = {
+  dashboard: 'Dashboard',
   agents: 'Agents',
   terminal: 'Terminal',
   sprint: 'Sprint Center',
@@ -181,9 +184,12 @@ function App(): React.JSX.Element {
 
       if (inInput && !e.metaKey) return
 
-      if (e.metaKey && e.key >= '1' && e.key <= '8') {
-        e.preventDefault()
-        setView(VIEW_ORDER[Number(e.key) - 1])
+      if (e.metaKey && e.key >= '1' && e.key <= '9') {
+        const target = VIEW_SHORTCUT_MAP[e.key]
+        if (target) {
+          e.preventDefault()
+          setView(target)
+        }
         return
       }
 

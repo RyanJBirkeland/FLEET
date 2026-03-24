@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { Panel, PanelGroup, PanelResizeHandle } from 'react-resizable-panels'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { ConfirmModal } from '../ui/ConfirmModal'
@@ -6,6 +7,7 @@ import { KanbanBoard } from './KanbanBoard'
 import { TaskTable } from './TaskTable'
 import { SpecDrawer } from './SpecDrawer'
 import { LogDrawer } from './LogDrawer'
+import { TaskMonitorPanel } from './TaskMonitorPanel'
 import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
 import { usePrConflictsStore } from '../../stores/prConflicts'
@@ -120,8 +122,8 @@ export function SprintCenter() {
     return partition.backlog.filter((t) => t.title.toLowerCase().includes(q))
   }, [partition.backlog, backlogSearch])
 
-  return (
-    <div className="sprint-center">
+  const kanbanContent = (
+    <>
       <div className="sprint-center__header">
         <div className="sprint-center__title-row">
           <span className="sprint-center__title text-gradient-aurora">SPRINT CENTER</span>
@@ -283,6 +285,36 @@ export function SprintCenter() {
           </>
         )}
       </div>
+    </>
+  )
+
+  return (
+    <div className="sprint-center">
+      {logDrawerTask ? (
+        <PanelGroup orientation="horizontal" style={{ height: '100%' }}>
+          <Panel defaultSize={65} minSize={40}>
+            {kanbanContent}
+          </Panel>
+          <PanelResizeHandle
+            style={{
+              width: '4px',
+              background: 'var(--bde-border, #333)',
+              cursor: 'col-resize',
+              flexShrink: 0,
+            }}
+          />
+          <Panel defaultSize={35} minSize={20}>
+            <TaskMonitorPanel
+              task={logDrawerTask}
+              onClose={() => setLogDrawerTaskId(null)}
+              onStop={handleStop}
+              onRerun={handleRerun}
+            />
+          </Panel>
+        </PanelGroup>
+      ) : (
+        kanbanContent
+      )}
 
       <SpecDrawer
         task={selectedTask}

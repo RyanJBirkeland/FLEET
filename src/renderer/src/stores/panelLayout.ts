@@ -4,7 +4,7 @@ import { create } from 'zustand'
 // Types
 // ---------------------------------------------------------------------------
 
-export type View = 'agents' | 'terminal' | 'sprint' | 'pr-station' | 'memory' | 'cost' | 'settings' | 'task-workbench'
+export type View = 'dashboard' | 'agents' | 'terminal' | 'sprint' | 'pr-station' | 'memory' | 'cost' | 'settings' | 'task-workbench'
 export type DropZone = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
 export interface PanelTab {
@@ -33,6 +33,7 @@ export type PanelNode = PanelLeafNode | PanelSplitNode
 // ---------------------------------------------------------------------------
 
 export const VIEW_LABELS: Record<View, string> = {
+  dashboard: 'Dashboard',
   agents: 'Agents',
   terminal: 'Terminal',
   sprint: 'Sprint',
@@ -302,7 +303,7 @@ function findFirstLeaf(node: PanelNode): PanelLeafNode | null {
 // Default layout
 // ---------------------------------------------------------------------------
 
-export const DEFAULT_LAYOUT: PanelNode = createLeaf('agents')
+export const DEFAULT_LAYOUT: PanelNode = createLeaf('dashboard')
 
 // ---------------------------------------------------------------------------
 // Zustand store
@@ -374,7 +375,7 @@ export const usePanelLayoutStore = create<PanelLayoutState>((set, get) => ({
 
   resetLayout: (): void => {
     _resetIdCounter()
-    const fresh = createLeaf('agents')
+    const fresh = createLeaf('dashboard')
     set({ root: fresh, focusedPanelId: fresh.panelId })
     if (typeof window !== 'undefined' && window.api?.settings) {
       window.api.settings.setJson('panel.layout', null).catch(() => {})

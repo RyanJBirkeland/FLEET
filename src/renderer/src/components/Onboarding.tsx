@@ -17,6 +17,12 @@ interface AuthStatus {
 
 type CheckState = 'loading' | 'pass' | 'fail' | 'warn'
 
+interface ExtendedCheckState {
+  gitAvailable: CheckState
+  reposConfigured: CheckState
+  supabaseConnected: CheckState
+}
+
 function getCheckState(status: AuthStatus | null, field: keyof Pick<AuthStatus, 'cliFound' | 'tokenFound'>): CheckState {
   if (!status) return 'loading'
   return status[field] ? 'pass' : 'fail'
@@ -49,22 +55,110 @@ function getInstruction(status: AuthStatus | null): string | null {
   return null
 }
 
+function CheckRow({
+  state,
+  label,
+  helpText,
+  optional = false,
+}: {
+  state: CheckState
+  label: string
+  helpText?: string
+  optional?: boolean
+}): React.JSX.Element {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
+      <div style={styles.checkRow}>
+        <StatusIcon state={state} />
+        <span style={styles.checkLabel}>{label}</span>
+        {optional && (
+          <span
+            style={{
+              fontSize: tokens.size.xs,
+              color: tokens.color.textMuted,
+              marginLeft: tokens.space[1],
+            }}
+          >
+            (optional)
+          </span>
+        )}
+      </div>
+      {helpText && state === 'fail' && (
+        <p
+          style={{
+            margin: `0 0 0 ${tokens.space[6]}`,
+            fontSize: tokens.size.xs,
+            color: tokens.color.textMuted,
+          }}
+        >
+          {helpText}
+        </p>
+      )}
+      {helpText && state === 'warn' && (
+        <p
+          style={{
+            margin: `0 0 0 ${tokens.space[6]}`,
+            fontSize: tokens.size.xs,
+            color: tokens.color.warning,
+          }}
+        >
+          {helpText}
+        </p>
+      )}
+    </div>
+  )
+}
+
 export function Onboarding({ onReady }: OnboardingProps): React.JSX.Element {
   const [status, setStatus] = useState<AuthStatus | null>(null)
   const [checking, setChecking] = useState(true)
+  const [extended, setExtended] = useState<ExtendedCheckState>({
+    gitAvailable: 'loading',
+    reposConfigured: 'loading',
+    supabaseConnected: 'loading',
+  })
 
   const runCheck = useCallback(async () => {
     setChecking(true)
-    try {
-      const result = await window.api.authStatus()
-      setStatus(result)
-      if (result.cliFound && result.tokenFound && !result.tokenExpired) {
+    setExtended({ gitAvailable: 'loading', reposConfigured: 'loading', supabaseConnected: 'loading' })
+
+    // Run auth check and extended checks concurrently
+    const [authResult] = await Promise.allSettled([
+      window.api.authStatus().then((result) => {
+        setStatus(result)
+        return result
+      }),
+    ])
+
+    // Git check — try to call getRepoPaths (requires git CLI)
+    const gitCheck = window.api.getRepoPaths().then(
+      () => 'pass' as CheckState,
+      () => 'fail' as CheckState
+    )
+
+    // Repos configured check — look for 'repos' setting
+    const reposCheck = window.api.settings.get('repos').then(
+      (val) => (val ? 'pass' : 'warn') as CheckState,
+      () => 'warn' as CheckState
+    )
+
+    // Supabase connected check — try a quick sprint list
+    const supabaseCheck = window.api.sprint.list().then(
+      () => 'pass' as CheckState,
+      () => 'warn' as CheckState
+    )
+
+    const [git, repos, supabase] = await Promise.all([gitCheck, reposCheck, supabaseCheck])
+    setExtended({ gitAvailable: git, reposConfigured: repos, supabaseConnected: supabase })
+
+    setChecking(false)
+
+    // Auto-advance only if required checks pass
+    if (authResult.status === 'fulfilled') {
+      const res = authResult.value
+      if (res.cliFound && res.tokenFound && !res.tokenExpired) {
         onReady()
       }
-    } catch {
-      setStatus({ cliFound: false, tokenFound: false, tokenExpired: false })
-    } finally {
-      setChecking(false)
     }
   }, [onReady])
 
@@ -87,22 +181,37 @@ export function Onboarding({ onReady }: OnboardingProps): React.JSX.Element {
         </div>
 
         <p style={styles.subtitle}>
-          Verifying Claude Code CLI and authentication
+          Verifying Claude Code CLI and environment
         </p>
 
         <div style={styles.checks}>
-          <div style={styles.checkRow}>
-            <StatusIcon state={cliState} />
-            <span style={styles.checkLabel}>Claude Code CLI installed</span>
-          </div>
-          <div style={styles.checkRow}>
-            <StatusIcon state={tokenState} />
-            <span style={styles.checkLabel}>Claude login completed</span>
-          </div>
-          <div style={styles.checkRow}>
-            <StatusIcon state={expiryState} />
-            <span style={styles.checkLabel}>Token not expired</span>
-          </div>
+          <div style={styles.sectionLabel}>Required</div>
+          <CheckRow state={cliState} label="Claude Code CLI installed" helpText="Install Claude Code CLI and add it to your PATH" />
+          <CheckRow state={tokenState} label="Claude login completed" helpText="Run `claude login` in your terminal" />
+          <CheckRow
+            state={expiryState}
+            label="Token not expired"
+            helpText="Run `claude login` to refresh your session"
+          />
+          <CheckRow
+            state={extended.gitAvailable}
+            label="Git available"
+            helpText="Install git and make sure it is on your PATH"
+          />
+
+          <div style={{ ...styles.sectionLabel, marginTop: tokens.space[3] }}>Optional</div>
+          <CheckRow
+            state={extended.reposConfigured}
+            label="Repositories configured"
+            helpText="Add repos in Settings to enable agent task dispatch"
+            optional
+          />
+          <CheckRow
+            state={extended.supabaseConnected}
+            label="Supabase connected"
+            helpText="Set supabase.url and supabase.serviceKey in Settings to enable Sprint tasks"
+            optional
+          />
         </div>
 
         {instruction && !checking && (
@@ -154,7 +263,7 @@ const styles: Record<string, React.CSSProperties> = {
     border: `1px solid ${tokens.color.border}`,
     borderRadius: tokens.radius.xl,
     padding: tokens.space[8],
-    maxWidth: '420px',
+    maxWidth: '460px',
     width: '100%',
     boxShadow: tokens.shadow.lg,
   },
@@ -180,6 +289,14 @@ const styles: Record<string, React.CSSProperties> = {
     flexDirection: 'column',
     gap: tokens.space[3],
     marginBottom: tokens.space[6],
+  },
+  sectionLabel: {
+    fontSize: tokens.size.xs,
+    fontWeight: 600,
+    color: tokens.color.textDim,
+    textTransform: 'uppercase',
+    letterSpacing: '0.08em',
+    marginBottom: tokens.space[1],
   },
   checkRow: {
     display: 'flex',

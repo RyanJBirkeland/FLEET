@@ -11,6 +11,7 @@ import { TerminalView } from '../../views/TerminalView'
 // Lazy-loaded views
 // ---------------------------------------------------------------------------
 
+const DashboardView = React.lazy(() => import('../../views/DashboardView'))
 const SprintView = React.lazy(() => import('../../views/SprintView'))
 const MemoryView = React.lazy(() => import('../../views/MemoryView'))
 const CostView = React.lazy(() => import('../../views/CostView'))
@@ -24,6 +25,8 @@ const TaskWorkbenchView = React.lazy(() => import('../../views/TaskWorkbenchView
 
 function resolveView(viewKey: View): React.ReactNode {
   switch (viewKey) {
+    case 'dashboard':
+      return <DashboardView />
     case 'agents':
       return <AgentsView />
     case 'terminal':
