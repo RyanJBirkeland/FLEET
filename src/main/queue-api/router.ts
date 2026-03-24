@@ -14,6 +14,7 @@ import {
   claimTask,
   releaseTask,
 } from '../data/sprint-queries'
+import { listAgentRunsByTaskId, hasAgent, readLog } from '../agent-history'
 import type { StatusUpdateRequest, ClaimRequest } from '../../shared/queue-api-contract'
 import { STATUS_UPDATE_FIELDS, RUNNER_WRITABLE_STATUSES } from '../../shared/queue-api-contract'
 import { toCamelCase, toSnakeCase } from './field-mapper'
@@ -175,8 +176,19 @@ export async function route(
     return handleEvents(req, res)
   }
 
+  // --- GET /queue/agents ---
+  if (method === 'GET' && path === '/queue/agents') {
+    return handleListAgents(res, query)
+  }
+
   // --- Routes with :id ---
   let params: Record<string, string> | null
+
+  // GET /queue/agents/:id/log (must come before /queue/agents to avoid false match)
+  params = matchRoute('/queue/agents/:id/log', path)
+  if (method === 'GET' && params) {
+    return handleAgentLog(res, params['id'], query)
+  }
 
   // GET /queue/tasks/:id
   params = matchRoute('/queue/tasks/:id', path)
@@ -418,6 +430,67 @@ async function handleTaskOutput(
   }
 
   sendJson(res, 200, { ok: true })
+}
+
+const MAX_LOG_BYTES = 204800 // 200KB
+const DEFAULT_LOG_BYTES = 50000
+
+async function handleListAgents(
+  res: http.ServerResponse,
+  query: URLSearchParams
+): Promise<void> {
+  const taskId = query.get('taskId') ?? undefined
+  const limit = Math.min(Math.max(parseInt(query.get('limit') ?? '10', 10) || 10, 1), 100)
+  const agents = await listAgentRunsByTaskId(taskId, limit)
+  sendJson(res, 200, agents.map((a) => ({
+    id: a.id,
+    status: a.status,
+    model: a.model,
+    task: a.task,
+    repo: a.repo,
+    startedAt: a.startedAt,
+    finishedAt: a.finishedAt,
+    exitCode: a.exitCode,
+    costUsd: a.costUsd,
+    tokensIn: a.tokensIn,
+    tokensOut: a.tokensOut,
+    source: a.source,
+  })))
+}
+
+async function handleAgentLog(
+  res: http.ServerResponse,
+  agentId: string,
+  query: URLSearchParams
+): Promise<void> {
+  const exists = await hasAgent(agentId)
+  if (!exists) {
+    sendJson(res, 404, { error: `Agent ${agentId} not found` })
+    return
+  }
+
+  const maxBytes = Math.min(
+    parseInt(query.get('maxBytes') ?? String(DEFAULT_LOG_BYTES), 10) || DEFAULT_LOG_BYTES,
+    MAX_LOG_BYTES
+  )
+  const fromByteParam = query.get('fromByte')
+
+  let fromByte: number
+  if (fromByteParam != null) {
+    // Explicit offset — read from that byte
+    fromByte = Math.max(parseInt(fromByteParam, 10) || 0, 0)
+  } else {
+    // Tail mode — do a zero-byte read to get totalBytes, then compute offset
+    const stat = await readLog(agentId, 0, 0)
+    fromByte = Math.max(0, stat.totalBytes - maxBytes)
+  }
+
+  const result = await readLog(agentId, fromByte, maxBytes)
+  sendJson(res, 200, {
+    content: result.content,
+    nextByte: result.nextByte,
+    totalBytes: result.totalBytes,
+  })
 }
 
 async function handleUpdateTask(

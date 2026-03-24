@@ -22,6 +22,19 @@ vi.mock('../../data/sprint-queries', () => ({
   releaseTask: (...args: unknown[]) => mockReleaseTask(...args),
 }))
 
+// ---------------------------------------------------------------------------
+// Mock agent-history — agent run queries and log reads
+// ---------------------------------------------------------------------------
+const mockListAgentRunsByTaskId = vi.fn()
+const mockHasAgent = vi.fn()
+const mockReadLog = vi.fn()
+
+vi.mock('../../agent-history', () => ({
+  listAgentRunsByTaskId: (...args: unknown[]) => mockListAgentRunsByTaskId(...args),
+  hasAgent: (...args: unknown[]) => mockHasAgent(...args),
+  readLog: (...args: unknown[]) => mockReadLog(...args),
+}))
+
 // Mock settings — no API key by default (auth disabled)
 const mockGetSetting = vi.fn().mockReturnValue(null)
 vi.mock('../../settings', () => ({
@@ -361,6 +374,93 @@ describe('Queue API', () => {
     it('responds to OPTIONS with CORS headers', async () => {
       const { status } = await request('OPTIONS', '/queue/health')
       expect(status).toBe(204)
+    })
+  })
+
+  describe('GET /queue/agents', () => {
+    it('returns agent runs list', async () => {
+      mockListAgentRunsByTaskId.mockResolvedValue([
+        {
+          id: 'run-1',
+          status: 'done',
+          model: 'claude-sonnet-4-5',
+          task: 'fix bug',
+          repo: 'bde',
+          startedAt: '2025-01-01T00:00:00Z',
+          finishedAt: '2025-01-01T01:00:00Z',
+          exitCode: 0,
+          costUsd: 0.45,
+          tokensIn: 12000,
+          tokensOut: 3400,
+          source: 'bde',
+        },
+      ])
+      const res = await request('GET', '/queue/agents')
+      expect(res.status).toBe(200)
+      expect(Array.isArray(res.body)).toBe(true)
+      const agents = res.body as unknown[]
+      expect(agents).toHaveLength(1)
+      expect((agents[0] as Record<string, unknown>).id).toBe('run-1')
+    })
+
+    it('passes taskId filter to query', async () => {
+      mockListAgentRunsByTaskId.mockResolvedValue([])
+      await request('GET', '/queue/agents?taskId=task-abc&limit=5')
+      expect(mockListAgentRunsByTaskId).toHaveBeenCalledWith('task-abc', 5)
+    })
+
+    it('uses default limit of 10', async () => {
+      mockListAgentRunsByTaskId.mockResolvedValue([])
+      await request('GET', '/queue/agents')
+      expect(mockListAgentRunsByTaskId).toHaveBeenCalledWith(undefined, 10)
+    })
+  })
+
+  describe('GET /queue/agents/:id/log', () => {
+    it('returns 404 when agent does not exist', async () => {
+      mockHasAgent.mockResolvedValue(false)
+      const res = await request('GET', '/queue/agents/nonexistent/log')
+      expect(res.status).toBe(404)
+    })
+
+    it('returns log content in tail mode (no fromByte)', async () => {
+      mockHasAgent.mockResolvedValue(true)
+      // First call: stat read (maxBytes=0) to get totalBytes
+      mockReadLog.mockResolvedValueOnce({
+        content: '',
+        nextByte: 0,
+        totalBytes: 5000,
+      })
+      // Second call: actual read from tail offset
+      mockReadLog.mockResolvedValueOnce({
+        content: 'last 100 bytes of log...',
+        nextByte: 5000,
+        totalBytes: 5000,
+      })
+      const res = await request('GET', '/queue/agents/run-1/log')
+      expect(res.status).toBe(200)
+      const body = res.body as Record<string, unknown>
+      expect(body.content).toBe('last 100 bytes of log...')
+      expect(body.totalBytes).toBe(5000)
+    })
+
+    it('returns log content from specific byte offset', async () => {
+      mockHasAgent.mockResolvedValue(true)
+      mockReadLog.mockResolvedValue({
+        content: 'more log data',
+        nextByte: 200,
+        totalBytes: 200,
+      })
+      const res = await request('GET', '/queue/agents/run-1/log?fromByte=100')
+      expect(res.status).toBe(200)
+      expect(mockReadLog).toHaveBeenCalledWith('run-1', 100, 50000)
+    })
+
+    it('caps maxBytes at 200KB', async () => {
+      mockHasAgent.mockResolvedValue(true)
+      mockReadLog.mockResolvedValue({ content: '', nextByte: 0, totalBytes: 0 })
+      await request('GET', '/queue/agents/run-1/log?fromByte=0&maxBytes=999999')
+      expect(mockReadLog).toHaveBeenCalledWith('run-1', 0, 204800)
     })
   })
 
