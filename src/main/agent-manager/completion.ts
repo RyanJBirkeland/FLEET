@@ -71,7 +71,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     branch = branchOut.trim()
   } catch (err) {
     logger.error(`[completion] Failed to detect branch for task ${taskId}: ${err}`)
-    await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Failed to detect branch' }).catch((e) =>
+    await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Failed to detect branch', claimed_by: null }).catch((e) =>
       logger.warn(`[completion] Failed to update task ${taskId} after branch detection error: ${e}`)
     )
     await onTaskTerminal(taskId, 'error')
@@ -80,7 +80,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
 
   if (!branch) {
     logger.error(`[completion] Empty branch name for task ${taskId}`)
-    await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Empty branch name' }).catch((e) =>
+    await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Empty branch name', claimed_by: null }).catch((e) =>
       logger.warn(`[completion] Failed to update task ${taskId} after empty branch: ${e}`)
     )
     await onTaskTerminal(taskId, 'error')
@@ -114,7 +114,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     )
     if (parseInt(diffOut.trim(), 10) === 0) {
       logger.warn(`[completion] Task ${taskId}: no commits to push on branch ${branch} — marking error`)
-      await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Agent produced no commits' }).catch((e) =>
+      await updateTask(taskId, { status: 'error', completed_at: new Date().toISOString(), notes: 'Agent produced no commits', claimed_by: null }).catch((e) =>
         logger.warn(`[completion] Failed to update task ${taskId} after empty branch: ${e}`)
       )
       await onTaskTerminal(taskId, 'error')
@@ -230,6 +230,7 @@ export async function resolveFailure(opts: ResolveFailureOpts, logger?: Logger):
       await updateTask(taskId, {
         status: 'failed',
         completed_at: new Date().toISOString(),
+        claimed_by: null,
       })
       return true  // terminal
     }

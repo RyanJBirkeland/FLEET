@@ -228,6 +228,7 @@ describe('resolveSuccess', () => {
       status: 'error',
       completed_at: expect.any(String),
       notes: 'Failed to detect branch',
+      claimed_by: null,
     })
 
     // Should call onTaskTerminal with 'error'
@@ -246,6 +247,7 @@ describe('resolveSuccess', () => {
       status: 'error',
       completed_at: expect.any(String),
       notes: 'Empty branch name',
+      claimed_by: null,
     })
 
     // Should call onTaskTerminal with 'error'

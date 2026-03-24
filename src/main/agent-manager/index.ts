@@ -205,8 +205,14 @@ export function createAgentManager(
               logger,
             })
           } catch (err) {
-            logger.error(`[agent-manager] setupWorktree failed for task ${task.id}: ${err}`)
-            await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString() })
+            const errMsg = err instanceof Error ? err.message : String(err)
+            logger.error(`[agent-manager] setupWorktree failed for task ${task.id}: ${errMsg}`)
+            await updateTask(task.id, {
+              status: 'error',
+              completed_at: new Date().toISOString(),
+              notes: `Worktree setup failed: ${errMsg}`.slice(0, 500),
+              claimed_by: null,
+            })
             await onTaskTerminal(task.id, 'error')
             continue
           }
