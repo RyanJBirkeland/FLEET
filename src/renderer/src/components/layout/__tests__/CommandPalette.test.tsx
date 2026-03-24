@@ -110,4 +110,119 @@ describe('CommandPalette', () => {
     await user.click(overlay)
     expect(onClose).toHaveBeenCalled()
   })
+
+  it('ArrowDown moves selection to next item', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const input = screen.getByPlaceholderText(/Type a command/)
+    await user.click(input)
+    await user.keyboard('{ArrowDown}')
+
+    // Second item should now have selected class
+    const selected = document.querySelectorAll('.command-palette__item--selected')
+    expect(selected.length).toBe(1)
+    // The selected item should not be the first one anymore
+    const items = document.querySelectorAll('.command-palette__item')
+    expect(items[1]).toHaveClass('command-palette__item--selected')
+  })
+
+  it('ArrowUp does not go below 0', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const input = screen.getByPlaceholderText(/Type a command/)
+    await user.click(input)
+    // ArrowUp from 0 stays at 0
+    await user.keyboard('{ArrowUp}')
+
+    const items = document.querySelectorAll('.command-palette__item')
+    expect(items[0]).toHaveClass('command-palette__item--selected')
+  })
+
+  it('Enter key runs selected command and closes', async () => {
+    const user = userEvent.setup()
+    const mockSetView = vi.fn()
+    const { useUIStore } = await import('../../../stores/ui')
+    vi.mocked(useUIStore).mockImplementation((selector) =>
+      selector({ setView: mockSetView })
+    )
+
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const input = screen.getByPlaceholderText(/Type a command/)
+    await user.click(input)
+    await user.keyboard('{Enter}')
+
+    // The first command should have been executed — setView called or onClose called
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('typing resets selected index to 0', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const input = screen.getByPlaceholderText(/Type a command/)
+    await user.click(input)
+    await user.keyboard('{ArrowDown}{ArrowDown}')
+
+    // Now type to reset
+    await user.type(input, 'agents')
+
+    const items = document.querySelectorAll('.command-palette__item')
+    if (items.length > 0) {
+      expect(items[0]).toHaveClass('command-palette__item--selected')
+    }
+  })
+
+  it('hovering an item changes selection', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const items = document.querySelectorAll('.command-palette__item')
+    expect(items.length).toBeGreaterThan(1)
+
+    await user.hover(items[2])
+    expect(items[2]).toHaveClass('command-palette__item--selected')
+  })
+
+  it('clicking a command calls onClose', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const items = document.querySelectorAll('.command-palette__item')
+    await user.click(items[0])
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  it('shows "Panels" group header', () => {
+    render(<CommandPalette open={true} onClose={onClose} />)
+    expect(screen.getByText('Panels')).toBeInTheDocument()
+  })
+
+  it('shows Spawn Agent command', () => {
+    render(<CommandPalette open={true} onClose={onClose} />)
+    expect(screen.getByText('Spawn Agent')).toBeInTheDocument()
+  })
+
+  it('filters down to panel commands when typing "split"', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const input = screen.getByPlaceholderText(/Type a command/)
+    await user.type(input, 'split')
+
+    expect(screen.getByText('Split Right')).toBeInTheDocument()
+    expect(screen.queryByText('Go to Agents')).not.toBeInTheDocument()
+  })
+
+  it('fuzzy match works for abbreviated queries', async () => {
+    const user = userEvent.setup()
+    render(<CommandPalette open={true} onClose={onClose} />)
+
+    const input = screen.getByPlaceholderText(/Type a command/)
+    await user.type(input, 'gta') // matches "Go to Agents"
+
+    expect(screen.getByText('Go to Agents')).toBeInTheDocument()
+  })
 })
