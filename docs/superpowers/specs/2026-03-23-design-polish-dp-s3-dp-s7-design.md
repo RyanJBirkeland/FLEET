@@ -10,34 +10,54 @@
 
 ### Problem
 
-5 of 7 views have gradient headers. AgentsView uses inline styles with plain muted text. PRStationView lacks the aurora treatment on its view header.
+Most views have gradient headers, but with gaps:
+
+- **AgentsView** — inline styles, plain muted text, no gradient, no underline
+- **PRStationView** — no view-level header at all (it's a split list+detail layout with component-level headers only)
+- **TerminalView** — has aurora title gradient but missing `::after` accent underline and `position: relative`
 
 ### Design
 
-**Standard gradient:** Both remaining views use `text-gradient-aurora` (the `--gradient-aurora` CSS variable: green→cyan at 135deg). No custom per-view gradients.
+**Standard gradient:** Use `text-gradient-aurora` (the `--gradient-aurora` CSS variable: green→cyan at 135deg) and the standard green→blue `::after` underline for all new/fixed headers.
+
+**Note on existing underline variation:** Memory uses purple (`rgba(167, 139, 250, 0.4)`), Settings uses blue (`rgba(108, 142, 239, 0.4)`). These are intentional per-view accents and stay as-is. New headers use the standard green→blue gradient.
 
 #### AgentsView
 
 - Migrate all inline header styles to CSS classes following the established pattern:
-  - `.agents-view__header` — flex container with padding and bottom border
+  - `.agents-view__header` — flex container, `position: relative`, padding, bottom border
   - `.agents-view__title` — 13px, 700 weight, uppercase, 0.10em letter-spacing, `text-gradient-aurora`
-- Add `::after` accent underline on `.agents-view__header` matching the gradient underline pattern used by Terminal, Cost, Memory, Settings, Sprint
+  - `.agents-view__spawn-btn` — the "+" button (currently inline-styled)
+- **Deliberate style changes from current inline values:** `fontWeight: 600` → `700`, `letterSpacing: 0.05em` → `0.10em` — aligning with the standard used by all other view headers
+- Add `::after` accent underline on `.agents-view__header`
 - CSS goes in `src/renderer/src/assets/agents.css` (new file, imported in the view)
 
 #### PRStationView
 
-- Apply `text-gradient-aurora` class to the existing view header title
-- Add `::after` accent underline if not already present
-- Use existing CSS file for PR Station styles
+- PRStationView has no view-level header element. It renders a side-by-side list panel (`PRStationList`) and detail panel (`PRStationDetail`), each with their own component-level headers.
+- **Add a view-level header** above the split layout: a thin bar with "PR STATION" title using `text-gradient-aurora` and `::after` underline, matching the pattern of all other views.
+- CSS class: `.pr-station__view-header`, `.pr-station__view-title`
+- Styles go in `src/renderer/src/assets/pr-station.css`
+
+#### TerminalView (fix)
+
+- Add `position: relative` to `.terminal-view__header`
+- Add `::after` accent underline to `.terminal-view__header`
+- Both additions go in `src/renderer/src/assets/terminal.css`
 
 ### Pattern Reference
 
-All view headers follow this structure:
+All view headers follow this structure. **`position: relative` is required** for the `::after` to render correctly.
 
 ```css
 .{view}__header {
   position: relative;
-  /* flex layout, padding */
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  height: 36px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .{view}__header::after {
@@ -73,7 +93,7 @@ All view headers follow this structure:
 
 #### Implementation
 
-Each view's root element wraps with `motion.div`:
+Each view's root `<div>` is **replaced** (not wrapped) with `motion.div`. The `motion.div` must receive the existing root className and any inline styles to preserve flex/height layouts.
 
 ```tsx
 import { motion } from 'framer-motion'
@@ -89,11 +109,13 @@ function SomeView() {
       animate="animate"
       transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
     >
-      {/* existing content */}
+      {/* existing content unchanged */}
     </motion.div>
   )
 }
 ```
+
+**Important:** `motion.div` replaces the existing root `<div>`, inheriting its `className`, `style`, and any other props. This avoids inserting an extra DOM node that would break `height: 100%` / flex layouts.
 
 #### Affected Views
 
@@ -101,7 +123,7 @@ All 7 views:
 
 1. AgentsView
 2. TerminalView
-3. SprintView
+3. SprintView (note: wraps `SprintCenter`)
 4. PRStationView
 5. MemoryView
 6. CostView
@@ -113,12 +135,14 @@ All 7 views:
 - Use `SPRINGS.snappy` for quick, non-distracting entrance
 - No `exit` animations (views unmount instantly when switching)
 - No `AnimatePresence` wrapper needed at the view level
+- `motion.div` must replace, not wrap, the root element
 
 ---
 
 ## Out of Scope
 
 - Custom per-view gradient colors (decided: standard aurora for all new headers)
+- Standardizing existing per-view underline gradients (Memory purple, Settings blue stay as-is)
 - List item stagger animations
 - Panel resize / sidebar collapse animations
 - View exit animations
