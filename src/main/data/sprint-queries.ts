@@ -2,7 +2,7 @@
  * Sprint task query functions — Supabase edition.
  * All functions are async and use the Supabase client singleton.
  */
-import type { SprintTask } from '../../shared/types'
+import type { SprintTask, TaskDependency } from '../../shared/types'
 import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
 import { getSupabaseClient } from './supabase-client'
 
