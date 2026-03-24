@@ -2,12 +2,13 @@
  * AgentDetail — right panel showing agent header, chat renderer, and steer input.
  */
 import { useMemo, useState, useEffect } from 'react'
-import { Bot, Clock, Zap, DollarSign } from 'lucide-react'
+import { Bot, Clock, Zap, DollarSign, Terminal } from 'lucide-react'
 import type { AgentMeta } from '../../../../shared/types'
 import type { AgentEvent } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
 import { ChatRenderer } from './ChatRenderer'
 import { SteerInput } from './SteerInput'
+import { useTerminalStore } from '../../stores/terminal'
 
 interface AgentDetailProps {
   agent: AgentMeta
@@ -36,6 +37,11 @@ export function AgentDetail({ agent, events, onSteer }: AgentDetailProps) {
       : null
   }, [events])
 
+  const handleOpenShell = () => {
+    const cwd = agent.repoPath
+    useTerminalStore.getState().addTab(undefined, cwd)
+  }
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* Header */}
@@ -51,6 +57,29 @@ export function AgentDetail({ agent, events, onSteer }: AgentDetailProps) {
           <span style={{ fontSize: tokens.size.lg, color: tokens.color.text, fontWeight: 500, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
             {agent.task.slice(0, 120)}
           </span>
+          <button
+            onClick={handleOpenShell}
+            aria-label="Open shell in agent directory"
+            title="Open shell in agent directory"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              padding: tokens.space[1],
+              display: 'flex',
+              alignItems: 'center',
+              color: tokens.color.textMuted,
+              borderRadius: tokens.radius.md,
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = tokens.color.surfaceHover
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'none'
+            }}
+          >
+            <Terminal size={16} />
+          </button>
           <span style={{
             fontSize: tokens.size.xs,
             padding: `2px ${tokens.space[2]}`,

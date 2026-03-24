@@ -1,7 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { AgentDetail } from '../AgentDetail'
 import type { AgentMeta, AgentEvent } from '../../../../../shared/types'
+import { useTerminalStore } from '../../../stores/terminal'
 
 // Mock ChatRenderer and SteerInput to simplify tests
 vi.mock('../ChatRenderer', () => ({
@@ -16,6 +18,15 @@ vi.mock('../SteerInput', () => ({
       <button onClick={() => onSend('test message')}>Send</button>
     </div>
   ),
+}))
+
+// Mock terminal store
+vi.mock('../../../stores/terminal', () => ({
+  useTerminalStore: {
+    getState: vi.fn(() => ({
+      addTab: vi.fn(),
+    })),
+  },
 }))
 
 function makeAgent(overrides: Partial<AgentMeta> = {}): AgentMeta {
@@ -214,5 +225,27 @@ describe('AgentDetail', () => {
     await waitFor(() => {
       expect(screen.getByText('No output available for this agent.')).toBeInTheDocument()
     })
+  })
+
+  it('renders Open Shell button', () => {
+    const agent = makeAgent()
+    render(<AgentDetail {...defaultProps} agent={agent} events={[]} />)
+    const button = screen.getByRole('button', { name: /open shell/i })
+    expect(button).toBeInTheDocument()
+  })
+
+  it('opens terminal in agent repo directory when Open Shell is clicked', async () => {
+    const user = userEvent.setup()
+    const mockAddTab = vi.fn()
+    vi.mocked(useTerminalStore.getState).mockReturnValue({
+      addTab: mockAddTab,
+    } as never)
+    const agent = makeAgent({ repo: 'BDE', repoPath: '/home/user/bde' })
+    render(<AgentDetail {...defaultProps} agent={agent} events={[]} />)
+
+    const button = screen.getByRole('button', { name: /open shell/i })
+    await user.click(button)
+
+    expect(mockAddTab).toHaveBeenCalledWith(undefined, '/home/user/bde')
   })
 })
