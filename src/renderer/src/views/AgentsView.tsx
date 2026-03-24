@@ -5,6 +5,7 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { Plus } from 'lucide-react'
+import '../assets/agents.css'
 import { useUIStore } from '../stores/ui'
 import { useAgentHistoryStore } from '../stores/agentHistory'
 import { useAgentEventsStore } from '../stores/agentEvents'
@@ -73,7 +74,7 @@ export function AgentsView() {
   }, [selectedId])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tokens.color.bg }}>
+    <div className="agents-view" style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       {/* HealthBar */}
       <HealthBarWrapper />
 
@@ -81,31 +82,14 @@ export function AgentsView() {
       {/* Left sidebar */}
       <div style={{ width: sidebarWidth, minWidth: 200, borderRight: `1px solid ${tokens.color.border}`, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: `${tokens.space[2]} ${tokens.space[3]}`,
-          borderBottom: `1px solid ${tokens.color.border}`,
-        }}>
-          <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+        <div className="agents-view__sidebar-header">
+          <span className="agents-view__title text-gradient-aurora">
             Agents
           </span>
           <button
+            className="agents-view__spawn-btn"
             onClick={() => setSpawnOpen(true)}
             title="Spawn Agent"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 24,
-              height: 24,
-              background: 'none',
-              border: `1px solid ${tokens.color.border}`,
-              borderRadius: tokens.radius.sm,
-              cursor: 'pointer',
-              color: tokens.color.textMuted,
-            }}
           >
             <Plus size={14} />
           </button>
