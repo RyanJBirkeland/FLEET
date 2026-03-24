@@ -21,13 +21,14 @@ import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/m
 import { DEFAULT_MODEL } from '../../shared/models'
 
 // Keyboard shortcut order: ⌘1=dashboard, ⌘2=agents, ⌘3=terminal, ⌘4=sprint,
-// ⌘5=pr-station, ⌘6=unassigned (reserved for Git Tree), ⌘7=memory, ⌘8=cost, ⌘9=settings
+// ⌘5=pr-station, ⌘6=git, ⌘7=memory, ⌘8=cost, ⌘9=settings
 const VIEW_SHORTCUT_MAP: Partial<Record<string, View>> = {
   '1': 'dashboard',
   '2': 'agents',
   '3': 'terminal',
   '4': 'sprint',
   '5': 'pr-station',
+  '6': 'git',
   '7': 'memory',
   '8': 'cost',
   '9': 'settings',
@@ -39,6 +40,7 @@ const VIEW_TITLES: Record<View, string> = {
   terminal: 'Terminal',
   sprint: 'Sprint Center',
   'pr-station': 'PR Station',
+  git: 'Source Control',
   memory: 'Memory',
   cost: 'Cost',
   settings: 'Settings',

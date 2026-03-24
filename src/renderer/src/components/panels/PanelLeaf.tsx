@@ -18,6 +18,7 @@ const CostView = React.lazy(() => import('../../views/CostView'))
 const SettingsView = React.lazy(() => import('../../views/SettingsView'))
 const PRStationView = React.lazy(() => import('../../views/PRStationView'))
 const TaskWorkbenchView = React.lazy(() => import('../../views/TaskWorkbenchView'))
+const GitTreeView = React.lazy(() => import('../../views/GitTreeView'))
 
 // ---------------------------------------------------------------------------
 // View registry
@@ -43,6 +44,8 @@ function resolveView(viewKey: View): React.ReactNode {
       return <PRStationView />
     case 'task-workbench':
       return <TaskWorkbenchView />
+    case 'git':
+      return <GitTreeView />
   }
 }
 

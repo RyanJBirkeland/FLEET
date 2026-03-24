@@ -4,7 +4,7 @@ import { create } from 'zustand'
 // Types
 // ---------------------------------------------------------------------------
 
-export type View = 'dashboard' | 'agents' | 'terminal' | 'sprint' | 'pr-station' | 'memory' | 'cost' | 'settings' | 'task-workbench'
+export type View = 'dashboard' | 'agents' | 'terminal' | 'sprint' | 'pr-station' | 'git' | 'memory' | 'cost' | 'settings' | 'task-workbench'
 export type DropZone = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
 export interface PanelTab {
@@ -42,6 +42,7 @@ export const VIEW_LABELS: Record<View, string> = {
   cost: 'Cost',
   settings: 'Settings',
   'task-workbench': 'Task Workbench',
+  git: 'Source Control',
 }
 
 // ---------------------------------------------------------------------------
