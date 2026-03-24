@@ -7,6 +7,7 @@ import { AgentStatusChip } from './AgentStatusChip'
 import { TaskEventSubtitle } from './TaskEventSubtitle'
 import { repoBadgeVariant } from '../../lib/format'
 import { useSprintEvents } from '../../stores/sprintEvents'
+import { useSprintUI } from '../../stores/sprintUI'
 
 import { TASK_STATUS } from '../../../../shared/constants'
 import type { SprintTask } from './SprintCenter'
@@ -37,6 +38,11 @@ export const TaskCard = memo(function TaskCard({
   onStop,
 }: TaskCardProps) {
   const latestEvent = useSprintEvents((s) => s.latestEvents[task.id] ?? null)
+  const selectedTaskIds = useSprintUI((s) => s.selectedTaskIds)
+  const toggleTaskSelection = useSprintUI((s) => s.toggleTaskSelection)
+
+  const hasAnySelection = selectedTaskIds.length > 0
+  const isSelected = selectedTaskIds.includes(task.id)
 
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: task.id,
@@ -59,12 +65,28 @@ export const TaskCard = memo(function TaskCard({
     isDragging && 'task-card--dragging',
     isHighPriority && 'task-card--high-priority',
     task.status === 'blocked' && 'task-card--blocked',
+    isSelected && 'task-card--selected',
   ]
     .filter(Boolean)
     .join(' ')
 
+  const handleCheckboxClick = (e: React.MouseEvent) => {
+    e.stopPropagation()
+    toggleTaskSelection(task.id)
+  }
+
   return (
     <div ref={setNodeRef} style={style} className={className} {...sortableAttributes} {...listeners}>
+      {hasAnySelection && (
+        <input
+          type="checkbox"
+          className="task-card__checkbox"
+          checked={isSelected}
+          onClick={handleCheckboxClick}
+          onChange={() => {}} // Controlled by onClick to avoid double-firing
+          aria-label={`Select task ${task.title}`}
+        />
+      )}
       <div className="task-card__title" title={task.title}>
         {task.title}
       </div>

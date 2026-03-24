@@ -18,6 +18,23 @@ vi.mock('@dnd-kit/utilities', () => ({
   CSS: { Transform: { toString: () => undefined } },
 }))
 
+const mockToggleTaskSelection = vi.fn()
+const mockSelectRange = vi.fn()
+const mockClearSelection = vi.fn()
+let mockSelectedTaskIds: string[] = []
+
+vi.mock('../../stores/sprintUI', () => ({
+  useSprintUI: (selector?: (state: any) => any) => {
+    const state = {
+      selectedTaskIds: mockSelectedTaskIds,
+      toggleTaskSelection: mockToggleTaskSelection,
+      selectRange: mockSelectRange,
+      clearSelection: mockClearSelection,
+    }
+    return selector ? selector(state) : state
+  },
+}))
+
 function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
   return {
     id: crypto.randomUUID(),
@@ -60,6 +77,10 @@ describe('TaskCard', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockToggleTaskSelection.mockClear()
+    mockSelectRange.mockClear()
+    mockClearSelection.mockClear()
+    mockSelectedTaskIds = []
   })
 
   it('renders task title and repo badge', () => {
@@ -322,5 +343,56 @@ describe('TaskCard', () => {
     const task = makeTask({ priority: 5 })
     const { container } = render(<TaskCard {...defaultProps} task={task} />)
     expect(container.querySelector('.task-card--high-priority')).not.toBeInTheDocument()
+  })
+
+  // --- Bulk selection tests ---
+
+  it('does not show checkbox when no tasks are selected', () => {
+    mockSelectedTaskIds = []
+    const task = makeTask()
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card__checkbox')).not.toBeInTheDocument()
+  })
+
+  it('shows checkbox when at least one task is selected', () => {
+    mockSelectedTaskIds = ['some-other-task']
+    const task = makeTask()
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card__checkbox')).toBeInTheDocument()
+  })
+
+  it('checkbox is checked when this task is selected', () => {
+    const task = makeTask({ id: 'task-1' })
+    mockSelectedTaskIds = ['task-1']
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    const checkbox = container.querySelector('.task-card__checkbox') as HTMLInputElement
+    expect(checkbox).toBeInTheDocument()
+    expect(checkbox?.checked).toBe(true)
+  })
+
+  it('checkbox is unchecked when this task is not selected', () => {
+    const task = makeTask({ id: 'task-1' })
+    mockSelectedTaskIds = ['some-other-task']
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    const checkbox = container.querySelector('.task-card__checkbox') as HTMLInputElement
+    expect(checkbox).toBeInTheDocument()
+    expect(checkbox?.checked).toBe(false)
+  })
+
+  it('adds task-card--selected class when task is selected', () => {
+    const task = makeTask({ id: 'task-1' })
+    mockSelectedTaskIds = ['task-1']
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    expect(container.querySelector('.task-card--selected')).toBeInTheDocument()
+  })
+
+  it('clicking checkbox calls toggleTaskSelection', async () => {
+    const user = userEvent.setup()
+    const task = makeTask({ id: 'task-1' })
+    mockSelectedTaskIds = ['task-1']
+    const { container } = render(<TaskCard {...defaultProps} task={task} />)
+    const checkbox = container.querySelector('.task-card__checkbox') as HTMLInputElement
+    await user.click(checkbox)
+    expect(mockToggleTaskSelection).toHaveBeenCalledWith('task-1')
   })
 })
