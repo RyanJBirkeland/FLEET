@@ -64,7 +64,8 @@ describe('BulkActionBar', () => {
     const user = userEvent.setup()
     render(<BulkActionBar {...defaultProps} selectedCount={2} />)
     await user.click(screen.getByRole('button', { name: /delete/i }))
-    const confirmButton = screen.getByRole('button', { name: /confirm|yes|delete/i })
+    const deleteButtons = screen.getAllByRole('button', { name: /delete/i })
+    const confirmButton = deleteButtons[deleteButtons.length - 1]
     await user.click(confirmButton)
     expect(mockOnDelete).toHaveBeenCalled()
   })

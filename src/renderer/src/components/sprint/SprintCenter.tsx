@@ -108,6 +108,18 @@ export function SprintCenter() {
   useSprintKeyboardShortcuts({ openWorkbench, setConflictDrawerOpen })
 
   // Keyboard shortcuts for bulk selection
+  const filteredTasks = repoFilter
+    ? tasks.filter((t) => t.repo.toLowerCase() === repoFilter.toLowerCase())
+    : tasks
+
+  const partition = useMemo(() => partitionSprintTasks(filteredTasks), [filteredTasks])
+
+  const filteredBacklog = useMemo(() => {
+    if (!backlogSearch.trim()) return partition.backlog
+    const q = backlogSearch.trim().toLowerCase()
+    return partition.backlog.filter((t) => t.title.toLowerCase().includes(q))
+  }, [partition.backlog, backlogSearch])
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       // Escape to clear selection
@@ -133,17 +145,6 @@ export function SprintCenter() {
     [tasks, conflictingTaskIds]
   )
 
-  const filteredTasks = repoFilter
-    ? tasks.filter((t) => t.repo.toLowerCase() === repoFilter.toLowerCase())
-    : tasks
-
-  const partition = useMemo(() => partitionSprintTasks(filteredTasks), [filteredTasks])
-
-  const filteredBacklog = useMemo(() => {
-    if (!backlogSearch.trim()) return partition.backlog
-    const q = backlogSearch.trim().toLowerCase()
-    return partition.backlog.filter((t) => t.title.toLowerCase().includes(q))
-  }, [partition.backlog, backlogSearch])
 
   // --- Bulk action handlers ---
   const handleBulkSetPriority = useCallback(
