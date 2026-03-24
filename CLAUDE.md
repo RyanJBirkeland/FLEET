@@ -73,7 +73,7 @@ These files are edited frequently across branches. Take extra care when modifyin
 ## Architecture Notes
 
 - **Data layer**: SQLite at `~/.bde/bde.db` (WAL mode, schema in `src/main/db.ts`) for local tables: `agent_runs`, `settings`, `cost_events`, `agent_events`. Sprint tasks live in **Supabase** (`sprint_tasks` table) — accessed via `src/main/data/sprint-queries.ts`. Local `sprint_tasks` was dropped in migration v12.
-- **AgentManager**: `src/main/agent-manager/` — in-process task orchestration (replaces external task runner). Drain loop watches for queued tasks, spawns agents in git worktrees via SDK, monitors with watchdogs, handles completion (push branch, open PR, retry logic). Fully dependency-injected.
+- **AgentManager**: `src/main/agent-manager/` — in-process task orchestration. Drain loop watches for queued tasks, spawns agents in git worktrees via SDK, monitors with watchdogs, handles completion (push branch, open PR, retry logic). Fully dependency-injected — passed as parameter to handler registration functions (no globalThis). Core agent lifecycle in `run-agent.ts` with explicit `RunAgentDeps` interface.
 - **AuthGuard**: `src/main/auth-guard.ts` — validates Claude Code subscription token. NOT called in the drain loop (Keychain access hangs in Electron). Auth is validated by the SDK at spawn time instead. Users must run `claude login` to authenticate.
 - **Task dependencies**: `src/main/agent-manager/dependency-index.ts` (in-memory reverse index, cycle detection), `src/main/agent-manager/resolve-dependents.ts` (blocked→queued transitions). Tasks can declare `depends_on: TaskDependency[]` with `hard` (block on failure) or `soft` (unblock regardless) edges. `blocked` status = unsatisfied hard deps. Resolution triggered from all terminal status paths.
 - **PR poller**: `src/main/pr-poller.ts` — polls open PRs from all configured repos every 60s, fetches check runs, broadcasts `pr:listUpdated` to renderer. Separate from sprint PR poller.
@@ -81,7 +81,7 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **State**: Zustand stores in `src/renderer/src/stores/`
 - **IPC**: 13 handler modules in `src/main/handlers/`, registered in `src/main/index.ts`, preload bridge in `src/preload/index.ts`. 69 typed channels in `src/shared/ipc-channels.ts`.
 - **Agent spawning**: `src/main/agent-manager/sdk-adapter.ts` spawns agents via `@anthropic-ai/claude-agent-sdk` (with CLI fallback). OAuth token read from `~/.bde/oauth-token` at startup — Keychain access hangs in Electron's main process, so the file-based approach is required.
-- **Queue API**: `src/main/queue-api/` — HTTP server on port 18790. Task CRUD with camelCase field mapping, SSE broadcaster (`task:queued`/`task:updated`/`task:output`), auth via Bearer header or `?token=` query param. Accepts agent visibility events at `POST /queue/tasks/:id/output`.
+- **Queue API**: `src/main/queue-api/` — HTTP server on port 18790. Split into `helpers.ts` (auth, parsing), `task-handlers.ts` (CRUD), `agent-handlers.ts` (logs), `event-handlers.ts` (SSE, output). Router is thin dispatch (~116 lines). Task CRUD with camelCase field mapping, SSE broadcaster, auth via Bearer header or `?token=` query param. General PATCH restricted to safe fields via `GENERAL_PATCH_FIELDS`; status changes must use `/status` endpoint.
 - **DB sync**: File watcher on `bde.db` pushes `sprint:externalChange` IPC events to renderer (500ms debounce)
 - **Design tokens**: `src/renderer/src/design-system/tokens.ts` — use these instead of hardcoded values
 - **Panel system**: `src/renderer/src/stores/panelLayout.ts` — recursive PanelNode tree (leaf/split), `src/renderer/src/components/panels/` — PanelRenderer, PanelLeaf, PanelTabBar, PanelDropOverlay. Layout persists to `panel.layout` setting. Views rendered inside panels; drag-and-drop docking with 5-zone hit testing.
@@ -91,11 +91,10 @@ These files are edited frequently across branches. Take extra care when modifyin
 
 ## Gotchas
 
-- **Worktree node_modules**: Git worktrees don't include `node_modules`. Symlink from main repo: `ln -s ~/projects/BDE/node_modules /tmp/worktrees/BDE/<branch>/node_modules`. Required for typecheck/test in worktrees.
+- **Worktree node_modules**: Git worktrees don't include `node_modules`. Run `npm install` in the worktree (preferred — handles native module rebuilds). Alternatively, symlink from main repo but native modules like `better-sqlite3` may fail.
 - **Zustand Map anti-pattern**: Never use `Map` as Zustand state — `new Map(old)` creates a new reference on every mutation, defeating shallow equality and causing all subscribers to re-render. Use `Record<string, T[]>` instead.
 - **Shared env utilities**: PATH augmentation and OAuth token loading are in `src/main/env-utils.ts`. Use `buildAgentEnv()` or `buildAgentEnvWithAuth()` — do NOT duplicate PATH logic in new files.
 - **CSS theming rule**: Never use hardcoded `rgba()` for overlays or `box-shadow`. Use `var(--bde-overlay)` for backgrounds and `var(--bde-shadow-sm/md/lg)` for shadows. Header gradients use `var(--bde-header-gradient)`. All defined in `base.css` with light theme variants.
-- **Preload type gap**: `window.api.workbench` exists at runtime (preload/index.ts) but is missing from TypeScript declarations — `tsconfig.web.json` will show errors for workbench-related code. This is a known pre-existing issue.
 - **FK constraints**: `sprint_tasks.agent_run_id` has NO foreign key constraint (migration v10 dropped it).
 - **Keychain token format**: `claudeAiOauth.expiresAt` is a stringified epoch millisecond, NOT an ISO date. Parse with `parseInt(val, 10)`.
 - **electron-builder afterSign**: Cannot use `.sh` files as `afterSign` hooks — electron-builder `require()`s them as JavaScript. Use `.js`/`.cjs` files, or omit for unsigned builds (`identity: null`).
@@ -128,6 +127,7 @@ npm run package      # Alias for build:mac
 - TypeScript strict mode
 - Zustand for all client state
 - `lucide-react` for icons
-- `react-resizable-panels` for panel layouts
+- `react-resizable-panels` for panel layouts (`orientation` prop, not `direction`)
+- ARIA accessibility: landmarks (`<main>`, `<nav>`), dialog semantics (`role="dialog"`, `aria-modal`), tab patterns (`role="tablist"`/`role="tab"`), live regions on ToastContainer. Maintain these when adding new UI.
 - Max one Zustand store per domain concern
 - Polling intervals centralized in `src/renderer/src/lib/constants.ts`
