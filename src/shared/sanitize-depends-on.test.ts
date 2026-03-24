@@ -1,3 +1,4 @@
+/// <reference types="vitest/globals" />
 import { sanitizeDependsOn } from './sanitize-depends-on'
 
 describe('sanitizeDependsOn', () => {
