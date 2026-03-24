@@ -1,25 +1,29 @@
 import { useState, useMemo } from 'react'
 import {
+  LayoutDashboard,
   Terminal,
   SquareTerminal,
   GitBranch,
   GitPullRequest,
   Brain,
   DollarSign,
-  Settings
+  Settings,
+  GitCommitHorizontal
 } from 'lucide-react'
 import { useUIStore, View } from '../../stores/ui'
 import { usePanelLayoutStore, findLeaf } from '../../stores/panelLayout'
 import { tokens } from '../../design-system/tokens'
 
 const NAV_ITEMS: { view: View; icon: typeof Terminal; label: string; shortcut: string }[] = [
-  { view: 'agents', icon: Terminal, label: 'Agents', shortcut: '⌘1' },
-  { view: 'terminal', icon: SquareTerminal, label: 'Terminal', shortcut: '⌘2' },
-  { view: 'sprint', icon: GitBranch, label: 'Sprint Center', shortcut: '⌘3' },
-  { view: 'pr-station', icon: GitPullRequest, label: 'PR Station', shortcut: '⌘4' },
-  { view: 'memory', icon: Brain, label: 'Memory', shortcut: '⌘5' },
-  { view: 'cost', icon: DollarSign, label: 'Cost Tracker', shortcut: '⌘6' },
-  { view: 'settings', icon: Settings, label: 'Settings', shortcut: '⌘7' }
+  { view: 'dashboard', icon: LayoutDashboard, label: 'Dashboard', shortcut: '⌘1' },
+  { view: 'agents', icon: Terminal, label: 'Agents', shortcut: '⌘2' },
+  { view: 'terminal', icon: SquareTerminal, label: 'Terminal', shortcut: '⌘3' },
+  { view: 'sprint', icon: GitBranch, label: 'Sprint Center', shortcut: '⌘4' },
+  { view: 'pr-station', icon: GitPullRequest, label: 'PR Station', shortcut: '⌘5' },
+  { view: 'git', icon: GitCommitHorizontal, label: 'Source Control', shortcut: '⌘6' },
+  { view: 'memory', icon: Brain, label: 'Memory', shortcut: '⌘7' },
+  { view: 'cost', icon: DollarSign, label: 'Cost Tracker', shortcut: '⌘8' },
+  { view: 'settings', icon: Settings, label: 'Settings', shortcut: '⌘9' }
 ]
 
 interface ActivityBarProps {
@@ -115,7 +119,7 @@ export function ActivityBar(_props: ActivityBarProps): React.JSX.Element {
             onContextMenu={(e) => handleContextMenu(e, view)}
             aria-label={label}
             aria-current={focusedView === view ? 'page' : undefined}
-            title={label + ' (' + shortcut + ')'}
+            title={shortcut ? label + ' (' + shortcut + ')' : label}
             style={{ position: 'relative' }}
           >
             <Icon size={18} strokeWidth={1.5} />

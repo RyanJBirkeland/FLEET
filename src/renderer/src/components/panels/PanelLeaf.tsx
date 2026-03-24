@@ -11,12 +11,14 @@ import { TerminalView } from '../../views/TerminalView'
 // Lazy-loaded views
 // ---------------------------------------------------------------------------
 
+const DashboardView = React.lazy(() => import('../../views/DashboardView'))
 const SprintView = React.lazy(() => import('../../views/SprintView'))
 const MemoryView = React.lazy(() => import('../../views/MemoryView'))
 const CostView = React.lazy(() => import('../../views/CostView'))
 const SettingsView = React.lazy(() => import('../../views/SettingsView'))
 const PRStationView = React.lazy(() => import('../../views/PRStationView'))
 const TaskWorkbenchView = React.lazy(() => import('../../views/TaskWorkbenchView'))
+const GitTreeView = React.lazy(() => import('../../views/GitTreeView'))
 
 // ---------------------------------------------------------------------------
 // View registry
@@ -24,6 +26,8 @@ const TaskWorkbenchView = React.lazy(() => import('../../views/TaskWorkbenchView
 
 function resolveView(viewKey: View): React.ReactNode {
   switch (viewKey) {
+    case 'dashboard':
+      return <DashboardView />
     case 'agents':
       return <AgentsView />
     case 'terminal':
@@ -40,6 +44,8 @@ function resolveView(viewKey: View): React.ReactNode {
       return <PRStationView />
     case 'task-workbench':
       return <TaskWorkbenchView />
+    case 'git':
+      return <GitTreeView />
   }
 }
 

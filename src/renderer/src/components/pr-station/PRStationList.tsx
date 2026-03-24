@@ -10,6 +10,9 @@ interface PRStationListProps {
   selectedPr: OpenPr | null
   onSelectPr: (pr: OpenPr) => void
   removedKeys?: Set<string>
+  /** When provided, overrides internal PR list (used by parent for filtering/sorting) */
+  prs?: OpenPr[]
+  onPrsChange?: (prs: OpenPr[]) => void
 }
 
 const REPO_COLOR: Record<string, string> = Object.fromEntries(
@@ -41,16 +44,19 @@ function CIBadge({ summary }: { summary: CheckRunSummary | undefined }) {
   )
 }
 
-export function PRStationList({ selectedPr, onSelectPr, removedKeys }: PRStationListProps) {
-  const [prs, setPrs] = useState<OpenPr[]>([])
+export function PRStationList({ selectedPr, onSelectPr, removedKeys, prs: externalPrs, onPrsChange }: PRStationListProps) {
+  const [internalPrs, setInternalPrs] = useState<OpenPr[]>([])
   const [checks, setChecks] = useState<Record<string, CheckRunSummary>>({})
   const [loading, setLoading] = useState(true)
 
+  const prs = externalPrs ?? internalPrs
+
   const applyPayload = useCallback((payload: PrListPayload) => {
-    setPrs(payload.prs)
+    setInternalPrs(payload.prs)
+    onPrsChange?.(payload.prs)
     setChecks(payload.checks)
     setLoading(false)
-  }, [])
+  }, [onPrsChange])
 
   // Subscribe to main-process push events
   useEffect(() => {

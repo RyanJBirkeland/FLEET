@@ -72,11 +72,11 @@ describe('panelLayout pure functions', () => {
   // --- DEFAULT_LAYOUT ---
 
   describe('DEFAULT_LAYOUT', () => {
-    it('is a single agents leaf', () => {
+    it('is a single dashboard leaf', () => {
       expect(DEFAULT_LAYOUT.type).toBe('leaf')
       const leaf = DEFAULT_LAYOUT as PanelLeafNode
       expect(leaf.tabs).toHaveLength(1)
-      expect(leaf.tabs[0].viewKey).toBe('agents')
+      expect(leaf.tabs[0].viewKey).toBe('dashboard')
     })
   })
 
@@ -824,7 +824,7 @@ describe('usePanelLayoutStore', () => {
       usePanelLayoutStore.getState().resetLayout()
       const newRoot = usePanelLayoutStore.getState().root
       expect(newRoot.type).toBe('leaf')
-      expect((newRoot as PanelLeafNode).tabs[0].viewKey).toBe('agents')
+      expect((newRoot as PanelLeafNode).tabs[0].viewKey).toBe('dashboard')
     })
 
     it('resets focusedPanelId to new root panelId', () => {

@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react'
+import { useState, useCallback, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { FileCode2 } from 'lucide-react'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -6,6 +6,7 @@ import { PRStationList } from '../components/pr-station/PRStationList'
 import { PRStationDetail } from '../components/pr-station/PRStationDetail'
 import { PRStationActions } from '../components/pr-station/PRStationActions'
 import { PRStationDiff } from '../components/pr-station/PRStationDiff'
+import { PRStationFilters, type PRFilters } from '../components/pr-station/PRStationFilters'
 import { ReviewSubmitDialog } from '../components/pr-station/ReviewSubmitDialog'
 import { Button } from '../components/ui/Button'
 import { ConfirmModal, useConfirm } from '../components/ui/ConfirmModal'
@@ -24,10 +25,37 @@ export default function PRStationView() {
   const [mergeability, setMergeability] = useState<PrMergeability | null>(null)
   const [activeTab, setActiveTab] = useState<DetailTab>('info')
   const [showReviewDialog, setShowReviewDialog] = useState(false)
+  const [allPrs, setAllPrs] = useState<OpenPr[]>([])
+  const [filters, setFilters] = useState<PRFilters>({ repo: null, sort: 'updated' })
   const prKey = selectedPr ? `${selectedPr.repo}#${selectedPr.number}` : ''
   const pendingCount = usePendingReviewStore((s) =>
     prKey ? (s.pendingComments[prKey] ?? []).length : 0
   )
+
+  const repos = useMemo(
+    () => [...new Set(allPrs.map((pr) => pr.repo))],
+    [allPrs]
+  )
+
+  const filteredPrs = useMemo(() => {
+    let result = allPrs
+    if (filters.repo !== null) {
+      result = result.filter((pr) => pr.repo === filters.repo)
+    }
+    if (filters.sort === 'created') {
+      result = [...result].sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      )
+    } else if (filters.sort === 'title') {
+      result = [...result].sort((a, b) => a.title.localeCompare(b.title))
+    } else {
+      // 'updated' — default order from the poller (already sorted by updated_at desc)
+      result = [...result].sort(
+        (a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
+      )
+    }
+    return result
+  }, [allPrs, filters])
 
   const { confirm, confirmProps } = useConfirm()
 
@@ -99,10 +127,13 @@ export default function PRStationView() {
       </div>
       <div className="pr-station" style={{ flex: 1, minHeight: 0 }}>
       <div className="pr-station__list-panel">
+        <PRStationFilters filters={filters} repos={repos} onChange={setFilters} />
         <PRStationList
           selectedPr={selectedPr}
           onSelectPr={handleSelectPr}
           removedKeys={removedKeys}
+          prs={filteredPrs}
+          onPrsChange={setAllPrs}
         />
       </div>
       <div className="pr-station__detail-panel">
@@ -143,7 +174,12 @@ export default function PRStationView() {
             )}
             {activeTab === 'info' ? (
               <div className="pr-station__detail-content">
-                <PRStationDetail key={`${selectedPr.repo}-${selectedPr.number}`} pr={selectedPr} />
+                <PRStationDetail
+                  key={`${selectedPr.repo}-${selectedPr.number}`}
+                  pr={selectedPr}
+                  mergeability={mergeability}
+                  onMerged={handleRemovePr}
+                />
                 <PRStationActions
                   pr={selectedPr}
                   mergeability={mergeability}
