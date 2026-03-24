@@ -1,5 +1,4 @@
 import { useState, useCallback, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { FileCode2 } from 'lucide-react'
 import { PRStationList } from '../components/pr-station/PRStationList'
 import { PRStationDetail } from '../components/pr-station/PRStationDetail'
@@ -11,12 +10,10 @@ import { getPrMergeability, type PrMergeability } from '../lib/github-api'
 import { usePendingReviewStore } from '../stores/pendingReview'
 import type { OpenPr } from '../../../shared/types'
 import { REPO_OPTIONS } from '../lib/constants'
-import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
 type DetailTab = 'info' | 'diff'
 
 export default function PRStationView() {
-  const reduced = useReducedMotion()
   const [selectedPr, setSelectedPr] = useState<OpenPr | null>(null)
   const [removedKeys, setRemovedKeys] = useState<Set<string>>(new Set())
   const [mergeability, setMergeability] = useState<PrMergeability | null>(null)
@@ -71,11 +68,7 @@ export default function PRStationView() {
   }, [prKey])
 
   return (
-    <motion.div className="pr-station-wrapper" style={{ display: 'flex', flexDirection: 'column', height: '100%' }} variants={VARIANTS.fadeIn} initial="initial" animate="animate" transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}>
-      <div className="pr-station__view-header">
-        <span className="pr-station__view-title text-gradient-aurora">PR Station</span>
-      </div>
-      <div className="pr-station" style={{ flex: 1, minHeight: 0 }}>
+    <div className="pr-station">
       <div className="pr-station__list-panel">
         <PRStationList
           selectedPr={selectedPr}
@@ -152,6 +145,5 @@ export default function PRStationView() {
         />
       )}
     </div>
-    </motion.div>
   )
 }

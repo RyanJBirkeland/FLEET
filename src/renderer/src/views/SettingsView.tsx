@@ -3,7 +3,6 @@
  * Each tab renders a self-contained section component.
  */
 import { useState } from 'react'
-import { motion } from 'framer-motion'
 import { Palette, Plug, GitBranch, FileText, Bot, Info, Cpu } from 'lucide-react'
 import { AppearanceSection } from '../components/settings/AppearanceSection'
 import { ConnectionsSection } from '../components/settings/ConnectionsSection'
@@ -12,7 +11,6 @@ import { TaskTemplatesSection } from '../components/settings/TaskTemplatesSectio
 import { AgentRuntimeSection } from '../components/settings/AgentRuntimeSection'
 import { AgentManagerSection } from '../components/settings/AgentManagerSection'
 import { AboutSection } from '../components/settings/AboutSection'
-import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
 const TABS = [
   { id: 'connections', label: 'Connections', icon: Plug },
@@ -37,12 +35,11 @@ const SECTION_MAP: Record<TabId, () => React.JSX.Element> = {
 }
 
 export default function SettingsView(): React.JSX.Element {
-  const reduced = useReducedMotion()
   const [activeTab, setActiveTab] = useState<TabId>('connections')
   const ActiveSection = SECTION_MAP[activeTab]
 
   return (
-    <motion.div className="settings-view settings-view--column" variants={VARIANTS.fadeIn} initial="initial" animate="animate" transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}>
+    <div className="settings-view settings-view--column">
       <div className="settings-view__header">
         <span className="settings-view__header-title">Settings</span>
       </div>
@@ -62,6 +59,6 @@ export default function SettingsView(): React.JSX.Element {
       <div className="settings-view__scroll">
         <ActiveSection />
       </div>
-    </motion.div>
+    </div>
   )
 }
