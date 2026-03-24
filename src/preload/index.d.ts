@@ -114,6 +114,17 @@ declare global {
       readFileAsBase64: (...args: IpcArgs<'fs:readFileAsBase64'>) => Promise<IpcResult<'fs:readFileAsBase64'>>
       readFileAsText: (...args: IpcArgs<'fs:readFileAsText'>) => Promise<IpcResult<'fs:readFileAsText'>>
       openDirectoryDialog: () => Promise<IpcResult<'fs:openDirectoryDialog'>>
+      readDir: (...args: IpcArgs<'fs:readDir'>) => Promise<IpcResult<'fs:readDir'>>
+      readFile: (...args: IpcArgs<'fs:readFile'>) => Promise<IpcResult<'fs:readFile'>>
+      writeFile: (...args: IpcArgs<'fs:writeFile'>) => Promise<IpcResult<'fs:writeFile'>>
+      watchDir: (...args: IpcArgs<'fs:watchDir'>) => Promise<IpcResult<'fs:watchDir'>>
+      unwatchDir: () => Promise<IpcResult<'fs:unwatchDir'>>
+      createFile: (...args: IpcArgs<'fs:createFile'>) => Promise<IpcResult<'fs:createFile'>>
+      createDir: (...args: IpcArgs<'fs:createDir'>) => Promise<IpcResult<'fs:createDir'>>
+      rename: (...args: IpcArgs<'fs:rename'>) => Promise<IpcResult<'fs:rename'>>
+      deletePath: (...args: IpcArgs<'fs:delete'>) => Promise<IpcResult<'fs:delete'>>
+      stat: (...args: IpcArgs<'fs:stat'>) => Promise<IpcResult<'fs:stat'>>
+      onDirChanged: (callback: (dirPath: string) => void) => () => void
 
       // GitHub rate-limit warning push events
       onGitHubRateLimitWarning: (
