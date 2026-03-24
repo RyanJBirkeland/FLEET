@@ -15,6 +15,7 @@ import { useAgentHistoryStore } from './stores/agentHistory'
 import { usePendingReviewStore } from './stores/pendingReview'
 import { useTaskNotifications } from './hooks/useTaskNotifications'
 import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
+import { useDesktopNotifications } from './hooks/useDesktopNotifications'
 import { PanelRenderer } from './components/panels/PanelRenderer'
 import { usePanelLayoutStore, findLeaf } from './stores/panelLayout'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
@@ -149,6 +150,7 @@ function App(): React.JSX.Element {
 
   useTaskNotifications()
   useGitHubRateLimitWarning()
+  useDesktopNotifications()
 
   useEffect(() => {
     const title = 'BDE \u2014 ' + VIEW_TITLES[activeView]
