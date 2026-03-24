@@ -298,6 +298,16 @@ export interface FsChannels {
     args: []
     result: string | null
   }
+  'fs:readDir': { args: [dirPath: string]; result: { name: string; type: 'file' | 'directory'; size: number }[] }
+  'fs:readFile': { args: [filePath: string]; result: string }
+  'fs:writeFile': { args: [filePath: string, content: string]; result: void }
+  'fs:watchDir': { args: [dirPath: string]; result: void }
+  'fs:unwatchDir': { args: []; result: void }
+  'fs:createFile': { args: [filePath: string]; result: void }
+  'fs:createDir': { args: [dirPath: string]; result: void }
+  'fs:rename': { args: [oldPath: string, newPath: string]; result: void }
+  'fs:delete': { args: [targetPath: string]; result: void }
+  'fs:stat': { args: [targetPath: string]; result: { size: number; mtime: number; isDirectory: boolean } }
 }
 
 /** Agent event streaming */

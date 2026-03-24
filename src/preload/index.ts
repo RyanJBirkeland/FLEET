@@ -139,6 +139,21 @@ const api = {
   readFileAsBase64: (path: string) => typedInvoke('fs:readFileAsBase64', path),
   readFileAsText: (path: string) => typedInvoke('fs:readFileAsText', path),
   openDirectoryDialog: () => typedInvoke('fs:openDirectoryDialog'),
+  readDir: (dirPath: string) => typedInvoke('fs:readDir', dirPath),
+  readFile: (filePath: string) => typedInvoke('fs:readFile', filePath),
+  writeFile: (filePath: string, content: string) => typedInvoke('fs:writeFile', filePath, content),
+  watchDir: (dirPath: string) => typedInvoke('fs:watchDir', dirPath),
+  unwatchDir: () => typedInvoke('fs:unwatchDir'),
+  createFile: (filePath: string) => typedInvoke('fs:createFile', filePath),
+  createDir: (dirPath: string) => typedInvoke('fs:createDir', dirPath),
+  rename: (oldPath: string, newPath: string) => typedInvoke('fs:rename', oldPath, newPath),
+  deletePath: (targetPath: string) => typedInvoke('fs:delete', targetPath),
+  stat: (targetPath: string) => typedInvoke('fs:stat', targetPath),
+  onDirChanged: (callback: (dirPath: string) => void) => {
+    const handler = (_event: unknown, dirPath: string): void => callback(dirPath)
+    ipcRenderer.on('fs:dirChanged', handler)
+    return () => { ipcRenderer.removeListener('fs:dirChanged', handler) }
+  },
 
   // GitHub rate-limit warning push events
   onGitHubRateLimitWarning: (
