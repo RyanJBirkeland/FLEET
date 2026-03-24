@@ -573,3 +573,498 @@ export interface ResolveSuccessOpts {
 - Create task A (queued). Create task B (depends on A, soft dep). Force A to fast-fail 3 times. Verify B transitions from `blocked` to `queued`.
 - Create the same scenario but with A failing via `resolveFailure` after MAX_RETRIES. Verify B unblocks.
 - `npm run test:main` passes
+
+---
+
+## Task 7 (P0): Spec Quality Guardrails on All Task Creation and Queuing Paths
+
+### Problem
+
+BDE has three tiers of spec quality checks (structural, semantic, operational) built into the Task Workbench UI, but none of these guardrails are enforced at the data layer. This means:
+
+1. **Queue API** (`POST /queue/tasks`) accepts tasks with empty specs, no markdown structure, and no title — the only validation is `title` and `repo` being non-empty strings. Automated callers (claude-task-runner, MCP tools, curl) can create low-quality tasks that waste agent compute.
+2. **Sprint Center** ticket creation (`sprint:create` IPC) performs zero validation — any payload is passed directly to `_createTask()`.
+3. **Status transitions to `queued`** happen in three places (`sprint:update` IPC, Queue API `PATCH /queue/tasks/:id/status`, and `handlePushToSprint` in the renderer) with no semantic quality gate. A task with a vague one-line spec can be queued and picked up by an agent immediately.
+
+The structural checks exist in `useReadinessChecks.ts` as pure functions, and the semantic checks exist in `workbench.ts` as a `workbench:checkSpec` IPC handler, but both are UI-only — they inform the user but never block creation or queuing.
+
+### Design
+
+**Tier 1 (structural) — enforce at creation time, everywhere:**
+- Title present and non-empty
+- Repo present and non-empty
+- Spec present and >= 50 characters
+- Spec has >= 2 markdown sections (`## ` headings)
+
+These are pure, synchronous checks. They run on every task creation path and reject with descriptive errors if any check fails.
+
+**Tier 2 (semantic) — enforce at queue time (status transition to `queued`):**
+- When any path sets `status='queued'`, run the existing AI-powered spec checks (clarity, scope, files_exist) via `claude -p`
+- If any semantic check returns `'fail'`, reject the queue transition
+- If semantic checks return `'warn'`, allow but include warnings in the response
+- Queue API gets a `?skipValidation=true` escape hatch for automated systems
+
+**Tier 3 (operational) — UI-only, no changes:**
+- Auth, repo path, git clean, conflict, slots — these remain advisory in the Task Workbench
+
+### Files to create
+
+#### 1. `src/shared/spec-validation.ts` — Structural validation (pure functions)
+
+```typescript
+/**
+ * Tier 1 structural validation for task specs.
+ * Pure functions — no IPC, no side effects. Shared by renderer and main process.
+ */
+
+export interface StructuralCheckResult {
+  valid: boolean
+  errors: string[]
+  warnings: string[]
+}
+
+export const MIN_SPEC_LENGTH = 50
+export const MIN_HEADING_COUNT = 2
+
+export function validateStructural(input: {
+  title?: string | null
+  repo?: string | null
+  spec?: string | null
+  status?: string | null  // if 'backlog', relax spec requirements
+}): StructuralCheckResult {
+  const errors: string[] = []
+  const warnings: string[] = []
+
+  // Title present — always enforced
+  if (!input.title || !input.title.trim()) {
+    errors.push('title is required')
+  }
+
+  // Repo present — always enforced
+  if (!input.repo || !input.repo.trim()) {
+    errors.push('repo is required')
+  }
+
+  // Spec checks — only enforced when status !== 'backlog'
+  if (input.status !== 'backlog') {
+    const specLen = (input.spec ?? '').trim().length
+    if (specLen === 0) {
+      errors.push('spec is required')
+    } else if (specLen < MIN_SPEC_LENGTH) {
+      errors.push(
+        `spec is too short (${specLen} chars, minimum ${MIN_SPEC_LENGTH}). Add problem context, solution approach, and files to modify.`
+      )
+    }
+
+    if (specLen > 0) {
+      const headingCount = ((input.spec ?? '').match(/^## /gm) ?? []).length
+      if (headingCount < MIN_HEADING_COUNT) {
+        errors.push(
+          `spec needs at least ${MIN_HEADING_COUNT} markdown sections (## headings). Use ## Problem, ## Solution, ## Files structure.`
+        )
+      }
+    }
+  }
+
+  return { valid: errors.length === 0, errors, warnings }
+}
+```
+
+Export constants `MIN_SPEC_LENGTH` and `MIN_HEADING_COUNT` so tests and the renderer's `useReadinessChecks` can share them rather than hardcoding `50` and `2`.
+
+#### 2. `src/main/spec-semantic-check.ts` — Semantic validation (wraps Claude CLI)
+
+```typescript
+/**
+ * Tier 2 semantic spec validation — AI-powered quality check.
+ * Extracts the core logic from workbench.ts checkSpec handler
+ * so it can be called from sprint-local.ts and queue-api handlers.
+ */
+import { spawn } from 'child_process'
+import { buildAgentEnv } from './env-utils'
+
+export interface SemanticCheckResult {
+  clarity: { status: 'pass' | 'warn' | 'fail'; message: string }
+  scope: { status: 'pass' | 'warn' | 'fail'; message: string }
+  filesExist: { status: 'pass' | 'warn' | 'fail'; message: string }
+}
+
+export interface SemanticCheckSummary {
+  passed: boolean
+  hasFails: boolean
+  hasWarns: boolean
+  results: SemanticCheckResult
+  failMessages: string[]
+  warnMessages: string[]
+}
+
+function runClaudePrint(prompt: string, timeoutMs = 120_000): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn('claude', ['-p', '--output-format', 'text'], {
+      env: buildAgentEnv(),
+      stdio: ['pipe', 'pipe', 'pipe'],
+    })
+    let stdout = ''
+    let stderr = ''
+    const timer = setTimeout(() => {
+      child.kill()
+      reject(new Error('Claude CLI timed out'))
+    }, timeoutMs)
+
+    child.stdout.on('data', (d: Buffer) => { stdout += d.toString() })
+    child.stderr.on('data', (d: Buffer) => { stderr += d.toString() })
+    child.on('close', (code) => {
+      clearTimeout(timer)
+      if (code === 0) resolve(stdout.trim())
+      else reject(new Error(stderr.trim() || `claude exited with code ${code}`))
+    })
+    child.on('error', (err) => {
+      clearTimeout(timer)
+      reject(err)
+    })
+    child.stdin.write(prompt)
+    child.stdin.end()
+  })
+}
+
+export async function checkSpecSemantic(input: {
+  title: string
+  repo: string
+  spec: string
+}): Promise<SemanticCheckSummary> {
+  const prompt = `You are reviewing a coding agent spec for quality. Return ONLY valid JSON (no markdown fencing).
+
+Title: "${input.title}"
+Repo: ${input.repo}
+Spec:
+${input.spec}
+
+Assess the spec on three dimensions. For each, return status ("pass", "warn", or "fail") and a brief message.
+
+1. clarity: Is the spec clear and actionable? Can an AI agent execute it without ambiguity?
+2. scope: Is this achievable by one agent in one session? Or too broad?
+3. filesExist: Are file paths specific and plausible? (You cannot verify they exist, so check if they look like real paths.)
+
+Return JSON: {"clarity":{"status":"...","message":"..."},"scope":{"status":"...","message":"..."},"filesExist":{"status":"...","message":"..."}}`
+
+  let results: SemanticCheckResult
+  try {
+    const raw = await runClaudePrint(prompt)
+    const parsed = JSON.parse(raw)
+    results = {
+      clarity: parsed.clarity ?? { status: 'warn', message: 'Unable to assess' },
+      scope: parsed.scope ?? { status: 'warn', message: 'Unable to assess' },
+      filesExist: parsed.filesExist ?? { status: 'warn', message: 'Unable to assess' },
+    }
+  } catch {
+    // If Claude CLI is unavailable, degrade to pass-through (don't block queuing)
+    return {
+      passed: true,
+      hasFails: false,
+      hasWarns: true,
+      results: {
+        clarity: { status: 'warn', message: 'AI check unavailable — skipped' },
+        scope: { status: 'warn', message: 'AI check unavailable — skipped' },
+        filesExist: { status: 'warn', message: 'AI check unavailable — skipped' },
+      },
+      failMessages: [],
+      warnMessages: ['Semantic checks skipped — Claude CLI unavailable'],
+    }
+  }
+
+  const failMessages: string[] = []
+  const warnMessages: string[] = []
+  for (const [key, check] of Object.entries(results)) {
+    if (check.status === 'fail') failMessages.push(`${key}: ${check.message}`)
+    if (check.status === 'warn') warnMessages.push(`${key}: ${check.message}`)
+  }
+
+  return {
+    passed: failMessages.length === 0,
+    hasFails: failMessages.length > 0,
+    hasWarns: warnMessages.length > 0,
+    results,
+    failMessages,
+    warnMessages,
+  }
+}
+```
+
+### Files to modify
+
+#### 3. `src/main/queue-api/task-handlers.ts` — Add structural validation at creation, semantic validation at queue transitions
+
+**In `handleCreateTask` (line 58-87):**
+
+After the existing `title`/`repo` checks (line 75-83), add structural validation:
+
+```typescript
+import { validateStructural } from '../../shared/spec-validation'
+import { checkSpecSemantic } from '../spec-semantic-check'
+
+// ... inside handleCreateTask, after existing title/repo checks:
+
+const { spec } = body as Record<string, unknown>
+const structural = validateStructural({
+  title: title as string,
+  repo: repo as string,
+  spec: typeof spec === 'string' ? spec : null,
+})
+if (!structural.valid) {
+  sendJson(res, 400, { error: 'Spec quality checks failed', details: structural.errors })
+  return
+}
+
+// If creating with status=queued, also run semantic checks
+const bodyObj = body as Record<string, unknown>
+if (bodyObj.status === 'queued' && typeof spec === 'string') {
+  const url = new URL(req.url ?? '', 'http://localhost')
+  const skipValidation = url.searchParams.get('skipValidation') === 'true'
+  if (!skipValidation) {
+    const semantic = await checkSpecSemantic({
+      title: title as string,
+      repo: repo as string,
+      spec: spec as string,
+    })
+    if (!semantic.passed) {
+      sendJson(res, 400, {
+        error: 'Cannot create task with queued status — semantic checks failed',
+        details: semantic.failMessages,
+      })
+      return
+    }
+  }
+}
+```
+
+**In `handleUpdateStatus` (line 136-185):**
+
+After filtering to allowed fields (line 167), add semantic check when transitioning to `queued`:
+
+```typescript
+// If transitioning to queued, run semantic checks (unless skipValidation=true)
+if (patch.status === 'queued') {
+  const url = new URL(req.url ?? '', 'http://localhost')
+  const skipValidation = url.searchParams.get('skipValidation') === 'true'
+
+  if (!skipValidation) {
+    // Fetch the task to get its spec
+    const task = await getTask(id)
+    if (!task) {
+      sendJson(res, 404, { error: `Task ${id} not found` })
+      return
+    }
+
+    // Run structural checks first (fast, synchronous)
+    const structural = validateStructural({
+      title: task.title,
+      repo: task.repo,
+      spec: task.spec,
+    })
+    if (!structural.valid) {
+      sendJson(res, 400, {
+        error: 'Cannot queue task — spec quality checks failed',
+        details: structural.errors,
+      })
+      return
+    }
+
+    // Run semantic checks (async, calls Claude CLI)
+    if (task.spec) {
+      const semantic = await checkSpecSemantic({
+        title: task.title,
+        repo: task.repo,
+        spec: task.spec,
+      })
+      if (!semantic.passed) {
+        sendJson(res, 400, {
+          error: 'Cannot queue task — semantic spec checks failed',
+          details: semantic.failMessages,
+        })
+        return
+      }
+    }
+  }
+}
+```
+
+Note: `handleUpdateStatus` already has access to `req.url` via its `req: http.IncomingMessage` parameter, so `?skipValidation=true` can be parsed directly inside the handler.
+
+#### 4. `src/main/handlers/sprint-local.ts` — Add validation to `sprint:create` and `sprint:update`
+
+**In `sprint:create` handler (line 101-105):**
+
+```typescript
+import { validateStructural } from '../../shared/spec-validation'
+
+safeHandle('sprint:create', async (_e, task: CreateTaskInput) => {
+  // Structural validation — relaxed for backlog (only title + repo required)
+  const structural = validateStructural({
+    title: task.title,
+    repo: task.repo,
+    spec: task.spec ?? null,
+    status: task.status ?? 'backlog',
+  })
+  if (!structural.valid) {
+    throw new Error(`Spec quality checks failed: ${structural.errors.join('; ')}`)
+  }
+  const row = await _createTask(task)
+  notifySprintMutation('created', row)
+  return row
+})
+```
+
+**In `sprint:update` handler (line 107-132):**
+
+Refactor to hoist the `_getTask` call and add semantic validation. The existing dependency check block (line 109-129) already fetches the task — share that fetch:
+
+```typescript
+safeHandle('sprint:update', async (_e, id: string, patch: Record<string, unknown>) => {
+  const task = patch.status === 'queued' ? await _getTask(id) : null
+
+  // If transitioning to queued, run quality checks
+  if (patch.status === 'queued' && task) {
+    // Structural check
+    const structural = validateStructural({
+      title: task.title,
+      repo: task.repo,
+      spec: (patch.spec as string) ?? task.spec ?? null,
+    })
+    if (!structural.valid) {
+      throw new Error(`Cannot queue task — spec quality checks failed: ${structural.errors.join('; ')}`)
+    }
+
+    // Semantic check
+    const specText = (patch.spec as string) ?? task.spec
+    if (specText) {
+      const { checkSpecSemantic } = await import('../spec-semantic-check')
+      const semantic = await checkSpecSemantic({
+        title: task.title,
+        repo: task.repo,
+        spec: specText,
+      })
+      if (!semantic.passed) {
+        throw new Error(`Cannot queue task — semantic checks failed: ${semantic.failMessages.join('; ')}`)
+      }
+    }
+
+    // Dependency check (existing logic)
+    const taskDeps = task.depends_on
+    if (taskDeps && taskDeps.length > 0) {
+      const { createDependencyIndex } = await import('../agent-manager/dependency-index')
+      const idx = createDependencyIndex()
+      const allTasks = await _listTasks()
+      const statusMap = new Map(allTasks.map((t) => [t.id, t.status]))
+      const { satisfied } = idx.areDependenciesSatisfied(
+        id, taskDeps, (depId) => statusMap.get(depId),
+      )
+      if (!satisfied) {
+        patch = { ...patch, status: 'blocked' }
+      }
+    }
+  }
+
+  return updateTask(id, patch)
+})
+```
+
+#### 5. `src/renderer/src/hooks/useReadinessChecks.ts` — Use shared constants
+
+Replace hardcoded values with imports from the shared module:
+
+```typescript
+import { MIN_SPEC_LENGTH, MIN_HEADING_COUNT } from '../../../shared/spec-validation'
+```
+
+Update the `computeStructuralChecks` function to use `MIN_SPEC_LENGTH` instead of `50` (line 41) and `MIN_HEADING_COUNT` instead of `2` (line 53). The behavior stays identical — this just eliminates the dual-maintenance risk.
+
+#### 6. `src/main/handlers/workbench.ts` — Refactor `workbench:checkSpec` to use shared function
+
+Replace the inline prompt + parsing logic (lines 274-305) with a call to `checkSpecSemantic`:
+
+```typescript
+import { checkSpecSemantic } from '../spec-semantic-check'
+
+safeHandle('workbench:checkSpec', async (_e, input: { title: string; repo: string; spec: string }) => {
+  const summary = await checkSpecSemantic(input)
+  return summary.results  // Returns { clarity, scope, filesExist } — same shape as before
+})
+```
+
+This removes the duplicated prompt string and parsing logic. The `runClaudePrint` function in `workbench.ts` is still used by `workbench:chat` and `workbench:generateSpec`, so it stays.
+
+### Wiring summary
+
+| Path | Tier 1 (structural) | Tier 2 (semantic) |
+|---|---|---|
+| Queue API `POST /queue/tasks` | Validate in `handleCreateTask` | Only if `status: 'queued'` in body |
+| Queue API `PATCH /queue/tasks/:id/status` (to `queued`) | Validate before queue | Validate before queue (skip with `?skipValidation=true`) |
+| `sprint:create` IPC | Validate in handler (relaxed for backlog) | N/A (creation into backlog) |
+| `sprint:update` IPC (to `queued`) | Validate before queue | Validate before queue |
+| `handlePushToSprint` (renderer) | Calls `sprint:update` with `status: 'queued'` — covered | Covered by `sprint:update` handler |
+| Task Workbench "Create & Queue" | Creates via `sprint:create` (title+repo), then updates via `sprint:update` (full check) | Covered by `sprint:update` handler |
+
+### Test requirements
+
+#### Unit tests for `src/shared/__tests__/spec-validation.test.ts`:
+- `validateStructural` with empty title returns error containing `'title is required'`
+- `validateStructural` with empty repo returns error containing `'repo is required'`
+- `validateStructural` with null spec (no `status: 'backlog'`) returns error containing `'spec is required'`
+- `validateStructural` with 30-char spec returns error about minimum length
+- `validateStructural` with 100-char spec but no `##` headings returns error about sections
+- `validateStructural` with 100-char spec and 1 heading returns error (need >= 2)
+- `validateStructural` with 100-char spec and 2+ headings returns `{ valid: true, errors: [], warnings: [] }`
+- `validateStructural` with `status: 'backlog'` and no spec returns `{ valid: true }` (relaxed mode)
+- `validateStructural` with `status: 'backlog'` but no title still returns error (title always required)
+- All error messages are descriptive (not just "invalid")
+
+#### Unit tests for `src/main/__tests__/spec-semantic-check.test.ts`:
+- Mock `spawn` to return valid JSON with all `pass` — verify `passed: true`, empty `failMessages`
+- Mock `spawn` to return JSON with a `fail` status — verify `passed: false` and `failMessages` populated
+- Mock `spawn` to return JSON with only `warn` statuses — verify `passed: true` and `warnMessages` populated
+- Mock `spawn` to throw (CLI unavailable) — verify graceful degradation: `passed: true`, warnings present
+- Mock `spawn` to return invalid JSON — verify graceful degradation, not a hard crash
+
+#### Integration tests for Queue API (`src/main/queue-api/__tests__/queue-api.test.ts`):
+- `POST /queue/tasks` with no spec returns 400 with `spec is required` in details
+- `POST /queue/tasks` with 20-char spec returns 400 with minimum length error in details
+- `POST /queue/tasks` with valid spec (50+ chars, 2+ headings) returns 201
+- `PATCH /queue/tasks/:id/status` with `{ status: 'queued' }` on task with bad spec returns 400
+- `PATCH /queue/tasks/:id/status?skipValidation=true` with `{ status: 'queued' }` on task with bad spec returns 200
+- `PATCH /queue/tasks/:id/status` with `{ status: 'active' }` does NOT trigger semantic checks (only `queued` triggers)
+
+#### Handler tests for sprint-local (`src/main/handlers/__tests__/sprint-local.test.ts`):
+- `sprint:create` with empty spec and no `status` field succeeds (backlog relaxed mode)
+- `sprint:create` with title and repo succeeds (backlog)
+- `sprint:update` transitioning to `queued` on task with bad spec throws error
+- `sprint:update` transitioning to `queued` on task with valid spec (and mocked semantic pass) succeeds
+- `sprint:update` transitioning to `done` does NOT trigger any validation
+
+### Edge cases
+
+1. **Task created without spec, spec added later via PATCH, then queued.** The structural check at creation time is relaxed for `backlog` status — only title + repo required. Full spec validation kicks in when transitioning to `queued`. This supports the common workflow of creating a backlog item and fleshing it out later.
+
+2. **Claude CLI unavailable during semantic check.** The `checkSpecSemantic` function degrades gracefully — returns `passed: true` with a warning. Queuing is not blocked by CLI downtime. The warning is surfaced in the API response or IPC error message.
+
+3. **Semantic checks add latency to queue transitions.** `claude -p` takes 5-30 seconds. For the Queue API, the caller waits for the response. For the renderer (`handlePushToSprint`), the `sprint:update` IPC call blocks the UI briefly. The renderer already shows loading states during IPC calls. If latency becomes a problem, semantic checks could be made async (queue first, check later, revert if fail) — but that is out of scope.
+
+4. **Spec has `##` headings inside fenced code blocks.** The regex `/^## /gm` counts headings inside code blocks. This is a known heuristic limitation. The semantic (AI) check covers this gap by assessing actual spec structure.
+
+5. **`skipValidation=true` abuse.** The escape hatch is intentional for automated systems (claude-task-runner, MCP tools) that validate specs in their own pipeline. It is not exposed in any UI. It is only available on the Queue API, not on IPC handlers.
+
+6. **Race condition: task spec modified between fetch and queue.** If the spec is updated via a concurrent PATCH while `handleUpdateStatus` is running semantic checks, the check runs against a stale spec. This is a TOCTOU race but is low-risk — the concurrent update would need to degrade the spec between the fetch and the status write.
+
+7. **Queue API `POST /queue/tasks` with `status: 'queued'` in body.** The structural check always runs. If `status` is `queued` in the POST body, semantic checks also run (unless `?skipValidation=true`). This prevents creating-and-queuing a task with a bad spec in a single API call.
+
+8. **Existing tasks with bad specs already in `queued` status.** This change is forward-looking — it does not retroactively validate existing tasks. Tasks already queued continue to run. Only new queue transitions are gated.
+
+### Verification
+
+1. `npm run typecheck` passes with new files
+2. `npm test` passes — new tests + existing tests unaffected
+3. `npm run test:main` passes
+4. Manual test: `curl -X POST http://localhost:18790/queue/tasks -H "Authorization: Bearer $TOKEN" -d '{"title":"test","repo":"bde"}'` returns 400 with `spec is required` in `details`
+5. Manual test: `curl -X POST` with valid spec (50+ chars, 2+ `##` headings) returns 201
+6. Manual test: Push a backlog task to sprint in the UI with a one-line spec — see error toast from `sprint:update` rejection
+7. Manual test: Task Workbench "Create & Queue" with a well-structured spec succeeds
+8. Manual test: `curl -X PATCH .../status?skipValidation=true` with `{"status":"queued"}` bypasses checks
