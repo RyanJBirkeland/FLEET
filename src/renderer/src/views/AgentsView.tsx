@@ -4,7 +4,9 @@
  * Right panel: agent detail with chat renderer and steering.
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
+import { motion } from 'framer-motion'
 import { Plus } from 'lucide-react'
+import '../assets/agents.css'
 import { useUIStore } from '../stores/ui'
 import { useAgentHistoryStore } from '../stores/agentHistory'
 import { useAgentEventsStore } from '../stores/agentEvents'
@@ -16,8 +18,10 @@ import { HealthBar } from '../components/agents/HealthBar'
 import { SpawnModal } from '../components/agents/SpawnModal'
 import { tokens } from '../design-system/tokens'
 import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
 export function AgentsView() {
+  const reduced = useReducedMotion()
   const activeView = useUIStore((s) => s.activeView)
   const agents = useAgentHistoryStore((s) => s.agents)
   const fetchAgents = useAgentHistoryStore((s) => s.fetchAgents)
@@ -73,7 +77,7 @@ export function AgentsView() {
   }, [selectedId])
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: tokens.color.bg }}>
+    <motion.div className="agents-view" style={{ display: 'flex', flexDirection: 'column', height: '100%' }} variants={VARIANTS.fadeIn} initial="initial" animate="animate" transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}>
       {/* HealthBar */}
       <HealthBarWrapper />
 
@@ -81,31 +85,14 @@ export function AgentsView() {
       {/* Left sidebar */}
       <div style={{ width: sidebarWidth, minWidth: 200, borderRight: `1px solid ${tokens.color.border}`, display: 'flex', flexDirection: 'column' }}>
         {/* Header */}
-        <div style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: `${tokens.space[2]} ${tokens.space[3]}`,
-          borderBottom: `1px solid ${tokens.color.border}`,
-        }}>
-          <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted, textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: 600 }}>
+        <div className="agents-view__sidebar-header">
+          <span className="agents-view__title text-gradient-aurora">
             Agents
           </span>
           <button
+            className="agents-view__spawn-btn"
             onClick={() => setSpawnOpen(true)}
             title="Spawn Agent"
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 24,
-              height: 24,
-              background: 'none',
-              border: `1px solid ${tokens.color.border}`,
-              borderRadius: tokens.radius.sm,
-              cursor: 'pointer',
-              color: tokens.color.textMuted,
-            }}
           >
             <Plus size={14} />
           </button>
@@ -141,7 +128,7 @@ export function AgentsView() {
 
       <SpawnModal open={spawnOpen} onClose={() => setSpawnOpen(false)} />
       </div>
-    </div>
+    </motion.div>
   )
 }
 
