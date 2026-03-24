@@ -115,22 +115,26 @@ export async function appendLog(id: string, content: string): Promise<void> {
 
 export async function readLog(
   id: string,
-  fromByte = 0
-): Promise<{ content: string; nextByte: number }> {
+  fromByte = 0,
+  maxBytes?: number
+): Promise<{ content: string; nextByte: number; totalBytes: number }> {
   initAgentHistory()
   const logPath = getAgentLogPath(getDb(), id)
-  if (!logPath) return { content: '', nextByte: fromByte }
+  if (!logPath) return { content: '', nextByte: fromByte, totalBytes: 0 }
   let fh: import('fs/promises').FileHandle | undefined
   try {
     fh = await open(logPath, 'r')
     const stats = await fh.stat()
-    const size = stats.size
-    if (fromByte >= size) return { content: '', nextByte: fromByte }
-    const buf = Buffer.alloc(size - fromByte)
-    await fh.read(buf, 0, buf.length, fromByte)
-    return { content: buf.toString('utf-8'), nextByte: size }
+    const totalBytes = stats.size
+    if (fromByte >= totalBytes) return { content: '', nextByte: fromByte, totalBytes }
+    const available = totalBytes - fromByte
+    const readSize = maxBytes != null ? Math.min(available, maxBytes) : available
+    if (readSize === 0) return { content: '', nextByte: fromByte, totalBytes }
+    const buf = Buffer.alloc(readSize)
+    await fh.read(buf, 0, readSize, fromByte)
+    return { content: buf.toString('utf-8'), nextByte: fromByte + readSize, totalBytes }
   } catch {
-    return { content: '', nextByte: fromByte }
+    return { content: '', nextByte: fromByte, totalBytes: 0 }
   } finally {
     await fh?.close()
   }

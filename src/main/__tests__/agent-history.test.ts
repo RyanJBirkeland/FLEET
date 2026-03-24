@@ -321,4 +321,57 @@ describe('agent-history (SQLite)', () => {
     // Should keep the 3 newest (prune-4, prune-3, prune-2)
     expect(remaining.map(a => a.id)).toEqual(['prune-4', 'prune-3', 'prune-2'])
   })
+
+  describe('readLog with maxBytes and totalBytes', () => {
+    it('returns totalBytes in the response', async () => {
+      await agentHistory.createAgentRecord({
+        id: 'log-test-1',
+        pid: null,
+        bin: 'claude',
+        model: 'opus',
+        repo: 'bde',
+        repoPath: '/tmp',
+        task: 'test',
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        exitCode: null,
+        status: 'running',
+        source: 'bde',
+        costUsd: null,
+        tokensIn: null,
+        tokensOut: null,
+        sprintTaskId: null,
+      })
+      await agentHistory.appendLog('log-test-1', 'Hello World -- this is a test log')
+      const result = await agentHistory.readLog('log-test-1', 0)
+      expect(result.totalBytes).toBeGreaterThan(0)
+      expect(result.content).toContain('Hello World')
+    })
+
+    it('respects maxBytes parameter', async () => {
+      await agentHistory.createAgentRecord({
+        id: 'log-test-2',
+        pid: null,
+        bin: 'claude',
+        model: 'opus',
+        repo: 'bde',
+        repoPath: '/tmp',
+        task: 'test',
+        startedAt: new Date().toISOString(),
+        finishedAt: null,
+        exitCode: null,
+        status: 'running',
+        source: 'bde',
+        costUsd: null,
+        tokensIn: null,
+        tokensOut: null,
+        sprintTaskId: null,
+      })
+      await agentHistory.appendLog('log-test-2', 'A'.repeat(10000))
+      const result = await agentHistory.readLog('log-test-2', 0, 100)
+      expect(result.content.length).toBeLessThanOrEqual(100)
+      expect(result.totalBytes).toBe(10000)
+      expect(result.nextByte).toBe(100)
+    })
+  })
 })
