@@ -56,3 +56,4 @@ describe('StatCounter', () => {
     expect(screen.getByTestId('test-icon')).toBeInTheDocument();
   });
 });
+
