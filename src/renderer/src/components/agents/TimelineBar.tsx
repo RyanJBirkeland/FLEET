@@ -46,6 +46,14 @@ export function TimelineBar({ agent, timeRange, totalWidth, onClick }: TimelineB
   // Determine CSS class based on status
   const statusClass = `timeline-bar--${agent.status}`
 
+  // Determine model variant class (opus, sonnet, haiku)
+  const modelVariant = agent.model.toLowerCase().includes('opus')
+    ? 'opus'
+    : agent.model.toLowerCase().includes('haiku')
+      ? 'haiku'
+      : 'sonnet'
+  const modelClass = `timeline-bar--${modelVariant}`
+
   const handleMouseEnter = (e: React.MouseEvent): void => {
     setShowTooltip(true)
     updateTooltipPosition(e)
@@ -71,7 +79,7 @@ export function TimelineBar({ agent, timeRange, totalWidth, onClick }: TimelineB
     <>
       <div
         ref={barRef}
-        className={`timeline-bar ${statusClass}`}
+        className={`timeline-bar ${statusClass} ${modelClass}`}
         style={{
           left: `${leftPercent}%`,
           width: `${widthPercent}%`,
