@@ -99,7 +99,47 @@ export async function setupWorktree(opts: SetupWorktreeOpts & { logger?: Logger 
     if (errMsg.includes('already exists')) {
       ;(logger ?? console).warn(`[worktree] Stale branch ${branch} — deleting and retrying`)
       try {
+        // Force-remove any existing worktree that references this branch
+        // This handles the case where worktree dir exists at a different path
+        // (e.g., /private/tmp vs /tmp, or leftover from a previous run)
+        try {
+          const { stdout: wtList } = await execFileAsync(
+            'git', ['worktree', 'list', '--porcelain'],
+            { cwd: repoPath, env: buildAgentEnv() }
+          )
+          const lines = wtList.split('\n')
+          for (let i = 0; i < lines.length; i++) {
+            if (lines[i].startsWith('worktree ') && lines[i + 1]?.includes(branch)) {
+              const stalePath = lines[i].replace('worktree ', '')
+              ;(logger ?? console).warn(`[worktree] Force-removing stale worktree at ${stalePath}`)
+              await execFileAsync(
+                'git', ['worktree', 'remove', '--force', stalePath],
+                { cwd: repoPath, env: buildAgentEnv() }
+              ).catch(() => {
+                // If git worktree remove fails, try rm -rf + prune
+                try { rmSync(stalePath, { recursive: true, force: true }) } catch { /* best-effort */ }
+              })
+            }
+          }
+        } catch {
+          // Fallback: just prune
+        }
+
         await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath, env: buildAgentEnv() })
+
+        // Also remove the target worktree path if it exists from a previous run
+        if (existsSync(worktreePath)) {
+          try {
+            await execFileAsync(
+              'git', ['worktree', 'remove', '--force', worktreePath],
+              { cwd: repoPath, env: buildAgentEnv() }
+            )
+          } catch {
+            rmSync(worktreePath, { recursive: true, force: true })
+          }
+          await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath, env: buildAgentEnv() })
+        }
+
         // Check for unpushed work before destroying branch
         try {
           const { stdout: aheadCount } = await execFileAsync(
@@ -156,13 +196,15 @@ export interface CleanupWorktreeOpts {
 
 export function cleanupWorktree(opts: CleanupWorktreeOpts): void {
   const { repoPath, worktreePath, branch } = opts
+  const env = buildAgentEnv()
 
-  execFile('git', ['worktree', 'remove', worktreePath, '--force'], { cwd: repoPath }, () => {
-    // best-effort
-  })
-
-  execFile('git', ['branch', '-D', branch], { cwd: repoPath }, () => {
-    // best-effort
+  execFile('git', ['worktree', 'remove', worktreePath, '--force'], { cwd: repoPath, env }, () => {
+    // After worktree removed, delete branch and prune
+    execFile('git', ['worktree', 'prune'], { cwd: repoPath, env }, () => {
+      execFile('git', ['branch', '-D', branch], { cwd: repoPath, env }, () => {
+        // best-effort
+      })
+    })
   })
 }
 
