@@ -15,7 +15,6 @@ import {
   Edit3,
   Trash2,
   FileText,
-  Link as LinkIcon
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
@@ -24,7 +23,7 @@ import { SpecEditor } from './SpecEditor'
 import { tokens } from '../../design-system/tokens'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintEvents } from '../../stores/sprintEvents'
-import { TASK_STATUS, AGENT_STATUS } from '../../../../shared/constants'
+import { TASK_STATUS } from '../../../../shared/constants'
 import { toast } from '../../stores/toasts'
 import type { SprintTask } from '../../../../shared/types'
 
@@ -37,7 +36,6 @@ interface SprintDetailPaneProps {
   onMarkDone?: (task: SprintTask) => void
   onDelete?: (taskId: string) => void
   onSaveSpec?: (taskId: string, spec: string) => void
-  onUpdateTitle?: (patch: { id: string; title: string }) => void
   onEditInWorkbench?: (task: SprintTask) => void
 }
 
@@ -68,7 +66,6 @@ export function SprintDetailPane({
   onMarkDone,
   onDelete,
   onSaveSpec,
-  onUpdateTitle,
   onEditInWorkbench,
 }: SprintDetailPaneProps) {
   const [editingSpec, setEditingSpec] = useState(false)
@@ -339,7 +336,7 @@ export function SprintDetailPane({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[2] }}>
-                <SpecViewer content={task.spec || task.prompt || ''} />
+                <SpecViewer content={task.spec || task.prompt || ''} onEdit={handleStartEditSpec} />
                 {onSaveSpec && (
                   <Button variant="ghost" size="sm" onClick={handleStartEditSpec}>
                     <Edit3 size={14} /> Edit Spec
@@ -369,9 +366,9 @@ export function SprintDetailPane({
                   fontFamily: tokens.font.code,
                 }}
               >
-                {latestEvent.type === 'agent:thinking' && latestEvent.content}
-                {latestEvent.type === 'agent:tool-call' && `Tool: ${latestEvent.toolName}`}
-                {latestEvent.type === 'agent:message' && latestEvent.content}
+                {latestEvent.type === 'agent:thinking' && 'text' in latestEvent && latestEvent.text}
+                {latestEvent.type === 'agent:tool_call' && 'tool' in latestEvent && `Tool: ${latestEvent.tool}`}
+                {latestEvent.type === 'agent:text' && 'text' in latestEvent && latestEvent.text}
               </div>
             )}
             <Button
