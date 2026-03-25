@@ -1,5 +1,6 @@
 import { app, shell, BrowserWindow, session } from 'electron'
 import { join } from 'path'
+import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import { startDbWatcher, buildConnectSrc } from './bootstrap'
 import icon from '../../resources/icon.png?asset'
@@ -103,7 +104,7 @@ app.whenReady().then(() => {
   // --- Agent Manager initialization ---
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
-    worktreeBase: getSetting('agentManager.worktreeBase') ?? '/tmp/worktrees/bde',
+    worktreeBase: getSetting('agentManager.worktreeBase') ?? join(homedir(), 'worktrees', 'bde'),
     maxRuntimeMs: getSettingJson<number>('agentManager.maxRuntimeMs') ?? 3_600_000,
     idleTimeoutMs: 900_000,
     pollIntervalMs: 30_000,

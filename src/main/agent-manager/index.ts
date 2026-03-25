@@ -149,9 +149,11 @@ export function createAgentManager(
 
       // Refresh dependency index each drain cycle to pick up tasks created
       // since startup or since the last drain. Rebuild is O(n) and cheap.
+      let taskStatusMap = new Map<string, string>()
       try {
         const allTasks = await getTasksWithDependencies()
         depIndex.rebuild(allTasks)
+        taskStatusMap = new Map(allTasks.map((t) => [t.id, t.status]))
       } catch (err) {
         logger.warn(`[agent-manager] Failed to refresh dependency index: ${err}`)
       }
@@ -160,8 +162,23 @@ export function createAgentManager(
       if (available <= 0) return
 
       try {
-        // Auth is validated by the SDK at spawn time — no explicit check here.
-        // checkAuthStatus() hangs in Electron due to Keychain access blocking.
+        // Quick token file check — avoid spawning agents that will immediately fail
+        // with "Invalid API key". Keychain access hangs in Electron, so we just
+        // check the file exists and is non-empty.
+        try {
+          const { join: joinPath } = await import('node:path')
+          const { homedir: home } = await import('node:os')
+          const { readFileSync } = await import('node:fs')
+          const tokenPath = joinPath(home(), '.bde', 'oauth-token')
+          const token = readFileSync(tokenPath, 'utf-8').trim()
+          if (!token || token.length < 20) {
+            logger.warn('[agent-manager] OAuth token file missing or empty — skipping drain cycle. Refresh with: security find-generic-password -s "Claude Code-credentials" -w | python3 -c "import sys,json; print(json.load(sys.stdin)[\'claudeAiOauth\'][\'accessToken\'])" > ~/.bde/oauth-token')
+            return
+          }
+        } catch {
+          logger.warn('[agent-manager] Cannot read OAuth token file — skipping drain cycle')
+          return
+        }
 
         logger.info(`[agent-manager] Fetching queued tasks via Queue API (limit=${available})...`)
         const queued = await fetchQueuedTasks(available)
@@ -181,6 +198,32 @@ export function createAgentManager(
               retry_count: Number(raw.retryCount) || 0,
               fast_fail_count: Number(raw.fastFailCount) || 0,
               playground_enabled: Boolean(raw.playgroundEnabled),
+            }
+
+            // Defense-in-depth: check dependencies before claiming.
+            // Tasks created via direct API may be 'queued' with unsatisfied deps.
+            const rawDeps = (raw as Record<string, unknown>).dependsOn ?? (raw as Record<string, unknown>).depends_on
+            if (rawDeps) {
+              try {
+                const deps = typeof rawDeps === 'string' ? JSON.parse(rawDeps) : rawDeps
+                if (Array.isArray(deps) && deps.length > 0) {
+                  const { satisfied, blockedBy } = depIndex.areDependenciesSatisfied(
+                    task.id,
+                    deps,
+                    (depId: string) => taskStatusMap.get(depId),
+                  )
+                  if (!satisfied) {
+                    logger.info(`[agent-manager] Task ${task.id} has unsatisfied deps [${blockedBy.join(', ')}] — auto-blocking`)
+                    await updateTask(task.id, {
+                      status: 'blocked',
+                      notes: `[auto-block] Blocked by: ${blockedBy.join(', ')}`,
+                    }).catch(() => {})
+                    continue
+                  }
+                }
+              } catch {
+                // If dep parsing fails, proceed without blocking
+              }
             }
 
             const repoPath = resolveRepoPath(task.repo)
