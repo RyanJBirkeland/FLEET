@@ -1,3 +1,5 @@
+import { join } from 'node:path'
+import { homedir } from 'node:os'
 export interface AgentManagerConfig {
   maxConcurrent: number
   worktreeBase: string
@@ -9,7 +11,7 @@ export interface AgentManagerConfig {
 
 export const DEFAULT_CONFIG: AgentManagerConfig = {
   maxConcurrent: 2,
-  worktreeBase: '/tmp/worktrees/bde',
+  worktreeBase: join(homedir(), 'worktrees', 'bde'),
   maxRuntimeMs: 60 * 60 * 1000,
   idleTimeoutMs: 15 * 60 * 1000,
   pollIntervalMs: 30_000,

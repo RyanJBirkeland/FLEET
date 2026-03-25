@@ -217,6 +217,32 @@ export async function handleCreateTask(
     }
   }
 
+  // Auto-block tasks with unsatisfied hard dependencies (matches sprint:create IPC behavior)
+  if (task.depends_on && task.depends_on.length > 0 && task.status === 'queued') {
+    try {
+      const { createDependencyIndex } = await import('../agent-manager/dependency-index')
+      const { listTasks, updateTask: updateTaskSb } = await import('../data/sprint-queries')
+      const idx = createDependencyIndex()
+      const allTasks = await listTasks()
+      const statusMap = new Map(allTasks.map((t: { id: string; status: string }) => [t.id, t.status]))
+      const { satisfied, blockedBy } = idx.areDependenciesSatisfied(
+        task.id,
+        task.depends_on,
+        (depId: string) => statusMap.get(depId),
+      )
+      if (!satisfied && blockedBy.length > 0) {
+        await updateTaskSb(task.id, {
+          status: 'blocked',
+          notes: `[auto-block] Blocked by: ${blockedBy.join(', ')}${task.notes ? '\n' + task.notes : ''}`,
+        })
+        task = { ...task, status: 'blocked' } as typeof task
+      }
+    } catch (err) {
+      console.warn(`[queue-api] Auto-block check failed for task ${task.id}:`, err)
+      // Non-fatal — drain loop has defense-in-depth auto-blocking
+    }
+  }
+
   sendJson(res, 201, toCamelCase(task))
 }
 

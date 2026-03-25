@@ -142,7 +142,7 @@ export async function runAgent(
   }
 
   // CRITICAL: Tell the agent which branch it is on so it does not push to main.
-  prompt += `\n\n## Git Branch\nYou are working on branch \`${worktree.branch}\`. Commit and push ONLY to this branch.\nDo NOT checkout, merge to, or push to \`main\`. The CI/PR system handles integration.\nIf you need to push, use: \`git push origin ${worktree.branch}\``
+  prompt += `\n\n## Setup\nBefore starting, run \`npm install\` if node_modules/ is missing or incomplete.\n\n## Git Branch\nYou are working on branch \`${worktree.branch}\`. Commit and push ONLY to this branch.\nDo NOT checkout, merge to, or push to \`main\`. The CI/PR system handles integration.\nIf you need to push, use: \`git push origin ${worktree.branch}\``
   // Conditionally augment prompt with playground instructions
   if (task.playground_enabled) {
     prompt += `\n\n## Dev Playground
@@ -258,8 +258,12 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
     // Invalidate cached OAuth token on auth errors so next agent gets a fresh token
     const errMsg = err instanceof Error ? err.message : String(err)
     if (errMsg.includes('Invalid API key') || errMsg.includes('invalid_api_key') || errMsg.includes('authentication')) {
-      const { invalidateOAuthToken } = await import('../env-utils')
+      const { invalidateOAuthToken, refreshOAuthTokenFromKeychain } = await import('../env-utils')
       invalidateOAuthToken()
+      // Try to auto-refresh so next agent doesn't fail too
+      refreshOAuthTokenFromKeychain().then((ok) => {
+        if (ok) logger.info('[agent-manager] OAuth token auto-refreshed from Keychain after auth failure')
+      }).catch(() => {})
       logger.warn(`[agent-manager] Auth failure detected — OAuth token cache invalidated`)
     }
   }
