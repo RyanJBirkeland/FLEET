@@ -131,6 +131,7 @@ export function registerSprintLocalHandlers(): void {
       }
     }
     const row = await _createTask(task)
+    if (!row) throw new Error('Failed to create task')
     notifySprintMutation('created', row)
     return row
   })

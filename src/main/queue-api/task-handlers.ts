@@ -228,6 +228,10 @@ export async function handleCreateTask(
 
   // Create the task (with potentially auto-blocked status)
   const task = await createTask(createInput as unknown as Parameters<typeof createTask>[0])
+  if (!task) {
+    sendJson(res, 500, { error: 'Failed to create task' })
+    return
+  }
 
   // If dependencies were provided, validate them (cycle detection + ID existence)
   if (task.depends_on && task.depends_on.length > 0) {
