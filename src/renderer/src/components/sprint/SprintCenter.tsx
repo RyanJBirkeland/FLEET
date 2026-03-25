@@ -1,23 +1,25 @@
+/**
+ * SprintCenter — Three-zone neon layout:
+ * 1. CircuitPipeline (top: pipeline status)
+ * 2. SprintTaskList + SprintDetailPane (middle: task list + detail pane)
+ */
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { Group, Panel, Separator } from 'react-resizable-panels'
+import { motion } from 'framer-motion'
+import { Plus } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
 import { ConfirmModal } from '../ui/ConfirmModal'
-import { KanbanBoard } from './KanbanBoard'
-import { TaskTable } from './TaskTable'
-import { SpecDrawer } from './SpecDrawer'
-import { LogDrawer } from './LogDrawer'
-import { TaskMonitorPanel } from './TaskMonitorPanel'
+import { CircuitPipeline } from './CircuitPipeline'
+import { SprintTaskList } from './SprintTaskList'
+import { SprintDetailPane } from './SprintDetailPane'
 import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
-import { BulkActionBar } from './BulkActionBar'
 import { usePrConflictsStore } from '../../stores/prConflicts'
 import { useUIStore } from '../../stores/ui'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintUI } from '../../stores/sprintUI'
 import { useSprintEvents } from '../../stores/sprintEvents'
-import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
 import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
 import { useSprintPolling } from '../../hooks/useSprintPolling'
 import { usePrStatusPolling } from '../../hooks/usePrStatusPolling'
@@ -25,52 +27,40 @@ import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcu
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { useHealthCheck } from '../../hooks/useHealthCheck'
 import { REPO_OPTIONS } from '../../lib/constants'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 import type { SprintTask } from '../../../../shared/types'
 export type { SprintTask }
 
-// --- Component ---
-
 export function SprintCenter() {
-  // --- Store state (aggregated selectors to reduce subscription overhead) ---
-  const { tasks, loading, loadError, prMergedMap } = useSprintTasks(
+  const reduced = useReducedMotion()
+
+  // --- Store state ---
+  const { tasks, loading, loadError } = useSprintTasks(
     useShallow((s) => ({
       tasks: s.tasks,
       loading: s.loading,
       loadError: s.loadError,
-      prMergedMap: s.prMergedMap,
     }))
   )
   const loadData = useSprintTasks((s) => s.loadData)
 
-  const { repoFilter, selectedTaskId, logDrawerTaskId, generatingIds, selectedTaskIds } = useSprintUI(
+  const { repoFilter, logDrawerTaskId } = useSprintUI(
     useShallow((s) => ({
       repoFilter: s.repoFilter,
-      selectedTaskId: s.selectedTaskId,
       logDrawerTaskId: s.logDrawerTaskId,
-      generatingIds: s.generatingIds,
-      selectedTaskIds: s.selectedTaskIds,
     }))
   )
   const setRepoFilter = useSprintUI((s) => s.setRepoFilter)
-  const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
   const setLogDrawerTaskId = useSprintUI((s) => s.setLogDrawerTaskId)
-  const clearSelection = useSprintUI((s) => s.clearSelection)
 
   // --- Extracted hooks ---
   const {
-    handleDragEnd,
-    handleReorder,
-    handlePushToSprint,
-    handleViewSpec,
     handleSaveSpec,
     handleMarkDone,
     handleStop,
     handleRerun,
-    handleUpdateTitle,
-    handleUpdatePriority,
-    handleEditInWorkbench,
     launchTask,
     deleteTask,
     confirmProps,
@@ -82,7 +72,7 @@ export function SprintCenter() {
   const openWorkbench = useCallback(() => setView('task-workbench'), [setView])
 
   // --- Local UI state ---
-  const [backlogSearch, setBacklogSearch] = useState('')
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [conflictDrawerOpen, setConflictDrawerOpen] = useState(false)
   const [healthDrawerOpen, setHealthDrawerOpen] = useState(false)
 
@@ -90,7 +80,6 @@ export function SprintCenter() {
     () => (selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) ?? null : null),
     [selectedTaskId, tasks]
   )
-  const logDrawerTask = logDrawerTaskId ? (tasks.find((t) => t.id === logDrawerTaskId) ?? null) : null
 
   // Subscribe to live task output events
   const initTaskOutputListener = useSprintEvents((s) => s.initTaskOutputListener)
@@ -106,9 +95,12 @@ export function SprintCenter() {
   }, [logDrawerTaskId])
 
   // In-app toast notifications for agent-done and PR-opened transitions
-  const handleViewOutput = useCallback((task: SprintTask) => {
-    setLogDrawerTaskId(task.id)
-  }, [setLogDrawerTaskId])
+  const handleViewOutput = useCallback(
+    (task: SprintTask) => {
+      setLogDrawerTaskId(task.id)
+    },
+    [setLogDrawerTaskId]
+  )
   useTaskToasts(tasks, logDrawerTaskId, handleViewOutput)
 
   // Extracted polling hooks
@@ -116,37 +108,12 @@ export function SprintCenter() {
   usePrStatusPolling()
   useSprintKeyboardShortcuts({ openWorkbench, setConflictDrawerOpen })
 
-  // Keyboard shortcuts for bulk selection
-  const filteredTasks = repoFilter
-    ? tasks.filter((t) => t.repo.toLowerCase() === repoFilter.toLowerCase())
-    : tasks
-
-  const partition = useMemo(() => partitionSprintTasks(filteredTasks), [filteredTasks])
-
-  const filteredBacklog = useMemo(() => {
-    if (!backlogSearch.trim()) return partition.backlog
-    const q = backlogSearch.trim().toLowerCase()
-    return partition.backlog.filter((t) => t.title.toLowerCase().includes(q))
-  }, [partition.backlog, backlogSearch])
-
+  // Auto-select first task if none selected
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      // Escape to clear selection
-      if (e.key === 'Escape' && selectedTaskIds.length > 0) {
-        clearSelection()
-        e.preventDefault()
-      }
-      // Cmd+A / Ctrl+A to select all visible backlog tasks
-      if ((e.metaKey || e.ctrlKey) && e.key === 'a' && filteredBacklog.length > 0) {
-        e.preventDefault()
-        const allBacklogIds = filteredBacklog.map((t) => t.id)
-        useSprintUI.getState().selectRange(allBacklogIds[0], allBacklogIds[allBacklogIds.length - 1], allBacklogIds)
-      }
+    if (!selectedTaskId && tasks.length > 0) {
+      setSelectedTaskId(tasks[0].id)
     }
-
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTaskIds.length, filteredBacklog, clearSelection])
+  }, [tasks, selectedTaskId])
 
   const conflictingTaskIds = usePrConflictsStore((s) => s.conflictingTaskIds)
   const conflictingTasks = useMemo(
@@ -154,269 +121,190 @@ export function SprintCenter() {
     [tasks, conflictingTaskIds]
   )
 
+  return (
+    <motion.div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        background: 'var(--neon-bg)',
+      }}
+      variants={VARIANTS.fadeIn}
+      initial="initial"
+      animate="animate"
+      transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
+    >
+      {/* Zone 1: CircuitPipeline */}
+      <ErrorBoundary name="CircuitPipeline">
+        <CircuitPipeline tasks={tasks} />
+      </ErrorBoundary>
 
-  // --- Bulk action handlers ---
-  const handleBulkSetPriority = useCallback(
-    (priority: number) => {
-      selectedTaskIds.forEach((taskId) => {
-        const task = tasks.find((t) => t.id === taskId)
-        if (task) {
-          handleUpdatePriority({ id: task.id, priority })
-        }
-      })
-      clearSelection()
-    },
-    [selectedTaskIds, tasks, handleUpdatePriority, clearSelection]
-  )
+      {/* Zone 2: Task List + Detail Pane */}
+      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+        {/* Left: Task List Sidebar */}
+        <div
+          style={{
+            width: 280,
+            minWidth: 200,
+            borderRight: '1px solid var(--neon-purple-border)',
+            display: 'flex',
+            flexDirection: 'column',
+            background: 'linear-gradient(180deg, rgba(138, 43, 226, 0.04), rgba(10, 0, 21, 0.4))',
+          }}
+        >
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              padding: '10px 12px',
+              borderBottom: '1px solid var(--neon-purple-border)',
+            }}
+          >
+            <span
+              style={{
+                color: 'var(--neon-purple)',
+                fontSize: '10px',
+                textTransform: 'uppercase',
+                letterSpacing: '1.5px',
+                fontWeight: 600,
+              }}
+            >
+              Tasks
+            </span>
+            <div style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+              {visibleStuckTasks.length > 0 && (
+                <button
+                  className="conflict-badge-btn"
+                  onClick={() => setHealthDrawerOpen(true)}
+                  title="Stuck tasks detected"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <Badge variant="warning" size="sm">
+                    {visibleStuckTasks.length}
+                  </Badge>
+                </button>
+              )}
+              {conflictingTasks.length > 0 && (
+                <button
+                  className="conflict-badge-btn"
+                  onClick={() => setConflictDrawerOpen(true)}
+                  title="View merge conflicts"
+                  style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <Badge variant="danger" size="sm">
+                    {conflictingTasks.length}
+                  </Badge>
+                </button>
+              )}
+              <button
+                onClick={openWorkbench}
+                title="New Ticket"
+                style={{
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  border: '1px solid var(--neon-cyan-border)',
+                  background: 'var(--neon-cyan-surface)',
+                  color: 'var(--neon-cyan)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0,
+                }}
+              >
+                <Plus size={12} />
+              </button>
+            </div>
+          </div>
 
-  const handleBulkDelete = useCallback(() => {
-    selectedTaskIds.forEach((taskId) => {
-      deleteTask(taskId)
-    })
-    clearSelection()
-  }, [selectedTaskIds, deleteTask, clearSelection])
-
-  const handleBulkMarkDone = useCallback(() => {
-    selectedTaskIds.forEach((taskId) => {
-      const task = tasks.find((t) => t.id === taskId)
-      if (task) {
-        handleMarkDone(task)
-      }
-    })
-    clearSelection()
-  }, [selectedTaskIds, tasks, handleMarkDone, clearSelection])
-
-  const kanbanContent = (
-    <>
-      <div className="sprint-center__header">
-        <div className="sprint-center__title-row">
-          <span className="sprint-center__title text-gradient-aurora">SPRINT CENTER</span>
-          <div className="sprint-board__repo-switcher">
+          {/* Repo Filter */}
+          <div
+            style={{
+              padding: '8px 12px',
+              borderBottom: '1px solid var(--neon-purple-border)',
+              display: 'flex',
+              gap: '4px',
+              flexWrap: 'wrap',
+            }}
+          >
             {REPO_OPTIONS.map((r) => (
               <button
                 key={r.label}
                 onClick={() => setRepoFilter(repoFilter === r.label ? null : r.label)}
-                className={`sprint-board__repo-chip ${repoFilter === r.label ? 'sprint-board__repo-chip--active' : ''}`}
-                style={
-                  repoFilter === r.label ? { borderColor: r.color, color: r.color } : undefined
-                }
+                style={{
+                  padding: '4px 8px',
+                  fontSize: '10px',
+                  borderRadius: '4px',
+                  border: `1px solid ${repoFilter === r.label ? r.color : 'rgba(255, 255, 255, 0.1)'}`,
+                  background: repoFilter === r.label ? `${r.color}22` : 'rgba(10, 0, 21, 0.4)',
+                  color: repoFilter === r.label ? r.color : 'rgba(255, 255, 255, 0.5)',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  fontWeight: 600,
+                }}
               >
-                <span className="sprint-board__repo-dot" style={{ background: r.color }} />
                 {r.label}
               </button>
             ))}
             <button
               onClick={() => setRepoFilter(null)}
-              className={`sprint-board__repo-chip ${repoFilter === null ? 'sprint-board__repo-chip--active' : ''}`}
+              style={{
+                padding: '4px 8px',
+                fontSize: '10px',
+                borderRadius: '4px',
+                border: `1px solid ${repoFilter === null ? 'var(--neon-cyan)' : 'rgba(255, 255, 255, 0.1)'}`,
+                background: repoFilter === null ? 'var(--neon-cyan-surface)' : 'rgba(10, 0, 21, 0.4)',
+                color: repoFilter === null ? 'var(--neon-cyan)' : 'rgba(255, 255, 255, 0.5)',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease',
+                fontWeight: 600,
+              }}
             >
               All
             </button>
           </div>
-        </div>
-        <div className="sprint-center__actions">
-          {visibleStuckTasks.length > 0 && (
-            <button
-              className="conflict-badge-btn"
-              onClick={() => setHealthDrawerOpen(true)}
-              title="Stuck tasks detected"
-            >
-              <Badge variant="warning" size="sm">
-                {visibleStuckTasks.length} stuck
-              </Badge>
-            </button>
-          )}
-          {conflictingTasks.length > 0 && (
-            <button
-              className="conflict-badge-btn"
-              onClick={() => setConflictDrawerOpen(true)}
-              title="View merge conflicts"
-            >
-              <Badge variant="danger" size="sm">
-                {conflictingTasks.length} conflict{conflictingTasks.length > 1 ? 's' : ''}
-              </Badge>
-            </button>
-          )}
-          <kbd className="sprint-center__shortcut-hint" title="Keyboard shortcuts">
-            N — New ticket &nbsp; Esc — Close
-          </kbd>
-          <Button variant="primary" size="sm" onClick={openWorkbench}>
-            + New Ticket
-          </Button>
-          <Button variant="icon" size="sm" onClick={loadData} disabled={loading} title="Refresh" aria-label="Refresh">
-            &#x21bb;
-          </Button>
-        </div>
-      </div>
 
-      <div className="sprint-center__body">
-        {loadError && tasks.length === 0 ? (
-          <div className="sprint-center__error">
-            <p className="sprint-center__error-message">{loadError}</p>
-            <Button variant="primary" size="sm" onClick={loadData} disabled={loading}>
-              {loading ? 'Retrying…' : 'Retry'}
-            </Button>
-          </div>
-        ) : loading && tasks.length === 0 ? (
-          <div className="kanban-board">
-            {['To Do', 'In Progress', 'Awaiting Review'].map((label) => (
-              <div key={label} className="kanban-col">
-                <div className="kanban-col__header">
-                  {label} <span className="sprint-col__count bde-count-badge">&mdash;</span>
-                </div>
-                <div className="kanban-col__cards">
-                  <div className="sprint-board__skeleton" />
-                  <div className="sprint-board__skeleton" />
-                </div>
+          {/* Task List */}
+          <ErrorBoundary name="SprintTaskList">
+            {loadError && tasks.length === 0 ? (
+              <div style={{ padding: '16px', color: 'rgba(255, 255, 255, 0.5)' }}>
+                <p style={{ marginBottom: '12px', fontSize: '13px' }}>{loadError}</p>
+                <Button variant="primary" size="sm" onClick={loadData} disabled={loading}>
+                  {loading ? 'Retrying…' : 'Retry'}
+                </Button>
               </div>
-            ))}
-          </div>
-        ) : (
-          <>
-            <ErrorBoundary name="KanbanBoard">
-            <KanbanBoard
-              todoTasks={partition.todo}
-              activeTasks={partition.inProgress}
-              awaitingReviewTasks={partition.awaitingReview}
-              prMergedMap={prMergedMap}
-              generatingIds={generatingIds}
-              onDragEnd={(taskId, newStatus) => handleDragEnd(taskId, newStatus, tasks)}
-              onReorder={handleReorder}
-              onPushToSprint={handlePushToSprint}
+            ) : (
+              <SprintTaskList
+                tasks={tasks}
+                selectedId={selectedTaskId}
+                onSelect={setSelectedTaskId}
+                loading={loading}
+                repoFilter={repoFilter}
+              />
+            )}
+          </ErrorBoundary>
+        </div>
+
+        {/* Right: Detail Pane */}
+        <ErrorBoundary name="SprintDetailPane">
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            <SprintDetailPane
+              task={selectedTask}
               onLaunch={launchTask}
-              onViewSpec={handleViewSpec}
-              onViewOutput={handleViewOutput}
-              onMarkDone={handleMarkDone}
               onStop={handleStop}
-            />
-            </ErrorBoundary>
-
-            <div className="bde-backlog-search">
-              <input
-                type="text"
-                className="bde-backlog-search__input"
-                placeholder="Search backlog..."
-                value={backlogSearch}
-                onChange={(e) => setBacklogSearch(e.target.value)}
-              />
-              {backlogSearch && (
-                <button
-                  className="bde-backlog-search__clear"
-                  onClick={() => setBacklogSearch('')}
-                  title="Clear search"
-                >
-                  &times;
-                </button>
-              )}
-            </div>
-
-            <BulkActionBar
-              selectedCount={selectedTaskIds.length}
-              onSetPriority={handleBulkSetPriority}
-              onDelete={handleBulkDelete}
-              onMarkDone={handleBulkMarkDone}
-              onClearSelection={clearSelection}
-            />
-
-            <ErrorBoundary name="Backlog">
-            <TaskTable
-              section="backlog"
-              tasks={filteredBacklog}
-              onPushToSprint={handlePushToSprint}
-              onViewSpec={handleViewSpec}
-              onViewOutput={handleViewOutput}
-              onMarkDone={handleMarkDone}
-              onUpdate={handleUpdatePriority}
-              onEditInWorkbench={handleEditInWorkbench}
-            />
-            </ErrorBoundary>
-
-            {partition.blocked.length > 0 && (
-              <ErrorBoundary name="Blocked Tasks">
-              <TaskTable
-                section="blocked"
-                tasks={partition.blocked}
-                defaultExpanded={true}
-                onPushToSprint={handlePushToSprint}
-                onViewSpec={handleViewSpec}
-                onViewOutput={handleViewOutput}
-                onMarkDone={handleMarkDone}
-                onUpdate={handleUpdatePriority}
-                onEditInWorkbench={handleEditInWorkbench}
-              />
-              </ErrorBoundary>
-            )}
-
-            <ErrorBoundary name="Done Tasks">
-            <TaskTable
-              section="done"
-              tasks={partition.done}
-              defaultExpanded={false}
-              onPushToSprint={handlePushToSprint}
-              onViewSpec={handleViewSpec}
-              onViewOutput={handleViewOutput}
               onRerun={handleRerun}
+              onMarkDone={handleMarkDone}
+              onDelete={deleteTask}
+              onSaveSpec={handleSaveSpec}
             />
-            </ErrorBoundary>
-
-            {partition.failed.length > 0 && (
-              <ErrorBoundary name="Failed Tasks">
-              <TaskTable
-                section="failed"
-                tasks={partition.failed}
-                defaultExpanded={false}
-                onPushToSprint={handlePushToSprint}
-                onViewSpec={handleViewSpec}
-                onViewOutput={handleViewOutput}
-              />
-              </ErrorBoundary>
-            )}
-          </>
-        )}
+          </div>
+        </ErrorBoundary>
       </div>
-    </>
-  )
 
-  return (
-    <div className="sprint-center">
-      {logDrawerTask ? (
-        <Group orientation="horizontal" style={{ height: '100%' }}>
-          <Panel defaultSize={65} minSize={40}>
-            {kanbanContent}
-          </Panel>
-          <Separator
-            style={{
-              width: '4px',
-              background: 'var(--bde-border, #333)',
-              cursor: 'col-resize',
-              flexShrink: 0,
-            }}
-          />
-          <Panel defaultSize={35} minSize={20}>
-            <TaskMonitorPanel
-              task={logDrawerTask}
-              onClose={() => setLogDrawerTaskId(null)}
-              onStop={handleStop}
-              onRerun={handleRerun}
-            />
-          </Panel>
-        </Group>
-      ) : (
-        kanbanContent
-      )}
-
-      <SpecDrawer
-        task={selectedTask}
-        onClose={() => setSelectedTaskId(null)}
-        onSave={handleSaveSpec}
-        onLaunch={launchTask}
-        onPushToSprint={handlePushToSprint}
-        onMarkDone={handleMarkDone}
-        onUpdate={handleUpdateTitle}
-        onDelete={deleteTask}
-      />
-
-      <LogDrawer task={logDrawerTask} onClose={() => setLogDrawerTaskId(null)} onStop={handleStop} onRerun={handleRerun} />
-
+      {/* Drawers */}
       <ConflictDrawer
         open={conflictDrawerOpen}
         tasks={conflictingTasks}
@@ -431,6 +319,6 @@ export function SprintCenter() {
       />
 
       <ConfirmModal {...confirmProps} />
-    </div>
+    </motion.div>
   )
 }
