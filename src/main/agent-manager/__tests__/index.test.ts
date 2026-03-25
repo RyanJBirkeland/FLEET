@@ -63,7 +63,7 @@ vi.mock('../../agent-history', () => ({
 import { createAgentManager } from '../index'
 import type { AgentManagerConfig, AgentHandle } from '../types'
 import { createAgentRecord } from '../../agent-history'
-import { getQueuedTasks, claimTask, updateTask } from '../../data/sprint-queries'
+import { getQueuedTasks, claimTask, updateTask, getTasksWithDependencies } from '../../data/sprint-queries'
 import { getRepoPaths } from '../../paths'
 import { spawnAgent } from '../sdk-adapter'
 import { setupWorktree, pruneStaleWorktrees } from '../worktree'
@@ -157,6 +157,28 @@ describe('createAgentManager', () => {
       expect(mgr.getStatus().shuttingDown).toBe(false)
       expect(vi.mocked(recoverOrphans)).toHaveBeenCalled()
       expect(vi.mocked(pruneStaleWorktrees)).toHaveBeenCalled()
+
+      await mgr.stop(100)
+      await flush()
+    })
+
+    it('is idempotent — calling start() twice does not create duplicate loops', async () => {
+      const logger = makeLogger()
+      const mgr = createAgentManager(baseConfig, logger)
+
+      mgr.start()
+
+      // Record call counts after first start
+      const orphanCalls = vi.mocked(recoverOrphans).mock.calls.length
+      const pruneCalls = vi.mocked(pruneStaleWorktrees).mock.calls.length
+
+      mgr.start() // second call should be a no-op
+
+      expect(mgr.getStatus().running).toBe(true)
+
+      // No additional calls should have been made
+      expect(vi.mocked(recoverOrphans)).toHaveBeenCalledTimes(orphanCalls)
+      expect(vi.mocked(pruneStaleWorktrees)).toHaveBeenCalledTimes(pruneCalls)
 
       await mgr.stop(100)
       await flush()
@@ -513,6 +535,51 @@ describe('createAgentManager', () => {
   })
 
   describe('watchdog', () => {
+    it('aborts agent and marks task error when maxRuntimeMs exceeded', async () => {
+      vi.useFakeTimers()
+
+      const config: AgentManagerConfig = { ...baseConfig, maxRuntimeMs: 100, pollIntervalMs: 999_999 }
+      const task = makeTask()
+      const { handle, abortFn } = makeBlockingHandle()
+
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([task])
+      vi.mocked(claimTask).mockResolvedValueOnce(task)
+      vi.mocked(spawnAgent).mockResolvedValueOnce(handle)
+
+      const logger = makeLogger()
+      const mgr = createAgentManager(config, logger)
+      mgr.start()
+
+      // Advance past INITIAL_DRAIN_DEFER_MS (5000ms) to spawn agent
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+
+      expect(mgr.getStatus().activeAgents.length).toBe(1)
+
+      // Advance past watchdog check interval (10_000ms) — maxRuntimeMs (100ms) is well exceeded
+      await vi.advanceTimersByTimeAsync(10_100)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+
+      expect(abortFn).toHaveBeenCalled()
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Watchdog killing task task-1: max-runtime'),
+      )
+      expect(vi.mocked(updateTask)).toHaveBeenCalledWith(
+        'task-1',
+        expect.objectContaining({ status: 'error', notes: 'Max runtime exceeded' }),
+      )
+
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    // NOTE: rate-limit-loop watchdog verdict is tested at the unit level in
+    // watchdog.test.ts (checkAgent returns 'rate-limit-loop') and the backpressure
+    // behavior in concurrency.test.ts. Integration-level testing with real timers
+    // requires >15s (INITIAL_DRAIN_DEFER_MS + WATCHDOG_INTERVAL_MS) which exceeds
+    // the test timeout, and fake timers cannot flush async generator microtasks.
+
     it('kills idle agent after timeout', async () => {
       vi.useFakeTimers()
 
@@ -547,6 +614,55 @@ describe('createAgentManager', () => {
       mgr.stop(0).catch(() => {})
       vi.useRealTimers()
     })
+
+    it('logs warning when updateTask rejects after max-runtime kill', async () => {
+      vi.useFakeTimers()
+      const config: AgentManagerConfig = { ...baseConfig, maxRuntimeMs: 100, pollIntervalMs: 999_999 }
+      const task = makeTask()
+      const { handle } = makeBlockingHandle()
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([task])
+      vi.mocked(claimTask).mockResolvedValueOnce(task)
+      vi.mocked(spawnAgent).mockResolvedValueOnce(handle)
+      // Make ALL updateTask calls reject — the watchdog one is not the first call
+      vi.mocked(updateTask).mockRejectedValue(new Error('DB error'))
+      const logger = makeLogger()
+      const mgr = createAgentManager(config, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(10_100)
+      for (let i = 0; i < 20; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-1 after max-runtime kill'))
+      vi.mocked(updateTask).mockResolvedValue(null) // reset
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    it('logs warning when updateTask rejects after idle kill', async () => {
+      vi.useFakeTimers()
+      const config: AgentManagerConfig = { ...baseConfig, idleTimeoutMs: 50, pollIntervalMs: 999_999 }
+      const task = makeTask()
+      const { handle } = makeBlockingHandle()
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([task])
+      vi.mocked(claimTask).mockResolvedValueOnce(task)
+      vi.mocked(spawnAgent).mockResolvedValueOnce(handle)
+      vi.mocked(updateTask).mockRejectedValue(new Error('DB error'))
+      const logger = makeLogger()
+      const mgr = createAgentManager(config, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(10_100)
+      for (let i = 0; i < 20; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-1 after idle kill'))
+      vi.mocked(updateTask).mockResolvedValue(null)
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    // NOTE: rate-limit requeue error test removed — same timing constraint as above.
   })
 
   describe('steerAgent', () => {
@@ -612,6 +728,267 @@ describe('createAgentManager', () => {
 
       mgr.stop(0).catch(() => {})
       vi.useRealTimers()
+    })
+  })
+
+  describe('stop() — abort error and drainInFlight paths', () => {
+    it('handles abort() throwing during stop without crashing (line 402)', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      const task = makeTask()
+      let resolveMessages: (() => void) | undefined
+      const p = new Promise<void>((r) => { resolveMessages = r })
+      const abortFn = vi.fn(() => { resolveMessages?.(); throw new Error('Abort failed') })
+      async function* gen(): AsyncIterable<unknown> { await p }
+      const handle = { messages: gen(), sessionId: 's', abort: abortFn, steer: vi.fn().mockResolvedValue(undefined) } as AgentHandle
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([task])
+      vi.mocked(claimTask).mockResolvedValueOnce(task)
+      vi.mocked(spawnAgent).mockResolvedValueOnce(handle)
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(mgr.getStatus().activeAgents.length).toBe(1)
+      const stopPromise = mgr.stop(100)
+      await vi.advanceTimersByTimeAsync(200)
+      for (let i = 0; i < 20; i++) await vi.advanceTimersByTimeAsync(1)
+      await stopPromise.catch(() => {})
+      expect(abortFn).toHaveBeenCalled()
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to abort agent task-1 during shutdown'))
+      vi.useRealTimers()
+    })
+
+    it('waits for in-flight drain before stopping (lines 395-396)', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      let resolveDrain: (() => void) | undefined
+      const drainDelay = new Promise<void>((r) => { resolveDrain = r })
+      vi.mocked(getQueuedTasks).mockImplementation(async () => { await drainDelay; return [] })
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      const stopPromise = mgr.stop(5000)
+      resolveDrain?.()
+      await vi.advanceTimersByTimeAsync(100)
+      for (let i = 0; i < 30; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(5100)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await stopPromise
+      expect(mgr.getStatus().running).toBe(false)
+      vi.useRealTimers()
+    })
+  })
+
+  describe('onTaskTerminal', () => {
+    it('resolves dependents via resolveDependents', async () => {
+      const { resolveDependents } = await import('../resolve-dependents')
+      const logger = makeLogger()
+      const mgr = createAgentManager(baseConfig, logger)
+      await mgr.onTaskTerminal('task-1', 'done')
+      expect(vi.mocked(resolveDependents)).toHaveBeenCalledWith('task-1', 'done', expect.anything(), expect.anything(), expect.anything(), logger)
+    })
+
+    it('logs error when resolveDependents throws', async () => {
+      const { resolveDependents } = await import('../resolve-dependents')
+      vi.mocked(resolveDependents).mockRejectedValueOnce(new Error('dep error'))
+      const logger = makeLogger()
+      const mgr = createAgentManager(baseConfig, logger)
+      await mgr.onTaskTerminal('task-1', 'done')
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('resolveDependents failed for task-1'))
+    })
+  })
+
+  describe('start() error handlers', () => {
+    it('logs error when initial orphan recovery fails', async () => {
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(recoverOrphans).mockRejectedValueOnce(new Error('orphan error'))
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      await flush(20)
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Initial orphan recovery error'))
+      await mgr.stop(100)
+      await flush()
+    })
+
+    it('logs error when initial worktree prune fails', async () => {
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(pruneStaleWorktrees).mockRejectedValueOnce(new Error('prune error'))
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      await flush(20)
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Initial worktree prune error'))
+      await mgr.stop(100)
+      await flush()
+    })
+
+    it('logs error when initial dependency index build fails', async () => {
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(getTasksWithDependencies).mockRejectedValueOnce(new Error('dep index error'))
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      await flush(20)
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to build dependency index'))
+      await mgr.stop(100)
+      await flush()
+    })
+  })
+
+  describe('periodic loops — error handling', () => {
+    it('logs error from orphanLoop when recoverOrphans rejects during periodic interval', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(recoverOrphans).mockResolvedValueOnce(0).mockRejectedValueOnce(new Error('orphan periodic error'))
+      const mgr = createAgentManager({ ...baseConfig, pollIntervalMs: 999_999 }, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(61_000)
+      for (let i = 0; i < 30; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Orphan recovery error'))
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    it('logs error from pruneLoop when pruneStaleWorktrees rejects during periodic interval', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(pruneStaleWorktrees).mockResolvedValueOnce(0).mockRejectedValueOnce(new Error('prune periodic error'))
+      const mgr = createAgentManager({ ...baseConfig, pollIntervalMs: 999_999 }, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(301_000)
+      for (let i = 0; i < 30; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('Worktree prune error'))
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    it('invokes isActive callback via pruneStaleWorktrees', async () => {
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(pruneStaleWorktrees).mockImplementation(async (_base, isActiveFn) => {
+        if (typeof isActiveFn === 'function') isActiveFn('some-task-id')
+        return 0
+      })
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      await flush(20)
+      expect(vi.mocked(pruneStaleWorktrees)).toHaveBeenCalled()
+      await mgr.stop(100)
+      await flush()
+    })
+  })
+
+  describe('drain loop — dependency checking', () => {
+    it('builds taskStatusMap from getTasksWithDependencies (covers map callback fn 15)', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      // Return tasks with data so the .map() callback fires
+      vi.mocked(getTasksWithDependencies).mockResolvedValue([
+        { id: 'dep-1', status: 'done', depends_on: null } as any,
+        { id: 'dep-2', status: 'queued', depends_on: null } as any,
+      ])
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([])
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(vi.mocked(getTasksWithDependencies)).toHaveBeenCalled()
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    it('auto-blocks task with unsatisfied dependencies (covers dep callback fn 16)', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      // Return tasks for dep index
+      vi.mocked(getTasksWithDependencies).mockResolvedValue([
+        { id: 'blocker-1', status: 'active', depends_on: null } as any,
+        { id: 'task-dep', status: 'queued', depends_on: JSON.stringify([{ taskId: 'blocker-1', type: 'hard' }]) } as any,
+      ])
+      // Return a task with depends_on
+      const taskWithDeps = makeTask({
+        id: 'task-dep',
+        depends_on: JSON.stringify([{ taskId: 'blocker-1', type: 'hard' }]),
+        dependsOn: JSON.stringify([{ taskId: 'blocker-1', type: 'hard' }]),
+      })
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([taskWithDeps])
+
+      // Mock depIndex.areDependenciesSatisfied to invoke the getStatus callback AND return unsatisfied
+      const { createDependencyIndex } = await import('../dependency-index')
+      vi.mocked(createDependencyIndex).mockReturnValue({
+        rebuild: vi.fn(),
+        getDependents: vi.fn(() => new Set()),
+        areDependenciesSatisfied: vi.fn((_taskId, _deps, getStatus) => {
+          // Invoke the callback to cover fn 16 (line 220)
+          if (typeof getStatus === 'function') getStatus('blocker-1')
+          return { satisfied: false, blockedBy: ['blocker-1'] }
+        }),
+      } as any)
+
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('unsatisfied deps'))
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+
+    it('skips task when claimTask returns null', async () => {
+      vi.useFakeTimers()
+      const logger = makeLogger()
+      setupDefaultMocks()
+      vi.mocked(getQueuedTasks).mockResolvedValueOnce([makeTask()])
+      vi.mocked(claimTask).mockResolvedValueOnce(null)
+      const mgr = createAgentManager(baseConfig, logger)
+      mgr.start()
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('already claimed'))
+      mgr.stop(0).catch(() => {})
+      vi.useRealTimers()
+    })
+  })
+
+  describe('defaultLogger / fileLog coverage', () => {
+    it('uses defaultLogger when no custom logger is passed, covering info path', async () => {
+      setupDefaultMocks()
+      const mgr = createAgentManager(baseConfig)
+      mgr.start()
+      await flush(20)
+      expect(mgr.getStatus().running).toBe(true)
+      await mgr.stop(100)
+      await flush()
+    })
+
+    it('triggers defaultLogger.warn and .error paths when operations fail', async () => {
+      setupDefaultMocks()
+      // Make initial orphan recovery reject to trigger error logging
+      vi.mocked(recoverOrphans).mockRejectedValueOnce(new Error('test orphan error'))
+      // Make initial prune reject to trigger error logging
+      vi.mocked(pruneStaleWorktrees).mockRejectedValueOnce(new Error('test prune error'))
+      const mgr = createAgentManager(baseConfig)
+      mgr.start()
+      await flush(30)
+      // Both error handlers should have fired via defaultLogger.error
+      await mgr.stop(100)
+      await flush()
     })
   })
 })
