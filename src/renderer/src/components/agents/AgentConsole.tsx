@@ -5,66 +5,20 @@
 import { useRef, useEffect, useMemo, useState } from 'react'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { ChevronDown } from 'lucide-react'
-import type { AgentEvent } from '../../../../shared/types'
-import { tokens } from '../../design-system/tokens'
 import { pairEvents } from '../../lib/pair-events'
 import { useAgentEventsStore } from '../../stores/agentEvents'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { ConsoleHeader } from './ConsoleHeader'
 import { ConsoleLine } from './ConsoleLine'
+import { CommandBar } from './CommandBar'
 
 interface AgentConsoleProps {
   agentId: string
   onSteer: (message: string) => void
+  onCommand: (cmd: string, args?: string) => void
 }
 
-const containerStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  height: '100%',
-  background: tokens.color.background,
-}
-
-const scrollAreaStyle: React.CSSProperties = {
-  flex: 1,
-  overflow: 'auto',
-  contain: 'strict',
-  minHeight: 0,
-}
-
-const jumpButtonStyle: React.CSSProperties = {
-  position: 'absolute',
-  bottom: tokens.space[3],
-  left: '50%',
-  transform: 'translateX(-50%)',
-  background: tokens.color.accent,
-  color: tokens.color.background,
-  border: 'none',
-  borderRadius: tokens.radius.full,
-  padding: `${tokens.space[1]} ${tokens.space[3]}`,
-  fontSize: tokens.size.sm,
-  fontWeight: 600,
-  cursor: 'pointer',
-  display: 'flex',
-  alignItems: 'center',
-  gap: tokens.space[1],
-  boxShadow: `0 2px 8px ${tokens.color.shadow}`,
-  transition: tokens.transition.fast,
-  zIndex: 10,
-}
-
-const commandBarPlaceholderStyle: React.CSSProperties = {
-  height: '48px',
-  borderTop: `1px solid ${tokens.color.border}`,
-  display: 'flex',
-  alignItems: 'center',
-  padding: `0 ${tokens.space[3]}`,
-  color: tokens.color.textDim,
-  fontSize: tokens.size.sm,
-  flexShrink: 0,
-}
-
-export function AgentConsole({ agentId, onSteer }: AgentConsoleProps) {
+export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps) {
   const parentRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
@@ -109,8 +63,8 @@ export function AgentConsole({ agentId, onSteer }: AgentConsoleProps) {
 
   if (!agent) {
     return (
-      <div style={containerStyle}>
-        <div style={{ padding: tokens.space[4], color: tokens.color.textDim, textAlign: 'center' }}>
+      <div className="agent-console">
+        <div style={{ padding: '16px', color: 'rgba(255, 255, 255, 0.3)', textAlign: 'center' }}>
           Agent not found
         </div>
       </div>
@@ -118,11 +72,11 @@ export function AgentConsole({ agentId, onSteer }: AgentConsoleProps) {
   }
 
   return (
-    <div style={containerStyle} className="agent-console">
+    <div className="agent-console">
       <ConsoleHeader agent={agent} events={events} />
 
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-        <div ref={parentRef} onScroll={handleScroll} style={scrollAreaStyle}>
+        <div ref={parentRef} onScroll={handleScroll} className="console-body">
           {blocks.length > 0 ? (
             <div
               style={{
@@ -149,33 +103,27 @@ export function AgentConsole({ agentId, onSteer }: AgentConsoleProps) {
               ))}
             </div>
           ) : (
-            <div style={{ padding: tokens.space[4], color: tokens.color.textDim, textAlign: 'center' }}>
+            <div style={{ padding: '16px', color: 'rgba(255, 255, 255, 0.3)', textAlign: 'center' }}>
               No events available
             </div>
           )}
         </div>
 
         {showJumpButton && (
-          <button
-            onClick={handleJumpToLatest}
-            style={jumpButtonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = 'translateX(-50%) scale(1.05)'
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = 'translateX(-50%) scale(1)'
-            }}
-          >
+          <button onClick={handleJumpToLatest} className="console-jump-to-latest">
             Jump to latest
             <ChevronDown size={16} />
           </button>
         )}
       </div>
 
-      {/* CommandBar placeholder — will be implemented in Task 5 */}
-      <div style={commandBarPlaceholderStyle}>
-        {agent.status === 'running' ? 'Command bar (coming soon)...' : ''}
-      </div>
+      {/* CommandBar */}
+      <CommandBar
+        onSend={onSteer}
+        onCommand={onCommand}
+        disabled={agent.status !== 'running'}
+        disabledReason={agent.status !== 'running' ? 'Agent not running' : undefined}
+      />
     </div>
   )
 }

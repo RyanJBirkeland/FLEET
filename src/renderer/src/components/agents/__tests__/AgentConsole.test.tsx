@@ -45,6 +45,15 @@ vi.mock('@tanstack/react-virtual', () => ({
   })),
 }))
 
+// Mock CommandBar component
+vi.mock('../CommandBar', () => ({
+  CommandBar: ({ disabled }: { disabled: boolean }) => (
+    <div data-testid="command-bar" data-disabled={disabled}>
+      Command Bar
+    </div>
+  ),
+}))
+
 describe('AgentConsole', () => {
   const mockAgent: AgentMeta = {
     id: 'test-agent-1',
@@ -95,12 +104,12 @@ describe('AgentConsole', () => {
   })
 
   it('renders console header with agent name', () => {
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
+    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
     expect(screen.getByText('Implement feature X')).toBeInTheDocument()
   })
 
   it('renders console lines for events', () => {
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
+    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
     // The ConsoleLine component should render the started event
     expect(screen.getByText(/Started with model opus-4/)).toBeInTheDocument()
   })
@@ -110,7 +119,7 @@ describe('AgentConsole', () => {
       const state = { agents: [] }
       return selector(state)
     })
-    render(<AgentConsole agentId="nonexistent" onSteer={vi.fn()} />)
+    render(<AgentConsole agentId="nonexistent" onSteer={vi.fn()} onCommand={vi.fn()} />)
     expect(screen.getByText('Agent not found')).toBeInTheDocument()
   })
 
@@ -119,32 +128,18 @@ describe('AgentConsole', () => {
       const state = { events: { 'test-agent-1': [] } }
       return selector(state)
     })
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
+    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
     expect(screen.getByText('No events available')).toBeInTheDocument()
   })
 
-  it('displays command bar placeholder for running agents', () => {
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
-    expect(screen.getByText('Command bar (coming soon)...')).toBeInTheDocument()
-  })
-
-  it('hides command bar placeholder for completed agents', () => {
-    const completedAgent = { ...mockAgent, status: 'done' as const }
-    vi.mocked(useAgentHistoryStore).mockImplementation((selector: any) => {
-      const state = { agents: [completedAgent] }
-      return selector(state)
-    })
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
-    expect(screen.queryByText('Command bar (coming soon)...')).not.toBeInTheDocument()
-  })
-
   it('renders model badge in header', () => {
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
+    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
+    // NeonBadge renders lowercase text with CSS text-transform
     expect(screen.getByText('opus-4')).toBeInTheDocument()
   })
 
   it('displays duration in header', () => {
-    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} />)
+    render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
     // Should show some duration (exact value depends on timing)
     const header = screen.getByText('Implement feature X').closest('.console-header')
     expect(header).toBeInTheDocument()
