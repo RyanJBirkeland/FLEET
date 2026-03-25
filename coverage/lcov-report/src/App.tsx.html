@@ -25,7 +25,7 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>0/134</span>
+                <span class='fraction'>0/131</span>
             </div>
         
             
@@ -39,14 +39,14 @@
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>0/34</span>
+                <span class='fraction'>0/32</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
                 <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>0/110</span>
+                <span class='fraction'>0/108</span>
             </div>
         
             
@@ -367,14 +367,7 @@
 <a name='L302'></a><a href='#L302'>302</a>
 <a name='L303'></a><a href='#L303'>303</a>
 <a name='L304'></a><a href='#L304'>304</a>
-<a name='L305'></a><a href='#L305'>305</a>
-<a name='L306'></a><a href='#L306'>306</a>
-<a name='L307'></a><a href='#L307'>307</a>
-<a name='L308'></a><a href='#L308'>308</a>
-<a name='L309'></a><a href='#L309'>309</a>
-<a name='L310'></a><a href='#L310'>310</a>
-<a name='L311'></a><a href='#L311'>311</a>
-<a name='L312'></a><a href='#L312'>312</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
+<a name='L305'></a><a href='#L305'>305</a></td><td class="line-coverage quiet"><span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -400,6 +393,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -499,7 +493,6 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -657,14 +650,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -690,11 +676,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore, type View } from './stores/ui'
 import { useCommandPaletteStore } from './stores/commandPalette'
 import { useCostDataStore } from './stores/costData'
-import { ActivityBar } from './components/layout/ActivityBar'
-import { TitleBar } from './components/layout/TitleBar'
-import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
 import { ToastContainer } from './components/layout/ToastContainer'
+import { UnifiedHeader } from './components/layout/UnifiedHeader'
+import { NeonSidebar } from './components/layout/NeonSidebar'
 import { Onboarding } from './components/Onboarding'
 import { Button } from './components/ui/Button'
 import { Kbd } from './components/ui/Kbd'
@@ -708,6 +693,8 @@ import { usePanelLayoutStore, findLeaf } from './stores/panelLayout'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
 import { DEFAULT_MODEL } from '../../shared/models'
 import './assets/neon.css'
+import './assets/neon-shell.css'
+import './assets/agents-neon.css'
 &nbsp;
 // Keyboard shortcut order: ⌘1=dashboard, ⌘2=agents, ⌘3=terminal, ⌘4=sprint,
 // ⌘5=pr-station, ⌘6=git, ⌘7=memory, ⌘8=cost, ⌘9=settings
@@ -813,7 +800,6 @@ function <span class="fstat-no" title="function not covered" >App(): React.JSX.E
   const <span class="cstat-no" title="statement not covered" >activeView = useUIStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.activeView)</span></span>
   const <span class="cstat-no" title="statement not covered" >setView = useUIStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.setView)</span></span>
   const <span class="cstat-no" title="statement not covered" >root = usePanelLayoutStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.root)</span></span>
-  const <span class="cstat-no" title="statement not covered" >totalCost = useCostDataStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.totalCost)</span></span>
   const <span class="cstat-no" title="statement not covered" >fetchLocalAgents = useCostDataStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.fetchLocalAgents)</span></span>
 &nbsp;
   const <span class="cstat-no" title="statement not covered" >paletteOpen = useCommandPaletteStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.isOpen)</span></span>
@@ -972,20 +958,13 @@ function <span class="fstat-no" title="function not covered" >App(): React.JSX.E
       &gt;
         Skip to main content
       &lt;/a&gt;
-      &lt;TitleBar
-        sessionCount={0}
-        totalCost={totalCost}
-        onConflictClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etView('sprint')}</span>
-      /&gt;
+      &lt;UnifiedHeader /&gt;
       &lt;div className="app-shell__body"&gt;
-        &lt;ActivityBar /&gt;
+        &lt;NeonSidebar model={DEFAULT_MODEL.modelId} /&gt;
         &lt;main id="main-content" className="app-shell__content" aria-label="Main content"&gt;
           &lt;PanelRenderer node={root} /&gt;
         &lt;/main&gt;
       &lt;/div&gt;
-      &lt;StatusBar
-        model={DEFAULT_MODEL.modelId}
-      /&gt;
       &lt;CommandPalette open={paletteOpen} onClose={closePalette} /&gt;
       &lt;AnimatePresence&gt;
         {shortcutsOpen &amp;&amp; &lt;ShortcutsOverlay onClose={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etShortcutsOpen(false)} /</span>&gt;}
@@ -1003,7 +982,7 @@ export { App }
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T04:34:50.946Z
+                at 2026-03-25T23:43:42.854Z
             </div>
         <script src="../prettify.js"></script>
         <script>
