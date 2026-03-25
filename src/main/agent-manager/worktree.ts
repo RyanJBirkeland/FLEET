@@ -159,7 +159,13 @@ export async function setupWorktree(opts: SetupWorktreeOpts & { logger?: Logger 
         } catch {
           // Branch may not have commits relative to main — proceed
         }
-        await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env: buildAgentEnv() })
+        try {
+          await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env: buildAgentEnv() })
+        } catch {
+          // Branch delete can fail if a stale worktree still references it — prune and retry
+          await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath, env: buildAgentEnv() })
+          await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env: buildAgentEnv() })
+        }
         await execFileAsync('git', ['worktree', 'add', '-b', branch, worktreePath], { cwd: repoPath, env: buildAgentEnv() })
       } catch (retryErr) {
         // Retry failed — clean up and throw

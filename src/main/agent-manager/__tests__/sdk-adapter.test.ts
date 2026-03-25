@@ -2,9 +2,12 @@ import { describe, it, expect, vi, beforeEach, type MockInstance } from 'vitest'
 import { Readable, Writable } from 'node:stream'
 
 // Mock child_process.spawn before importing the module
-vi.mock('node:child_process', () => ({
-  spawn: vi.fn(),
-}))
+vi.mock('node:child_process', () => {
+  const execFile = vi.fn() as ReturnType<typeof vi.fn> & { [k: symbol]: unknown }
+  const { promisify } = require('node:util')
+  execFile[promisify.custom] = vi.fn()
+  return { spawn: vi.fn(), execFile }
+})
 
 // Mock the SDK so we test CLI fallback path
 vi.mock('@anthropic-ai/claude-agent-sdk', () => {

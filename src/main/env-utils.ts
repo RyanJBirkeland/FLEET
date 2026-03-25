@@ -3,7 +3,9 @@
  * Consolidates PATH augmentation and OAuth token loading that was
  * previously duplicated across adhoc-agent.ts, workbench.ts, and sdk-adapter.ts.
  */
-import { readFileSync, existsSync } from 'node:fs'
+import { readFileSync, existsSync, writeFileSync } from 'node:fs'
+import { execFile as execFileCb } from 'node:child_process'
+import { promisify } from 'node:util'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 
@@ -57,6 +59,34 @@ export function buildAgentEnvWithAuth(): Record<string, string | undefined> {
 export function invalidateOAuthToken(): void {
   _tokenLoadedAt = 0
   _cachedOAuthToken = null
+}
+
+const execFilePromise = promisify(execFileCb)
+
+/**
+ * Attempts to refresh ~/.bde/oauth-token from the macOS Keychain.
+ * Spawns the `security` CLI asynchronously (never blocks main thread).
+ * Returns true if token was refreshed, false on failure.
+ */
+export async function refreshOAuthTokenFromKeychain(): Promise<boolean> {
+  try {
+    const { stdout: credJson } = await execFilePromise(
+      'security',
+      ['find-generic-password', '-s', 'Claude Code-credentials', '-w'],
+      { timeout: 10_000, env: buildAgentEnv() }
+    )
+    const creds = JSON.parse(credJson.trim())
+    const token = creds?.claudeAiOauth?.accessToken
+    if (!token || typeof token !== 'string') return false
+
+    const tokenPath = join(homedir(), '.bde', 'oauth-token')
+    writeFileSync(tokenPath, token, 'utf8')
+    invalidateOAuthToken() // Force re-read on next call
+    return true
+  } catch {
+    // Keychain access can fail (locked, not found, permissions)
+    return false
+  }
 }
 
 /** Reset caches — for testing only. */

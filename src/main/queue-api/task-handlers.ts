@@ -199,8 +199,35 @@ export async function handleCreateTask(
     }
   }
 
-  // Create the task first to get its ID, then validate dependencies
-  const task = await createTask(body as Parameters<typeof createTask>[0])
+  // Auto-block tasks with unsatisfied hard dependencies before creation
+  // (matches sprint:create IPC behavior — check deps, set status=blocked if needed)
+  const createInput = body as Record<string, unknown>
+  const dependsOn = createInput.depends_on as Array<{ id: string; type: string }> | undefined
+  if (dependsOn && dependsOn.length > 0 && (createInput.status === 'queued' || !createInput.status)) {
+    try {
+      const { createDependencyIndex } = await import('../agent-manager/dependency-index')
+      const { listTasks } = await import('../data/sprint-queries')
+      const idx = createDependencyIndex()
+      const allTasks = await listTasks()
+      const statusMap = new Map(allTasks.map((t: { id: string; status: string }) => [t.id, t.status]))
+      const { satisfied, blockedBy } = idx.areDependenciesSatisfied(
+        'new-task',
+        dependsOn as Array<{ id: string; type: 'hard' | 'soft' }>,
+        (depId: string) => statusMap.get(depId),
+      )
+      if (!satisfied && blockedBy.length > 0) {
+        createInput.status = 'blocked'
+        const existingNotes = createInput.notes ? `\n${createInput.notes}` : ''
+        createInput.notes = `[auto-block] Blocked by: ${blockedBy.join(', ')}${existingNotes}`
+      }
+    } catch (err) {
+      console.warn(`[queue-api] Auto-block check failed:`, err)
+      // Non-fatal — drain loop has defense-in-depth auto-blocking
+    }
+  }
+
+  // Create the task (with potentially auto-blocked status)
+  const task = await createTask(createInput as unknown as Parameters<typeof createTask>[0])
 
   // If dependencies were provided, validate them (cycle detection + ID existence)
   if (task.depends_on && task.depends_on.length > 0) {

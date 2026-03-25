@@ -172,8 +172,15 @@ export function createAgentManager(
           const tokenPath = joinPath(home(), '.bde', 'oauth-token')
           const token = readFileSync(tokenPath, 'utf-8').trim()
           if (!token || token.length < 20) {
-            logger.warn('[agent-manager] OAuth token file missing or empty — skipping drain cycle. Refresh with: security find-generic-password -s "Claude Code-credentials" -w | python3 -c "import sys,json; print(json.load(sys.stdin)[\'claudeAiOauth\'][\'accessToken\'])" > ~/.bde/oauth-token')
-            return
+            // Auto-refresh from keychain before giving up
+            const { refreshOAuthTokenFromKeychain } = await import('../env-utils')
+            const refreshed = await refreshOAuthTokenFromKeychain()
+            if (refreshed) {
+              logger.info('[agent-manager] OAuth token auto-refreshed from Keychain')
+            } else {
+              logger.warn('[agent-manager] OAuth token file missing/empty and keychain refresh failed — skipping drain cycle')
+              return
+            }
           }
         } catch {
           logger.warn('[agent-manager] Cannot read OAuth token file — skipping drain cycle')
