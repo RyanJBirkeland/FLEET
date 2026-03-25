@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.9% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>20/22</span>
+                <span class='fraction'>0/22</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.44% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>17/18</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">66.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>16/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -184,7 +184,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -193,28 +193,28 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">15x</span>
-<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">16x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -290,7 +290,7 @@ interface AgentCardProps {
   onClick: () =&gt; void
 }
 &nbsp;
-const STATUS_COLORS: Record&lt;string, string&gt; = {
+const STATUS_COLORS: Record&lt;string, string&gt; = <span class="cstat-no" title="statement not covered" >{</span>
   running: tokens.color.success,
   done: tokens.color.textMuted,
   failed: tokens.color.danger,
@@ -298,29 +298,29 @@ const STATUS_COLORS: Record&lt;string, string&gt; = {
   unknown: tokens.color.textDim,
 }
 &nbsp;
-function formatDuration(startedAt: string, finishedAt: string | null): string {
-  const start = new Date(startedAt).getTime()
-  const end = finishedAt ? new Date(finishedAt).getTime() : Date.now()
-  const sec = Math.floor((end - start) / 1000)
-  if (sec &lt; 60) return `${sec}s`
-  if (sec &lt; 3600) return `${Math.floor(sec / 60)}m`
-  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`
+function <span class="fstat-no" title="function not covered" >formatDuration(s</span>tartedAt: string, finishedAt: string | null): string {
+  const start = <span class="cstat-no" title="statement not covered" >new Date(startedAt).getTime()</span>
+  const end = <span class="cstat-no" title="statement not covered" >finishedAt ? new Date(finishedAt).getTime() : Date.now()</span>
+  const sec = <span class="cstat-no" title="statement not covered" >Math.floor((end - start) / 1000)</span>
+<span class="cstat-no" title="statement not covered" >  if (sec &lt; 60) <span class="cstat-no" title="statement not covered" >return `${sec}s`</span></span>
+<span class="cstat-no" title="statement not covered" >  if (sec &lt; 3600) <span class="cstat-no" title="statement not covered" >return `${Math.floor(sec / 60)}m`</span></span>
+<span class="cstat-no" title="statement not covered" >  return `${Math.floor(sec / 3600)}h ${Math.floor((sec % 3600) / 60)}m`</span>
 }
 &nbsp;
-export function AgentCard({ agent, selected, onClick }: AgentCardProps) {
-  const statusColor = STATUS_COLORS[agent.status] ?? <span class="branch-1 cbranch-no" title="branch not covered" >tokens.color.textDim</span>
-  const isRunning = agent.status === 'running'
-  const SourceIcon = agent.source === 'bde' ? Bot : Cpu
+export function <span class="fstat-no" title="function not covered" >AgentCard({</span> agent, selected, onClick }: AgentCardProps) {
+  const statusColor = <span class="cstat-no" title="statement not covered" >STATUS_COLORS[agent.status] ?? tokens.color.textDim</span>
+  const isRunning = <span class="cstat-no" title="statement not covered" >agent.status === 'running'</span>
+  const SourceIcon = <span class="cstat-no" title="statement not covered" >agent.source === 'bde' ? Bot : Cpu</span>
 &nbsp;
   // Live duration ticker for running agents
-  const [, setTick] = useState(0)
-  useEffect(() =&gt; {
-    if (!isRunning) return
-    const id = setInterval(<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etTick(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t + 1)</span>, 1</span>000)
-    return () =&gt; clearInterval(id)
+  const [, setTick<span class="cstat-no" title="statement not covered" >] = useState(0)</span>
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (!isRunning) <span class="cstat-no" title="statement not covered" >return</span></span>
+    const id = <span class="cstat-no" title="statement not covered" >setInterval(<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etTick(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t + 1)</span>, 1</span>000)</span>
+<span class="cstat-no" title="statement not covered" >    return <span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >c</span>learInterval(id)</span></span>
   }, [isRunning])
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;button
       onClick={onClick}
       style={{
@@ -388,7 +388,7 @@ export function AgentCard({ agent, selected, onClick }: AgentCardProps) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

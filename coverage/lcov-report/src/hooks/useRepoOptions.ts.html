@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>9/9</span>
+                <span class='fraction'>0/9</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -117,7 +117,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -129,23 +129,23 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useState, useEffect } from 'react'
 import { REPO_OPTIONS, type RepoOption } from '../lib/constants'
@@ -158,8 +158,8 @@ interface RepoConfig {
   color?: string
 }
 &nbsp;
-function toRepoOptions(configs: RepoConfig[]): RepoOption[] {
-  return configs.map((r) =&gt; ({
+function <span class="fstat-no" title="function not covered" >toRepoOptions(c</span>onfigs: RepoConfig[]): RepoOption[] {
+<span class="cstat-no" title="statement not covered" >  return configs.map(<span class="fstat-no" title="function not covered" >(r</span>) =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
     label: r.name,
     owner: r.githubOwner ?? '',
     color: r.color ?? 'var(--bde-text-dim)',
@@ -170,24 +170,24 @@ function toRepoOptions(configs: RepoConfig[]): RepoOption[] {
  * Loads repo options from settings via IPC, falling back to the static
  * REPO_OPTIONS constant until the async load completes.
  */
-export function useRepoOptions(): RepoOption[] {
-  const [repos, setRepos] = useState&lt;RepoOption[]&gt;(REPO_OPTIONS)
+export function <span class="fstat-no" title="function not covered" >useRepoOptions(): RepoOption[] {</span>
+  const [repos, setRepos<span class="cstat-no" title="statement not covered" >] = useState&lt;RepoOption[]&gt;(REPO_OPTIONS)</span>
 &nbsp;
-  useEffect(() =&gt; {
-    window.api.settings
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    window.api.settings</span>
       .getJson('repos')
-      .then((raw) =&gt; {
-        const configs = raw as RepoConfig[] | null
-        if (configs &amp;&amp; configs.length &gt; 0) {
-          setRepos(toRepoOptions(configs))
+      .then(<span class="fstat-no" title="function not covered" >(r</span>aw) =&gt; {
+        const configs = <span class="cstat-no" title="statement not covered" >raw as RepoConfig[] | null</span>
+<span class="cstat-no" title="statement not covered" >        if (configs &amp;&amp; configs.length &gt; 0) {</span>
+<span class="cstat-no" title="statement not covered" >          setRepos(toRepoOptions(configs))</span>
         }
       })
-      .catch(() =&gt; {
+      .catch(<span class="fstat-no" title="function not covered" >() =&gt; {</span>
         // Keep fallback
       })
   }, [])
 &nbsp;
-  return repos
+<span class="cstat-no" title="statement not covered" >  return repos</span>
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -196,7 +196,7 @@ export function useRepoOptions(): RepoOption[] {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

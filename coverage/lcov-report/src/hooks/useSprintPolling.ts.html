@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">91.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>11/12</span>
+                <span class='fraction'>0/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">50% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/2</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">83.33% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>5/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -106,19 +106,19 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">13x</span>
-<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
@@ -134,20 +134,20 @@ import {
 } from '../lib/constants'
 import { TASK_STATUS } from '../../../shared/constants'
 &nbsp;
-export function useSprintPolling(): void {
-  const tasks = useSprintTasks((s) =&gt; s.tasks)
-  const loadData = useSprintTasks((s) =&gt; s.loadData)
+export function <span class="fstat-no" title="function not covered" >useSprintPolling(): void {</span>
+  const <span class="cstat-no" title="statement not covered" >tasks = useSprintTasks(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.tasks)</span></span>
+  const <span class="cstat-no" title="statement not covered" >loadData = useSprintTasks(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.loadData)</span></span>
 &nbsp;
   // Adaptive sprint polling — consistency backstop
-  const hasActiveTasks = tasks.some(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.status === TASK_STATUS.ACTIVE)</span>
-  const sprintPollMs = hasActiveTasks ? <span class="branch-0 cbranch-no" title="branch not covered" >POLL_SPRINT_ACTIVE_MS : P</span>OLL_SPRINT_INTERVAL
+  const hasActiveTasks = <span class="cstat-no" title="statement not covered" >tasks.some(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.status === TASK_STATUS.ACTIVE)</span></span>
+  const sprintPollMs = <span class="cstat-no" title="statement not covered" >hasActiveTasks ? POLL_SPRINT_ACTIVE_MS : POLL_SPRINT_INTERVAL</span>
 &nbsp;
-  useEffect(() =&gt; { loadData() }, [loadData])
-  useVisibilityAwareInterval(loadData, sprintPollMs)
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span> <span class="cstat-no" title="statement not covered" >loadData() }</span>, [loadData])</span>
+<span class="cstat-no" title="statement not covered" >  useVisibilityAwareInterval(loadData, sprintPollMs)</span>
 &nbsp;
   // Instant refresh when an external process writes to bde.db
-  useEffect(() =&gt; {
-    return window.api.onExternalSprintChange(loadData)
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    return window.api.onExternalSprintChange(loadData)</span>
   }, [loadData])
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -157,7 +157,7 @@ export function useSprintPolling(): void {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

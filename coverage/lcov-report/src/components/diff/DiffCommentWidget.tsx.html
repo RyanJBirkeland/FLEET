@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>0/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>0/5</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -121,17 +121,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">13x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">12x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -140,7 +138,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -167,16 +167,16 @@ interface DiffCommentWidgetProps {
   comments: PrComment[]
 }
 &nbsp;
-export function DiffCommentWidget({ comments }: DiffCommentWidgetProps) {
-  const [collapsed, setCollapsed] = useState(false)
+export function <span class="fstat-no" title="function not covered" >DiffCommentWidget({</span> comments }: DiffCommentWidgetProps) {
+  const [collapsed, setCollapsed<span class="cstat-no" title="statement not covered" >] = useState(false)</span>
 &nbsp;
-  if (comments.length === 0) return null
+<span class="cstat-no" title="statement not covered" >  if (comments.length === 0) <span class="cstat-no" title="statement not covered" >return null</span></span>
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className="diff-comment-widget"&gt;
       &lt;button
         className="diff-comment-widget__toggle"
-        onClick={() =&gt; setCollapsed((c) =&gt; !c)}
+        onClick={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etCollapsed(<span class="fstat-no" title="function not covered" >(c</span>) =&gt; <span class="cstat-no" title="statement not covered" >!c)</span>}</span>
       &gt;
         {collapsed ? &lt;ChevronRight size={12} /&gt; : &lt;ChevronDown size={12} /&gt;}
         &lt;MessageSquare size={12} /&gt;
@@ -186,8 +186,8 @@ export function DiffCommentWidget({ comments }: DiffCommentWidgetProps) {
       &lt;/button&gt;
       {!collapsed &amp;&amp; (
         &lt;div className="diff-comment-widget__thread"&gt;
-          {comments.map((c) =&gt; (
-            &lt;div key={c.id} className="diff-comment-widget__comment"&gt;
+          {comments.map(<span class="fstat-no" title="function not covered" >(c</span>) =&gt; (
+<span class="cstat-no" title="statement not covered" >            &lt;div key={c.id} className="diff-comment-widget__comment"&gt;</span>
               &lt;div className="diff-comment-widget__header"&gt;
                 &lt;span className="diff-comment-widget__author"&gt;{c.user.login}&lt;/span&gt;
                 &lt;span className="diff-comment-widget__time"&gt;{timeAgo(c.created_at)}&lt;/span&gt;
@@ -211,7 +211,7 @@ export function DiffCommentWidget({ comments }: DiffCommentWidgetProps) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

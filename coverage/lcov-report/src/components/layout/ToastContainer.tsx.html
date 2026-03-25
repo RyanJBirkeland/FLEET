@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">68.42% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>13/19</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">94.73% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>18/19</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">75% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">62.5% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>10/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line medium'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -140,15 +140,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -180,25 +180,25 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">28x</span>
-<span class="cline-any cline-yes">28x</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -209,17 +209,17 @@
 import { useToastStore, type Toast } from '../../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 &nbsp;
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () =&gt; void }) {
+function <span class="fstat-no" title="function not covered" >ToastItem({</span> toast, onDismiss }: { toast: Toast; onDismiss: () =&gt; void }) {
   const modifier =
-    toast.type === 'success'
+<span class="cstat-no" title="statement not covered" >    toast.type === 'success'</span>
       ? 'toast--success'
       : toast.type === 'error'
         ? 'toast--error'
         : 'toast--info'
 &nbsp;
-  const hasAction = toast.onUndo || toast.onAction
+  const hasAction = <span class="cstat-no" title="statement not covered" >toast.onUndo || toast.onAction</span>
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className={`toast ${modifier} ${hasAction ? 'toast--has-action' : ''}`} role={toast.type === 'error' ? 'alert' : 'status'} onClick={onDismiss}&gt;
       &lt;span className="toast__message"&gt;{toast.message}&lt;/span&gt;
       {toast.onUndo &amp;&amp; (
@@ -250,26 +250,26 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () =&gt; voi
   )
 }
 &nbsp;
-export function ToastContainer() {
-  const toasts = useToastStore((s) =&gt; s.toasts)
-  const removeToast = useToastStore((s) =&gt; s.removeToast)
-  const reduced = useReducedMotion()
+export function <span class="fstat-no" title="function not covered" >ToastContainer() {</span>
+  const <span class="cstat-no" title="statement not covered" >toasts = useToastStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.toasts)</span></span>
+  const <span class="cstat-no" title="statement not covered" >removeToast = useToastStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.removeToast)</span></span>
+  const <span class="cstat-no" title="statement not covered" >reduced = useReducedMotion()</span>
 &nbsp;
-  if (toasts.length === 0) return null
+<span class="cstat-no" title="statement not covered" >  if (toasts.length === 0) <span class="cstat-no" title="statement not covered" >return null</span></span>
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className="toast-container" role="region" aria-live="polite" aria-atomic="true" aria-label="Notifications"&gt;
       &lt;AnimatePresence&gt;
-        {toasts.map((t) =&gt; (
-          &lt;motion.div
+        {toasts.map(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; (
+<span class="cstat-no" title="statement not covered" >          &lt;motion.div</span>
             key={t.id}
             variants={VARIANTS.slideUp}
             initial="initial"
             animate="animate"
             exit="exit"
-            transition={reduced ? <span class="branch-0 cbranch-no" title="branch not covered" >REDUCED_TRANSITION : S</span>PRINGS.snappy}
+            transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
           &gt;
-            &lt;ToastItem toast={t} onDismiss={() =&gt; removeToast(t.id)} /&gt;
+            &lt;ToastItem toast={t} onDismiss={<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >r</span>emoveToast(t.id)} /</span>&gt;
           &lt;/motion.div&gt;
         ))}
       &lt;/AnimatePresence&gt;
@@ -283,7 +283,7 @@ export function ToastContainer() {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

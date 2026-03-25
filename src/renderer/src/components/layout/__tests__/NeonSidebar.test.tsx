@@ -7,25 +7,41 @@ vi.mock('framer-motion', () => ({
   useReducedMotion: () => false,
 }));
 
-vi.mock('../../../stores/sidebar', () => ({
-  useSidebarStore: vi.fn((sel: any) => sel({
+vi.mock('../../../stores/sidebar', () => {
+  const mockState = {
     pinnedViews: ['dashboard', 'agents', 'ide'],
-  })),
-  getUnpinnedViews: vi.fn(() => ['sprint', 'pr-station']),
-}));
+    pinView: vi.fn(),
+    unpinView: vi.fn(),
+  };
 
-vi.mock('../../../stores/panelLayout', () => ({
-  usePanelLayoutStore: vi.fn((sel: any) => sel({
+  return {
+    useSidebarStore: vi.fn((sel?: any) => sel ? sel(mockState) : mockState),
+    getUnpinnedViews: vi.fn(() => ['sprint', 'pr-station']),
+  };
+});
+
+vi.mock('../../../stores/panelLayout', () => {
+  const mockPanelState = {
     root: { type: 'leaf', panelId: 'p1', tabs: [{ viewKey: 'dashboard', label: 'Dashboard' }], activeTab: 0 },
     focusedPanelId: 'p1',
-  })),
-  // getOpenViews is a standalone exported function, not a store method
-  getOpenViews: vi.fn(() => ['dashboard']),
-}));
+    splitPanel: vi.fn(),
+    addTab: vi.fn(),
+  };
 
-vi.mock('../../../stores/ui', () => ({
-  useUIStore: vi.fn((sel: any) => sel({ activeView: 'dashboard', setView: vi.fn() })),
-}));
+  return {
+    usePanelLayoutStore: vi.fn((sel?: any) => sel ? sel(mockPanelState) : mockPanelState),
+    // getOpenViews is a standalone exported function, not a store method
+    getOpenViews: vi.fn(() => ['dashboard']),
+  };
+});
+
+vi.mock('../../../stores/ui', () => {
+  const mockUIState = { activeView: 'dashboard', setView: vi.fn() };
+
+  return {
+    useUIStore: vi.fn((sel?: any) => sel ? sel(mockUIState) : mockUIState),
+  };
+});
 
 describe('NeonSidebar', () => {
   it('renders pinned view icons', async () => {

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">88.46% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>23/26</span>
+                <span class='fraction'>0/26</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">55.55% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>10/18</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>5/5</span>
+                <span class='fraction'>0/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90.9% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>20/22</span>
+                <span class='fraction'>0/22</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -123,41 +123,41 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -171,42 +171,42 @@ interface UIStore {
   setView: (view: View) =&gt; void
 }
 &nbsp;
-function getFocusedPanelId(): string {
-  const { root, focusedPanelId } = usePanelLayoutStore.getState()
-  <span class="missing-if-branch" title="else path not taken" >E</span>if (focusedPanelId) return focusedPanelId
+function <span class="fstat-no" title="function not covered" >getFocusedPanelId(): string {</span>
+  const { root, focusedPanelId } = <span class="cstat-no" title="statement not covered" >usePanelLayoutStore.getState()</span>
+<span class="cstat-no" title="statement not covered" >  if (focusedPanelId) <span class="cstat-no" title="statement not covered" >return focusedPanelId</span></span>
   // Fall back to the root leaf if there's no focused panel yet
 <span class="cstat-no" title="statement not covered" >  if (root.type === 'leaf') <span class="cstat-no" title="statement not covered" >return root.panelId</span></span>
 <span class="cstat-no" title="statement not covered" >  return ''</span>
 }
 &nbsp;
-export const useUIStore = create&lt;UIStore&gt;((set) =&gt; ({
+export const <span class="cstat-no" title="statement not covered" >useUIStore = create&lt;UIStore&gt;(<span class="fstat-no" title="function not covered" >(s</span>et) =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
   activeView: 'agents',
-  setView: (view: View) =&gt; {
-    const store = usePanelLayoutStore.getState()
-    const existing = store.findPanelByView(view)
-    if (existing) {
-      store.focusPanel(existing.panelId)
-      const leaf = findLeaf(store.root, existing.panelId)
-      <span class="missing-if-branch" title="else path not taken" >E</span>if (leaf) {
-        const tabIdx = leaf.tabs.findIndex((t) =&gt; t.viewKey === view)
-        <span class="missing-if-branch" title="else path not taken" >E</span>if (tabIdx &gt;= 0 &amp;&amp; tabIdx !== leaf.activeTab) {
-          store.setActiveTab(existing.panelId, tabIdx)
+  setView: <span class="fstat-no" title="function not covered" >(v</span>iew: View) =&gt; {
+    const store = <span class="cstat-no" title="statement not covered" >usePanelLayoutStore.getState()</span>
+    const existing = <span class="cstat-no" title="statement not covered" >store.findPanelByView(view)</span>
+<span class="cstat-no" title="statement not covered" >    if (existing) {</span>
+<span class="cstat-no" title="statement not covered" >      store.focusPanel(existing.panelId)</span>
+      const <span class="cstat-no" title="statement not covered" >leaf = findLeaf(store.root, existing.panelId)</span>
+<span class="cstat-no" title="statement not covered" >      if (leaf) {</span>
+        const tabIdx = <span class="cstat-no" title="statement not covered" >leaf.tabs.findIndex(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.viewKey === view)</span></span>
+<span class="cstat-no" title="statement not covered" >        if (tabIdx &gt;= 0 &amp;&amp; tabIdx !== leaf.activeTab) {</span>
+<span class="cstat-no" title="statement not covered" >          store.setActiveTab(existing.panelId, tabIdx)</span>
         }
       }
     } else {
-      store.addTab(getFocusedPanelId(), view)
+<span class="cstat-no" title="statement not covered" >      store.addTab(getFocusedPanelId(), view)</span>
     }
-    set({ activeView: view })
+<span class="cstat-no" title="statement not covered" >    set({ activeView: view })</span>
   },
 }))
 &nbsp;
 // Keep activeView in sync when panel focus changes
-usePanelLayoutStore.subscribe((state) =&gt; {
-  const focused = findLeaf(state.root, state.focusedPanelId ?? <span class="branch-1 cbranch-no" title="branch not covered" >'')</span>
-  <span class="missing-if-branch" title="else path not taken" >E</span>if (focused) {
-    const activeTab = focused.tabs[focused.activeTab]
-    <span class="missing-if-branch" title="else path not taken" >E</span>if (activeTab) {
-      useUIStore.setState({ activeView: activeTab.viewKey })
+<span class="cstat-no" title="statement not covered" >usePanelLayoutStore.subscribe(<span class="fstat-no" title="function not covered" >(s</span>tate) =&gt; {</span>
+  const <span class="cstat-no" title="statement not covered" >focused = findLeaf(state.root, state.focusedPanelId ?? '')</span>
+<span class="cstat-no" title="statement not covered" >  if (focused) {</span>
+    const activeTab = <span class="cstat-no" title="statement not covered" >focused.tabs[focused.activeTab]</span>
+<span class="cstat-no" title="statement not covered" >    if (activeTab) {</span>
+<span class="cstat-no" title="statement not covered" >      useUIStore.setState({ activeView: activeTab.viewKey })</span>
     }
   }
 })
@@ -217,7 +217,7 @@ usePanelLayoutStore.subscribe((state) =&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>16/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>0/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>15/15</span>
+                <span class='fraction'>0/15</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -129,7 +129,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -141,24 +141,19 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -166,16 +161,21 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">11x</span>
-<span class="cline-any cline-yes">3x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -187,7 +187,7 @@ import type { AgentEvent } from '../../../shared/types'
 export type AnyTaskEvent = TaskOutputEvent | AgentEvent
 &nbsp;
 /** Maximum number of events to retain per agent to prevent memory leaks. */
-const MAX_EVENTS_PER_AGENT = 500
+const MAX_EVENTS_PER_AGENT = <span class="cstat-no" title="statement not covered" >500</span>
 &nbsp;
 interface SprintEventsState {
   // --- State ---
@@ -199,19 +199,19 @@ interface SprintEventsState {
   clearTaskEvents: (taskId: string) =&gt; void
 }
 &nbsp;
-export const useSprintEvents = create&lt;SprintEventsState&gt;((set) =&gt; ({
+export const <span class="cstat-no" title="statement not covered" >useSprintEvents = create&lt;SprintEventsState&gt;(<span class="fstat-no" title="function not covered" >(s</span>et) =&gt; (<span class="cstat-no" title="statement not covered" >{</span></span>
   taskEvents: {},
   latestEvents: {},
 &nbsp;
-  initTaskOutputListener: (): (() =&gt; void) =&gt; {
-    const cleanup = window.api.agentEvents?.onEvent(({ agentId, event }) =&gt; {
-      set((s) =&gt; {
-        const existing = s.taskEvents[agentId] ?? []
-        let updated = [...existing, event]
-        if (updated.length &gt; MAX_EVENTS_PER_AGENT) {
-          updated = updated.slice(updated.length - MAX_EVENTS_PER_AGENT)
+  initTaskOutputListener: <span class="fstat-no" title="function not covered" >(): (() =&gt; void) =&gt; {</span>
+    const cleanup = <span class="cstat-no" title="statement not covered" >window.api.agentEvents?.onEvent(<span class="fstat-no" title="function not covered" >({</span> agentId, event }) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      set(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; {</span>
+        const existing = <span class="cstat-no" title="statement not covered" >s.taskEvents[agentId] ?? []</span>
+        let updated = <span class="cstat-no" title="statement not covered" >[...existing, event]</span>
+<span class="cstat-no" title="statement not covered" >        if (updated.length &gt; MAX_EVENTS_PER_AGENT) {</span>
+<span class="cstat-no" title="statement not covered" >          updated = updated.slice(updated.length - MAX_EVENTS_PER_AGENT)</span>
         }
-        return {
+<span class="cstat-no" title="statement not covered" >        return {</span>
           taskEvents: {
             ...s.taskEvents,
             [agentId]: updated,
@@ -224,16 +224,16 @@ export const useSprintEvents = create&lt;SprintEventsState&gt;((set) =&gt; ({
       })
     })
 &nbsp;
-    return () =&gt; {
-      cleanup?.()
+<span class="cstat-no" title="statement not covered" >    return <span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >      cleanup?.()</span>
     }
   },
 &nbsp;
-  clearTaskEvents: (taskId): void =&gt; {
-    set((s) =&gt; {
-      const { [taskId]: _events, ...restEvents } = s.taskEvents
-      const { [taskId]: _latest, ...restLatest } = s.latestEvents
-      return { taskEvents: restEvents, latestEvents: restLatest }
+  clearTaskEvents: <span class="fstat-no" title="function not covered" >(t</span>askId): void =&gt; {
+<span class="cstat-no" title="statement not covered" >    set(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; {</span>
+      const { [taskId]: _events, ...restEvents } = <span class="cstat-no" title="statement not covered" >s.taskEvents</span>
+      const { [taskId]: _latest, ...restLatest } = <span class="cstat-no" title="statement not covered" >s.latestEvents</span>
+<span class="cstat-no" title="statement not covered" >      return { taskEvents: restEvents, latestEvents: restLatest }</span>
     })
   },
 }))
@@ -244,7 +244,7 @@ export const useSprintEvents = create&lt;SprintEventsState&gt;((set) =&gt; ({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

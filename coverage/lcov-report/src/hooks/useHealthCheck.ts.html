@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">95% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>19/20</span>
+                <span class='fraction'>0/20</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">50% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>1/2</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>9/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>0/14</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -111,31 +111,31 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
-<span class="cline-any cline-yes">10x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { useCallback, useEffect, useMemo } from 'react'
 import { useHealthCheckStore } from '../stores/healthCheck'
@@ -147,32 +147,32 @@ import type { SprintTask } from '../../../shared/types'
  * useHealthCheck — detects stuck active tasks and surfaces them for the UI.
  * Polls on a visibility-aware interval and allows per-task dismissal.
  */
-export function useHealthCheck(tasks: SprintTask[]) {
-  const setStuckTasks = useHealthCheckStore((s) =&gt; s.setStuckTasks)
-  const stuckTaskIds = useHealthCheckStore((s) =&gt; s.stuckTaskIds)
-  const dismissedIds = useHealthCheckStore((s) =&gt; s.dismissedIds)
-  const dismissTask = useHealthCheckStore((s) =&gt; s.dismiss)
+export function <span class="fstat-no" title="function not covered" >useHealthCheck(t</span>asks: SprintTask[]) {
+  const <span class="cstat-no" title="statement not covered" >setStuckTasks = useHealthCheckStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.setStuckTasks)</span></span>
+  const <span class="cstat-no" title="statement not covered" >stuckTaskIds = useHealthCheckStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.stuckTaskIds)</span></span>
+  const <span class="cstat-no" title="statement not covered" >dismissedIds = useHealthCheckStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.dismissedIds)</span></span>
+  const <span class="cstat-no" title="statement not covered" >dismissTask = useHealthCheckStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.dismiss)</span></span>
 &nbsp;
-  const runHealthCheck = useCallback(async () =&gt; {
-    try {
-      const stuck = await window.api.sprint.healthCheck()
-      setStuckTasks(stuck.map(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.id)</span>)
+  const <span class="cstat-no" title="statement not covered" >runHealthCheck = useCallback(<span class="fstat-no" title="function not covered" >async () =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    try {</span>
+      const stuck = <span class="cstat-no" title="statement not covered" >await window.api.sprint.healthCheck()</span>
+<span class="cstat-no" title="statement not covered" >      setStuckTasks(stuck.map(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >t.id)</span>)</span>
     } catch {
       /* silent */
     }
   }, [setStuckTasks])
 &nbsp;
-  useEffect(() =&gt; {
-    runHealthCheck()
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    runHealthCheck()</span>
   }, [runHealthCheck])
-  useVisibilityAwareInterval(runHealthCheck, POLL_HEALTH_CHECK_MS)
+<span class="cstat-no" title="statement not covered" >  useVisibilityAwareInterval(runHealthCheck, POLL_HEALTH_CHECK_MS)</span>
 &nbsp;
-  const visibleStuckTasks = useMemo(
-    () =&gt; tasks.filter((t) =&gt; stuckTaskIds.includes(t.id) &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >!dismissedIds.includes(t.id))</span>,
+  const <span class="cstat-no" title="statement not covered" >visibleStuckTasks = useMemo(</span>
+<span class="fstat-no" title="function not covered" >    () =&gt; <span class="cstat-no" title="statement not covered" >t</span>asks.filter(<span class="fstat-no" title="function not covered" >(t</span>) =&gt; <span class="cstat-no" title="statement not covered" >stuckTaskIds.includes(t.id) &amp;&amp; !dismissedIds.includes(t.id))</span>,</span>
     [tasks, stuckTaskIds, dismissedIds]
   )
 &nbsp;
-  return { visibleStuckTasks, dismissTask }
+<span class="cstat-no" title="statement not covered" >  return { visibleStuckTasks, dismissTask }</span>
 }
 &nbsp;</pre></td></tr></table></pre>
 
@@ -181,7 +181,7 @@ export function useHealthCheck(tasks: SprintTask[]) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

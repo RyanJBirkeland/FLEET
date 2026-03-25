@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>10/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -107,21 +107,19 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">2x</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -129,8 +127,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">8x</span>
-<span class="cline-any cline-yes">8x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -144,34 +144,34 @@
  * Source: https://docs.anthropic.com/en/docs/about-claude/models
  * PRICING_VERSION: 2025-06-20
  */
-export const PRICING_VERSION = '2025-06-20'
+export const PRICING_VERSION = <span class="cstat-no" title="statement not covered" >'2025-06-20'</span>
 &nbsp;
-export const MODEL_PRICING: Record&lt;ModelKey, { input: number; output: number; cacheRead?: number; cacheWrite?: number }&gt; = {
+export const MODEL_PRICING: Record&lt;ModelKey, { input: number; output: number; cacheRead?: number; cacheWrite?: number }&gt; = <span class="cstat-no" title="statement not covered" >{</span>
   haiku:  { input: 0.80 / 1_000_000, output: 4.00 / 1_000_000, cacheRead: 0.08 / 1_000_000, cacheWrite: 1.00 / 1_000_000 },
   sonnet: { input: 3.00 / 1_000_000, output: 15.00 / 1_000_000, cacheRead: 0.30 / 1_000_000, cacheWrite: 3.75 / 1_000_000 },
   opus:   { input: 15.00 / 1_000_000, output: 75.00 / 1_000_000, cacheRead: 1.50 / 1_000_000, cacheWrite: 18.75 / 1_000_000 },
 }
 &nbsp;
-export function resolveModel(model: string): ModelKey {
-  const m = model.toLowerCase()
-  if (m.includes('haiku')) return 'haiku'
-  if (m.includes('opus')) return 'opus'
-  return 'sonnet'
+export function <span class="fstat-no" title="function not covered" >resolveModel(m</span>odel: string): ModelKey {
+  const m = <span class="cstat-no" title="statement not covered" >model.toLowerCase()</span>
+<span class="cstat-no" title="statement not covered" >  if (m.includes('haiku')) <span class="cstat-no" title="statement not covered" >return 'haiku'</span></span>
+<span class="cstat-no" title="statement not covered" >  if (m.includes('opus')) <span class="cstat-no" title="statement not covered" >return 'opus'</span></span>
+<span class="cstat-no" title="statement not covered" >  return 'sonnet'</span>
 }
 &nbsp;
-export function calcCost(
+export function <span class="fstat-no" title="function not covered" >calcCost(</span>
   input: number,
   output: number,
   modelKey: ModelKey,
-  cacheRead = 0,
-  cacheCreate = 0,
+  cacheRead = <span class="branch-0 cbranch-no" title="branch not covered" >0,</span>
+  cacheCreate = <span class="branch-0 cbranch-no" title="branch not covered" >0,</span>
 ): number {
-  const p = MODEL_PRICING[modelKey]
-  return (
+  const p = <span class="cstat-no" title="statement not covered" >MODEL_PRICING[modelKey]</span>
+<span class="cstat-no" title="statement not covered" >  return (</span>
     input * p.input +
     output * p.output +
-    cacheRead * (p.cacheRead ?? <span class="branch-1 cbranch-no" title="branch not covered" >p.input) +</span>
-    cacheCreate * (p.cacheWrite ?? <span class="branch-1 cbranch-no" title="branch not covered" >p.input)</span>
+    cacheRead * (p.cacheRead ?? p.input) +
+    cacheCreate * (p.cacheWrite ?? p.input)
   )
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -181,7 +181,7 @@ export function calcCost(
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>
