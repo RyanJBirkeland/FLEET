@@ -243,6 +243,111 @@ describe('resolveSuccess', () => {
     expect(mockOnTaskTerminal).toHaveBeenCalledWith(opts.taskId, 'error')
   })
 
+  it('marks error with "Worktree evicted" when worktree path does not exist', async () => {
+    vi.mocked(existsSync).mockReturnValueOnce(false)
+
+    await resolveSuccess(opts, noopLogger)
+
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      status: 'error',
+      completed_at: expect.any(String),
+      notes: expect.stringContaining('Worktree evicted'),
+      claimed_by: null,
+    })
+    expect(mockOnTaskTerminal).toHaveBeenCalledWith(opts.taskId, 'error')
+  })
+
+  it('auto-commits uncommitted changes before pushing', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' },                    // git rev-parse
+      { stdout: ' M src/file.ts\n' },                           // git status --porcelain (uncommitted changes)
+      { stdout: '' },                                            // git add -u
+      { stdout: '' },                                            // git commit
+      { stdout: '1\n' },                                         // git rev-list --count
+      { stdout: '' },                                            // git push
+      { stdout: '' },                                            // gh pr list
+      { stdout: 'abc123 first commit\n' },                       // git log
+      { stdout: ' file.ts | 10 ++++\n' },                       // git diff --stat
+      { stdout: 'https://github.com/owner/repo/pull/50\n' },    // gh pr create
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify git add -u was called
+    const addCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('add')
+    )
+    expect(addCall).toBeDefined()
+    expect(addCall![1]).toContain('-u')
+
+    // Verify git commit was called with auto-commit message
+    const commitCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('commit')
+    )
+    expect(commitCall).toBeDefined()
+    const commitArgs = commitCall![1] as string[]
+    expect(commitArgs).toContain('-m')
+    const msgArg = commitArgs[commitArgs.indexOf('-m') + 1]
+    expect(msgArg).toContain('Automated commit by BDE agent manager')
+  })
+
+  it('marks error with agent summary when no commits to push and summary exists', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: '' },                        // git status --porcelain
+      { stdout: '0\n' },                     // git rev-list --count (no commits)
+    ])
+
+    await resolveSuccess({ ...opts, agentSummary: 'I tried but could not complete the task' }, noopLogger)
+
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      status: 'error',
+      completed_at: expect.any(String),
+      notes: expect.stringContaining('Agent produced no commits. Last output: I tried but could not complete the task'),
+      claimed_by: null,
+    })
+    expect(mockOnTaskTerminal).toHaveBeenCalledWith(opts.taskId, 'error')
+  })
+
+  it('marks error with "no output captured" when no commits and no agent summary', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: '' },                        // git status --porcelain
+      { stdout: '0\n' },                     // git rev-list --count (no commits)
+    ])
+
+    await resolveSuccess({ ...opts, agentSummary: null }, noopLogger)
+
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      status: 'error',
+      completed_at: expect.any(String),
+      notes: 'Agent produced no commits (no output captured)',
+      claimed_by: null,
+    })
+    expect(mockOnTaskTerminal).toHaveBeenCalledWith(opts.taskId, 'error')
+  })
+
+  it('records push failure in notes but does not call onTaskTerminal', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' },              // git rev-parse
+      { stdout: '' },                                      // git status --porcelain
+      { stdout: '1\n' },                                   // git rev-list --count
+      { error: new Error('failed to push some refs') },   // git push fails
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    // Should record push failure in notes
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      notes: expect.stringContaining('git push failed'),
+    })
+
+    // Should NOT call onTaskTerminal (push failure is recoverable)
+    expect(mockOnTaskTerminal).not.toHaveBeenCalled()
+  })
+
   it('sets task to error and calls onTaskTerminal when branch name is empty', async () => {
     mockExecFileSequence([
       { stdout: '' }, // git rev-parse returns empty string
