@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">89.47% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>17/19</span>
+                <span class='fraction'>0/19</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">90% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>9/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">85.71% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/7</span>
+                <span class='fraction'>0/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">93.75% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>15/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -129,44 +129,44 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">5x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -183,34 +183,34 @@ interface ConflictBannerProps {
   mergeableState: string | null | undefined
 }
 &nbsp;
-export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerProps) {
-  const [conflictFiles, setConflictFiles] = useState&lt;string[]&gt;([])
-  const [loading, setLoading] = useState(false)
+export function <span class="fstat-no" title="function not covered" >PRStationConflictBanner({</span> pr, mergeableState }: ConflictBannerProps) {
+  const [conflictFiles, setConflictFiles<span class="cstat-no" title="statement not covered" >] = useState&lt;string[]&gt;([])</span>
+  const [loading, setLoading<span class="cstat-no" title="statement not covered" >] = useState(false)</span>
 &nbsp;
-  useEffect(() =&gt; {
-    if (mergeableState !== 'dirty') {
-      setConflictFiles([])
-      return
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    if (mergeableState !== 'dirty') {</span>
+<span class="cstat-no" title="statement not covered" >      setConflictFiles([])</span>
+<span class="cstat-no" title="statement not covered" >      return</span>
     }
 &nbsp;
-    const repo = REPO_OPTIONS.find((r) =&gt; r.label === pr.repo)
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!repo) <span class="cstat-no" title="statement not covered" >return</span>
+    const repo = <span class="cstat-no" title="statement not covered" >REPO_OPTIONS.find(<span class="fstat-no" title="function not covered" >(r</span>) =&gt; <span class="cstat-no" title="statement not covered" >r.label === pr.repo)</span></span>
+<span class="cstat-no" title="statement not covered" >    if (!repo) <span class="cstat-no" title="statement not covered" >return</span></span>
 &nbsp;
-    setLoading(true)
-    window.api
+<span class="cstat-no" title="statement not covered" >    setLoading(true)</span>
+<span class="cstat-no" title="statement not covered" >    window.api</span>
       .checkConflictFiles({ owner: repo.owner, repo: repo.label, prNumber: pr.number })
-      .then((result) =&gt; {
-        setConflictFiles(result.files)
+      .then(<span class="fstat-no" title="function not covered" >(r</span>esult) =&gt; {
+<span class="cstat-no" title="statement not covered" >        setConflictFiles(result.files)</span>
       })
       .catch(<span class="fstat-no" title="function not covered" >() =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >        setConflictFiles([])</span>
       })
-      .finally(() =&gt; setLoading(false))
+      .finally(<span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >s</span>etLoading(false))</span>
   }, [pr.repo, pr.number, mergeableState])
 &nbsp;
-  if (mergeableState !== 'dirty') return null
+<span class="cstat-no" title="statement not covered" >  if (mergeableState !== 'dirty') <span class="cstat-no" title="statement not covered" >return null</span></span>
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className="pr-conflict-banner"&gt;
       &lt;div className="pr-conflict-banner__header"&gt;
         &lt;AlertTriangle size={14} /&gt;
@@ -220,8 +220,8 @@ export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerPr
         &lt;span className="pr-conflict-banner__loading"&gt;Checking conflicting files...&lt;/span&gt;
       ) : conflictFiles.length &gt; 0 ? (
         &lt;ul className="pr-conflict-banner__files"&gt;
-          {conflictFiles.map((f) =&gt; (
-            &lt;li key={f} className="pr-conflict-banner__file"&gt;{f}&lt;/li&gt;
+          {conflictFiles.map(<span class="fstat-no" title="function not covered" >(f</span>) =&gt; (
+<span class="cstat-no" title="statement not covered" >            &lt;li key={f} className="pr-conflict-banner__file"&gt;{f}&lt;/li&gt;</span>
           ))}
         &lt;/ul&gt;
       ) : null}
@@ -235,7 +235,7 @@ export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerPr
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

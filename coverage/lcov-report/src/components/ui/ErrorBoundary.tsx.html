@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>8/8</span>
+                <span class='fraction'>0/8</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>3/3</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -115,28 +115,28 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">28x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">37x</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">31x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Component, ErrorInfo, ReactNode } from 'react'
@@ -153,19 +153,19 @@ interface State {
 }
 &nbsp;
 export class ErrorBoundary extends Component&lt;Props, State&gt; {
-  state: State = { error: null }
+  state: State = <span class="cstat-no" title="statement not covered" >{ error: null }</span>
 &nbsp;
-  static getDerivedStateFromError(error: Error): State {
-    return { error }
+  static <span class="fstat-no" title="function not covered" >getDerivedStateFromError(e</span>rror: Error): State {
+<span class="cstat-no" title="statement not covered" >    return { error }</span>
   }
 &nbsp;
-  componentDidCatch(error: Error, info: ErrorInfo): void {
-    console.error(`[ErrorBoundary:${this.props.name ?? 'unknown'}]`, error, info)
+<span class="fstat-no" title="function not covered" >  componentDidCatch(e</span>rror: Error, info: ErrorInfo): void {
+<span class="cstat-no" title="statement not covered" >    console.error(`[ErrorBoundary:${this.props.name ?? 'unknown'}]`, error, info)</span>
   }
 &nbsp;
-  render(): ReactNode {
-    if (this.state.error) {
-      return this.props.fallback ?? (
+<span class="fstat-no" title="function not covered" >  render(): ReactNode {</span>
+<span class="cstat-no" title="statement not covered" >    if (this.state.error) {</span>
+<span class="cstat-no" title="statement not covered" >      return this.props.fallback ?? (</span>
         &lt;div style={{ padding: tokens.space[4], color: tokens.color.danger, fontFamily: tokens.font.code, fontSize: tokens.size.sm }}&gt;
           &lt;div style={{ fontWeight: 600, marginBottom: tokens.space[1] }}&gt;
             {this.props.name ? `${this.props.name} crashed` : 'Something went wrong'}
@@ -174,7 +174,7 @@ export class ErrorBoundary extends Component&lt;Props, State&gt; {
         &lt;/div&gt;
       )
     }
-    return this.props.children
+<span class="cstat-no" title="statement not covered" >    return this.props.children</span>
   }
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -184,7 +184,7 @@ export class ErrorBoundary extends Component&lt;Props, State&gt; {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

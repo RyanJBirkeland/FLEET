@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>0/14</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>6/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>0/14</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -127,22 +127,20 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">18x</span>
-<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -150,13 +148,15 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">14x</span>
-<span class="cline-any cline-yes">14x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">/**
@@ -171,24 +171,24 @@ interface UseSprintKeyboardShortcutsArgs {
   setConflictDrawerOpen: Dispatch&lt;SetStateAction&lt;boolean&gt;&gt;
 }
 &nbsp;
-export function useSprintKeyboardShortcuts({
+export function <span class="fstat-no" title="function not covered" >useSprintKeyboardShortcuts({</span>
   openWorkbench,
   setConflictDrawerOpen,
 }: UseSprintKeyboardShortcutsArgs): void {
-  const selectedTaskId = useSprintUI((s) =&gt; s.selectedTaskId)
-  const setLogDrawerTaskId = useSprintUI((s) =&gt; s.setLogDrawerTaskId)
+  const <span class="cstat-no" title="statement not covered" >selectedTaskId = useSprintUI(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.selectedTaskId)</span></span>
+  const <span class="cstat-no" title="statement not covered" >setLogDrawerTaskId = useSprintUI(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.setLogDrawerTaskId)</span></span>
 &nbsp;
-  useEffect(() =&gt; {
-    const handleKeyDown = (e: KeyboardEvent) =&gt; {
-      if (e.key === 'Escape') {
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+    const handleKeyDown = <span class="cstat-no" title="statement not covered" ><span class="fstat-no" title="function not covered" >(e</span>: KeyboardEvent) =&gt; {</span>
+<span class="cstat-no" title="statement not covered" >      if (e.key === 'Escape') {</span>
         // If SpecDrawer is open, let it handle Escape (unsaved-changes guard)
-        if (selectedTaskId) return
-        setLogDrawerTaskId(null)
-        setConflictDrawerOpen(false)
-        return
+<span class="cstat-no" title="statement not covered" >        if (selectedTaskId) <span class="cstat-no" title="statement not covered" >return</span></span>
+<span class="cstat-no" title="statement not covered" >        setLogDrawerTaskId(null)</span>
+<span class="cstat-no" title="statement not covered" >        setConflictDrawerOpen(false)</span>
+<span class="cstat-no" title="statement not covered" >        return</span>
       }
 &nbsp;
-      if (
+<span class="cstat-no" title="statement not covered" >      if (</span>
         e.key === 'n' &amp;&amp;
         !e.metaKey &amp;&amp;
         !e.ctrlKey &amp;&amp;
@@ -198,13 +198,13 @@ export function useSprintKeyboardShortcuts({
         document.activeElement?.tagName !== 'SELECT' &amp;&amp;
         !(document.activeElement as HTMLElement)?.isContentEditable
       ) {
-        e.preventDefault()
-        openWorkbench()
+<span class="cstat-no" title="statement not covered" >        e.preventDefault()</span>
+<span class="cstat-no" title="statement not covered" >        openWorkbench()</span>
       }
     }
 &nbsp;
-    window.addEventListener('keydown', handleKeyDown)
-    return () =&gt; window.removeEventListener('keydown', handleKeyDown)
+<span class="cstat-no" title="statement not covered" >    window.addEventListener('keydown', handleKeyDown)</span>
+<span class="cstat-no" title="statement not covered" >    return <span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >w</span>indow.removeEventListener('keydown', handleKeyDown)</span></span>
   }, [selectedTaskId, setLogDrawerTaskId, openWorkbench, setConflictDrawerOpen])
 }
 &nbsp;</pre></td></tr></table></pre>
@@ -214,7 +214,7 @@ export function useSprintKeyboardShortcuts({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../prettify.js"></script>
         <script>

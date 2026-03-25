@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>12/15</span>
+                <span class='fraction'>0/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>2/2</span>
+                <span class='fraction'>0/2</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -166,14 +166,14 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">9x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">7x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -238,7 +238,7 @@ interface TerminalContentProps {
   activeView: string
 }
 &nbsp;
-export function TerminalContent({
+export function <span class="fstat-no" title="function not covered" >TerminalContent({</span>
   tabs,
   activeTabId,
   splitEnabled,
@@ -246,21 +246,21 @@ export function TerminalContent({
   isAgentTab,
   activeView
 }: TerminalContentProps): React.JSX.Element {
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className="terminal-content"&gt;
       {!isAgentTab &amp;&amp; showFind &amp;&amp; &lt;FindBar /&gt;}
-      {tabs.map((tab) =&gt; {
-        const isVisible = tab.id === activeTabId
-        const paneClass = `terminal-content__pane${isVisible ? '' : ' terminal-content__pane--hidden'}`
+      {tabs.map(<span class="fstat-no" title="function not covered" >(t</span>ab) =&gt; {
+        const isVisible = <span class="cstat-no" title="statement not covered" >tab.id === activeTabId</span>
+        const paneClass = <span class="cstat-no" title="statement not covered" >`terminal-content__pane${isVisible ? '' : ' terminal-content__pane--hidden'}`</span>
 &nbsp;
-        return (
+<span class="cstat-no" title="statement not covered" >        return (</span>
           &lt;div key={tab.id} className={paneClass}&gt;
             {tab.kind === 'agent' &amp;&amp; tab.agentId ? (
               &lt;div className="terminal-content__agent-wrapper"&gt;
                 &lt;div className="terminal-agent-status-bar"&gt;
                   &lt;span&gt;{'\u{1F916}'} Agent Output&lt;/span&gt;
                   {tab.agentSessionKey &amp;&amp; (
-<span class="branch-1 cbranch-no" title="branch not covered" >                    &lt;span className="terminal-content__agent-session-key"&gt;</span>
+                    &lt;span className="terminal-content__agent-session-key"&gt;
                       {tab.agentSessionKey}
                     &lt;/span&gt;
                   )}
@@ -269,8 +269,8 @@ export function TerminalContent({
                   &lt;AgentOutputTab agentId={tab.agentId} sessionKey={tab.agentSessionKey} /&gt;
                 &lt;/div&gt;
               &lt;/div&gt;
-            ) : splitEnabled &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >tab.id === activeTabId ? (</span>
-<span class="branch-0 cbranch-no" title="branch not covered" >              &lt;Group orientation="horizontal"&gt;</span>
+            ) : splitEnabled &amp;&amp; tab.id === activeTabId ? (
+              &lt;Group orientation="horizontal"&gt;
                 &lt;Panel defaultSize={50} minSize={20}&gt;
                   &lt;TerminalPane
                     tabId={tab.id}
@@ -310,7 +310,7 @@ export function TerminalContent({
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

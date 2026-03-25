@@ -3,11 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useUIStore, type View } from './stores/ui'
 import { useCommandPaletteStore } from './stores/commandPalette'
 import { useCostDataStore } from './stores/costData'
-import { ActivityBar } from './components/layout/ActivityBar'
-import { TitleBar } from './components/layout/TitleBar'
-import { StatusBar } from './components/layout/StatusBar'
 import { CommandPalette } from './components/layout/CommandPalette'
 import { ToastContainer } from './components/layout/ToastContainer'
+import { UnifiedHeader } from './components/layout/UnifiedHeader'
+import { NeonSidebar } from './components/layout/NeonSidebar'
 import { Onboarding } from './components/Onboarding'
 import { Button } from './components/ui/Button'
 import { Kbd } from './components/ui/Kbd'
@@ -126,7 +125,6 @@ function App(): React.JSX.Element {
   const activeView = useUIStore((s) => s.activeView)
   const setView = useUIStore((s) => s.setView)
   const root = usePanelLayoutStore((s) => s.root)
-  const totalCost = useCostDataStore((s) => s.totalCost)
   const fetchLocalAgents = useCostDataStore((s) => s.fetchLocalAgents)
 
   const paletteOpen = useCommandPaletteStore((s) => s.isOpen)
@@ -285,20 +283,13 @@ function App(): React.JSX.Element {
       >
         Skip to main content
       </a>
-      <TitleBar
-        sessionCount={0}
-        totalCost={totalCost}
-        onConflictClick={() => setView('sprint')}
-      />
+      <UnifiedHeader />
       <div className="app-shell__body">
-        <ActivityBar />
+        <NeonSidebar model={DEFAULT_MODEL.modelId} />
         <main id="main-content" className="app-shell__content" aria-label="Main content">
           <PanelRenderer node={root} />
         </main>
       </div>
-      <StatusBar
-        model={DEFAULT_MODEL.modelId}
-      />
       <CommandPalette open={paletteOpen} onClose={closePalette} />
       <AnimatePresence>
         {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}

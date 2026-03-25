@@ -13,7 +13,8 @@ export function NeonTooltip({ label, shortcut, delay = 300, children }: NeonTool
   const [visible, setVisible] = useState(false);
   const [position, setPosition] = useState({ top: 0, left: 0 });
   const triggerRef = useRef<HTMLDivElement>(null);
-  const timerRef = useRef<ReturnType<typeof setTimeout>>();
+  const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined!);
+
 
   const show = useCallback(() => {
     timerRef.current = setTimeout(() => {
@@ -29,11 +30,13 @@ export function NeonTooltip({ label, shortcut, delay = 300, children }: NeonTool
   }, [delay]);
 
   const hide = useCallback(() => {
-    clearTimeout(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
     setVisible(false);
   }, []);
 
-  useEffect(() => () => clearTimeout(timerRef.current), []);
+  useEffect(() => () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  }, []);
 
   return (
     <>

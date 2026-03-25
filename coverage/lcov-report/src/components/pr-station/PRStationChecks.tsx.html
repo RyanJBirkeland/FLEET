@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>16/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>18/18</span>
+                <span class='fraction'>0/18</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>14/14</span>
+                <span class='fraction'>0/14</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -143,26 +143,24 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -171,8 +169,10 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -180,12 +180,12 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -213,25 +213,25 @@ interface PRStationChecksProps {
   loading: boolean
 }
 &nbsp;
-function CheckIcon({ run }: { run: CheckRun }) {
-  if (run.status !== 'completed') {
-    return &lt;Loader2 size={14} className="pr-detail__check-spinner" /&gt;
+function <span class="fstat-no" title="function not covered" >CheckIcon({</span> run }: { run: CheckRun }) {
+<span class="cstat-no" title="statement not covered" >  if (run.status !== 'completed') {</span>
+<span class="cstat-no" title="statement not covered" >    return &lt;Loader2 size={14} className="pr-detail__check-spinner" /&gt;</span>
   }
-  if (run.conclusion === 'success' || run.conclusion === 'skipped') {
-    return &lt;CircleCheck size={14} /&gt;
+<span class="cstat-no" title="statement not covered" >  if (run.conclusion === 'success' || run.conclusion === 'skipped') {</span>
+<span class="cstat-no" title="statement not covered" >    return &lt;CircleCheck size={14} /&gt;</span>
   }
-  return &lt;CircleX size={14} /&gt;
+<span class="cstat-no" title="statement not covered" >  return &lt;CircleX size={14} /&gt;</span>
 }
 &nbsp;
-function checkStatusClass(run: CheckRun): string {
-  if (run.status !== 'completed') return 'pr-detail__check--pending'
-  if (run.conclusion === 'success' || run.conclusion === 'skipped') return 'pr-detail__check--pass'
-  return 'pr-detail__check--fail'
+function <span class="fstat-no" title="function not covered" >checkStatusClass(r</span>un: CheckRun): string {
+<span class="cstat-no" title="statement not covered" >  if (run.status !== 'completed') <span class="cstat-no" title="statement not covered" >return 'pr-detail__check--pending'</span></span>
+<span class="cstat-no" title="statement not covered" >  if (run.conclusion === 'success' || run.conclusion === 'skipped') <span class="cstat-no" title="statement not covered" >return 'pr-detail__check--pass'</span></span>
+<span class="cstat-no" title="statement not covered" >  return 'pr-detail__check--fail'</span>
 }
 &nbsp;
-export function PRStationChecks({ checks, loading }: PRStationChecksProps) {
-  if (loading) {
-    return (
+export function <span class="fstat-no" title="function not covered" >PRStationChecks({</span> checks, loading }: PRStationChecksProps) {
+<span class="cstat-no" title="statement not covered" >  if (loading) {</span>
+<span class="cstat-no" title="statement not covered" >    return (</span>
       &lt;div className="pr-detail__section"&gt;
         &lt;h3 className="pr-detail__section-title"&gt;CI Checks&lt;/h3&gt;
         &lt;div className="pr-detail__checks-loading"&gt;
@@ -242,8 +242,8 @@ export function PRStationChecks({ checks, loading }: PRStationChecksProps) {
     )
   }
 &nbsp;
-  if (checks.length === 0) {
-    return (
+<span class="cstat-no" title="statement not covered" >  if (checks.length === 0) {</span>
+<span class="cstat-no" title="statement not covered" >    return (</span>
       &lt;div className="pr-detail__section"&gt;
         &lt;h3 className="pr-detail__section-title"&gt;CI Checks&lt;/h3&gt;
         &lt;span className="pr-detail__no-data"&gt;No check runs&lt;/span&gt;
@@ -251,12 +251,12 @@ export function PRStationChecks({ checks, loading }: PRStationChecksProps) {
     )
   }
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className="pr-detail__section"&gt;
       &lt;h3 className="pr-detail__section-title"&gt;CI Checks&lt;/h3&gt;
       &lt;ul className="pr-detail__checks"&gt;
-        {checks.map((run) =&gt; (
-          &lt;li key={run.name} className={`pr-detail__check ${checkStatusClass(run)}`}&gt;
+        {checks.map(<span class="fstat-no" title="function not covered" >(r</span>un) =&gt; (
+<span class="cstat-no" title="statement not covered" >          &lt;li key={run.name} className={`pr-detail__check ${checkStatusClass(run)}`}&gt;</span>
             &lt;CheckIcon run={run} /&gt;
             &lt;span className="pr-detail__check-name"&gt;{run.name}&lt;/span&gt;
             {run.html_url &amp;&amp; (
@@ -283,7 +283,7 @@ export function PRStationChecks({ checks, loading }: PRStationChecksProps) {
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

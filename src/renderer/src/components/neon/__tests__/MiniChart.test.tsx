@@ -27,4 +27,11 @@ describe('MiniChart', () => {
     const { container } = render(<MiniChart data={[]} />);
     expect(container.textContent).toContain('No data');
   });
+
+  it('uses purple as default accent when bar has no accent', () => {
+    const noAccentData: ChartBar[] = [{ value: 50 }];
+    const { container } = render(<MiniChart data={noAccentData} />);
+    const bar = container.querySelector('[data-role="chart-bar"]') as HTMLElement;
+    expect(bar.style.background).toContain('var(--neon-purple)');
+  });
 });

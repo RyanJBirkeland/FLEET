@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">86.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>13/15</span>
+                <span class='fraction'>0/15</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">66.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>2/3</span>
+                <span class='fraction'>0/3</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">80% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/5</span>
+                <span class='fraction'>0/5</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>13/13</span>
+                <span class='fraction'>0/13</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -122,33 +122,33 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-yes">6x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">6x</span>
-<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -169,33 +169,33 @@ type TextareaProps = {
   'aria-label'?: string
 }
 &nbsp;
-export const Textarea = forwardRef&lt;HTMLTextAreaElement, TextareaProps&gt;(function Textarea(
-  { value, onChange, onKeyDown, placeholder, disabled = false, className, 'aria-label': ariaLabel },
+export const <span class="cstat-no" title="statement not covered" >Textarea = forwardRef&lt;HTMLTextAreaElement, TextareaProps&gt;(function <span class="fstat-no" title="function not covered" >Textarea(</span></span>
+  { value, onChange, onKeyDown, placeholder, disabled = <span class="branch-0 cbranch-no" title="branch not covered" >false, c</span>lassName, 'aria-label': ariaLabel },
   forwardedRef,
 ) {
-  const innerRef = useRef&lt;HTMLTextAreaElement&gt;(null)
+  const <span class="cstat-no" title="statement not covered" >innerRef = useRef&lt;HTMLTextAreaElement&gt;(null)</span>
 &nbsp;
-  useImperativeHandle(forwardedRef, <span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >i</span>nnerRef.current as HTMLTextAreaElement)</span>
+<span class="cstat-no" title="statement not covered" >  useImperativeHandle(forwardedRef, <span class="fstat-no" title="function not covered" >() =&gt; <span class="cstat-no" title="statement not covered" >i</span>nnerRef.current as HTMLTextAreaElement)</span></span>
 &nbsp;
-  const resize = useCallback(() =&gt; {
-    const el = innerRef.current
-    <span class="missing-if-branch" title="if path not taken" >I</span>if (!el) <span class="cstat-no" title="statement not covered" >return</span>
-    el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
+  const <span class="cstat-no" title="statement not covered" >resize = useCallback(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+    const el = <span class="cstat-no" title="statement not covered" >innerRef.current</span>
+<span class="cstat-no" title="statement not covered" >    if (!el) <span class="cstat-no" title="statement not covered" >return</span></span>
+<span class="cstat-no" title="statement not covered" >    el.style.height = 'auto'</span>
+<span class="cstat-no" title="statement not covered" >    el.style.height = `${el.scrollHeight}px`</span>
   }, [])
 &nbsp;
-  useEffect(() =&gt; {
-    resize()
+<span class="cstat-no" title="statement not covered" >  useEffect(<span class="fstat-no" title="function not covered" >() =&gt; {</span></span>
+<span class="cstat-no" title="statement not covered" >    resize()</span>
   }, [value, resize])
 &nbsp;
-  const classes = ['bde-textarea', className].filter(Boolean).join(' ')
+  const classes = <span class="cstat-no" title="statement not covered" >['bde-textarea', className].filter(Boolean).join(' ')</span>
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;textarea
       ref={innerRef}
       className={classes}
       value={value}
-      onChange={(e) =&gt; onChange(e.target.value)}
+      onChange={<span class="fstat-no" title="function not covered" >(e</span>) =&gt; <span class="cstat-no" title="statement not covered" >onChange(e.target.value)}</span>
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       disabled={disabled}
@@ -211,7 +211,7 @@ export const Textarea = forwardRef&lt;HTMLTextAreaElement, TextareaProps&gt;(fun
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">18.75% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>3/16</span>
+                <span class='fraction'>0/16</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">25% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>3/12</span>
+                <span class='fraction'>0/12</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">16.66% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>1/6</span>
+                <span class='fraction'>0/6</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">20% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>3/15</span>
+                <span class='fraction'>0/15</span>
             </div>
         
             
@@ -183,9 +183,9 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-no">&nbsp;</span>
@@ -197,7 +197,7 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">2x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -281,10 +281,10 @@ function <span class="fstat-no" title="function not covered" >minutesAgo(i</span
 <span class="cstat-no" title="statement not covered" >  return Math.floor((Date.now() - new Date(isoDate).getTime()) / 60_000)</span>
 }
 &nbsp;
-export function HealthCheckDrawer({ open, tasks, onClose, onDismiss }: HealthCheckDrawerProps) {
-  const [rescuing, setRescuing] = useState&lt;string | null&gt;(null)
+export function <span class="fstat-no" title="function not covered" >HealthCheckDrawer({</span> open, tasks, onClose, onDismiss }: HealthCheckDrawerProps) {
+  const [rescuing, setRescuing<span class="cstat-no" title="statement not covered" >] = useState&lt;string | null&gt;(null)</span>
 &nbsp;
-  const handleRescue = useCallback(<span class="fstat-no" title="function not covered" >async (t</span>ask: SprintTask) =&gt; {
+  const <span class="cstat-no" title="statement not covered" >handleRescue = useCallback(<span class="fstat-no" title="function not covered" >async (t</span>ask: SprintTask) =&gt; {</span>
 <span class="cstat-no" title="statement not covered" >    setRescuing(task.id)</span>
 <span class="cstat-no" title="statement not covered" >    try {</span>
 <span class="cstat-no" title="statement not covered" >      await window.api.sprint.update(task.id, { status: TASK_STATUS.QUEUED, agent_run_id: null })</span>
@@ -296,10 +296,10 @@ export function HealthCheckDrawer({ open, tasks, onClose, onDismiss }: HealthChe
     }
   }, [])
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;&gt;
-      {open &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >&lt;div className="health-drawer__overlay" onClick={onClose} /&gt;}</span>
-      &lt;div className={`health-drawer ${open ? <span class="branch-0 cbranch-no" title="branch not covered" >'health-drawer--open' : '</span>'}`}&gt;
+      {open &amp;&amp; &lt;div className="health-drawer__overlay" onClick={onClose} /&gt;}
+      &lt;div className={`health-drawer ${open ? 'health-drawer--open' : ''}`}&gt;
         &lt;div className="health-drawer__header"&gt;
           &lt;div className="health-drawer__header-left"&gt;
             &lt;HeartPulse size={14} /&gt;
@@ -315,7 +315,7 @@ export function HealthCheckDrawer({ open, tasks, onClose, onDismiss }: HealthChe
           {tasks.length === 0 ? (
             &lt;div className="health-drawer__empty"&gt;No stuck tasks detected.&lt;/div&gt;
           ) : (
-<span class="branch-1 cbranch-no" title="branch not covered" >            tasks.map(<span class="fstat-no" title="function not covered" >(t</span>ask) =&gt; {</span>
+            tasks.map(<span class="fstat-no" title="function not covered" >(t</span>ask) =&gt; {
               const mins = <span class="cstat-no" title="statement not covered" >minutesAgo(task.started_at)</span>
 <span class="cstat-no" title="statement not covered" >              return (</span>
                 &lt;div key={task.id} className="health-row"&gt;
@@ -367,7 +367,7 @@ export function HealthCheckDrawer({ open, tasks, onClose, onDismiss }: HealthChe
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

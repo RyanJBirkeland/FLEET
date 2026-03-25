@@ -23,30 +23,30 @@
         <div class='clearfix'>
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Statements</span>
-                <span class='fraction'>7/7</span>
+                <span class='fraction'>0/7</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">40% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Branches</span>
-                <span class='fraction'>4/10</span>
+                <span class='fraction'>0/10</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Functions</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
             <div class='fl pad1y space-right2'>
-                <span class="strong">100% </span>
+                <span class="strong">0% </span>
                 <span class="quiet">Lines</span>
-                <span class='fraction'>4/4</span>
+                <span class='fraction'>0/4</span>
             </div>
         
             
@@ -61,7 +61,7 @@
             </div>
         </template>
     </div>
-    <div class='status-line high'></div>
+    <div class='status-line low'></div>
     <pre><table class="coverage">
 <tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
 <a name='L2'></a><a href='#L2'>2</a>
@@ -127,11 +127,11 @@
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">4x</span>
-<span class="cline-any cline-yes">12x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
-<span class="cline-any cline-yes">4x</span>
+<span class="cline-any cline-no">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
 <span class="cline-any cline-neutral">&nbsp;</span>
@@ -177,12 +177,12 @@ interface TitleBarProps {
   onConflictClick?: () =&gt; void
 }
 &nbsp;
-export function TitleBar({ sessionCount, totalCost, onConflictClick }: TitleBarProps): React.JSX.Element {
-  const theme = useThemeStore((s) =&gt; s.theme)
-  const toggleTheme = useThemeStore((s) =&gt; s.toggleTheme)
-  const conflictCount = usePrConflictsStore((s) =&gt; s.conflictingTaskIds.length)
+export function <span class="fstat-no" title="function not covered" >TitleBar({</span> sessionCount, totalCost, onConflictClick }: TitleBarProps): React.JSX.Element {
+  const <span class="cstat-no" title="statement not covered" >theme = useThemeStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.theme)</span></span>
+  const <span class="cstat-no" title="statement not covered" >toggleTheme = useThemeStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.toggleTheme)</span></span>
+  const <span class="cstat-no" title="statement not covered" >conflictCount = usePrConflictsStore(<span class="fstat-no" title="function not covered" >(s</span>) =&gt; <span class="cstat-no" title="statement not covered" >s.conflictingTaskIds.length)</span></span>
 &nbsp;
-  return (
+<span class="cstat-no" title="statement not covered" >  return (</span>
     &lt;div className="titlebar glass"&gt;
       &lt;div className="titlebar__left"&gt;
         &lt;span className="titlebar__logotype-wrapper"&gt;
@@ -194,7 +194,7 @@ export function TitleBar({ sessionCount, totalCost, onConflictClick }: TitleBarP
 &nbsp;
       &lt;div className="titlebar__right"&gt;
         {conflictCount &gt; 0 &amp;&amp; (
-<span class="branch-1 cbranch-no" title="branch not covered" >          &lt;button</span>
+          &lt;button
             className="conflict-badge-btn"
             onClick={onConflictClick}
             title={`${conflictCount} PR${conflictCount &gt; 1 ? 's' : ''} with merge conflicts`}
@@ -210,7 +210,7 @@ export function TitleBar({ sessionCount, totalCost, onConflictClick }: TitleBarP
         &lt;span className="titlebar__cost"&gt;${totalCost.toFixed(2)}&lt;/span&gt;
         &lt;NotificationBell /&gt;
         &lt;button className="bde-btn bde-btn--icon bde-btn--sm" onClick={toggleTheme} title="Toggle theme"&gt;
-          {theme === 'dark' ? &lt;Sun size={14} /&gt; : <span class="branch-1 cbranch-no" title="branch not covered" >&lt;Moon size={14} /&gt;}</span>
+          {theme === 'dark' ? &lt;Sun size={14} /&gt; : &lt;Moon size={14} /&gt;}
         &lt;/button&gt;
       &lt;/div&gt;
     &lt;/div&gt;
@@ -223,7 +223,7 @@ export function TitleBar({ sessionCount, totalCost, onConflictClick }: TitleBarP
             <div class='footer quiet pad2 space-top1 center small'>
                 Code coverage generated by
                 <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
-                at 2026-03-25T01:44:05.222Z
+                at 2026-03-25T04:34:50.946Z
             </div>
         <script src="../../../prettify.js"></script>
         <script>

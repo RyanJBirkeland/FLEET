@@ -43,7 +43,7 @@ export function HeaderTab({
       aria-selected={isActive}
       title={label}
     >
-      {showDot && <div className="header-tab__dot" />}
+      {isActive && showDot && <div className="header-tab__dot" />}
       <span>{label}</span>
       {showClose && (
         <button
