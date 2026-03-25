@@ -5,6 +5,18 @@
 import type { SprintTask, TaskDependency } from '../../shared/types'
 import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
 import { getSupabaseClient } from './supabase-client'
+import type { Logger } from '../agent-manager/types'
+
+// Module-level logger — defaults to console, injectable for testing/structured logging
+let logger: Logger = {
+  info: (m) => console.log(m),
+  warn: (m) => console.warn(m),
+  error: (m) => console.error(m),
+}
+
+export function setSprintQueriesLogger(l: Logger): void {
+  logger = l
+}
 
 /**
  * Sanitize a single task object to ensure depends_on is valid.
@@ -68,7 +80,7 @@ export async function getTask(id: string): Promise<SprintTask | null> {
     .maybeSingle()
 
   if (error) {
-    console.warn(`[sprint-queries] getTask failed for id=${id}:`, error)
+    logger.warn(`[sprint-queries] getTask failed for id=${id}: ${error}`)
     return null
   }
   return data ? sanitizeTask(data) : null
@@ -87,7 +99,7 @@ export async function listTasks(status?: string): Promise<SprintTask[]> {
 
   const { data, error } = await query
   if (error) {
-    console.warn('[sprint-queries] listTasks failed:', error)
+    logger.warn(`[sprint-queries] listTasks failed: ${error}`)
     return []
   }
   return sanitizeTasks(data ?? [])
@@ -155,7 +167,7 @@ export async function updateTask(
     .single()
 
   if (error) {
-    console.warn(`[sprint-queries] updateTask failed for id=${id}:`, error)
+    logger.warn(`[sprint-queries] updateTask failed for id=${id}: ${error}`)
     return null
   }
   return data ? sanitizeTask(data) : null
@@ -168,7 +180,7 @@ export async function deleteTask(id: string): Promise<void> {
     .eq('id', id)
 
   if (error) {
-    console.warn(`[sprint-queries] deleteTask failed for id=${id}:`, error)
+    logger.warn(`[sprint-queries] deleteTask failed for id=${id}: ${error}`)
   }
 }
 
@@ -225,7 +237,7 @@ export async function getQueueStats(): Promise<QueueStats> {
     .select('status')
 
   if (error) {
-    console.warn('[sprint-queries] getQueueStats failed:', error)
+    logger.warn(`[sprint-queries] getQueueStats failed: ${error}`)
     return stats
   }
 
@@ -249,7 +261,7 @@ export async function getDoneTodayCount(): Promise<number> {
     .gte('completed_at', today.toISOString())
 
   if (error) {
-    console.warn('[sprint-queries] getDoneTodayCount failed:', error)
+    logger.warn(`[sprint-queries] getDoneTodayCount failed: ${error}`)
     return 0
   }
   return count ?? 0
@@ -281,7 +293,7 @@ export async function markTaskDoneByPrNumber(prNumber: number): Promise<string[]
 
     return affectedIds
   } catch (err) {
-    console.warn(`[sprint-queries] failed to mark task done for PR #${prNumber}:`, err)
+    logger.warn(`[sprint-queries] failed to mark task done for PR #${prNumber}: ${err}`)
     return []
   }
 }
@@ -311,7 +323,7 @@ export async function markTaskCancelledByPrNumber(prNumber: number): Promise<str
 
     return affectedIds
   } catch (err) {
-    console.warn(`[sprint-queries] failed to mark task cancelled for PR #${prNumber}:`, err)
+    logger.warn(`[sprint-queries] failed to mark task cancelled for PR #${prNumber}: ${err}`)
     return []
   }
 }
@@ -324,7 +336,7 @@ export async function listTasksWithOpenPrs(): Promise<SprintTask[]> {
     .eq('pr_status', 'open')
 
   if (error) {
-    console.warn('[sprint-queries] listTasksWithOpenPrs failed:', error)
+    logger.warn(`[sprint-queries] listTasksWithOpenPrs failed: ${error}`)
     return []
   }
   return sanitizeTasks(data ?? [])
@@ -341,9 +353,8 @@ export async function updateTaskMergeableState(
       .update({ pr_mergeable_state: mergeableState })
       .eq('pr_number', prNumber)
   } catch (err) {
-    console.warn(
-      `[sprint-queries] failed to update mergeable_state for PR #${prNumber}:`,
-      err
+    logger.warn(
+      `[sprint-queries] failed to update mergeable_state for PR #${prNumber}: ${err}`
     )
   }
 }
@@ -374,9 +385,8 @@ export async function clearSprintTaskFk(agentRunId: string): Promise<void> {
       .update({ agent_run_id: null })
       .eq('agent_run_id', agentRunId)
   } catch (err) {
-    console.warn(
-      `[sprint-queries] failed to clear FK for agent_run_id=${agentRunId}:`,
-      err
+    logger.warn(
+      `[sprint-queries] failed to clear FK for agent_run_id=${agentRunId}: ${err}`
     )
   }
 }
@@ -390,7 +400,7 @@ export async function getHealthCheckTasks(): Promise<SprintTask[]> {
     .lt('started_at', oneHourAgo)
 
   if (error) {
-    console.warn('[sprint-queries] getHealthCheckTasks failed:', error)
+    logger.warn(`[sprint-queries] getHealthCheckTasks failed: ${error}`)
     return []
   }
   return sanitizeTasks(data ?? [])
