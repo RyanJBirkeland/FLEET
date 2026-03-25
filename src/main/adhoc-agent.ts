@@ -10,7 +10,7 @@ import { basename } from 'node:path'
 import { importAgent, updateAgentMeta } from './agent-history'
 import { buildAgentEnvWithAuth } from './env-utils'
 import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
-import type { AgentEvent, SpawnLocalAgentResult } from '../shared/types'
+import type { SpawnLocalAgentResult } from '../shared/types'
 
 /** Wrapper around an SDK Query for ad-hoc agent management */
 interface AdhocSession {
