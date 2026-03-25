@@ -81,9 +81,7 @@ describe('resolveDependents', () => {
 
     await resolveDependents('A', 'failed', index, getTask, updateTask)
 
-    // Should not unblock — but does update notes with blocking info
-    expect(updateTask).not.toHaveBeenCalledWith('B', { status: 'queued' })
-    expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
+    expect(updateTask).not.toHaveBeenCalled()
   })
 
   it('keeps dependent blocked when hard dep is cancelled', async () => {
@@ -96,9 +94,7 @@ describe('resolveDependents', () => {
 
     await resolveDependents('A', 'cancelled', index, getTask, updateTask)
 
-    // Should not unblock — but does update notes with blocking info
-    expect(updateTask).not.toHaveBeenCalledWith('B', { status: 'queued' })
-    expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
+    expect(updateTask).not.toHaveBeenCalled()
   })
 
   it('unblocks dependent when soft dep fails', async () => {
@@ -139,9 +135,7 @@ describe('resolveDependents', () => {
 
     await resolveDependents('A', 'done', index, getTask, updateTask)
 
-    // Should not unblock — but does update notes with blocking info
-    expect(updateTask).not.toHaveBeenCalledWith('C', { status: 'queued' })
-    expect(updateTask).toHaveBeenCalledWith('C', { notes: '[auto-block] Blocked by: B' })
+    expect(updateTask).not.toHaveBeenCalled()
   })
 
   it('fan-in: unblocks when last dep is satisfied', async () => {
