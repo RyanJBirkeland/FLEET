@@ -5,6 +5,7 @@ export { GlassPanel } from './GlassPanel';
 export { ActivityFeed, type FeedEvent } from './ActivityFeed';
 export { NeonProgress } from './NeonProgress';
 export { PipelineFlow, type PipelineStage } from './PipelineFlow';
+export { CircuitPipeline, type CircuitNode } from './CircuitPipeline';
 export { MiniChart, type ChartBar } from './MiniChart';
 export { StatusBar } from './StatusBar';
 export { ScanlineOverlay } from './ScanlineOverlay';
