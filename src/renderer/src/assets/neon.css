@@ -1,0 +1,184 @@
+/* src/renderer/src/assets/neon.css */
+/* ═══════════════════════════════════════════════════════
+   V2 Neon Design System — CSS Tokens & Animations
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Neon Accent Palette ── */
+:root {
+  /* Cyan — agents, success, live states */
+  --neon-cyan: #00ffc8;
+  --neon-cyan-glow: 0 0 12px rgba(0, 255, 200, 0.5);
+  --neon-cyan-surface: rgba(0, 255, 200, 0.08);
+  --neon-cyan-border: rgba(0, 255, 200, 0.25);
+
+  /* Pink — tasks, counts, highlights */
+  --neon-pink: #ff64c8;
+  --neon-pink-glow: 0 0 12px rgba(255, 100, 200, 0.5);
+  --neon-pink-surface: rgba(255, 100, 200, 0.08);
+  --neon-pink-border: rgba(255, 100, 200, 0.25);
+
+  /* Blue — PRs, links, info */
+  --neon-blue: #64c8ff;
+  --neon-blue-glow: 0 0 12px rgba(100, 200, 255, 0.5);
+  --neon-blue-surface: rgba(100, 200, 255, 0.08);
+  --neon-blue-border: rgba(100, 200, 255, 0.25);
+
+  /* Purple — headers, borders, structural */
+  --neon-purple: #bf5af2;
+  --neon-purple-glow: 0 0 12px rgba(191, 90, 242, 0.5);
+  --neon-purple-surface: rgba(191, 90, 242, 0.08);
+  --neon-purple-border: rgba(191, 90, 242, 0.25);
+
+  /* Orange — cost, warnings */
+  --neon-orange: #ffb432;
+  --neon-orange-glow: 0 0 12px rgba(255, 180, 50, 0.5);
+  --neon-orange-surface: rgba(255, 180, 50, 0.08);
+  --neon-orange-border: rgba(255, 180, 50, 0.25);
+
+  /* Red — errors, failures, danger */
+  --neon-red: #ff3264;
+  --neon-red-glow: 0 0 12px rgba(255, 50, 100, 0.5);
+  --neon-red-surface: rgba(255, 50, 100, 0.08);
+  --neon-red-border: rgba(255, 50, 100, 0.25);
+
+  /* ── Atmosphere ── */
+  --neon-bg: #0a0015;
+  --neon-bg-gradient: radial-gradient(
+      ellipse at 30% 20%, rgba(138, 43, 226, 0.12) 0%, transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 80%, rgba(0, 200, 255, 0.08) 0%, transparent 50%
+    );
+
+  /* ── Glass ── */
+  --neon-glass-blur: blur(16px) saturate(180%);
+  --neon-glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  --neon-glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+
+  /* ── Scanline ── */
+  --neon-scanline-opacity: 0.02;
+  --neon-scanline-speed: 30s;
+
+  /* ── Particle ── */
+  --neon-particle-count: 18;
+  --neon-particle-size: 3px;
+}
+
+/* ── Light theme overrides ── */
+html.theme-light {
+  --neon-cyan: #00b894;
+  --neon-cyan-glow: 0 0 8px rgba(0, 184, 148, 0.3);
+  --neon-cyan-surface: rgba(0, 184, 148, 0.08);
+  --neon-cyan-border: rgba(0, 184, 148, 0.2);
+
+  --neon-pink: #e84393;
+  --neon-pink-glow: 0 0 8px rgba(232, 67, 147, 0.3);
+  --neon-pink-surface: rgba(232, 67, 147, 0.08);
+  --neon-pink-border: rgba(232, 67, 147, 0.2);
+
+  --neon-blue: #0984e3;
+  --neon-blue-glow: 0 0 8px rgba(9, 132, 227, 0.3);
+  --neon-blue-surface: rgba(9, 132, 227, 0.08);
+  --neon-blue-border: rgba(9, 132, 227, 0.2);
+
+  --neon-purple: #a855f7;
+  --neon-purple-glow: 0 0 8px rgba(168, 85, 247, 0.3);
+  --neon-purple-surface: rgba(168, 85, 247, 0.08);
+  --neon-purple-border: rgba(168, 85, 247, 0.2);
+
+  --neon-orange: #e17055;
+  --neon-orange-glow: 0 0 8px rgba(225, 112, 85, 0.3);
+  --neon-orange-surface: rgba(225, 112, 85, 0.08);
+  --neon-orange-border: rgba(225, 112, 85, 0.2);
+
+  --neon-red: #d63031;
+  --neon-red-glow: 0 0 8px rgba(214, 48, 49, 0.3);
+  --neon-red-surface: rgba(214, 48, 49, 0.08);
+  --neon-red-border: rgba(214, 48, 49, 0.2);
+
+  --neon-bg: #f8f7fc;
+  --neon-bg-gradient: radial-gradient(
+      ellipse at 30% 20%, rgba(168, 85, 247, 0.06) 0%, transparent 50%
+    ),
+    radial-gradient(
+      ellipse at 70% 80%, rgba(9, 132, 227, 0.04) 0%, transparent 50%
+    );
+
+  --neon-glass-blur: blur(16px) saturate(120%);
+  --neon-glass-edge: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  --neon-glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+
+  --neon-scanline-opacity: 0;
+  --neon-particle-count: 0;
+}
+
+/* ═══════════════════════════════════════════════════════
+   Keyframe Animations
+   ═══════════════════════════════════════════════════════ */
+
+@keyframes neon-pulse {
+  0%, 100% { box-shadow: var(--pulse-shadow-min); }
+  50% { box-shadow: var(--pulse-shadow-max); }
+}
+
+@keyframes neon-breathe {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+@keyframes neon-scanline {
+  0% { background-position: 0 0; }
+  100% { background-position: 0 -200px; }
+}
+
+@keyframes neon-gradient-rotate {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+@keyframes neon-particle-drift-1 {
+  0% { transform: translate(0, 0) scale(1); opacity: 0; }
+  10% { opacity: 0.6; }
+  90% { opacity: 0.6; }
+  100% { transform: translate(120px, -180px) scale(0.5); opacity: 0; }
+}
+
+@keyframes neon-particle-drift-2 {
+  0% { transform: translate(0, 0) scale(0.8); opacity: 0; }
+  10% { opacity: 0.5; }
+  90% { opacity: 0.5; }
+  100% { transform: translate(-100px, -220px) scale(0.3); opacity: 0; }
+}
+
+@keyframes neon-particle-drift-3 {
+  0% { transform: translate(0, 0) scale(1.2); opacity: 0; }
+  10% { opacity: 0.4; }
+  90% { opacity: 0.4; }
+  100% { transform: translate(80px, -160px) scale(0.6); opacity: 0; }
+}
+
+@keyframes neon-dash-flow {
+  0% { stroke-dashoffset: 20; }
+  100% { stroke-dashoffset: 0; }
+}
+
+@keyframes neon-ambient-shift {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    --neon-scanline-opacity: 0 !important;
+    --neon-particle-count: 0 !important;
+  }
+
+  .neon-pulse,
+  .neon-breathe,
+  .neon-gradient-rotate {
+    animation: none !important;
+  }
+}
