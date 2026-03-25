@@ -72,3 +72,49 @@ test.describe('Spawn agent modal', () => {
     await expect(spawnButton).toBeVisible()
   })
 })
+
+test.describe('Spawn agent modal — extended', () => {
+  test('opens SpawnModal via spawn button, fills task, verifies Spawn button', async ({ bde }) => {
+    const { window } = bde
+
+    // Navigate to Agents view
+    await expect(window.locator('.app-shell')).toBeVisible({ timeout: 15_000 })
+    await window.keyboard.press('Meta+2')
+    await expect(window.locator('.agents-view')).toBeVisible({ timeout: 5_000 })
+
+    // Click the spawn button (plus icon) in the sidebar header
+    const spawnBtn = window.locator('.agents-view__spawn-btn')
+    await expect(spawnBtn).toBeVisible()
+    await spawnBtn.click()
+
+    // Assert SpawnModal opens
+    const spawnModal = window.locator('.spawn-modal.glass-modal')
+    await expect(spawnModal).toBeVisible({ timeout: 5_000 })
+
+    // Verify modal title
+    const modalTitle = spawnModal.locator('#spawn-modal-title')
+    await expect(modalTitle).toContainText('Spawn Agent')
+
+    // Fill in the task title field
+    const taskField = spawnModal.locator('textarea.spawn-modal__textarea')
+    await expect(taskField).toBeVisible()
+    await taskField.fill('E2E test: implement feature X')
+    await expect(taskField).toHaveValue('E2E test: implement feature X')
+
+    // Verify Repository select is present
+    const repoSelect = spawnModal.locator('select.spawn-modal__select')
+    await expect(repoSelect).toBeVisible()
+
+    // Verify Model chips section is present
+    const modelChips = spawnModal.locator('.spawn-modal__chips')
+    await expect(modelChips).toBeVisible()
+
+    // Verify Spawn submit button exists (don't click — needs OAuth token)
+    const submitBtn = spawnModal.locator('button[type="submit"]', { hasText: /Spawn|Loading/ })
+    await expect(submitBtn).toBeVisible()
+
+    // Verify Cancel button exists
+    const cancelBtn = spawnModal.locator('button', { hasText: 'Cancel' })
+    await expect(cancelBtn).toBeVisible()
+  })
+})
