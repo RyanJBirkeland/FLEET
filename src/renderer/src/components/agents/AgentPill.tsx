@@ -29,11 +29,21 @@ export function AgentPill({ agent, currentAction, accent, onClick }: AgentPillPr
       className={`agent-pill ${agent.status === 'running' ? 'agent-pill--running' : ''}`}
       style={pillStyle}
       onClick={onClick}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          onClick()
+        }
+      }}
     >
       <div className="agent-pill__dot" style={dotStyle} />
       <span className="agent-pill__name">{truncate(agent.task, 20)}</span>
       {currentAction && (
-        <span className="agent-pill__action">{truncate(currentAction, 30)}</span>
+        <>
+          <span style={{ color: 'rgba(255, 255, 255, 0.3)' }}>·</span>
+          <span className="agent-pill__action">{truncate(currentAction, 30)}</span>
+        </>
       )}
     </div>
   )

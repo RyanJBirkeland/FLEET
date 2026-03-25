@@ -134,6 +134,6 @@ describe('LiveActivityStrip', () => {
 
     render(<LiveActivityStrip onSelectAgent={mockOnSelectAgent} />)
 
-    expect(screen.getByText('Thinking...')).toBeInTheDocument()
+    expect(screen.getByText('Thinking…')).toBeInTheDocument()
   })
 })
