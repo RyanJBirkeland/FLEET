@@ -390,6 +390,8 @@ describe('createAgentManager', () => {
       expect(vi.mocked(updateTask)).toHaveBeenCalledWith('task-1', {
         status: 'error',
         completed_at: expect.any(String),
+        notes: expect.stringContaining('Worktree setup failed:'),
+        claimed_by: null,
       })
 
       mgr.stop(0).catch(() => {})

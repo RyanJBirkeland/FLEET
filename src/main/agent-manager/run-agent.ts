@@ -135,7 +135,7 @@ export async function runAgent(
   let prompt = (task.prompt || task.spec || task.title || '').trim()
   if (!prompt) {
     logger.error(`[agent-manager] Task ${task.id} has no prompt/spec/title — marking error`)
-    await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: 'Empty prompt' })
+    await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: 'Empty prompt', claimed_by: null })
     await onTaskTerminal(task.id, 'error')
     cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch })
     return
@@ -168,7 +168,7 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
     ])
   } catch (err) {
     logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
-    await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: `Spawn failed: ${err instanceof Error ? err.message : String(err)}` }).catch((err) => logger.warn(`[agent-manager] Failed to update task ${task.id} after spawn failure: ${err}`))
+    await updateTask(task.id, { status: 'error', completed_at: new Date().toISOString(), notes: `Spawn failed: ${err instanceof Error ? err.message : String(err)}`, claimed_by: null }).catch((err) => logger.warn(`[agent-manager] Failed to update task ${task.id} after spawn failure: ${err}`))
     await onTaskTerminal(task.id, 'error')
     cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch })
     return
@@ -188,6 +188,7 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
     tokensOut: 0,
   }
   activeAgents.set(task.id, agent)
+  let lastAgentOutput = ''
   // Persist agent_run_id so LogDrawer can find logs after restart
   await updateTask(task.id, { agent_run_id: agentRunId }).catch((err) =>
     logger.warn(`[agent-manager] Failed to persist agent_run_id for task ${task.id}: ${err}`)
@@ -242,9 +243,23 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
           })
         }
       }
+      // Capture last assistant text for diagnostics
+      if (typeof msg === 'object' && msg !== null) {
+        const m = msg as Record<string, unknown>
+        if (m.type === 'assistant' && typeof m.text === 'string') {
+          lastAgentOutput = (m.text as string).slice(-500)
+        }
+      }
     }
   } catch (err) {
     logger.error(`[agent-manager] Error consuming messages for task ${task.id}: ${err}`)
+    // Invalidate cached OAuth token on auth errors so next agent gets a fresh token
+    const errMsg = err instanceof Error ? err.message : String(err)
+    if (errMsg.includes('Invalid API key') || errMsg.includes('invalid_api_key') || errMsg.includes('authentication')) {
+      const { invalidateOAuthToken } = await import('../env-utils')
+      invalidateOAuthToken()
+      logger.warn(`[agent-manager] Auth failure detected — OAuth token cache invalidated`)
+    }
   }
 
   // Agent exited
@@ -281,7 +296,7 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
   const now = new Date().toISOString()
 
   if (ffResult === 'fast-fail-exhausted') {
-    await updateTask(task.id, { status: 'error', completed_at: now, notes: 'Fast-fail exhausted' })
+    await updateTask(task.id, { status: 'error', completed_at: now, notes: 'Fast-fail exhausted', claimed_by: null })
       .catch((err) => logger.error(`[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`))
     await onTaskTerminal(task.id, 'error')
   } else if (ffResult === 'fast-fail-requeue') {
@@ -301,6 +316,7 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
         title: task.title,
         ghRepo,
         onTaskTerminal,
+        agentSummary: lastAgentOutput || null,
       }, logger)
     } catch (err) {
       logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
