@@ -25,10 +25,25 @@ vi.mock('../../stores/costData', () => ({
   ),
 }))
 
+vi.mock('../../components/neon', async () => {
+  const actual = await vi.importActual<typeof import('../../components/neon')>(
+    '../../components/neon',
+  )
+  return {
+    ...actual,
+    ScanlineOverlay: () => null,
+    ParticleField: () => null,
+  }
+})
+
 Object.defineProperty(window, 'api', {
   value: {
-    getPrList: vi.fn().mockResolvedValue({ prs: [], checks: {} }),
+    getPrList: vi.fn().mockResolvedValue([]),
     openExternal: vi.fn(),
+    dashboard: {
+      completionsPerHour: vi.fn().mockResolvedValue([]),
+      recentEvents: vi.fn().mockResolvedValue([]),
+    },
   },
   writable: true,
   configurable: true,
@@ -49,17 +64,22 @@ describe('DashboardView', () => {
     vi.clearAllMocks()
   })
 
-  it('renders all four dashboard cards', () => {
+  it('renders the Ops Deck command center', () => {
     render(<DashboardView />)
-    expect(screen.getByText('Active Tasks')).toBeInTheDocument()
-    expect(screen.getByText('Recent Completions')).toBeInTheDocument()
-    expect(screen.getByText('Cost Summary')).toBeInTheDocument()
-    expect(screen.getByText('Open PRs')).toBeInTheDocument()
+    expect(screen.getByText('BDE Command Center')).toBeInTheDocument()
   })
 
-  it('shows empty state messages when no data', () => {
+  it('renders stat counters for key metrics', () => {
     render(<DashboardView />)
-    expect(screen.getByText('No active tasks')).toBeInTheDocument()
-    expect(screen.getByText('No completed tasks yet')).toBeInTheDocument()
+    expect(screen.getByText('Agents')).toBeInTheDocument()
+    expect(screen.getByText('Tasks')).toBeInTheDocument()
+    expect(screen.getByText('PRs')).toBeInTheDocument()
+    expect(screen.getByText('Done')).toBeInTheDocument()
+  })
+
+  it('renders pipeline and cost sections', () => {
+    render(<DashboardView />)
+    expect(screen.getByText('Pipeline')).toBeInTheDocument()
+    expect(screen.getByText(/Cost/)).toBeInTheDocument()
   })
 })
