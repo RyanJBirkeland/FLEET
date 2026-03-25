@@ -9,4 +9,5 @@ export { MiniChart, type ChartBar } from './MiniChart';
 export { StatusBar } from './StatusBar';
 export { ScanlineOverlay } from './ScanlineOverlay';
 export { ParticleField } from './ParticleField';
+export { NeonTooltip } from './NeonTooltip';
 export { type NeonAccent, neonVar, NEON_ACCENTS } from './types';
