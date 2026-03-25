@@ -8,7 +8,7 @@ interface LiveActivityStripProps {
   onSelectAgent: (id: string) => void
 }
 
-export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps) {
+export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps): JSX.Element {
   const agents = useAgentHistoryStore((state) => state.agents)
   const events = useAgentEventsStore((state) => state.events)
 
@@ -23,17 +23,25 @@ export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps) {
 
     switch (latestEvent.type) {
       case 'agent:tool_call':
-        return latestEvent.summary
+        return latestEvent.summary || `Calling ${latestEvent.tool}`
       case 'agent:thinking':
         return 'Thinking...'
       case 'agent:text':
-        return latestEvent.text
+        return latestEvent.text.slice(0, 50)
       case 'agent:user_message':
-        return 'User message'
+        return 'Processing user message'
       case 'agent:rate_limited':
-        return 'Rate limited'
+        return `Rate limited (retry in ${Math.round(latestEvent.retryDelayMs / 1000)}s)`
       case 'agent:error':
-        return 'Error: ' + latestEvent.message
+        return `Error: ${latestEvent.message.slice(0, 30)}`
+      case 'agent:completed':
+        return 'Completed'
+      case 'agent:started':
+        return `Started with ${latestEvent.model}`
+      case 'agent:tool_result':
+        return latestEvent.success ? `${latestEvent.tool} succeeded` : `${latestEvent.tool} failed`
+      case 'agent:playground':
+        return `Generated ${latestEvent.filename}`
       default:
         return ''
     }
