@@ -51,8 +51,8 @@ export default function DashboardView() {
   useEffect(() => {
     let cancelled = false
     window.api.dashboard
-      .completionsPerHour()
-      .then((data) => {
+      ?.completionsPerHour()
+      ?.then((data) => {
         if (cancelled) return
         const accents: Array<'cyan' | 'pink' | 'blue' | 'orange' | 'purple'> = [
           'cyan',
@@ -69,7 +69,7 @@ export default function DashboardView() {
           })),
         )
       })
-      .catch(() => {})
+      ?.catch(() => {})
     return () => {
       cancelled = true
     }
@@ -79,8 +79,8 @@ export default function DashboardView() {
   useEffect(() => {
     let cancelled = false
     window.api.dashboard
-      .recentEvents(30)
-      .then((events) => {
+      ?.recentEvents(30)
+      ?.then((events) => {
         if (cancelled) return
         setFeedEvents(
           events.map((e) => ({
@@ -96,7 +96,7 @@ export default function DashboardView() {
           })),
         )
       })
-      .catch(() => {})
+      ?.catch(() => {})
     return () => {
       cancelled = true
     }
