@@ -17,25 +17,33 @@ export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps) {
   const getLatestAction = (agentId: string): string => {
     const agentEvents = events[agentId]
     if (!agentEvents || agentEvents.length === 0) {
-      return ''
+      return 'Starting…'
     }
     const latestEvent = agentEvents[agentEvents.length - 1]
 
     switch (latestEvent.type) {
-      case 'agent:tool_call':
-        return latestEvent.summary
+      case 'agent:started':
+        return `Started with ${latestEvent.model}`
       case 'agent:thinking':
-        return 'Thinking...'
+        return 'Thinking…'
+      case 'agent:tool_call':
+        return latestEvent.summary || `Calling ${latestEvent.tool}`
+      case 'agent:tool_result':
+        return latestEvent.summary || `${latestEvent.tool} completed`
       case 'agent:text':
         return latestEvent.text
       case 'agent:user_message':
         return 'User message'
       case 'agent:rate_limited':
-        return 'Rate limited'
+        return `Rate limited (retry in ${Math.round(latestEvent.retryDelayMs / 1000)}s)`
       case 'agent:error':
-        return 'Error: ' + latestEvent.message
+        return latestEvent.message
+      case 'agent:completed':
+        return 'Completed'
+      case 'agent:playground':
+        return `Playground: ${latestEvent.filename}`
       default:
-        return ''
+        return 'Running…'
     }
   }
 
