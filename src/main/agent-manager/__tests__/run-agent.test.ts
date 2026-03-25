@@ -3,7 +3,7 @@
  * watchdog race, fast-fail paths, and completion fallback.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runAgent } from '../run-agent'
+import { runAgent, detectHtmlWrite, tryEmitPlaygroundEvent } from '../run-agent'
 import type { RunAgentTask, RunAgentDeps } from '../run-agent'
 import type { ActiveAgent } from '../types'
 
@@ -43,6 +43,11 @@ vi.mock('../../agent-history', () => ({
 
 vi.mock('../../broadcast', () => ({
   broadcast: vi.fn(),
+}))
+
+vi.mock('node:fs/promises', () => ({
+  stat: vi.fn(),
+  readFile: vi.fn(),
 }))
 
 vi.mock('../../env-utils', () => ({
@@ -187,6 +192,27 @@ describe('runAgent — auth error handling', () => {
       expect.stringContaining('Auth failure detected'),
     )
   })
+
+  it('handles refreshOAuthTokenFromKeychain rejection gracefully', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { invalidateOAuthToken, refreshOAuthTokenFromKeychain } = await import('../../env-utils')
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeErrorHandle(new Error('invalid_api_key')))
+    ;(refreshOAuthTokenFromKeychain as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('keychain locked'))
+    const deps = makeDeps()
+    await runAgent(makeTask(), worktree, repoPath, deps)
+    expect(invalidateOAuthToken).toHaveBeenCalled()
+    expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Auth failure detected'))
+  })
+
+  it('logs success when refreshOAuthTokenFromKeychain succeeds', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { refreshOAuthTokenFromKeychain } = await import('../../env-utils')
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeErrorHandle(new Error('authentication failed')))
+    ;(refreshOAuthTokenFromKeychain as ReturnType<typeof vi.fn>).mockResolvedValue(true)
+    const deps = makeDeps()
+    await runAgent(makeTask(), worktree, repoPath, deps)
+    expect(refreshOAuthTokenFromKeychain).toHaveBeenCalled()
+  })
 })
 
 describe('runAgent — watchdog race', () => {
@@ -312,5 +338,131 @@ describe('runAgent — completion fallback', () => {
 
     expect(resolveFailure).toHaveBeenCalled()
     expect(deps.onTaskTerminal).not.toHaveBeenCalled()
+  })
+})
+
+describe('detectHtmlWrite', () => {
+  it('returns file path for tool_result Write of .html file', () => {
+    expect(detectHtmlWrite({ type: 'tool_result', tool_name: 'Write', input: { file_path: '/tmp/wt/index.html' } })).toBe('/tmp/wt/index.html')
+  })
+  it('returns file path for result type with name Write', () => {
+    expect(detectHtmlWrite({ type: 'result', name: 'Write', input: { file_path: 'output.html' } })).toBe('output.html')
+  })
+  it('returns null for non-html file', () => {
+    expect(detectHtmlWrite({ type: 'tool_result', tool_name: 'Write', input: { file_path: '/tmp/wt/file.ts' } })).toBeNull()
+  })
+  it('returns null for non-Write tool', () => {
+    expect(detectHtmlWrite({ type: 'tool_result', tool_name: 'Read', input: { file_path: '/tmp/wt/index.html' } })).toBeNull()
+  })
+  it('returns null for non-tool_result/result type', () => {
+    expect(detectHtmlWrite({ type: 'assistant', text: 'hello' })).toBeNull()
+  })
+  it('returns null for null/non-object inputs', () => {
+    expect(detectHtmlWrite(null)).toBeNull()
+    expect(detectHtmlWrite('string')).toBeNull()
+  })
+  it('returns null when input has no file_path', () => {
+    expect(detectHtmlWrite({ type: 'tool_result', tool_name: 'Write', input: {} })).toBeNull()
+  })
+  it('is case-insensitive for tool name', () => {
+    expect(detectHtmlWrite({ type: 'tool_result', tool_name: 'write', input: { file_path: 'page.HTML' } })).toBe('page.HTML')
+  })
+})
+
+describe('tryEmitPlaygroundEvent', () => {
+  beforeEach(() => vi.clearAllMocks())
+  it('emits playground event for a valid HTML file', async () => {
+    const { stat } = await import('node:fs/promises')
+    const { readFile } = await import('node:fs/promises')
+    const { broadcast } = await import('../../broadcast')
+    vi.mocked(stat).mockResolvedValue({ size: 1024 } as any)
+    vi.mocked(readFile).mockResolvedValue('<html>hello</html>')
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    await tryEmitPlaygroundEvent('task-1', '/absolute/path/index.html', '/wt', logger)
+    expect(broadcast).toHaveBeenCalledWith('agent:event', expect.objectContaining({
+      agentId: 'task-1',
+      event: expect.objectContaining({ type: 'agent:playground', filename: 'index.html', html: '<html>hello</html>' }),
+    }))
+  })
+  it('resolves relative path against worktreePath', async () => {
+    const { stat } = await import('node:fs/promises')
+    const { readFile } = await import('node:fs/promises')
+    vi.mocked(stat).mockResolvedValue({ size: 100 } as any)
+    vi.mocked(readFile).mockResolvedValue('<html/>')
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    await tryEmitPlaygroundEvent('task-1', 'relative/file.html', '/wt/path', logger)
+    expect(stat).toHaveBeenCalledWith('/wt/path/relative/file.html')
+  })
+  it('skips file that is too large', async () => {
+    const { stat } = await import('node:fs/promises')
+    const { broadcast } = await import('../../broadcast')
+    vi.mocked(stat).mockResolvedValue({ size: 10 * 1024 * 1024 } as any)
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    await tryEmitPlaygroundEvent('task-1', '/big.html', '/wt', logger)
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('File too large'))
+    expect(broadcast).not.toHaveBeenCalled()
+  })
+  it('logs warning on file read error', async () => {
+    const { stat } = await import('node:fs/promises')
+    vi.mocked(stat).mockRejectedValue(new Error('ENOENT'))
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    await tryEmitPlaygroundEvent('task-1', '/missing.html', '/wt', logger)
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to read HTML file'))
+  })
+})
+
+describe('runAgent — lastAgentOutput capture', () => {
+  beforeEach(() => vi.clearAllMocks())
+  it('captures last assistant text and passes to resolveSuccess as agentSummary', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { classifyExit } = await import('../fast-fail')
+    const { resolveSuccess } = await import('../completion')
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([
+      { type: 'assistant', text: 'First response' },
+      { type: 'assistant', text: 'Final answer with details about the implementation' },
+      { exit_code: 0 },
+    ]))
+    ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('normal-exit')
+    const deps = makeDeps()
+    await runAgent(makeTask(), worktree, repoPath, deps)
+    expect(resolveSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({ agentSummary: expect.stringContaining('Final answer with details') }),
+      deps.logger,
+    )
+  })
+})
+
+describe('runAgent — updateTask.catch error handlers', () => {
+  beforeEach(() => vi.clearAllMocks())
+  it('logs error when updateTask rejects in fast-fail-exhausted path', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { classifyExit } = await import('../fast-fail')
+    const { updateTask } = await import('../../data/sprint-queries')
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([{ exit_code: 1 }]))
+    ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('fast-fail-exhausted')
+    ;(updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DB error'))
+    const deps = makeDeps()
+    await runAgent(makeTask({ fast_fail_count: 3 }), worktree, repoPath, deps)
+    expect(deps.logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-1 after fast-fail exhausted'))
+  })
+  it('logs error when updateTask rejects in fast-fail-requeue path', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { classifyExit } = await import('../fast-fail')
+    const { updateTask } = await import('../../data/sprint-queries')
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([{ exit_code: 1 }]))
+    ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('fast-fail-requeue')
+    ;(updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DB error'))
+    const deps = makeDeps()
+    await runAgent(makeTask({ fast_fail_count: 1 }), worktree, repoPath, deps)
+    expect(deps.logger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to requeue fast-fail task task-1'))
+  })
+  it('logs warning when updateTask rejects in spawn failure .catch path', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { updateTask } = await import('../../data/sprint-queries')
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Spawn failed'))
+    ;(updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DB error'))
+    const deps = makeDeps()
+    await runAgent(makeTask(), worktree, repoPath, deps)
+    expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-1 after spawn failure'))
   })
 })

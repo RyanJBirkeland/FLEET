@@ -368,6 +368,85 @@ describe('resolveSuccess', () => {
   })
 })
 
+describe('resolveSuccess — catch handler coverage', () => {
+  const mockOnTaskTerminal2 = vi.fn()
+  const catchOpts = { taskId: 'task-catch', worktreePath: '/tmp/worktrees/task-catch', title: 'Catch test', ghRepo: 'owner/repo', onTaskTerminal: mockOnTaskTerminal2 }
+
+  beforeEach(() => { resetMocks(); mockOnTaskTerminal2.mockReset(); vi.mocked(existsSync).mockReturnValue(true) })
+
+  it('logs warning when updateTask fails after push error (line 152)', async () => {
+    let i = 0
+    const r = [{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }, { error: new Error('push failed') }] as any[]
+    getCustomMock().mockImplementation(() => { const x = r[i] ?? { stdout: '' }; i++; return x.error ? Promise.reject(x.error) : Promise.resolve({ stdout: x.stdout ?? '', stderr: '' }) })
+    updateTaskMock.mockRejectedValueOnce(new Error('DB down'))
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-catch after push error'))
+  })
+
+  it('logs warning when gh pr list fails during existing PR check (line 176)', async () => {
+    let i = 0
+    const r = [{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }, { stdout: '' }, { error: new Error('gh CLI crash') }, { stdout: '' }, { stdout: '' }, { stdout: 'https://github.com/o/r/pull/10\n' }] as any[]
+    getCustomMock().mockImplementation(() => { const x = r[i] ?? { stdout: '' }; i++; return x.error ? Promise.reject(x.error) : Promise.resolve({ stdout: x.stdout ?? '', stderr: '' }) })
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to check for existing PR'))
+  })
+
+  it('logs warning when retry PR list fails after "already exists" error (line 213)', async () => {
+    let i = 0
+    const r = [{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }, { stdout: '' }, { stdout: '' }, { stdout: '' }, { stdout: '' }, { error: new Error('a pull request already exists for branch') }, { error: new Error('gh CLI down') }] as any[]
+    getCustomMock().mockImplementation(() => { const x = r[i] ?? { stdout: '' }; i++; return x.error ? Promise.reject(x.error) : Promise.resolve({ stdout: x.stdout ?? '', stderr: '' }) })
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to fetch existing PR after creation failure'))
+  })
+
+  it('logs error when final updateTask with PR info fails (line 231)', async () => {
+    mockExecFileSequence([{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }, { stdout: '' }, { stdout: '{"url":"https://github.com/o/r/pull/1","number":1}\n' }])
+    updateTaskMock.mockRejectedValueOnce(new Error('DB error'))
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.error).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-catch with PR info'))
+  })
+
+  it('handles generatePrBody when git log and diff both fail', async () => {
+    let i = 0
+    const r = [{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }, { stdout: '' }, { stdout: '' }, { error: new Error('git log failed') }, { error: new Error('git diff failed') }, { stdout: 'https://github.com/o/r/pull/55\n' }] as any[]
+    getCustomMock().mockImplementation(() => { const x = r[i] ?? { stdout: '' }; i++; return x.error ? Promise.reject(x.error) : Promise.resolve({ stdout: x.stdout ?? '', stderr: '' }) })
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(updateTaskMock).toHaveBeenCalledWith(catchOpts.taskId, { pr_status: 'open', pr_url: 'https://github.com/o/r/pull/55', pr_number: 55 })
+  })
+
+  it('logs warning when updateTask fails after worktree eviction (line 73)', async () => {
+    vi.mocked(existsSync).mockReturnValueOnce(false)
+    updateTaskMock.mockRejectedValueOnce(new Error('DB error'))
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-catch after worktree eviction'))
+  })
+
+  it('logs warning when updateTask fails after branch detection error (line 89)', async () => {
+    mockExecFileSequence([{ error: new Error('not a git repository') }])
+    updateTaskMock.mockRejectedValueOnce(new Error('DB error'))
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-catch after branch detection error'))
+  })
+
+  it('logs warning when updateTask fails after empty branch (line 98)', async () => {
+    mockExecFileSequence([{ stdout: '\n' }])
+    updateTaskMock.mockRejectedValueOnce(new Error('DB error'))
+    await resolveSuccess(catchOpts, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-catch after empty branch'))
+  })
+
+  it('logs warning when updateTask fails in no-commits path (line 135)', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/b\n' },  // git rev-parse
+      { stdout: '' },            // git status --porcelain
+      { stdout: '0\n' },         // git rev-list --count (0 commits)
+    ])
+    updateTaskMock.mockRejectedValueOnce(new Error('DB error'))
+    await resolveSuccess({ ...catchOpts, agentSummary: 'some output' }, noopLogger)
+    expect(noopLogger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task task-catch after empty branch'))
+  })
+})
+
 describe('resolveFailure', () => {
   beforeEach(() => {
     updateTaskMock.mockReset()
