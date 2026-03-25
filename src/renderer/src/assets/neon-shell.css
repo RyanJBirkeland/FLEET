@@ -3,12 +3,21 @@
    Neon App Shell — Header, Sidebar, Tooltips
    ═══════════════════════════════════════════════════════ */
 
+/* ── App Shell Background ── */
+.app-shell {
+  background: var(--neon-bg);
+}
+
+.app-shell__body {
+  background: var(--neon-bg);
+}
+
 /* ── Unified Header ── */
 .unified-header {
   height: 44px;
   display: flex;
   align-items: center;
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.06), transparent);
+  background: linear-gradient(180deg, rgba(138, 43, 226, 0.12) 0%, rgba(10, 0, 21, 0.95) 100%);
   border-bottom: 1px solid var(--neon-purple-border);
   -webkit-app-region: drag;
   flex-shrink: 0;
@@ -137,7 +146,7 @@
 /* ── Neon Sidebar ── */
 .neon-sidebar {
   width: 52px;
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.06), rgba(10, 0, 21, 0.6));
+  background: linear-gradient(180deg, rgba(138, 43, 226, 0.1) 0%, rgba(10, 0, 21, 0.95) 100%);
   border-right: 1px solid var(--neon-purple-border);
   display: flex;
   flex-direction: column;
