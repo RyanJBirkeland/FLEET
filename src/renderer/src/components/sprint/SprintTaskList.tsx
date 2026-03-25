@@ -1,152 +1,286 @@
 /**
- * SprintTaskList — Middle-left zone showing all tasks in a scrollable list
+ * SprintTaskList — Filterable left-pane task list for Sprint Center redesign.
+ * Displays tasks with status badges, search, and filtering capabilities.
  */
-import { useMemo } from 'react'
-import { motion } from 'framer-motion'
+import { useState, useMemo } from 'react'
+import { Badge } from '../ui/Badge'
+import { Input } from '../ui/Input'
+import { Search, X } from 'lucide-react'
+import { repoColor, repoBadgeVariant, timeAgo } from '../../lib/format'
+import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
 import type { SprintTask } from '../../../../shared/types'
-import { NeonBadge } from '../neon/NeonBadge'
-import { neonVar } from '../neon/types'
-import { VARIANTS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
+
+type StatusFilter = 'all' | 'backlog' | 'todo' | 'blocked' | 'in-progress' | 'awaiting-review' | 'done' | 'failed'
 
 interface SprintTaskListProps {
   tasks: SprintTask[]
-  selectedId: string | null
-  onSelect: (taskId: string) => void
-  loading?: boolean
+  selectedTaskId: string | null
+  onSelectTask: (task: SprintTask) => void
   repoFilter?: string | null
 }
 
-const statusAccentMap = {
-  backlog: 'blue',
-  queued: 'cyan',
-  active: 'purple',
-  done: 'pink',
-  failed: 'red',
-  cancelled: 'red',
-  error: 'red',
-  blocked: 'orange',
-} as const
+function getStatusLabel(status: StatusFilter): string {
+  switch (status) {
+    case 'all':
+      return 'All Tasks'
+    case 'backlog':
+      return 'Backlog'
+    case 'todo':
+      return 'To Do'
+    case 'blocked':
+      return 'Blocked'
+    case 'in-progress':
+      return 'In Progress'
+    case 'awaiting-review':
+      return 'Awaiting Review'
+    case 'done':
+      return 'Done'
+    case 'failed':
+      return 'Failed'
+    default:
+      return 'All Tasks'
+  }
+}
 
-export function SprintTaskList({ tasks, selectedId, onSelect, loading, repoFilter }: SprintTaskListProps) {
-  const reduced = useReducedMotion()
+function getStatusBadgeVariant(task: SprintTask): 'default' | 'success' | 'warning' | 'danger' | 'info' | 'muted' {
+  switch (task.status) {
+    case 'active':
+      return task.pr_status === 'open' ? 'info' : 'warning'
+    case 'done':
+      return 'success'
+    case 'failed':
+    case 'error':
+    case 'cancelled':
+      return 'danger'
+    case 'blocked':
+      return 'danger'
+    case 'queued':
+      return 'info'
+    case 'backlog':
+    default:
+      return 'muted'
+  }
+}
 
-  const filteredTasks = useMemo(() => {
+function getStatusDisplay(task: SprintTask): string {
+  if (task.status === 'active' && task.pr_status === 'open') {
+    return 'Review'
+  }
+  if (task.status === 'done' && task.pr_status === 'open') {
+    return 'Review'
+  }
+  switch (task.status) {
+    case 'active':
+      return 'Active'
+    case 'queued':
+      return 'Todo'
+    case 'blocked':
+      return 'Blocked'
+    case 'backlog':
+      return 'Backlog'
+    case 'done':
+      return 'Done'
+    case 'failed':
+      return 'Failed'
+    case 'cancelled':
+      return 'Cancelled'
+    case 'error':
+      return 'Error'
+    default:
+      return task.status
+  }
+}
+
+export function SprintTaskList({ tasks, selectedTaskId, onSelectTask, repoFilter }: SprintTaskListProps) {
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
+
+  // Apply repo filter first
+  const repoFilteredTasks = useMemo(() => {
     if (!repoFilter) return tasks
     return tasks.filter((t) => t.repo.toLowerCase() === repoFilter.toLowerCase())
   }, [tasks, repoFilter])
 
+  // Partition tasks for status filtering
+  const partition = useMemo(() => partitionSprintTasks(repoFilteredTasks), [repoFilteredTasks])
+
+  // Apply status filter
+  const statusFilteredTasks = useMemo(() => {
+    switch (statusFilter) {
+      case 'all':
+        return repoFilteredTasks
+      case 'backlog':
+        return partition.backlog
+      case 'todo':
+        return partition.todo
+      case 'blocked':
+        return partition.blocked
+      case 'in-progress':
+        return partition.inProgress
+      case 'awaiting-review':
+        return partition.awaitingReview
+      case 'done':
+        return partition.done
+      case 'failed':
+        return partition.failed
+      default:
+        return repoFilteredTasks
+    }
+  }, [statusFilter, repoFilteredTasks, partition])
+
+  // Apply search filter
+  const filteredTasks = useMemo(() => {
+    if (!searchQuery.trim()) return statusFilteredTasks
+    const query = searchQuery.toLowerCase().trim()
+    return statusFilteredTasks.filter(
+      (task) =>
+        task.title.toLowerCase().includes(query) ||
+        task.repo.toLowerCase().includes(query) ||
+        task.spec?.toLowerCase().includes(query) ||
+        task.notes?.toLowerCase().includes(query)
+    )
+  }, [statusFilteredTasks, searchQuery])
+
+  // Sort by priority (lower number = higher priority) for backlog/todo, by updated_at for others
   const sortedTasks = useMemo(() => {
-    // Sort by: active first, then by priority (descending), then by created (newest first)
     return [...filteredTasks].sort((a, b) => {
-      // Active tasks first
-      if (a.status === 'active' && b.status !== 'active') return -1
-      if (b.status === 'active' && a.status !== 'active') return 1
-
-      // Then by priority (higher first)
-      if (a.priority !== b.priority) return (b.priority || 0) - (a.priority || 0)
-
-      // Then by created date (newer first)
-      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      if (statusFilter === 'backlog' || statusFilter === 'todo' || statusFilter === 'all') {
+        return a.priority - b.priority
+      }
+      return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()
     })
-  }, [filteredTasks])
+  }, [filteredTasks, statusFilter])
 
-  if (loading && tasks.length === 0) {
-    return (
-      <div style={{ padding: '16px', color: 'rgba(255, 255, 255, 0.3)' }}>
-        <div>Loading tasks...</div>
-      </div>
-    )
-  }
+  const statusFilterOptions: StatusFilter[] = [
+    'all',
+    'backlog',
+    'todo',
+    'in-progress',
+    'awaiting-review',
+    'blocked',
+    'done',
+    'failed',
+  ]
 
-  if (sortedTasks.length === 0) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          height: '100%',
-          color: 'rgba(255, 255, 255, 0.2)',
-          fontSize: '13px',
-          fontFamily: 'var(--bde-font-code)',
-        }}
-      >
-        {repoFilter ? `No tasks for ${repoFilter}` : 'No tasks yet'}
-      </div>
-    )
+  const getFilterCount = (filter: StatusFilter): number => {
+    switch (filter) {
+      case 'all':
+        return repoFilteredTasks.length
+      case 'backlog':
+        return partition.backlog.length
+      case 'todo':
+        return partition.todo.length
+      case 'blocked':
+        return partition.blocked.length
+      case 'in-progress':
+        return partition.inProgress.length
+      case 'awaiting-review':
+        return partition.awaitingReview.length
+      case 'done':
+        return partition.done.length
+      case 'failed':
+        return partition.failed.length
+      default:
+        return 0
+    }
   }
 
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1px',
-        overflowY: 'auto',
-        overflowX: 'hidden',
-      }}
-    >
-      {sortedTasks.map((task) => {
-        const accent = statusAccentMap[task.status] || 'blue'
-        const isSelected = task.id === selectedId
+    <div className="sprint-task-list">
+      <div className="sprint-task-list__header">
+        <h2 className="sprint-task-list__title">Tasks</h2>
+        <span className="sprint-task-list__count bde-count-badge">{sortedTasks.length}</span>
+      </div>
 
-        return (
-          <motion.div
-            key={task.id}
-            onClick={() => onSelect(task.id)}
-            style={{
-              padding: '10px 12px',
-              cursor: 'pointer',
-              borderBottom: `1px solid ${neonVar(accent, 'border')}`,
-              background: isSelected
-                ? `linear-gradient(90deg, ${neonVar(accent, 'surface')}, rgba(10, 0, 21, 0.4))`
-                : 'rgba(10, 0, 21, 0.2)',
-              borderLeft: isSelected ? `3px solid ${neonVar(accent, 'color')}` : '3px solid transparent',
-              transition: 'all 0.2s ease',
-            }}
-            whileHover={{
-              background: `linear-gradient(90deg, ${neonVar(accent, 'surface')}, rgba(10, 0, 21, 0.3))`,
-            }}
-            variants={VARIANTS.fadeIn}
-            initial="initial"
-            animate="animate"
-            transition={reduced ? REDUCED_TRANSITION : { duration: 0.2 }}
-          >
-            <div style={{ display: 'flex', alignItems: 'start', gap: '8px', marginBottom: '6px' }}>
-              <NeonBadge accent={accent} label={task.status} />
-              {task.priority !== undefined && task.priority > 0 && (
-                <NeonBadge accent="purple" label={`P${task.priority}`} />
-              )}
-            </div>
-            <div
-              style={{
-                color: 'rgba(255, 255, 255, 0.9)',
-                fontSize: '13px',
-                fontWeight: 500,
-                marginBottom: '4px',
-                lineHeight: '1.3',
-              }}
+      <div className="sprint-task-list__search">
+        <Input
+          value={searchQuery}
+          onChange={setSearchQuery}
+          placeholder="Search tasks..."
+          prefix={<Search size={14} />}
+          suffix={
+            searchQuery && (
+              <button
+                className="sprint-task-list__clear-btn"
+                onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
+              >
+                <X size={14} />
+              </button>
+            )
+          }
+        />
+      </div>
+
+      <div className="sprint-task-list__filters">
+        {statusFilterOptions.map((filter) => {
+          const count = getFilterCount(filter)
+          const isActive = statusFilter === filter
+          return (
+            <button
+              key={filter}
+              className={`sprint-task-list__filter-chip ${isActive ? 'sprint-task-list__filter-chip--active' : ''}`}
+              onClick={() => setStatusFilter(filter)}
+              disabled={count === 0}
             >
-              {task.title}
-            </div>
-            <div
-              style={{
-                color: 'rgba(255, 255, 255, 0.4)',
-                fontSize: '11px',
-                display: 'flex',
-                gap: '8px',
-                alignItems: 'center',
-              }}
-            >
-              <span>{task.repo}</span>
-              {task.pr_number && <span>• PR #{task.pr_number}</span>}
-              {task.depends_on && task.depends_on.length > 0 && (
-                <span>• {task.depends_on.length} dep{task.depends_on.length > 1 ? 's' : ''}</span>
-              )}
-            </div>
-          </motion.div>
-        )
-      })}
+              {getStatusLabel(filter)}
+              <span className="sprint-task-list__filter-count">{count}</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="sprint-task-list__items">
+        {sortedTasks.length === 0 ? (
+          <div className="sprint-task-list__empty">
+            {searchQuery ? 'No tasks match your search' : 'No tasks in this category'}
+          </div>
+        ) : (
+          sortedTasks.map((task, index) => {
+            const isSelected = task.id === selectedTaskId
+            return (
+              <button
+                key={task.id}
+                className={`sprint-task-list-item ${isSelected ? 'sprint-task-list-item--selected' : ''}`}
+                onClick={() => onSelectTask(task)}
+                style={{ '--stagger-index': index } as React.CSSProperties}
+              >
+                <div className="sprint-task-list-item__header">
+                  <span
+                    className="sprint-task-list-item__repo-dot"
+                    style={{ background: repoColor(task.repo) }}
+                    title={task.repo}
+                  />
+                  <span className="sprint-task-list-item__title">{task.title}</span>
+                </div>
+
+                <div className="sprint-task-list-item__meta">
+                  <Badge variant={getStatusBadgeVariant(task)} size="sm">
+                    {getStatusDisplay(task)}
+                  </Badge>
+                  <Badge variant={repoBadgeVariant(task.repo)} size="sm">
+                    {task.repo}
+                  </Badge>
+                  {task.priority <= 2 && (
+                    <Badge variant="danger" size="sm">
+                      P{task.priority}
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="sprint-task-list-item__footer">
+                  <span className="sprint-task-list-item__time">{timeAgo(task.updated_at)}</span>
+                  {task.pr_number && (
+                    <span className="sprint-task-list-item__pr" title={`PR #${task.pr_number}`}>
+                      #{task.pr_number}
+                    </span>
+                  )}
+                </div>
+              </button>
+            )
+          })
+        )}
+      </div>
     </div>
   )
 }
