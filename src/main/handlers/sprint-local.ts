@@ -7,6 +7,7 @@ import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
 import { notifySprintMutation } from './sprint-listeners'
 import { buildBlockedNotes, checkTaskDependencies } from '../agent-manager/dependency-helpers'
+import { detectCycle } from '../agent-manager/dependency-index'
 import {
   generatePrompt,
   validateSpecPath,
@@ -243,10 +244,6 @@ export function registerSprintLocalHandlers(): void {
       taskId: string,
       proposedDeps: Array<{ id: string; type: 'hard' | 'soft' }>,
     ) => {
-      const { detectCycle } = await import(
-        '../agent-manager/dependency-index'
-      )
-
       // Validate all dep targets exist
       for (const dep of proposedDeps) {
         const target = await _getTask(dep.id)
