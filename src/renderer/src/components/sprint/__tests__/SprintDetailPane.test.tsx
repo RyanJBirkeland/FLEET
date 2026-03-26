@@ -295,18 +295,12 @@ describe('SprintDetailPane', () => {
     expect(onEditInWorkbench).toHaveBeenCalledWith(mockTask)
   })
 
-  it('toggles specification section expansion', () => {
+  it('renders inline meta strip with repo and priority', () => {
     render(<SprintDetailPane task={mockTask} onClose={vi.fn()} />)
 
-    const taskWithSpec2 = { ...mockTask, spec: '# Test' }
-
-    // Spec section should be present
-    expect(screen.getByText('Specification')).toBeInTheDocument()
-
-    // Click to collapse
-    fireEvent.click(metadataButton)
-
-    // Should be collapsed (content should not be visible)
-    expect(screen.queryByText('Repo')).not.toBeInTheDocument()
+    // Meta strip shows repo and priority inline
+    expect(screen.getByText('Repo')).toBeInTheDocument()
+    expect(screen.getByText('BDE')).toBeInTheDocument()
+    expect(screen.getByText('P1')).toBeInTheDocument()
   })
 })

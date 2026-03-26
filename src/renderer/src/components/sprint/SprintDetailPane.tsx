@@ -19,7 +19,6 @@ import {
 import { Badge } from '../ui/Badge'
 import { renderMarkdown } from '../../lib/render-markdown'
 import { useSprintTasks } from '../../stores/sprintTasks'
-import { useSprintEvents } from '../../stores/sprintEvents'
 import { TASK_STATUS } from '../../../../shared/constants'
 import { toast } from '../../stores/toasts'
 import type { SprintTask } from '../../../../shared/types'
@@ -88,7 +87,6 @@ export function SprintDetailPane({
   const [specExpanded, setSpecExpanded] = useState(true)
 
   const allTasks = useSprintTasks((s) => s.tasks)
-  const latestEvent = useSprintEvents((s) => (task ? s.latestEvents[task.id] : null))
 
   const dependencyTasks = useMemo(() => {
     if (!task?.depends_on) return []

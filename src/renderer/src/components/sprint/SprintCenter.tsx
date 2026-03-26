@@ -136,7 +136,7 @@ export function SprintCenter() {
         <div className="sprint-center__sidebar">
           {/* Pipeline */}
           <ErrorBoundary name="CircuitPipeline">
-            <CircuitPipeline tasks={tasks} statusFilter={statusFilter} onStageClick={setStatusFilter} />
+            <CircuitPipeline tasks={tasks} statusFilter={statusFilter} onStageClick={setStatusFilter as (filter: string) => void} />
           </ErrorBoundary>
 
           {/* Header */}
