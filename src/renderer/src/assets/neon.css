@@ -146,6 +146,10 @@ html.theme-light {
   100% { background-position: 0 -200px; }
 }
 
+.neon-scanline-overlay {
+  opacity: var(--neon-scanline-opacity);
+}
+
 @keyframes neon-gradient-rotate {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
