@@ -14,9 +14,21 @@ describe('GlassPanel', () => {
     expect(panel.style.backdropFilter).toBeTruthy();
   });
 
-  it('applies accent when provided', () => {
+  it('applies accent border when provided', () => {
     const { container } = render(<GlassPanel accent="purple">X</GlassPanel>);
     const panel = container.firstChild as HTMLElement;
-    expect(panel.style.borderColor).toBe('var(--neon-purple-border)');
+    expect(panel.style.border).toContain('var(--neon-purple-border)');
+  });
+
+  it('uses token borderRadius', () => {
+    const { container } = render(<GlassPanel>X</GlassPanel>);
+    const panel = container.firstChild as HTMLElement;
+    expect(panel.style.borderRadius).toBe('12px');
+  });
+
+  it('uses surfaceDeep background without accent', () => {
+    const { container } = render(<GlassPanel>X</GlassPanel>);
+    const panel = container.firstChild as HTMLElement;
+    expect(panel.style.background).toBe('var(--neon-surface-deep)');
   });
 });

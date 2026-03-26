@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { type NeonAccent, neonVar } from './types';
+import { tokens } from '../../design-system/tokens';
 
 interface GlassPanelProps {
   accent?: NeonAccent;
@@ -16,6 +17,7 @@ const BLUR_MAP = {
 };
 
 export function GlassPanel({ accent, blur = 'md', children, className = '', style }: GlassPanelProps) {
+  const borderVal = accent ? neonVar(accent, 'border') : tokens.neon.surfaceDim;
   return (
     <div
       className={`glass-panel ${className}`.trim()}
@@ -23,11 +25,10 @@ export function GlassPanel({ accent, blur = 'md', children, className = '', styl
         backdropFilter: BLUR_MAP[blur],
         WebkitBackdropFilter: BLUR_MAP[blur],
         background: accent
-          ? `linear-gradient(135deg, ${neonVar(accent, 'surface')}, rgba(10, 0, 21, 0.4))`
-          : 'rgba(20, 10, 40, 0.4)',
-        border: `1px solid ${accent ? neonVar(accent, 'border') : 'rgba(255, 255, 255, 0.08)'}`,
-        borderColor: accent ? neonVar(accent, 'border') : 'rgba(255, 255, 255, 0.08)',
-        borderRadius: '14px',
+          ? `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${tokens.neon.surfaceDeep})`
+          : tokens.neon.surfaceDeep,
+        border: `1px solid ${borderVal}`,
+        borderRadius: tokens.radius.xl,
         boxShadow: 'var(--neon-glass-shadow), var(--neon-glass-edge)',
         ...style,
       }}
