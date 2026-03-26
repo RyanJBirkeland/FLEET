@@ -1,4 +1,5 @@
 import { type NeonAccent, neonVar } from './types';
+import { tokens } from '../../design-system/tokens';
 
 export interface PipelineStage {
   label: string;
@@ -12,16 +13,16 @@ interface PipelineFlowProps {
 
 export function PipelineFlow({ stages }: PipelineFlowProps) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[1], flexWrap: 'wrap' }}>
       {stages.map((stage, i) => (
-        <div key={stage.label} style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+        <div key={stage.label} style={{ display: 'flex', alignItems: 'center', gap: tokens.space[1] }}>
           <div style={{
             background: neonVar(stage.accent, 'surface'),
             border: `1px solid ${neonVar(stage.accent, 'border')}`,
-            borderRadius: '6px',
-            padding: '4px 10px',
+            borderRadius: tokens.radius.md,
+            padding: `${tokens.space[1]} ${tokens.space[2]}`,
             color: neonVar(stage.accent, 'color'),
-            fontSize: '11px',
+            fontSize: tokens.size.xs,
             fontWeight: 600,
             whiteSpace: 'nowrap',
           }}>
@@ -29,8 +30,8 @@ export function PipelineFlow({ stages }: PipelineFlowProps) {
           </div>
           {i < stages.length - 1 && (
             <span data-role="pipeline-arrow" style={{
-              color: 'rgba(255, 255, 255, 0.2)',
-              fontSize: '14px',
+              color: tokens.neon.textDim,
+              fontSize: tokens.size.lg,
             }}>→</span>
           )}
         </div>
