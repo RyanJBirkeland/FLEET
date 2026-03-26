@@ -19,7 +19,6 @@ import { AgentTimeline } from '../components/agents/AgentTimeline'
 import { SpawnModal } from '../components/agents/SpawnModal'
 import { tokens } from '../design-system/tokens'
 import { toast } from '../stores/toasts'
-import { toast } from '../stores/toasts'
 import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
