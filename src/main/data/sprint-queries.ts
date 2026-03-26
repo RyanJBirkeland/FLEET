@@ -155,6 +155,9 @@ export async function updateTask(
   const entries = Object.entries(patch).filter(([k]) => UPDATE_ALLOWLIST.has(k))
   if (entries.length === 0) return null
 
+  // Fetch current state for change tracking
+  const oldTask = await getTask(id)
+
   const updateObj: Record<string, unknown> = {}
   for (const [k, v] of entries) {
     // Sanitize depends_on if it's being updated
@@ -172,6 +175,17 @@ export async function updateTask(
     logger.warn(`[sprint-queries] updateTask failed for id=${id}: ${error}`)
     return null
   }
+
+  // Record changes for audit trail
+  if (oldTask && data) {
+    try {
+      const { recordTaskChanges } = await import('./task-changes')
+      recordTaskChanges(id, oldTask as unknown as Record<string, unknown>, updateObj)
+    } catch (err) {
+      logger.warn(`[sprint-queries] Failed to record task changes: ${err}`)
+    }
+  }
+
   return data ? sanitizeTask(data) : null
 }
 

@@ -49,7 +49,7 @@ const initialState = {
   loading: true,
   loadError: null,
   prMergedMap: {},
-  pendingUpdates: {} as Record<string, number>,
+  pendingUpdates: {} as Record<string, { ts: number; fields: string[] }>,
   pendingCreates: [] as string[],
 }
 
@@ -447,26 +447,32 @@ describe('sprintTasks store', () => {
   })
 
   describe('loadData — advanced cases', () => {
-    it('preserves optimistic version of task with pending update during poll', async () => {
-      const optimistic = makeTask('t1', { status: 'active' })
-      const pendingUpdates: Record<string, number> = { 't1': Date.now() }
+    it('preserves only pending fields from optimistic version during poll', async () => {
+      const optimistic = makeTask('t1', { status: 'active', notes: 'local notes' })
+      const pendingUpdates: Record<string, { ts: number; fields: string[] }> = {
+        't1': { ts: Date.now(), fields: ['status'] },
+      }
       useSprintTasks.setState({ tasks: [optimistic], pendingUpdates, pendingCreates: [] })
 
-      // Poll returns stale version
-      const stale = makeTask('t1', { status: 'backlog' })
+      // Poll returns stale status but has updated notes from server
+      const stale = makeTask('t1', { status: 'backlog', notes: 'server notes' })
       ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([stale])
 
       await useSprintTasks.getState().loadData()
 
-      // Optimistic version should be preserved
+      // Pending field (status) should be preserved from local
       expect(useSprintTasks.getState().tasks[0].status).toBe('active')
+      // Non-pending field (notes) should come from server
+      expect(useSprintTasks.getState().tasks[0].notes).toBe('server notes')
     })
 
     it('expires pending update TTL and accepts incoming data', async () => {
       const optimistic = makeTask('t1', { status: 'active' })
       // Timestamp older than PENDING_UPDATE_TTL (2000ms)
       const oldTs = Date.now() - 3000
-      const pendingUpdates: Record<string, number> = { 't1': oldTs }
+      const pendingUpdates: Record<string, { ts: number; fields: string[] }> = {
+        't1': { ts: oldTs, fields: ['status'] },
+      }
       useSprintTasks.setState({ tasks: [optimistic], pendingUpdates, pendingCreates: [] })
 
       const incoming = makeTask('t1', { status: 'done' })
@@ -476,6 +482,28 @@ describe('sprintTasks store', () => {
 
       // TTL expired — incoming data should win
       expect(useSprintTasks.getState().tasks[0].status).toBe('done')
+    })
+
+    it('merges field-by-field: pending fields from local, rest from server', async () => {
+      const local = makeTask('t1', { status: 'active', priority: 1, notes: 'old local notes', claimed_by: 'agent-1' })
+      const pendingUpdates: Record<string, { ts: number; fields: string[] }> = {
+        't1': { ts: Date.now(), fields: ['status', 'claimed_by'] },
+      }
+      useSprintTasks.setState({ tasks: [local], pendingUpdates, pendingCreates: [] })
+
+      // Server has updated priority and notes, but stale status
+      const server = makeTask('t1', { status: 'backlog', priority: 5, notes: 'server notes', claimed_by: null })
+      ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([server])
+
+      await useSprintTasks.getState().loadData()
+
+      const merged = useSprintTasks.getState().tasks[0]
+      // Pending fields preserved from local
+      expect(merged.status).toBe('active')
+      expect(merged.claimed_by).toBe('agent-1')
+      // Non-pending fields come from server
+      expect(merged.priority).toBe(5)
+      expect(merged.notes).toBe('server notes')
     })
 
     it('preserves pending-create temp tasks not yet in DB', async () => {

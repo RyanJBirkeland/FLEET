@@ -25,8 +25,10 @@ import { startPrPoller, stopPrPoller } from './pr-poller'
 import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
 import { startQueueApi, stopQueueApi } from './queue-api'
 import { pruneOldEvents } from './data/event-queries'
+import { pruneOldChanges } from './data/task-changes'
 import { getEventRetentionDays } from './config'
 import { createAgentManager } from './agent-manager'
+import { createSprintTaskRepository } from './data/sprint-task-repository'
 import { getOAuthToken } from './env-utils'
 import { getSetting, getSettingJson } from './settings'
 
@@ -101,6 +103,9 @@ app.whenReady().then(() => {
 
   pruneOldEvents(getDb(), getEventRetentionDays())
 
+  // Prune old audit trail records (non-fatal)
+  try { pruneOldChanges(30) } catch { /* non-fatal */ }
+
   // --- Agent Manager initialization ---
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
@@ -117,7 +122,8 @@ app.whenReady().then(() => {
   if (autoStart) {
     getOAuthToken()
 
-    const am = createAgentManager(amConfig)
+    const repo = createSprintTaskRepository()
+    const am = createAgentManager(amConfig, repo)
     am.start()
     app.on('will-quit', () => am.stop(10_000))
 

@@ -278,4 +278,9 @@ export function registerSprintLocalHandlers(): void {
     if (updated) notifySprintMutation('updated', updated)
     return updated
   })
+
+  safeHandle('sprint:getChanges', async (_e, taskId: string) => {
+    const { getTaskChanges } = await import('../data/task-changes')
+    return getTaskChanges(taskId)
+  })
 }
