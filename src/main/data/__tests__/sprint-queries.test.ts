@@ -52,6 +52,10 @@ vi.mock('../supabase-client', () => ({
   getSupabaseClient: () => ({ from: mockFrom }),
 }))
 
+vi.mock('../task-changes', () => ({
+  recordTaskChanges: vi.fn(),
+}))
+
 beforeEach(() => {
   vi.clearAllMocks()
 })
@@ -152,10 +156,18 @@ describe('updateTask', () => {
   })
 
   it('updates allowed fields', async () => {
+    const oldTask = { id: 'abc', title: 'Old', priority: 1 }
     const updated = { id: 'abc', title: 'Updated', priority: 3 }
-    const chain = chainable()
-    ;(chain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: updated, error: null })
-    mockUpdate.mockReturnValue(chain)
+
+    // First call: getTask (SELECT) — returns the old task
+    const selectChain = chainable()
+    ;(selectChain.maybeSingle as ReturnType<typeof vi.fn>).mockResolvedValue({ data: oldTask, error: null })
+    mockSelect.mockReturnValueOnce(selectChain)
+
+    // Second call: update — returns the updated task
+    const updateChain = chainable()
+    ;(updateChain.single as ReturnType<typeof vi.fn>).mockResolvedValue({ data: updated, error: null })
+    mockUpdate.mockReturnValue(updateChain)
 
     const result = await updateTask('abc', { title: 'Updated', priority: 3 })
     // sanitizeTask adds depends_on: null when not present

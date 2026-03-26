@@ -247,6 +247,10 @@ export interface SprintChannels {
     args: [taskId: string]
     result: SprintTask | null
   }
+  'sprint:getChanges': {
+    args: [taskId: string]
+    result: Array<{ id: number; task_id: string; field: string; old_value: string | null; new_value: string | null; changed_by: string; changed_at: string }>
+  }
 }
 
 /** Window shell integration */
