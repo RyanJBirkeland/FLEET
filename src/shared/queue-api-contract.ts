@@ -46,7 +46,7 @@ export const RUNNER_WRITABLE_STATUSES = new Set(['queued', 'active', 'done', 'fa
 export const STATUS_UPDATE_FIELDS = new Set([
   'status', 'prUrl', 'prNumber', 'prStatus', 'prMergeableState',
   'completedAt', 'startedAt', 'agentRunId', 'retryCount',
-  'fastFailCount', 'notes', 'maxRuntimeMs',
+  'fastFailCount', 'notes', 'maxRuntimeMs', 'needsReview',
 ])
 
 /** Allowed fields for general PATCH /queue/tasks/:id — excludes status, claimed_by, depends_on

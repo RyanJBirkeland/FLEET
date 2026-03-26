@@ -340,7 +340,7 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
   const now = new Date().toISOString()
 
   if (ffResult === 'fast-fail-exhausted') {
-    await repo.updateTask(task.id, { status: 'error', completed_at: now, notes: 'Fast-fail exhausted', claimed_by: null })
+    await repo.updateTask(task.id, { status: 'error', completed_at: now, notes: 'Fast-fail exhausted', claimed_by: null, needs_review: true })
       .catch((err) => logger.error(`[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`))
     await onTaskTerminal(task.id, 'error')
   } else if (ffResult === 'fast-fail-requeue') {

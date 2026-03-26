@@ -182,6 +182,7 @@ export function registerSprintLocalHandlers(): void {
       }
     }
 
+    if (patch.status === 'queued') { patch.needs_review = false }
     return updateTask(id, patch)
   })
 
@@ -225,6 +226,7 @@ export function registerSprintLocalHandlers(): void {
   })
 
   safeHandle('sprint:healthCheck', async () => {
+    try { const allTasks = await _listTasks(); const oneHourAgo = Date.now() - 3600000; for (const task of allTasks) { if (['error', 'failed'].includes(task.status) && !task.needs_review) { const updatedAt = new Date(task.updated_at).getTime(); if (updatedAt < oneHourAgo) { await _updateTask(task.id, { needs_review: true }) } } } } catch (err) { console.warn('[sprint:healthCheck] Failed to flag stuck tasks:', err) }
     return _getHealthCheckTasks()
   })
 

@@ -253,7 +253,7 @@ describe('sprint:update handler', () => {
     await handler(mockEvent, '1', { status: 'queued' })
 
     // Since deps are satisfied, patch should not be changed to blocked
-    expect(_updateTask).toHaveBeenCalledWith('1', { status: 'queued' })
+    expect(_updateTask).toHaveBeenCalledWith('1', { status: 'queued', needs_review: false })
   })
 
   it('transitions status to blocked when dependencies are unsatisfied', async () => {

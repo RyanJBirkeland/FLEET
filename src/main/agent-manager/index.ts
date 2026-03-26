@@ -91,11 +91,11 @@ export function handleWatchdogVerdict(
   logger: Logger,
 ): ConcurrencyState {
   if (verdict === 'max-runtime') {
-    updateTaskFn(taskId, { status: 'error', completed_at: now, notes: 'Max runtime exceeded' })
+    updateTaskFn(taskId, { status: 'error', completed_at: now, notes: 'Max runtime exceeded', needs_review: true })
       .then(() => onTerminal(taskId, 'error'))
       .catch((err) => logger.warn(`[agent-manager] Failed to update task ${taskId} after max-runtime kill: ${err}`))
   } else if (verdict === 'idle') {
-    updateTaskFn(taskId, { status: 'error', completed_at: now, notes: 'Idle timeout' })
+    updateTaskFn(taskId, { status: 'error', completed_at: now, notes: 'Idle timeout', needs_review: true })
       .then(() => onTerminal(taskId, 'error'))
       .catch((err) => logger.warn(`[agent-manager] Failed to update task ${taskId} after idle kill: ${err}`))
   } else if (verdict === 'rate-limit-loop') {

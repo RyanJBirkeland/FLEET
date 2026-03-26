@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { ArrowRight, Eye, CheckCircle2, RefreshCw, ExternalLink } from 'lucide-react'
+import { ArrowRight, Eye, CheckCircle2, RefreshCw, ExternalLink, AlertTriangle } from 'lucide-react'
 import { Badge } from '../ui/Badge'
 import { tokens } from '../../design-system/tokens'
 import { timeAgo, formatDate, repoBadgeVariant } from '../../lib/format'
