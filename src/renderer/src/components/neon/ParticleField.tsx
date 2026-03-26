@@ -6,18 +6,25 @@ interface ParticleFieldProps {
 }
 
 const DRIFT_ANIMATIONS = ['neon-particle-drift-1', 'neon-particle-drift-2', 'neon-particle-drift-3'];
+const DURATION_BASE_S = 20;
+const DURATION_RANGE_S = 20;
+const DELAY_RANGE_S = -30;
+const SIZE_MIN_PX = 2;
+const SIZE_RANGE_PX = 2;
+const TOP_OFFSET_PCT = 20;
+const TOP_RANGE_PCT = 80;
 
 export function ParticleField({ density = 18 }: ParticleFieldProps) {
   const particles = useMemo(() => {
     return Array.from({ length: density }, (_, i) => ({
       id: i,
       left: `${Math.random() * 100}%`,
-      top: `${20 + Math.random() * 80}%`,
+      top: `${TOP_OFFSET_PCT + Math.random() * TOP_RANGE_PCT}%`,
       accent: NEON_ACCENTS[i % NEON_ACCENTS.length],
-      duration: `${20 + Math.random() * 20}s`,
-      delay: `${Math.random() * -30}s`,
+      duration: `${DURATION_BASE_S + Math.random() * DURATION_RANGE_S}s`,
+      delay: `${Math.random() * DELAY_RANGE_S}s`,
       animation: DRIFT_ANIMATIONS[i % DRIFT_ANIMATIONS.length],
-      size: `${2 + Math.random() * 2}px`,
+      size: `${SIZE_MIN_PX + Math.random() * SIZE_RANGE_PX}px`,
     }));
   }, [density]);
 
