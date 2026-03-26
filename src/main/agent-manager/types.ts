@@ -41,6 +41,8 @@ export interface AgentHandle {
   sessionId: string
   abort(): void
   steer(message: string): Promise<void>
+  /** Optional callback invoked with each line of stderr output. */
+  onStderr?: (line: string) => void
 }
 
 export interface ActiveAgent {

@@ -180,6 +180,12 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
   }
 
   const agentRunId = randomUUID()
+
+  // Wire up stderr capture — emit as agent:stderr events (non-blocking)
+  handle.onStderr = (line: string) => {
+    emitAgentEvent(agentRunId, { type: 'agent:stderr', text: line, timestamp: Date.now() })
+  }
+
   const agent: ActiveAgent = {
     taskId: task.id,
     agentRunId,

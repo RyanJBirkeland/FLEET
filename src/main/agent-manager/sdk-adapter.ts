@@ -107,8 +107,26 @@ function spawnViaCli(
     },
   )
 
-  // Drain stderr to prevent pipe buffer backpressure
-  child.stderr.resume()
+  // Capture stderr line-by-line and forward via onStderr callback
+  let stderrBuffer = ''
+  child.stderr.on('data', (chunk: Buffer) => {
+    stderrBuffer += chunk.toString()
+    const lines = stderrBuffer.split('\n')
+    stderrBuffer = lines.pop() ?? ''
+    for (const line of lines) {
+      const trimmed = line.trim()
+      if (trimmed && handle.onStderr) {
+        handle.onStderr(trimmed)
+      }
+    }
+  })
+  child.stderr.on('end', () => {
+    const trimmed = stderrBuffer.trim()
+    if (trimmed && handle.onStderr) {
+      handle.onStderr(trimmed)
+    }
+    stderrBuffer = ''
+  })
 
   const sessionId = randomUUID()
 
@@ -139,7 +157,7 @@ function spawnViaCli(
     }
   }
 
-  return {
+  const handle: AgentHandle = {
     messages: parseMessages(),
     sessionId,
     abort() {
@@ -157,4 +175,6 @@ function spawnViaCli(
       )
     },
   }
+
+  return handle
 }

@@ -116,6 +116,12 @@ export interface AgentErrorEvent extends TaskOutputEvent {
   message: string
 }
 
+/** Agent stderr output */
+export interface AgentStderrEvent extends TaskOutputEvent {
+  type: 'agent:stderr'
+  text: string
+}
+
 /** Agent finished execution */
 export interface AgentCompletedEvent extends TaskOutputEvent {
   type: 'agent:completed'
