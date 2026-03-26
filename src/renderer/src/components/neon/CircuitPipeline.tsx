@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react';
+import { tokens } from '../../design-system/tokens';
 import { type NeonAccent, neonVar } from './types';
 
 export interface CircuitNode {
@@ -40,8 +41,8 @@ export function CircuitPipeline({
         display: 'flex',
         flexDirection: isHorizontal ? 'row' : 'column',
         alignItems: 'center',
-        gap: isHorizontal ? '24px' : '16px',
-        padding: compact ? '12px' : '16px',
+        gap: isHorizontal ? tokens.space[6] : tokens.space[4],
+        padding: compact ? tokens.space[3] : tokens.space[4],
         position: 'relative',
       }}
       data-orientation={orientation}
@@ -53,7 +54,7 @@ export function CircuitPipeline({
             display: 'flex',
             flexDirection: isHorizontal ? 'row' : 'column',
             alignItems: 'center',
-            gap: isHorizontal ? '24px' : '16px',
+            gap: isHorizontal ? tokens.space[6] : tokens.space[4],
             position: 'relative',
           }}
         >
@@ -65,17 +66,17 @@ export function CircuitPipeline({
               position: 'relative',
               width: `${nodeSize}px`,
               height: `${nodeSize}px`,
-              borderRadius: '12px',
-              background: `linear-gradient(135deg, ${neonVar(node.accent, 'surface')}, rgba(10, 0, 21, 0.4))`,
+              borderRadius: tokens.radius.xl,
+              background: `linear-gradient(135deg, ${neonVar(node.accent, 'surface')}, ${tokens.neon.surfaceDeep})`,
               border: `2px solid ${neonVar(node.accent, 'border')}`,
               boxShadow: node.active
-                ? `${neonVar(node.accent, 'glow')}, inset 0 1px 0 rgba(255, 255, 255, 0.1)`
-                : 'inset 0 1px 0 rgba(255, 255, 255, 0.05)',
+                ? `${neonVar(node.accent, 'glow')}, inset 0 1px 0 ${tokens.neon.surfaceSubtle}`
+                : `inset 0 1px 0 ${tokens.neon.surfaceDim}`,
               display: 'flex',
               flexDirection: 'column',
               alignItems: 'center',
               justifyContent: 'center',
-              gap: '4px',
+              gap: tokens.space[1],
               transition: 'all 200ms ease',
               animation: node.active && animated ? 'circuit-pulse 2s ease-in-out infinite' : undefined,
               '--pulse-shadow-min': `0 0 8px ${neonVar(node.accent, 'border')}`,
@@ -115,7 +116,7 @@ export function CircuitPipeline({
               <div
                 style={{
                   color: neonVar(node.accent, 'color'),
-                  fontSize: compact ? '14px' : '18px',
+                  fontSize: compact ? tokens.size.lg : tokens.size.xxl,
                   lineHeight: 1,
                 }}
               >
@@ -127,7 +128,7 @@ export function CircuitPipeline({
             <div
               style={{
                 color: neonVar(node.accent, 'color'),
-                fontSize: compact ? '16px' : '20px',
+                fontSize: compact ? tokens.size.xl : tokens.size.xxl,
                 fontWeight: 700,
                 lineHeight: 1,
                 textShadow: neonVar(node.accent, 'glow'),
@@ -140,7 +141,7 @@ export function CircuitPipeline({
             <div
               style={{
                 color: neonVar(node.accent, 'color'),
-                fontSize: compact ? '8px' : '9px',
+                fontSize: tokens.size.xs,
                 fontWeight: 600,
                 letterSpacing: '0.5px',
                 textTransform: 'uppercase' as const,
