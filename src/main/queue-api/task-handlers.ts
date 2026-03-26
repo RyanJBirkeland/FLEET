@@ -12,9 +12,10 @@ import {
   claimTask,
   releaseTask,
   getTasksWithDependencies,
+  getActiveTaskCount,
 } from '../data/sprint-queries'
 import type { StatusUpdateRequest, ClaimRequest } from '../../shared/queue-api-contract'
-import { STATUS_UPDATE_FIELDS, RUNNER_WRITABLE_STATUSES, GENERAL_PATCH_FIELDS } from '../../shared/queue-api-contract'
+import { STATUS_UPDATE_FIELDS, RUNNER_WRITABLE_STATUSES, GENERAL_PATCH_FIELDS, MAX_ACTIVE_TASKS } from '../../shared/queue-api-contract'
 import { toCamelCase, toSnakeCase } from './field-mapper'
 import { detectCycle } from '../agent-manager/dependency-index'
 import { buildBlockedNotes, checkTaskDependencies } from '../agent-manager/dependency-helpers'
@@ -400,6 +401,18 @@ export async function handleClaim(
   const { executorId } = body as ClaimRequest
   if (typeof executorId !== 'string' || !executorId.trim()) {
     sendJson(res, 400, { error: 'executorId is required' })
+    return
+  }
+
+  // Enforce WIP limit — prevent more than MAX_ACTIVE_TASKS active tasks.
+  // Note: TOCTOU race exists between this check and claimTask() below.
+  // Acceptable because BDE's drain loop is the primary caller and runs
+  // sequentially. For true atomicity, this would need a Supabase RPC.
+  const activeCount = await getActiveTaskCount()
+  if (activeCount >= MAX_ACTIVE_TASKS) {
+    sendJson(res, 409, {
+      error: `WIP limit reached (${activeCount}/${MAX_ACTIVE_TASKS} active tasks). Complete or cancel an active task first.`
+    })
     return
   }
 

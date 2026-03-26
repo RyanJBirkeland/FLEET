@@ -13,6 +13,7 @@ const mockClaimTask = vi.fn()
 const mockReleaseTask = vi.fn()
 const mockGetTasksWithDependencies = vi.fn()
 const mockDeleteTask = vi.fn()
+const mockGetActiveTaskCount = vi.fn()
 
 vi.mock('../../data/sprint-queries', () => ({
   getQueueStats: (...args: unknown[]) => mockGetQueueStats(...args),
@@ -24,6 +25,7 @@ vi.mock('../../data/sprint-queries', () => ({
   releaseTask: (...args: unknown[]) => mockReleaseTask(...args),
   getTasksWithDependencies: (...args: unknown[]) => mockGetTasksWithDependencies(...args),
   deleteTask: (...args: unknown[]) => mockDeleteTask(...args),
+  getActiveTaskCount: (...args: unknown[]) => mockGetActiveTaskCount(...args),
 }))
 
 // ---------------------------------------------------------------------------
@@ -147,6 +149,7 @@ beforeEach(() => {
   mockGetDb.mockReturnValue({}) // default db mock
   mockGetTasksWithDependencies.mockResolvedValue([]) // default empty tasks list
   mockDeleteTask.mockResolvedValue(undefined) // default delete success
+  mockGetActiveTaskCount.mockResolvedValue(0) // default: no active tasks (WIP limit not hit)
   mockCheckSpecSemantic.mockResolvedValue({
     passed: true,
     hasFails: false,
@@ -440,6 +443,29 @@ describe('Queue API', () => {
     it('rejects missing executorId', async () => {
       const { status } = await request('POST', '/queue/tasks/abc/claim', {})
       expect(status).toBe(400)
+    })
+
+    it('rejects claim when active task count is at WIP limit', async () => {
+      mockGetActiveTaskCount.mockResolvedValue(5)
+
+      const { status, body } = await request('POST', '/queue/tasks/abc/claim', {
+        executorId: 'runner-1',
+      })
+      expect(status).toBe(409)
+      expect((body as { error: string }).error).toMatch(/WIP limit reached/)
+      expect(mockClaimTask).not.toHaveBeenCalled()
+    })
+
+    it('allows claim when active task count is below WIP limit', async () => {
+      mockGetActiveTaskCount.mockResolvedValue(4)
+      const claimed = { id: 'abc', status: 'active', claimed_by: 'runner-1' }
+      mockClaimTask.mockResolvedValue(claimed)
+
+      const { status, body } = await request('POST', '/queue/tasks/abc/claim', {
+        executorId: 'runner-1',
+      })
+      expect(status).toBe(200)
+      expect(body).toEqual({ id: 'abc', status: 'active', claimedBy: 'runner-1' })
     })
   })
 
