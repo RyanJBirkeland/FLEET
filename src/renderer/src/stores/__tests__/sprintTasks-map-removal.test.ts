@@ -44,16 +44,16 @@ describe('sprintTasks store — Map/Set removal', () => {
 
   it('pendingUpdates can be set and read via spread', () => {
     useSprintTasks.setState((s) => ({
-      pendingUpdates: { ...s.pendingUpdates, 'task-1': 12345 },
+      pendingUpdates: { ...s.pendingUpdates, 'task-1': { ts: 12345, fields: ['status'] } },
     }))
     const { pendingUpdates } = useSprintTasks.getState()
     expect('task-1' in pendingUpdates).toBe(true)
-    expect(pendingUpdates['task-1']).toBe(12345)
+    expect(pendingUpdates['task-1']).toEqual({ ts: 12345, fields: ['status'] })
     expect(pendingUpdates).not.toBeInstanceOf(Map)
   })
 
   it('pendingUpdates can remove a key via destructuring', () => {
-    useSprintTasks.setState({ pendingUpdates: { 'task-1': 100, 'task-2': 200 } })
+    useSprintTasks.setState({ pendingUpdates: { 'task-1': { ts: 100, fields: ['status'] }, 'task-2': { ts: 200, fields: ['notes'] } } })
     useSprintTasks.setState((s) => {
       const { ['task-1']: _, ...rest } = s.pendingUpdates
       return { pendingUpdates: rest }

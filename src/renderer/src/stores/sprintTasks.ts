@@ -40,7 +40,7 @@ interface SprintTasksState {
   prMergedMap: Record<string, boolean>
 
   // --- Optimistic update protection ---
-  pendingUpdates: Record<string, number> // taskId → timestamp
+  pendingUpdates: Record<string, { ts: number; fields: string[] }> // taskId → {timestamp, field names}
   pendingCreates: string[] // temp IDs of optimistically created tasks
 
   // --- Actions ---
@@ -73,21 +73,31 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
 
         // Expire old pending updates (using a local Map for O(1) mutation)
         const nextPendingMap = new Map(Object.entries(s.pendingUpdates))
-        for (const [id, ts] of nextPendingMap) {
-          if (now - ts > PENDING_UPDATE_TTL) nextPendingMap.delete(id)
+        for (const [id, pending] of nextPendingMap) {
+          if (now - pending.ts > PENDING_UPDATE_TTL) nextPendingMap.delete(id)
         }
-        const nextPending: Record<string, number> = Object.fromEntries(nextPendingMap)
+        const nextPending: Record<string, { ts: number; fields: string[] }> = Object.fromEntries(nextPendingMap)
 
         // Build a map of current optimistic tasks by ID for quick lookup
         const currentTaskMap = new Map(s.tasks.map((t) => [t.id, t]))
 
-        // Merge incoming data, preserving optimistic versions for pending updates
+        // Merge incoming data, preserving only pending FIELDS from local version
         const mergedById = new Map<string, SprintTask>()
         for (const task of incoming) {
-          if (task.id in nextPending) {
-            // Keep optimistic version — DB hasn't caught up yet
-            const optimistic = currentTaskMap.get(task.id)
-            mergedById.set(task.id, optimistic ?? task)
+          const pending = nextPending[task.id]
+          if (pending) {
+            const localTask = currentTaskMap.get(task.id)
+            if (localTask && now - pending.ts <= PENDING_UPDATE_TTL) {
+              // Merge: start with server data, overlay only the pending fields from local
+              const merged = { ...task } as unknown as Record<string, unknown>
+              for (const field of pending.fields) {
+                merged[field] = (localTask as unknown as Record<string, unknown>)[field]
+              }
+              mergedById.set(task.id, merged as unknown as SprintTask)
+            } else {
+              // TTL expired or local task missing — use server data
+              mergedById.set(task.id, task)
+            }
           } else {
             mergedById.set(task.id, task)
           }
@@ -113,7 +123,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   updateTask: async (taskId, patch): Promise<void> => {
     // Record pending update before optimistic patch
     set((s) => ({
-      pendingUpdates: { ...s.pendingUpdates, [taskId]: Date.now() },
+      pendingUpdates: { ...s.pendingUpdates, [taskId]: { ts: Date.now(), fields: Object.keys(patch) } },
       tasks: s.tasks.map((t) =>
         t.id === taskId ? { ...t, ...patch, updated_at: new Date().toISOString() } : t
       ),
