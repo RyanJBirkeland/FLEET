@@ -56,6 +56,21 @@ export const GENERAL_PATCH_FIELDS = new Set([
   'maxRuntimeMs',
 ])
 
+// --- Batch Operations ---
+
+export interface BatchOperation {
+  op: 'update' | 'delete'
+  id: string
+  patch?: Record<string, unknown>  // required for update
+}
+
+export interface BatchResult {
+  id: string
+  op: 'update' | 'delete'
+  ok: boolean
+  error?: string
+}
+
 // --- Streaming Visibility Event Types ---
 
 /** All possible event type discriminators */
