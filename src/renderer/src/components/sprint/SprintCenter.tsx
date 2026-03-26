@@ -279,9 +279,8 @@ export function SprintCenter() {
             ) : (
               <SprintTaskList
                 tasks={tasks}
-                selectedId={selectedTaskId}
-                onSelect={setSelectedTaskId}
-                loading={loading}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={(task) => setSelectedTaskId(task.id)}
                 repoFilter={repoFilter}
               />
             )}
@@ -293,6 +292,7 @@ export function SprintCenter() {
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             <SprintDetailPane
               task={selectedTask}
+              onClose={() => setSelectedTaskId(null)}
               onLaunch={launchTask}
               onStop={handleStop}
               onRerun={handleRerun}

@@ -18,8 +18,7 @@ import {
 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
-import { SpecViewer } from './SpecViewer'
-import { SpecEditor } from './SpecEditor'
+import { renderMarkdown } from '../../lib/render-markdown'
 import { tokens } from '../../design-system/tokens'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintEvents } from '../../stores/sprintEvents'
@@ -324,7 +323,22 @@ export function SprintDetailPane({
           >
             {editingSpec ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[2] }}>
-                <SpecEditor value={specDraft} onChange={setSpecDraft} />
+                <textarea
+                  value={specDraft}
+                  onChange={(e) => setSpecDraft(e.target.value)}
+                  style={{
+                    width: '100%',
+                    minHeight: '200px',
+                    padding: tokens.space[2],
+                    fontSize: tokens.size.sm,
+                    fontFamily: tokens.font.code,
+                    color: tokens.color.text,
+                    background: tokens.color.bg,
+                    border: `1px solid ${tokens.color.border}`,
+                    borderRadius: '4px',
+                    resize: 'vertical',
+                  }}
+                />
                 <div style={{ display: 'flex', gap: tokens.space[2] }}>
                   <Button variant="primary" size="sm" onClick={handleSaveSpec}>
                     Save Spec
@@ -336,7 +350,15 @@ export function SprintDetailPane({
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[2] }}>
-                <SpecViewer content={task.spec || task.prompt || ''} onEdit={handleStartEditSpec} />
+                <div
+                  dangerouslySetInnerHTML={{ __html: renderMarkdown(task.spec || task.prompt || '') }}
+                  style={{
+                    fontSize: tokens.size.sm,
+                    fontFamily: tokens.font.code,
+                    color: tokens.color.text,
+                    lineHeight: 1.6,
+                  }}
+                />
                 {onSaveSpec && (
                   <Button variant="ghost" size="sm" onClick={handleStartEditSpec}>
                     <Edit3 size={14} /> Edit Spec
