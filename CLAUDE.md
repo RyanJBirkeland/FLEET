@@ -50,6 +50,10 @@ Format: `{type}: {description}`
 - Agent event mapping/emission: `src/main/agent-event-mapper.ts` (shared by adhoc + pipeline agents)
 - Worktree management: `src/main/agent-manager/worktree.ts`
 - Shutdown/lifecycle: `src/main/agent-manager/index.ts`
+- Repository interface: `src/main/data/sprint-task-repository.ts` (ISprintTaskRepository + factory)
+- Audit trail: `src/main/data/task-changes.ts` (field-level change tracking in SQLite)
+- Shared logger: `src/main/logger.ts` (createLogger → `~/.bde/bde.log`)
+- Polling hook: `src/renderer/src/hooks/useBackoffInterval.ts` (backoff + jitter)
 
 ## PR Rules
 
@@ -80,8 +84,9 @@ These files are edited frequently across branches. Take extra care when modifyin
 
 ## Architecture Notes
 
-- **Data layer**: SQLite at `~/.bde/bde.db` (WAL mode, schema in `src/main/db.ts`) for local tables: `agent_runs`, `settings`, `cost_events`, `agent_events`. Sprint tasks live in **Supabase** (`sprint_tasks` table) — accessed via `src/main/data/sprint-queries.ts`. Local `sprint_tasks` was dropped in migration v12.
-- **AgentManager**: `src/main/agent-manager/` — in-process task orchestration. Drain loop watches for queued tasks, spawns agents in git worktrees via SDK, monitors with watchdogs, handles completion (push branch, open PR, retry logic). Fully dependency-injected — passed as parameter to handler registration functions (no globalThis). Core agent lifecycle in `run-agent.ts` with explicit `RunAgentDeps` interface.
+- **Data layer**: SQLite at `~/.bde/bde.db` (WAL mode, schema in `src/main/db.ts`) for local tables: `agent_runs`, `settings`, `cost_events`, `agent_events`, `task_changes`. Sprint tasks live in **Supabase** (`sprint_tasks` table) — accessed via `src/main/data/sprint-queries.ts`. Local `sprint_tasks` was dropped in migration v12. Audit trail stored in `task_changes` table (migration v14) — field-level diffs logged on every `updateTask()` call.
+- **Repository pattern**: `src/main/data/sprint-task-repository.ts` defines `ISprintTaskRepository` interface. Agent manager receives the repository via constructor injection (`createAgentManager(config, repo, logger)`). Concrete implementation delegates to sprint-queries. IPC handlers (sprint-local.ts) and Queue API (task-handlers.ts) still import sprint-queries directly — they're thin enough not to need the abstraction.
+- **AgentManager**: `src/main/agent-manager/` — in-process task orchestration. Drain loop watches for queued tasks, spawns agents in git worktrees via SDK, monitors with watchdogs, handles completion (push branch, open PR, retry logic). All data access goes through `ISprintTaskRepository` (injected). Core agent lifecycle in `run-agent.ts` with explicit `RunAgentDeps` interface. Per-task `max_runtime_ms` overrides the global 1-hour watchdog limit.
 - **AuthGuard**: `src/main/auth-guard.ts` — validates Claude Code subscription token. NOT called in the drain loop (Keychain access hangs in Electron). Auth is validated by the SDK at spawn time instead. Users must run `claude login` to authenticate.
 - **Task dependencies**: `src/main/agent-manager/dependency-index.ts` (in-memory reverse index, cycle detection), `src/main/agent-manager/resolve-dependents.ts` (blocked→queued transitions). Tasks can declare `depends_on: TaskDependency[]` with `hard` (block on failure) or `soft` (unblock regardless) edges. `blocked` status = unsatisfied hard deps. Resolution triggered from all terminal status paths.
 - **PR poller**: `src/main/pr-poller.ts` — polls open PRs from all configured repos every 60s, fetches check runs, broadcasts `pr:listUpdated` to renderer. Separate from sprint PR poller.
@@ -89,7 +94,7 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **State**: Zustand stores in `src/renderer/src/stores/`
 - **IPC**: 17 handler modules in `src/main/handlers/`, registered in `src/main/index.ts`, preload bridge in `src/preload/index.ts`. 87 typed channels in `src/shared/ipc-channels.ts`.
 - **Agent spawning**: `src/main/agent-manager/sdk-adapter.ts` spawns agents via `@anthropic-ai/claude-agent-sdk` (with CLI fallback). OAuth token read from `~/.bde/oauth-token` at startup — Keychain access hangs in Electron's main process, so the file-based approach is required.
-- **Queue API**: `src/main/queue-api/` — HTTP server on port 18790. Split into `helpers.ts` (auth, parsing), `task-handlers.ts` (CRUD), `agent-handlers.ts` (logs), `event-handlers.ts` (SSE, output). Router is thin dispatch (~116 lines). Task CRUD with camelCase field mapping, SSE broadcaster, auth via Bearer header or `?token=` query param. General PATCH restricted to safe fields via `GENERAL_PATCH_FIELDS`; status changes must use `/status` endpoint.
+- **Queue API**: `src/main/queue-api/` — HTTP server on port 18790. Split into `helpers.ts` (auth, parsing), `task-handlers.ts` (CRUD), `agent-handlers.ts` (logs), `event-handlers.ts` (SSE, output). Router is thin dispatch (~116 lines). Task CRUD with camelCase field mapping, SSE broadcaster, auth via Bearer header or `?token=` query param. General PATCH restricted to safe fields via `GENERAL_PATCH_FIELDS`; status changes must use `/status` endpoint. Claim endpoint enforces WIP limit (`MAX_ACTIVE_TASKS=5`, fail-closed on Supabase errors). Dependency validation runs BEFORE task creation (no rollback needed).
 - **DB sync**: File watcher on `bde.db` pushes `sprint:externalChange` IPC events to renderer (500ms debounce)
 - **Design tokens**: `src/renderer/src/design-system/tokens.ts` — use these instead of hardcoded values. Neon theme tokens in CSS custom properties (`neon.css`, `neon-shell.css`, `agents-neon.css`).
 - **Neon components**: `src/renderer/src/components/neon/` (12 primitives: NeonCard, StatCounter, NeonBadge, GlassPanel, ActivityFeed, NeonProgress, PipelineFlow, MiniChart, StatusBar, ScanlineOverlay, ParticleField, NeonTooltip). Used by Dashboard + Agents views. Glass morphism, glow effects, terminal aesthetic.
@@ -99,7 +104,9 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **IDE**: `src/renderer/src/views/IDEView.tsx` + `src/renderer/src/components/ide/` (9 components). Monaco editor + file explorer sidebar + integrated terminal. `ideStore` in `src/renderer/src/stores/ide.ts`. File I/O via `ide-fs-handlers.ts` (path-scoped to opened root, atomic writes, binary detection). State persisted to `ide.state` setting with 2s debounce.
 - **PR Station**: Full code review tool in `src/renderer/src/components/pr-station/` (11 components) + `src/renderer/src/components/diff/` (DiffViewer, DiffCommentWidget, DiffCommentComposer). Features: PR list with filter bar (repo chips, sort), CI badges, detail panel with MergeButton (squash/merge/rebase), reviews, conversation timeline, changed files, conflict detection, diff viewer with inline comments, batch review submission. `pendingReview` Zustand store tracks pending comments per PR (persisted to localStorage, restored on app init). All GitHub API calls in `src/renderer/src/lib/github-api.ts` proxied through `github:fetch` IPC.
 - **Source Control**: `src/renderer/src/views/GitTreeView.tsx` + `src/renderer/src/components/git-tree/` (5 components: GitFileRow, FileTreeSection, CommitBox, BranchSelector, InlineDiffDrawer). `gitTree` Zustand store in `src/renderer/src/stores/gitTree.ts`. Uses existing git IPC channels (`git:status`, `git:diff`, `git:stage`, `git:unstage`, `git:commit`, `git:push`, `git:branches`). Polls at `POLL_GIT_STATUS_INTERVAL` (30s).
-- **Dashboard**: `src/renderer/src/views/DashboardView.tsx` + `src/renderer/src/components/dashboard/` (5 components: DashboardCard, ActiveTasksCard, RecentCompletionsCard, CostSummaryCard, OpenPRsCard). Aggregates data from `sprintTasks`, `costData` stores and PR list IPC. Default landing view.
+- **Dashboard**: `src/renderer/src/views/DashboardView.tsx` + `src/renderer/src/components/dashboard/` (5 components: DashboardCard, ActiveTasksCard, RecentCompletionsCard, CostSummaryCard, OpenPRsCard). Aggregates data from `sprintTasks`, `costData` stores and PR list IPC. Default landing view. Polls every 60s via `useBackoffInterval` (with jitter + exponential backoff on errors).
+- **Logging**: `src/main/logger.ts` — `createLogger(name)` writes to `~/.bde/bde.log` with `[LEVEL] [module]` format + ISO timestamps. Truncates at 10MB on startup. Used by all main-process modules except agent-manager (which has its own `~/.bde/agent-manager.log`). Sprint-queries uses injectable logger via `setSprintQueriesLogger()`.
+- **Optimistic updates**: `src/renderer/src/stores/sprintTasks.ts` — field-level tracking via `pendingUpdates: Record<string, { ts: number; fields: string[] }>`. On poll merge, only pending fields are preserved from local state; all other fields come from server. 2-second TTL. Full reload on failure (safest revert).
 - **Full architecture**: See `docs/architecture.md`
 
 ## Gotchas
@@ -168,3 +175,10 @@ npm run package      # Alias for build:mac
 - ARIA accessibility: landmarks (`<main>`, `<nav>`), dialog semantics (`role="dialog"`, `aria-modal`), tab patterns (`role="tablist"`/`role="tab"`), live regions on ToastContainer. Maintain these when adding new UI.
 - Max one Zustand store per domain concern
 - Polling intervals centralized in `src/renderer/src/lib/constants.ts`
+- Use `useBackoffInterval` (not raw `setInterval`) for new polling — provides jitter + backoff
+- New main-process modules: use `createLogger(name)` from `src/main/logger.ts` — not raw `console.*`
+- Agent manager data access: always through `ISprintTaskRepository`, never direct sprint-queries imports
+- WIP limit (`MAX_ACTIVE_TASKS`) enforced at API layer — don't rely on UI-only enforcement
+- Task dependency validation runs before creation — no create-then-rollback patterns
+- Audit trail is automatic — `updateTask()` records field-level diffs to `task_changes` table
+- Optimistic updates track fields, not just task IDs — only pending fields preserved on poll merge
