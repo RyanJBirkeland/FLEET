@@ -98,10 +98,6 @@ vi.mock('../../components/sessions/MessageInput', () => ({
   MessageInput: () => <div data-testid="message-input" />,
 }))
 
-vi.mock('../../components/sessions/SpawnModal', () => ({
-  SpawnModal: () => null,
-}))
-
 vi.mock('../../components/sprint/SprintBoard', () => ({
   default: () => <div data-testid="sprint-board" />,
 }))
