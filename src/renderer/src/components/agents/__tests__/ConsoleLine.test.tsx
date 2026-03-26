@@ -52,19 +52,116 @@ describe('ConsoleLine', () => {
     expect(screen.getByText(/Rate limited, retry in 5s \(attempt 2\)/)).toBeInTheDocument()
   })
 
-  it('renders completed block with cost, tokens, and duration', () => {
+  // Tool icon tests
+  it('renders Bash tool_pair with orange tool icon', () => {
+    const block: ChatBlock = {
+      type: 'tool_pair',
+      tool: 'Bash',
+      summary: 'Running ls',
+      input: { command: 'ls' },
+      result: { success: true, summary: 'Output', output: 'file.txt' },
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    const icon = container.querySelector('.console-tool-icon--bash')
+    expect(icon).toBeInTheDocument()
+    expect(icon?.textContent).toBe('$')
+  })
+
+  it('renders Read tool_call with blue tool icon', () => {
+    const block: ChatBlock = {
+      type: 'tool_call',
+      tool: 'Read',
+      summary: 'Reading file',
+      input: { path: 'file.txt' },
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    const icon = container.querySelector('.console-tool-icon--read')
+    expect(icon).toBeInTheDocument()
+    expect(icon?.textContent).toBe('R')
+  })
+
+  it('renders unknown tool with default icon', () => {
+    const block: ChatBlock = {
+      type: 'tool_call',
+      tool: 'CustomTool',
+      summary: 'Doing something',
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    const icon = container.querySelector('.console-tool-icon--default')
+    expect(icon).toBeInTheDocument()
+  })
+
+  // Markdown rendering in text blocks
+  it('renders markdown in text blocks', () => {
+    const block: ChatBlock = {
+      type: 'text',
+      text: '\u2705 **Step 1 PASSED**: Run `npm test`',
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    expect(container.querySelector('.console-md-bold')?.textContent).toBe('Step 1 PASSED')
+    expect(container.querySelector('.console-md-code')?.textContent).toBe('npm test')
+  })
+
+  // Grouped text styling
+  it('applies grouped styling to multi-line text blocks', () => {
+    const block: ChatBlock = {
+      type: 'text',
+      text: 'Line one\nLine two',
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    expect(container.querySelector('.console-line__content--grouped')).toBeInTheDocument()
+  })
+
+  it('does not apply grouped styling to single-line text', () => {
+    const block: ChatBlock = {
+      type: 'text',
+      text: 'Just one line',
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    expect(container.querySelector('.console-line__content--grouped')).not.toBeInTheDocument()
+  })
+
+  // Completion card tests
+  it('renders completion card with stats for successful completion', () => {
     const block: ChatBlock = {
       type: 'completed',
       exitCode: 0,
-      costUsd: 0.0234,
-      tokensIn: 1000,
-      tokensOut: 500,
-      durationMs: 12345,
+      costUsd: 0.48,
+      tokensIn: 142000,
+      tokensOut: 8200,
+      durationMs: 314000,
       timestamp: Date.now()
     }
-    render(<ConsoleLine block={block} />)
-    expect(screen.getByText('[done]')).toBeInTheDocument()
-    expect(screen.getByText(/\$0\.0234.*1500 tokens.*12\.35s/)).toBeInTheDocument()
+    const { container } = render(<ConsoleLine block={block} />)
+    expect(container.querySelector('.console-completion-card')).toBeInTheDocument()
+    expect(container.querySelector('.console-completion-card--failed')).not.toBeInTheDocument()
+    expect(screen.getByText(/completed successfully/)).toBeInTheDocument()
+    expect(screen.getByText('$0.48')).toBeInTheDocument()
+    expect(screen.getByText('142K')).toBeInTheDocument()
+    expect(screen.getByText('8.2K')).toBeInTheDocument()
+    expect(screen.getByText('5m 14s')).toBeInTheDocument()
+  })
+
+  it('renders failed completion card with exit code', () => {
+    const block: ChatBlock = {
+      type: 'completed',
+      exitCode: 1,
+      costUsd: 1.22,
+      tokensIn: 380000,
+      tokensOut: 24000,
+      durationMs: 723000,
+      timestamp: Date.now(),
+    }
+    const { container } = render(<ConsoleLine block={block} />)
+    expect(container.querySelector('.console-completion-card--failed')).toBeInTheDocument()
+    expect(screen.getByText(/failed/i)).toBeInTheDocument()
+    expect(screen.getByText(/exit code 1/i)).toBeInTheDocument()
   })
 
   it('renders playground block with filename and size', () => {

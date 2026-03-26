@@ -540,6 +540,187 @@
   white-space: nowrap;
 }
 
+/* ── Markdown Rendering in Agent Text ── */
+.console-md-bold {
+  font-weight: 700;
+  color: var(--neon-text);
+}
+
+.console-md-code {
+  background: var(--neon-cyan-surface);
+  color: var(--neon-cyan);
+  padding: 1px 5px;
+  border-radius: 4px;
+  font-size: 11px;
+}
+
+.console-md-heading {
+  font-weight: 700;
+  color: var(--neon-text);
+  font-size: 13px;
+  display: block;
+  margin-top: 4px;
+}
+
+/* ── Tool-Specific Icons ── */
+.console-tool-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  font-size: 10px;
+  flex-shrink: 0;
+  font-weight: 700;
+  font-family: var(--bde-font-code);
+}
+
+.console-tool-icon--bash { background: var(--neon-orange-surface); color: var(--neon-orange); }
+.console-tool-icon--read { background: var(--neon-blue-surface); color: var(--neon-blue); }
+.console-tool-icon--edit,
+.console-tool-icon--write { background: var(--neon-cyan-surface); color: var(--neon-cyan); }
+.console-tool-icon--grep { background: var(--neon-purple-surface); color: var(--neon-purple); }
+.console-tool-icon--glob { background: var(--neon-orange-surface); color: var(--neon-orange); }
+.console-tool-icon--agent { background: var(--neon-pink-surface); color: var(--neon-pink); }
+.console-tool-icon--default { background: var(--neon-blue-surface); color: var(--neon-blue); }
+
+/* ── Completion Summary Card ── */
+.console-completion-card {
+  margin: 12px;
+  padding: 16px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--neon-cyan-surface) 0%, var(--neon-surface-deep) 100%);
+  border: 1px solid var(--neon-cyan-border);
+  font-family: var(--bde-font-code);
+}
+
+.console-completion-card--failed {
+  background: linear-gradient(135deg, var(--neon-red-surface) 0%, var(--neon-surface-deep) 100%);
+  border-color: var(--neon-red-border);
+}
+
+.console-completion-card__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.console-completion-card__stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.console-completion-card__stat {
+  text-align: center;
+}
+
+.console-completion-card__stat-value {
+  font-size: 18px;
+  font-weight: 700;
+  font-family: var(--bde-font-code);
+}
+
+.console-completion-card__stat-value--cyan { color: var(--neon-cyan); }
+.console-completion-card__stat-value--purple { color: var(--neon-purple); }
+.console-completion-card__stat-value--orange { color: var(--neon-orange); }
+.console-completion-card__stat-value--red { color: var(--neon-red); }
+
+.console-completion-card__stat-label {
+  font-size: 10px;
+  color: var(--neon-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+
+.console-completion-card__header--success { color: var(--neon-cyan); }
+.console-completion-card__header--failed { color: var(--neon-red); }
+
+/* ── Stderr Content ── */
+.console-line__content--stderr {
+  color: var(--neon-orange);
+}
+
+/* ── Grouped Text Blocks ── */
+.console-line__content--grouped {
+  border-left: 2px solid var(--neon-cyan-border);
+  padding-left: 8px;
+}
+
+/* ── Console Badge ── */
+.console-badge {
+  display: inline-block;
+  padding: 0 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  flex-shrink: 0;
+  font-weight: 600;
+  font-family: var(--bde-font-code);
+}
+
+.console-badge--success {
+  background: var(--neon-cyan-surface);
+  color: var(--neon-cyan);
+}
+
+.console-badge--danger {
+  background: var(--neon-red-surface);
+  color: var(--neon-red);
+}
+
+.console-badge--purple {
+  background: var(--neon-purple-surface);
+  color: var(--neon-purple);
+}
+
+/* ── Expanded Content ── */
+.console-line__expanded-content {
+  padding-left: 24px;
+  font-family: var(--bde-font-code);
+  font-size: 12px;
+  color: var(--neon-text-muted);
+  white-space: pre-wrap;
+  line-height: 1.5;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.console-line__detail {
+  padding-left: 24px;
+}
+
+.console-line__detail-group {
+  padding-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.console-line__detail-label {
+  font-size: 10px;
+  color: var(--neon-text-dim);
+  margin-bottom: 4px;
+}
+
+.console-line__json {
+  margin: 0;
+  padding: 8px;
+  background: var(--neon-surface-dim);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: var(--bde-font-code);
+  color: var(--neon-text-muted);
+  overflow: auto;
+  max-height: 240px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 /* ── Reduced Motion Overrides ── */
 @media (prefers-reduced-motion: reduce) {
   .agent-pill--running,
