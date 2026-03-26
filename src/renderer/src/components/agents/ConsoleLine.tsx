@@ -1,11 +1,11 @@
 /**
- * ConsoleLine — Renders a single agent event as a terminal-style line with colored prefix.
- * Supports collapsible content for thinking, tool_call, and tool_pair blocks.
+ * ConsoleLine — Renders a single agent event as a terminal-style line.
+ * Uses neon CSS classes (agents-neon.css) for all styling.
  */
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
-import { tokens } from '../../design-system/tokens'
 import type { ChatBlock } from '../../lib/pair-events'
+import { renderAgentMarkdown } from '../../lib/render-agent-markdown'
 
 interface ConsoleLineProps {
   block: ChatBlock
@@ -13,70 +13,46 @@ interface ConsoleLineProps {
 
 function formatTime(ts: number): string {
   try {
-    return new Date(ts).toLocaleTimeString([], {
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    })
+    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   } catch {
     return ''
   }
 }
 
-const jsonBlockStyle: React.CSSProperties = {
-  margin: 0,
-  padding: tokens.space[2],
-  background: tokens.color.surface,
-  borderRadius: tokens.radius.sm,
-  fontSize: tokens.size.xs,
-  fontFamily: tokens.font.code,
-  color: tokens.color.textMuted,
-  overflow: 'auto',
-  maxHeight: '240px',
-  whiteSpace: 'pre-wrap',
-  wordBreak: 'break-word'
+function formatDuration(ms: number): string {
+  const totalSec = Math.floor(ms / 1000)
+  const hours = Math.floor(totalSec / 3600)
+  const minutes = Math.floor((totalSec % 3600) / 60)
+  const seconds = totalSec % 60
+  if (hours > 0) return `${hours}h ${minutes}m`
+  if (minutes > 0) return `${minutes}m ${seconds}s`
+  return `${seconds}s`
 }
 
-const lineStyle: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'row',
-  alignItems: 'flex-start',
-  gap: tokens.space[2],
-  fontSize: tokens.size.sm,
-  fontFamily: tokens.font.code,
-  padding: `${tokens.space[1]} ${tokens.space[2]}`
+function formatTokenCount(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1)}K`
+  return String(n)
 }
 
-const prefixStyle = (color: string): React.CSSProperties => ({
-  color,
-  fontWeight: 700,
-  flexShrink: 0,
-  fontFamily: tokens.font.code
-})
-
-const contentStyle: React.CSSProperties = {
-  flex: 1,
-  color: tokens.color.text,
-  minWidth: 0,
-  wordBreak: 'break-word'
+interface ToolMeta {
+  letter: string
+  iconClass: string
 }
 
-const timestampStyle: React.CSSProperties = {
-  color: tokens.color.textDim,
-  fontSize: tokens.size.xs,
-  flexShrink: 0,
-  marginLeft: 'auto'
+const TOOL_MAP: Record<string, ToolMeta> = {
+  bash: { letter: '$', iconClass: 'console-tool-icon--bash' },
+  read: { letter: 'R', iconClass: 'console-tool-icon--read' },
+  edit: { letter: 'E', iconClass: 'console-tool-icon--edit' },
+  write: { letter: 'W', iconClass: 'console-tool-icon--write' },
+  grep: { letter: 'G', iconClass: 'console-tool-icon--grep' },
+  glob: { letter: 'G', iconClass: 'console-tool-icon--glob' },
+  agent: { letter: 'A', iconClass: 'console-tool-icon--agent' },
 }
 
-const badgeStyle = (color: string, bgColor: string): React.CSSProperties => ({
-  background: bgColor,
-  color,
-  padding: `0 ${tokens.space[1]}`,
-  borderRadius: tokens.radius.sm,
-  fontSize: tokens.size.xs,
-  marginLeft: tokens.space[2],
-  flexShrink: 0
-})
+function getToolMeta(toolName: string): ToolMeta {
+  return TOOL_MAP[toolName.toLowerCase()] ?? { letter: '\u2022', iconClass: 'console-tool-icon--default' }
+}
 
 export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
@@ -84,35 +60,39 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
   switch (block.type) {
     case 'started':
       return (
-        <div style={lineStyle} data-testid="console-line-started">
-          <span style={prefixStyle(tokens.color.info)}>[agent]</span>
-          <span style={contentStyle}>Started with model {block.model}</span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+        <div className="console-line" data-testid="console-line-started">
+          <span className="console-prefix console-prefix--agent">[agent]</span>
+          <span className="console-line__content">Started with model {block.model}</span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
 
-    case 'text':
+    case 'text': {
+      const isGrouped = block.text.includes('\n')
       return (
-        <div style={lineStyle} data-testid="console-line-text">
-          <span style={prefixStyle(tokens.color.info)}>[agent]</span>
-          <span style={contentStyle}>{block.text}</span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+        <div className="console-line" data-testid="console-line-text">
+          <span className="console-prefix console-prefix--agent">[agent]</span>
+          <span className={`console-line__content${isGrouped ? ' console-line__content--grouped' : ''}`}>
+            {renderAgentMarkdown(block.text)}
+          </span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
+    }
 
     case 'user_message':
       return (
-        <div style={lineStyle} data-testid="console-line-user">
-          <span style={prefixStyle('#ff69b4')}>[user]</span>
-          <span style={contentStyle}>{block.text}</span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+        <div className="console-line" data-testid="console-line-user">
+          <span className="console-prefix console-prefix--user">[user]</span>
+          <span className="console-line__content">{block.text}</span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
 
     case 'thinking': {
       return (
         <div
-          style={{ ...lineStyle, flexDirection: 'column', gap: tokens.space[1] }}
+          className={`console-line console-line--collapsible${expanded ? ' console-line--expanded' : ''}`}
           data-testid="console-line-thinking"
         >
           <button
@@ -120,45 +100,32 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: tokens.space[2],
+              gap: '8px',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left'
+              textAlign: 'left',
             }}
             aria-label={expanded ? 'Collapse thinking' : 'Expand thinking'}
           >
             <ChevronRight
               size={14}
+              className="console-line__chevron"
               style={{
-                color: 'var(--bde-purple)',
-                transition: tokens.transition.fast,
                 transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                flexShrink: 0
               }}
             />
-            <span style={prefixStyle('var(--bde-purple)')}>[think]</span>
-            <span style={contentStyle}>Thinking...</span>
-            <span style={badgeStyle('var(--bde-purple)', 'var(--bde-purple-dim)')}>
+            <span className="console-prefix console-prefix--think">[think]</span>
+            <span className="console-line__content">Thinking...</span>
+            <span className="console-badge console-badge--purple">
               {block.tokenCount.toLocaleString()} tokens
             </span>
-            <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+            <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
           </button>
           {expanded && block.text && (
-            <div
-              style={{
-                paddingLeft: tokens.space[6],
-                fontFamily: tokens.font.code,
-                fontSize: tokens.size.sm,
-                color: tokens.color.textMuted,
-                whiteSpace: 'pre-wrap',
-                lineHeight: 1.5,
-                maxHeight: '300px',
-                overflowY: 'auto'
-              }}
-            >
+            <div className="console-line__expanded-content">
               {block.text}
             </div>
           )}
@@ -167,9 +134,10 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
     }
 
     case 'tool_call': {
+      const meta = getToolMeta(block.tool)
       return (
         <div
-          style={{ ...lineStyle, flexDirection: 'column', gap: tokens.space[1] }}
+          className={`console-line console-line--collapsible${expanded ? ' console-line--expanded' : ''}`}
           data-testid="console-line-tool-call"
         >
           <button
@@ -177,43 +145,34 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: tokens.space[2],
+              gap: '8px',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left'
+              textAlign: 'left',
             }}
             aria-label={expanded ? 'Collapse tool call' : 'Expand tool call'}
           >
             <ChevronRight
               size={14}
+              className="console-line__chevron"
               style={{
-                color: tokens.color.info,
-                transition: tokens.transition.fast,
                 transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                flexShrink: 0
               }}
             />
-            <span style={prefixStyle(tokens.color.info)}>[tool]</span>
-            <span style={contentStyle}>
+            <span className={`console-tool-icon ${meta.iconClass}`}>{meta.letter}</span>
+            <span className="console-prefix console-prefix--tool">[tool]</span>
+            <span className="console-line__content">
               {block.tool} — {block.summary}
             </span>
-            <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+            <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
           </button>
           {expanded && block.input !== undefined && (
-            <div style={{ paddingLeft: tokens.space[6] }}>
-              <div
-                style={{
-                  fontSize: tokens.size.xs,
-                  color: tokens.color.textDim,
-                  marginBottom: tokens.space[1]
-                }}
-              >
-                Input
-              </div>
-              <pre style={jsonBlockStyle}>
+            <div className="console-line__detail">
+              <div className="console-line__detail-label">Input</div>
+              <pre className="console-line__json">
                 <code>{JSON.stringify(block.input, null, 2)}</code>
               </pre>
             </div>
@@ -223,9 +182,10 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
     }
 
     case 'tool_pair': {
+      const meta = getToolMeta(block.tool)
       return (
         <div
-          style={{ ...lineStyle, flexDirection: 'column', gap: tokens.space[1] }}
+          className={`console-line console-line--collapsible${expanded ? ' console-line--expanded' : ''}`}
           data-testid="console-line-tool-pair"
         >
           <button
@@ -233,76 +193,47 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: tokens.space[2],
+              gap: '8px',
               background: 'none',
               border: 'none',
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left'
+              textAlign: 'left',
             }}
             aria-label={expanded ? 'Collapse tool pair' : 'Expand tool pair'}
           >
             <ChevronRight
               size={14}
+              className="console-line__chevron"
               style={{
-                color: tokens.color.info,
-                transition: tokens.transition.fast,
                 transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
-                flexShrink: 0
               }}
             />
-            <span style={prefixStyle(tokens.color.info)}>[tool]</span>
-            <span style={contentStyle}>
+            <span className={`console-tool-icon ${meta.iconClass}`}>{meta.letter}</span>
+            <span className="console-prefix console-prefix--tool">[tool]</span>
+            <span className="console-line__content">
               {block.tool} — {block.summary}
             </span>
-            <span
-              style={badgeStyle(
-                block.result.success ? tokens.color.success : tokens.color.danger,
-                block.result.success ? tokens.color.accentDim : tokens.color.dangerDim
-              )}
-            >
+            <span className={`console-badge ${block.result.success ? 'console-badge--success' : 'console-badge--danger'}`}>
               {block.result.success ? 'success' : 'failed'}
             </span>
-            <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+            <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
           </button>
           {expanded && (
-            <div
-              style={{
-                paddingLeft: tokens.space[6],
-                display: 'flex',
-                flexDirection: 'column',
-                gap: tokens.space[2]
-              }}
-            >
+            <div className="console-line__detail-group">
               {block.input !== undefined && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: tokens.size.xs,
-                      color: tokens.color.textDim,
-                      marginBottom: tokens.space[1]
-                    }}
-                  >
-                    Input
-                  </div>
-                  <pre style={jsonBlockStyle}>
+                <div className="console-line__detail">
+                  <div className="console-line__detail-label">Input</div>
+                  <pre className="console-line__json">
                     <code>{JSON.stringify(block.input, null, 2)}</code>
                   </pre>
                 </div>
               )}
               {block.result.output !== undefined && (
-                <div>
-                  <div
-                    style={{
-                      fontSize: tokens.size.xs,
-                      color: tokens.color.textDim,
-                      marginBottom: tokens.space[1]
-                    }}
-                  >
-                    Output
-                  </div>
-                  <pre style={jsonBlockStyle}>
+                <div className="console-line__detail">
+                  <div className="console-line__detail-label">Output</div>
+                  <pre className="console-line__json">
                     <code>{JSON.stringify(block.result.output, null, 2)}</code>
                   </pre>
                 </div>
@@ -315,57 +246,89 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
 
     case 'stderr':
       return (
-        <div style={lineStyle} data-testid="console-line-stderr">
-          <span style={prefixStyle(tokens.color.warning)}>[stderr]</span>
-          <span
-            style={{ ...contentStyle, fontFamily: tokens.font.code, color: tokens.color.warning }}
-          >
-            {block.text}
-          </span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+        <div className="console-line" data-testid="console-line-stderr">
+          <span className="console-prefix console-prefix--rate">[stderr]</span>
+          <span className="console-line__content" style={{ color: 'var(--neon-orange)' }}>{block.text}</span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
 
     case 'error':
       return (
-        <div style={lineStyle} data-testid="console-line-error">
-          <span style={prefixStyle(tokens.color.danger)}>[error]</span>
-          <span style={contentStyle}>{block.message}</span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+        <div className="console-line" data-testid="console-line-error">
+          <span className="console-prefix console-prefix--error">[error]</span>
+          <span className="console-line__content">{block.message}</span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
 
     case 'rate_limited':
       return (
-        <div style={lineStyle} data-testid="console-line-rate-limited">
-          <span style={prefixStyle(tokens.color.warning)}>[rate]</span>
-          <span style={contentStyle}>
+        <div className="console-line" data-testid="console-line-rate-limited">
+          <span className="console-prefix console-prefix--rate">[rate]</span>
+          <span className="console-line__content">
             Rate limited, retry in {Math.ceil(block.retryDelayMs / 1000)}s (attempt {block.attempt})
           </span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
 
-    case 'completed':
+    case 'completed': {
+      const success = block.exitCode === 0
       return (
-        <div style={lineStyle} data-testid="console-line-completed">
-          <span style={prefixStyle(tokens.color.info)}>[done]</span>
-          <span style={contentStyle}>
-            ${block.costUsd.toFixed(4)} • {block.tokensIn + block.tokensOut} tokens •{' '}
-            {(block.durationMs / 1000).toFixed(2)}s
-          </span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+        <div
+          className={`console-completion-card${success ? '' : ' console-completion-card--failed'}`}
+          data-testid="console-line-completed"
+        >
+          <div className="console-completion-card__header">
+            <span style={{ color: success ? 'var(--neon-cyan)' : 'var(--neon-red)' }}>
+              {success ? '\u2713' : '\u2717'}
+            </span>
+            <span style={{ color: success ? 'var(--neon-cyan)' : 'var(--neon-red)' }}>
+              {success ? 'Agent completed successfully' : `Agent failed (exit code ${block.exitCode})`}
+            </span>
+          </div>
+          <div className="console-completion-card__stats">
+            <div className="console-completion-card__stat">
+              <div className="console-completion-card__stat-value" style={{ color: 'var(--neon-cyan)' }}>
+                {formatDuration(block.durationMs)}
+              </div>
+              <div className="console-completion-card__stat-label">Duration</div>
+            </div>
+            <div className="console-completion-card__stat">
+              <div
+                className="console-completion-card__stat-value"
+                style={{ color: success ? 'var(--neon-cyan)' : 'var(--neon-red)' }}
+              >
+                ${block.costUsd.toFixed(2)}
+              </div>
+              <div className="console-completion-card__stat-label">Cost</div>
+            </div>
+            <div className="console-completion-card__stat">
+              <div className="console-completion-card__stat-value" style={{ color: 'var(--neon-purple)' }}>
+                {formatTokenCount(block.tokensIn)}
+              </div>
+              <div className="console-completion-card__stat-label">Tokens In</div>
+            </div>
+            <div className="console-completion-card__stat">
+              <div className="console-completion-card__stat-value" style={{ color: 'var(--neon-orange)' }}>
+                {formatTokenCount(block.tokensOut)}
+              </div>
+              <div className="console-completion-card__stat-label">Tokens Out</div>
+            </div>
+          </div>
         </div>
       )
+    }
 
     case 'playground':
       return (
-        <div style={lineStyle} data-testid="console-line-playground">
-          <span style={prefixStyle(tokens.color.info)}>[play]</span>
-          <span style={contentStyle}>
+        <div className="console-line" data-testid="console-line-playground">
+          <span className="console-prefix console-prefix--play">[play]</span>
+          <span className="console-line__content">
             {block.filename} ({Math.ceil(block.sizeBytes / 1024)}KB) — clickable
           </span>
-          <span style={timestampStyle}>{formatTime(block.timestamp)}</span>
+          <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>
       )
   }
