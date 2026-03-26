@@ -150,9 +150,8 @@ describe('SprintTaskList', () => {
 
   it('filters tasks by status via store', () => {
     const onSelectTask = vi.fn()
-    render(<SprintTaskList tasks={mockTasks} selectedTaskId={null} onSelectTask={onSelectTask} />)
-
     useSprintUI.setState({ statusFilter: 'backlog' })
+    render(<SprintTaskList tasks={mockTasks} selectedTaskId={null} onSelectTask={onSelectTask} />)
 
     expect(screen.getByText('Fix navbar styling bug')).toBeInTheDocument()
     expect(screen.queryByText('Implement user authentication')).not.toBeInTheDocument()
@@ -160,6 +159,7 @@ describe('SprintTaskList', () => {
 
   it('filters tasks by done status via store', () => {
     const onSelectTask = vi.fn()
+    useSprintUI.setState({ statusFilter: 'done' })
     render(<SprintTaskList tasks={mockTasks} selectedTaskId={null} onSelectTask={onSelectTask} />)
 
     useSprintUI.setState({ statusFilter: 'done' })
