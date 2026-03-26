@@ -625,6 +625,11 @@
   font-family: var(--bde-font-code);
 }
 
+.console-completion-card__stat-value--cyan { color: var(--neon-cyan); }
+.console-completion-card__stat-value--purple { color: var(--neon-purple); }
+.console-completion-card__stat-value--orange { color: var(--neon-orange); }
+.console-completion-card__stat-value--red { color: var(--neon-red); }
+
 .console-completion-card__stat-label {
   font-size: 10px;
   color: var(--neon-text-dim);
@@ -632,6 +637,9 @@
   letter-spacing: 0.5px;
   margin-top: 2px;
 }
+
+.console-completion-card__header--success { color: var(--neon-cyan); }
+.console-completion-card__header--failed { color: var(--neon-red); }
 
 /* ── Stderr Content ── */
 .console-line__content--stderr {

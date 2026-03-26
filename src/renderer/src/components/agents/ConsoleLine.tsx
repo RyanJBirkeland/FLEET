@@ -280,38 +280,33 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
           className={`console-completion-card${success ? '' : ' console-completion-card--failed'}`}
           data-testid="console-line-completed"
         >
-          <div className="console-completion-card__header">
-            <span style={{ color: success ? 'var(--neon-cyan)' : 'var(--neon-red)' }}>
-              {success ? '\u2713' : '\u2717'}
-            </span>
-            <span style={{ color: success ? 'var(--neon-cyan)' : 'var(--neon-red)' }}>
+          <div className={`console-completion-card__header ${success ? 'console-completion-card__header--success' : 'console-completion-card__header--failed'}`}>
+            <span>{success ? '\u2713' : '\u2717'}</span>
+            <span>
               {success ? 'Agent completed successfully' : `Agent failed (exit code ${block.exitCode})`}
             </span>
           </div>
           <div className="console-completion-card__stats">
             <div className="console-completion-card__stat">
-              <div className="console-completion-card__stat-value" style={{ color: 'var(--neon-cyan)' }}>
+              <div className="console-completion-card__stat-value console-completion-card__stat-value--cyan">
                 {formatDuration(block.durationMs)}
               </div>
               <div className="console-completion-card__stat-label">Duration</div>
             </div>
             <div className="console-completion-card__stat">
-              <div
-                className="console-completion-card__stat-value"
-                style={{ color: success ? 'var(--neon-cyan)' : 'var(--neon-red)' }}
-              >
+              <div className={`console-completion-card__stat-value ${success ? 'console-completion-card__stat-value--cyan' : 'console-completion-card__stat-value--red'}`}>
                 ${block.costUsd.toFixed(2)}
               </div>
               <div className="console-completion-card__stat-label">Cost</div>
             </div>
             <div className="console-completion-card__stat">
-              <div className="console-completion-card__stat-value" style={{ color: 'var(--neon-purple)' }}>
+              <div className="console-completion-card__stat-value console-completion-card__stat-value--purple">
                 {formatTokenCount(block.tokensIn)}
               </div>
               <div className="console-completion-card__stat-label">Tokens In</div>
             </div>
             <div className="console-completion-card__stat">
-              <div className="console-completion-card__stat-value" style={{ color: 'var(--neon-orange)' }}>
+              <div className="console-completion-card__stat-value console-completion-card__stat-value--orange">
                 {formatTokenCount(block.tokensOut)}
               </div>
               <div className="console-completion-card__stat-label">Tokens Out</div>
