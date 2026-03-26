@@ -360,7 +360,6 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
             <span className="console-line__content">
               {total} tool calls ({breakdown})
             </span>
-            <span className="console-badge console-badge--success">{total}</span>
             <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
           </button>
           {expanded && (

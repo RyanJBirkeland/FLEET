@@ -325,6 +325,7 @@
 /* ── Collapsible Lines ── */
 .console-line--collapsible {
   cursor: pointer;
+  flex-direction: column;
 }
 
 .console-line--collapsible:hover {
@@ -643,10 +644,12 @@
 
 /* ── Tool Group ── */
 .console-tool-group__items {
-  padding-left: 24px;
+  padding-left: 20px;
   border-left: 2px solid var(--neon-blue-border);
   margin-left: 6px;
   margin-top: 4px;
+  width: 100%;
+  overflow: hidden;
 }
 
 /* ── Stderr Content ── */
