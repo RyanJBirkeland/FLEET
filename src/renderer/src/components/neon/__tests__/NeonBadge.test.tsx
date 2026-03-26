@@ -19,4 +19,12 @@ describe('NeonBadge', () => {
     const { container } = render(<NeonBadge accent="cyan" label="live" pulse />);
     expect(container.firstChild).toHaveClass('neon-pulse');
   });
+
+  it('applies token-based sizing and spacing', () => {
+    const { container } = render(<NeonBadge accent="cyan" label="test" />);
+    const badge = container.firstChild as HTMLElement;
+    expect(badge.style.fontSize).toBe('11px');
+    expect(badge.style.padding).toBe('2px 8px');
+    expect(badge.style.borderRadius).toBe('9999px');
+  });
 });

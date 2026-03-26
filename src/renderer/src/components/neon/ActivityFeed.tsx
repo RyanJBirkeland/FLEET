@@ -1,4 +1,5 @@
 import { type NeonAccent, neonVar } from './types';
+import { tokens } from '../../design-system/tokens';
 
 export interface FeedEvent {
   id: string;
@@ -28,19 +29,19 @@ export function ActivityFeed({ events, maxItems }: ActivityFeedProps) {
 
   if (displayed.length === 0) {
     return (
-      <div style={{ color: 'rgba(255, 255, 255, 0.3)', fontSize: '11px', padding: '12px 0' }}>
+      <div style={{ color: tokens.neon.textDim, fontSize: tokens.size.xs, padding: `${tokens.space[3]} 0` }}>
         No recent activity
       </div>
     );
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
       {displayed.map((event) => (
         <div key={event.id} style={{
           display: 'flex',
           alignItems: 'center',
-          gap: '6px',
+          gap: tokens.space[1],
         }}>
           <div style={{
             width: '5px',
@@ -51,16 +52,16 @@ export function ActivityFeed({ events, maxItems }: ActivityFeedProps) {
             flexShrink: 0,
           }} />
           <span style={{
-            color: 'rgba(255, 255, 255, 0.6)',
-            fontSize: '11px',
+            color: tokens.neon.textMuted,
+            fontSize: tokens.size.xs,
             flex: 1,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
           }}>{event.label}</span>
           <span style={{
-            color: 'rgba(255, 255, 255, 0.3)',
-            fontSize: '9px',
+            color: tokens.neon.textDim,
+            fontSize: tokens.size.xs,
             flexShrink: 0,
           }}>{formatRelativeTime(event.timestamp)}</span>
         </div>
