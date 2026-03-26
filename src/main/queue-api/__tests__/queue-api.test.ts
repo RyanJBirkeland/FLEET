@@ -287,19 +287,11 @@ describe('Queue API', () => {
       expect((body as { error: string }).error).toMatch(/dependency type must be/)
     })
 
-    it('rejects dependencies with non-existent task IDs', async () => {
-      const created = {
-        id: 'new-1',
-        title: 'Task with deps',
-        repo: 'my-repo',
-        depends_on: [{ id: 'missing-task', type: 'hard' }]
-      }
-      mockCreateTask.mockResolvedValue(created)
+    it('rejects dependencies with non-existent task IDs before creating task', async () => {
       mockGetTasksWithDependencies.mockResolvedValue([
         { id: 'existing-1', depends_on: null, status: 'done' },
         { id: 'existing-2', depends_on: null, status: 'queued' }
       ])
-      mockDeleteTask.mockResolvedValue(undefined)
 
       const { status, body } = await request('POST', '/queue/tasks', {
         title: 'Task with deps',
@@ -309,22 +301,16 @@ describe('Queue API', () => {
       expect(status).toBe(400)
       expect((body as { error: string }).error).toMatch(/task IDs do not exist/)
       expect((body as { error: string }).error).toMatch(/missing-task/)
-      expect(mockDeleteTask).toHaveBeenCalledWith('new-1')
+      // Task should never have been created — no rollback needed
+      expect(mockCreateTask).not.toHaveBeenCalled()
+      expect(mockDeleteTask).not.toHaveBeenCalled()
     })
 
-    it('rejects dependencies that would create a cycle', async () => {
-      const created = {
-        id: 'new-1',
-        title: 'Task with deps',
-        repo: 'my-repo',
-        depends_on: [{ id: 'task-a', type: 'hard' }]
-      }
-      mockCreateTask.mockResolvedValue(created)
+    it('rejects dependencies that would create a cycle before creating task', async () => {
       mockGetTasksWithDependencies.mockResolvedValue([
         { id: 'task-a', depends_on: [{ id: 'task-b', type: 'hard' }], status: 'queued' },
-        { id: 'task-b', depends_on: [{ id: 'new-1', type: 'hard' }], status: 'queued' }
+        { id: 'task-b', depends_on: [{ id: 'pending-new-task', type: 'hard' }], status: 'queued' }
       ])
-      mockDeleteTask.mockResolvedValue(undefined)
 
       const { status, body } = await request('POST', '/queue/tasks', {
         title: 'Task with deps',
@@ -333,28 +319,26 @@ describe('Queue API', () => {
       })
       expect(status).toBe(400)
       expect((body as { error: string }).error).toMatch(/cycle detected/)
-      expect(mockDeleteTask).toHaveBeenCalledWith('new-1')
+      // Task should never have been created — no rollback needed
+      expect(mockCreateTask).not.toHaveBeenCalled()
+      expect(mockDeleteTask).not.toHaveBeenCalled()
     })
 
-    it('rejects self-referencing dependencies', async () => {
-      const created = {
-        id: 'new-1',
-        title: 'Task with deps',
-        repo: 'my-repo',
-        depends_on: [{ id: 'new-1', type: 'hard' }]
-      }
-      mockCreateTask.mockResolvedValue(created)
+    it('rejects self-referencing dependencies before creating task', async () => {
+      // With pre-creation validation, the temporary ID is 'pending-new-task'
+      // so a self-reference uses that ID
       mockGetTasksWithDependencies.mockResolvedValue([])
-      mockDeleteTask.mockResolvedValue(undefined)
 
       const { status, body } = await request('POST', '/queue/tasks', {
         title: 'Task with deps',
         repo: 'my-repo',
-        depends_on: [{ id: 'new-1', type: 'hard' }]
+        depends_on: [{ id: 'pending-new-task', type: 'hard' }]
       })
       expect(status).toBe(400)
       expect((body as { error: string }).error).toMatch(/cycle detected/)
-      expect(mockDeleteTask).toHaveBeenCalledWith('new-1')
+      // Task should never have been created — no rollback needed
+      expect(mockCreateTask).not.toHaveBeenCalled()
+      expect(mockDeleteTask).not.toHaveBeenCalled()
     })
 
     it('creates task with valid dependencies', async () => {
@@ -366,6 +350,10 @@ describe('Queue API', () => {
       }
       mockCreateTask.mockResolvedValue(created)
       mockGetTasksWithDependencies.mockResolvedValue([
+        { id: 'task-a', depends_on: null, status: 'done' }
+      ])
+      // checkTaskDependencies calls listTasks() for auto-blocking check
+      mockListTasks.mockResolvedValue([
         { id: 'task-a', depends_on: null, status: 'done' }
       ])
 
