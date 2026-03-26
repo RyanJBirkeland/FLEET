@@ -6,6 +6,7 @@ import { validateStructural } from '../../shared/spec-validation'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
 import { notifySprintMutation } from './sprint-listeners'
+import { buildBlockedNotes } from '../agent-manager/dependency-helpers'
 import {
   generatePrompt,
   validateSpecPath,
@@ -126,7 +127,7 @@ export function registerSprintLocalHandlers(): void {
         task = {
           ...task,
           status: 'blocked',
-          notes: `[auto-block] Blocked by: ${blockedBy.join(', ')}${task.notes ? `\n${task.notes}` : ''}`
+          notes: buildBlockedNotes(blockedBy, task.notes as string | null)
         }
       }
     }
@@ -181,12 +182,10 @@ export function registerSprintLocalHandlers(): void {
         )
         if (!satisfied && blockedBy.length > 0) {
           // Auto-block and record which dependencies are blocking, preserving user notes
-          const existingNotes = (task.notes || '').replace(/^\[auto-block\] .*\n?/, '').trim()
-          const blockNote = `[auto-block] Blocked by: ${blockedBy.join(', ')}`
           patch = {
             ...patch,
             status: 'blocked',
-            notes: existingNotes ? `${blockNote}\n${existingNotes}` : blockNote
+            notes: buildBlockedNotes(blockedBy, task.notes as string | null)
           }
         }
       }

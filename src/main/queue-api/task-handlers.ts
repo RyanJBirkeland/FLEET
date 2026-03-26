@@ -18,6 +18,7 @@ import type { StatusUpdateRequest, ClaimRequest } from '../../shared/queue-api-c
 import { STATUS_UPDATE_FIELDS, RUNNER_WRITABLE_STATUSES, GENERAL_PATCH_FIELDS } from '../../shared/queue-api-contract'
 import { toCamelCase, toSnakeCase } from './field-mapper'
 import { detectCycle } from '../agent-manager/dependency-index'
+import { buildBlockedNotes } from '../agent-manager/dependency-helpers'
 import type { TaskDependency } from '../../shared/types'
 import { validateStructural } from '../../shared/spec-validation'
 import { checkSpecSemantic } from '../spec-semantic-check'
@@ -217,8 +218,7 @@ export async function handleCreateTask(
       )
       if (!satisfied && blockedBy.length > 0) {
         createInput.status = 'blocked'
-        const existingNotes = createInput.notes ? `\n${createInput.notes}` : ''
-        createInput.notes = `[auto-block] Blocked by: ${blockedBy.join(', ')}${existingNotes}`
+        createInput.notes = buildBlockedNotes(blockedBy, createInput.notes as string | null)
       }
     } catch (err) {
       console.warn(`[queue-api] Auto-block check failed:`, err)

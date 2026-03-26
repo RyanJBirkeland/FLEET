@@ -18,6 +18,7 @@ import { checkAgent } from './watchdog'
 import { setupWorktree, pruneStaleWorktrees } from './worktree'
 import { recoverOrphans } from './orphan-recovery'
 import { createDependencyIndex } from './dependency-index'
+import { formatBlockedNote } from './dependency-helpers'
 import { resolveDependents } from './resolve-dependents'
 import { runAgent as _runAgent, type RunAgentDeps } from './run-agent'
 import { updateTask, getTask, getTasksWithDependencies } from '../data/sprint-queries'
@@ -265,7 +266,7 @@ export function createAgentManager(
                     logger.info(`[agent-manager] Task ${task.id} has unsatisfied deps [${blockedBy.join(', ')}] — auto-blocking`)
                     await updateTask(task.id, {
                       status: 'blocked',
-                      notes: `[auto-block] Blocked by: ${blockedBy.join(', ')}`,
+                      notes: formatBlockedNote(blockedBy),
                     }).catch(() => {})
                     continue
                   }
