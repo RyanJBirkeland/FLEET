@@ -28,13 +28,29 @@
   font-size: 14px;
 }
 
+.sprint-pipeline__stats {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .sprint-pipeline__stat {
   font-size: 10px;
   color: var(--neon-text-dim);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sprint-pipeline__stat + .sprint-pipeline__stat::before {
+  content: '·';
+  color: rgba(255, 255, 255, 0.15);
+  margin-right: 2px;
 }
 
 .sprint-pipeline__stat b {
-  color: var(--neon-text-muted);
+  color: var(--neon-text);
+  font-size: 12px;
 }
 
 .sprint-pipeline__body {
