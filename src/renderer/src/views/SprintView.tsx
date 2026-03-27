@@ -1,10 +1,6 @@
-/**
- * SprintView — Scrum Planning Center with Kanban board, spec drawer, and PR list.
- * Replaces the old read-only SprintBoard + PRList split layout.
- */
 import { motion } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
-import { SprintCenter } from '../components/sprint/SprintCenter'
+import { SprintPipeline } from '../components/sprint/SprintPipeline'
 
 export default function SprintView() {
   const reduced = useReducedMotion()
@@ -16,7 +12,7 @@ export default function SprintView() {
       animate="animate"
       transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
     >
-      <SprintCenter />
+      <SprintPipeline />
     </motion.div>
   )
 }
