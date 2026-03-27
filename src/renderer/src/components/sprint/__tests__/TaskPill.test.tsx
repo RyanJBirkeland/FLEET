@@ -132,3 +132,39 @@ describe('TaskPill', () => {
     expect(pill.querySelector('.task-pill__time')).toBeNull()
   })
 })
+
+describe('TaskPill - additional status classes', () => {
+  beforeEach(() => {
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('applies done class for done tasks without open PR', async () => {
+    const { TaskPill } = await import('../TaskPill')
+    const doneTask: SprintTask = { ...baseTask, status: 'done', pr_status: null }
+    render(<TaskPill task={doneTask} selected={false} onClick={vi.fn()} />)
+    const pill = screen.getByTestId('task-pill')
+    expect(pill.className).toContain('task-pill--done')
+  })
+
+  it('applies review class for done tasks with open PR', async () => {
+    const { TaskPill } = await import('../TaskPill')
+    const reviewTask: SprintTask = { ...baseTask, status: 'done', pr_status: 'open' }
+    render(<TaskPill task={reviewTask} selected={false} onClick={vi.fn()} />)
+    const pill = screen.getByTestId('task-pill')
+    expect(pill.className).toContain('task-pill--review')
+  })
+
+  it('shows elapsed time under 60 minutes correctly (e.g. 30m)', async () => {
+    const { TaskPill } = await import('../TaskPill')
+    const now = new Date('2026-03-01T10:00:00Z').getTime()
+    vi.setSystemTime(now)
+    const startedAt = new Date(now - 30 * 60 * 1000).toISOString()
+    const activeTask: SprintTask = { ...baseTask, status: 'active', started_at: startedAt }
+    render(<TaskPill task={activeTask} selected={false} onClick={vi.fn()} />)
+    expect(screen.getByText('30m')).toBeInTheDocument()
+  })
+})

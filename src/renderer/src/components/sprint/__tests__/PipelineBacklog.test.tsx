@@ -201,3 +201,73 @@ describe('PipelineBacklog', () => {
     expect(screen.getByText('No details')).toBeInTheDocument()
   })
 })
+
+describe('PipelineBacklog - additional coverage', () => {
+  const onTaskClick = vi.fn()
+  const onAddToQueue = vi.fn()
+  const onRerun = vi.fn()
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('shows P2 priority badge for priority 2 backlog tasks', () => {
+    const task = makeTask({ id: 'b1', title: 'Med Priority', priority: 2 })
+    render(
+      <PipelineBacklog
+        backlog={[task]}
+        failed={[]}
+        onTaskClick={onTaskClick}
+        onAddToQueue={onAddToQueue}
+        onRerun={onRerun}
+      />
+    )
+    expect(screen.getByText('P2')).toBeInTheDocument()
+  })
+
+  it('does not show priority badge for priority 3 backlog tasks', () => {
+    const task = makeTask({ id: 'b1', title: 'Low Priority', priority: 3 })
+    render(
+      <PipelineBacklog
+        backlog={[task]}
+        failed={[]}
+        onTaskClick={onTaskClick}
+        onAddToQueue={onAddToQueue}
+        onRerun={onRerun}
+      />
+    )
+    expect(screen.queryByText('P3')).not.toBeInTheDocument()
+  })
+
+  it('shows failed count badge', () => {
+    const failed = [
+      makeTask({ id: 'f1', status: 'failed' }),
+      makeTask({ id: 'f2', status: 'failed' })
+    ]
+    render(
+      <PipelineBacklog
+        backlog={[]}
+        failed={failed}
+        onTaskClick={onTaskClick}
+        onAddToQueue={onAddToQueue}
+        onRerun={onRerun}
+      />
+    )
+    expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  it('calls onTaskClick when failed card is clicked', () => {
+    const task = makeTask({ id: 'f1', title: 'Clickable Failed', status: 'failed' })
+    render(
+      <PipelineBacklog
+        backlog={[]}
+        failed={[task]}
+        onTaskClick={onTaskClick}
+        onAddToQueue={onAddToQueue}
+        onRerun={onRerun}
+      />
+    )
+    fireEvent.click(screen.getByText('Clickable Failed'))
+    expect(onTaskClick).toHaveBeenCalledWith('f1')
+  })
+})

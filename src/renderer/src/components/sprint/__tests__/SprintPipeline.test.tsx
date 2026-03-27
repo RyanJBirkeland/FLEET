@@ -138,29 +138,65 @@ vi.mock('../PipelineBacklog', () => ({
 }))
 
 vi.mock('../PipelineStage', () => ({
-  PipelineStage: ({ name, label }: { name: string; label: string }) => (
-    <div data-testid={`pipeline-stage-${name}`}>{label}</div>
+  PipelineStage: ({ name, label, doneFooter }: { name: string; label: string; doneFooter?: React.ReactNode }) => (
+    <div data-testid={`pipeline-stage-${name}`}>
+      {label}
+      {doneFooter}
+    </div>
   )
 }))
 
 vi.mock('../TaskDetailDrawer', () => ({
-  TaskDetailDrawer: ({ task }: { task: SprintTask }) => (
-    <div data-testid="task-detail-drawer">Drawer: {task.title}</div>
+  TaskDetailDrawer: ({ task, onClose, onViewLogs, onOpenSpec, onEdit, onViewAgents }: {
+    task: SprintTask;
+    onClose: () => void;
+    onViewLogs: (t: SprintTask) => void;
+    onOpenSpec: () => void;
+    onEdit: (t: SprintTask) => void;
+    onViewAgents: (id: string) => void;
+    onLaunch: (t: SprintTask) => void;
+    onStop: (t: SprintTask) => void;
+    onMarkDone: (t: SprintTask) => void;
+    onRerun: (t: SprintTask) => void;
+    onDelete: (t: SprintTask) => void;
+  }) => (
+    <div data-testid="task-detail-drawer">
+      Drawer: {task.title}
+      <button data-testid="drawer-close" onClick={onClose}>Close</button>
+      <button data-testid="drawer-logs" onClick={() => onViewLogs(task)}>Logs</button>
+      <button data-testid="drawer-spec" onClick={onOpenSpec}>Spec</button>
+      <button data-testid="drawer-edit" onClick={() => onEdit(task)}>Edit</button>
+      <button data-testid="drawer-agents" onClick={() => onViewAgents(task.agent_run_id ?? '')}>Agents</button>
+    </div>
   )
 }))
 
 vi.mock('../SpecPanel', () => ({
-  SpecPanel: ({ taskTitle }: { taskTitle: string }) => (
-    <div data-testid="spec-panel">Spec: {taskTitle}</div>
+  SpecPanel: ({ taskTitle, onClose, onSave }: { taskTitle: string; onClose: () => void; onSave: (spec: string) => void }) => (
+    <div data-testid="spec-panel">
+      Spec: {taskTitle}
+      <button data-testid="spec-close" onClick={onClose}>Close Spec</button>
+      <button data-testid="spec-save" onClick={() => onSave('new spec content')}>Save Spec</button>
+    </div>
   )
 }))
 
 vi.mock('../DoneHistoryPanel', () => ({
-  DoneHistoryPanel: () => <div data-testid="done-history-panel">DoneHistoryPanel</div>
+  DoneHistoryPanel: ({ onClose }: { onClose: () => void; tasks: any[]; onTaskClick: (id: string) => void }) => (
+    <div data-testid="done-history-panel">
+      DoneHistoryPanel
+      <button data-testid="dhp-close" onClick={onClose}>Close Done</button>
+    </div>
+  )
 }))
 
 vi.mock('../NewTicketModal', () => ({
-  NewTicketModal: () => <div data-testid="new-ticket-modal">NewTicketModal</div>
+  NewTicketModal: ({ onClose, onCreate }: { onClose: () => void; onCreate: (data: any) => void; open: boolean }) => (
+    <div data-testid="new-ticket-modal">
+      <button data-testid="ntm-close" onClick={onClose}>Close</button>
+      <button data-testid="ntm-create" onClick={() => onCreate({ title: 'New Task', repo: 'BDE', prompt: null, priority: 3, depends_on: null })}>Create</button>
+    </div>
+  )
 }))
 
 vi.mock('../../ui/ConfirmModal', () => ({
@@ -286,4 +322,231 @@ describe('SprintPipeline', () => {
     render(<SprintPipeline />)
     expect(screen.getByTestId('layout-group')).toBeInTheDocument()
   })
+})
+
+describe('SprintPipeline - additional scenarios', () => {
+  beforeEach(() => {
+    Object.assign(mocks.storeState, {
+      tasks: [],
+      loading: false,
+      loadError: null,
+      loadData: mocks.mockLoadData,
+      updateTask: mocks.mockUpdateTask,
+      createTask: mocks.mockCreateTask
+    })
+    Object.assign(mocks.uiState, {
+      selectedTaskId: null,
+      drawerOpen: false,
+      specPanelOpen: false,
+      doneViewOpen: false,
+      logDrawerTaskId: null,
+      setSelectedTaskId: mocks.mockSetSelectedTaskId,
+      setDrawerOpen: mocks.mockSetDrawerOpen,
+      setSpecPanelOpen: mocks.mockSetSpecPanelOpen,
+      setDoneViewOpen: mocks.mockSetDoneViewOpen
+    })
+    mocks.mockSetSelectedTaskId.mockClear()
+    mocks.mockSetDoneViewOpen.mockClear()
+  })
+
+  it('shows header stats: active count, queued count, done count', async () => {
+    const tasks = [
+      makeTask({ id: 'a1', status: 'active' }),
+      makeTask({ id: 'a2', status: 'active' }),
+      makeTask({ id: 'q1', status: 'queued' }),
+      makeTask({ id: 'd1', status: 'done' }),
+      makeTask({ id: 'd2', status: 'done' }),
+      makeTask({ id: 'd3', status: 'done' })
+    ]
+    Object.assign(mocks.storeState, { tasks })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(screen.getByText('2 active')).toBeInTheDocument()
+    expect(screen.getByText('1 queued')).toBeInTheDocument()
+    expect(screen.getByText('3 done')).toBeInTheDocument()
+  })
+
+  it('shows 0 active, 0 queued, 0 done when tasks is empty', async () => {
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(screen.getByText('0 active')).toBeInTheDocument()
+    expect(screen.getByText('0 queued')).toBeInTheDocument()
+    expect(screen.getByText('0 done')).toBeInTheDocument()
+  })
+
+  it('opens NewTicketModal when "+ New Task" button is clicked', async () => {
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByText('+ New Task'))
+    expect(screen.getByTestId('new-ticket-modal')).toBeInTheDocument()
+  })
+
+  it('auto-selects first active task when none is selected and active tasks exist', async () => {
+    const tasks = [makeTask({ id: 'active-1', status: 'active' })]
+    Object.assign(mocks.storeState, { tasks })
+    Object.assign(mocks.uiState, { selectedTaskId: null })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(mocks.mockSetSelectedTaskId).toHaveBeenCalledWith('active-1')
+  })
+
+  it('auto-selects first queued task when no active task and queued tasks exist', async () => {
+    const tasks = [makeTask({ id: 'queued-1', status: 'queued' })]
+    Object.assign(mocks.storeState, { tasks })
+    Object.assign(mocks.uiState, { selectedTaskId: null })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(mocks.mockSetSelectedTaskId).toHaveBeenCalledWith('queued-1')
+  })
+
+  it('shows "View all" link in done footer when more than 5 done tasks', async () => {
+    const doneTasks = Array.from({ length: 7 }, (_, i) =>
+      makeTask({ id: `d${i}`, status: 'done' })
+    )
+    Object.assign(mocks.storeState, { tasks: doneTasks })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(screen.getByText('View all →')).toBeInTheDocument()
+  })
+
+  it('calls setDoneViewOpen(true) when "View all" link is clicked', async () => {
+    const doneTasks = Array.from({ length: 7 }, (_, i) =>
+      makeTask({ id: `d${i}`, status: 'done' })
+    )
+    Object.assign(mocks.storeState, { tasks: doneTasks })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByText('View all →'))
+    expect(mocks.mockSetDoneViewOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('does not show "View all" footer when 5 or fewer done tasks', async () => {
+    const doneTasks = Array.from({ length: 5 }, (_, i) =>
+      makeTask({ id: `d${i}`, status: 'done' })
+    )
+    Object.assign(mocks.storeState, { tasks: doneTasks })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(screen.queryByText('View all →')).not.toBeInTheDocument()
+  })
+
+    it('does not auto-select when selectedTaskId is already set', async () => {
+    const tasks = [makeTask({ id: 'active-1', status: 'active' })]
+    Object.assign(mocks.storeState, { tasks })
+    Object.assign(mocks.uiState, { selectedTaskId: 'already-set' })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(mocks.mockSetSelectedTaskId).not.toHaveBeenCalled()
+  })
+
+  it('calls setSpecPanelOpen(false) when SpecPanel close button is clicked', async () => {
+    const task = makeTask({ id: 'spec-1', title: 'Spec Task', spec: 'spec content' })
+    Object.assign(mocks.storeState, { tasks: [task] })
+    Object.assign(mocks.uiState, { selectedTaskId: 'spec-1', specPanelOpen: true })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByTestId('spec-close'))
+    expect(mocks.mockSetSpecPanelOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('calls setDoneViewOpen(false) when DoneHistoryPanel close button is clicked', async () => {
+    Object.assign(mocks.uiState, { doneViewOpen: true })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByTestId('dhp-close'))
+    expect(mocks.mockSetDoneViewOpen).toHaveBeenCalledWith(false)
+  })
+
+  it('calls createTask and closes NewTicketModal when onCreate is called', async () => {
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    // Open modal first
+    fe.click(screen.getByText('+ New Task'))
+    expect(screen.getByTestId('new-ticket-modal')).toBeInTheDocument()
+    // Trigger create
+    fe.click(screen.getByTestId('ntm-create'))
+    expect(mocks.mockCreateTask).toHaveBeenCalled()
+    // Modal should close
+    expect(screen.queryByTestId('new-ticket-modal')).not.toBeInTheDocument()
+  })
+
+  it('closes NewTicketModal when onClose is called', async () => {
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    // Open modal first
+    fe.click(screen.getByText('+ New Task'))
+    expect(screen.getByTestId('new-ticket-modal')).toBeInTheDocument()
+    // Trigger close
+    fe.click(screen.getByTestId('ntm-close'))
+    // Modal should close
+    expect(screen.queryByTestId('new-ticket-modal')).not.toBeInTheDocument()
+  })
+
+
+  it('calls setView("agents") when drawer onViewLogs is triggered', async () => {
+    const task = makeTask({ id: 'active-1', status: 'active' })
+    Object.assign(mocks.storeState, { tasks: [task] })
+    Object.assign(mocks.uiState, { selectedTaskId: 'active-1', drawerOpen: true })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByTestId('drawer-logs'))
+    expect(mocks.mockSetView).toHaveBeenCalledWith('agents')
+  })
+
+  it('calls setSpecPanelOpen(true) when drawer onOpenSpec is triggered', async () => {
+    const task = makeTask({ id: 'spec-task', status: 'queued' })
+    Object.assign(mocks.storeState, { tasks: [task] })
+    Object.assign(mocks.uiState, { selectedTaskId: 'spec-task', drawerOpen: true })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByTestId('drawer-spec'))
+    expect(mocks.mockSetSpecPanelOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('calls setView("task-workbench") when drawer onEdit is triggered', async () => {
+    const task = makeTask({ id: 'edit-task', status: 'queued' })
+    Object.assign(mocks.storeState, { tasks: [task] })
+    Object.assign(mocks.uiState, { selectedTaskId: 'edit-task', drawerOpen: true })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByTestId('drawer-edit'))
+    expect(mocks.mockSetView).toHaveBeenCalledWith('task-workbench')
+  })
+
+  it('calls setDrawerOpen(false) and setSelectedTaskId(null) when drawer is closed', async () => {
+    const task = makeTask({ id: 'close-task', status: 'queued' })
+    Object.assign(mocks.storeState, { tasks: [task] })
+    Object.assign(mocks.uiState, { selectedTaskId: 'close-task', drawerOpen: true })
+    mocks.mockSetDrawerOpen.mockClear()
+    mocks.mockSetSelectedTaskId.mockClear()
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByTestId('drawer-close'))
+    expect(mocks.mockSetDrawerOpen).toHaveBeenCalledWith(false)
+    expect(mocks.mockSetSelectedTaskId).toHaveBeenCalledWith(null)
+  })
+
 })
