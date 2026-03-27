@@ -153,3 +153,54 @@ describe('clear', () => {
     expect(useAgentEventsStore.getState().events).toEqual({})
   })
 })
+
+describe('event cap (MAX_EVENTS_PER_AGENT = 2000)', () => {
+  it('allows up to 2000 events without eviction', () => {
+    let capturedCallback: ((payload: { agentId: string; event: AgentEvent }) => void) | null = null
+    vi.mocked(window.api.agentEvents.onEvent).mockImplementation((cb) => {
+      capturedCallback = cb
+      return () => {}
+    })
+
+    useAgentEventsStore.getState().init()
+
+    for (let i = 0; i < 2000; i++) {
+      capturedCallback!({ agentId: 'agent-cap', event: makeEvent(`e${i}`) })
+    }
+
+    expect(useAgentEventsStore.getState().events['agent-cap']).toHaveLength(2000)
+  })
+
+  it('evicts oldest events once cap is exceeded', () => {
+    let capturedCallback: ((payload: { agentId: string; event: AgentEvent }) => void) | null = null
+    vi.mocked(window.api.agentEvents.onEvent).mockImplementation((cb) => {
+      capturedCallback = cb
+      return () => {}
+    })
+
+    useAgentEventsStore.getState().init()
+
+    for (let i = 0; i < 2001; i++) {
+      capturedCallback!({ agentId: 'agent-cap', event: makeEvent(`e${i}`) })
+    }
+
+    const events = useAgentEventsStore.getState().events['agent-cap']
+    expect(events).toHaveLength(2000)
+    // oldest (e0) evicted; e1 is now first, e2000 is last
+    expect((events[0] as { text: string }).text).toBe('e1')
+    expect((events[events.length - 1] as { text: string }).text).toBe('e2000')
+  })
+
+  it('caps loadHistory at 2000 events, keeping the most recent', async () => {
+    const bigHistory = Array.from({ length: 2500 }, (_, i) => makeEvent(`h${i}`))
+    vi.mocked(window.api.agentEvents.getHistory).mockResolvedValue(bigHistory)
+
+    await useAgentEventsStore.getState().loadHistory('agent-hist')
+
+    const events = useAgentEventsStore.getState().events['agent-hist']
+    expect(events).toHaveLength(2000)
+    // slice(-2000) of 2500 keeps indices 500..2499
+    expect((events[0] as { text: string }).text).toBe('h500')
+    expect((events[events.length - 1] as { text: string }).text).toBe('h2499')
+  })
+})
