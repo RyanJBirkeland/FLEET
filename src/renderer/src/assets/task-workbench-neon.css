@@ -10,6 +10,7 @@
   flex-direction: column;
   position: relative;
   font-family: var(--bde-font-code);
+  background: var(--neon-bg);
 }
 
 .wb__copilot-toggle {
@@ -53,8 +54,8 @@
 
 .wb-form__heading {
   font-size: 16px;
-  font-weight: 600;
-  color: var(--neon-text);
+  font-weight: 700;
+  color: var(--neon-cyan);
 }
 
 .wb-form__group {
@@ -87,9 +88,9 @@
 }
 
 .wb-form__input {
-  padding: 8px;
-  background: var(--neon-surface-dim);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--neon-purple-border);
   border-radius: 6px;
   color: var(--neon-text);
   font-size: 13px;
@@ -99,27 +100,32 @@
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
+.wb-form__input::placeholder {
+  color: var(--neon-text-dim);
+}
+
 .wb-form__input:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 6px rgba(0, 255, 200, 0.2);
+  box-shadow: 0 0 8px rgba(0, 255, 200, 0.25);
 }
 
 .wb-form__select {
-  padding: 8px;
-  background: var(--neon-surface-dim);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--neon-purple-border);
   border-radius: 6px;
   color: var(--neon-text);
   font-size: 13px;
   outline: none;
   width: 100%;
   font-family: inherit;
+  cursor: pointer;
   transition: border-color 150ms ease, box-shadow 150ms ease;
 }
 
 .wb-form__select:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 6px rgba(0, 255, 200, 0.2);
+  box-shadow: 0 0 8px rgba(0, 255, 200, 0.25);
 }
 
 .wb-form__toggle {
@@ -217,32 +223,38 @@
   max-height: 60vh;
   resize: vertical;
   padding: 12px;
-  background: var(--neon-surface-dim);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--neon-purple-border);
   border-radius: 8px;
   color: var(--neon-text);
   font-size: 13px;
   font-family: var(--bde-font-code);
   line-height: 1.6;
   outline: none;
+  width: 100%;
   transition: border-color 150ms ease, box-shadow 150ms ease;
+}
+
+.wb-spec__textarea::placeholder {
+  color: var(--neon-text-dim);
 }
 
 .wb-spec__textarea:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 6px rgba(0, 255, 200, 0.2);
+  box-shadow: 0 0 8px rgba(0, 255, 200, 0.25);
 }
 
 /* ── Readiness Checks ── */
 .wb-checks {
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--neon-purple-border);
   border-radius: 8px;
   padding: 12px;
-  background: var(--neon-surface-dim);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .wb-checks--has-fail {
   border-color: var(--neon-red);
+  box-shadow: 0 0 8px rgba(255, 50, 100, 0.15);
 }
 
 .wb-checks__summary {
@@ -309,7 +321,7 @@
 
 .wb-actions__btn--secondary {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--neon-purple-border);
   color: var(--neon-text);
   cursor: pointer;
 }
@@ -365,22 +377,24 @@
   display: flex;
   flex-direction: column;
   height: 100%;
-  border-left: 1px solid rgba(255, 255, 255, 0.06);
+  border-left: 1px solid var(--neon-purple-border);
+  background: rgba(10, 0, 21, 0.5);
 }
 
 .wb-copilot__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 8px 12px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--neon-purple-border);
   flex-shrink: 0;
+  background: linear-gradient(180deg, rgba(138, 43, 226, 0.06) 0%, transparent 100%);
 }
 
 .wb-copilot__title {
   font-size: 12px;
-  font-weight: 600;
-  color: var(--neon-text-muted);
+  font-weight: 700;
+  color: var(--neon-purple);
   text-transform: uppercase;
   letter-spacing: 0.06em;
 }
