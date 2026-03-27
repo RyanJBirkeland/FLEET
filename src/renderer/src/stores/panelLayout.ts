@@ -328,7 +328,9 @@ function findFirstLeaf(node: PanelNode): PanelLeafNode | null {
 function migrateLayout(node: PanelNode): PanelNode {
   if (node.type === 'leaf') {
     const migratedTabs = node.tabs.map((tab) => {
-      if (tab.viewKey === 'memory' || tab.viewKey === 'cost') {
+      // Use type assertion to allow checking legacy view names
+      const viewKey = tab.viewKey as string
+      if (viewKey === 'memory' || viewKey === 'cost') {
         return { viewKey: 'settings' as View, label: VIEW_LABELS.settings }
       }
       return tab
