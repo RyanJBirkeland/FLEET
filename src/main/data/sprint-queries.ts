@@ -240,10 +240,34 @@ export function deleteTask(id: string): void {
   }
 }
 
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
+export function claimTask(id: string, claimedBy: string, maxActive?: number): SprintTask | null {
   try {
+    const db = getDb()
     const now = new Date().toISOString()
-    const result = getDb()
+
+    if (maxActive !== undefined) {
+      // Atomic WIP check — single transaction prevents TOCTOU race
+      const result = db.transaction(() => {
+        const { count } = db
+          .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'active'")
+          .get() as { count: number }
+        if (count >= maxActive) return null
+
+        return db
+          .prepare(
+            `UPDATE sprint_tasks
+             SET status = 'active', claimed_by = ?, started_at = ?
+             WHERE id = ? AND status = 'queued'
+             RETURNING *`
+          )
+          .get(claimedBy, now, id) as Record<string, unknown> | undefined
+      })()
+
+      return result ? sanitizeTask(result) : null
+    }
+
+    // No WIP limit — original behavior
+    const result = db
       .prepare(
         `UPDATE sprint_tasks
          SET status = 'active', claimed_by = ?, started_at = ?

@@ -494,16 +494,20 @@ describe('Queue API', () => {
       })
       expect(status).toBe(200)
       expect(body).toEqual({ id: 'abc', status: 'active', claimedBy: 'runner-1' })
-      expect(mockClaimTask).toHaveBeenCalledWith('abc', 'runner-1')
+      // MAX_ACTIVE_TASKS (5) is now passed to claimTask for atomic WIP enforcement
+      expect(mockClaimTask).toHaveBeenCalledWith('abc', 'runner-1', 5)
     })
 
-    it('returns 409 when task not claimable', async () => {
+    it('returns 409 when task not claimable (below WIP limit)', async () => {
       mockClaimTask.mockReturnValue(null)
+      // Active count below limit → "not claimable" error path
+      mockGetActiveTaskCount.mockReturnValue(0)
 
-      const { status } = await request('POST', '/queue/tasks/abc/claim', {
+      const { status, body } = await request('POST', '/queue/tasks/abc/claim', {
         executorId: 'runner-1'
       })
       expect(status).toBe(409)
+      expect((body as { error: string }).error).toMatch(/not claimable/)
     })
 
     it('rejects missing executorId', async () => {
@@ -511,7 +515,9 @@ describe('Queue API', () => {
       expect(status).toBe(400)
     })
 
-    it('rejects claim when active task count is at WIP limit', async () => {
+    it('returns WIP limit error when claimTask returns null and active count is at limit', async () => {
+      // claimTask now enforces WIP atomically and returns null when limit hit
+      mockClaimTask.mockReturnValue(null)
       mockGetActiveTaskCount.mockReturnValue(5)
 
       const { status, body } = await request('POST', '/queue/tasks/abc/claim', {
@@ -519,7 +525,8 @@ describe('Queue API', () => {
       })
       expect(status).toBe(409)
       expect((body as { error: string }).error).toMatch(/WIP limit reached/)
-      expect(mockClaimTask).not.toHaveBeenCalled()
+      // claimTask IS now called (WIP check is inside it)
+      expect(mockClaimTask).toHaveBeenCalledWith('abc', 'runner-1', 5)
     })
 
     it('allows claim when active task count is below WIP limit', async () => {
