@@ -136,7 +136,12 @@ vi.stubGlobal('api', {
   killAgent: vi.fn().mockResolvedValue({ ok: true }),
   onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
   agentManager: {
-    status: vi.fn().mockResolvedValue({ running: false, concurrency: null, activeAgents: [] }),
+    status: vi.fn().mockResolvedValue({
+      running: false,
+      shuttingDown: false,
+      concurrency: { maxSlots: 0, effectiveSlots: 0, activeCount: 0, recoveryDueAt: null, consecutiveRateLimits: 0, atFloor: false },
+      activeAgents: []
+    }),
     kill: vi.fn().mockResolvedValue({ ok: true })
   },
   terminal: {

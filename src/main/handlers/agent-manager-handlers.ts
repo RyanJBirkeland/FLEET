@@ -3,13 +3,26 @@
  */
 import { safeHandle } from '../ipc-utils'
 import type { AgentManager } from '../agent-manager'
+import type { AgentManagerStatus } from '../../shared/types'
+
+const STOPPED_STATUS: AgentManagerStatus = {
+  running: false,
+  shuttingDown: false,
+  concurrency: {
+    maxSlots: 0,
+    effectiveSlots: 0,
+    activeCount: 0,
+    recoveryDueAt: null,
+    consecutiveRateLimits: 0,
+    atFloor: false
+  },
+  activeAgents: []
+}
 
 export function registerAgentManagerHandlers(am: AgentManager | undefined): void {
   safeHandle('agent-manager:status', async () => {
-    if (!am) return { running: false, concurrency: null, activeAgents: [] }
-    // Cast needed: AgentManagerStatus.concurrency shape differs from IPC channel type.
-    // This mismatch predates DI — preserving existing runtime behavior.
-    return am.getStatus() as any
+    if (!am) return STOPPED_STATUS
+    return am.getStatus()
   })
 
   safeHandle('agent-manager:kill', async (_e, taskId: string) => {

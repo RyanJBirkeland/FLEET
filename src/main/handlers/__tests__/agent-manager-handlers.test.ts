@@ -51,7 +51,12 @@ describe('Agent manager handlers', () => {
 
         const result = await handlers['agent-manager:status'](mockEvent)
 
-        expect(result).toEqual({ running: false, concurrency: null, activeAgents: [] })
+        expect(result).toMatchObject({
+          running: false,
+          shuttingDown: false,
+          activeAgents: [],
+          concurrency: expect.objectContaining({ maxSlots: 0, activeCount: 0 })
+        })
       })
 
       it('returns status from AgentManager when provided', async () => {

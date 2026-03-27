@@ -12,7 +12,6 @@ import { Button } from './components/ui/Button'
 import { Kbd } from './components/ui/Kbd'
 import { useAgentHistoryStore } from './stores/agentHistory'
 import { usePendingReviewStore } from './stores/pendingReview'
-import { useTaskNotifications } from './hooks/useTaskNotifications'
 import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
 import { useDesktopNotifications } from './hooks/useDesktopNotifications'
 import { PanelRenderer } from './components/panels/PanelRenderer'
@@ -150,7 +149,6 @@ function App(): React.JSX.Element {
     restorePendingReview()
   }, [restorePendingReview])
 
-  useTaskNotifications()
   useGitHubRateLimitWarning()
   useDesktopNotifications()
 

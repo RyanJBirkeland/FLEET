@@ -20,7 +20,8 @@ import type {
   SprintTask,
   ClaimedTask,
   PrListPayload,
-  TaskTemplate
+  TaskTemplate,
+  AgentManagerStatus
 } from './types'
 import type { AgentEvent } from './types'
 import type { BatchOperation, BatchResult } from './queue-api-contract'
@@ -414,21 +415,7 @@ export interface AuthChannels {
 export interface AgentManagerChannels {
   'agent-manager:status': {
     args: []
-    result: {
-      running: boolean
-      concurrency: { maxSlots: number; activeCount: number; cooldownUntil: number } | null
-      activeAgents: Array<{
-        taskId: string
-        agentRunId: string
-        model: string
-        startedAt: number
-        lastOutputAt: number
-        rateLimitCount: number
-        costUsd: number
-        tokensIn: number
-        tokensOut: number
-      }>
-    }
+    result: AgentManagerStatus
   }
   'agent-manager:kill': {
     args: [taskId: string]
