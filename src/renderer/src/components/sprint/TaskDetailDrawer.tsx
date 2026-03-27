@@ -136,7 +136,12 @@ export function TaskDetailDrawer({
         )}
 
         {/* Prompt block */}
-        {task.prompt && <div className="task-drawer__prompt">{task.prompt}</div>}
+        {task.prompt && (
+          <>
+            <span className="task-drawer__prompt-label">Prompt</span>
+            <div className="task-drawer__prompt">{task.prompt}</div>
+          </>
+        )}
 
         {/* Spec link */}
         {task.spec && (
