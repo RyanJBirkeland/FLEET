@@ -13,12 +13,6 @@ class MockNotification {
 
 vi.stubGlobal('Notification', MockNotification)
 
-// Add missing window.api stubs needed by the module
-vi.stubGlobal('api', {
-  ...((globalThis as Record<string, unknown>).api as Record<string, unknown>),
-  onExternalSprintChange: vi.fn().mockReturnValue(() => {})
-})
-
 describe('notifyOnce', () => {
   beforeEach(() => {
     _resetNotifiedTaskIds()

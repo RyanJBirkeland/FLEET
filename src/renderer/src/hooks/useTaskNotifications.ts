@@ -54,59 +54,6 @@ function notify(title: string, body: string): void {
   }
 }
 
-function requestPermissionOnce(): void {
-  if (!('Notification' in window)) return
-  if (Notification.permission === 'default') {
-    Notification.requestPermission()
-  }
-}
-
-export function useTaskNotifications(): void {
-  const seenDoneIds = useRef<Set<string>>(new Set())
-  const initialized = useRef(false)
-
-  // Request notification permission on mount
-  useEffect(() => {
-    requestPermissionOnce()
-  }, [])
-
-  // Watch for completed sprint tasks via local SQLite change events
-  useEffect(() => {
-    const handleChange = async (): Promise<void> => {
-      try {
-        const tasks = (await window.api.sprint.list()) as SprintTask[]
-        const doneTasks = tasks.filter((t) => t.status === 'done')
-
-        // On first event, seed seenDoneIds without notifying
-        if (!initialized.current) {
-          for (const t of doneTasks) seenDoneIds.current.add(t.id)
-          boundSet(seenDoneIds.current, MAX_SEEN_IDS)
-          initialized.current = true
-          return
-        }
-
-        for (const task of doneTasks) {
-          if (!seenDoneIds.current.has(task.id)) {
-            seenDoneIds.current.add(task.id)
-            boundSet(seenDoneIds.current, MAX_SEEN_IDS)
-            const body = task.pr_url
-              ? `PR ready: ${task.pr_url}`
-              : `Task "${task.title}" completed in ${task.repo}.`
-            notifyOnce(task.id, '\u2705 Agent task done', body)
-          }
-        }
-      } catch {
-        // Silently ignore — non-critical feature
-      }
-    }
-
-    // Seed seen IDs on mount
-    handleChange()
-
-    return window.api.onExternalSprintChange(handleChange)
-  }, [])
-}
-
 // ---------------------------------------------------------------------------
 // useTaskToasts — in-app toast notifications for task state transitions
 // ---------------------------------------------------------------------------
