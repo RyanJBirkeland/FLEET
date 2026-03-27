@@ -1,0 +1,341 @@
+import { useEffect, useState } from 'react'
+import type { SprintTask } from '../../../../shared/types'
+
+export interface TaskDetailDrawerProps {
+  task: SprintTask
+  onClose: () => void
+  onLaunch: (task: SprintTask) => void
+  onStop: (task: SprintTask) => void
+  onMarkDone: (task: SprintTask) => void
+  onRerun: (task: SprintTask) => void
+  onDelete: (task: SprintTask) => void
+  onViewLogs: (task: SprintTask) => void
+  onOpenSpec: () => void
+  onEdit: (task: SprintTask) => void
+  onViewAgents: (agentId: string) => void
+}
+
+function formatElapsed(startedAt: string): string {
+  const ms = Date.now() - new Date(startedAt).getTime()
+  const min = Math.floor(ms / 60000)
+  if (min < 60) return `${min}m`
+  const hr = Math.floor(min / 60)
+  return `${hr}h ${min % 60}m`
+}
+
+function formatTimestamp(iso: string): string {
+  const d = new Date(iso)
+  return d.toLocaleString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+function getDotColor(status: string): string {
+  switch (status) {
+    case 'queued':
+      return 'var(--neon-cyan)'
+    case 'blocked':
+      return 'var(--neon-orange)'
+    case 'active':
+      return 'var(--neon-purple)'
+    case 'done':
+      return 'var(--neon-pink)'
+    case 'failed':
+    case 'error':
+    case 'cancelled':
+      return 'var(--neon-red, #ff3366)'
+    default:
+      return 'var(--neon-cyan)'
+  }
+}
+
+function getDependencyStats(
+  deps: SprintTask['depends_on']
+): { count: number; complete: number } | null {
+  if (!deps || deps.length === 0) return null
+  return { count: deps.length, complete: 0 }
+}
+
+export function TaskDetailDrawer({
+  task,
+  onClose,
+  onLaunch,
+  onStop,
+  onMarkDone,
+  onRerun,
+  onDelete,
+  onViewLogs,
+  onOpenSpec,
+  onEdit,
+  onViewAgents
+}: TaskDetailDrawerProps) {
+  const [elapsed, setElapsed] = useState('')
+
+  useEffect(() => {
+    if (task.status !== 'active' || !task.started_at) return
+    setElapsed(formatElapsed(task.started_at))
+    const interval = setInterval(() => setElapsed(formatElapsed(task.started_at!)), 10000)
+    return () => clearInterval(interval)
+  }, [task.status, task.started_at])
+
+  const depStats = getDependencyStats(task.depends_on)
+
+  return (
+    <aside className="task-drawer" data-testid="task-detail-drawer">
+      {/* Header */}
+      <div className="task-drawer__head">
+        <h2 className="task-drawer__title">{task.title}</h2>
+        <div className="task-drawer__status">
+          <span
+            className="task-drawer__status-dot"
+            style={{ background: getDotColor(task.status) }}
+          />
+          <span>{task.status}</span>
+          {elapsed && <span> — {elapsed}</span>}
+        </div>
+        <button className="task-drawer__close" onClick={onClose} aria-label="Close drawer">
+          ✕
+        </button>
+      </div>
+
+      {/* Body */}
+      <div className="task-drawer__body">
+        <div className="task-drawer__field">
+          <span className="task-drawer__label">Repo</span>
+          <span className="task-drawer__value">{task.repo}</span>
+        </div>
+
+        <div className="task-drawer__field">
+          <span className="task-drawer__label">Priority</span>
+          <span className="task-drawer__value">P{task.priority}</span>
+        </div>
+
+        {depStats && (
+          <div className="task-drawer__field">
+            <span className="task-drawer__label">Dependencies</span>
+            <span className="task-drawer__value">
+              {depStats.count} dep{depStats.count !== 1 ? 's' : ''} — {depStats.complete}/
+              {depStats.count} complete
+            </span>
+          </div>
+        )}
+
+        <div className="task-drawer__field">
+          <span className="task-drawer__label">Created</span>
+          <span className="task-drawer__value">{formatTimestamp(task.created_at)}</span>
+        </div>
+
+        {task.started_at && (
+          <div className="task-drawer__field">
+            <span className="task-drawer__label">Started</span>
+            <span className="task-drawer__value">{formatTimestamp(task.started_at)}</span>
+          </div>
+        )}
+
+        {/* Prompt block */}
+        {task.prompt && <div className="task-drawer__prompt">{task.prompt}</div>}
+
+        {/* Spec link */}
+        {task.spec && (
+          <button className="task-drawer__spec-link" onClick={onOpenSpec}>
+            View Spec →
+          </button>
+        )}
+
+        {/* Agent section */}
+        {task.agent_run_id && (
+          <button
+            className="task-drawer__agent-link"
+            onClick={() => onViewAgents(task.agent_run_id!)}
+          >
+            ● Running — View in Agents →
+          </button>
+        )}
+
+        {/* PR section */}
+        {task.pr_url && task.pr_number && (
+          <div className="task-drawer__field">
+            <span className="task-drawer__label">PR</span>
+            <span className="task-drawer__value">
+              #{task.pr_number} ({task.pr_status ?? 'unknown'})
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* Actions bar */}
+      <div className="task-drawer__actions">
+        <ActionButtons
+          task={task}
+          onLaunch={onLaunch}
+          onStop={onStop}
+          onMarkDone={onMarkDone}
+          onRerun={onRerun}
+          onDelete={onDelete}
+          onViewLogs={onViewLogs}
+          onEdit={onEdit}
+        />
+      </div>
+    </aside>
+  )
+}
+
+function ActionButtons({
+  task,
+  onLaunch,
+  onStop,
+  onMarkDone: _onMarkDone,
+  onRerun,
+  onDelete,
+  onViewLogs,
+  onEdit
+}: {
+  task: SprintTask
+  onLaunch: (t: SprintTask) => void
+  onStop: (t: SprintTask) => void
+  onMarkDone: (t: SprintTask) => void
+  onRerun: (t: SprintTask) => void
+  onDelete: (t: SprintTask) => void
+  onViewLogs: (t: SprintTask) => void
+  onEdit: (t: SprintTask) => void
+}) {
+  switch (task.status) {
+    case 'backlog':
+      return (
+        <>
+          <button
+            className="task-drawer__btn task-drawer__btn--primary"
+            onClick={() => onLaunch(task)}
+          >
+            Add to Queue
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--secondary"
+            onClick={() => onEdit(task)}
+          >
+            Edit
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--danger"
+            onClick={() => onDelete(task)}
+          >
+            Delete
+          </button>
+        </>
+      )
+    case 'queued':
+      return (
+        <>
+          <button
+            className="task-drawer__btn task-drawer__btn--primary"
+            onClick={() => onLaunch(task)}
+          >
+            Launch
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--secondary"
+            onClick={() => onEdit(task)}
+          >
+            Edit
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--danger"
+            onClick={() => onDelete(task)}
+          >
+            Delete
+          </button>
+        </>
+      )
+    case 'blocked':
+      return (
+        <>
+          <button
+            className="task-drawer__btn task-drawer__btn--primary"
+            onClick={() => onLaunch(task)}
+          >
+            Unblock
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--secondary"
+            onClick={() => onEdit(task)}
+          >
+            Edit
+          </button>
+        </>
+      )
+    case 'active':
+      return (
+        <>
+          <button
+            className="task-drawer__btn task-drawer__btn--primary"
+            onClick={() => onViewLogs(task)}
+          >
+            View Logs
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--secondary"
+            onClick={() => onEdit(task)}
+          >
+            Edit
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--danger"
+            onClick={() => onStop(task)}
+          >
+            Stop
+          </button>
+        </>
+      )
+    case 'done':
+      return (
+        <>
+          {task.pr_url && (
+            <a
+              className="task-drawer__btn task-drawer__btn--primary"
+              href={task.pr_url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              View PR
+            </a>
+          )}
+          <button
+            className="task-drawer__btn task-drawer__btn--secondary"
+            onClick={() => onRerun(task)}
+          >
+            Re-run
+          </button>
+        </>
+      )
+    case 'failed':
+    case 'error':
+    case 'cancelled':
+      return (
+        <>
+          <button
+            className="task-drawer__btn task-drawer__btn--primary"
+            onClick={() => onRerun(task)}
+          >
+            Re-run
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--secondary"
+            onClick={() => onEdit(task)}
+          >
+            Edit
+          </button>
+          <button
+            className="task-drawer__btn task-drawer__btn--danger"
+            onClick={() => onDelete(task)}
+          >
+            Delete
+          </button>
+        </>
+      )
+    default:
+      return <></>
+  }
+}

@@ -19,10 +19,16 @@ interface SprintUIState {
   statusFilter: StatusFilter
   generatingIds: string[]
   selectedTaskIds: string[]
+  drawerOpen: boolean
+  specPanelOpen: boolean
+  doneViewOpen: boolean
 
   // --- Actions ---
   setSelectedTaskId: (id: string | null) => void
   setLogDrawerTaskId: (id: string | null) => void
+  setDrawerOpen: (open: boolean) => void
+  setSpecPanelOpen: (open: boolean) => void
+  setDoneViewOpen: (open: boolean) => void
   setRepoFilter: (filter: string | null) => void
   setSearchQuery: (query: string) => void
   setStatusFilter: (filter: StatusFilter) => void
@@ -40,9 +46,15 @@ export const useSprintUI = create<SprintUIState>((set) => ({
   statusFilter: 'all',
   generatingIds: [],
   selectedTaskIds: [],
+  drawerOpen: false,
+  specPanelOpen: false,
+  doneViewOpen: false,
 
-  setSelectedTaskId: (id): void => set({ selectedTaskId: id }),
+  setSelectedTaskId: (id): void => set({ selectedTaskId: id, drawerOpen: id !== null }),
   setLogDrawerTaskId: (id): void => set({ logDrawerTaskId: id }),
+  setDrawerOpen: (open): void => set({ drawerOpen: open }),
+  setSpecPanelOpen: (open): void => set({ specPanelOpen: open }),
+  setDoneViewOpen: (open): void => set({ doneViewOpen: open }),
   setRepoFilter: (filter): void => set({ repoFilter: filter }),
   setSearchQuery: (query): void => set({ searchQuery: query }),
   setStatusFilter: (filter): void => set({ statusFilter: filter }),
