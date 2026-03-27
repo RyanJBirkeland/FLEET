@@ -30,14 +30,32 @@ import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../env-util
 // Logger helper — callers can supply their own or fall back to console
 // ---------------------------------------------------------------------------
 
-import { appendFileSync, readFileSync, statSync } from 'node:fs'
+import { appendFileSync, readFileSync, statSync, renameSync, rmSync } from 'node:fs'
 import { join as joinPath } from 'node:path'
 import { homedir as home } from 'node:os'
 import { BDE_AGENT_LOG_PATH } from '../paths'
 const LOG_PATH = BDE_AGENT_LOG_PATH
+const AM_MAX_LOG_SIZE = 10 * 1024 * 1024 // 10MB
+let amWriteCount = 0
+
+function rotateAmLogIfNeeded(): void {
+  try {
+    const stats = statSync(LOG_PATH)
+    if (stats.size > AM_MAX_LOG_SIZE) {
+      const oldPath = LOG_PATH + '.old'
+      try { rmSync(oldPath) } catch { /* may not exist */ }
+      renameSync(LOG_PATH, oldPath)
+    }
+  } catch { /* file doesn't exist yet */ }
+}
+
 function fileLog(level: string, m: string): void {
   try {
     appendFileSync(LOG_PATH, `[${new Date().toISOString()}] [${level}] ${m}\n`)
+    if (++amWriteCount >= 500) {
+      amWriteCount = 0
+      rotateAmLogIfNeeded()
+    }
   } catch {}
 }
 
@@ -206,6 +224,8 @@ export function createAgentManager(
   repo: ISprintTaskRepository,
   logger: Logger = defaultLogger
 ): AgentManager {
+  rotateAmLogIfNeeded()
+
   // ---- Core state ----
   let concurrency: ConcurrencyState = makeConcurrencyState(config.maxConcurrent)
   const activeAgents = new Map<string, ActiveAgent>()
@@ -569,6 +589,21 @@ export function createAgentManager(
       const timeout = new Promise<void>((r) => setTimeout(r, timeoutMs))
       await Promise.race([allSettled, timeout])
     }
+
+    // Re-queue any tasks that are still active after agent shutdown
+    for (const agent of activeAgents.values()) {
+      try {
+        repo.updateTask(agent.taskId, {
+          status: 'queued',
+          claimed_by: null,
+          started_at: null
+        })
+        logger.info(`[agent-manager] Re-queued task ${agent.taskId} during shutdown`)
+      } catch (err) {
+        logger.warn(`[agent-manager] Failed to re-queue task ${agent.taskId}: ${err}`)
+      }
+    }
+    activeAgents.clear()
 
     running = false
     logger.info('[agent-manager] Stopped')

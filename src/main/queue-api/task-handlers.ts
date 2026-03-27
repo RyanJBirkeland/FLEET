@@ -437,21 +437,19 @@ export async function handleClaim(
     return
   }
 
-  // Enforce WIP limit — prevent more than MAX_ACTIVE_TASKS active tasks.
-  // Note: TOCTOU race exists between this check and claimTask() below.
-  // Acceptable because BDE's drain loop is the primary caller and runs
-  // sequentially. SQLite transactions could enforce this if needed.
-  const activeCount = getActiveTaskCount()
-  if (activeCount >= MAX_ACTIVE_TASKS) {
-    sendJson(res, 409, {
-      error: `WIP limit reached (${activeCount}/${MAX_ACTIVE_TASKS} active tasks). Complete or cancel an active task first.`
-    })
-    return
-  }
-
-  const claimed = claimTask(id, executorId)
+  // Enforce WIP limit atomically inside claimTask() via a single SQL transaction.
+  // This eliminates the TOCTOU race between the count check and the UPDATE.
+  const claimed = claimTask(id, executorId, MAX_ACTIVE_TASKS)
   if (!claimed) {
-    sendJson(res, 409, { error: `Task ${id} is not claimable (not queued or does not exist)` })
+    // Distinguish WIP limit from task-not-claimable for a useful error message.
+    const activeCount = getActiveTaskCount()
+    if (activeCount >= MAX_ACTIVE_TASKS) {
+      sendJson(res, 409, {
+        error: `WIP limit reached (${activeCount}/${MAX_ACTIVE_TASKS} active tasks). Complete or cancel an active task first.`
+      })
+    } else {
+      sendJson(res, 409, { error: `Task ${id} is not claimable (not queued or does not exist)` })
+    }
     return
   }
   sendJson(res, 200, toCamelCase(claimed))

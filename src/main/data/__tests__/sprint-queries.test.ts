@@ -281,6 +281,36 @@ describe('claimTask', () => {
     const result = claimTask('nonexistent', 'exec-1')
     expect(result).toBeNull()
   })
+
+  it('enforces WIP limit atomically when maxActive is provided', () => {
+    const t1 = createTask({ title: 'Active 1', repo: 'bde' })!
+    updateTask(t1.id, { status: 'active' })
+    const t2 = createTask({ title: 'Active 2', repo: 'bde' })!
+    updateTask(t2.id, { status: 'active' })
+
+    const queued = createTask({ title: 'Should be blocked', repo: 'bde' })!
+    updateTask(queued.id, { status: 'queued' })
+
+    // WIP limit of 2 — should reject
+    const result = claimTask(queued.id, 'exec-1', 2)
+    expect(result).toBeNull()
+    // Task must remain queued
+    const unchanged = getTask(queued.id)
+    expect(unchanged!.status).toBe('queued')
+  })
+
+  it('allows claim when active count is below maxActive', () => {
+    const active = createTask({ title: 'Active', repo: 'bde' })!
+    updateTask(active.id, { status: 'active' })
+
+    const queued = createTask({ title: 'Claimable', repo: 'bde' })!
+    updateTask(queued.id, { status: 'queued' })
+
+    // WIP limit of 2 — one active, should allow
+    const result = claimTask(queued.id, 'exec-1', 2)
+    expect(result).not.toBeNull()
+    expect(result!.status).toBe('active')
+  })
 })
 
 describe('releaseTask', () => {

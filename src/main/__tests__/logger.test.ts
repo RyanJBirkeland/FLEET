@@ -4,13 +4,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 vi.mock('node:fs', () => ({
   appendFileSync: vi.fn(),
   statSync: vi.fn(() => ({ size: 100 })),
-  writeFileSync: vi.fn(),
   existsSync: vi.fn(() => true),
-  mkdirSync: vi.fn()
+  mkdirSync: vi.fn(),
+  renameSync: vi.fn(),
+  rmSync: vi.fn()
 }))
 
 import { createLogger } from '../logger'
-import { appendFileSync } from 'node:fs'
+import { appendFileSync, statSync, renameSync, rmSync } from 'node:fs'
 
 describe('createLogger', () => {
   beforeEach(() => {
@@ -39,5 +40,29 @@ describe('createLogger', () => {
     const call = vi.mocked(appendFileSync).mock.calls[0]
     // Timestamp format: 2026-03-25T...
     expect(call[1]).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  })
+
+  it('renames log to .old when size exceeds MAX_LOG_SIZE', () => {
+    const MAX_LOG_SIZE = 10 * 1024 * 1024 // 10MB
+    vi.mocked(statSync).mockReturnValueOnce({ size: MAX_LOG_SIZE + 1 } as ReturnType<typeof statSync>)
+    createLogger('test')
+    expect(renameSync).toHaveBeenCalledWith(
+      expect.stringContaining('bde.log'),
+      expect.stringContaining('bde.log.old')
+    )
+  })
+
+  it('removes existing .old file before renaming', () => {
+    const MAX_LOG_SIZE = 10 * 1024 * 1024 // 10MB
+    vi.mocked(statSync).mockReturnValueOnce({ size: MAX_LOG_SIZE + 1 } as ReturnType<typeof statSync>)
+    createLogger('test')
+    expect(rmSync).toHaveBeenCalledWith(expect.stringContaining('bde.log.old'))
+    expect(renameSync).toHaveBeenCalled()
+  })
+
+  it('does not rename log when size is within limit', () => {
+    vi.mocked(statSync).mockReturnValueOnce({ size: 100 } as ReturnType<typeof statSync>)
+    createLogger('test')
+    expect(renameSync).not.toHaveBeenCalled()
   })
 })
