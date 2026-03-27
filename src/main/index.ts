@@ -133,6 +133,16 @@ app.whenReady().then(() => {
 
   pruneOldEvents(getDb(), getEventRetentionDays())
 
+  // Prune agent_events periodically (every 24 hours)
+  const pruneEventsInterval = setInterval(() => {
+    try {
+      pruneOldEvents(getDb(), getEventRetentionDays())
+    } catch {
+      /* non-fatal */
+    }
+  }, 24 * 60 * 60 * 1000)
+  app.on('will-quit', () => clearInterval(pruneEventsInterval))
+
   // Prune old audit trail records (non-fatal)
   try {
     pruneOldChanges(30)
