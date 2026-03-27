@@ -20,7 +20,7 @@ export function PipelineStage({
   selectedTaskId,
   onTaskClick,
   doneFooter
-}: PipelineStageProps): JSX.Element {
+}: PipelineStageProps) {
   return (
     <div className="pipeline-stage">
       <div className={`pipeline-stage__dot pipeline-stage__dot--${name}`}>{tasks.length}</div>

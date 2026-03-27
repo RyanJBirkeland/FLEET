@@ -40,7 +40,7 @@ function formatElapsed(startedAt: string): string {
   return `${hr}h ${min % 60}m`
 }
 
-export function TaskPill({ task, selected, onClick }: TaskPillProps): JSX.Element {
+export function TaskPill({ task, selected, onClick }: TaskPillProps) {
   const [elapsed, setElapsed] = useState('')
 
   useEffect(() => {

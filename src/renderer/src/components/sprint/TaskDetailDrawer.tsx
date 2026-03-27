@@ -71,7 +71,7 @@ export function TaskDetailDrawer({
   onOpenSpec,
   onEdit,
   onViewAgents
-}: TaskDetailDrawerProps): JSX.Element {
+}: TaskDetailDrawerProps) {
   const [elapsed, setElapsed] = useState('')
 
   useEffect(() => {
@@ -187,7 +187,7 @@ function ActionButtons({
   task,
   onLaunch,
   onStop,
-  onMarkDone,
+  onMarkDone: _onMarkDone,
   onRerun,
   onDelete,
   onViewLogs,
@@ -201,7 +201,7 @@ function ActionButtons({
   onDelete: (t: SprintTask) => void
   onViewLogs: (t: SprintTask) => void
   onEdit: (t: SprintTask) => void
-}): JSX.Element {
+}) {
   switch (task.status) {
     case 'backlog':
       return (
