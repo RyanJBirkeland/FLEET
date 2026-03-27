@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTaskWorkbenchStore, type CopilotMessage } from '../../stores/taskWorkbench'
-import { tokens } from '../../design-system/tokens'
 
 interface WorkbenchCopilotProps {
   onClose: () => void
@@ -14,56 +13,21 @@ function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () =
   const isUser = msg.role === 'user'
   const isSystem = msg.role === 'system'
 
-  const style: CSSProperties = {
-    alignSelf: isUser ? 'flex-end' : 'flex-start',
-    maxWidth: '90%',
-    padding: `${tokens.space[2]} ${tokens.space[3]}`,
-    borderRadius: tokens.radius.md,
-    fontSize: tokens.size.md,
-    color: tokens.color.text,
-    lineHeight: 1.5,
-    whiteSpace: 'pre-wrap',
-    wordBreak: 'break-word',
-    ...(isUser
-      ? { background: tokens.color.accentDim, border: '1px solid transparent' }
+  const className = `wb-copilot__bubble ${
+    isUser
+      ? 'wb-copilot__bubble--user'
       : isSystem
-        ? {
-            background: 'transparent',
-            border: `1px solid ${tokens.color.border}`,
-            fontStyle: 'italic',
-            color: tokens.color.textMuted,
-            fontSize: tokens.size.sm
-          }
-        : { background: tokens.color.surface, border: `1px solid ${tokens.color.border}` })
-  }
+        ? 'wb-copilot__bubble--system'
+        : 'wb-copilot__bubble--assistant'
+  }`
 
   return (
-    <div style={style}>
+    <div className={className}>
       <div>{msg.content}</div>
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          marginTop: tokens.space[1]
-        }}
-      >
-        <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>
-          {formatTime(msg.timestamp)}
-        </span>
+      <div className="wb-copilot__bubble-footer">
+        <span className="wb-copilot__time">{formatTime(msg.timestamp)}</span>
         {msg.insertable && onInsert && (
-          <button
-            onClick={onInsert}
-            style={{
-              background: tokens.color.accentDim,
-              border: `1px solid ${tokens.color.accent}`,
-              borderRadius: tokens.radius.sm,
-              color: tokens.color.accent,
-              padding: '1px 8px',
-              fontSize: tokens.size.xs,
-              cursor: 'pointer'
-            }}
-          >
+          <button onClick={onInsert} className="wb-copilot__insert-btn">
             Insert into spec
           </button>
         )}
@@ -179,66 +143,20 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
     [setField]
   )
 
+  const sendDisabled = !input.trim() || loading
+
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        height: '100%',
-        borderLeft: `1px solid ${tokens.color.border}`
-      }}
-    >
+    <div className="wb-copilot">
       {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          padding: `${tokens.space[2]} ${tokens.space[3]}`,
-          borderBottom: `1px solid ${tokens.color.border}`,
-          flexShrink: 0
-        }}
-      >
-        <span
-          style={{
-            fontSize: tokens.size.sm,
-            fontWeight: 600,
-            color: tokens.color.textMuted,
-            textTransform: 'uppercase',
-            letterSpacing: '0.06em'
-          }}
-        >
-          AI Copilot
-        </span>
-        <button
-          onClick={onClose}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: tokens.color.textMuted,
-            cursor: 'pointer',
-            fontSize: tokens.size.lg,
-            lineHeight: 1,
-            padding: 0
-          }}
-          title="Close copilot"
-        >
+      <div className="wb-copilot__header">
+        <span className="wb-copilot__title">AI Copilot</span>
+        <button onClick={onClose} className="wb-copilot__close" title="Close copilot">
           ×
         </button>
       </div>
 
       {/* Messages */}
-      <div
-        ref={scrollRef}
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          padding: tokens.space[3],
-          display: 'flex',
-          flexDirection: 'column',
-          gap: tokens.space[2]
-        }}
-      >
+      <div ref={scrollRef} className="wb-copilot__messages">
         {messages.map((msg) => (
           <MessageBubble
             key={msg.id}
@@ -247,22 +165,8 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
           />
         ))}
         {loading && (
-          <div
-            style={{
-              alignSelf: 'flex-start',
-              padding: `${tokens.space[2]} ${tokens.space[3]}`,
-              display: 'flex',
-              alignItems: 'center',
-              gap: tokens.space[2]
-            }}
-          >
-            <span
-              style={{
-                color: tokens.color.textMuted,
-                fontSize: tokens.size.sm,
-                fontStyle: 'italic'
-              }}
-            >
+          <div className="wb-copilot__loading">
+            <span className="wb-copilot__loading-text">
               {useTaskWorkbenchStore.getState().streamingMessageId ? 'Streaming...' : 'Thinking...'}
             </span>
             <button
@@ -273,15 +177,7 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
                   useTaskWorkbenchStore.getState().finishStreaming(true)
                 }
               }}
-              style={{
-                background: 'none',
-                border: `1px solid ${tokens.color.border}`,
-                borderRadius: tokens.radius.sm,
-                color: tokens.color.textMuted,
-                padding: '1px 8px',
-                fontSize: tokens.size.xs,
-                cursor: 'pointer'
-              }}
+              className="wb-copilot__cancel-btn"
             >
               Cancel
             </button>
@@ -290,15 +186,7 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
       </div>
 
       {/* Input */}
-      <div
-        style={{
-          padding: tokens.space[2],
-          borderTop: `1px solid ${tokens.color.border}`,
-          display: 'flex',
-          gap: tokens.space[2],
-          flexShrink: 0
-        }}
-      >
+      <div className="wb-copilot__input-row">
         <textarea
           ref={inputRef}
           value={input}
@@ -306,34 +194,12 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
           onKeyDown={handleKeyDown}
           placeholder="Ask about the codebase, brainstorm approaches..."
           rows={2}
-          style={{
-            flex: 1,
-            resize: 'none',
-            padding: tokens.space[2],
-            background: tokens.color.surface,
-            border: `1px solid ${tokens.color.border}`,
-            borderRadius: tokens.radius.md,
-            color: tokens.color.text,
-            fontSize: tokens.size.md,
-            fontFamily: tokens.font.ui,
-            outline: 'none'
-          }}
+          className="wb-copilot__input"
         />
         <button
           onClick={handleSend}
-          disabled={!input.trim() || loading}
-          style={{
-            alignSelf: 'flex-end',
-            padding: `${tokens.space[2]} ${tokens.space[3]}`,
-            background: !input.trim() || loading ? tokens.color.surface : tokens.color.accent,
-            color:
-              !input.trim() || loading ? tokens.color.textMuted : 'var(--bde-btn-primary-text)',
-            border: 'none',
-            borderRadius: tokens.radius.md,
-            cursor: !input.trim() || loading ? 'not-allowed' : 'pointer',
-            fontSize: tokens.size.sm,
-            fontWeight: 600
-          }}
+          disabled={sendDisabled}
+          className={`wb-copilot__send-btn ${sendDisabled ? 'wb-copilot__send-btn--disabled' : 'wb-copilot__send-btn--active'}`}
         >
           Send
         </button>

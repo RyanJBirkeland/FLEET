@@ -7,7 +7,6 @@ import { ReadinessChecks } from './ReadinessChecks'
 import { WorkbenchActions } from './WorkbenchActions'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { REPO_OPTIONS } from '../../lib/constants'
-import { tokens } from '../../design-system/tokens'
 
 const PRIORITY_OPTIONS = [
   { label: 'P1 Critical', value: 1 },
@@ -292,58 +291,30 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [submitting, handleSubmit])
 
-  const inputStyle = {
-    padding: tokens.space[2],
-    background: tokens.color.surface,
-    border: `1px solid ${tokens.color.border}`,
-    borderRadius: tokens.radius.md,
-    color: tokens.color.text,
-    fontSize: tokens.size.md,
-    outline: 'none',
-    width: '100%'
-  }
-
-  const labelStyle = {
-    fontSize: tokens.size.sm,
-    fontWeight: 600 as const,
-    color: tokens.color.textMuted,
-    textTransform: 'uppercase' as const,
-    letterSpacing: '0.06em'
-  }
-
   return (
-    <div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        gap: tokens.space[4],
-        padding: tokens.space[4],
-        overflowY: 'auto',
-        height: '100%'
-      }}
-    >
-      <div style={{ fontSize: tokens.size.xl, fontWeight: 600, color: tokens.color.text }}>
+    <div className="wb-form">
+      <div className="wb-form__heading">
         {mode === 'edit' ? `Edit: ${title || 'Untitled'}` : 'New Task'}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[3] }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
-          <label style={labelStyle}>Title *</label>
+      <div className="wb-form__group">
+        <div className="wb-form__field">
+          <label className="wb-form__label">Title *</label>
           <input
             ref={titleRef}
             type="text"
             value={title}
             onChange={(e) => setField('title', e.target.value)}
             placeholder='e.g. "Add recipe search to Feast onboarding"'
-            style={inputStyle}
+            className="wb-form__input"
           />
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
-          <label style={labelStyle}>Repo</label>
+        <div className="wb-form__field">
+          <label className="wb-form__label">Repo</label>
           <select
             value={repo}
             onChange={(e) => setField('repo', e.target.value)}
-            style={inputStyle}
+            className="wb-form__select"
           >
             {REPO_OPTIONS.map((r) => (
               <option key={r.label} value={r.label}>
@@ -357,35 +328,19 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
       <div>
         <button
           onClick={() => setField('advancedOpen', !advancedOpen)}
-          style={{
-            background: 'none',
-            border: 'none',
-            color: tokens.color.textMuted,
-            fontSize: tokens.size.sm,
-            cursor: 'pointer',
-            padding: 0
-          }}
+          className="wb-form__toggle"
         >
           {advancedOpen ? '\u25be' : '\u25b8'} More options
         </button>
         {advancedOpen && (
-          <div
-            style={{
-              marginTop: tokens.space[2],
-              display: 'flex',
-              flexDirection: 'column',
-              gap: tokens.space[3]
-            }}
-          >
-            <div style={{ display: 'flex', gap: tokens.space[3] }}>
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1], flex: 1 }}
-              >
-                <label style={labelStyle}>Priority</label>
+          <div className="wb-form__advanced">
+            <div className="wb-form__field--row">
+              <div className="wb-form__field wb-form__field--flex">
+                <label className="wb-form__label">Priority</label>
                 <select
                   value={priority}
                   onChange={(e) => setField('priority', Number(e.target.value))}
-                  style={inputStyle}
+                  className="wb-form__select"
                 >
                   {PRIORITY_OPTIONS.map((p) => (
                     <option key={p.value} value={p.value}>
@@ -395,22 +350,16 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
                 </select>
               </div>
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[2] }}>
+            <div className="wb-form__checkbox-row">
               <input
                 type="checkbox"
                 id="playground-enabled-workbench"
                 checked={playgroundEnabled}
                 onChange={(e) => setField('playgroundEnabled', e.target.checked)}
-                style={{ cursor: 'pointer' }}
               />
               <label
                 htmlFor="playground-enabled-workbench"
-                style={{
-                  margin: 0,
-                  cursor: 'pointer',
-                  fontSize: tokens.size.sm,
-                  color: tokens.color.text
-                }}
+                className="wb-form__checkbox-label"
                 title="Enable native HTML preview rendering for frontend work"
               >
                 Dev Playground
@@ -420,8 +369,8 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
         )}
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
-        <label style={labelStyle}>Spec</label>
+      <div className="wb-form__field">
+        <label className="wb-form__label">Spec</label>
         <SpecEditor
           onRequestGenerate={handleGenerate}
           onRequestResearch={handleResearch}

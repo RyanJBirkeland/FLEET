@@ -1,5 +1,4 @@
 import { useTaskWorkbenchStore, type CheckResult } from '../../stores/taskWorkbench'
-import { tokens } from '../../design-system/tokens'
 
 const STATUS_ICONS: Record<CheckResult['status'], string> = {
   pass: '\u2705',
@@ -23,60 +22,27 @@ export function ReadinessChecks() {
   if (total === 0) return null
 
   return (
-    <div
-      style={{
-        border: `1px solid ${hasFailures ? tokens.color.danger : tokens.color.border}`,
-        borderRadius: tokens.radius.lg,
-        padding: tokens.space[3],
-        background: tokens.color.surface
-      }}
-    >
-      <button
-        onClick={toggleExpanded}
-        style={{
-          background: 'none',
-          border: 'none',
-          color: tokens.color.text,
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          gap: tokens.space[2],
-          width: '100%',
-          fontSize: tokens.size.sm,
-          padding: 0
-        }}
-      >
+    <div className={`wb-checks${hasFailures ? ' wb-checks--has-fail' : ''}`}>
+      <button onClick={toggleExpanded} className="wb-checks__summary">
         <span>{expanded ? '\u25be' : '\u25b8'}</span>
-        <span style={{ display: 'flex', gap: tokens.space[1] }}>
+        <span className="wb-checks__icons">
           {allChecks.map((c) => (
             <span key={c.id} title={c.label}>
               {STATUS_ICONS[c.status]}
             </span>
           ))}
         </span>
-        <span style={{ color: tokens.color.textMuted, marginLeft: 'auto' }}>
+        <span className="wb-checks__count">
           {passing}/{total} passing
         </span>
       </button>
       {expanded && (
-        <div
-          style={{
-            marginTop: tokens.space[2],
-            display: 'flex',
-            flexDirection: 'column',
-            gap: tokens.space[1]
-          }}
-        >
+        <div className="wb-checks__list">
           {allChecks.map((c) => (
-            <div
-              key={c.id}
-              style={{ display: 'flex', gap: tokens.space[2], fontSize: tokens.size.sm }}
-            >
+            <div key={c.id} className="wb-checks__item">
               <span>{STATUS_ICONS[c.status]}</span>
-              <span style={{ color: tokens.color.text, fontWeight: 500, minWidth: 80 }}>
-                {c.label}
-              </span>
-              <span style={{ color: tokens.color.textMuted }}>{c.message}</span>
+              <span className="wb-checks__item-label">{c.label}</span>
+              <span className="wb-checks__item-msg">{c.message}</span>
             </div>
           ))}
         </div>

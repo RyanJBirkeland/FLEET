@@ -3,7 +3,7 @@ import { Group, Panel, Separator } from 'react-resizable-panels'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import { WorkbenchForm } from './WorkbenchForm'
 import { WorkbenchCopilot } from './WorkbenchCopilot'
-import { tokens } from '../../design-system/tokens'
+import '../../assets/task-workbench-neon.css'
 
 export function TaskWorkbench() {
   const copilotVisible = useTaskWorkbenchStore((s) => s.copilotVisible)
@@ -75,34 +75,11 @@ export function TaskWorkbench() {
   )
 
   return (
-    <div
-      ref={containerRef}
-      style={{ height: '100%', display: 'flex', flexDirection: 'column', position: 'relative' }}
-    >
+    <div ref={containerRef} className="wb">
       {/* Toggle copilot button when hidden */}
       {!copilotVisible && (
-        <div
-          style={{
-            position: 'absolute',
-            top: tokens.space[3],
-            right: tokens.space[3],
-            zIndex: 10
-          }}
-        >
-          <button
-            onClick={toggleCopilot}
-            style={{
-              background: tokens.color.accentDim,
-              border: `1px solid ${tokens.color.accent}`,
-              borderRadius: tokens.radius.md,
-              color: tokens.color.accent,
-              padding: `${tokens.space[1]} ${tokens.space[3]}`,
-              fontSize: tokens.size.sm,
-              cursor: 'pointer'
-            }}
-          >
-            AI Copilot
-          </button>
+        <div className="wb__copilot-toggle">
+          <button onClick={toggleCopilot}>AI Copilot</button>
         </div>
       )}
 
@@ -113,13 +90,7 @@ export function TaskWorkbench() {
 
         {copilotVisible && (
           <>
-            <Separator
-              style={{
-                width: 1,
-                background: tokens.color.border,
-                cursor: 'col-resize'
-              }}
-            />
+            <Separator className="wb__separator" />
             <Panel defaultSize={35} minSize={20}>
               <WorkbenchCopilot onClose={toggleCopilot} />
             </Panel>
