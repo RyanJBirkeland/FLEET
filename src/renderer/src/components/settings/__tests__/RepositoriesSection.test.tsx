@@ -125,6 +125,12 @@ describe('RepositoriesSection', () => {
     const removeButtons = screen.getAllByTitle('Remove repository')
     await user.click(removeButtons[1])
 
+    // Confirm the deletion in the confirmation dialog
+    await waitFor(() => {
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    })
+    await user.click(screen.getByRole('button', { name: /^remove$/i }))
+
     await waitFor(() => {
       expect(window.api.settings.setJson).toHaveBeenCalledWith(
         'repos',

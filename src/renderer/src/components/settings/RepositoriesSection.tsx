@@ -5,6 +5,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Trash2, Plus, FolderOpen } from 'lucide-react'
 import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
+import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 
 const REPO_COLOR_PALETTE = [
   '#6C8EEF',
@@ -26,6 +27,7 @@ interface RepoConfig {
 }
 
 export function RepositoriesSection(): React.JSX.Element {
+  const { confirm, confirmProps } = useConfirm()
   const [repos, setRepos] = useState<RepoConfig[]>([])
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
@@ -46,12 +48,18 @@ export function RepositoriesSection(): React.JSX.Element {
   }, [])
 
   const handleRemove = useCallback(
-    (name: string) => {
+    async (name: string) => {
+      const ok = await confirm({
+        message: `Remove repository "${name}" from BDE?`,
+        confirmLabel: 'Remove',
+        variant: 'danger'
+      })
+      if (!ok) return
       const updated = repos.filter((r) => r.name !== name)
       saveRepos(updated)
       toast.success(`Removed "${name}"`)
     },
-    [repos, saveRepos]
+    [repos, saveRepos, confirm]
   )
 
   const handleAdd = useCallback(async () => {
@@ -82,7 +90,9 @@ export function RepositoriesSection(): React.JSX.Element {
   }, [])
 
   return (
-    <section className="settings-section">
+    <>
+      <ConfirmModal {...confirmProps} />
+      <section className="settings-section">
       <h2 className="settings-section__title bde-section-title">Repositories</h2>
       <div className="settings-repos">
         {repos.map((r) => (
@@ -189,6 +199,7 @@ export function RepositoriesSection(): React.JSX.Element {
           <Plus size={14} /> Add Repository
         </Button>
       )}
-    </section>
+      </section>
+    </>
   )
 }
