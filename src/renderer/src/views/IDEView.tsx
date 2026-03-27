@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Group, Panel, Separator } from 'react-resizable-panels'
+import { PanelLeftOpen } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useIDEStore } from '../stores/ide'
 import { useTerminalStore } from '../stores/terminal'
@@ -326,6 +327,11 @@ export function IDEView(): React.JSX.Element {
                   setFocusedPanel('editor')
                 }}
               >
+                {sidebarCollapsed && !activeTab && (
+                  <button className="ide-sidebar-toggle" onClick={toggleSidebar}>
+                    <PanelLeftOpen size={16} />
+                  </button>
+                )}
                 <EditorTabBar onCloseTab={(id, dirty) => void handleCloseTab(id, dirty)} />
                 <div className="ide-editor-content">
                   <EditorPane
