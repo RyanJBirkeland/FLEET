@@ -25,6 +25,8 @@ vi.mock('../../stores/costData', () => ({
   )
 }))
 
+vi.mock('../../hooks/useSprintPolling', () => ({ useSprintPolling: vi.fn() }))
+
 vi.mock('../../components/neon', async () => {
   const actual =
     await vi.importActual<typeof import('../../components/neon')>('../../components/neon')
@@ -39,6 +41,7 @@ Object.defineProperty(window, 'api', {
   value: {
     getPrList: vi.fn().mockResolvedValue([]),
     openExternal: vi.fn(),
+    onExternalSprintChange: vi.fn().mockReturnValue(() => {}),
     dashboard: {
       completionsPerHour: vi.fn().mockResolvedValue([]),
       recentEvents: vi.fn().mockResolvedValue([])

@@ -7,6 +7,7 @@ import { useUIStore } from '../stores/ui'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION } from '../lib/motion'
 import { POLL_DASHBOARD_INTERVAL } from '../lib/constants'
 import { useBackoffInterval } from '../hooks/useBackoffInterval'
+import { useSprintPolling } from '../hooks/useSprintPolling'
 import {
   StatusBar,
   StatCounter,
@@ -126,8 +127,18 @@ export default function DashboardView() {
     }
   }, [])
 
+  // Keep sprint task stats fresh — polls + reacts to sprint:externalChange IPC
+  useSprintPolling()
+
   // Poll with jitter to prevent thundering herd; backoff on total failure
   useBackoffInterval(fetchDashboardData, POLL_DASHBOARD_INTERVAL)
+
+  // Refresh chart/feed immediately on sprint mutations (not just every 60s)
+  useEffect(() => {
+    return window.api.onExternalSprintChange(() => {
+      fetchDashboardData()
+    })
+  }, [fetchDashboardData])
 
   const transition = reduced ? REDUCED_TRANSITION : SPRINGS.snappy
 

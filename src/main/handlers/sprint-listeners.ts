@@ -4,6 +4,7 @@
  * and event-store cleanup from handler registration.
  */
 import type { SprintTask } from '../../shared/types'
+import { BrowserWindow } from 'electron'
 import { sseBroadcaster } from '../queue-api/router'
 import { createLogger } from '../logger'
 
@@ -41,5 +42,10 @@ export function notifySprintMutation(type: SprintMutationEvent['type'], task: Sp
       title: task.title,
       priority: task.priority
     })
+  }
+
+  // Push to renderer windows so Dashboard/SprintCenter refresh immediately
+  for (const win of BrowserWindow.getAllWindows()) {
+    win.webContents.send('sprint:externalChange')
   }
 }
