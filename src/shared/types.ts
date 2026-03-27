@@ -249,6 +249,36 @@ export interface Attachment {
 /** Lightweight result type for expected failures. */
 export type Result<T> = { ok: true; data: T } | { ok: false; error: string }
 
+// --- Agent Manager status types (shared so renderer can read typed status) ---
+
+export interface AgentManagerConcurrencyState {
+  maxSlots: number
+  effectiveSlots: number
+  activeCount: number
+  recoveryDueAt: number | null
+  consecutiveRateLimits: number
+  atFloor: boolean
+}
+
+export interface AgentManagerActiveAgent {
+  taskId: string
+  agentRunId: string
+  model: string
+  startedAt: number
+  lastOutputAt: number
+  rateLimitCount: number
+  costUsd: number
+  tokensIn: number
+  tokensOut: number
+}
+
+export interface AgentManagerStatus {
+  running: boolean
+  shuttingDown: boolean
+  concurrency: AgentManagerConcurrencyState
+  activeAgents: AgentManagerActiveAgent[]
+}
+
 // --- Agent Events (unified event stream for local + remote agents) ---
 
 export type AgentEventType =

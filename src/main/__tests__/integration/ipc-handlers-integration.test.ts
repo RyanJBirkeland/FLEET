@@ -168,14 +168,16 @@ describe('IPC handlers integration', () => {
 
       const result = (await invoke('agent-manager:status')) as {
         running: boolean
+        shuttingDown: boolean
         concurrency: unknown
         activeAgents: unknown[]
       }
 
-      expect(result).toEqual({
+      expect(result).toMatchObject({
         running: false,
-        concurrency: null,
-        activeAgents: []
+        shuttingDown: false,
+        activeAgents: [],
+        concurrency: expect.objectContaining({ maxSlots: 0, activeCount: 0 })
       })
     })
 
@@ -183,7 +185,14 @@ describe('IPC handlers integration', () => {
       const mockStatus = {
         running: true,
         shuttingDown: false,
-        concurrency: { maxSlots: 2, activeCount: 1, cooldownUntil: 0 },
+        concurrency: {
+          maxSlots: 2,
+          effectiveSlots: 2,
+          activeCount: 1,
+          recoveryDueAt: null,
+          consecutiveRateLimits: 0,
+          atFloor: false
+        },
         activeAgents: [
           {
             taskId: 't1',
