@@ -1,7 +1,6 @@
-import { appendFileSync, statSync, writeFileSync } from 'node:fs'
+import { appendFileSync, statSync, mkdirSync, existsSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import { mkdirSync, existsSync } from 'node:fs'
 
 const BDE_DIR = join(homedir(), '.bde')
 const LOG_PATH = join(BDE_DIR, 'bde.log')
@@ -23,17 +22,26 @@ function rotateIfNeeded(): void {
   try {
     const stats = statSync(LOG_PATH)
     if (stats.size > MAX_LOG_SIZE) {
-      writeFileSync(LOG_PATH, '') // truncate
+      const oldPath = LOG_PATH + '.old'
+      try { rmSync(oldPath) } catch { /* may not exist */ }
+      renameSync(LOG_PATH, oldPath)
     }
   } catch {
     // File doesn't exist yet — fine
   }
 }
 
+let writeCount = 0
+const ROTATION_CHECK_INTERVAL = 1000 // check every 1000 writes
+
 function fileLog(level: string, name: string, msg: string): void {
   try {
     const ts = new Date().toISOString()
     appendFileSync(LOG_PATH, `${ts} [${level}] [${name}] ${msg}\n`)
+    if (++writeCount >= ROTATION_CHECK_INTERVAL) {
+      writeCount = 0
+      rotateIfNeeded()
+    }
   } catch {
     // Logging should never crash the app
   }
