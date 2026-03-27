@@ -1,6 +1,5 @@
 import { useCallback } from 'react'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
-import { tokens } from '../../design-system/tokens'
 
 const SPEC_TEMPLATES: Record<string, { label: string; spec: string }> = {
   feature: {
@@ -49,20 +48,12 @@ export function SpecEditor({ onRequestGenerate, onRequestResearch, generating }:
   )
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[2] }}>
-      <div style={{ display: 'flex', gap: tokens.space[2], flexWrap: 'wrap' }}>
+    <div className="wb-spec">
+      <div className="wb-spec__toolbar">
         <button
           onClick={onRequestGenerate}
           disabled={generating}
-          style={{
-            background: tokens.color.accentDim,
-            border: `1px solid ${tokens.color.accent}`,
-            borderRadius: tokens.radius.md,
-            color: tokens.color.accent,
-            padding: `${tokens.space[1]} ${tokens.space[3]}`,
-            fontSize: tokens.size.sm,
-            cursor: generating ? 'wait' : 'pointer'
-          }}
+          className="wb-spec__btn wb-spec__btn--primary"
         >
           {generating ? 'Generating...' : 'Generate Spec'}
         </button>
@@ -70,31 +61,14 @@ export function SpecEditor({ onRequestGenerate, onRequestResearch, generating }:
           <button
             key={key}
             onClick={() => setField('spec', tmpl.spec)}
-            style={{
-              background: 'none',
-              border: `1px solid ${tokens.color.border}`,
-              borderRadius: tokens.radius.md,
-              color: tokens.color.textMuted,
-              padding: `${tokens.space[1]} ${tokens.space[3]}`,
-              fontSize: tokens.size.sm,
-              cursor: 'pointer'
-            }}
+            className="wb-spec__btn"
           >
             {tmpl.label}
           </button>
         ))}
         <button
           onClick={onRequestResearch}
-          style={{
-            background: 'none',
-            border: `1px solid ${tokens.color.border}`,
-            borderRadius: tokens.radius.md,
-            color: tokens.color.textMuted,
-            padding: `${tokens.space[1]} ${tokens.space[3]}`,
-            fontSize: tokens.size.sm,
-            cursor: 'pointer',
-            marginLeft: 'auto'
-          }}
+          className="wb-spec__btn wb-spec__btn--research"
         >
           Research Codebase
         </button>
@@ -104,20 +78,7 @@ export function SpecEditor({ onRequestGenerate, onRequestResearch, generating }:
         onChange={(e) => setField('spec', e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Describe what the agent should do. The more specific, the better the results."
-        style={{
-          minHeight: 200,
-          maxHeight: '60vh',
-          resize: 'vertical',
-          padding: tokens.space[3],
-          background: tokens.color.surface,
-          border: `1px solid ${tokens.color.border}`,
-          borderRadius: tokens.radius.lg,
-          color: tokens.color.text,
-          fontSize: tokens.size.md,
-          fontFamily: tokens.font.code,
-          lineHeight: 1.6,
-          outline: 'none'
-        }}
+        className="wb-spec__textarea"
       />
     </div>
   )
