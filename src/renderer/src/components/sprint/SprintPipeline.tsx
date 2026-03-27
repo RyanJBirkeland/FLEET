@@ -1,0 +1,287 @@
+/**
+ * SprintPipeline — Three-zone neon pipeline layout:
+ * Left: PipelineBacklog | Center: Pipeline stages | Right: TaskDetailDrawer (conditional)
+ */
+import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useShallow } from 'zustand/react/shallow'
+import { LayoutGroup } from 'framer-motion'
+import { useSprintTasks } from '../../stores/sprintTasks'
+import { useSprintUI } from '../../stores/sprintUI'
+import { useUIStore } from '../../stores/ui'
+import { useSprintEvents } from '../../stores/sprintEvents'
+import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
+import { useSprintPolling } from '../../hooks/useSprintPolling'
+import { usePrStatusPolling } from '../../hooks/usePrStatusPolling'
+import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcuts'
+import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
+import { useHealthCheck } from '../../hooks/useHealthCheck'
+import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
+import { ConfirmModal } from '../ui/ConfirmModal'
+import { PipelineBacklog } from './PipelineBacklog'
+import { PipelineStage } from './PipelineStage'
+import { TaskDetailDrawer } from './TaskDetailDrawer'
+import { SpecPanel } from './SpecPanel'
+import { DoneHistoryPanel } from './DoneHistoryPanel'
+import { NewTicketModal } from './NewTicketModal'
+import type { SprintTask } from '../../../../shared/types'
+
+import '../../assets/sprint-pipeline-neon.css'
+
+export function SprintPipeline() {
+  // --- Store state ---
+  const tasks = useSprintTasks((s) => s.tasks)
+  const updateTask = useSprintTasks((s) => s.updateTask)
+  const createTask = useSprintTasks((s) => s.createTask)
+
+  const { selectedTaskId, drawerOpen, specPanelOpen, doneViewOpen, logDrawerTaskId } = useSprintUI(
+    useShallow((s) => ({
+      selectedTaskId: s.selectedTaskId,
+      drawerOpen: s.drawerOpen,
+      specPanelOpen: s.specPanelOpen,
+      doneViewOpen: s.doneViewOpen,
+      logDrawerTaskId: s.logDrawerTaskId
+    }))
+  )
+  const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
+  const setDrawerOpen = useSprintUI((s) => s.setDrawerOpen)
+  const setSpecPanelOpen = useSprintUI((s) => s.setSpecPanelOpen)
+  const setDoneViewOpen = useSprintUI((s) => s.setDoneViewOpen)
+  const setLogDrawerTaskId = useSprintUI((s) => s.setLogDrawerTaskId)
+
+  const setView = useUIStore((s) => s.setView)
+
+  // --- Extracted hooks ---
+  const {
+    handleSaveSpec,
+    handleMarkDone,
+    handleStop,
+    handleRerun,
+    launchTask,
+    deleteTask,
+    confirmProps
+  } = useSprintTaskActions()
+
+  useHealthCheck(tasks)
+
+  // --- Local UI state ---
+  const [showNewTicketModal, setShowNewTicketModal] = useState(false)
+
+  // Partition tasks
+  const partition = useMemo(() => partitionSprintTasks(tasks), [tasks])
+
+  const selectedTask = useMemo(
+    () => (selectedTaskId ? (tasks.find((t) => t.id === selectedTaskId) ?? null) : null),
+    [selectedTaskId, tasks]
+  )
+
+  // Subscribe to live task output events
+  const initTaskOutputListener = useSprintEvents((s) => s.initTaskOutputListener)
+  useEffect(() => {
+    const cleanup = initTaskOutputListener()
+    return cleanup
+  }, [initTaskOutputListener])
+
+  // Keep notification hook aware of which task's LogDrawer is open
+  useEffect(() => {
+    setOpenLogDrawerTaskId(logDrawerTaskId)
+    return () => setOpenLogDrawerTaskId(null)
+  }, [logDrawerTaskId])
+
+  // In-app toast notifications
+  const handleViewOutput = useCallback(
+    (task: SprintTask) => {
+      setLogDrawerTaskId(task.id)
+    },
+    [setLogDrawerTaskId]
+  )
+  useTaskToasts(tasks, logDrawerTaskId, handleViewOutput)
+
+  // Polling hooks
+  useSprintPolling()
+  usePrStatusPolling()
+  useSprintKeyboardShortcuts({
+    openWorkbench: () => setView('task-workbench'),
+    setConflictDrawerOpen: () => {}
+  })
+
+  // Auto-select first active or queued task on load
+  useEffect(() => {
+    if (!selectedTaskId && tasks.length > 0) {
+      const active = partition.inProgress[0] || partition.todo[0]
+      if (active) {
+        setSelectedTaskId(active.id)
+      }
+    }
+  }, [tasks, selectedTaskId, partition, setSelectedTaskId])
+
+  // --- Callbacks ---
+  const handleTaskClick = useCallback(
+    (id: string) => {
+      setSelectedTaskId(id)
+    },
+    [setSelectedTaskId]
+  )
+
+  const handleAddToQueue = useCallback(
+    (task: SprintTask) => {
+      updateTask(task.id, { status: 'queued' })
+    },
+    [updateTask]
+  )
+
+  const handleCloseDrawer = useCallback(() => {
+    setDrawerOpen(false)
+    setSelectedTaskId(null)
+  }, [setDrawerOpen, setSelectedTaskId])
+
+  const handleDeleteTask = useCallback(
+    (task: SprintTask) => {
+      void deleteTask(task.id)
+    },
+    [deleteTask]
+  )
+
+  // Stats
+  const activeCount = partition.inProgress.length
+  const queuedCount = partition.todo.length
+  const doneCount = partition.done.length
+
+  return (
+    <div className="sprint-pipeline">
+      <header className="sprint-pipeline__header">
+        <h1 className="sprint-pipeline__title">Sprint</h1>
+        <div className="sprint-pipeline__stats">
+          <span className="sprint-pipeline__stat">
+            {activeCount} active
+          </span>
+          <span className="sprint-pipeline__stat">
+            {queuedCount} queued
+          </span>
+          <span className="sprint-pipeline__stat">
+            {doneCount} done
+          </span>
+        </div>
+        <button
+          className="sprint-pipeline__new-btn"
+          onClick={() => setShowNewTicketModal(true)}
+        >
+          + New Task
+        </button>
+      </header>
+
+      <div className="sprint-pipeline__body">
+        <PipelineBacklog
+          backlog={partition.backlog}
+          failed={partition.failed}
+          onTaskClick={handleTaskClick}
+          onAddToQueue={handleAddToQueue}
+          onRerun={handleRerun}
+        />
+
+        <div className="pipeline-center">
+          <LayoutGroup>
+            <PipelineStage
+              name="queued"
+              label="Queued"
+              tasks={partition.todo}
+              count={`${partition.todo.length} tasks`}
+              selectedTaskId={selectedTaskId}
+              onTaskClick={handleTaskClick}
+            />
+            <PipelineStage
+              name="blocked"
+              label="Blocked"
+              tasks={partition.blocked}
+              count={`${partition.blocked.length} task${partition.blocked.length !== 1 ? 's' : ''}`}
+              selectedTaskId={selectedTaskId}
+              onTaskClick={handleTaskClick}
+            />
+            <PipelineStage
+              name="active"
+              label="Active"
+              tasks={partition.inProgress}
+              count={`${partition.inProgress.length} of 5`}
+              selectedTaskId={selectedTaskId}
+              onTaskClick={handleTaskClick}
+            />
+            <PipelineStage
+              name="review"
+              label="Review"
+              tasks={partition.awaitingReview}
+              count={`${partition.awaitingReview.length} task${partition.awaitingReview.length !== 1 ? 's' : ''}`}
+              selectedTaskId={selectedTaskId}
+              onTaskClick={handleTaskClick}
+            />
+            <PipelineStage
+              name="done"
+              label="Done"
+              tasks={partition.done.slice(0, 5)}
+              count={`${Math.min(partition.done.length, 5)} of ${partition.done.length}`}
+              selectedTaskId={selectedTaskId}
+              onTaskClick={handleTaskClick}
+              doneFooter={
+                partition.done.length > 5 ? (
+                  <div className="pipeline-stage__done-footer">
+                    Showing 5 of {partition.done.length} ·{' '}
+                    <button
+                      className="pipeline-stage__done-link"
+                      onClick={() => setDoneViewOpen(true)}
+                    >
+                      View all &rarr;
+                    </button>
+                  </div>
+                ) : undefined
+              }
+            />
+          </LayoutGroup>
+        </div>
+
+        {drawerOpen && selectedTask && (
+          <TaskDetailDrawer
+            task={selectedTask}
+            onClose={handleCloseDrawer}
+            onLaunch={launchTask}
+            onStop={handleStop}
+            onMarkDone={handleMarkDone}
+            onRerun={handleRerun}
+            onDelete={handleDeleteTask}
+            onViewLogs={() => setView('agents')}
+            onOpenSpec={() => setSpecPanelOpen(true)}
+            onEdit={() => setView('task-workbench')}
+            onViewAgents={() => setView('agents')}
+          />
+        )}
+      </div>
+
+      {specPanelOpen && selectedTask?.spec && (
+        <SpecPanel
+          taskTitle={selectedTask.title}
+          spec={selectedTask.spec}
+          onClose={() => setSpecPanelOpen(false)}
+          onSave={(newSpec) => handleSaveSpec(selectedTask.id, newSpec)}
+        />
+      )}
+
+      {doneViewOpen && (
+        <DoneHistoryPanel
+          tasks={partition.done}
+          onTaskClick={handleTaskClick}
+          onClose={() => setDoneViewOpen(false)}
+        />
+      )}
+
+      <ConfirmModal {...confirmProps} />
+
+      {showNewTicketModal && (
+        <NewTicketModal
+          open={showNewTicketModal}
+          onClose={() => setShowNewTicketModal(false)}
+          onCreate={(data) => {
+            createTask(data)
+            setShowNewTicketModal(false)
+          }}
+        />
+      )}
+    </div>
+  )
+}
