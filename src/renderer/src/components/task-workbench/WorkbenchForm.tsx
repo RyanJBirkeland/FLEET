@@ -28,6 +28,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
   const mode = useTaskWorkbenchStore((s) => s.mode)
   const taskId = useTaskWorkbenchStore((s) => s.taskId)
   const spec = useTaskWorkbenchStore((s) => s.spec)
+  const specType = useTaskWorkbenchStore((s) => s.specType)
   const dependsOn = useTaskWorkbenchStore((s) => s.dependsOn)
   const playgroundEnabled = useTaskWorkbenchStore((s) => s.playgroundEnabled)
   const setField = useTaskWorkbenchStore((s) => s.setField)
@@ -55,7 +56,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
 
     const timer = setTimeout(async () => {
       try {
-        const result = await window.api.workbench.checkSpec({ title, repo, spec })
+        const result = await window.api.workbench.checkSpec({ title, repo, spec, specType })
         setSemanticChecks([
           {
             id: 'clarity',
@@ -89,7 +90,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
     }, 2000)
 
     return () => clearTimeout(timer)
-  }, [spec, title, repo, setSemanticChecks])
+  }, [spec, title, repo, specType, setSemanticChecks])
 
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 100)

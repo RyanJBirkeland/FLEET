@@ -420,7 +420,7 @@ export function registerWorkbenchHandlers(am?: AgentManager): void {
   // --- AI-powered spec checks ---
   safeHandle(
     'workbench:checkSpec',
-    async (_e, input: { title: string; repo: string; spec: string }) => {
+    async (_e, input: { title: string; repo: string; spec: string; specType?: string }) => {
       const summary = await checkSpecSemantic(input)
       return summary.results // Returns { clarity, scope, filesExist } — same shape as before
     }
