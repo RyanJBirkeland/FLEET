@@ -18,16 +18,29 @@ export interface GitFileStatus {
   staged: boolean
 }
 
-export async function gitStatus(cwd: string): Promise<Result<{ files: GitFileStatus[] }>> {
+export async function gitStatus(
+  cwd: string
+): Promise<Result<{ files: GitFileStatus[]; branch: string }>> {
   try {
-    const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+    const { stdout } = await execFileAsync('git', ['status', '--porcelain', '--branch'], {
       cwd,
       encoding: 'utf-8' as const,
       maxBuffer: MAX_BUFFER
     })
     const files: GitFileStatus[] = []
+    let branch = ''
+
     for (const line of stdout.split('\n')) {
       if (!line.trim()) continue
+
+      // Parse branch line (## branch_name or ## branch_name...origin/branch_name)
+      if (line.startsWith('## ')) {
+        const branchPart = line.slice(3)
+        const dotIndex = branchPart.indexOf('...')
+        branch = dotIndex > 0 ? branchPart.slice(0, dotIndex) : branchPart
+        continue
+      }
+
       const index = line[0]
       const worktree = line[1]
       const filePath = line.slice(3)
@@ -41,7 +54,7 @@ export async function gitStatus(cwd: string): Promise<Result<{ files: GitFileSta
         files.push({ path: filePath, status: '?', staged: false })
       }
     }
-    return { ok: true, data: { files } }
+    return { ok: true, data: { files, branch } }
   } catch (err) {
     return { ok: false, error: `git status failed in ${cwd}: ${(err as Error).message}` }
   }

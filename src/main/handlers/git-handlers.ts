@@ -76,7 +76,7 @@ export function registerGitHandlers(): void {
     const result = await gitStatus(validateRepoPath(cwd))
     if (!result.ok) {
       logger.warn(`git:status ${result.error}`)
-      return { files: [] }
+      return { files: [], branch: '' }
     }
     return result.data
   })
