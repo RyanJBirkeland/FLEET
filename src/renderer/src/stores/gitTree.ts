@@ -64,6 +64,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     try {
       const result = await window.api.gitStatus(cwd)
       const files = result?.files ?? []
+      const branch = result?.branch ?? ''
       const staged: GitFileEntry[] = []
       const unstaged: GitFileEntry[] = []
       const untracked: GitFileEntry[] = []
@@ -78,7 +79,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
         }
       }
 
-      set({ staged, unstaged, untracked, loading: false })
+      set({ staged, unstaged, untracked, branch, loading: false })
     } catch {
       set({ loading: false })
       toast.error('Failed to fetch git status')

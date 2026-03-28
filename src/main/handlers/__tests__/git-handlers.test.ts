@@ -147,13 +147,14 @@ describe('git:status handler', () => {
 
   it('returns file status when git succeeds', async () => {
     const files = [{ path: 'src/foo.ts', status: 'M', staged: true }]
-    vi.mocked(gitStatus).mockResolvedValue({ ok: true, data: { files } })
+    const branch = 'main'
+    vi.mocked(gitStatus).mockResolvedValue({ ok: true, data: { files, branch } })
 
     const handler = captureHandler('git:status')
     const result = await handler(mockEvent, '/Users/test/projects/BDE')
 
     expect(gitStatus).toHaveBeenCalledWith('/Users/test/projects/BDE')
-    expect(result).toEqual({ files })
+    expect(result).toEqual({ files, branch })
   })
 
   it('returns empty files array on git error', async () => {
@@ -162,7 +163,7 @@ describe('git:status handler', () => {
     const handler = captureHandler('git:status')
     const result = await handler(mockEvent, '/Users/test/projects/BDE')
 
-    expect(result).toEqual({ files: [] })
+    expect(result).toEqual({ files: [], branch: '' })
   })
 })
 
