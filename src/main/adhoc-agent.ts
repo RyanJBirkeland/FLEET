@@ -47,12 +47,17 @@ export async function spawnAdhocAgent(args: {
     session_id: sessionId
   }
 
+  // AbortController used to cleanly resolve the generator promise on session close
+  const sessionAbort = new AbortController()
+
   // Use an async generator that yields the first message then stays open
   async function* initialPrompt() {
     yield initialMessage
-    // Generator stays open — query() keeps the session alive
+    // Generator stays open until sessionAbort.abort() is called on close()
     // Follow-up messages go through queryHandle.streamInput()
-    await new Promise<void>(() => {}) // Never resolves — keeps generator alive
+    await new Promise<void>((resolve) => {
+      sessionAbort.signal.addEventListener('abort', () => resolve(), { once: true })
+    })
   }
 
   const queryHandle = sdk.query({
@@ -99,6 +104,7 @@ export async function spawnAdhocAgent(args: {
       )
     },
     close() {
+      sessionAbort.abort()
       queryHandle.close()
     }
   })
