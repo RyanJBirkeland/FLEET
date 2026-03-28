@@ -19,7 +19,6 @@ export interface SynthesizeResult {
 }
 
 interface CodebaseContext {
-  claudeMd: string
   fileTree: string
   relevantFiles: Array<{ path: string; content: string }>
 }
@@ -35,25 +34,11 @@ async function gatherCodebaseContext(
   answers: Record<string, string>
 ): Promise<CodebaseContext> {
   const context: CodebaseContext = {
-    claudeMd: '',
     fileTree: '',
     relevantFiles: []
   }
 
-  // 1. Read CLAUDE.md from repo root
-  try {
-    const claudeMdPath = `${repoPath}/CLAUDE.md`
-    context.claudeMd = await fs.readFile(claudeMdPath, 'utf-8')
-    log.info(`Loaded CLAUDE.md (${context.claudeMd.length} chars)`)
-  } catch (err: any) {
-    if (err.code === 'ENOENT') {
-      log.info('CLAUDE.md not found in repo')
-    } else {
-      log.warn(`Error reading CLAUDE.md: ${err.message}`)
-    }
-  }
-
-  // 2. Get file tree via git ls-files (truncate to 500 lines)
+  // 1. Get file tree via git ls-files (truncate to 500 lines)
   try {
     const { stdout } = await execFileAsync('git', ['ls-files'], {
       cwd: repoPath,
@@ -67,7 +52,7 @@ async function gatherCodebaseContext(
     log.warn(`Error getting file tree: ${err.message}`)
   }
 
-  // 3. Extract keywords from answer values
+  // 2. Extract keywords from answer values
   const answerText = Object.values(answers).join(' ')
   const words = answerText
     .split(/[\s.,;:!?()[\]{}'"]+/)
@@ -77,7 +62,7 @@ async function gatherCodebaseContext(
     .map((k) => k.toLowerCase())
   log.info(`Extracted keywords: ${keywords.join(', ')}`)
 
-  // 4. Grep for each keyword, collect unique file paths (cap at 10 files)
+  // 3. Grep for each keyword, collect unique file paths (cap at 10 files)
   const matchedFiles = new Set<string>()
   for (const keyword of keywords) {
     if (matchedFiles.size >= 10) break
@@ -109,7 +94,7 @@ async function gatherCodebaseContext(
     }
   }
 
-  // 5. Read top 5 matched files (first 200 lines each)
+  // 4. Read top 5 matched files (first 200 lines each)
   const filesToRead = Array.from(matchedFiles).slice(0, 5)
   for (const file of filesToRead) {
     try {
@@ -153,7 +138,6 @@ function buildSpecPrompt(request: SynthesizeRequest, context: CodebaseContext): 
 
 REPO: ${repo}
 
-${context.claudeMd ? `CLAUDE.md:\n${context.claudeMd}\n\n` : ''}
 ${context.fileTree ? `FILE TREE (first 500):\n${context.fileTree}\n\n` : ''}
 ${context.relevantFiles.length > 0 ? `RELEVANT FILES:\n${context.relevantFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}\n\n` : ''}`
   }
@@ -167,7 +151,6 @@ CONTEXT:
 - User Input:
 ${answersText}
 
-${context.claudeMd ? `\nCLAUDE.md (Project Context):\n${context.claudeMd}\n` : ''}
 ${context.fileTree ? `\nFILE TREE (first 500 files):\n${context.fileTree}\n` : ''}
 ${context.relevantFiles.length > 0 ? `\nRELEVANT CODE:\n${context.relevantFiles.map((f) => `--- ${f.path} ---\n${f.content}`).join('\n\n')}\n` : ''}
 
