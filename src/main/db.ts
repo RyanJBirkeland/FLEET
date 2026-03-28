@@ -27,6 +27,12 @@ export function closeDb(): void {
 export function backupDatabase(): void {
   const db = getDb()
   const backupPath = DB_PATH + '.backup'
+
+  // Validate backup path to prevent SQL injection (defense in depth)
+  if (!/^[\w\-.\/]+$/.test(backupPath)) {
+    throw new Error('Invalid backup path')
+  }
+
   try {
     db.exec(`VACUUM INTO '${backupPath}'`)
   } catch (err) {

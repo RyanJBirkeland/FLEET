@@ -174,8 +174,10 @@ function App(): React.JSX.Element {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
-      const tag = (e.target as HTMLElement).tagName
-      const inInput = tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
+      const target = e.target as HTMLElement
+      const tag = target.tagName
+      const inInput =
+        target.isContentEditable || tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT'
 
       if (e.key === 'Escape') {
         e.preventDefault()
