@@ -59,6 +59,9 @@ declare global {
       spawnLocalAgent: (
         ...args: IpcArgs<'local:spawnClaudeAgent'>
       ) => Promise<IpcResult<'local:spawnClaudeAgent'>>
+      spawnAssistant: (
+        ...args: IpcArgs<'agent:spawnAssistant'>
+      ) => Promise<IpcResult<'agent:spawnAssistant'>>
       sendToAgent: (pid: number, message: string) => Promise<IpcResult<'local:sendToAgent'>>
       isAgentInteractive: (
         ...args: IpcArgs<'local:isInteractive'>

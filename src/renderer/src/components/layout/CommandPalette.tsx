@@ -100,6 +100,28 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
 
     const actions: Command[] = [
       {
+        id: 'action-spawn-assistant',
+        label: 'Launch BDE Assistant',
+        category: 'action',
+        hint: 'Interactive helper',
+        action: async () => {
+          onClose()
+          try {
+            const paths = await window.api.getRepoPaths()
+            const repoPath = paths['BDE'] || paths[Object.keys(paths)[0]]
+            if (!repoPath) {
+              toast.error('No repo path found')
+              return
+            }
+            await window.api.spawnAssistant({ repoPath })
+            toast.success('BDE Assistant spawned')
+            setView('agents')
+          } catch (err) {
+            toast.error(`Failed to spawn assistant: ${err instanceof Error ? err.message : 'Unknown error'}`)
+          }
+        }
+      },
+      {
         id: 'action-spawn-agent',
         label: 'Spawn Agent',
         category: 'action',
