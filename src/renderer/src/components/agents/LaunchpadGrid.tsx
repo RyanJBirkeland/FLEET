@@ -127,10 +127,6 @@ export function LaunchpadGrid({
             </button>
           )
         })}
-        <button type="button" className="launchpad__tile launchpad__tile--add">
-          <div className="launchpad__tile-icon">+</div>
-          <div className="launchpad__tile-name">Add Custom</div>
-        </button>
       </div>
 
       {/* Recent */}

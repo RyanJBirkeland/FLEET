@@ -8,9 +8,7 @@ interface Command {
 const COMMANDS: Command[] = [
   { name: '/stop', description: 'Kill the running agent' },
   { name: '/retry', description: 'Requeue the sprint task' },
-  { name: '/focus', description: 'Steer to focus on a topic' },
-  { name: '/approve', description: 'Approve pending action' },
-  { name: '/files', description: 'List files the agent touched' }
+  { name: '/focus', description: 'Steer to focus on a topic' }
 ]
 
 interface CommandAutocompleteProps {

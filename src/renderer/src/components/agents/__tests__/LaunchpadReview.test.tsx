@@ -17,7 +17,6 @@ const mockTemplate: PromptTemplate = {
 describe('LaunchpadReview', () => {
   const onSpawn = vi.fn()
   const onBack = vi.fn()
-  const onSaveTemplate = vi.fn()
 
   const defaultProps = {
     template: mockTemplate,
@@ -27,7 +26,6 @@ describe('LaunchpadReview', () => {
     model: 'sonnet',
     onSpawn,
     onBack,
-    onSaveTemplate,
     spawning: false
   }
 

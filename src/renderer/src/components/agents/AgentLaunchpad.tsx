@@ -131,10 +131,6 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps) {
     [repo, model, repoPaths, spawnAgent, fetchProcesses, saveRecent, onAgentSpawned]
   )
 
-  const handleSaveTemplate = useCallback(() => {
-    toast.info('Template saving coming soon')
-  }, [])
-
   const handleBack = useCallback(() => {
     if (phase === 'review' && selectedTemplate && selectedTemplate.questions.length > 0) {
       setPhase('configure')
@@ -176,7 +172,6 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps) {
           model={model}
           onSpawn={handleSpawn}
           onBack={handleBack}
-          onSaveTemplate={handleSaveTemplate}
           spawning={spawning}
         />
       )

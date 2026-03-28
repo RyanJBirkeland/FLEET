@@ -43,11 +43,6 @@ describe('LaunchpadGrid', () => {
     expect(screen.getByText('New Feature')).toBeInTheDocument()
   })
 
-  it('renders the + Add tile', () => {
-    render(<LaunchpadGrid {...defaultProps} />)
-    expect(screen.getByText('Add Custom')).toBeInTheDocument()
-  })
-
   it('calls onSelectTemplate when a tile is clicked', () => {
     render(<LaunchpadGrid {...defaultProps} />)
     fireEvent.click(screen.getByText('Clean Code'))
