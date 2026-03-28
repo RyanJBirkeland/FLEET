@@ -29,6 +29,7 @@ export async function spawnAdhocAgent(args: {
   task: string
   repoPath: string
   model?: string
+  assistant?: boolean
 }): Promise<SpawnLocalAgentResult> {
   const model = args.model || 'claude-sonnet-4-5'
 

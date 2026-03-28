@@ -73,6 +73,7 @@ export interface SpawnLocalAgentArgs {
   task: string
   repoPath: string
   model?: string
+  assistant?: boolean
 }
 
 export interface SpawnLocalAgentResult {

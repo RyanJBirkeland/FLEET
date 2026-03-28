@@ -27,7 +27,16 @@ export function registerAgentHandlers(am?: AgentManager): void {
     return spawnAdhocAgent({
       task: args.task,
       repoPath: args.repoPath,
-      model: args.model
+      model: args.model,
+      assistant: args.assistant
+    })
+  })
+  safeHandle('agent:spawnAssistant', async (_e, args: { repoPath: string; model?: string }) => {
+    return spawnAdhocAgent({
+      task: 'You are now ready to assist. Wait for the user\'s first message.',
+      repoPath: args.repoPath,
+      model: args.model,
+      assistant: true
     })
   })
   safeHandle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))
