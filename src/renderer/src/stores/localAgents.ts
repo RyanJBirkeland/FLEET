@@ -97,18 +97,16 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
           }
         },
 
-        sendToAgent: async (pid, message) => {
-          const result = await window.api.sendToAgent(pid, message)
-          if (!result.ok) {
-            throw new Error(
-              result.error ??
-                'Cannot send to agent — stdin not available (agent may have been spawned outside this session)'
-            )
-          }
+        sendToAgent: async (_pid, _message) => {
+          throw new Error(
+            'Direct PID-based messaging removed. Use agent:steer with an agent ID instead.'
+          )
         },
 
-        killLocalAgent: async (pid): Promise<void> => {
-          await window.api.killLocalAgent(pid)
+        killLocalAgent: async (_pid): Promise<void> => {
+          throw new Error(
+            'Local PID-based agent kill removed. Use agent:kill with an agent ID instead.'
+          )
         },
 
         selectLocalAgent: (pid): void => {

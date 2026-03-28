@@ -68,18 +68,11 @@ vi.stubGlobal('api', {
     delete: vi.fn().mockResolvedValue(undefined),
     reset: vi.fn().mockResolvedValue(undefined)
   },
-  getAgentConfig: vi
-    .fn()
-    .mockResolvedValue({ binary: 'claude', permissionMode: 'bypassPermissions' }),
-  saveAgentConfig: vi.fn().mockResolvedValue(undefined),
   getAgentProcesses: vi.fn().mockResolvedValue([]),
   spawnLocalAgent: vi
     .fn()
     .mockResolvedValue({ pid: 1234, logPath: '/tmp/log', id: 'agent-1', interactive: false }),
-  sendToAgent: vi.fn().mockResolvedValue({ ok: true }),
   steerAgent: vi.fn().mockResolvedValue({ ok: true }),
-  isAgentInteractive: vi.fn().mockResolvedValue(false),
-  killLocalAgent: vi.fn().mockResolvedValue({ ok: true }),
   tailAgentLog: vi.fn().mockResolvedValue({ content: '', nextByte: 0 }),
   setTitle: vi.fn(),
   openExternal: vi.fn().mockResolvedValue(undefined),

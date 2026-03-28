@@ -106,34 +106,16 @@ describe('localAgents store', () => {
     expect(useLocalAgentsStore.getState().spawnedAgents[0].model).toBe('sonnet')
   })
 
-  it('sendToAgent throws on { ok: false }', async () => {
-    vi.mocked(window.api.sendToAgent).mockResolvedValue({ ok: false, error: 'agent busy' })
-
+  it('sendToAgent throws (removed functionality)', async () => {
     await expect(useLocalAgentsStore.getState().sendToAgent(123, 'hello')).rejects.toThrow(
-      'agent busy'
+      'Direct PID-based messaging removed'
     )
-
-    expect(window.api.sendToAgent).toHaveBeenCalledWith(123, 'hello')
   })
 
-  it('sendToAgent resolves on { ok: true }', async () => {
-    vi.mocked(window.api.sendToAgent).mockResolvedValue({ ok: true })
-
-    await expect(useLocalAgentsStore.getState().sendToAgent(123, 'hello')).resolves.toBeUndefined()
-  })
-
-  it('killLocalAgent calls IPC and does NOT remove process (ps-poll handles that)', async () => {
-    useLocalAgentsStore.setState({
-      processes: [
-        { pid: 100, bin: 'claude', args: '', cwd: null, startedAt: Date.now(), cpuPct: 0, memMb: 0 }
-      ]
-    })
-
-    await useLocalAgentsStore.getState().killLocalAgent(100)
-
-    expect(window.api.killLocalAgent).toHaveBeenCalledWith(100)
-    // Process should still be in the list — removal happens via polling
-    expect(useLocalAgentsStore.getState().processes).toHaveLength(1)
+  it('killLocalAgent throws (removed functionality)', async () => {
+    await expect(useLocalAgentsStore.getState().killLocalAgent(100)).rejects.toThrow(
+      'Local PID-based agent kill removed'
+    )
   })
 
   it('log polling accumulates content and advances logNextByte', async () => {

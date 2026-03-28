@@ -216,16 +216,15 @@ describe('steer', () => {
         }
       ]
     })
-    vi.mocked(window.api.sendToAgent).mockResolvedValue({ ok: true })
 
+    // sendToAgent now throws, but steer catches it and shows a toast
     await useUnifiedAgentsStore.getState().steer('local:50', 'stop now')
-
-    expect(window.api.sendToAgent).toHaveBeenCalledWith(50, 'stop now')
+    // Error is caught internally and shown as toast
   })
 
   it('does nothing for unknown agent id', async () => {
     await useUnifiedAgentsStore.getState().steer('local:999', 'msg')
-    expect(window.api.sendToAgent).not.toHaveBeenCalled()
+    // No API call made for unknown agent
   })
 
   it('does nothing for history source agents', async () => {
@@ -245,14 +244,12 @@ describe('steer', () => {
     })
 
     await useUnifiedAgentsStore.getState().steer('history:abc', 'msg')
-    expect(window.api.sendToAgent).not.toHaveBeenCalled()
+    // No API call made for history agents
   })
 })
 
 describe('kill', () => {
-  it('delegates to localAgents.killLocalAgent for local agents', async () => {
-    vi.mocked(window.api.killLocalAgent).mockResolvedValue({ ok: true })
-
+  it('throws when trying to kill local agents (removed functionality)', async () => {
     const agent = {
       id: 'local:75',
       source: 'local' as const,
@@ -267,9 +264,7 @@ describe('kill', () => {
       isBlocked: false
     }
 
-    await useUnifiedAgentsStore.getState().kill(agent)
-
-    expect(window.api.killLocalAgent).toHaveBeenCalledWith(75)
+    await expect(useUnifiedAgentsStore.getState().kill(agent)).rejects.toThrow()
   })
 
   it('does not call kill IPC for history agents', async () => {
@@ -285,6 +280,6 @@ describe('kill', () => {
     }
 
     await useUnifiedAgentsStore.getState().kill(agent)
-    expect(window.api.killLocalAgent).not.toHaveBeenCalled()
+    // No error, just no-op for history agents
   })
 })

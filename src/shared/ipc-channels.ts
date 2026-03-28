@@ -138,17 +138,6 @@ export interface PrChannels {
   }
 }
 
-/** Agent configuration */
-export interface AgentConfigChannels {
-  'config:getAgentConfig': {
-    args: []
-    result: { binary: string | null; permissionMode: string | null }
-  }
-  'config:saveAgentConfig': {
-    args: [config: { binary: string; permissionMode: string }]
-    result: void
-  }
-}
 
 /** Agent lifecycle and interaction */
 export interface AgentChannels {
@@ -172,14 +161,6 @@ export interface AgentChannels {
       memMb: number
     }[]
   }
-  'local:sendToAgent': {
-    args: [args: { pid: number; message: string }]
-    result: { ok: boolean; error?: string }
-  }
-  'local:isInteractive': {
-    args: [pid: number]
-    result: boolean
-  }
   'local:tailAgentLog': {
     args: [args: { logPath: string; fromByte?: number }]
     result: { content: string; nextByte: number }
@@ -190,10 +171,6 @@ export interface AgentChannels {
   }
   'agent:kill': {
     args: [agentId: string]
-    result: { ok: boolean; error?: string }
-  }
-  'agent:killLocal': {
-    args: [pid: number]
     result: { ok: boolean; error?: string }
   }
   'agents:list': {
@@ -551,7 +528,6 @@ export interface SynthesizerChannels {
 export type IpcChannelMap = SettingsChannels &
   GitChannels &
   PrChannels &
-  AgentConfigChannels &
   AgentChannels &
   GitHubApiChannels &
   CostChannels &
