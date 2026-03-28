@@ -73,11 +73,16 @@ export const usePendingReviewStore = create<PendingReviewStore>((set, get) => ({
   }
 }))
 
-// Auto-persist to localStorage whenever pendingComments changes
+// Auto-persist to localStorage whenever pendingComments changes (debounced 500ms)
+let persistTimer: ReturnType<typeof setTimeout> | null = null
+
 usePendingReviewStore.subscribe((state) => {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state.pendingComments))
-  } catch {
-    // Storage quota exceeded or unavailable — ignore
-  }
+  if (persistTimer) clearTimeout(persistTimer)
+  persistTimer = setTimeout(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.pendingComments))
+    } catch {
+      // Storage quota exceeded or unavailable — ignore
+    }
+  }, 500)
 })

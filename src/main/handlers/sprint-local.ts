@@ -15,93 +15,55 @@ import {
   type GeneratePromptRequest,
   type GeneratePromptResponse
 } from './sprint-spec'
+import { validateTaskCreation } from '../services/task-validation'
 import {
   getTask as _getTask,
   listTasks as _listTasks,
   createTask as _createTask,
   updateTask as _updateTask,
   deleteTask as _deleteTask,
-  claimTask as _claimTask,
-  releaseTask as _releaseTask,
-  getQueueStats as _getQueueStats,
-  getDoneTodayCount as _getDoneTodayCount,
-  markTaskDoneByPrNumber as _markTaskDoneByPrNumber,
-  markTaskCancelledByPrNumber as _markTaskCancelledByPrNumber,
-  listTasksWithOpenPrs as _listTasksWithOpenPrs,
-  updateTaskMergeableState as _updateTaskMergeableState,
-  getHealthCheckTasks as _getHealthCheckTasks,
-  UPDATE_ALLOWLIST
+  getHealthCheckTasks as _getHealthCheckTasks
 } from '../data/sprint-queries'
-import type { CreateTaskInput, QueueStats } from '../data/sprint-queries'
+import {
+  getTask,
+  updateTask,
+  listTasks,
+  claimTask,
+  releaseTask,
+  getQueueStats,
+  getDoneTodayCount,
+  markTaskDoneByPrNumber,
+  markTaskCancelledByPrNumber,
+  listTasksWithOpenPrs,
+  updateTaskMergeableState,
+  UPDATE_ALLOWLIST
+} from '../services/sprint-service'
+import type { CreateTaskInput, QueueStats } from '../services/sprint-service'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 
 const logger = createLogger('sprint-local')
 
-export { UPDATE_ALLOWLIST }
+// Re-export service-layer wrappers so existing deep imports keep working
+export {
+  getTask,
+  listTasks,
+  claimTask,
+  updateTask,
+  releaseTask,
+  getQueueStats,
+  getDoneTodayCount,
+  markTaskDoneByPrNumber,
+  markTaskCancelledByPrNumber,
+  listTasksWithOpenPrs,
+  updateTaskMergeableState,
+  UPDATE_ALLOWLIST
+}
 export type { CreateTaskInput, QueueStats }
 
 // Re-export listener and spec APIs so existing deep imports keep working
 export { onSprintMutation } from './sprint-listeners'
 export { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
-
-// --- Thin wrappers that delegate to data layer (SQLite) ---
-
-export function getTask(id: string): SprintTask | null {
-  return _getTask(id)
-}
-
-export function listTasks(status?: string): SprintTask[] {
-  return _listTasks(status)
-}
-
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
-  const result = _claimTask(id, claimedBy)
-  if (result) notifySprintMutation('updated', result)
-  return result
-}
-
-export function updateTask(
-  id: string,
-  patch: Record<string, unknown>
-): SprintTask | null {
-  const result = _updateTask(id, patch)
-  if (result) notifySprintMutation('updated', result)
-  return result
-}
-
-export function releaseTask(id: string, claimedBy: string): SprintTask | null {
-  const result = _releaseTask(id, claimedBy)
-  if (result) notifySprintMutation('updated', result)
-  return result
-}
-
-export function getQueueStats(): QueueStats {
-  return _getQueueStats()
-}
-
-export function getDoneTodayCount(): number {
-  return _getDoneTodayCount()
-}
-
-export function markTaskDoneByPrNumber(prNumber: number): string[] {
-  return _markTaskDoneByPrNumber(prNumber)
-}
-
-export function markTaskCancelledByPrNumber(prNumber: number): string[] {
-  return _markTaskCancelledByPrNumber(prNumber)
-}
-
-export function listTasksWithOpenPrs(): SprintTask[] {
-  return _listTasksWithOpenPrs()
-}
-
-export function updateTaskMergeableState(
-  prNumber: number,
-  mergeableState: string | null
-): void {
-  _updateTaskMergeableState(prNumber, mergeableState)
-}
 
 // --- Terminal status resolution ---
 
@@ -120,38 +82,11 @@ export function registerSprintLocalHandlers(): void {
   })
 
   safeHandle('sprint:create', async (_e, task: CreateTaskInput) => {
-    // Structural validation — relaxed for backlog (only title + repo required)
-    const structural = validateStructural({
-      title: task.title,
-      repo: task.repo,
-      spec: task.spec ?? null,
-      status: task.status ?? 'backlog'
-    })
-    if (!structural.valid) {
-      throw new Error(`Spec quality checks failed: ${structural.errors.join('; ')}`)
+    const validation = validateTaskCreation(task, { logger, listTasks: _listTasks })
+    if (!validation.valid) {
+      throw new Error(`Spec quality checks failed: ${validation.errors.join('; ')}`)
     }
-
-    // Check if task has dependencies and should be auto-blocked
-    if (
-      task.depends_on &&
-      task.depends_on.length > 0 &&
-      (task.status === 'queued' || !task.status)
-    ) {
-      const { shouldBlock, blockedBy } = checkTaskDependencies(
-        'new-task',
-        task.depends_on,
-        logger,
-        _listTasks
-      )
-      if (shouldBlock) {
-        task = {
-          ...task,
-          status: 'blocked',
-          notes: buildBlockedNotes(blockedBy, task.notes as string | null)
-        }
-      }
-    }
-    const row = _createTask(task)
+    const row = _createTask(validation.task)
     if (!row) throw new Error('Failed to create task')
     notifySprintMutation('created', row)
     return row
