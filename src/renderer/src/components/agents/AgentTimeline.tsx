@@ -9,11 +9,10 @@ interface AgentTimelineProps {
 
 export function AgentTimeline({ agents, onSelectAgent }: AgentTimelineProps): React.JSX.Element {
   // Default time range: last 6 hours
-  const timeRange = useMemo(() => {
-    const now = Date.now()
-    const sixHoursAgo = now - 6 * 3600 * 1000
-    return { start: sixHoursAgo, end: now }
-  }, [])
+  // Recompute on every render so the window stays current
+  const now = Date.now()
+  const sixHoursAgo = now - 6 * 3600 * 1000
+  const timeRange = { start: sixHoursAgo, end: now }
 
   // Filter agents to those within the time range
   const filteredAgents = useMemo(() => {

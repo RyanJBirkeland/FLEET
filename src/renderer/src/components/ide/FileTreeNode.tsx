@@ -40,13 +40,15 @@ export function FileTreeNode({
 }: FileTreeNodeProps): React.JSX.Element {
   const expandedDirs = useIDEStore((s) => s.expandedDirs)
   const toggleDir = useIDEStore((s) => s.toggleDir)
-  const activeTabId = useIDEStore((s) => s.activeTabId)
-  const openTabs = useIDEStore((s) => s.openTabs)
+  // Derive activeFilePath instead of subscribing to full openTabs array
+  const activeFilePath = useIDEStore((s) => {
+    const activeTab = s.openTabs.find((t) => t.id === s.activeTabId)
+    return activeTab?.filePath ?? null
+  })
   const [children, setChildren] = useState<DirEntry[]>([])
   const [loadError, setLoadError] = useState(false)
   const isExpanded = expandedDirs[fullPath] ?? false
-  const activeTab = openTabs.find((t) => t.id === activeTabId)
-  const isActive = activeTab?.filePath === fullPath
+  const isActive = activeFilePath === fullPath
 
   useEffect(() => {
     if (type === 'directory' && isExpanded) {
