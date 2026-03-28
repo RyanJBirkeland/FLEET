@@ -177,7 +177,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     }
   },
 
-  createTask: async (data): Promise<string | null> => {
+  createTask: async (data: CreateTicketInput): Promise<string | null> => {
     const repoEnum = data.repo.toLowerCase()
     const optimistic: SprintTask = {
       id: `temp-${Date.now()}`,
