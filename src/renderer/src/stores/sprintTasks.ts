@@ -142,11 +142,16 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       }
     })
     try {
-      await window.api.sprint.update(taskId, patch)
-      // DB write committed — remove from pending
+      const serverTask = (await window.api.sprint.update(taskId, patch)) as SprintTask | null
+      // Apply server response (may differ from optimistic — e.g. auto-blocked) and clear pending
       set((s) => {
         const { [taskId]: _, ...rest } = s.pendingUpdates
-        return { pendingUpdates: rest }
+        return {
+          pendingUpdates: rest,
+          tasks: serverTask?.id
+            ? s.tasks.map((t) => (t.id === taskId ? sanitizeDeps(serverTask) : t))
+            : s.tasks
+        }
       })
     } catch (e) {
       // Remove from pending on failure too

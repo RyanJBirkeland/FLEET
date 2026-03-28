@@ -16,6 +16,7 @@ export interface SprintPrPollerDeps {
   markTaskCancelledByPrNumber: (prNumber: number) => string[]
   updateTaskMergeableState: (prNumber: number, state: string | null) => void
   onTaskTerminal?: (taskId: string, status: string) => void
+  logger?: { info: (msg: string) => void; warn: (msg: string) => void }
 }
 
 export interface SprintPrPollerInstance {
@@ -38,6 +39,7 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
 
     const results = await deps.pollPrStatuses(inputs)
 
+    const log = deps.logger ?? console
     for (const result of results) {
       const input = inputs.find((i) => i.taskId === result.taskId)
       const prNumber = input ? parsePrUrl(input.prUrl)?.number : undefined
@@ -45,11 +47,18 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
 
       if (result.merged) {
         const ids = deps.markTaskDoneByPrNumber(prNumber)
+        log.info(`[sprint-pr-poller] PR #${prNumber} merged — marked ${ids.length} task(s) done: ${ids.join(', ') || '(none)'}`)
         if (deps.onTaskTerminal) {
-          for (const id of ids) deps.onTaskTerminal(id, 'done')
+          for (const id of ids) {
+            log.info(`[sprint-pr-poller] Calling onTaskTerminal(${id}, 'done')`)
+            deps.onTaskTerminal(id, 'done')
+          }
+        } else {
+          log.warn(`[sprint-pr-poller] onTaskTerminal not wired — dependency resolution will not fire`)
         }
       } else if (result.state === 'CLOSED') {
         const ids = deps.markTaskCancelledByPrNumber(prNumber)
+        log.info(`[sprint-pr-poller] PR #${prNumber} closed — cancelled ${ids.length} task(s): ${ids.join(', ') || '(none)'}`)
         if (deps.onTaskTerminal) {
           for (const id of ids) deps.onTaskTerminal(id, 'cancelled')
         }
@@ -59,7 +68,7 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
   }
 
   function safePoll(): void {
-    poll().catch(err => console.error('[sprint-pr-poller] poll error:', err))
+    poll().catch(err => (deps.logger ?? console).warn(`[sprint-pr-poller] poll error: ${err}`))
   }
 
   return {
@@ -85,6 +94,7 @@ import {
   markTaskCancelledByPrNumber,
   updateTaskMergeableState
 } from './handlers/sprint-local'
+import { createLogger } from './logger'
 
 let _instance: SprintPrPollerInstance | null = null
 let _onTaskTerminal: ((taskId: string, status: string) => void) | null = null
@@ -94,13 +104,15 @@ export function setOnTaskTerminal(fn: (taskId: string, status: string) => void):
 }
 
 export function startSprintPrPoller(): void {
+  const pollerLogger = createLogger('sprint-pr-poller')
   _instance = createSprintPrPoller({
     listTasksWithOpenPrs,
     pollPrStatuses,
     markTaskDoneByPrNumber,
     markTaskCancelledByPrNumber,
     updateTaskMergeableState,
-    onTaskTerminal: _onTaskTerminal ?? undefined
+    onTaskTerminal: _onTaskTerminal ?? undefined,
+    logger: pollerLogger
   })
   _instance.start()
 }

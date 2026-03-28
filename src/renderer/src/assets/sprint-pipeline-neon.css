@@ -158,10 +158,21 @@
 
 .backlog-card__action {
   font-size: 9px;
+  font-weight: 600;
   color: var(--neon-cyan);
-  margin-top: 4px;
+  background: var(--neon-cyan-surface);
+  border: 1px solid var(--neon-cyan-border);
+  border-radius: 4px;
+  padding: 3px 8px;
+  margin-top: 6px;
+  cursor: pointer;
   opacity: 0;
-  transition: opacity 150ms ease;
+  transition: opacity 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.backlog-card__action:hover {
+  background: var(--neon-cyan-border);
+  box-shadow: 0 0 8px var(--neon-cyan-glow);
 }
 
 .backlog-card:hover .backlog-card__action {
