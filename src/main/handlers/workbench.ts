@@ -11,6 +11,7 @@ import { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
 import { buildAgentEnv } from '../env-utils'
 import type { AgentManager } from '../agent-manager'
 import { checkSpecSemantic } from '../spec-semantic-check'
+import { buildAgentPrompt } from '../agent-manager/prompt-composer'
 
 const execFileAsync = promisify(execFile)
 
@@ -87,31 +88,11 @@ export function buildChatPrompt(
   messages: Array<{ role: string; content: string }>,
   formContext: { title: string; repo: string; spec: string }
 ): string {
-  const contextBlock = [
-    `[Task Context] Title: "${formContext.title}", Repo: ${formContext.repo}`,
-    formContext.spec ? `Spec draft:\n${formContext.spec}` : '(no spec yet)'
-  ].join('\n')
-
-  const history = messages
-    .map((m) => `${m.role === 'user' ? 'User' : 'Assistant'}: ${m.content}`)
-    .join('\n\n')
-
-  return `You are a text-only assistant helping craft a coding agent task. You have context about the task being created.
-
-CONSTRAINTS:
-- You are a text-only assistant. You cannot open URLs, render previews, generate images, or use tools.
-- Keep responses focused and under 500 words. Use markdown for structure.
-- When asked to research, reference specific file paths from the codebase.
-- When asked to draft spec sections, use markdown with ## headings.
-- Do not promise capabilities you do not have (opening browsers, visual mockups, etc.).
-
-${contextBlock}
-
----
-
-${history}
-
-Respond helpfully and concisely.`
+  return buildAgentPrompt({
+    agentType: 'copilot',
+    messages,
+    formContext
+  })
 }
 
 export function buildSpecGenerationPrompt(input: {

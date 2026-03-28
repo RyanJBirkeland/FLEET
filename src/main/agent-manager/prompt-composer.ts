@@ -108,7 +108,18 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
 
   // Add task content based on agent type
   if (agentType === 'copilot' && messages) {
-    // For copilot, build chat-style prompt with message history
+    // For copilot, add form context if available, then message history
+    if (input.formContext) {
+      const { title, repo, spec } = input.formContext
+      prompt += '\n\n## Task Context\n\n'
+      prompt += `Title: "${title}"\nRepo: ${repo}\n`
+      if (spec) {
+        prompt += `\nSpec draft:\n${spec}\n`
+      } else {
+        prompt += '\n(no spec yet)\n'
+      }
+    }
+
     prompt += '\n\n## Conversation\n\n'
     for (const msg of messages) {
       prompt += `**${msg.role}**: ${msg.content}\n\n`
