@@ -211,18 +211,23 @@ export const useIDEStore = create<IDEState>((set) => ({
 // ---------------------------------------------------------------------------
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
+let lastSerialized = ''
 
 useIDEStore.subscribe((state) => {
+  const toSave = {
+    rootPath: state.rootPath,
+    openTabs: state.openTabs.map((t) => ({ filePath: t.filePath })),
+    activeFilePath: state.openTabs.find((t) => t.id === state.activeTabId)?.filePath ?? null,
+    sidebarCollapsed: state.sidebarCollapsed,
+    terminalCollapsed: state.terminalCollapsed,
+    recentFolders: state.recentFolders
+  }
+  const serialized = JSON.stringify(toSave)
+  if (serialized === lastSerialized) return // Skip — nothing changed
+  lastSerialized = serialized
+
   if (persistTimer) clearTimeout(persistTimer)
   persistTimer = setTimeout(() => {
-    const toSave = {
-      rootPath: state.rootPath,
-      openTabs: state.openTabs.map((t) => ({ filePath: t.filePath })),
-      activeFilePath: state.openTabs.find((t) => t.id === state.activeTabId)?.filePath ?? null,
-      sidebarCollapsed: state.sidebarCollapsed,
-      terminalCollapsed: state.terminalCollapsed,
-      recentFolders: state.recentFolders
-    }
     window.api.settings.setJson('ide.state', toSave)
   }, 2000)
 })
