@@ -23,6 +23,7 @@
 
 .pr-station__view-title {
   color: var(--neon-text);
+  text-shadow: 0 0 8px var(--neon-cyan);
 }
 
 /* ── PR Station: Panels ────────────────────────────────── */
@@ -74,12 +75,13 @@
 /* ── PR Station List Row ───────────────────────────────── */
 
 .pr-station-list__row:hover {
-  background: var(--neon-surface-dim);
+  background: var(--neon-cyan-surface);
 }
 
 .pr-station-list__row--selected {
-  background: var(--neon-surface-dim);
+  background: var(--neon-cyan-surface);
   border-left-color: var(--neon-cyan);
+  box-shadow: var(--neon-cyan-glow);
 }
 
 .pr-station-list__number {
@@ -144,6 +146,7 @@
 .pr-actions__dropdown {
   background: var(--neon-surface-deep);
   border: 1px solid var(--neon-cyan-border);
+  box-shadow: var(--neon-glass-shadow);
 }
 
 .pr-actions__dropdown-item {
@@ -151,7 +154,7 @@
 }
 
 .pr-actions__dropdown-item:hover {
-  background: var(--neon-surface-dim);
+  background: var(--neon-cyan-surface);
 }
 
 .pr-actions__dropdown-item--active {
@@ -160,7 +163,7 @@
 
 .pr-actions__merged-badge {
   color: var(--neon-purple);
-  background: rgba(138, 43, 226, 0.15);
+  background: var(--neon-purple-surface);
 }
 
 /* ── PR Detail Panel ───────────────────────────────────── */
@@ -304,17 +307,17 @@
 
 .pr-detail__file-badge--added {
   color: var(--neon-cyan);
-  background: rgba(0, 255, 200, 0.15);
+  background: var(--neon-cyan-surface);
 }
 
 .pr-detail__file-badge--removed {
   color: var(--neon-red);
-  background: rgba(255, 85, 102, 0.15);
+  background: var(--neon-red-surface);
 }
 
 .pr-detail__file-badge--modified {
   color: var(--neon-orange);
-  background: rgba(255, 165, 0, 0.15);
+  background: var(--neon-orange-surface);
 }
 
 .pr-detail__file-add {
@@ -328,8 +331,8 @@
 /* ── Conflict Banner ───────────────────────────────────── */
 
 .pr-conflict-banner {
-  background: rgba(255, 165, 0, 0.10);
-  border: 1px solid rgba(255, 165, 0, 0.30);
+  background: var(--neon-orange-surface);
+  border: 1px solid var(--neon-orange-border);
 }
 
 .pr-conflict-banner__header {
@@ -361,12 +364,12 @@
 
 .pr-review__badge--approved {
   color: var(--neon-cyan);
-  background: rgba(0, 255, 200, 0.15);
+  background: var(--neon-cyan-surface);
 }
 
 .pr-review__badge--changes {
   color: var(--neon-red);
-  background: rgba(255, 85, 102, 0.15);
+  background: var(--neon-red-surface);
 }
 
 .pr-review__badge--commented {
@@ -430,8 +433,8 @@
 /* ── Review Banner ─────────────────────────────────────── */
 
 .pr-review-banner {
-  background: rgba(0, 255, 200, 0.08);
-  border-bottom: 1px solid rgba(0, 255, 200, 0.25);
+  background: var(--neon-cyan-surface);
+  border-bottom: 1px solid var(--neon-cyan-border);
   color: var(--neon-text);
 }
 
@@ -443,11 +446,13 @@
 
 .review-dialog-backdrop {
   background: var(--neon-overlay);
+  backdrop-filter: var(--neon-glass-blur);
 }
 
 .review-dialog {
   background: var(--neon-bg);
   border: 1px solid var(--neon-cyan-border);
+  box-shadow: var(--neon-purple-glow);
 }
 
 .review-dialog__title {
