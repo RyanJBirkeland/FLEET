@@ -8,7 +8,7 @@ import {
   AlertTriangle
 } from 'lucide-react'
 import { useNotificationsStore, type NotificationType } from '../../stores/notifications'
-import { usePanelLayoutStore, type View } from '../../stores/panelLayout'
+import { usePanelLayoutStore, type View, VIEW_LABELS } from '../../stores/panelLayout'
 import { timeAgo } from '../../lib/format'
 
 const NOTIFICATION_ICONS: Record<
@@ -69,9 +69,12 @@ export function NotificationBell(): React.JSX.Element {
         window.open(viewLink, '_blank')
       } else {
         // Internal path like '/sprint/task-id' — extract the view name segment
-        const viewName = viewLink.replace(/^\//, '').split('/')[0] as View
-        setView(viewName)
-        setIsOpen(false)
+        const viewName = viewLink.replace(/^\//, '').split('/')[0]
+        // Validate viewName against known views before casting to View type
+        if (viewName in VIEW_LABELS) {
+          setView(viewName as View)
+          setIsOpen(false)
+        }
       }
     }
   }

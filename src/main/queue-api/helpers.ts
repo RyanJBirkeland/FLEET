@@ -52,11 +52,9 @@ export function checkAuth(req: http.IncomingMessage, res: http.ServerResponse): 
 // Response / body helpers
 // ---------------------------------------------------------------------------
 
-export const CORS_HEADERS = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'GET, POST, PATCH, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Authorization, Content-Type'
-}
+// CORS headers removed - localhost API doesn't need them and wildcard
+// Access-Control-Allow-Origin: * would allow any browser tab to probe the API
+export const CORS_HEADERS = {}
 
 export function sendJson(res: http.ServerResponse, status: number, body: unknown): void {
   res.writeHead(status, { 'Content-Type': 'application/json', ...CORS_HEADERS })
