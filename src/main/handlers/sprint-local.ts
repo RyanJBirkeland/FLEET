@@ -21,87 +21,48 @@ import {
   createTask as _createTask,
   updateTask as _updateTask,
   deleteTask as _deleteTask,
-  claimTask as _claimTask,
-  releaseTask as _releaseTask,
-  getQueueStats as _getQueueStats,
-  getDoneTodayCount as _getDoneTodayCount,
-  markTaskDoneByPrNumber as _markTaskDoneByPrNumber,
-  markTaskCancelledByPrNumber as _markTaskCancelledByPrNumber,
-  listTasksWithOpenPrs as _listTasksWithOpenPrs,
-  updateTaskMergeableState as _updateTaskMergeableState,
-  getHealthCheckTasks as _getHealthCheckTasks,
-  UPDATE_ALLOWLIST
+  getHealthCheckTasks as _getHealthCheckTasks
 } from '../data/sprint-queries'
-import type { CreateTaskInput, QueueStats } from '../data/sprint-queries'
+import {
+  getTask,
+  updateTask,
+  listTasks,
+  claimTask,
+  releaseTask,
+  getQueueStats,
+  getDoneTodayCount,
+  markTaskDoneByPrNumber,
+  markTaskCancelledByPrNumber,
+  listTasksWithOpenPrs,
+  updateTaskMergeableState,
+  UPDATE_ALLOWLIST
+} from '../services/sprint-service'
+import type { CreateTaskInput, QueueStats } from '../services/sprint-service'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 
 const logger = createLogger('sprint-local')
 
-export { UPDATE_ALLOWLIST }
+// Re-export service-layer wrappers so existing deep imports keep working
+export {
+  getTask,
+  listTasks,
+  claimTask,
+  updateTask,
+  releaseTask,
+  getQueueStats,
+  getDoneTodayCount,
+  markTaskDoneByPrNumber,
+  markTaskCancelledByPrNumber,
+  listTasksWithOpenPrs,
+  updateTaskMergeableState,
+  UPDATE_ALLOWLIST
+}
 export type { CreateTaskInput, QueueStats }
 
 // Re-export listener and spec APIs so existing deep imports keep working
 export { onSprintMutation } from './sprint-listeners'
 export { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
-
-// --- Thin wrappers that delegate to data layer (SQLite) ---
-
-export function getTask(id: string): SprintTask | null {
-  return _getTask(id)
-}
-
-export function listTasks(status?: string): SprintTask[] {
-  return _listTasks(status)
-}
-
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
-  const result = _claimTask(id, claimedBy)
-  if (result) notifySprintMutation('updated', result)
-  return result
-}
-
-export function updateTask(
-  id: string,
-  patch: Record<string, unknown>
-): SprintTask | null {
-  const result = _updateTask(id, patch)
-  if (result) notifySprintMutation('updated', result)
-  return result
-}
-
-export function releaseTask(id: string, claimedBy: string): SprintTask | null {
-  const result = _releaseTask(id, claimedBy)
-  if (result) notifySprintMutation('updated', result)
-  return result
-}
-
-export function getQueueStats(): QueueStats {
-  return _getQueueStats()
-}
-
-export function getDoneTodayCount(): number {
-  return _getDoneTodayCount()
-}
-
-export function markTaskDoneByPrNumber(prNumber: number): string[] {
-  return _markTaskDoneByPrNumber(prNumber)
-}
-
-export function markTaskCancelledByPrNumber(prNumber: number): string[] {
-  return _markTaskCancelledByPrNumber(prNumber)
-}
-
-export function listTasksWithOpenPrs(): SprintTask[] {
-  return _listTasksWithOpenPrs()
-}
-
-export function updateTaskMergeableState(
-  prNumber: number,
-  mergeableState: string | null
-): void {
-  _updateTaskMergeableState(prNumber, mergeableState)
-}
 
 // --- Terminal status resolution ---
 
