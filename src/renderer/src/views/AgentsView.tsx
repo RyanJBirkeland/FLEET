@@ -4,9 +4,9 @@
  * 2. Fleet List + Agent Console (two-pane)
  * 3. Timeline Waterfall (Gantt-style)
  */
-import { useEffect, useState, useCallback, useRef } from 'react'
+import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Plus } from 'lucide-react'
+import { Plus, Activity } from 'lucide-react'
 import '../assets/agents.css'
 import { usePanelLayoutStore } from '../stores/panelLayout'
 import { useAgentHistoryStore } from '../stores/agentHistory'
@@ -15,8 +15,8 @@ import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
 import { AgentList } from '../components/agents/AgentList'
 import { AgentConsole } from '../components/agents/AgentConsole'
 import { LiveActivityStrip } from '../components/agents/LiveActivityStrip'
-import { AgentTimeline } from '../components/agents/AgentTimeline'
 import { AgentLaunchpad } from '../components/agents/AgentLaunchpad'
+import { NeonCard, MiniChart, type ChartBar } from '../components/neon'
 import { tokens } from '../design-system/tokens'
 import { toast } from '../stores/toasts'
 import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
@@ -73,6 +73,35 @@ export function AgentsView() {
   }, [])
 
   const selectedAgent = agents.find((a) => a.id === selectedId)
+
+  // Build line chart data: agent completions per hour over the last 6 hours
+  const activityChartData = useMemo((): ChartBar[] => {
+    const now = Date.now()
+    const sixHoursAgo = now - 6 * 3600 * 1000
+    const buckets: { hour: number; count: number }[] = []
+
+    // Create 6 one-hour buckets
+    for (let i = 0; i < 6; i++) {
+      buckets.push({ hour: sixHoursAgo + i * 3600 * 1000, count: 0 })
+    }
+
+    // Count agents that started in each bucket
+    for (const agent of agents) {
+      const started = new Date(agent.startedAt).getTime()
+      if (started < sixHoursAgo) continue
+      const bucketIdx = Math.min(
+        Math.floor((started - sixHoursAgo) / 3600000),
+        buckets.length - 1
+      )
+      buckets[bucketIdx].count++
+    }
+
+    return buckets.map((b) => ({
+      value: b.count,
+      accent: 'cyan' as const,
+      label: new Date(b.hour).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
+    }))
+  }, [agents])
 
   const handleSteer = useCallback(
     async (message: string) => {
@@ -239,8 +268,29 @@ export function AgentsView() {
         </div>
       </div>
 
-      {/* Zone 3: Timeline Waterfall */}
-      <AgentTimeline agents={agents} onSelectAgent={handleSelectAgent} />
+      {/* Zone 3: Agent Activity Chart */}
+      <div style={{ padding: '0 12px 12px' }}>
+        <NeonCard accent="cyan" title="Agent Activity — Last 6 Hours" icon={<Activity size={12} />}>
+          <MiniChart data={activityChartData} height={80} />
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'space-between',
+              color: 'rgba(255, 255, 255, 0.3)',
+              fontSize: '9px',
+              marginTop: '4px',
+              fontFamily: 'var(--bde-font-code)'
+            }}
+          >
+            {activityChartData.length > 0 && (
+              <>
+                <span>{activityChartData[0].label}</span>
+                <span>{activityChartData[activityChartData.length - 1].label}</span>
+              </>
+            )}
+          </div>
+        </NeonCard>
+      </div>
     </motion.div>
   )
 }

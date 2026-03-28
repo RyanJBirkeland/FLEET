@@ -1,5 +1,6 @@
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { useAgentEventsStore } from '../../stores/agentEvents'
+import { useShallow } from 'zustand/react/shallow'
 import { NEON_ACCENTS } from '../neon/types'
 import type { NeonAccent } from '../neon/types'
 import { AgentPill } from './AgentPill'
@@ -10,9 +11,18 @@ interface LiveActivityStripProps {
 
 export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps) {
   const agents = useAgentHistoryStore((state) => state.agents)
-  const events = useAgentEventsStore((state) => state.events)
-
   const runningAgents = agents.filter((agent) => agent.status === 'running')
+
+  // Only subscribe to events for running agents to avoid unnecessary re-renders
+  const events = useAgentEventsStore(
+    useShallow((state) => {
+      const relevantEvents: Record<string, typeof state.events[string]> = {}
+      for (const agent of runningAgents) {
+        relevantEvents[agent.id] = state.events[agent.id]
+      }
+      return relevantEvents
+    })
+  )
 
   const getLatestAction = (agentId: string): string => {
     const agentEvents = events[agentId]
