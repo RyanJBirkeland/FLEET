@@ -70,5 +70,12 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
     }
   }
 
+  // Sort done by completion time descending so .slice(0, N) gets most recent
+  done.sort((a, b) => {
+    const ta = a.completed_at ?? a.updated_at ?? ''
+    const tb = b.completed_at ?? b.updated_at ?? ''
+    return tb.localeCompare(ta)
+  })
+
   return { backlog, todo, blocked, inProgress, awaitingReview, done, failed }
 }

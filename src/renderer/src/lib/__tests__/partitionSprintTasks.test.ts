@@ -152,6 +152,20 @@ describe('partitionSprintTasks', () => {
     expect(result.failed).toHaveLength(1)
   })
 
+  it('sorts done tasks by completed_at descending (most recent first)', () => {
+    const tasks = [
+      makeTask({ status: 'done', pr_status: 'merged', completed_at: '2026-03-20T00:00:00Z' }),
+      makeTask({ status: 'done', pr_status: 'merged', completed_at: '2026-03-28T00:00:00Z' }),
+      makeTask({ status: 'done', pr_status: 'merged', completed_at: '2026-03-24T00:00:00Z' })
+    ]
+    const result = partitionSprintTasks(tasks)
+    expect(result.done.map((t) => t.completed_at)).toEqual([
+      '2026-03-28T00:00:00Z',
+      '2026-03-24T00:00:00Z',
+      '2026-03-20T00:00:00Z'
+    ])
+  })
+
   it('every task lands in exactly one bucket (no duplicates)', () => {
     const tasks = [
       makeTask({ status: 'backlog' }),
