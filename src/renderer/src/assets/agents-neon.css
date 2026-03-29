@@ -433,114 +433,6 @@
   color: rgba(255, 255, 255, 0.4);
 }
 
-/* ── Agent Timeline ── */
-.agent-timeline {
-  height: 70px;
-  display: flex;
-  flex-direction: column;
-  padding: 8px 12px;
-  background: linear-gradient(180deg, rgba(10, 0, 21, 0.85) 0%, rgba(138, 43, 226, 0.08) 100%);
-  backdrop-filter: var(--neon-glass-blur);
-  -webkit-backdrop-filter: var(--neon-glass-blur);
-  border-top: 1px solid var(--neon-purple-border);
-  overflow-x: auto;
-  overflow-y: hidden;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.agent-timeline::-webkit-scrollbar {
-  height: 4px;
-}
-
-.agent-timeline::-webkit-scrollbar-thumb {
-  background: var(--neon-purple-surface);
-  border-radius: 2px;
-}
-
-.agent-timeline__canvas {
-  position: relative;
-  height: 100%;
-  min-width: 100%;
-}
-
-/* ── Timeline Bar ── */
-.timeline-bar {
-  position: absolute;
-  height: 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  transition: width 300ms ease, left 300ms ease, opacity 150ms ease, transform 150ms ease;
-}
-
-.timeline-bar:hover {
-  transform: scaleY(1.3);
-  z-index: 10;
-}
-
-/* Timeline Bar Status Colors */
-.timeline-bar--running {
-  background: var(--neon-cyan);
-  box-shadow: var(--neon-cyan-glow);
-  animation: neon-breathe 2s ease-in-out infinite;
-}
-
-.timeline-bar--done {
-  background: var(--neon-cyan);
-  opacity: 0.4;
-}
-
-.timeline-bar--failed {
-  background: var(--neon-red);
-  box-shadow: var(--neon-red-glow);
-}
-
-.timeline-bar--cancelled {
-  background: var(--neon-orange);
-  opacity: 0.6;
-}
-
-.timeline-bar--queued {
-  background: var(--neon-purple);
-  opacity: 0.3;
-}
-
-.timeline-bar--blocked {
-  background: var(--neon-orange);
-  opacity: 0.4;
-}
-
-/* Timeline Bar Model Variants (height) */
-.timeline-bar--opus {
-  height: 14px;
-}
-
-.timeline-bar--sonnet {
-  height: 10px;
-}
-
-.timeline-bar--haiku {
-  height: 8px;
-}
-
-/* Timeline Bar Tooltip */
-.timeline-bar__tooltip {
-  position: fixed;
-  padding: 8px 12px;
-  background: linear-gradient(135deg, rgba(191, 90, 242, 0.12), rgba(10, 0, 21, 0.95));
-  backdrop-filter: var(--neon-glass-blur);
-  -webkit-backdrop-filter: var(--neon-glass-blur);
-  border: 1px solid var(--neon-purple-border);
-  border-radius: 8px;
-  box-shadow: var(--neon-glass-shadow);
-  font-family: var(--bde-font-code);
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
-  z-index: 1000;
-  pointer-events: none;
-  white-space: nowrap;
-}
-
 /* ── Markdown Rendering in Agent Text ── */
 .console-md-bold {
   font-weight: 700;
@@ -740,13 +632,11 @@
 
 /* ── Reduced Motion Overrides ── */
 @media (prefers-reduced-motion: reduce) {
-  .agent-pill--running,
-  .timeline-bar--running {
+  .agent-pill--running {
     animation: none;
   }
 
-  .console-line__chevron,
-  .timeline-bar {
+  .console-line__chevron {
     transition: none;
   }
 }

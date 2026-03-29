@@ -9,7 +9,6 @@ interface LaunchpadReviewProps {
   model: string
   onSpawn: (finalPrompt: string) => void
   onBack: () => void
-  onSaveTemplate: () => void
   spawning: boolean
 }
 
@@ -21,7 +20,6 @@ export function LaunchpadReview({
   model,
   onSpawn,
   onBack,
-  onSaveTemplate,
   spawning
 }: LaunchpadReviewProps) {
   const [editing, setEditing] = useState(false)
@@ -94,11 +92,6 @@ export function LaunchpadReview({
           <button type="button" className="launchpad__btn-ghost" onClick={onBack}>
             &#x2190; Back
           </button>
-          {false && (
-            <button type="button" className="launchpad__btn-ghost" onClick={onSaveTemplate}>
-              Save as Template
-            </button>
-          )}
           <button
             type="button"
             className="launchpad__btn-spawn"
