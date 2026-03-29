@@ -48,12 +48,6 @@ declare global {
         fetch: (path: string, init?: GitHubFetchInit) => Promise<IpcResult<'github:fetch'>>
       }
 
-      // Agent runtime config
-      getAgentConfig: () => Promise<IpcResult<'config:getAgentConfig'>>
-      saveAgentConfig: (
-        ...args: IpcArgs<'config:saveAgentConfig'>
-      ) => Promise<IpcResult<'config:saveAgentConfig'>>
-
       // Local agent process detection + spawning
       getAgentProcesses: () => Promise<IpcResult<'local:getAgentProcesses'>>
       spawnLocalAgent: (
@@ -62,12 +56,7 @@ declare global {
       spawnAssistant: (
         ...args: IpcArgs<'agent:spawnAssistant'>
       ) => Promise<IpcResult<'agent:spawnAssistant'>>
-      sendToAgent: (pid: number, message: string) => Promise<IpcResult<'local:sendToAgent'>>
-      isAgentInteractive: (
-        ...args: IpcArgs<'local:isInteractive'>
-      ) => Promise<IpcResult<'local:isInteractive'>>
       steerAgent: (agentId: string, message: string) => Promise<IpcResult<'agent:steer'>>
-      killLocalAgent: (...args: IpcArgs<'agent:killLocal'>) => Promise<IpcResult<'agent:killLocal'>>
       killAgent: (...args: IpcArgs<'agent:kill'>) => Promise<IpcResult<'agent:kill'>>
       tailAgentLog: (
         ...args: IpcArgs<'local:tailAgentLog'>

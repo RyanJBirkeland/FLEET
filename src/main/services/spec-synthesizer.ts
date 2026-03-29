@@ -4,8 +4,8 @@
 import { promises as fs } from 'fs'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
-import { buildAgentEnv } from '../env-utils'
 import { createLogger } from '../logger'
+import { runSdkStreaming } from '../sdk-streaming'
 import type { SynthesizeRequest, ReviseRequest } from '../../shared/types'
 
 const execFileAsync = promisify(execFile)
@@ -221,65 +221,6 @@ Regenerate the full spec incorporating the user's instruction. Maintain the same
 Output the revised spec now:`
 }
 
-// --- Helper: Run SDK streaming query ---
-
-async function runSdkStreaming(
-  prompt: string,
-  onChunk: (chunk: string) => void,
-  streamId: string,
-  timeoutMs = 180_000
-): Promise<string> {
-  const sdk = await import('@anthropic-ai/claude-agent-sdk')
-  const env = buildAgentEnv()
-
-  const queryHandle = sdk.query({
-    prompt,
-    options: {
-      model: 'claude-sonnet-4-5',
-      maxTurns: 1,
-      env: env as Record<string, string>,
-      permissionMode: 'bypassPermissions' as const,
-      allowDangerouslySkipPermissions: true,
-      settingSources: ['user', 'project', 'local']
-    }
-  })
-
-  activeStreams.set(streamId, { close: () => queryHandle.return() })
-
-  let fullText = ''
-  const timer = setTimeout(() => {
-    queryHandle.return()
-    activeStreams.delete(streamId)
-  }, timeoutMs)
-
-  try {
-    for await (const msg of queryHandle) {
-      if (typeof msg !== 'object' || msg === null) continue
-      const m = msg as Record<string, unknown>
-
-      // Extract text from assistant messages
-      if (m.type === 'assistant') {
-        const message = m.message as Record<string, unknown> | undefined
-        const content = message?.content
-        if (Array.isArray(content)) {
-          for (const block of content) {
-            const b = block as Record<string, unknown>
-            if (b.type === 'text' && typeof b.text === 'string') {
-              fullText += b.text
-              onChunk(b.text)
-            }
-          }
-        }
-      }
-    }
-  } finally {
-    clearTimeout(timer)
-    activeStreams.delete(streamId)
-  }
-
-  return fullText.trim()
-}
-
 // --- Main: Synthesize spec ---
 
 export async function synthesizeSpec(
@@ -296,7 +237,7 @@ export async function synthesizeSpec(
   const prompt = buildSpecPrompt(request, context)
 
   // Stream generation
-  const spec = await runSdkStreaming(prompt, onChunk, streamId)
+  const spec = await runSdkStreaming(prompt, onChunk, activeStreams, streamId)
 
   log.info(`Spec generated: ${spec.length} chars`)
   return {
@@ -318,7 +259,7 @@ export async function reviseSpec(
   const prompt = buildRevisionPrompt(request)
 
   // Stream revision
-  const spec = await runSdkStreaming(prompt, onChunk, streamId)
+  const spec = await runSdkStreaming(prompt, onChunk, activeStreams, streamId)
 
   log.info(`Spec revised: ${spec.length} chars`)
   return {

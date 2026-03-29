@@ -41,16 +41,6 @@ export function registerAgentHandlers(am?: AgentManager): void {
   })
   safeHandle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))
   safeHandle(
-    'local:sendToAgent',
-    async (_e, { pid: _pid, message: _message }: { pid: number; message: string }) => {
-      return {
-        ok: false,
-        error: 'Direct PID-based messaging removed. Use agent:steer with an agent ID instead.'
-      } as const
-    }
-  )
-  safeHandle('local:isInteractive', () => false)
-  safeHandle(
     'agent:steer',
     async (_e, { agentId, message }: { agentId: string; message: string }) => {
       // Try ad-hoc agents first
@@ -99,17 +89,6 @@ export function registerAgentHandlers(am?: AgentManager): void {
     return rows.map((r) => JSON.parse(r.payload))
   })
   cleanupOldLogs()
-
-  // --- Agent config IPC ---
-  // Agent binary and permission mode are now managed by the task-runner, not BDE.
-  // Return null to indicate these are no longer configurable from BDE.
-  safeHandle('config:getAgentConfig', () => ({
-    binary: null,
-    permissionMode: null
-  }))
-  safeHandle('config:saveAgentConfig', () => {
-    // No-op: agent config now lives in task-runner's own configuration.
-  })
 
   // --- Agent history IPC ---
   safeHandle('agents:list', (_e, args: { limit?: number; status?: string }) =>
