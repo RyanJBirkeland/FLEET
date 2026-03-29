@@ -162,7 +162,7 @@ describe('git:status handler', () => {
     const handler = captureHandler('git:status')
     const result = await handler(mockEvent, '/Users/test/projects/BDE')
 
-    expect(result).toEqual({ files: [] })
+    expect(result).toEqual({ files: [], branch: '' })
   })
 })
 
@@ -270,7 +270,7 @@ describe('github:fetch handler', () => {
     vi.mocked(githubFetch).mockResolvedValue(mockResponse as any)
 
     const handler = captureHandler('github:fetch')
-    await handler(mockEvent, '/repos/owner/repo', {
+    await handler(mockEvent, '/repos/owner/repo/pulls', {
       headers: { Authorization: 'Bearer caller_token', 'X-Custom': 'value' }
     })
 
