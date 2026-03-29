@@ -1,9 +1,25 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, beforeAll, afterAll } from 'vitest'
+import { mkdtempSync, rmSync } from 'fs'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import { validateIdePath } from '../../handlers/ide-fs-handlers'
 
-const WATCHED_ROOT = '/home/user/project'
+let WATCHED_ROOT: string
 
 describe('IDE path traversal prevention', () => {
+  beforeAll(() => {
+    // Create a real temp directory so fs.realpathSync works on all platforms
+    WATCHED_ROOT = mkdtempSync(join(tmpdir(), 'ide-test-'))
+  })
+
+  afterAll(() => {
+    // Clean up the temp directory
+    try {
+      rmSync(WATCHED_ROOT, { recursive: true, force: true })
+    } catch {
+      // ignore cleanup errors
+    }
+  })
   it('rejects ../../etc/passwd traversal', () => {
     expect(() => validateIdePath(`${WATCHED_ROOT}/../../etc/passwd`, WATCHED_ROOT)).toThrow(
       'Path traversal blocked'
