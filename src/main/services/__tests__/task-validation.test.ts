@@ -149,7 +149,11 @@ describe('validateTaskCreation', () => {
     expect(checkTaskDependencies).toHaveBeenCalledWith(
       'new-task',
       input.depends_on,
-      mockLogger,
+      expect.objectContaining({
+        warn: mockLogger.warn,
+        info: expect.any(Function),
+        error: expect.any(Function)
+      }),
       customListTasks
     )
   })
