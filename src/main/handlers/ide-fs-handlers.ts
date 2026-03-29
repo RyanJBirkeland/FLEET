@@ -13,19 +13,34 @@ let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
 /** Validates that targetPath is within allowedRoot. Returns the resolved absolute path. */
 export function validateIdePath(targetPath: string, allowedRoot: string): string {
-  const resolved = resolve(targetPath)
   const root = resolve(allowedRoot)
+
+  // Resolve root symlinks first to get the canonical root path
+  let rootReal: string
+  try {
+    rootReal = fs.realpathSync(root)
+  } catch {
+    rootReal = root
+  }
+
+  const resolved = resolve(targetPath)
 
   // Resolve symlinks to prevent path traversal via symlink escape
   let real: string
   try {
     real = fs.realpathSync(resolved)
   } catch {
-    // If realpath fails (e.g., path doesn't exist yet), use resolved path
-    real = resolved
+    // If realpath fails (e.g., path doesn't exist yet), we need to normalize
+    // the path to use the real root to ensure consistent comparison
+    if (resolved.startsWith(root + '/')) {
+      real = resolved.replace(root, rootReal)
+    } else if (resolved === root) {
+      real = rootReal
+    } else {
+      real = resolved
+    }
   }
 
-  const rootReal = fs.realpathSync(root)
   if (!real.startsWith(rootReal + '/') && real !== rootReal) {
     throw new Error(`Path traversal blocked: "${targetPath}" is outside root "${allowedRoot}"`)
   }
