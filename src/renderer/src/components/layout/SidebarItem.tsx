@@ -117,6 +117,7 @@ export function SidebarItem({
               { label: 'Open to Right', action: 'open-right' },
               { label: 'Open Below', action: 'open-below' },
               { label: 'Open in New Tab', action: 'open-tab' },
+              { label: 'Open in New Window', action: 'open-window' },
               { label: 'Close All', action: 'close-all' }
             ].map(({ label: menuLabel, action }) => (
               <button
