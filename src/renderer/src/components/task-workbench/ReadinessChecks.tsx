@@ -1,10 +1,20 @@
+import { Check, AlertTriangle, X, Loader2 } from 'lucide-react'
 import { useTaskWorkbenchStore, type CheckResult } from '../../stores/taskWorkbench'
 
-const STATUS_ICONS: Record<CheckResult['status'], string> = {
-  pass: '\u2705',
-  warn: '\u26a0\ufe0f',
-  fail: '\u274c',
-  pending: '\u23f3'
+const STATUS_ICON_MAP: Record<CheckResult['status'], { Icon: typeof Check; className: string; label: string }> = {
+  pass: { Icon: Check, className: 'wb-check-icon--pass', label: 'Passed' },
+  warn: { Icon: AlertTriangle, className: 'wb-check-icon--warn', label: 'Warning' },
+  fail: { Icon: X, className: 'wb-check-icon--fail', label: 'Failed' },
+  pending: { Icon: Loader2, className: 'wb-check-icon--pending', label: 'Pending' }
+}
+
+function CheckIcon({ status }: { status: CheckResult['status'] }) {
+  const { Icon, className, label } = STATUS_ICON_MAP[status]
+  return (
+    <span className={`wb-check-icon ${className}`} aria-label={label} role="img">
+      <Icon size={14} />
+    </span>
+  )
 }
 
 export function ReadinessChecks() {
@@ -28,7 +38,7 @@ export function ReadinessChecks() {
         <span className="wb-checks__icons">
           {allChecks.map((c) => (
             <span key={c.id} title={c.label}>
-              {STATUS_ICONS[c.status]}
+              <CheckIcon status={c.status} />
             </span>
           ))}
         </span>
@@ -40,7 +50,7 @@ export function ReadinessChecks() {
         <div className="wb-checks__list">
           {allChecks.map((c) => (
             <div key={c.id} className="wb-checks__item">
-              <span>{STATUS_ICONS[c.status]}</span>
+              <CheckIcon status={c.status} />
               <span className="wb-checks__item-label">{c.label}</span>
               <span className="wb-checks__item-msg">{c.message}</span>
             </div>

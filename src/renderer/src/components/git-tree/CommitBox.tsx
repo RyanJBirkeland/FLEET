@@ -1,5 +1,5 @@
 import React from 'react'
-import { GitCommitHorizontal, Upload } from 'lucide-react'
+import { GitCommitHorizontal, Upload, Loader2 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -8,6 +8,8 @@ import { GitCommitHorizontal, Upload } from 'lucide-react'
 export interface CommitBoxProps {
   commitMessage: string
   stagedCount: number
+  commitLoading?: boolean
+  pushLoading?: boolean
   onMessageChange: (msg: string) => void
   onCommit: () => void
   onPush: () => void
@@ -20,11 +22,13 @@ export interface CommitBoxProps {
 export function CommitBox({
   commitMessage,
   stagedCount,
+  commitLoading = false,
+  pushLoading = false,
   onMessageChange,
   onCommit,
   onPush
 }: CommitBoxProps): React.ReactElement {
-  const canCommit = commitMessage.trim().length > 0 && stagedCount > 0
+  const canCommit = commitMessage.trim().length > 0 && stagedCount > 0 && !commitLoading
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>): void {
     if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') {
@@ -53,29 +57,34 @@ export function CommitBox({
           onClick={onCommit}
           disabled={!canCommit}
           aria-label="Commit staged changes"
+          aria-busy={commitLoading}
           title={
-            !canCommit
-              ? stagedCount === 0
-                ? 'No staged changes'
-                : 'Enter a commit message'
-              : 'Commit staged changes (⌘↵)'
+            commitLoading
+              ? 'Committing...'
+              : !canCommit
+                ? stagedCount === 0
+                  ? 'No staged changes'
+                  : 'Enter a commit message'
+                : 'Commit staged changes (⌘↵)'
           }
           className={`git-commit-box__commit-btn ${canCommit ? 'git-commit-box__commit-btn--enabled' : 'git-commit-box__commit-btn--disabled'}`}
         >
-          <GitCommitHorizontal size={14} />
-          Commit
-          {stagedCount > 0 && <span className="git-commit-box__count">({stagedCount})</span>}
+          {commitLoading ? <Loader2 size={14} className="bde-spin" /> : <GitCommitHorizontal size={14} />}
+          {commitLoading ? 'Committing...' : 'Commit'}
+          {!commitLoading && stagedCount > 0 && <span className="git-commit-box__count">({stagedCount})</span>}
         </button>
 
         {/* Push button */}
         <button
           onClick={onPush}
+          disabled={pushLoading}
           aria-label="Push to remote"
-          title="Push to remote"
+          aria-busy={pushLoading}
+          title={pushLoading ? 'Pushing...' : 'Push to remote'}
           className="git-commit-box__push-btn"
         >
-          <Upload size={14} />
-          Push
+          {pushLoading ? <Loader2 size={14} className="bde-spin" /> : <Upload size={14} />}
+          {pushLoading ? 'Pushing...' : 'Push'}
         </button>
       </div>
     </div>

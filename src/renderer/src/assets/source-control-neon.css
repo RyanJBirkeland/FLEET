@@ -492,3 +492,61 @@
   color: var(--bde-text);
   background-color: transparent;
 }
+
+/* ── Error Banner ── */
+.git-tree-view__error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  padding: var(--bde-space-2) var(--bde-space-3);
+  background: var(--neon-red-surface, rgba(255, 50, 50, 0.1));
+  border-bottom: 1px solid var(--neon-red-border, rgba(255, 50, 50, 0.3));
+  color: var(--neon-red, #ff5050);
+  font-size: 12px;
+}
+
+.git-tree-view__error-text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-tree-view__error-retry {
+  background: var(--neon-red-surface, rgba(255, 50, 50, 0.15));
+  border: 1px solid var(--neon-red-border, rgba(255, 50, 50, 0.3));
+  border-radius: var(--bde-radius-sm, 4px);
+  color: var(--neon-red, #ff5050);
+  padding: 2px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 100ms ease;
+}
+
+.git-tree-view__error-retry:hover {
+  background: var(--neon-red-border, rgba(255, 50, 50, 0.3));
+}
+
+.git-tree-view__error-dismiss {
+  background: none;
+  border: none;
+  color: var(--neon-red, #ff5050);
+  cursor: pointer;
+  padding: 2px;
+  opacity: 0.6;
+  transition: opacity 100ms ease;
+}
+
+.git-tree-view__error-dismiss:hover {
+  opacity: 1;
+}
+
+/* ── Loading spinner ── */
+.bde-spin {
+  animation: bde-spin 1s linear infinite;
+}
+
+@keyframes bde-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}

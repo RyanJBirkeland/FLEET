@@ -360,6 +360,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
         onSaveBacklog={() => handleSubmit('backlog')}
         onQueueNow={() => handleSubmit('queue')}
         onLaunch={() => handleSubmit('queue')}
+        onCancel={mode === 'edit' ? resetForm : undefined}
         submitting={submitting}
       />
 

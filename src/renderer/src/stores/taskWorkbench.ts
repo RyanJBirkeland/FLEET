@@ -80,6 +80,30 @@ const WELCOME_MESSAGE: CopilotMessage = {
   timestamp: Date.now()
 }
 
+const COPILOT_STORAGE_KEY = 'bde:copilot-messages'
+
+function loadPersistedMessages(): CopilotMessage[] {
+  try {
+    const raw = localStorage.getItem(COPILOT_STORAGE_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed) && parsed.length > 0) return parsed
+  } catch {
+    // Ignore corrupt localStorage
+  }
+  return []
+}
+
+function persistMessages(messages: CopilotMessage[]): void {
+  try {
+    // Only persist the last 100 messages to keep localStorage lean
+    const toStore = messages.slice(-100)
+    localStorage.setItem(COPILOT_STORAGE_KEY, JSON.stringify(toStore))
+  } catch {
+    // Ignore quota errors
+  }
+}
+
 function defaults(): Pick<
   TaskWorkbenchState,
   | 'mode'
@@ -118,7 +142,10 @@ function defaults(): Pick<
     playgroundEnabled: false,
     specType: null,
     copilotVisible: true,
-    copilotMessages: [{ ...WELCOME_MESSAGE, timestamp: Date.now() }],
+    copilotMessages: (() => {
+      const persisted = loadPersistedMessages()
+      return persisted.length > 0 ? persisted : [{ ...WELCOME_MESSAGE, timestamp: Date.now() }]
+    })(),
     copilotLoading: false,
     streamingMessageId: null,
     activeStreamId: null,
@@ -208,3 +235,12 @@ export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
       }
     })
 }))
+
+// Persist copilot messages to localStorage on change
+useTaskWorkbenchStore.subscribe(
+  (state, prev) => {
+    if (state.copilotMessages !== prev.copilotMessages && !state.streamingMessageId) {
+      persistMessages(state.copilotMessages)
+    }
+  }
+)

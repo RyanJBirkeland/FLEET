@@ -47,6 +47,30 @@ export default function SettingsView(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('connections')
   const ActiveSection = SECTION_MAP[activeTab]
 
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+    let nextIndex = index
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      nextIndex = (index + 1) % TABS.length
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      nextIndex = (index - 1 + TABS.length) % TABS.length
+    } else if (e.key === 'Home') {
+      e.preventDefault()
+      nextIndex = 0
+    } else if (e.key === 'End') {
+      e.preventDefault()
+      nextIndex = TABS.length - 1
+    } else {
+      return
+    }
+    setActiveTab(TABS[nextIndex].id)
+    // Focus the newly active tab button
+    const tabList = e.currentTarget.parentElement
+    const nextButton = tabList?.children[nextIndex] as HTMLElement | undefined
+    nextButton?.focus()
+  }
+
   return (
     <motion.div
       className="settings-view settings-view--column"
@@ -59,13 +83,15 @@ export default function SettingsView(): React.JSX.Element {
         <span className="settings-view__header-title text-gradient-aurora">Settings</span>
       </div>
       <div className="settings-view__tabs" role="tablist" aria-label="Settings sections">
-        {TABS.map(({ id, label, icon: Icon }) => (
+        {TABS.map(({ id, label, icon: Icon }, index) => (
           <button
             key={id}
             role="tab"
             aria-selected={activeTab === id}
+            tabIndex={activeTab === id ? 0 : -1}
             className={`settings-tab ${activeTab === id ? 'settings-tab--active' : ''}`}
             onClick={() => setActiveTab(id)}
+            onKeyDown={(e) => handleTabKeyDown(e, index)}
             type="button"
           >
             <Icon size={14} />

@@ -261,7 +261,7 @@ export function SprintPipeline() {
               name="queued"
               label="Queued"
               tasks={partition.todo}
-              count={`${partition.todo.length} tasks`}
+              count={`${partition.todo.length}`}
               selectedTaskId={selectedTaskId}
               onTaskClick={handleTaskClick}
             />
@@ -269,7 +269,7 @@ export function SprintPipeline() {
               name="blocked"
               label="Blocked"
               tasks={partition.blocked}
-              count={`${partition.blocked.length} task${partition.blocked.length !== 1 ? 's' : ''}`}
+              count={`${partition.blocked.length}`}
               selectedTaskId={selectedTaskId}
               onTaskClick={handleTaskClick}
             />
@@ -277,7 +277,7 @@ export function SprintPipeline() {
               name="active"
               label="Active"
               tasks={partition.inProgress}
-              count={`${partition.inProgress.length} of 5`}
+              count={`${partition.inProgress.length}/5`}
               selectedTaskId={selectedTaskId}
               onTaskClick={handleTaskClick}
             />
@@ -285,7 +285,7 @@ export function SprintPipeline() {
               name="review"
               label="Review"
               tasks={partition.awaitingReview}
-              count={`${partition.awaitingReview.length} task${partition.awaitingReview.length !== 1 ? 's' : ''}`}
+              count={`${partition.awaitingReview.length}`}
               selectedTaskId={selectedTaskId}
               onTaskClick={handleTaskClick}
             />
@@ -293,7 +293,7 @@ export function SprintPipeline() {
               name="done"
               label="Done"
               tasks={partition.done.slice(0, 5)}
-              count={`${Math.min(partition.done.length, 5)} of ${partition.done.length}`}
+              count={`${partition.done.length}`}
               selectedTaskId={selectedTaskId}
               onTaskClick={handleTaskClick}
               doneFooter={

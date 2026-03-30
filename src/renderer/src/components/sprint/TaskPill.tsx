@@ -52,7 +52,7 @@ export function TaskPill({ task, selected, onClick }: TaskPillProps) {
       data-testid="task-pill"
     >
       <div className="task-pill__dot" style={{ background: getDotColor(task.status) }} />
-      <span className="task-pill__title">{task.title}</span>
+      <span className="task-pill__title" title={task.title}>{task.title}</span>
       <span
         className="task-pill__badge"
         style={{ background: 'var(--neon-cyan-surface)', color: 'var(--neon-cyan)' }}

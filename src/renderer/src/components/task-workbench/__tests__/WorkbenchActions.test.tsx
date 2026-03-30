@@ -21,7 +21,7 @@ describe('WorkbenchActions', () => {
     render(<WorkbenchActions {...defaultProps} />)
     expect(screen.getByText('Save to Backlog')).toBeInTheDocument()
     expect(screen.getByText('Queue Now')).toBeInTheDocument()
-    expect(screen.getByText('Launch')).toBeInTheDocument()
+    expect(screen.getByText('Queue & Run')).toBeInTheDocument()
   })
 
   it('Save to Backlog disabled when no title-present check passes', () => {
@@ -34,7 +34,7 @@ describe('WorkbenchActions', () => {
     // allTier1Pass = [].every(...) = true, so canQueue and canLaunch are true
     render(<WorkbenchActions {...defaultProps} />)
     expect(screen.getByText('Queue Now')).not.toBeDisabled()
-    expect(screen.getByText('Launch')).not.toBeDisabled()
+    expect(screen.getByText('Queue & Run')).not.toBeDisabled()
   })
 
   it('all buttons disabled when structural checks have failures', () => {
@@ -47,7 +47,7 @@ describe('WorkbenchActions', () => {
     render(<WorkbenchActions {...defaultProps} />)
     expect(screen.getByText('Save to Backlog')).toBeDisabled()
     expect(screen.getByText('Queue Now')).toBeDisabled()
-    expect(screen.getByText('Launch')).toBeDisabled()
+    expect(screen.getByText('Queue & Run')).toBeDisabled()
   })
 
   it('Save to Backlog enabled when title check passes', () => {
@@ -106,7 +106,7 @@ describe('WorkbenchActions', () => {
       operationalChecks: []
     })
     render(<WorkbenchActions {...defaultProps} />)
-    expect(screen.getByText('Launch')).not.toBeDisabled()
+    expect(screen.getByText('Queue & Run')).not.toBeDisabled()
   })
 
   it('Launch disabled when semantic checks have fails', () => {
@@ -120,7 +120,7 @@ describe('WorkbenchActions', () => {
       operationalChecks: []
     })
     render(<WorkbenchActions {...defaultProps} />)
-    expect(screen.getByText('Launch')).toBeDisabled()
+    expect(screen.getByText('Queue & Run')).toBeDisabled()
   })
 
   it('Launch allowed when semantic checks have warnings (not fails)', () => {
@@ -134,7 +134,7 @@ describe('WorkbenchActions', () => {
       operationalChecks: []
     })
     render(<WorkbenchActions {...defaultProps} />)
-    expect(screen.getByText('Launch')).not.toBeDisabled()
+    expect(screen.getByText('Queue & Run')).not.toBeDisabled()
   })
 
   it('Launch enabled when semantic checks are empty', () => {
@@ -146,7 +146,7 @@ describe('WorkbenchActions', () => {
       operationalChecks: []
     })
     render(<WorkbenchActions {...defaultProps} />)
-    expect(screen.getByText('Launch')).not.toBeDisabled()
+    expect(screen.getByText('Queue & Run')).not.toBeDisabled()
   })
 
   it('calls onSaveBacklog when Save to Backlog clicked', () => {
@@ -178,7 +178,7 @@ describe('WorkbenchActions', () => {
       ]
     })
     render(<WorkbenchActions {...defaultProps} />)
-    fireEvent.click(screen.getByText('Launch'))
+    fireEvent.click(screen.getByText('Queue & Run'))
     expect(defaultProps.onLaunch).toHaveBeenCalledTimes(1)
   })
 
@@ -203,7 +203,7 @@ describe('WorkbenchActions', () => {
   it('shows "Launching..." on Launch when submitting', () => {
     render(<WorkbenchActions {...defaultProps} submitting={true} />)
     expect(screen.getByText('Launching...')).toBeInTheDocument()
-    expect(screen.queryByText('Launch')).not.toBeInTheDocument()
+    expect(screen.queryByText('Queue & Run')).not.toBeInTheDocument()
   })
 
   it('Launch disabled when tier 3 operational check fails even if tier 1 passes', () => {
@@ -217,7 +217,7 @@ describe('WorkbenchActions', () => {
       ]
     })
     render(<WorkbenchActions {...defaultProps} />)
-    expect(screen.getByText('Launch')).toBeDisabled()
+    expect(screen.getByText('Queue & Run')).toBeDisabled()
   })
 
   it('Queue Now enabled when advisory checks are warn status (test profile)', () => {

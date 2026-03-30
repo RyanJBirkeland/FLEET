@@ -24,6 +24,8 @@ export function AgentPill({ agent, currentAction, accent, onClick }: AgentPillPr
     background: neonVar(accent, 'surface')
   }
 
+  const fullLabel = currentAction ? `${agent.task} — ${currentAction}` : agent.task
+
   return (
     <div
       className={`agent-pill ${agent.status === 'running' ? 'agent-pill--running' : ''}`}
@@ -31,6 +33,8 @@ export function AgentPill({ agent, currentAction, accent, onClick }: AgentPillPr
       onClick={onClick}
       role="button"
       tabIndex={0}
+      title={fullLabel}
+      aria-label={fullLabel}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           onClick()

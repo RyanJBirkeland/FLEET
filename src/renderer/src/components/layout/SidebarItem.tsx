@@ -36,6 +36,16 @@ export function SidebarItem({
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Shift+F10 or ContextMenu key opens context menu
+    if ((e.key === 'F10' && e.shiftKey) || e.key === 'ContextMenu') {
+      e.preventDefault()
+      e.stopPropagation()
+      const rect = e.currentTarget.getBoundingClientRect()
+      setContextMenu({ x: rect.right, y: rect.top })
+    }
+  }
+
   const closeContextMenu = () => {
     setContextMenu(null)
   }
@@ -61,7 +71,9 @@ export function SidebarItem({
             onActivate(view)
           }}
           onContextMenu={handleContextMenu}
+          onKeyDown={handleKeyDown}
           aria-label={label}
+          aria-haspopup="menu"
           aria-current={isActive ? 'page' : undefined}
         >
           {icon}

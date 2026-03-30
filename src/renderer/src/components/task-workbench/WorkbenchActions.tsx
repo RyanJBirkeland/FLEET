@@ -4,6 +4,7 @@ interface WorkbenchActionsProps {
   onSaveBacklog: () => void
   onQueueNow: () => void
   onLaunch: () => void
+  onCancel?: () => void
   submitting: boolean
 }
 
@@ -11,8 +12,10 @@ export function WorkbenchActions({
   onSaveBacklog,
   onQueueNow,
   onLaunch,
+  onCancel,
   submitting
 }: WorkbenchActionsProps) {
+  const mode = useTaskWorkbenchStore((s) => s.mode)
   const structural = useTaskWorkbenchStore((s) => s.structuralChecks)
   const operational = useTaskWorkbenchStore((s) => s.operationalChecks)
   const semantic = useTaskWorkbenchStore((s) => s.semanticChecks)
@@ -28,13 +31,23 @@ export function WorkbenchActions({
 
   return (
     <div className="wb-actions">
+      {mode === 'edit' && onCancel && (
+        <button
+          onClick={onCancel}
+          disabled={submitting}
+          className="wb-actions__btn wb-actions__btn--ghost"
+          aria-label="Discard changes and cancel editing"
+        >
+          Cancel
+        </button>
+      )}
       <button
         onClick={onSaveBacklog}
         disabled={!canSave || submitting}
         className="wb-actions__btn wb-actions__btn--secondary"
         aria-label="Save task to backlog"
       >
-        Save to Backlog
+        {mode === 'edit' ? 'Save Changes' : 'Save to Backlog'}
       </button>
       <button
         onClick={onQueueNow}
@@ -48,9 +61,10 @@ export function WorkbenchActions({
         onClick={onLaunch}
         disabled={!canLaunch || submitting}
         className="wb-actions__btn wb-actions__btn--launch"
-        aria-label="Launch task immediately"
+        aria-label="Queue task and start agent immediately"
+        title="Queue task and start agent immediately"
       >
-        {submitting ? 'Launching...' : 'Launch'}
+        {submitting ? 'Launching...' : 'Queue & Run'}
       </button>
     </div>
   )

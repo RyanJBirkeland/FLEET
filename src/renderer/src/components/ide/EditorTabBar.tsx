@@ -1,3 +1,4 @@
+import { useRef, useEffect, useCallback } from 'react'
 import { X } from 'lucide-react'
 import { useIDEStore } from '../../stores/ide'
 
@@ -25,8 +26,32 @@ export function EditorTabBar({ onCloseTab }: EditorTabBarProps): React.JSX.Eleme
     }
   }
 
+  // Detect overflow and set data attribute for CSS fade indicators
+  const barRef = useRef<HTMLDivElement>(null)
+  const checkOverflow = useCallback(() => {
+    const el = barRef.current
+    if (!el) return
+    if (el.scrollWidth > el.clientWidth) {
+      el.setAttribute('data-overflow', '')
+    } else {
+      el.removeAttribute('data-overflow')
+    }
+  }, [])
+
+  useEffect(() => {
+    checkOverflow()
+  }, [openTabs.length, checkOverflow])
+
+  useEffect(() => {
+    const el = barRef.current
+    if (!el) return
+    const observer = new ResizeObserver(checkOverflow)
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [checkOverflow])
+
   return (
-    <div className="ide-editor-tab-bar" role="tablist" aria-label="Editor tabs">
+    <div ref={barRef} className="ide-editor-tab-bar" role="tablist" aria-label="Editor tabs">
       {openTabs.map((tab) => {
         const isActive = tab.id === activeTabId
         return (

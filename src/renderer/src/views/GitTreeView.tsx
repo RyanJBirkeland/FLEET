@@ -1,6 +1,6 @@
 import React, { useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
-import { GitBranch, RefreshCw } from 'lucide-react'
+import { GitBranch, RefreshCw, AlertCircle, X } from 'lucide-react'
 import { useGitTreeStore } from '../stores/gitTree'
 import { toast } from '../stores/toasts'
 import { CommitBox } from '../components/git-tree/CommitBox'
@@ -24,6 +24,9 @@ export default function GitTreeView(): React.ReactElement {
   const repoPaths = useGitTreeStore((s) => s.repoPaths)
   const activeRepo = useGitTreeStore((s) => s.activeRepo)
   const branches = useGitTreeStore((s) => s.branches)
+  const commitLoading = useGitTreeStore((s) => s.commitLoading)
+  const pushLoading = useGitTreeStore((s) => s.pushLoading)
+  const lastError = useGitTreeStore((s) => s.lastError)
 
   const {
     fetchStatus,
@@ -38,7 +41,8 @@ export default function GitTreeView(): React.ReactElement {
     push,
     fetchBranches,
     setActiveRepo,
-    loadRepoPaths
+    loadRepoPaths,
+    clearError
   } = useGitTreeStore.getState()
 
   const hasUncommittedChanges = staged.length > 0 || unstaged.length > 0 || untracked.length > 0
@@ -183,10 +187,38 @@ export default function GitTreeView(): React.ReactElement {
       <CommitBox
         commitMessage={commitMessage}
         stagedCount={staged.length}
+        commitLoading={commitLoading}
+        pushLoading={pushLoading}
         onMessageChange={setCommitMessage}
         onCommit={handleCommit}
         onPush={handlePush}
       />
+
+      {/* Persistent error banner */}
+      {lastError && (
+        <div className="git-tree-view__error-banner" role="alert">
+          <AlertCircle size={14} />
+          <span className="git-tree-view__error-text">{lastError}</span>
+          <button
+            className="git-tree-view__error-retry"
+            onClick={() => {
+              clearError()
+              if (lastError.startsWith('Push')) handlePush()
+              else handleCommit()
+            }}
+            aria-label="Retry failed operation"
+          >
+            Retry
+          </button>
+          <button
+            className="git-tree-view__error-dismiss"
+            onClick={clearError}
+            aria-label="Dismiss error"
+          >
+            <X size={12} />
+          </button>
+        </div>
+      )}
 
       {/* File sections — scrollable */}
       <div className="git-tree-view__body">

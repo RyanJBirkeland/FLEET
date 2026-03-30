@@ -17,6 +17,9 @@ interface GitTreeState {
   unstaged: GitFileEntry[]
   untracked: GitFileEntry[]
   loading: boolean
+  commitLoading: boolean
+  pushLoading: boolean
+  lastError: string | null
   selectedFile: GitFileEntry | null
   selectedStaged: boolean
   diffContent: string
@@ -36,6 +39,7 @@ interface GitTreeState {
   setCommitMessage: (msg: string) => void
   commit: (cwd: string) => Promise<void>
   push: (cwd: string) => Promise<void>
+  clearError: () => void
   fetchBranches: (cwd: string) => Promise<void>
   setActiveRepo: (path: string) => void
   loadRepoPaths: () => Promise<void>
@@ -51,6 +55,9 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
   unstaged: [],
   untracked: [],
   loading: false,
+  commitLoading: false,
+  pushLoading: false,
+  lastError: null,
   selectedFile: null,
   selectedStaged: false,
   diffContent: '',
@@ -154,25 +161,37 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
   },
 
   commit: async (cwd: string): Promise<void> => {
-    const { commitMessage, staged } = get()
-    if (!commitMessage.trim() || staged.length === 0) return
+    const { commitMessage, staged, commitLoading } = get()
+    if (!commitMessage.trim() || staged.length === 0 || commitLoading) return
+    set({ commitLoading: true, lastError: null })
     try {
       await window.api.gitCommit(cwd, commitMessage)
-      set({ commitMessage: '' })
+      set({ commitMessage: '', commitLoading: false })
       await get().fetchStatus(cwd)
       toast.success('Committed successfully')
     } catch (err) {
-      toast.error(`Commit failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      const message = `Commit failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+      set({ commitLoading: false, lastError: message })
+      toast.error(message)
     }
   },
 
   push: async (cwd: string): Promise<void> => {
+    if (get().pushLoading) return
+    set({ pushLoading: true, lastError: null })
     try {
       await window.api.gitPush(cwd)
+      set({ pushLoading: false })
       toast.success('Pushed successfully')
     } catch (err) {
-      toast.error(`Push failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      const message = `Push failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+      set({ pushLoading: false, lastError: message })
+      toast.error(message)
     }
+  },
+
+  clearError: (): void => {
+    set({ lastError: null })
   },
 
   fetchBranches: async (cwd: string): Promise<void> => {

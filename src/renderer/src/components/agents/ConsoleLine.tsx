@@ -45,9 +45,11 @@ const TOOL_MAP: Record<string, ToolMeta> = {
   read: { letter: 'R', iconClass: 'console-tool-icon--read' },
   edit: { letter: 'E', iconClass: 'console-tool-icon--edit' },
   write: { letter: 'W', iconClass: 'console-tool-icon--write' },
-  grep: { letter: 'G', iconClass: 'console-tool-icon--grep' },
-  glob: { letter: 'G', iconClass: 'console-tool-icon--glob' },
+  grep: { letter: '?', iconClass: 'console-tool-icon--grep' },
+  glob: { letter: 'F', iconClass: 'console-tool-icon--glob' },
   agent: { letter: 'A', iconClass: 'console-tool-icon--agent' },
+  list: { letter: 'L', iconClass: 'console-tool-icon--default' },
+  task: { letter: 'T', iconClass: 'console-tool-icon--default' },
 }
 
 function getToolMeta(toolName: string): ToolMeta {
@@ -162,7 +164,7 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
                 transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             />
-            <span className={`console-tool-icon ${meta.iconClass}`}>{meta.letter}</span>
+            <span className={`console-tool-icon ${meta.iconClass}`} title={block.tool}>{meta.letter}</span>
             <span className="console-prefix console-prefix--tool">[tool]</span>
             <span className="console-line__content">
               {block.tool} — {block.summary}
@@ -210,7 +212,7 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
                 transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
               }}
             />
-            <span className={`console-tool-icon ${meta.iconClass}`}>{meta.letter}</span>
+            <span className={`console-tool-icon ${meta.iconClass}`} title={block.tool}>{meta.letter}</span>
             <span className="console-prefix console-prefix--tool">[tool]</span>
             <span className="console-line__content">
               {block.tool} — {block.summary}

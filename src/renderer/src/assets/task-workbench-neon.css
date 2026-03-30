@@ -304,6 +304,28 @@
   color: var(--neon-text-muted);
 }
 
+/* ── Check Icons (Lucide) ── */
+.wb-check-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+}
+
+.wb-check-icon--pass { color: var(--neon-cyan, #00e5ff); }
+.wb-check-icon--warn { color: var(--bde-warning, #ffa500); }
+.wb-check-icon--fail { color: var(--neon-red, #ff5050); }
+.wb-check-icon--pending {
+  color: var(--neon-text-dim, rgba(255, 255, 255, 0.4));
+  animation: bde-spin 1.5s linear infinite;
+}
+
+@keyframes bde-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 /* ── Actions ── */
 .wb-actions {
   display: flex;
@@ -370,6 +392,18 @@
   background: var(--neon-surface-dim);
   color: var(--neon-text-dim);
   cursor: not-allowed;
+}
+
+.wb-actions__btn--ghost {
+  background: none;
+  border: 1px solid transparent;
+  color: var(--neon-text-dim);
+  cursor: pointer;
+}
+
+.wb-actions__btn--ghost:hover:not(:disabled) {
+  color: var(--neon-text);
+  border-color: var(--neon-purple-border);
 }
 
 /* ── Copilot ── */

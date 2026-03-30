@@ -51,7 +51,8 @@ describe('ReadinessChecks', () => {
       ],
     })
     render(<ReadinessChecks />)
-    expect(screen.getByTitle('Title').textContent).toBe('✅')
+    const icon = screen.getByTitle('Title').querySelector('[aria-label="Passed"]')
+    expect(icon).toBeInTheDocument()
   })
 
   it('shows fail icon for failing checks', () => {
@@ -61,7 +62,8 @@ describe('ReadinessChecks', () => {
       ],
     })
     render(<ReadinessChecks />)
-    expect(screen.getByTitle('Repo').textContent).toBe('❌')
+    const icon = screen.getByTitle('Repo').querySelector('[aria-label="Failed"]')
+    expect(icon).toBeInTheDocument()
   })
 
   it('shows warn icon for warning checks', () => {
@@ -71,7 +73,8 @@ describe('ReadinessChecks', () => {
       ],
     })
     render(<ReadinessChecks />)
-    expect(screen.getByTitle('Scope').textContent).toBe('⚠️')
+    const icon = screen.getByTitle('Scope').querySelector('[aria-label="Warning"]')
+    expect(icon).toBeInTheDocument()
   })
 
   it('shows pending icon for pending checks', () => {
@@ -81,7 +84,8 @@ describe('ReadinessChecks', () => {
       ],
     })
     render(<ReadinessChecks />)
-    expect(screen.getByTitle('Auth').textContent).toBe('⏳')
+    const icon = screen.getByTitle('Auth').querySelector('[aria-label="Pending"]')
+    expect(icon).toBeInTheDocument()
   })
 
   it('displays all check icons in summary', () => {

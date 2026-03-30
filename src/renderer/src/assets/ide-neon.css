@@ -115,9 +115,31 @@
 
 /* ── Editor Tab Bar ── */
 .ide-editor-tab-bar {
+  position: relative;
   background: rgba(10, 0, 21, 0.6);
   backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
+  /* Scroll shadow indicators for overflow */
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 24px,
+    black calc(100% - 24px),
+    transparent 100%
+  );
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    black 24px,
+    black calc(100% - 24px),
+    transparent 100%
+  );
+}
+
+/* Remove fade mask when not overflowing */
+.ide-editor-tab-bar:not([data-overflow]) {
+  mask-image: none;
+  -webkit-mask-image: none;
 }
 
 .ide-editor-tab-bar::-webkit-scrollbar-thumb {
@@ -426,4 +448,69 @@
   color: var(--neon-cyan);
   border-color: var(--neon-cyan-border);
   box-shadow: 0 0 8px rgba(0, 255, 200, 0.15);
+}
+
+/* ── Keyboard Shortcuts Overlay ── */
+.ide-shortcuts-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bde-overlay, rgba(0, 0, 0, 0.5));
+}
+
+.ide-shortcuts-panel {
+  background: var(--neon-surface-deep, #0d0520);
+  border: 1px solid var(--neon-purple-border);
+  border-radius: 12px;
+  padding: 20px 24px;
+  min-width: 280px;
+  backdrop-filter: var(--neon-glass-blur, blur(16px));
+  box-shadow: var(--bde-shadow-lg, 0 8px 32px rgba(0,0,0,0.4));
+}
+
+.ide-shortcuts-panel__title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neon-text, #fff);
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.ide-shortcuts-panel__grid {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ide-shortcuts-panel__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.ide-shortcuts-panel__key {
+  min-width: 72px;
+  text-align: right;
+  font-family: var(--bde-font-mono, monospace);
+  font-size: 11px;
+  color: var(--neon-cyan, #00e5ff);
+  background: var(--neon-cyan-surface, rgba(0, 229, 255, 0.08));
+  border: 1px solid var(--neon-cyan-border, rgba(0, 229, 255, 0.2));
+  border-radius: 4px;
+  padding: 2px 6px;
+}
+
+.ide-shortcuts-panel__desc {
+  font-size: 12px;
+  color: var(--neon-text-dim, rgba(255, 255, 255, 0.6));
+}
+
+.ide-shortcuts-panel__hint {
+  margin-top: 14px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--neon-text-dim, rgba(255, 255, 255, 0.4));
 }

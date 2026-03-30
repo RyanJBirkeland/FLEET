@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { PanelLeftOpen } from 'lucide-react'
@@ -17,8 +17,24 @@ import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/
 import { toast } from '../stores/toasts'
 import '../assets/ide-neon.css'
 
+const IDE_SHORTCUTS = [
+  { keys: '⌘B', desc: 'Toggle sidebar' },
+  { keys: '⌘J', desc: 'Toggle terminal' },
+  { keys: '⌘O', desc: 'Open folder' },
+  { keys: '⌘S', desc: 'Save file' },
+  { keys: '⌘W', desc: 'Close tab' },
+  { keys: '⌘T', desc: 'New terminal tab' },
+  { keys: '⌘F', desc: 'Find in terminal' },
+  { keys: '⌘⇧D', desc: 'Split terminal' },
+  { keys: '⌘⇧[/]', desc: 'Prev/next terminal tab' },
+  { keys: '⌘+/-/0', desc: 'Terminal zoom' },
+  { keys: '⌃L', desc: 'Clear terminal' },
+  { keys: '⌘/', desc: 'Show this help' }
+] as const
+
 export function IDEView(): React.JSX.Element {
   const reduced = useReducedMotion()
+  const [showShortcuts, setShowShortcuts] = useState(false)
   useEffect(() => {
     const restore = async (): Promise<void> => {
       try {
@@ -303,6 +319,17 @@ export function IDEView(): React.JSX.Element {
           }
         }
       }
+      if (e.metaKey && e.key === '/' && !e.ctrlKey) {
+        e.preventDefault()
+        e.stopPropagation()
+        setShowShortcuts((v) => !v)
+        return
+      }
+      if (e.key === 'Escape' && showShortcuts) {
+        e.preventDefault()
+        setShowShortcuts(false)
+        return
+      }
       if (e.ctrlKey && e.key === 'l' && !e.metaKey && focusedPanel === 'terminal') {
         e.preventDefault()
         e.stopPropagation()
@@ -329,7 +356,8 @@ export function IDEView(): React.JSX.Element {
     termSetShowFind,
     termZoomIn,
     termZoomOut,
-    termResetZoom
+    termResetZoom,
+    showShortcuts
   ])
 
   if (!rootPath) {
@@ -422,6 +450,29 @@ export function IDEView(): React.JSX.Element {
         </Panel>
       </Group>
       <UnsavedDialogModal {...confirmProps} />
+
+      {/* Keyboard shortcuts help overlay */}
+      {showShortcuts && (
+        <div
+          className="ide-shortcuts-overlay"
+          onClick={() => setShowShortcuts(false)}
+          role="dialog"
+          aria-label="IDE Keyboard Shortcuts"
+        >
+          <div className="ide-shortcuts-panel" onClick={(e) => e.stopPropagation()}>
+            <div className="ide-shortcuts-panel__title">Keyboard Shortcuts</div>
+            <div className="ide-shortcuts-panel__grid">
+              {IDE_SHORTCUTS.map(({ keys, desc }) => (
+                <div key={keys} className="ide-shortcuts-panel__row">
+                  <kbd className="ide-shortcuts-panel__key">{keys}</kbd>
+                  <span className="ide-shortcuts-panel__desc">{desc}</span>
+                </div>
+              ))}
+            </div>
+            <div className="ide-shortcuts-panel__hint">Press ⌘/ or Esc to close</div>
+          </div>
+        </div>
+      )}
     </motion.div>
   )
 }
