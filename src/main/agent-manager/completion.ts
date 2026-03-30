@@ -5,6 +5,8 @@ import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { buildAgentEnv } from '../env-utils'
 import { MAX_RETRIES, AGENT_SUMMARY_MAX_LENGTH } from './types'
 import type { Logger } from './types'
+import { broadcast } from '../broadcast'
+import type { AgentEvent } from '../../shared/types'
 
 const execFile = promisify(execFileCb)
 
@@ -226,6 +228,13 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
   // 0. Guard: worktree must still exist (macOS /tmp can evict it)
   if (!existsSync(worktreePath)) {
     logger.error(`[completion] Worktree path no longer exists for task ${taskId}: ${worktreePath}`)
+    // Emit agent event so user sees the failure in agent console
+    const event: AgentEvent = {
+      type: 'agent:error',
+      message: `Worktree evicted before completion (${worktreePath}). Use ~/worktrees/ instead of /tmp/.`,
+      timestamp: Date.now()
+    }
+    broadcast('agent:event', { agentId: taskId, event })
     try {
       repo.updateTask(taskId, {
         status: 'error',
@@ -246,6 +255,12 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     branch = await detectBranch(worktreePath)
   } catch (err) {
     logger.error(`[completion] Failed to detect branch for task ${taskId}: ${err}`)
+    const event: AgentEvent = {
+      type: 'agent:error',
+      message: 'Failed to detect branch',
+      timestamp: Date.now()
+    }
+    broadcast('agent:event', { agentId: taskId, event })
     try {
       repo.updateTask(taskId, {
         status: 'error',
@@ -264,6 +279,12 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
 
   if (!branch) {
     logger.error(`[completion] Empty branch name for task ${taskId}`)
+    const event: AgentEvent = {
+      type: 'agent:error',
+      message: 'Empty branch name',
+      timestamp: Date.now()
+    }
+    broadcast('agent:event', { agentId: taskId, event })
     try {
       repo.updateTask(taskId, {
         status: 'error',
@@ -317,10 +338,10 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     // If rev-list fails, try pushing anyway
   }
 
-  // 4. Push branch to origin (skip pre-push hooks — agent code is reviewed via PR)
+  // 4. Push branch to origin (run pre-push hooks for secret scanning)
   logger.info(`[completion] Task ${taskId}: pushing branch ${branch}`)
   try {
-    await execFile('git', ['push', '--no-verify', 'origin', branch], {
+    await execFile('git', ['push', 'origin', branch], {
       cwd: worktreePath,
       env: buildAgentEnv()
     })
@@ -352,7 +373,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
       // so the UI shows a "Create PR" link instead of silently orphaning
       repo.updateTask(taskId, {
         pr_status: 'branch_only',
-        notes: `Branch ${branch} pushed to ${ghRepo} but PR creation failed after ${PR_CREATE_MAX_ATTEMPTS} attempts`
+        notes: `Branch ${branch} pushed to ${ghRepo} but PR creation failed after ${PR_CREATE_MAX_ATTEMPTS} attempts. To create the PR manually: gh pr create --head ${branch} --repo ${ghRepo}`
       })
       logger.warn(
         `[completion] Task ${taskId}: branch ${branch} pushed, PR creation failed — set pr_status=branch_only`

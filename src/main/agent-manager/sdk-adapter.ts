@@ -137,6 +137,12 @@ function spawnViaCli(
   })
 
   const sessionId = randomUUID()
+  let exitCode: number | null = null
+
+  // Track child process exit to expose exit code
+  child.on('exit', (code) => {
+    exitCode = code
+  })
 
   // Send initial prompt via stdin
   child.stdin.write(
@@ -162,6 +168,10 @@ function spawnViaCli(
           /* skip non-JSON */
         }
       }
+    }
+    // After stdout ends, yield exit_code message if process exited
+    if (exitCode !== null) {
+      yield { type: 'exit_code', exit_code: exitCode }
     }
   }
 

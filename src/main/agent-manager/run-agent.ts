@@ -14,6 +14,8 @@ import { broadcast } from '../broadcast'
 import { mapRawMessage, emitAgentEvent } from '../agent-event-mapper'
 import type { AgentEvent } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
+import DOMPurify from 'dompurify'
+import { JSDOM } from 'jsdom'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -44,6 +46,10 @@ export interface RunAgentDeps {
 // ---------------------------------------------------------------------------
 
 const MAX_PLAYGROUND_SIZE = 5 * 1024 * 1024 // 5MB
+
+// Create DOMPurify instance for sanitizing playground HTML
+const window = new JSDOM('').window
+const purify = DOMPurify(window)
 
 export function isRateLimitMessage(msg: unknown): boolean {
   if (typeof msg !== 'object' || msg === null) return false
@@ -112,15 +118,16 @@ export async function tryEmitPlaygroundEvent(
       return
     }
 
-    // Read file content
-    const html = await readFile(absolutePath, 'utf-8')
+    // Read and sanitize file content
+    const rawHtml = await readFile(absolutePath, 'utf-8')
+    const sanitizedHtml = purify.sanitize(rawHtml)
     const filename = basename(absolutePath)
 
-    // Emit playground event
+    // Emit playground event with sanitized HTML
     const event: AgentEvent = {
       type: 'agent:playground',
       filename,
-      html,
+      html: sanitizedHtml,
       sizeBytes: stats.size,
       timestamp: Date.now()
     }
@@ -155,7 +162,7 @@ export async function runAgent(
       claimed_by: null
     })
     await onTaskTerminal(task.id, 'error')
-    cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch })
+    await cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch, logger })
     return
   }
 
@@ -168,6 +175,13 @@ export async function runAgent(
 
   let handle: AgentHandle
   try {
+    let timer: ReturnType<typeof setTimeout>
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timer = setTimeout(
+        () => reject(new Error(`Spawn timed out after ${SPAWN_TIMEOUT_MS / 1000}s`)),
+        SPAWN_TIMEOUT_MS
+      )
+    })
     handle = await Promise.race([
       spawnAgent({
         prompt,
@@ -175,27 +189,29 @@ export async function runAgent(
         model: defaultModel,
         logger
       }),
-      new Promise<never>((_, reject) =>
-        setTimeout(
-          () => reject(new Error(`Spawn timed out after ${SPAWN_TIMEOUT_MS / 1000}s`)),
-          SPAWN_TIMEOUT_MS
-        )
-      )
-    ])
+      timeoutPromise
+    ]).finally(() => clearTimeout(timer!))
   } catch (err) {
     logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
+    const errMsg = err instanceof Error ? err.message : String(err)
+    // Emit agent:error event so the failure is visible in agent console
+    emitAgentEvent(task.id, {
+      type: 'agent:error',
+      message: `Spawn failed: ${errMsg}`,
+      timestamp: Date.now()
+    })
     try {
       repo.updateTask(task.id, {
         status: 'error',
         completed_at: new Date().toISOString(),
-        notes: `Spawn failed: ${err instanceof Error ? err.message : String(err)}`,
+        notes: `Spawn failed: ${errMsg}`,
         claimed_by: null
       })
     } catch (updateErr) {
       logger.warn(`[agent-manager] Failed to update task ${task.id} after spawn failure: ${updateErr}`)
     }
     await onTaskTerminal(task.id, 'error')
-    cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch })
+    await cleanupWorktree({ repoPath, worktreePath: worktree.worktreePath, branch: worktree.branch, logger })
     return
   }
 

@@ -39,7 +39,9 @@ export async function runSdkStreaming(
   activeStreams.set(streamId, { close: () => queryHandle.return() })
 
   let fullText = ''
+  let timedOut = false
   const timer = setTimeout(() => {
+    timedOut = true
     queryHandle.return()
     activeStreams.delete(streamId)
   }, timeoutMs)
@@ -67,6 +69,10 @@ export async function runSdkStreaming(
   } finally {
     clearTimeout(timer)
     activeStreams.delete(streamId)
+  }
+
+  if (timedOut) {
+    throw new Error(`SDK streaming timed out after ${timeoutMs / 1000}s`)
   }
 
   return fullText.trim()
