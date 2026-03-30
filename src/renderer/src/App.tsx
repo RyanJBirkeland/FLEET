@@ -15,12 +15,20 @@ import { useGitHubRateLimitWarning } from './hooks/useGitHubRateLimitWarning'
 import { useDesktopNotifications } from './hooks/useDesktopNotifications'
 import { PanelRenderer } from './components/panels/PanelRenderer'
 import { usePanelLayoutStore, findLeaf } from './stores/panelLayout'
+import type { View } from './stores/panelLayout'
+import { TearoffShell } from './components/layout/TearoffShell'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from './lib/motion'
 import { DEFAULT_MODEL } from '../../shared/models'
 import { VIEW_SHORTCUT_MAP, VIEW_LABELS } from './lib/view-registry'
 import './assets/neon.css'
 import './assets/neon-shell.css'
 import './assets/agents-neon.css'
+
+// Query params are read once at module load time — outside any component to avoid
+// violating Rules of Hooks if we need to conditionally skip the full App render.
+const _params = new URLSearchParams(window.location.search)
+const _tearoffView = _params.get('view') as View | null
+const _tearoffWindowId = _params.get('windowId')
 
 const SHORTCUTS_LEFT: { keys: string; description: string }[] = [
   { keys: '\u23181\u20137', description: 'Switch views' },
@@ -288,4 +296,20 @@ function App(): React.JSX.Element {
   )
 }
 
-export { App }
+/**
+ * AppRoot — thin wrapper that checks query params before rendering the full App.
+ * Tear-off windows load the same HTML entry point but with ?view=<view>&windowId=<id>,
+ * which causes TearoffShell to render instead of the full panel system.
+ *
+ * Query params are read at module load (outside any component) so that no hooks
+ * are called conditionally — Rules of Hooks is satisfied because App's hooks only
+ * run when AppRoot decides to render <App />.
+ */
+function AppRoot(): React.JSX.Element {
+  if (_tearoffView && _tearoffWindowId) {
+    return <TearoffShell view={_tearoffView} windowId={_tearoffWindowId} />
+  }
+  return <App />
+}
+
+export { App, AppRoot }
