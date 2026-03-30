@@ -42,6 +42,9 @@ export function createSseBroadcaster(): SseBroadcaster {
       clients.delete(res)
     },
     broadcast(event, data) {
+      // QA-7: All connected SSE clients receive all events (no per-client filtering).
+      // For multi-tenant environments, implement task-level event filtering based on
+      // client subscriptions or permissions.
       const payload = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`
       for (const c of clients) {
         try {

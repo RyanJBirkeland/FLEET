@@ -91,6 +91,7 @@ vi.mock('../../agent-manager/resolve-dependents', () => ({
 // Wire onStatusTerminal mock for terminal status resolution
 // ---------------------------------------------------------------------------
 import { setQueueApiOnStatusTerminal } from '../task-handlers'
+import { clearApiKeyCache } from '../helpers'
 const mockOnStatusTerminal = vi.fn()
 
 // ---------------------------------------------------------------------------
@@ -170,6 +171,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  clearApiKeyCache() // QA-12: Clear cached API key between tests
   mockGetSetting.mockReturnValue(TEST_API_KEY) // return known key so all requests are authenticated
   mockSetSetting.mockImplementation(() => {}) // capture auto-generated key writes
   mockGetDb.mockReturnValue({}) // default db mock
@@ -944,12 +946,14 @@ describe('Queue API', () => {
   })
 
   describe('Error handling — sprint-queries throws', () => {
+    // QA-16: Updated to match standardized error response format
     it('returns 500 when getQueueStats throws', async () => {
       mockGetQueueStats.mockImplementation(() => { throw new Error('Supabase connection failed'); })
 
       const { status, body } = await request('GET', '/queue/health')
       expect(status).toBe(500)
-      expect((body as { error: string }).error).toMatch(/internal server error/i)
+      expect((body as { error: string }).error).toBe('Failed to get queue stats')
+      expect((body as { details: string }).details).toBe('Supabase connection failed')
     })
 
     it('returns 500 when listTasks throws', async () => {

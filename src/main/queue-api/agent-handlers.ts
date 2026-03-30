@@ -40,7 +40,8 @@ export async function handleAgentLog(
   agentId: string,
   query: URLSearchParams
 ): Promise<void> {
-  // Check if agent exists before trying to read its log
+  // QA-6: Check if agent exists. Task-level authorization is implicit via API key auth.
+  // For multi-tenant environments, this should validate task ownership/permissions.
   const exists = await hasAgent(agentId)
   if (!exists) {
     sendJson(res, 404, { error: `Agent ${agentId} not found` })

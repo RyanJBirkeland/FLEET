@@ -24,11 +24,13 @@ vi.mock('../../data/sprint-queries', () => ({
 }))
 
 // Mock settings — provide a known API key for auth
-const SSE_TEST_KEY = 'sse-test-key'
+// Note: Use string literal directly in mock factory to avoid hoisting issues
 vi.mock('../../settings', () => ({
-  getSetting: vi.fn().mockReturnValue(SSE_TEST_KEY),
+  getSetting: vi.fn().mockReturnValue('sse-test-key'),
   setSetting: vi.fn()
 }))
+
+const SSE_TEST_KEY = 'sse-test-key'
 
 // Mock event-queries and db (needed by event-handlers)
 vi.mock('../../data/event-queries', () => ({
