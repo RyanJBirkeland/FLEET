@@ -3,6 +3,7 @@ import type { SprintTask, TaskDependency } from '../../../shared/types'
 import { TASK_STATUS, PR_STATUS } from '../../../shared/constants'
 import { toast } from './toasts'
 import { detectTemplate } from '../../../shared/template-heuristics'
+import { sanitizeDependsOn } from '../../../shared/sanitize-depends-on'
 import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 import { useSprintUI } from './sprintUI'
 
@@ -17,18 +18,6 @@ export interface CreateTicketInput {
   depends_on?: TaskDependency[]
   playground_enabled?: boolean
   spec_type?: string | null
-}
-
-/** Ensure depends_on is always a parsed array (Supabase JSONB may arrive as string). */
-function sanitizeDeps(task: SprintTask): SprintTask {
-  if (typeof task.depends_on === 'string') {
-    try {
-      task = { ...task, depends_on: JSON.parse(task.depends_on) }
-    } catch {
-      task = { ...task, depends_on: null }
-    }
-  }
-  return task
 }
 
 /** How long (ms) to protect an optimistic update from being overwritten by poll data. */
@@ -68,7 +57,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set({ loadError: null, loading: true })
     try {
       const result = (await window.api.sprint.list()) as SprintTask[]
-      const incoming = (Array.isArray(result) ? result : []).map(sanitizeDeps)
+      const incoming = (Array.isArray(result) ? result : []).map(t => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) }))
 
       set((s) => {
         const now = Date.now()
@@ -159,7 +148,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
               })()
             : s.pendingUpdates,
           tasks: serverTask?.id
-            ? s.tasks.map((t) => (t.id === taskId ? sanitizeDeps(serverTask) : t))
+            ? s.tasks.map((t) => (t.id === taskId ? { ...serverTask, depends_on: sanitizeDependsOn(serverTask.depends_on) } : t))
             : s.tasks
         }
       })
@@ -338,7 +327,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set((s) => ({
       tasks: s.tasks.map((t) => {
         if (t.id !== update.taskId) return t
-        const merged = sanitizeDeps({ ...t, ...update } as SprintTask)
+        const merged = { ...t, ...update, depends_on: sanitizeDependsOn((update as any).depends_on ?? t.depends_on) } as SprintTask
         if (merged.status === TASK_STATUS.DONE && merged.pr_url && !merged.pr_status) {
           merged.pr_status = PR_STATUS.OPEN
         }
@@ -351,5 +340,5 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set((s) => ({ prMergedMap: updater(s.prMergedMap) }))
   },
 
-  setTasks: (tasks): void => set({ tasks: tasks.map(sanitizeDeps) })
+  setTasks: (tasks): void => set({ tasks: tasks.map(t => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) })) })
 }))

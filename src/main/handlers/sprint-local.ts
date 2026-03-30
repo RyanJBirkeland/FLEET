@@ -178,10 +178,15 @@ export function registerSprintLocalHandlers(): void {
 
   safeHandle('sprint:delete', async (_e, id: string) => {
     const task = getTask(id)
-    _deleteTask(id)
-    if (task) {
-      notifySprintMutation('deleted', task)
+    if (!task) {
+      throw new Error(`Task ${id} not found`)
     }
+    // Prevent deletion of active tasks
+    if (task.status === 'active') {
+      throw new Error(`Cannot delete active task ${id} — stop the agent first`)
+    }
+    _deleteTask(id)
+    notifySprintMutation('deleted', task)
     return { ok: true }
   })
 
@@ -227,12 +232,12 @@ export function registerSprintLocalHandlers(): void {
       if (tasksToUpdate.length > 0) {
         db.transaction(() => {
           for (const task of tasksToUpdate) {
-            _updateTask(task.id, { needs_review: true })
+            updateTask(task.id, { needs_review: true })
           }
         })()
       }
     } catch (err) {
-      console.warn('[sprint:healthCheck] Failed to flag stuck tasks:', err)
+      logger.warn(`[sprint:healthCheck] Failed to flag stuck tasks: ${err}`)
     }
     return _getHealthCheckTasks()
   })

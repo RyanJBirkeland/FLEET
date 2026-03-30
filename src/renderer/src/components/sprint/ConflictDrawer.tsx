@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { GitMerge, ExternalLink, Play, Loader2 } from 'lucide-react'
 import { Button } from '../ui/Button'
 import { Badge } from '../ui/Badge'
@@ -24,62 +24,64 @@ export function ConflictDrawer({ open, tasks, onClose }: ConflictDrawerProps) {
   const [resolving, setResolving] = useState<string | null>(null)
   const [branchInfo, setBranchInfo] = useState<Record<string, BranchInfo>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  const fetchedRef = useRef<Set<string>>(new Set())
+
+  const fetchBranchInfo = useCallback((taskId: string, task: SprintTask) => {
+    if (!task.pr_url || !task.pr_number) return
+
+    const parsed = parsePrUrl(task.pr_url)
+    if (!parsed) return
+
+    fetchedRef.current.add(taskId)
+
+    setBranchInfo((prev) => ({
+      ...prev,
+      [taskId]: { headBranch: '', baseBranch: '', files: [], loading: true }
+    }))
+
+    window.api
+      .checkConflictFiles({
+        owner: parsed.owner,
+        repo: parsed.repo,
+        prNumber: task.pr_number
+      })
+      .then((result) => {
+        setBranchInfo((prev) => ({
+          ...prev,
+          [taskId]: {
+            headBranch: result.headBranch,
+            baseBranch: result.baseBranch,
+            files: result.files,
+            loading: false
+          }
+        }))
+      })
+      .catch(() => {
+        setBranchInfo((prev) => ({
+          ...prev,
+          [taskId]: { headBranch: '', baseBranch: '', files: [], loading: false }
+        }))
+      })
+  }, [])
 
   // Fetch branch info for each conflicting task when drawer opens
   useEffect(() => {
     if (!open || tasks.length === 0) return
 
-    const controller = new AbortController()
-
     for (const task of tasks) {
+      // Skip if already fetched
+      if (fetchedRef.current.has(task.id)) continue
       if (!task.pr_url || !task.pr_number) continue
-      if (branchInfo[task.id] && !branchInfo[task.id].loading) continue
-
-      const parsed = parsePrUrl(task.pr_url)
-      if (!parsed) continue
-
-      setBranchInfo((prev) => ({
-        ...prev,
-        [task.id]: { headBranch: '', baseBranch: '', files: [], loading: true }
-      }))
-
-      window.api
-        .checkConflictFiles({
-          owner: parsed.owner,
-          repo: parsed.repo,
-          prNumber: task.pr_number
-        })
-        .then((result) => {
-          if (controller.signal.aborted) return
-          setBranchInfo((prev) => ({
-            ...prev,
-            [task.id]: {
-              headBranch: result.headBranch,
-              baseBranch: result.baseBranch,
-              files: result.files,
-              loading: false
-            }
-          }))
-        })
-        .catch(() => {
-          if (controller.signal.aborted) return
-          setBranchInfo((prev) => ({
-            ...prev,
-            [task.id]: { ...prev[task.id], loading: false }
-          }))
-        })
+      fetchBranchInfo(task.id, task)
     }
-
-    return () => {
-      controller.abort()
-    }
-  }, [open, tasks])
+  }, [open, tasks, fetchBranchInfo])
 
   // Reset when drawer closes
   useEffect(() => {
     if (!open) {
       setBranchInfo({})
       setExpandedId(null)
+      fetchedRef.current.clear()
     }
   }, [open])
 
@@ -193,7 +195,17 @@ export function ConflictDrawer({ open, tasks, onClose }: ConflictDrawerProps) {
                           </ul>
                         </>
                       ) : (
-                        <div className="conflict-row__loading">Could not load file details.</div>
+                        <div className="conflict-row__loading">
+                          Could not load file details.{' '}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => fetchBranchInfo(task.id, task)}
+                            title="Retry loading file details"
+                          >
+                            Retry
+                          </Button>
+                        </div>
                       )}
 
                       <div className="conflict-row__actions">

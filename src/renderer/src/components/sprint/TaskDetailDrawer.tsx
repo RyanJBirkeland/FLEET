@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { SprintTask } from '../../../../shared/types'
 import { useSprintTasks } from '../../stores/sprintTasks'
+import { formatElapsed, getDotColor } from '../../lib/task-format'
 
 const MIN_DRAWER_WIDTH = 280
 const MAX_DRAWER_WIDTH = 700
@@ -20,14 +21,6 @@ export interface TaskDetailDrawerProps {
   onUnblock?: (task: SprintTask) => void
 }
 
-function formatElapsed(startedAt: string): string {
-  const ms = Date.now() - new Date(startedAt).getTime()
-  const min = Math.floor(ms / 60000)
-  if (min < 60) return `${min}m`
-  const hr = Math.floor(min / 60)
-  return `${hr}h ${min % 60}m`
-}
-
 function formatTimestamp(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleString(undefined, {
@@ -36,25 +29,6 @@ function formatTimestamp(iso: string): string {
     hour: '2-digit',
     minute: '2-digit'
   })
-}
-
-function getDotColor(status: string): string {
-  switch (status) {
-    case 'queued':
-      return 'var(--neon-cyan)'
-    case 'blocked':
-      return 'var(--neon-orange)'
-    case 'active':
-      return 'var(--neon-purple)'
-    case 'done':
-      return 'var(--neon-pink)'
-    case 'failed':
-    case 'error':
-    case 'cancelled':
-      return 'var(--neon-red, #ff3366)'
-    default:
-      return 'var(--neon-cyan)'
-  }
 }
 
 function getDependencyStats(
@@ -146,7 +120,15 @@ export function TaskDetailDrawer({
   return (
     <aside className="task-drawer" data-testid="task-detail-drawer" style={{ width }}>
       {/* Resize handle */}
-      <div className="task-drawer__resize-handle" onMouseDown={handleResizeStart} />
+      <div
+        className="task-drawer__resize-handle"
+        onMouseDown={handleResizeStart}
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="Resize drawer"
+        tabIndex={0}
+        style={{ cursor: 'col-resize' }}
+      />
       {/* Header */}
       <div className="task-drawer__head">
         <h2 className="task-drawer__title">{task.title}</h2>
@@ -412,7 +394,7 @@ function ActionButtons({
             className="task-drawer__btn task-drawer__btn--secondary"
             onClick={() => onRerun(task)}
           >
-            Re-run
+            Clone & Queue
           </button>
         </>
       )
@@ -425,7 +407,7 @@ function ActionButtons({
             className="task-drawer__btn task-drawer__btn--primary"
             onClick={() => onRerun(task)}
           >
-            Re-run
+            Clone & Queue
           </button>
           <button
             className="task-drawer__btn task-drawer__btn--secondary"

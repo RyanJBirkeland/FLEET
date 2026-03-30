@@ -20,6 +20,7 @@ import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { Button } from '../ui/Button'
 import { toast } from '../../stores/toasts'
+import { Spinner } from '../ui/Spinner'
 import { PipelineBacklog } from './PipelineBacklog'
 import { PipelineStage } from './PipelineStage'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
@@ -219,6 +220,7 @@ export function SprintPipeline() {
 
       {loading && tasks.length === 0 && (
         <div className="pipeline-empty-state">
+          <Spinner size="md" />
           <p className="pipeline-empty-state__title">Loading tasks...</p>
         </div>
       )}
