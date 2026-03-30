@@ -155,6 +155,7 @@ export function handleWatchdogVerdict(
       updateTaskFn(taskId, {
         status: 'error',
         completed_at: now,
+        claimed_by: null,
         notes: `Agent exceeded the maximum runtime of ${runtimeMinutes} minutes. The task may be too large for a single agent session. Consider breaking it into smaller subtasks.`,
         needs_review: true,
         claimed_by: null
@@ -174,6 +175,7 @@ export function handleWatchdogVerdict(
       updateTaskFn(taskId, {
         status: 'error',
         completed_at: now,
+        claimed_by: null,
         notes: 'Agent produced no output for 15 minutes. The agent may be stuck or rate-limited. Check agent events for the last activity. To retry: reset task status to \'queued\'.',
         needs_review: true,
         claimed_by: null
