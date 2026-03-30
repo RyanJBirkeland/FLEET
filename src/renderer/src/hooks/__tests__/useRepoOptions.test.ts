@@ -8,9 +8,15 @@ describe('useRepoOptions', () => {
     vi.mocked(window.api.settings.getJson).mockResolvedValue(null)
   })
 
-  it('returns REPO_OPTIONS as the initial fallback value', () => {
+  it('returns empty array while loading, then REPO_OPTIONS as fallback', async () => {
     const { result } = renderHook(() => useRepoOptions())
-    expect(result.current).toEqual(REPO_OPTIONS)
+    // Initially returns empty array while loading
+    expect(result.current).toEqual([])
+
+    // After settings load, returns REPO_OPTIONS fallback
+    await waitFor(() => {
+      expect(result.current).toEqual(REPO_OPTIONS)
+    })
   })
 
   it('loads repos from settings via IPC and maps to RepoOption shape', async () => {
@@ -53,11 +59,12 @@ describe('useRepoOptions', () => {
 
     const { result } = renderHook(() => useRepoOptions())
 
-    await waitFor(() => {
-      expect(window.api.settings.getJson).toHaveBeenCalledWith('repos')
-    })
+    // Initially empty while loading
+    expect(result.current).toEqual([])
 
-    expect(result.current).toEqual(REPO_OPTIONS)
+    await waitFor(() => {
+      expect(result.current).toEqual(REPO_OPTIONS)
+    })
   })
 
   it('keeps fallback when IPC call throws', async () => {
@@ -65,10 +72,11 @@ describe('useRepoOptions', () => {
 
     const { result } = renderHook(() => useRepoOptions())
 
-    await waitFor(() => {
-      expect(window.api.settings.getJson).toHaveBeenCalledWith('repos')
-    })
+    // Initially empty while loading
+    expect(result.current).toEqual([])
 
-    expect(result.current).toEqual(REPO_OPTIONS)
+    await waitFor(() => {
+      expect(result.current).toEqual(REPO_OPTIONS)
+    })
   })
 })
