@@ -10,7 +10,7 @@
   align-items: center;
   gap: 10px;
   padding: 0 16px;
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.08) 0%, rgba(10, 0, 21, 0.85) 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-deep) 100%);
   backdrop-filter: var(--neon-glass-blur);
   -webkit-backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
@@ -35,7 +35,7 @@
   gap: 6px;
   padding: 6px 12px;
   border-radius: 10px;
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   border: 1px solid var(--neon-cyan-border);
   cursor: pointer;
   transition: background 150ms ease, border-color 150ms ease;
@@ -109,14 +109,14 @@
 
 .agent-pill__action {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--neon-text-dim);
 }
 
 /* ── Agent Console ── */
 .agent-console {
   display: flex;
   flex-direction: column;
-  background: rgba(10, 0, 21, 0.8);
+  background: var(--neon-surface-deep);
   backdrop-filter: var(--neon-glass-blur);
   -webkit-backdrop-filter: var(--neon-glass-blur);
   border-radius: 10px;
@@ -132,7 +132,7 @@
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: linear-gradient(180deg, rgba(191, 90, 242, 0.06) 0%, rgba(10, 0, 21, 0.4) 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-dim) 100%);
   backdrop-filter: var(--neon-glass-blur);
   -webkit-backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
@@ -170,7 +170,7 @@
 .console-header__task-name {
   font-weight: 600;
   font-size: 12px;
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--neon-text);
 }
 
 .console-header__meta {
@@ -178,7 +178,7 @@
   align-items: center;
   gap: 8px;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--neon-text-dim);
   font-family: var(--bde-font-code);
 }
 
@@ -192,7 +192,7 @@
 .console-header__action-btn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--neon-text-dim);
   cursor: pointer;
   padding: 4px;
   border-radius: 4px;
@@ -203,12 +203,12 @@
 }
 
 .console-header__action-btn:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: rgba(255, 255, 255, 0.8);
+  background: var(--neon-surface-dim);
+  color: var(--neon-text-muted);
 }
 
 .console-header__action-btn:active {
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--neon-surface-subtle);
 }
 
 /* ── Console Body ── */
@@ -227,7 +227,7 @@
   align-items: center;
   gap: 4px;
   padding: 6px 12px;
-  background: linear-gradient(135deg, rgba(191, 90, 242, 0.2), rgba(10, 0, 21, 0.9));
+  background: linear-gradient(135deg, var(--neon-purple-border), var(--neon-surface-deep));
   backdrop-filter: var(--neon-glass-blur);
   -webkit-backdrop-filter: var(--neon-glass-blur);
   border: 1px solid var(--neon-purple-border);
@@ -243,7 +243,7 @@
 }
 
 .console-jump-to-latest:hover {
-  background: linear-gradient(135deg, rgba(191, 90, 242, 0.3), rgba(10, 0, 21, 0.95));
+  background: linear-gradient(135deg, var(--neon-purple-border), var(--neon-surface-deep));
   transform: translateX(-50%) translateY(-2px);
 }
 
@@ -264,7 +264,7 @@
 }
 
 .console-line:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--neon-surface-dim);
 }
 
 /* Console Line Prefixes */
@@ -309,7 +309,7 @@
 /* ── Console Line Components ── */
 .console-line__timestamp {
   margin-left: auto;
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--neon-text-dim);
   font-size: 10px;
   flex-shrink: 0;
   font-family: var(--bde-font-code);
@@ -318,7 +318,7 @@
 .console-line__content {
   flex: 1;
   overflow: hidden;
-  color: rgba(255, 255, 255, 0.7);
+  color: var(--neon-text-muted);
   word-break: break-word;
 }
 
@@ -329,18 +329,18 @@
 }
 
 .console-line--collapsible:hover {
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--neon-surface-dim);
 }
 
 .console-line__chevron {
   flex-shrink: 0;
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--neon-text-dim);
   transition: transform 150ms ease, color 150ms ease;
   font-size: 10px;
 }
 
 .console-line--collapsible:hover .console-line__chevron {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--neon-text-muted);
 }
 
 .console-line--expanded .console-line__chevron {
@@ -354,7 +354,7 @@
   align-items: center;
   gap: 8px;
   padding: 0 12px;
-  background: linear-gradient(180deg, rgba(10, 0, 21, 0.4) 0%, rgba(191, 90, 242, 0.06) 100%);
+  background: linear-gradient(180deg, var(--neon-surface-dim) 0%, var(--neon-purple-surface) 100%);
   backdrop-filter: var(--neon-glass-blur);
   -webkit-backdrop-filter: var(--neon-glass-blur);
   border-top: 1px solid var(--neon-purple-border);
@@ -380,11 +380,11 @@
 }
 
 .command-bar__input::placeholder {
-  color: rgba(255, 255, 255, 0.3);
+  color: var(--neon-text-dim);
 }
 
 .command-bar__input:disabled {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--neon-text-dim);
   cursor: not-allowed;
 }
 
@@ -394,7 +394,7 @@
   bottom: 48px;
   left: 12px;
   min-width: 250px;
-  background: linear-gradient(135deg, rgba(191, 90, 242, 0.06), rgba(10, 0, 21, 0.95));
+  background: linear-gradient(135deg, var(--neon-purple-surface), var(--neon-surface-deep));
   backdrop-filter: var(--neon-glass-blur);
   -webkit-backdrop-filter: var(--neon-glass-blur);
   border: 1px solid var(--neon-purple-border);
@@ -411,7 +411,7 @@
   padding: 6px 10px;
   border-radius: 6px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--neon-text-muted);
   font-size: 12px;
   font-family: var(--bde-font-code);
   transition: background 100ms ease, color 100ms ease;
@@ -430,7 +430,7 @@
 
 .command-autocomplete__item-description {
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--neon-text-dim);
 }
 
 /* ── Markdown Rendering in Agent Text ── */

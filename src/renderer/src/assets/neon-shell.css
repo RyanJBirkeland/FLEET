@@ -17,7 +17,7 @@
   height: 44px;
   display: flex;
   align-items: center;
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.12) 0%, rgba(10, 0, 21, 0.95) 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-deep) 100%);
   border-bottom: 1px solid var(--neon-purple-border);
   -webkit-app-region: drag;
   flex-shrink: 0;
@@ -33,7 +33,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid rgba(191, 90, 242, 0.1);
+  border-right: 1px solid var(--neon-purple-surface);
   -webkit-app-region: no-drag;
   cursor: pointer;
   transition: background 150ms ease;
@@ -83,7 +83,7 @@
   padding: 0 14px;
   gap: 6px;
   font-size: 11px;
-  color: rgba(255, 255, 255, 0.35);
+  color: var(--neon-text-dim);
   cursor: pointer;
   -webkit-app-region: no-drag;
   border-radius: 8px 8px 0 0;
@@ -96,14 +96,14 @@
 }
 
 .header-tab:hover {
-  color: rgba(255, 255, 255, 0.6);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--neon-text-muted);
+  background: var(--neon-surface-dim);
 }
 
 .header-tab--active {
   height: 34px;
-  color: #fff;
-  background: rgba(10, 0, 21, 0.8);
+  color: var(--neon-text);
+  background: var(--neon-surface-deep);
   border-color: var(--neon-purple-border);
   border-bottom-color: transparent;
   font-weight: 500;
@@ -125,7 +125,7 @@
   width: 16px;
   height: 16px;
   border-radius: 4px;
-  color: rgba(255, 255, 255, 0.2);
+  color: var(--neon-text-dim);
   cursor: pointer;
   transition: color 100ms ease, background 100ms ease;
   background: none;
@@ -139,14 +139,14 @@
 }
 
 .header-tab__close:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.1);
+  color: var(--neon-text);
+  background: var(--neon-surface-subtle);
 }
 
 /* ── Neon Sidebar ── */
 .neon-sidebar {
   width: 52px;
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.1) 0%, rgba(10, 0, 21, 0.95) 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-deep) 100%);
   border-right: 1px solid var(--neon-purple-border);
   display: flex;
   flex-direction: column;
@@ -186,15 +186,15 @@
   cursor: pointer;
   position: relative;
   transition: background 150ms ease, color 150ms ease;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--neon-text-muted);
   border: none;
   background: transparent;
   padding: 0;
 }
 
 .sidebar-item:hover {
-  background: rgba(191, 90, 242, 0.08);
-  color: rgba(255, 255, 255, 0.9);
+  background: var(--neon-purple-surface);
+  color: var(--neon-text);
 }
 
 .sidebar-item--active {
@@ -220,12 +220,12 @@
   z-index: 1000;
   padding: 6px 12px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--neon-purple-surface), rgba(10, 0, 21, 0.9));
+  background: linear-gradient(135deg, var(--neon-purple-surface), var(--neon-surface-deep));
   border: 1px solid var(--neon-purple-border);
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: var(--neon-glass-shadow);
-  color: #fff;
+  color: var(--neon-text);
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
@@ -264,7 +264,7 @@
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--neon-text-muted);
   font-size: 12px;
   transition: background 100ms ease, color 100ms ease;
   border-radius: 6px;
@@ -272,7 +272,7 @@
 
 .overflow-menu__item:hover {
   background: var(--neon-purple-surface);
-  color: #fff;
+  color: var(--neon-text);
 }
 
 .overflow-menu__item-pin {
@@ -294,16 +294,16 @@
   align-items: center;
   padding: 0 10px;
   font-size: 10px;
-  color: rgba(255, 255, 255, 0.35);
-  background: rgba(10, 0, 21, 0.4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--neon-text-dim);
+  background: var(--neon-surface-deep);
+  border-bottom: 1px solid var(--bde-border);
   cursor: pointer;
   transition: color 100ms ease;
   flex-shrink: 0;
 }
 
 .panel-label-slim:hover {
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--neon-text-muted);
 }
 
 /* ── Model Badge ── */

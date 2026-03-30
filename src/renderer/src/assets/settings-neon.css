@@ -12,7 +12,7 @@
 
 .settings-view__header {
   border-bottom-color: var(--neon-purple-border);
-  background: linear-gradient(180deg, rgba(191, 90, 242, 0.06) 0%, var(--neon-bg) 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-bg) 100%);
 }
 
 .settings-view__header::after {
@@ -80,7 +80,7 @@
 
 .settings-section__title {
   color: var(--neon-purple);
-  text-shadow: 0 0 6px rgba(191, 90, 242, 0.3);
+  text-shadow: var(--neon-purple-glow);
 }
 
 /* ── Form Fields ─────────────────────────────────────── */
@@ -97,7 +97,7 @@
 
 .settings-field__input:focus {
   border-color: var(--neon-purple);
-  box-shadow: 0 0 8px rgba(191, 90, 242, 0.3);
+  box-shadow: var(--neon-purple-glow);
   outline: none;
 }
 
@@ -136,11 +136,11 @@
 
 .settings-color {
   border-color: transparent;
-  box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--bde-shadow-sm);
 }
 
 .settings-color:hover {
-  box-shadow: 0 0 10px rgba(191, 90, 242, 0.4);
+  box-shadow: var(--neon-purple-glow);
 }
 
 .settings-color--active {
@@ -164,7 +164,7 @@
 
 .settings-about__link:hover {
   color: var(--neon-cyan);
-  text-shadow: 0 0 6px rgba(0, 255, 200, 0.4);
+  text-shadow: var(--neon-cyan-glow);
 }
 
 /* ── Buttons inside Settings ─────────────────────────── */
@@ -182,7 +182,7 @@
 
 .settings-view .bde-btn--primary {
   background: var(--neon-purple);
-  color: #0a0015;
+  color: var(--neon-bg);
   border: none;
   text-shadow: none;
 }

@@ -497,7 +497,7 @@
 /* ── Review Submit Dialog ──────────────────────────────── */
 
 .review-dialog-backdrop {
-  background: var(--neon-overlay);
+  background: var(--bde-overlay);
   backdrop-filter: var(--neon-glass-blur);
 }
 

@@ -162,7 +162,7 @@
 }
 
 .diff-line__gutter--selectable:hover {
-  background: rgba(0, 255, 200, 0.12);
+  background: var(--neon-cyan-surface);
 }
 
 .diff-selection-trigger {
@@ -243,5 +243,5 @@
 
 .diff-comment-widget__pending-badge {
   color: var(--neon-orange);
-  background: rgba(255, 165, 0, 0.15);
+  background: var(--neon-orange-surface);
 }
