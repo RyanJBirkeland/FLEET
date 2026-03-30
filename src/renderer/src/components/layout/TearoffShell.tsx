@@ -2,49 +2,10 @@ import React, { Suspense, useState, useEffect } from 'react'
 import { Undo2 } from 'lucide-react'
 import { View } from '../../stores/panelLayout'
 import { VIEW_LABELS } from '../../lib/view-registry'
+import { resolveView } from '../../lib/view-resolver'
 import { useCrossWindowDrop } from '../../hooks/useCrossWindowDrop'
 import { CrossWindowDropOverlay } from '../panels/CrossWindowDropOverlay'
 import '../../assets/tearoff-shell.css'
-
-// ---------------------------------------------------------------------------
-// Lazy-loaded views (same pattern as PanelLeaf)
-// ---------------------------------------------------------------------------
-
-const DashboardView = React.lazy(() => import('../../views/DashboardView'))
-const AgentsView = React.lazy(() =>
-  import('../../views/AgentsView').then((m) => ({ default: m.AgentsView }))
-)
-const IDEView = React.lazy(() => import('../../views/IDEView'))
-const SprintView = React.lazy(() => import('../../views/SprintView'))
-const SettingsView = React.lazy(() => import('../../views/SettingsView'))
-const PRStationView = React.lazy(() => import('../../views/PRStationView'))
-const TaskWorkbenchView = React.lazy(() => import('../../views/TaskWorkbenchView'))
-const GitTreeView = React.lazy(() => import('../../views/GitTreeView'))
-
-// ---------------------------------------------------------------------------
-// View resolver
-// ---------------------------------------------------------------------------
-
-function resolveView(viewKey: View): React.ReactNode {
-  switch (viewKey) {
-    case 'dashboard':
-      return <DashboardView />
-    case 'agents':
-      return <AgentsView />
-    case 'ide':
-      return <IDEView />
-    case 'sprint':
-      return <SprintView />
-    case 'settings':
-      return <SettingsView />
-    case 'pr-station':
-      return <PRStationView />
-    case 'task-workbench':
-      return <TaskWorkbenchView />
-    case 'git':
-      return <GitTreeView />
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Close dialog
