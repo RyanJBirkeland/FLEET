@@ -126,7 +126,8 @@ describe('IPC Registration Completeness', () => {
       'tearoff:returnToMain', // ipcMain.on, fire-and-forget (no typed result)
       'tearoff:dropComplete', // ipcMain.on, fire-and-forget (cross-window drag)
       'tearoff:dragCancelFromRenderer', // ipcMain.on, fire-and-forget (cross-window drag)
-      'tearoff:returnAll' // ipcMain.on, fire-and-forget (bulk return all tabs)
+      'tearoff:returnAll', // ipcMain.on, fire-and-forget (bulk return all tabs)
+      'tearoff:viewsChanged' // ipcMain.on, fire-and-forget (renderer notifies main of open views)
     ])
 
     const extras = [...registeredChannels]
