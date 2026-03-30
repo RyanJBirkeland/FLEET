@@ -24,7 +24,7 @@ vi.mock('../../data/sprint-queries', () => ({
 import { existsSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { updateTask } from '../../data/sprint-queries'
-import { resolveSuccess, resolveFailure, PR_CREATE_MAX_ATTEMPTS } from '../completion'
+import { resolveSuccess, resolveFailure, PR_CREATE_MAX_ATTEMPTS, sanitizeTitle } from '../completion'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import { MAX_RETRIES } from '../types'
 
@@ -700,15 +700,98 @@ describe('resolveFailure', () => {
     expect(result).toBe(true)
   })
 
-  it('returns false when updateTask throws', async () => {
+  it('returns true (terminal) when updateTask throws to prevent infinite loop (AM-5)', async () => {
     updateTaskMock.mockImplementationOnce(() => { throw new Error('DB error'); })
 
-    const result = await resolveFailure({
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    const result = resolveFailure({
       taskId: 'task-5',
       retryCount: MAX_RETRIES,
       repo: mockRepo
-    })
+    }, logger)
 
-    expect(result).toBe(false) // not terminal because the update failed
+    expect(result).toBe(true) // terminal to prevent infinite loop on DB error
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to update task task-5 during failure resolution')
+    )
+  })
+
+  it('returns true (terminal) on DB error even when retries remain (AM-5)', async () => {
+    updateTaskMock.mockImplementationOnce(() => { throw new Error('DB connection lost'); })
+
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+    const result = resolveFailure({
+      taskId: 'task-6',
+      retryCount: 0, // retries remain
+      repo: mockRepo
+    }, logger)
+
+    expect(result).toBe(true) // treat DB error as terminal
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to update task task-6 during failure resolution')
+    )
+  })
+})
+
+describe('sanitizeTitle (AM-3)', () => {
+  it('returns unchanged title for clean input', () => {
+    expect(sanitizeTitle('Add login page')).toBe('Add login page')
+    expect(sanitizeTitle('Fix bug in auth module')).toBe('Fix bug in auth module')
+  })
+
+  it('removes control characters except newline and tab', () => {
+    expect(sanitizeTitle('Title\x00with\x01null\x02bytes')).toBe('Titlewithnullbytes')
+    expect(sanitizeTitle('Bell\x07char')).toBe('Bellchar')
+    expect(sanitizeTitle('ESC\x1Bsequence')).toBe('ESCsequence')
+    expect(sanitizeTitle('DEL\x7Fchar')).toBe('DELchar')
+  })
+
+  it('preserves newline and tab characters', () => {
+    expect(sanitizeTitle('Line1\nLine2')).toBe('Line1\nLine2')
+    expect(sanitizeTitle('Tab\tseparated')).toBe('Tab\tseparated')
+  })
+
+  it('removes backticks', () => {
+    expect(sanitizeTitle('Fix `utils.ts` bug')).toBe('Fix utils.ts bug')
+    expect(sanitizeTitle('```code block```')).toBe('code block')
+  })
+
+  it('removes angle brackets', () => {
+    expect(sanitizeTitle('Fix <Component> render')).toBe('Fix Component render')
+    expect(sanitizeTitle('<script>alert(1)</script>')).toBe('scriptalert(1)/script')
+  })
+
+  it('removes javascript: links from markdown', () => {
+    expect(sanitizeTitle('[Click me](javascript:alert(1))')).toBe('[Click me]()')
+    expect(sanitizeTitle('[Foo](JAVASCRIPT:void(0))')).toBe('[Foo]()')
+  })
+
+  it('removes image markdown', () => {
+    expect(sanitizeTitle('Add ![tracker](http://evil.com/pixel.gif) feature')).toBe('Add  feature')
+    expect(sanitizeTitle('![alt text](image.png)')).toBe('')
+  })
+
+  it('trims whitespace from start and end', () => {
+    expect(sanitizeTitle('  Title with spaces  ')).toBe('Title with spaces')
+    expect(sanitizeTitle('\n\nLeading newlines')).toBe('Leading newlines')
+    expect(sanitizeTitle('Trailing newlines\n\n')).toBe('Trailing newlines')
+  })
+
+  it('handles combined attack patterns', () => {
+    const malicious = 'Fix bug `<script>alert(1)</script>` ![tracker](http://evil.com) [link](javascript:void(0))'
+    const sanitized = sanitizeTitle(malicious)
+    expect(sanitized).not.toContain('<script>')
+    expect(sanitized).not.toContain('javascript:')
+    expect(sanitized).not.toContain('![tracker]')
+    expect(sanitized).toContain('Fix bug')
+  })
+
+  it('handles empty string', () => {
+    expect(sanitizeTitle('')).toBe('')
+    expect(sanitizeTitle('   ')).toBe('')
+  })
+
+  it('handles string with only control characters', () => {
+    expect(sanitizeTitle('\x00\x01\x02\x03')).toBe('')
   })
 })

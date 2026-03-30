@@ -11,28 +11,26 @@ export async function spawnAgent(opts: {
 }): Promise<AgentHandle> {
   const env = { ...buildAgentEnv() }
 
-  // Use the cached OAuth token as ANTHROPIC_API_KEY.
-  // This avoids the Keychain access hang inside Electron.
+  // Get OAuth token for SDK auth parameter.
+  // Do NOT pass token via environment variable (AM-RED-2).
   const token = getOAuthToken()
-  if (token) {
-    env.ANTHROPIC_API_KEY = token
-  }
 
   // Try SDK first, fall back to CLI
   try {
     const sdk = await import('@anthropic-ai/claude-agent-sdk')
-    return spawnViaSdk(sdk, opts, env, opts.logger)
+    return spawnViaSdk(sdk, opts, env, token, opts.logger)
   } catch {
     // SDK not available — use CLI fallback
   }
 
-  return spawnViaCli(opts, env, opts.logger)
+  return spawnViaCli(opts, env, token, opts.logger)
 }
 
 function spawnViaSdk(
   sdk: typeof import('@anthropic-ai/claude-agent-sdk'),
   opts: { prompt: string; cwd: string; model: string },
   env: NodeJS.ProcessEnv,
+  apiKey: string | null,
   logger?: Logger
 ): AgentHandle {
   const abortController = new AbortController()
@@ -43,8 +41,9 @@ function spawnViaSdk(
       model: opts.model,
       cwd: opts.cwd,
       env: env as Record<string, string | undefined>,
-      permissionMode: 'bypassPermissions',
-      allowDangerouslySkipPermissions: true,
+      // AM-RED-1: Removed bypassPermissions - agents now respect permission prompts
+      // AM-RED-2: Pass auth via apiKey parameter instead of environment variable
+      ...(apiKey ? { apiKey } : {}),
       abortController,
       settingSources: ['user', 'project', 'local']
     }
@@ -76,13 +75,13 @@ function spawnViaSdk(
     async steer(message: string): Promise<SteerResult> {
       try {
         ;(logger ?? console).warn(
-          `[agent-manager] Steer in SDK mode is limited — message may not reach agent: "${message.slice(0, 100)}"`
+          `[agent-manager] Steer in SDK mode is not supported — interrupting agent instead: "${message.slice(0, 100)}"`
         )
         await queryResult.interrupt()
         // Re-send via streamInput is not straightforward for a single query.
-        // The interrupt signals the agent, then we log the steer message intention.
-        // Full steer support requires streaming input mode; this is best-effort.
-        return { delivered: true }
+        // The interrupt signals the agent, but the steer message cannot be delivered.
+        // Full steer support requires streaming input mode; this path is unsupported.
+        return { delivered: false, error: 'SDK mode does not support steer - agent interrupted instead' }
       } catch (err) {
         return { delivered: false, error: String(err) }
       }
@@ -93,8 +92,14 @@ function spawnViaSdk(
 function spawnViaCli(
   opts: { prompt: string; cwd: string; model: string },
   env: NodeJS.ProcessEnv,
+  apiKey: string | null,
   _logger?: Logger
 ): AgentHandle {
+  // AM-RED-2: Pass auth via ANTHROPIC_API_KEY for CLI (no auth parameter available in CLI)
+  if (apiKey) {
+    env = { ...env, ANTHROPIC_API_KEY: apiKey }
+  }
+
   const child = spawn(
     'claude',
     [
@@ -104,9 +109,8 @@ function spawnViaCli(
       'stream-json',
       '--verbose',
       '--model',
-      opts.model,
-      '--permission-mode',
-      'bypassPermissions'
+      opts.model
+      // AM-RED-1: Removed --permission-mode bypassPermissions
     ],
     {
       cwd: opts.cwd,
