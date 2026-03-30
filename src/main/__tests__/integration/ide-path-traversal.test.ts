@@ -1,15 +1,18 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
-import { mkdtempSync, rmSync } from 'fs'
+import { mkdtempSync, rmSync, realpathSync } from 'fs'
 import { tmpdir } from 'os'
 import { join } from 'path'
 import { validateIdePath } from '../../handlers/ide-fs-handlers'
 
 let WATCHED_ROOT: string
+let WATCHED_ROOT_REAL: string
 
 describe('IDE path traversal prevention', () => {
   beforeAll(() => {
     // Create a real temp directory so fs.realpathSync works on all platforms
     WATCHED_ROOT = mkdtempSync(join(tmpdir(), 'ide-test-'))
+    // IDE-2: validateIdePath now returns canonical paths, so we need the real path for comparisons
+    WATCHED_ROOT_REAL = realpathSync(WATCHED_ROOT)
   })
 
   afterAll(() => {
@@ -49,8 +52,8 @@ describe('IDE path traversal prevention', () => {
     // The resolved path either stays inside root (harmless) or goes outside (blocked).
     try {
       const result = validateIdePath(malicious, WATCHED_ROOT)
-      // If it didn't throw, the resolved path must still be inside the root
-      expect(result.startsWith(WATCHED_ROOT + '/')).toBe(true)
+      // IDE-2: If it didn't throw, the resolved path must still be inside the root (canonical path)
+      expect(result.startsWith(WATCHED_ROOT_REAL + '/') || result === WATCHED_ROOT_REAL).toBe(true)
     } catch (err) {
       expect((err as Error).message).toContain('Path traversal blocked')
     }
@@ -58,16 +61,19 @@ describe('IDE path traversal prevention', () => {
 
   it('allows valid paths within watched root', () => {
     const result = validateIdePath(`${WATCHED_ROOT}/src/index.ts`, WATCHED_ROOT)
-    expect(result).toBe(`${WATCHED_ROOT}/src/index.ts`)
+    // IDE-2: validateIdePath now returns canonical path
+    expect(result).toBe(`${WATCHED_ROOT_REAL}/src/index.ts`)
   })
 
   it('allows the root path itself', () => {
     const result = validateIdePath(WATCHED_ROOT, WATCHED_ROOT)
-    expect(result).toBe(WATCHED_ROOT)
+    // IDE-2: validateIdePath now returns canonical path
+    expect(result).toBe(WATCHED_ROOT_REAL)
   })
 
   it('allows nested subdirectory paths', () => {
     const result = validateIdePath(`${WATCHED_ROOT}/a/b/c/d.txt`, WATCHED_ROOT)
-    expect(result).toBe(`${WATCHED_ROOT}/a/b/c/d.txt`)
+    // IDE-2: validateIdePath now returns canonical path
+    expect(result).toBe(`${WATCHED_ROOT_REAL}/a/b/c/d.txt`)
   })
 })
