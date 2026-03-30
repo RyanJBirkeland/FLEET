@@ -13,12 +13,48 @@ const EXTRA_PATHS = ['/usr/local/bin', '/opt/homebrew/bin', `${homedir()}/.local
 
 let _cachedEnv: Record<string, string | undefined> | null = null
 
-/** Returns process.env with common tool paths prepended to PATH. Cached after first call. */
+// Allowlist of environment variables that agents need
+const ENV_ALLOWLIST = [
+  'PATH',
+  'HOME',
+  'USER',
+  'SHELL',
+  'LANG',
+  'TERM',
+  'TMPDIR',
+  'XDG_CONFIG_HOME',
+  'XDG_DATA_HOME',
+  'XDG_CACHE_HOME',
+  'GIT_AUTHOR_NAME',
+  'GIT_AUTHOR_EMAIL',
+  'GIT_COMMITTER_NAME',
+  'GIT_COMMITTER_EMAIL',
+  'NODE_PATH'
+]
+
+/** Returns allowlisted env vars with common tool paths prepended to PATH. Cached after first call. */
 export function buildAgentEnv(): Record<string, string | undefined> {
   if (_cachedEnv) return { ..._cachedEnv }
-  const env = { ...process.env }
+  const env: Record<string, string | undefined> = {}
+
+  // Copy only allowlisted environment variables
+  for (const key of ENV_ALLOWLIST) {
+    if (process.env[key] !== undefined) {
+      env[key] = process.env[key]
+    }
+  }
+
+  // Also allow npm_config_* variables
+  for (const key of Object.keys(process.env)) {
+    if (key.startsWith('npm_config_') && process.env[key] !== undefined) {
+      env[key] = process.env[key]
+    }
+  }
+
+  // Prepend extra paths to PATH
   const currentPath = env.PATH ?? ''
   env.PATH = [...EXTRA_PATHS, ...currentPath.split(':')].filter(Boolean).join(':')
+
   _cachedEnv = env
   return { ..._cachedEnv }
 }

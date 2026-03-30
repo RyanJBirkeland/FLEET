@@ -1,5 +1,5 @@
 import { execFile } from 'node:child_process'
-import { mkdirSync, existsSync, readdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs'
+import { mkdirSync, existsSync, readdirSync, writeFileSync, readFileSync, rmSync, renameSync } from 'node:fs'
 import { promisify } from 'node:util'
 import path from 'node:path'
 import { buildAgentEnv } from '../env-utils'
@@ -74,13 +74,22 @@ function acquireLock(worktreeBase: string, repoPath: string, logger?: Logger): v
     // Stale lock — PID is dead
   }
 
-  // Re-acquire atomically after cleaning stale lock
+  // Re-acquire atomically after cleaning stale lock using rename (atomic on POSIX)
+  const tempLockFile = lockFile + `.${process.pid}.tmp`
+  writeFileSync(tempLockFile, String(process.pid))
   try {
     rmSync(lockFile)
   } catch {
     /* already gone */
   }
-  writeFileSync(lockFile, String(process.pid), { flag: 'wx' })
+  try {
+    // renameSync is atomic and overwrites the target on POSIX systems
+    renameSync(tempLockFile, lockFile)
+  } catch (err) {
+    // If rename fails, clean up temp file and re-throw
+    try { rmSync(tempLockFile) } catch { /* ignore */ }
+    throw err
+  }
 }
 
 function releaseLock(worktreeBase: string, repoPath: string): void {
@@ -212,20 +221,31 @@ export interface CleanupWorktreeOpts {
   repoPath: string
   worktreePath: string
   branch: string
+  logger?: Logger
 }
 
-export function cleanupWorktree(opts: CleanupWorktreeOpts): void {
-  const { repoPath, worktreePath, branch } = opts
+export async function cleanupWorktree(opts: CleanupWorktreeOpts): Promise<void> {
+  const { repoPath, worktreePath, branch, logger } = opts
   const env = buildAgentEnv()
+  const log = logger ?? console
 
-  execFile('git', ['worktree', 'remove', worktreePath, '--force'], { cwd: repoPath, env }, () => {
-    // After worktree removed, delete branch and prune
-    execFile('git', ['worktree', 'prune'], { cwd: repoPath, env }, () => {
-      execFile('git', ['branch', '-D', branch], { cwd: repoPath, env }, () => {
-        // best-effort
-      })
-    })
-  })
+  try {
+    await execFileAsync('git', ['worktree', 'remove', worktreePath, '--force'], { cwd: repoPath, env })
+  } catch (err) {
+    log.warn(`[worktree] Failed to remove worktree ${worktreePath}: ${err}`)
+  }
+
+  try {
+    await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath, env })
+  } catch (err) {
+    log.warn(`[worktree] Failed to prune worktrees: ${err}`)
+  }
+
+  try {
+    await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env })
+  } catch (err) {
+    log.warn(`[worktree] Failed to delete branch ${branch}: ${err}`)
+  }
 }
 
 export async function pruneStaleWorktrees(
