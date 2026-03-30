@@ -112,7 +112,7 @@ export async function tryEmitPlaygroundEvent(
     // Sanitize HTML to prevent XSS from agent-generated content
     const window = new JSDOM('').window
     const DOMPurify = DOMPurifyModule.default || DOMPurifyModule
-    const purify = DOMPurify(window as unknown as Window)
+    const purify = DOMPurify(window as any)
     const html = purify.sanitize(rawHtml, {
       ALLOWED_TAGS: [
         'div', 'span', 'p', 'a', 'img', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
