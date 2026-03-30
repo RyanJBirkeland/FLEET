@@ -1,3 +1,4 @@
+import React from 'react'
 import { X } from 'lucide-react'
 import type { PanelTab } from '../../stores/panelLayout'
 
@@ -13,7 +14,7 @@ export function TearoffTabBar({
   activeTab,
   onSelectTab,
   onCloseTab
-}: TearoffTabBarProps): JSX.Element {
+}: TearoffTabBarProps): React.ReactElement {
   const showClose = tabs.length > 1
 
   return (
