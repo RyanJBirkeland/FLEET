@@ -32,13 +32,13 @@
 }
 
 .wb__copilot-toggle button:hover {
-  background: rgba(0, 255, 200, 0.15);
+  background: var(--neon-cyan-surface);
   box-shadow: var(--neon-cyan-glow);
 }
 
 .wb__separator {
   width: 1px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--neon-surface-dim);
   cursor: col-resize;
 }
 
@@ -89,7 +89,7 @@
 
 .wb-form__input {
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bde-overlay);
   border: 1px solid var(--neon-purple-border);
   border-radius: 6px;
   color: var(--neon-text);
@@ -106,12 +106,12 @@
 
 .wb-form__input:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 8px rgba(0, 255, 200, 0.25);
+  box-shadow: var(--neon-cyan-glow);
 }
 
 .wb-form__select {
   padding: 10px 12px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bde-overlay);
   border: 1px solid var(--neon-purple-border);
   border-radius: 6px;
   color: var(--neon-text);
@@ -125,7 +125,7 @@
 
 .wb-form__select:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 8px rgba(0, 255, 200, 0.25);
+  box-shadow: var(--neon-cyan-glow);
 }
 
 .wb-form__toggle {
@@ -182,7 +182,7 @@
 
 .wb-spec__btn {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bde-border);
   border-radius: 6px;
   color: var(--neon-text-muted);
   padding: 4px 12px;
@@ -194,7 +194,7 @@
 
 .wb-spec__btn:hover {
   background: var(--neon-surface-dim);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--bde-border-hover);
   color: var(--neon-text);
 }
 
@@ -205,7 +205,7 @@
 }
 
 .wb-spec__btn--primary:hover {
-  background: rgba(0, 255, 200, 0.15);
+  background: var(--neon-cyan-surface);
   box-shadow: var(--neon-cyan-glow);
 }
 
@@ -223,7 +223,7 @@
   max-height: 60vh;
   resize: vertical;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.3);
+  background: var(--bde-overlay);
   border: 1px solid var(--neon-purple-border);
   border-radius: 8px;
   color: var(--neon-text);
@@ -241,7 +241,7 @@
 
 .wb-spec__textarea:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 8px rgba(0, 255, 200, 0.25);
+  box-shadow: var(--neon-cyan-glow);
 }
 
 /* ── Readiness Checks ── */
@@ -249,12 +249,12 @@
   border: 1px solid var(--neon-purple-border);
   border-radius: 8px;
   padding: 12px;
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--bde-overlay);
 }
 
 .wb-checks--has-fail {
   border-color: var(--neon-red);
-  box-shadow: 0 0 8px rgba(255, 50, 100, 0.15);
+  box-shadow: var(--neon-red-glow);
 }
 
 .wb-checks__summary {
@@ -313,11 +313,11 @@
   height: 18px;
 }
 
-.wb-check-icon--pass { color: var(--neon-cyan, #00e5ff); }
+.wb-check-icon--pass { color: var(--neon-cyan); }
 .wb-check-icon--warn { color: var(--bde-warning, #ffa500); }
-.wb-check-icon--fail { color: var(--neon-red, #ff5050); }
+.wb-check-icon--fail { color: var(--neon-red); }
 .wb-check-icon--pending {
-  color: var(--neon-text-dim, rgba(255, 255, 255, 0.4));
+  color: var(--neon-text-dim);
   animation: bde-spin 1.5s linear infinite;
 }
 
@@ -349,7 +349,7 @@
 }
 
 .wb-actions__btn--secondary:hover:not(:disabled) {
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--bde-border-hover);
   background: var(--neon-surface-dim);
 }
 
@@ -361,7 +361,7 @@
 .wb-actions__btn--primary {
   background: var(--neon-purple);
   border: none;
-  color: #fff;
+  color: var(--neon-text);
   font-weight: 600;
   cursor: pointer;
 }
@@ -379,7 +379,7 @@
 .wb-actions__btn--launch {
   background: var(--neon-cyan);
   border: none;
-  color: #0a0015;
+  color: var(--neon-bg);
   font-weight: 600;
   cursor: pointer;
 }
@@ -412,7 +412,7 @@
   flex-direction: column;
   height: 100%;
   border-left: 1px solid var(--neon-purple-border);
-  background: rgba(10, 0, 21, 0.5);
+  background: var(--neon-surface-deep);
 }
 
 .wb-copilot__header {
@@ -422,7 +422,7 @@
   padding: 10px 12px;
   border-bottom: 1px solid var(--neon-purple-border);
   flex-shrink: 0;
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.06) 0%, transparent 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, transparent 100%);
 }
 
 .wb-copilot__title {
@@ -477,13 +477,13 @@
 .wb-copilot__bubble--assistant {
   align-self: flex-start;
   background: var(--neon-surface-dim);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bde-border);
 }
 
 .wb-copilot__bubble--system {
   align-self: flex-start;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bde-border);
   font-style: italic;
   color: var(--neon-text-muted);
   font-size: 12px;
@@ -514,7 +514,7 @@
 }
 
 .wb-copilot__insert-btn:hover {
-  background: rgba(0, 255, 200, 0.15);
+  background: var(--neon-cyan-surface);
   box-shadow: var(--neon-cyan-glow);
 }
 
@@ -534,7 +534,7 @@
 
 .wb-copilot__cancel-btn {
   background: none;
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bde-border);
   border-radius: 4px;
   color: var(--neon-text-muted);
   padding: 1px 8px;
@@ -546,12 +546,12 @@
 
 .wb-copilot__cancel-btn:hover {
   background: var(--neon-surface-dim);
-  border-color: rgba(255, 255, 255, 0.12);
+  border-color: var(--bde-border-hover);
 }
 
 .wb-copilot__input-row {
   padding: 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  border-top: 1px solid var(--bde-border);
   display: flex;
   gap: 8px;
   flex-shrink: 0;
@@ -562,7 +562,7 @@
   resize: none;
   padding: 8px;
   background: var(--neon-surface-dim);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--bde-border);
   border-radius: 6px;
   color: var(--neon-text);
   font-size: 13px;
@@ -573,7 +573,7 @@
 
 .wb-copilot__input:focus {
   border-color: var(--neon-cyan);
-  box-shadow: 0 0 6px rgba(0, 255, 200, 0.2);
+  box-shadow: var(--neon-cyan-glow);
 }
 
 .wb-copilot__send-btn {
@@ -589,7 +589,7 @@
 
 .wb-copilot__send-btn--active {
   background: var(--neon-cyan);
-  color: #0a0015;
+  color: var(--neon-bg);
   cursor: pointer;
 }
 

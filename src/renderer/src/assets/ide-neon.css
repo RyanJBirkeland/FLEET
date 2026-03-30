@@ -21,19 +21,19 @@
 
 /* ── File Sidebar ── */
 .ide-sidebar {
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   border-right: 1px solid var(--neon-purple-border);
 }
 
 .ide-sidebar__header {
-  background: linear-gradient(180deg, rgba(138, 43, 226, 0.08) 0%, rgba(10, 0, 21, 0.6) 100%);
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-deep) 100%);
   backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
 }
 
 .ide-sidebar__title {
   color: var(--neon-purple);
-  text-shadow: 0 0 8px rgba(191, 90, 242, 0.3);
+  text-shadow: 0 0 8px var(--neon-purple-glow);
 }
 
 .ide-sidebar__folder-name {
@@ -116,7 +116,7 @@
 /* ── Editor Tab Bar ── */
 .ide-editor-tab-bar {
   position: relative;
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
   /* Scroll shadow indicators for overflow */
@@ -193,7 +193,7 @@
 
 .ide-empty-state__title {
   color: var(--neon-text);
-  text-shadow: 0 0 12px rgba(191, 90, 242, 0.5);
+  text-shadow: 0 0 12px var(--neon-purple-glow);
 }
 
 .ide-empty-state__subtitle {
@@ -203,12 +203,12 @@
 .ide-empty-state__open-btn {
   color: var(--neon-bg);
   background: var(--neon-cyan);
-  box-shadow: 0 0 12px rgba(0, 255, 200, 0.15);
+  box-shadow: 0 0 12px var(--neon-cyan-glow);
   transition: box-shadow 0.15s ease, opacity 0.15s ease;
 }
 
 .ide-empty-state__open-btn:hover {
-  box-shadow: 0 0 16px rgba(0, 255, 200, 0.25);
+  box-shadow: 0 0 16px var(--neon-cyan-glow);
 }
 
 .ide-empty-state__recent-label {
@@ -234,19 +234,19 @@
 }
 
 .terminal-view__header {
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
 }
 
 .terminal-view__title {
   color: var(--neon-purple);
-  text-shadow: 0 0 8px rgba(191, 90, 242, 0.3);
+  text-shadow: 0 0 8px var(--neon-purple-glow);
 }
 
 /* ── Terminal Tab Bar ── */
 .terminal-tab-bar {
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   backdrop-filter: var(--neon-glass-blur);
   border-bottom: 1px solid var(--neon-purple-border);
 }
@@ -291,7 +291,7 @@
 
 /* ── Terminal Toolbar ── */
 .terminal-toolbar {
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   backdrop-filter: var(--neon-glass-blur);
 }
 
@@ -421,7 +421,7 @@
 }
 
 .terminal-agent-status-bar {
-  background: rgba(10, 0, 21, 0.6);
+  background: var(--neon-surface-deep);
   border-bottom: 1px solid var(--neon-purple-border);
 }
 
@@ -447,7 +447,7 @@
 .ide-sidebar-toggle:hover {
   color: var(--neon-cyan);
   border-color: var(--neon-cyan-border);
-  box-shadow: 0 0 8px rgba(0, 255, 200, 0.15);
+  box-shadow: 0 0 8px var(--neon-cyan-glow);
 }
 
 /* ── Keyboard Shortcuts Overlay ── */
@@ -505,12 +505,12 @@
 
 .ide-shortcuts-panel__desc {
   font-size: 12px;
-  color: var(--neon-text-dim, rgba(255, 255, 255, 0.6));
+  color: var(--neon-text-dim);
 }
 
 .ide-shortcuts-panel__hint {
   margin-top: 14px;
   text-align: center;
   font-size: 11px;
-  color: var(--neon-text-dim, rgba(255, 255, 255, 0.4));
+  color: var(--neon-text-dim);
 }

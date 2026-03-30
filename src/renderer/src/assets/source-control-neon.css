@@ -501,17 +501,17 @@
 
 .git-diff-drawer__line--add {
   color: var(--bde-success);
-  background-color: rgba(0, 211, 127, 0.07);
+  background-color: var(--bde-diff-add-bg);
 }
 
 .git-diff-drawer__line--delete {
   color: var(--bde-danger);
-  background-color: rgba(255, 77, 77, 0.07);
+  background-color: var(--bde-diff-del-bg);
 }
 
 .git-diff-drawer__line--meta {
   color: var(--bde-info);
-  background-color: rgba(59, 130, 246, 0.07);
+  background-color: var(--bde-info-dim);
 }
 
 .git-diff-drawer__line--default {
