@@ -175,7 +175,7 @@ You are a QA engineer focused on user experience. Your goal is to find every bro
 After all 18 audits complete, a synthesis agent:
 
 1. Reads all 18 findings docs from `docs/superpowers/audits/prod-audit/`
-2. **Deduplicates** — same issue flagged by multiple personas gets one entry with all sources cited
+2. **Deduplicates** — same issue flagged by multiple personas OR across overlapping feature scopes gets one entry with all sources cited
 3. **Cross-references** against March 28 audit synthesis — marks what's been fixed, what's still open, what's new
 4. **Prioritizes** using severity × effort matrix
 5. **Groups** by feature × severity bucket (for Phase 3 task creation)
@@ -288,7 +288,17 @@ Fix {severity} issues in {feature} identified by production readiness audit.
 
 This ensures priority ordering while allowing Medium/Low tasks to proceed even if the higher-severity task fails.
 
-### 5.4 Task Naming Convention
+### 5.4 Execution
+
+Phase 3 is executed by a **Task Creation Agent** (19th agent) that:
+1. Reads `docs/superpowers/audits/prod-audit/synthesis.md`
+2. Parses the Remediation Task Map table
+3. For each row, creates a sprint task via `sprint:create` IPC with status `queued`, a full spec (per Section 5.2 template), and dependency wiring (per Section 5.3)
+4. Reports the created task IDs and dependency graph
+
+This agent runs after the synthesis agent completes. It needs access to the BDE main process IPC (run from within the Electron app context or via Queue API at `localhost:18790`).
+
+### 5.5 Task Naming Convention
 
 `audit-{feature}-{severity}` — e.g., `audit-agent-manager-critical`, `audit-queue-api-medium`
 
@@ -298,9 +308,9 @@ This ensures priority ordering while allowing Medium/Low tasks to proceed even i
 1. Dispatch Batch 1 (6 agents) → wait for completion
 2. Dispatch Batch 2 (6 agents) → wait for completion
 3. Dispatch Batch 3 (6 agents) → wait for completion
-4. Dispatch Synthesis agent → wait for completion
-5. Parse synthesis → create sprint tasks → set status: queued
-6. Agent pipeline picks up tasks automatically
+4. Dispatch Synthesis agent (19th) → wait for completion
+5. Dispatch Task Creation agent (20th) → reads synthesis, creates sprint tasks via Queue API, sets status: queued
+6. Agent pipeline picks up remediation tasks automatically
 ```
 
 ## 7. Feature File Scopes
@@ -367,13 +377,10 @@ This ensures priority ordering while allowing Medium/Low tasks to proceed even i
 - `src/main/__tests__/integration/queue-api-integration.test.ts`
 - `src/main/__tests__/integration/queue-api-sse.test.ts`
 
-### 7.3 Sprint Pipeline (13 source + 15 test files)
+### 7.3 Sprint Pipeline (15 source + 15 test files)
 
 **Source:**
 - `src/main/handlers/sprint-local.ts`
-- `src/main/data/sprint-queries.ts`
-- `src/main/data/sprint-task-repository.ts`
-- `src/main/data/task-changes.ts`
 - `src/main/sprint-pr-poller.ts`
 - `src/shared/sanitize-depends-on.ts`
 - `src/renderer/src/components/sprint/SprintPipeline.tsx`
@@ -406,7 +413,7 @@ This ensures priority ordering while allowing Medium/Low tasks to proceed even i
 - `src/renderer/src/stores/__tests__/sprintTasks.test.ts`
 - `src/renderer/src/stores/__tests__/sprintTasks-map-removal.test.ts`
 
-### 7.4 IDE (12 source + 9 test files)
+### 7.4 IDE (13 source + 9 test files)
 
 **Source:**
 - `src/renderer/src/views/IDEView.tsx`
@@ -434,7 +441,7 @@ This ensures priority ordering while allowing Medium/Low tasks to proceed even i
 - `src/renderer/src/stores/__tests__/ide.test.ts`
 - `src/main/__tests__/ide-fs-handlers.test.ts`
 
-### 7.5 PR Station (16 source + 16 test files)
+### 7.5 PR Station (20 source + 17 test files)
 
 **Source:**
 - `src/renderer/src/lib/github-api.ts`
@@ -474,9 +481,10 @@ This ensures priority ordering while allowing Medium/Low tasks to proceed even i
 - `src/renderer/src/components/diff/__tests__/DiffCommentComposer.test.tsx`
 - `src/renderer/src/components/diff/__tests__/DiffSizeWarning.test.tsx`
 - `src/renderer/src/lib/__tests__/github-api.test.ts`
+- `src/renderer/src/stores/__tests__/pendingReview.test.ts`
 - `src/main/handlers/__tests__/git-handlers.test.ts`
 
-### 7.6 Data Layer (9 source + 10 test files)
+### 7.6 Data Layer (10 source + 9 test files)
 
 **Source:**
 - `src/main/db.ts`
@@ -493,7 +501,6 @@ This ensures priority ordering while allowing Medium/Low tasks to proceed even i
 **Tests:**
 - `src/main/__tests__/db.test.ts`
 - `src/main/data/__tests__/sprint-queries.test.ts`
-- `src/main/data/__tests__/sprint-task-repository.test.ts`
 - `src/main/data/__tests__/agent-queries.test.ts`
 - `src/main/data/__tests__/cost-queries.test.ts`
 - `src/main/data/__tests__/event-queries.test.ts`
