@@ -21,6 +21,21 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
     }
   }, [spec, editing])
 
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        if (editing) {
+          setEditing(false)
+          setDraft(spec)
+        } else {
+          onClose()
+        }
+      }
+    }
+    document.addEventListener('keydown', handleEscape)
+    return () => document.removeEventListener('keydown', handleEscape)
+  }, [editing, spec, onClose])
+
   const handleSave = async () => {
     setSaving(true)
     try {

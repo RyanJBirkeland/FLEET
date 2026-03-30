@@ -95,10 +95,10 @@ describe('TaskDetailDrawer', () => {
     expect(screen.getByText('Stop')).toBeInTheDocument()
   })
 
-  it('shows correct action buttons for failed status (Re-run, Edit, Delete)', () => {
+  it('shows correct action buttons for failed status (Clone & Queue, Edit, Delete)', () => {
     const task: SprintTask = { ...baseTask, status: 'failed' }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
-    expect(screen.getByText('Re-run')).toBeInTheDocument()
+    expect(screen.getByText('Clone & Queue')).toBeInTheDocument()
     expect(screen.getByText('Edit')).toBeInTheDocument()
     expect(screen.getByText('Delete')).toBeInTheDocument()
   })
@@ -168,10 +168,10 @@ describe('TaskDetailDrawer - additional status combos', () => {
     expect(screen.queryByText('Delete')).not.toBeInTheDocument()
   })
 
-  it('shows Re-run button for done status', () => {
+  it('shows Clone & Queue button for done status', () => {
     const task: SprintTask = { ...baseTask, status: 'done' }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
-    expect(screen.getByText('Re-run')).toBeInTheDocument()
+    expect(screen.getByText('Clone & Queue')).toBeInTheDocument()
   })
 
   it('shows View PR link for done task with pr_url', () => {
@@ -186,18 +186,18 @@ describe('TaskDetailDrawer - additional status combos', () => {
     expect(screen.getByText('View PR')).toBeInTheDocument()
   })
 
-  it('shows correct action buttons for error status (Re-run, Edit, Delete)', () => {
+  it('shows correct action buttons for error status (Clone & Queue, Edit, Delete)', () => {
     const task: SprintTask = { ...baseTask, status: 'error' }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
-    expect(screen.getByText('Re-run')).toBeInTheDocument()
+    expect(screen.getByText('Clone & Queue')).toBeInTheDocument()
     expect(screen.getByText('Edit')).toBeInTheDocument()
     expect(screen.getByText('Delete')).toBeInTheDocument()
   })
 
-  it('shows correct action buttons for cancelled status (Re-run, Edit, Delete)', () => {
+  it('shows correct action buttons for cancelled status (Clone & Queue, Edit, Delete)', () => {
     const task: SprintTask = { ...baseTask, status: 'cancelled' }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
-    expect(screen.getByText('Re-run')).toBeInTheDocument()
+    expect(screen.getByText('Clone & Queue')).toBeInTheDocument()
     expect(screen.getByText('Edit')).toBeInTheDocument()
     expect(screen.getByText('Delete')).toBeInTheDocument()
   })
@@ -210,11 +210,11 @@ describe('TaskDetailDrawer - additional status combos', () => {
     expect(props.onLaunch).toHaveBeenCalledWith(task)
   })
 
-  it('calls onRerun when Re-run button clicked (done)', () => {
+  it('calls onRerun when Clone & Queue button clicked (done)', () => {
     const task: SprintTask = { ...baseTask, status: 'done' }
     const props = makeProps({ task })
     render(<TaskDetailDrawer {...props} />)
-    fireEvent.click(screen.getByText('Re-run'))
+    fireEvent.click(screen.getByText('Clone & Queue'))
     expect(props.onRerun).toHaveBeenCalledWith(task)
   })
 

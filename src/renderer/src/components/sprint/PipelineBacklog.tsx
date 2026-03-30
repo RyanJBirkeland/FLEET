@@ -75,8 +75,8 @@ export function PipelineBacklog({
               onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTaskClick(task.id) } }}
             >
               <div className="failed-card__title">{task.title}</div>
-              <div className="failed-card__meta">
-                {task.notes ? task.notes.slice(0, 40) : 'No details'}
+              <div className="failed-card__meta" title={task.notes || 'No details'} style={{ textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
+                {task.notes || 'No details'}
               </div>
               <button
                 className="backlog-card__action"

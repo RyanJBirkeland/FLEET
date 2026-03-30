@@ -183,8 +183,9 @@ describe('PipelineBacklog', () => {
         onRerun={onRerun}
       />
     )
-    // Should show truncated notes (first 40 chars)
-    expect(screen.getByText(notes.slice(0, 40))).toBeInTheDocument()
+    // Should show full notes with tooltip
+    expect(screen.getByText(notes)).toBeInTheDocument()
+    expect(screen.getByTitle(notes)).toBeInTheDocument()
   })
 
   it('shows "No details" on failed card with no notes', () => {
