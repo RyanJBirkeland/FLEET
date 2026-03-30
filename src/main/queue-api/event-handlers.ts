@@ -6,6 +6,9 @@ import { sendJson, parseBody } from './helpers'
 import { createSseBroadcaster } from './sse-broadcaster'
 import { insertEventBatch, queryEvents } from '../data/event-queries'
 import { getDb } from '../db'
+import { createLogger } from '../logger'
+
+const logger = createLogger('queue-api:events')
 
 // ---------------------------------------------------------------------------
 // SSE broadcaster (singleton, re-exported by router.ts)
@@ -93,7 +96,9 @@ export async function handleTaskOutput(
     if (batch.length > 0) {
       insertEventBatch(getDb(), batch)
     }
-  } catch {
+  } catch (err) {
+    // QA-17: Log event persistence errors for debugging
+    logger.error(`Failed to persist events for task ${taskId}: ${err instanceof Error ? err.message : String(err)}`)
     // Best-effort — do not fail the request
   }
 

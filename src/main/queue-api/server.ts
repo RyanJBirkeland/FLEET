@@ -29,10 +29,12 @@ export function startQueueApi(opts: QueueApiOptions = {}): http.Server {
     try {
       await route(req, res)
     } catch (err) {
-      logger.error(`Unhandled error: ${err}`)
+      // QA-16: Standardize error response format across all handlers
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      logger.error(`Unhandled error in ${req.method} ${req.url}: ${errorMessage}`)
       if (!res.headersSent) {
         res.writeHead(500, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ error: 'Internal server error' }))
+        res.end(JSON.stringify({ error: 'Internal server error', details: errorMessage }))
       }
     }
   })

@@ -22,6 +22,9 @@ import type {
   ClaimRequest,
   BatchResult
 } from '../../shared/queue-api-contract'
+import { createLogger } from '../logger'
+
+const logger = createLogger('queue-api:tasks')
 import {
   STATUS_UPDATE_FIELDS,
   RUNNER_WRITABLE_STATUSES,
@@ -95,21 +98,29 @@ function validateDependencies(
 }
 
 export async function handleHealth(res: http.ServerResponse): Promise<void> {
-  const stats = getQueueStats()
-  sendJson(res, 200, {
-    status: 'ok',
-    version: '1.0.0',
-    queue: {
-      backlog: stats.backlog,
-      queued: stats.queued,
-      blocked: stats.blocked,
-      active: stats.active,
-      done: stats.done,
-      failed: stats.failed,
-      cancelled: stats.cancelled,
-      error: stats.error
-    }
-  })
+  // QA-16: Wrap in try-catch for consistent error handling
+  try {
+    const stats = getQueueStats()
+    sendJson(res, 200, {
+      status: 'ok',
+      version: '1.0.0',
+      queue: {
+        backlog: stats.backlog,
+        queued: stats.queued,
+        blocked: stats.blocked,
+        active: stats.active,
+        done: stats.done,
+        failed: stats.failed,
+        cancelled: stats.cancelled,
+        error: stats.error
+      }
+    })
+  } catch (err) {
+    sendJson(res, 500, {
+      error: 'Failed to get queue stats',
+      details: err instanceof Error ? err.message : String(err)
+    })
+  }
 }
 
 export async function handleListTasks(
@@ -173,6 +184,10 @@ export async function handleCreateTask(
   if (bodyObj.status === 'queued' && typeof spec === 'string') {
     const url = new URL(req.url ?? '', 'http://localhost')
     const skipValidation = url.searchParams.get('skipValidation') === 'true'
+    // QA-8: Log when validation is bypassed for audit trail
+    if (skipValidation) {
+      logger.warn(`Spec validation bypassed for new task: ${title} (skipValidation=true)`)
+    }
     if (!skipValidation) {
       const semantic = await checkSpecSemantic({
         title: title as string,
@@ -260,10 +275,22 @@ export async function handleUpdateTask(
   // Filter to safe fields only — status, claimed_by, depends_on must use dedicated endpoints
   const raw = body as Record<string, unknown>
   const filtered: Record<string, unknown> = {}
+  const disallowed: string[] = [] // QA-14: Track disallowed fields to inform client
+
   for (const [k, v] of Object.entries(raw)) {
     if (GENERAL_PATCH_FIELDS.has(k)) {
       filtered[k] = v
+    } else {
+      disallowed.push(k)
     }
+  }
+
+  // QA-14: Return 400 when disallowed fields are present
+  if (disallowed.length > 0) {
+    sendJson(res, 400, {
+      error: `Disallowed fields: ${disallowed.join(', ')}. Use dedicated endpoints for status, claimed_by, or depends_on.`
+    })
+    return
   }
 
   if (Object.keys(filtered).length === 0) {
@@ -307,7 +334,14 @@ export async function handleUpdateStatus(
   }
 
   const patch = body as StatusUpdateRequest
-  if (patch.status && !RUNNER_WRITABLE_STATUSES.has(patch.status)) {
+
+  // QA-10: Validate that status field is present and valid
+  if (!patch.status) {
+    sendJson(res, 400, { error: 'status field is required' })
+    return
+  }
+
+  if (!RUNNER_WRITABLE_STATUSES.has(patch.status)) {
     sendJson(res, 400, { error: `Invalid status: ${patch.status}` })
     return
   }
@@ -316,6 +350,11 @@ export async function handleUpdateStatus(
   if (patch.status === 'queued') {
     const url = new URL(req.url ?? '', 'http://localhost')
     const skipValidation = url.searchParams.get('skipValidation') === 'true'
+
+    // QA-8: Log when validation is bypassed for audit trail
+    if (skipValidation) {
+      logger.warn(`Spec validation bypassed for task ${id} status update (skipValidation=true)`)
+    }
 
     if (!skipValidation) {
       // Fetch the task to get its spec
@@ -536,6 +575,21 @@ export async function handleUpdateDependencies(
   sendJson(res, 200, toCamelCase(updated))
 }
 
+// QA-15: Individual DELETE endpoint for tasks
+export async function handleDeleteTask(res: http.ServerResponse, id: string): Promise<void> {
+  try {
+    deleteTask(id)
+    sendJson(res, 200, { ok: true, id })
+  } catch (err) {
+    sendJson(res, 500, {
+      error: `Failed to delete task ${id}: ${err instanceof Error ? err.message : String(err)}`
+    })
+  }
+}
+
+// QA-5: Batch operations have no per-task authorization granularity.
+// All operations in the batch are executed with the same API key's permissions.
+// For fine-grained access control, use individual endpoints instead.
 export async function handleBatchTasks(
   req: http.IncomingMessage,
   res: http.ServerResponse

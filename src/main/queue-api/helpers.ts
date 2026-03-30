@@ -1,7 +1,7 @@
 /**
  * Queue API shared helpers: auth, JSON parsing, URL/route matching.
  */
-import { randomBytes } from 'node:crypto'
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import type http from 'node:http'
 import { getSetting, setSetting } from '../settings'
 
@@ -9,12 +9,25 @@ import { getSetting, setSetting } from '../settings'
 // Auth
 // ---------------------------------------------------------------------------
 
+// QA-12: Cache API key to avoid repeated settings reads
+let cachedApiKey: string | null = null
+
 function getApiKey(): string {
+  if (cachedApiKey) return cachedApiKey
   const existing = getSetting('taskRunner.apiKey') ?? process.env['SPRINT_API_KEY']
-  if (existing) return existing
+  if (existing) {
+    cachedApiKey = existing
+    return existing
+  }
   const generated = randomBytes(32).toString('hex')
   setSetting('taskRunner.apiKey', generated)
+  cachedApiKey = generated
   return generated
+}
+
+// QA-12: Clear cached API key (for testing)
+export function clearApiKeyCache(): void {
+  cachedApiKey = null
 }
 
 export function checkAuth(req: http.IncomingMessage, res: http.ServerResponse): boolean {
@@ -27,7 +40,9 @@ export function checkAuth(req: http.IncomingMessage, res: http.ServerResponse): 
   if (authHeader && authHeader.startsWith('Bearer ')) {
     token = authHeader.slice(7)
   } else {
-    // Fall back to ?token= query param (used by SSE clients)
+    // QA-3: Fall back to ?token= query param (used by SSE clients)
+    // NOTE: Query string tokens are logged in access logs and browser history.
+    // This is acceptable for localhost-only API but should not be used in production.
     const url = new URL(req.url ?? '/', `http://${req.headers.host ?? 'localhost'}`)
     const queryToken = url.searchParams.get('token')
     if (queryToken) {
@@ -40,7 +55,21 @@ export function checkAuth(req: http.IncomingMessage, res: http.ServerResponse): 
     return false
   }
 
-  if (token !== apiKey) {
+  // QA-4: Use timing-safe comparison to prevent timing attacks
+  // Ensure both strings are same length to avoid early exit
+  if (token.length !== apiKey.length) {
+    sendJson(res, 403, { error: 'Invalid API key' })
+    return false
+  }
+
+  try {
+    const tokenBuffer = Buffer.from(token, 'utf8')
+    const keyBuffer = Buffer.from(apiKey, 'utf8')
+    if (!timingSafeEqual(tokenBuffer, keyBuffer)) {
+      sendJson(res, 403, { error: 'Invalid API key' })
+      return false
+    }
+  } catch {
     sendJson(res, 403, { error: 'Invalid API key' })
     return false
   }
@@ -62,16 +91,42 @@ export function sendJson(res: http.ServerResponse, status: number, body: unknown
 }
 
 export const MAX_BODY_SIZE = 5 * 1024 * 1024 // 5 MB
+export const BODY_PARSE_TIMEOUT_MS = 30_000 // 30 seconds
 
 export function parseBody(req: http.IncomingMessage, res?: http.ServerResponse): Promise<unknown> {
   return new Promise((resolve, reject) => {
     const chunks: Buffer[] = []
     let totalSize = 0
+    let settled = false // QA-9: Track if promise has been settled to prevent double-rejection
+
+    // QA-13: Add request timeout to prevent indefinite hangs
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        settled = true
+        req.destroy()
+        if (res && !res.writableEnded) {
+          sendJson(res, 408, { error: 'Request timeout' })
+        }
+        reject(new Error('Request timeout'))
+      }
+    }, BODY_PARSE_TIMEOUT_MS)
+
+    const cleanup = () => {
+      clearTimeout(timeout)
+      req.removeAllListeners('data')
+      req.removeAllListeners('end')
+      req.removeAllListeners('error')
+    }
+
     req.on('data', (chunk: Buffer) => {
+      if (settled) return // QA-9: Stop processing if already rejected
+
       totalSize += chunk.length
       if (totalSize > MAX_BODY_SIZE) {
+        settled = true
+        cleanup()
         req.destroy()
-        if (res) {
+        if (res && !res.writableEnded) {
           sendJson(res, 413, { error: 'Payload too large' })
         }
         reject(new Error('Payload too large'))
@@ -79,7 +134,12 @@ export function parseBody(req: http.IncomingMessage, res?: http.ServerResponse):
       }
       chunks.push(chunk)
     })
+
     req.on('end', () => {
+      if (settled) return
+      settled = true
+      cleanup()
+
       const raw = Buffer.concat(chunks).toString('utf8')
       if (!raw) {
         resolve(null)
@@ -91,7 +151,13 @@ export function parseBody(req: http.IncomingMessage, res?: http.ServerResponse):
         reject(new Error('Invalid JSON body'))
       }
     })
-    req.on('error', reject)
+
+    req.on('error', (err) => {
+      if (settled) return
+      settled = true
+      cleanup()
+      reject(err)
+    })
   })
 }
 
