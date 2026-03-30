@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { Group, Panel, Separator } from 'react-resizable-panels'
 import { PanelLeftOpen } from 'lucide-react'
@@ -112,7 +112,6 @@ export function IDEView(): React.JSX.Element {
 
   const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null
   const { confirmUnsaved, confirmProps } = useUnsavedDialog()
-  const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set())
 
   // IDE-5, IDE-7, IDE-8, IDE-9: Load file content from store with proper error handling and loading states
   useEffect(() => {
@@ -135,25 +134,18 @@ export function IDEView(): React.JSX.Element {
       })
   }, [activeTab, fileContents, fileLoadingStates, setFileContent, setFileLoading])
 
-  // IDE-7: Track pending saves to prevent race conditions
+  // IDE-7: Save is async, preventing race conditions on rapid tab switches
   const handleSave = useCallback(async () => {
     if (!activeTab) return
     const content = fileContents[activeTab.filePath]
     if (content === undefined) return
     const { filePath, id } = activeTab
 
-    setPendingSaves((prev) => new Set(prev).add(filePath))
     try {
       await window.api.writeFile(filePath, content)
       setDirty(id, false)
     } catch (err) {
       toast.error(`Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
-    } finally {
-      setPendingSaves((prev) => {
-        const next = new Set(prev)
-        next.delete(filePath)
-        return next
-      })
     }
   }, [activeTab, fileContents, setDirty])
 
