@@ -21,8 +21,16 @@ export function getDb(): Database.Database {
 }
 
 export function closeDb(): void {
-  _db?.close()
-  _db = null
+  if (_db) {
+    try {
+      // DL-12: Checkpoint WAL to ensure durability on shutdown
+      _db.pragma('wal_checkpoint(TRUNCATE)')
+    } catch (err) {
+      console.error('[db] WAL checkpoint failed during close:', err)
+    }
+    _db.close()
+    _db = null
+  }
 }
 
 export function backupDatabase(): void {
@@ -36,11 +44,8 @@ export function backupDatabase(): void {
     throw new Error('Invalid backup path: path traversal detected')
   }
 
-  try {
-    db.exec(`VACUUM INTO '${backupPath}'`)
-  } catch (err) {
-    console.error('[db] Backup failed:', err)
-  }
+  // DL-11: Propagate VACUUM INTO failures instead of swallowing
+  db.exec(`VACUUM INTO '${backupPath}'`)
 }
 
 export interface Migration {
@@ -496,11 +501,19 @@ export function runMigrations(db: Database.Database): void {
 
   if (pending.length === 0) return
 
-  const runAll = db.transaction(() => {
-    for (const migration of pending) {
-      migration.up(db)
-      db.pragma(`user_version = ${migration.version}`)
+  // DL-8 & DL-19: Run migrations individually with error context
+  for (const migration of pending) {
+    try {
+      const runSingle = db.transaction(() => {
+        migration.up(db)
+        db.pragma(`user_version = ${migration.version}`)
+      })
+      runSingle()
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      throw new Error(
+        `Migration v${migration.version} ("${migration.description}") failed: ${msg}`
+      )
     }
-  })
-  runAll()
+  }
 }

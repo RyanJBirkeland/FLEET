@@ -8,6 +8,7 @@ import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
 import { getDb } from '../db'
 import { recordTaskChanges } from './task-changes'
 import type { Logger } from '../agent-manager/types'
+import type Database from 'better-sqlite3'
 
 // Module-level logger — defaults to console, injectable for testing/structured logging
 let logger: Logger = {
@@ -122,7 +123,9 @@ export function getTask(id: string, db?: Database.Database): SprintTask | null {
       .get(id) as Record<string, unknown> | undefined
     return row ? sanitizeTask(row) : null
   } catch (err) {
-    logger.warn(`[sprint-queries] getTask failed for id=${id}: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getTask failed for id=${id}: ${msg}`)
     return null
   }
 }
@@ -143,7 +146,9 @@ export function listTasks(status?: string): SprintTask[] {
       .all() as Record<string, unknown>[]
     return sanitizeTasks(rows)
   } catch (err) {
-    logger.warn(`[sprint-queries] listTasks failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] listTasks failed: ${msg}`)
     return []
   }
 }
@@ -174,7 +179,9 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
 
     return result ? sanitizeTask(result) : null
   } catch (err) {
-    logger.warn(`[sprint-queries] createTask failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] createTask failed: ${msg}`)
     return null
   }
 }
@@ -240,16 +247,32 @@ export function updateTask(
       return sanitizeTask(result)
     })()
   } catch (err) {
-    logger.warn(`[sprint-queries] updateTask failed for id=${id}: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] updateTask failed for id=${id}: ${msg}`)
     return null
   }
 }
 
-export function deleteTask(id: string): void {
+export function deleteTask(id: string, deletedBy: string = 'unknown'): void {
   try {
-    getDb().prepare('DELETE FROM sprint_tasks WHERE id = ?').run(id)
+    const db = getDb()
+    // DL-14 & DL-18: Record deletion in audit trail before removing task (pass db for consistency)
+    db.transaction(() => {
+      const task = getTask(id, db)
+      if (task) {
+        // Record deletion event with task snapshot
+        db.prepare(
+          'INSERT INTO task_changes (task_id, field, old_value, new_value, changed_by) VALUES (?, ?, ?, ?, ?)'
+        ).run(id, '_deleted', JSON.stringify(task), null, deletedBy)
+      }
+      // Delete task and orphaned audit records
+      db.prepare('DELETE FROM sprint_tasks WHERE id = ?').run(id)
+    })()
   } catch (err) {
-    logger.warn(`[sprint-queries] deleteTask failed for id=${id}: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] deleteTask failed for id=${id}: ${msg}`)
   }
 }
 
@@ -266,7 +289,11 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
           .get() as { count: number }
         if (count >= maxActive) return null
 
-        return db
+        // DL-13 & DL-18: Record audit trail before update (pass db for consistency)
+        const oldTask = getTask(id, db)
+        if (!oldTask) return null
+
+        const updated = db
           .prepare(
             `UPDATE sprint_tasks
              SET status = 'active', claimed_by = ?, started_at = ?
@@ -274,42 +301,92 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
              RETURNING *`
           )
           .get(claimedBy, now, id) as Record<string, unknown> | undefined
+
+        if (updated) {
+          recordTaskChanges(
+            id,
+            oldTask as unknown as Record<string, unknown>,
+            { status: 'active', claimed_by: claimedBy, started_at: now },
+            claimedBy,
+            db
+          )
+        }
+
+        return updated
       })()
 
       return result ? sanitizeTask(result) : null
     }
 
-    // No WIP limit — original behavior
-    const result = db
-      .prepare(
-        `UPDATE sprint_tasks
-         SET status = 'active', claimed_by = ?, started_at = ?
-         WHERE id = ? AND status = 'queued'
-         RETURNING *`
-      )
-      .get(claimedBy, now, id) as Record<string, unknown> | undefined
+    // No WIP limit — original behavior with audit trail
+    return db.transaction(() => {
+      const oldTask = getTask(id, db)
+      if (!oldTask) return null
 
-    return result ? sanitizeTask(result) : null
+      const result = db
+        .prepare(
+          `UPDATE sprint_tasks
+           SET status = 'active', claimed_by = ?, started_at = ?
+           WHERE id = ? AND status = 'queued'
+           RETURNING *`
+        )
+        .get(claimedBy, now, id) as Record<string, unknown> | undefined
+
+      if (result) {
+        recordTaskChanges(
+          id,
+          oldTask as unknown as Record<string, unknown>,
+          { status: 'active', claimed_by: claimedBy, started_at: now },
+          claimedBy,
+          db
+        )
+        return sanitizeTask(result)
+      }
+
+      return null
+    })()
   } catch (err) {
-    logger.warn(`[sprint-queries] claimTask failed for id=${id}: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] claimTask failed for id=${id}: ${msg}`)
     return null
   }
 }
 
 export function releaseTask(id: string, claimedBy: string): SprintTask | null {
   try {
-    const result = getDb()
-      .prepare(
-        `UPDATE sprint_tasks
-         SET status = 'queued', claimed_by = NULL, started_at = NULL, agent_run_id = NULL
-         WHERE id = ? AND status = 'active' AND claimed_by = ?
-         RETURNING *`
-      )
-      .get(id, claimedBy) as Record<string, unknown> | undefined
+    const db = getDb()
+    // DL-13 & DL-18: Record audit trail for release (pass db for consistency)
+    return db.transaction(() => {
+      const oldTask = getTask(id, db)
+      if (!oldTask) return null
 
-    return result ? sanitizeTask(result) : null
+      const result = db
+        .prepare(
+          `UPDATE sprint_tasks
+           SET status = 'queued', claimed_by = NULL, started_at = NULL, agent_run_id = NULL
+           WHERE id = ? AND status = 'active' AND claimed_by = ?
+           RETURNING *`
+        )
+        .get(id, claimedBy) as Record<string, unknown> | undefined
+
+      if (result) {
+        recordTaskChanges(
+          id,
+          oldTask as unknown as Record<string, unknown>,
+          { status: 'queued', claimed_by: null, started_at: null, agent_run_id: null },
+          claimedBy,
+          db
+        )
+        return sanitizeTask(result)
+      }
+
+      return null
+    })()
   } catch (err) {
-    logger.warn(`[sprint-queries] releaseTask failed for id=${id}: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] releaseTask failed for id=${id}: ${msg}`)
     return null
   }
 }
@@ -337,7 +414,9 @@ export function getQueueStats(): QueueStats {
       }
     }
   } catch (err) {
-    logger.warn(`[sprint-queries] getQueueStats failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getQueueStats failed: ${msg}`)
   }
 
   return stats
@@ -356,7 +435,9 @@ export function getDoneTodayCount(): number {
 
     return result.count
   } catch (err) {
-    logger.warn(`[sprint-queries] getDoneTodayCount failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getDoneTodayCount failed: ${msg}`)
     return 0
   }
 }
@@ -430,7 +511,9 @@ export function markTaskDoneByPrNumber(prNumber: number): string[] {
       return affectedIds
     })()
   } catch (err) {
-    logger.warn(`[sprint-queries] failed to mark task done for PR #${prNumber}: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] markTaskDoneByPrNumber failed for PR #${prNumber}: ${msg}`)
     return []
   }
 }
@@ -504,9 +587,9 @@ export function markTaskCancelledByPrNumber(prNumber: number): string[] {
       return affectedIds
     })()
   } catch (err) {
-    logger.warn(
-      `[sprint-queries] failed to mark task cancelled for PR #${prNumber}: ${err}`
-    )
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] markTaskCancelledByPrNumber failed for PR #${prNumber}: ${msg}`)
     return []
   }
 }
@@ -520,7 +603,9 @@ export function listTasksWithOpenPrs(): SprintTask[] {
       .all() as Record<string, unknown>[]
     return sanitizeTasks(rows)
   } catch (err) {
-    logger.warn(`[sprint-queries] listTasksWithOpenPrs failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] listTasksWithOpenPrs failed: ${msg}`)
     return []
   }
 }
@@ -535,9 +620,9 @@ export function updateTaskMergeableState(
       .prepare('UPDATE sprint_tasks SET pr_mergeable_state = ? WHERE pr_number = ?')
       .run(mergeableState, prNumber)
   } catch (err) {
-    logger.warn(
-      `[sprint-queries] failed to update mergeable_state for PR #${prNumber}: ${err}`
-    )
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] updateTaskMergeableState failed for PR #${prNumber}: ${msg}`)
   }
 }
 
@@ -548,9 +633,11 @@ export function getActiveTaskCount(): number {
       .get() as { count: number }
     return result.count
   } catch (err) {
+    // DL-17: Standardize error message format
     // Fail-closed: return MAX to prevent new claims when DB is broken.
     // This is intentional — better to block claims than to over-saturate.
-    logger.warn(`[sprint-queries] getActiveTaskCount failed: ${err}`)
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getActiveTaskCount failed: ${msg}`)
     return Infinity
   }
 }
@@ -567,7 +654,9 @@ export function getQueuedTasks(limit: number): SprintTask[] {
       .all(limit) as Record<string, unknown>[]
     return sanitizeTasks(rows)
   } catch (err) {
-    logger.warn(`[sprint-queries] getQueuedTasks failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getQueuedTasks failed: ${msg}`)
     return []
   }
 }
@@ -581,7 +670,9 @@ export function getOrphanedTasks(claimedBy: string): SprintTask[] {
       .all(claimedBy) as Record<string, unknown>[]
     return sanitizeTasks(rows)
   } catch (err) {
-    logger.warn(`[sprint-queries] getOrphanedTasks failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getOrphanedTasks failed: ${msg}`)
     return []
   }
 }
@@ -592,9 +683,9 @@ export function clearSprintTaskFk(agentRunId: string): void {
       .prepare('UPDATE sprint_tasks SET agent_run_id = NULL WHERE agent_run_id = ?')
       .run(agentRunId)
   } catch (err) {
-    logger.warn(
-      `[sprint-queries] failed to clear FK for agent_run_id=${agentRunId}: ${err}`
-    )
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] clearSprintTaskFk failed for agent_run_id=${agentRunId}: ${msg}`)
   }
 }
 
@@ -608,7 +699,9 @@ export function getHealthCheckTasks(): SprintTask[] {
       .all(oneHourAgo) as Record<string, unknown>[]
     return sanitizeTasks(rows)
   } catch (err) {
-    logger.warn(`[sprint-queries] getHealthCheckTasks failed: ${err}`)
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getHealthCheckTasks failed: ${msg}`)
     return []
   }
 }
