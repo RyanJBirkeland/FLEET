@@ -15,6 +15,8 @@ type MockIDEState = {
   sidebarCollapsed: boolean
   terminalCollapsed: boolean
   focusedPanel: 'editor' | 'terminal'
+  fileContents: Record<string, string>
+  fileLoadingStates: Record<string, boolean>
   setRootPath: ReturnType<typeof vi.fn>
   openTab: ReturnType<typeof vi.fn>
   closeTab: ReturnType<typeof vi.fn>
@@ -22,6 +24,8 @@ type MockIDEState = {
   setFocusedPanel: ReturnType<typeof vi.fn>
   toggleSidebar: ReturnType<typeof vi.fn>
   toggleTerminal: ReturnType<typeof vi.fn>
+  setFileContent: ReturnType<typeof vi.fn>
+  setFileLoading: ReturnType<typeof vi.fn>
   recentFolders: string[]
 }
 
@@ -34,6 +38,8 @@ const { mockUseIDEStore, mockSetFocusedPanel } = vi.hoisted(() => {
     sidebarCollapsed: false,
     terminalCollapsed: false,
     focusedPanel: 'editor',
+    fileContents: {},
+    fileLoadingStates: {},
     setRootPath: vi.fn(),
     openTab: vi.fn(),
     closeTab: vi.fn(),
@@ -41,6 +47,8 @@ const { mockUseIDEStore, mockSetFocusedPanel } = vi.hoisted(() => {
     setFocusedPanel: mockSetFocusedPanel,
     toggleSidebar: vi.fn(),
     toggleTerminal: vi.fn(),
+    setFileContent: vi.fn(),
+    setFileLoading: vi.fn(),
     recentFolders: []
   }
   const mockUseIDEStore = vi.fn((selector: (s: MockIDEState) => unknown) =>
@@ -189,6 +197,8 @@ function setIDEState(overrides: Partial<MockIDEState>): void {
     sidebarCollapsed: false,
     terminalCollapsed: false,
     focusedPanel: 'editor',
+    fileContents: {},
+    fileLoadingStates: {},
     setRootPath: vi.fn(),
     openTab: vi.fn(),
     closeTab: vi.fn(),
@@ -196,6 +206,8 @@ function setIDEState(overrides: Partial<MockIDEState>): void {
     setFocusedPanel: mockSetFocusedPanel,
     toggleSidebar: vi.fn(),
     toggleTerminal: vi.fn(),
+    setFileContent: vi.fn(),
+    setFileLoading: vi.fn(),
     recentFolders: [],
     ...overrides
   }

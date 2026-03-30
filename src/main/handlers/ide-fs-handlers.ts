@@ -30,21 +30,29 @@ export function validateIdePath(targetPath: string, allowedRoot: string): string
   try {
     real = fs.realpathSync(resolved)
   } catch {
-    // If realpath fails (e.g., path doesn't exist yet), we need to normalize
-    // the path to use the real root to ensure consistent comparison
-    if (resolved.startsWith(root + '/')) {
-      real = resolved.replace(root, rootReal)
-    } else if (resolved === root) {
-      real = rootReal
-    } else {
-      real = resolved
+    // IDE-3: If realpath fails (e.g., path doesn't exist yet), resolve parent symlinks
+    const parent = dirname(resolved)
+    try {
+      const parentReal = fs.realpathSync(parent)
+      const basename = resolved.split('/').pop() ?? ''
+      real = `${parentReal}/${basename}`
+    } catch {
+      // If parent also doesn't exist, normalize using real root
+      if (resolved.startsWith(root + '/')) {
+        real = resolved.replace(root, rootReal)
+      } else if (resolved === root) {
+        real = rootReal
+      } else {
+        real = resolved
+      }
     }
   }
 
   if (!real.startsWith(rootReal + '/') && real !== rootReal) {
     throw new Error(`Path traversal blocked: "${targetPath}" is outside root "${allowedRoot}"`)
   }
-  return resolved
+  // IDE-2: Return the real (canonical) path to avoid TOCTOU issues
+  return real
 }
 
 export async function readDir(
@@ -147,6 +155,16 @@ export function registerIdeFsHandlers(): void {
         broadcastDirChanged(dirPath)
         debounceTimer = null
       }, 500)
+    })
+
+    // IDE-6: Add error handler to prevent crashes on EMFILE/EACCES
+    watcher.on('error', (err) => {
+      console.error('File watcher error:', err)
+      stopWatcher()
+      const windows = BrowserWindow.getAllWindows()
+      for (const win of windows) {
+        win.webContents.send('fs:watchError', err.message)
+      }
     })
   })
 

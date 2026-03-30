@@ -78,6 +78,8 @@ interface IDEState {
   sidebarWidth: number
   terminalHeight: number
   recentFolders: string[]
+  fileContents: Record<string, string> // IDE-5: Move from component state to store
+  fileLoadingStates: Record<string, boolean> // IDE-9: Track loading state per file
 
   // Actions
   setRootPath: (path: string) => void
@@ -92,6 +94,9 @@ interface IDEState {
   setFocusedPanel: (panel: 'editor' | 'terminal') => void
   setSidebarWidth: (width: number) => void
   setTerminalHeight: (height: number) => void
+  setFileContent: (filePath: string, content: string) => void // IDE-5
+  setFileLoading: (filePath: string, loading: boolean) => void // IDE-9
+  clearFileContent: (filePath: string) => void // IDE-5
 }
 
 // ---------------------------------------------------------------------------
@@ -109,12 +114,23 @@ export const useIDEStore = create<IDEState>((set) => ({
   sidebarWidth: 240,
   terminalHeight: 200,
   recentFolders: [],
+  fileContents: {}, // IDE-5
+  fileLoadingStates: {}, // IDE-9
 
   setRootPath: (path: string): void => {
     set((s) => {
       const prev = s.recentFolders.filter((f) => f !== path)
       const recentFolders = [path, ...prev].slice(0, 5)
-      return { rootPath: path, expandedDirs: {}, recentFolders }
+      // IDE-14: Clear stale tabs from old root when changing root
+      return {
+        rootPath: path,
+        expandedDirs: {},
+        recentFolders,
+        openTabs: [],
+        activeTabId: null,
+        fileContents: {},
+        fileLoadingStates: {}
+      }
     })
   },
 
@@ -203,6 +219,27 @@ export const useIDEStore = create<IDEState>((set) => ({
 
   setTerminalHeight: (height: number): void => {
     set({ terminalHeight: height })
+  },
+
+  // IDE-5: File content management actions
+  setFileContent: (filePath: string, content: string): void => {
+    set((s) => ({
+      fileContents: { ...s.fileContents, [filePath]: content }
+    }))
+  },
+
+  setFileLoading: (filePath: string, loading: boolean): void => {
+    set((s) => ({
+      fileLoadingStates: { ...s.fileLoadingStates, [filePath]: loading }
+    }))
+  },
+
+  clearFileContent: (filePath: string): void => {
+    set((s) => {
+      const { [filePath]: _, ...rest } = s.fileContents
+      const { [filePath]: _loading, ...restLoading } = s.fileLoadingStates
+      return { fileContents: rest, fileLoadingStates: restLoading }
+    })
   }
 }))
 
@@ -220,7 +257,8 @@ useIDEStore.subscribe((state) => {
     activeFilePath: state.openTabs.find((t) => t.id === state.activeTabId)?.filePath ?? null,
     sidebarCollapsed: state.sidebarCollapsed,
     terminalCollapsed: state.terminalCollapsed,
-    recentFolders: state.recentFolders
+    recentFolders: state.recentFolders,
+    expandedDirs: state.expandedDirs // IDE-11: Persist expanded directories
   }
   const serialized = JSON.stringify(toSave)
   if (serialized === lastSerialized) return // Skip — nothing changed

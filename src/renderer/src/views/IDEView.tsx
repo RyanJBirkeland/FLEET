@@ -31,6 +31,7 @@ export function IDEView(): React.JSX.Element {
           sidebarCollapsed?: boolean
           terminalCollapsed?: boolean
           recentFolders?: string[]
+          expandedDirs?: Record<string, boolean> // IDE-11
         }
         // Set watchDir FIRST so ideRootPath is ready before any readFile calls
         if (state.rootPath) await window.api.watchDir(state.rootPath)
@@ -38,7 +39,8 @@ export function IDEView(): React.JSX.Element {
           rootPath: state.rootPath ?? null,
           sidebarCollapsed: state.sidebarCollapsed ?? false,
           terminalCollapsed: state.terminalCollapsed ?? false,
-          recentFolders: state.recentFolders ?? []
+          recentFolders: state.recentFolders ?? [],
+          expandedDirs: state.expandedDirs ?? {} // IDE-11: Restore expanded directories
         })
         if (state.openTabs) {
           for (const tab of state.openTabs) {
@@ -65,13 +67,17 @@ export function IDEView(): React.JSX.Element {
     sidebarCollapsed,
     terminalCollapsed,
     focusedPanel,
+    fileContents,
+    fileLoadingStates,
     setRootPath,
     openTab,
     closeTab,
     setDirty,
     setFocusedPanel,
     toggleSidebar,
-    toggleTerminal
+    toggleTerminal,
+    setFileContent,
+    setFileLoading
   } = useIDEStore(
     useShallow((s) => ({
       rootPath: s.rootPath,
@@ -80,13 +86,17 @@ export function IDEView(): React.JSX.Element {
       sidebarCollapsed: s.sidebarCollapsed,
       terminalCollapsed: s.terminalCollapsed,
       focusedPanel: s.focusedPanel,
+      fileContents: s.fileContents, // IDE-5
+      fileLoadingStates: s.fileLoadingStates, // IDE-9
       setRootPath: s.setRootPath,
       openTab: s.openTab,
       closeTab: s.closeTab,
       setDirty: s.setDirty,
       setFocusedPanel: s.setFocusedPanel,
       toggleSidebar: s.toggleSidebar,
-      toggleTerminal: s.toggleTerminal
+      toggleTerminal: s.toggleTerminal,
+      setFileContent: s.setFileContent, // IDE-5
+      setFileLoading: s.setFileLoading // IDE-9
     }))
   )
 
@@ -100,39 +110,60 @@ export function IDEView(): React.JSX.Element {
   const termZoomOut = useTerminalStore((s) => s.zoomOut)
   const termResetZoom = useTerminalStore((s) => s.resetZoom)
 
-  const [fileContents, setFileContents] = useState<Record<string, string>>({})
   const activeTab = openTabs.find((t) => t.id === activeTabId) ?? null
   const { confirmUnsaved, confirmProps } = useUnsavedDialog()
+  const [pendingSaves, setPendingSaves] = useState<Set<string>>(new Set())
 
+  // IDE-5, IDE-7, IDE-8, IDE-9: Load file content from store with proper error handling and loading states
   useEffect(() => {
     if (!activeTab) return
     const { filePath } = activeTab
     if (fileContents[filePath] !== undefined) return
+    if (fileLoadingStates[filePath]) return // Already loading
+
+    setFileLoading(filePath, true)
     window.api
       .readFile(filePath)
-      .then((content) => setFileContents((prev) => ({ ...prev, [filePath]: content ?? '' })))
-      .catch(() => setFileContents((prev) => ({ ...prev, [filePath]: '' })))
-  }, [activeTab, fileContents])
+      .then((content) => {
+        setFileContent(filePath, content ?? '')
+        setFileLoading(filePath, false)
+      })
+      .catch((err) => {
+        setFileLoading(filePath, false)
+        toast.error(`Failed to read file: ${err instanceof Error ? err.message : 'Unknown error'}`)
+        setFileContent(filePath, '') // Set empty content to prevent retry loop
+      })
+  }, [activeTab, fileContents, fileLoadingStates, setFileContent, setFileLoading])
 
+  // IDE-7: Track pending saves to prevent race conditions
   const handleSave = useCallback(async () => {
     if (!activeTab) return
     const content = fileContents[activeTab.filePath]
     if (content === undefined) return
+    const { filePath, id } = activeTab
+
+    setPendingSaves((prev) => new Set(prev).add(filePath))
     try {
-      await window.api.writeFile(activeTab.filePath, content)
-      setDirty(activeTab.id, false)
+      await window.api.writeFile(filePath, content)
+      setDirty(id, false)
     } catch (err) {
       toast.error(`Save failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setPendingSaves((prev) => {
+        const next = new Set(prev)
+        next.delete(filePath)
+        return next
+      })
     }
   }, [activeTab, fileContents, setDirty])
 
   const handleContentChange = useCallback(
     (content: string) => {
       if (!activeTab) return
-      setFileContents((prev) => ({ ...prev, [activeTab.filePath]: content }))
+      setFileContent(activeTab.filePath, content)
       setDirty(activeTab.id, true)
     },
-    [activeTab, setDirty]
+    [activeTab, setDirty, setFileContent]
   )
 
   const handleCloseTab = useCallback(
@@ -165,6 +196,19 @@ export function IDEView(): React.JSX.Element {
     [openTab, setFocusedPanel]
   )
 
+  // IDE-10: Add beforeunload guard for unsaved changes
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent): void => {
+      const hasDirtyTabs = openTabs.some((t) => t.isDirty)
+      if (hasDirtyTabs) {
+        e.preventDefault()
+        e.returnValue = ''
+      }
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [openTabs])
+
   useEffect(() => {
     if (activeView !== 'ide') return
     const handler = (e: KeyboardEvent): void => {
@@ -187,7 +231,8 @@ export function IDEView(): React.JSX.Element {
           void handleOpenFolder()
           return
         }
-        if (e.key === 's' && focusedPanel === 'editor') {
+        // IDE-12: Allow Cmd+S to work regardless of focused panel if there's an active tab
+        if (e.key === 's' && activeTabId) {
           e.preventDefault()
           e.stopPropagation()
           void handleSave()
@@ -339,13 +384,29 @@ export function IDEView(): React.JSX.Element {
                 )}
                 <EditorTabBar onCloseTab={(id, dirty) => void handleCloseTab(id, dirty)} />
                 <div className="ide-editor-content">
-                  <EditorPane
-                    filePath={activeTab?.filePath ?? null}
-                    content={activeTab ? (fileContents[activeTab.filePath] ?? null) : null}
-                    language={activeTab?.language ?? 'plaintext'}
-                    onContentChange={handleContentChange}
-                    onSave={() => void handleSave()}
-                  />
+                  {/* IDE-9: Show loading indicator while file is being fetched */}
+                  {activeTab && fileLoadingStates[activeTab.filePath] ? (
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        color: 'var(--bde-text-dim)',
+                        fontSize: 'var(--bde-size-sm)'
+                      }}
+                    >
+                      Loading...
+                    </div>
+                  ) : (
+                    <EditorPane
+                      filePath={activeTab?.filePath ?? null}
+                      content={activeTab ? (fileContents[activeTab.filePath] ?? null) : null}
+                      language={activeTab?.language ?? 'plaintext'}
+                      onContentChange={handleContentChange}
+                      onSave={() => void handleSave()}
+                    />
+                  )}
                 </div>
               </div>
             </Panel>

@@ -27,11 +27,31 @@ export function FileSidebar({ onOpenFile }: FileSidebarProps): React.JSX.Element
     }
   }
 
+  // IDE-4: Sanitize filename to prevent path traversal
+  function sanitizeFilename(name: string): string | null {
+    if (!name || name.trim() === '') return null
+    const trimmed = name.trim()
+    // Block path traversal sequences
+    if (trimmed.includes('/') || trimmed.includes('\\') || trimmed === '.' || trimmed === '..') {
+      return null
+    }
+    // Block null bytes and other control characters
+    if (/[\x00-\x1f\x7f]/.test(trimmed)) {
+      return null
+    }
+    return trimmed
+  }
+
   async function handleNewFile(parentPath: string): Promise<void> {
     const name = await prompt({ message: 'New file name:', placeholder: 'filename.txt' })
     if (!name) return
+    const sanitized = sanitizeFilename(name)
+    if (!sanitized) {
+      toast.error('Invalid filename: cannot contain path separators or special characters')
+      return
+    }
     try {
-      await window.api.createFile(`${parentPath}/${name}`)
+      await window.api.createFile(`${parentPath}/${sanitized}`)
     } catch (err) {
       toast.error(`Failed to create file: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
@@ -40,8 +60,13 @@ export function FileSidebar({ onOpenFile }: FileSidebarProps): React.JSX.Element
   async function handleNewFolder(parentPath: string): Promise<void> {
     const name = await prompt({ message: 'New folder name:', placeholder: 'folder' })
     if (!name) return
+    const sanitized = sanitizeFilename(name)
+    if (!sanitized) {
+      toast.error('Invalid folder name: cannot contain path separators or special characters')
+      return
+    }
     try {
-      await window.api.createDir(`${parentPath}/${name}`)
+      await window.api.createDir(`${parentPath}/${sanitized}`)
     } catch (err) {
       toast.error(`Failed to create folder: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
@@ -56,8 +81,13 @@ export function FileSidebar({ onOpenFile }: FileSidebarProps): React.JSX.Element
       placeholder: oldName
     })
     if (!newName || newName === oldName) return
+    const sanitized = sanitizeFilename(newName)
+    if (!sanitized) {
+      toast.error('Invalid filename: cannot contain path separators or special characters')
+      return
+    }
     try {
-      await window.api.rename(path, [...parts.slice(0, -1), newName].join('/'))
+      await window.api.rename(path, [...parts.slice(0, -1), sanitized].join('/'))
     } catch (err) {
       toast.error(`Rename failed: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
