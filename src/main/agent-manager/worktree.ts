@@ -279,7 +279,11 @@ export async function pruneStaleWorktrees(
       if (!isActive(taskId)) {
         const worktreePath = path.join(repoDir, taskId)
         try {
-          rmSync(worktreePath, { recursive: true, force: true })
+          // Use shell rm -rf instead of rmSync to avoid Electron's ASAR
+          // interception, which treats .asar files as directories and
+          // fails with ENOTDIR when trying to rmdir them.
+          const env = buildAgentEnv()
+          await execFileAsync('rm', ['-rf', worktreePath], { env })
           pruned++
         } catch (err) {
           log.warn(`[worktree] Failed to remove stale worktree directory: ${err}`)
