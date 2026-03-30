@@ -10,7 +10,7 @@
 
 import type Database from 'better-sqlite3'
 import { createLogger } from '../logger'
-import { getSetting } from './settings-queries'
+import { getSetting, deleteSetting } from './settings-queries'
 import { SETTING_SUPABASE_URL, SETTING_SUPABASE_KEY } from '../settings'
 
 const logger = createLogger('supabase-import')
@@ -51,18 +51,31 @@ interface SupabaseSprintTaskRow {
  * - Silent no-op if credentials are missing or the fetch fails.
  */
 export async function importSprintTasksFromSupabase(db: Database.Database): Promise<void> {
-  // Check if table already has data — skip import if so
-  const countRow = db.prepare('SELECT COUNT(*) as cnt FROM sprint_tasks').get() as {
-    cnt: number
-  }
-  if (countRow.cnt > 0) {
+  // DL-10: Read credentials inside transaction to prevent TOCTOU race
+  const credentials = db.transaction(() => {
+    const countRow = db.prepare('SELECT COUNT(*) as cnt FROM sprint_tasks').get() as {
+      cnt: number
+    }
+    if (countRow.cnt > 0) {
+      return null // Signal to skip import
+    }
+    // Read credentials atomically with the count check
+    return {
+      url: getSetting(db, SETTING_SUPABASE_URL),
+      key: getSetting(db, SETTING_SUPABASE_KEY)
+    }
+  })()
+
+  if (!credentials) {
+    const countRow = db.prepare('SELECT COUNT(*) as cnt FROM sprint_tasks').get() as {
+      cnt: number
+    }
     logger.info(`sprint_tasks already has ${countRow.cnt} rows — skipping Supabase import`)
     return
   }
 
-  // Read credentials from settings table
-  const supabaseUrl = getSetting(db, SETTING_SUPABASE_URL)
-  const supabaseKey = getSetting(db, SETTING_SUPABASE_KEY)
+  const supabaseUrl = credentials.url
+  const supabaseKey = credentials.key
 
   if (!supabaseUrl || !supabaseKey) {
     logger.info('Supabase credentials not configured — skipping import')
@@ -116,15 +129,38 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
     )
   `)
 
+  // DL-15: Valid status values per schema CHECK constraint
+  const VALID_STATUSES = new Set([
+    'backlog',
+    'queued',
+    'blocked',
+    'active',
+    'done',
+    'cancelled',
+    'failed',
+    'error'
+  ])
+
   const importAll = db.transaction((tasks: SupabaseSprintTaskRow[]) => {
     let imported = 0
+    let skipped = 0
     for (const row of tasks) {
+      const status = row.status ?? 'backlog'
+      // DL-15: Validate status before insert to prevent silent drops
+      if (!VALID_STATUSES.has(status)) {
+        logger.warn(
+          `Skipping task ${row.id} ("${row.title}") with invalid status: "${status}"`
+        )
+        skipped++
+        continue
+      }
+
       insert.run({
         id: row.id,
         title: row.title,
         prompt: row.prompt ?? '',
         repo: row.repo ?? 'bde',
-        status: row.status ?? 'backlog',
+        status,
         priority: row.priority ?? 1,
         spec: row.spec ?? null,
         notes: row.notes ?? null,
@@ -155,12 +191,24 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
       })
       imported++
     }
-    return imported
+    return { imported, skipped }
   })
 
   try {
-    const count = importAll(rows)
-    logger.info(`Imported ${count} sprint tasks from Supabase`)
+    const result = importAll(rows)
+    logger.info(
+      `Imported ${result.imported} sprint tasks from Supabase` +
+        (result.skipped > 0 ? ` (skipped ${result.skipped} with invalid status)` : '')
+    )
+
+    // DL-6: Delete credentials after successful import to prevent plaintext storage
+    try {
+      deleteSetting(db, SETTING_SUPABASE_URL)
+      deleteSetting(db, SETTING_SUPABASE_KEY)
+      logger.info('Supabase credentials deleted after successful import')
+    } catch (err) {
+      logger.warn(`Failed to delete Supabase credentials: ${err instanceof Error ? err.message : String(err)}`)
+    }
   } catch (err) {
     logger.error(`Failed to insert imported tasks: ${err instanceof Error ? err.message : String(err)}`)
   }

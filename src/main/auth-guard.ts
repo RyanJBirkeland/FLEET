@@ -88,6 +88,10 @@ export async function checkAuthStatus(
 export async function ensureSubscriptionAuth(
   store: CredentialStore = defaultCredentialStore
 ): Promise<void> {
+  // DL-16: Clear env vars unconditionally to prevent bypass (even on error path)
+  delete process.env['ANTHROPIC_API_KEY']
+  delete process.env['ANTHROPIC_AUTH_TOKEN']
+
   const status = await checkAuthStatus(store)
 
   if (!status.tokenFound) {
@@ -97,7 +101,4 @@ export async function ensureSubscriptionAuth(
   if (status.tokenExpired) {
     throw new Error('Claude subscription token expired — run: claude login')
   }
-
-  delete process.env['ANTHROPIC_API_KEY']
-  delete process.env['ANTHROPIC_AUTH_TOKEN']
 }

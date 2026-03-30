@@ -14,6 +14,7 @@ export interface TaskChange {
 /**
  * Record field-level changes for a task.
  * Compares old and new values, only records actual changes.
+ * DL-20: Wraps in transaction if db not provided (transactional for multi-field patches).
  */
 export function recordTaskChanges(
   taskId: string,
@@ -23,20 +24,31 @@ export function recordTaskChanges(
   db?: Database.Database
 ): void {
   const conn = db ?? getDb()
-  const stmt = conn.prepare(
-    'INSERT INTO task_changes (task_id, field, old_value, new_value, changed_by) VALUES (?, ?, ?, ?, ?)'
-  )
 
-  for (const [field, newValue] of Object.entries(newPatch)) {
-    const oldValue = oldTask[field]
-    // Stringify for comparison (handles objects like depends_on)
-    const oldStr = oldValue != null ? JSON.stringify(oldValue) : null
-    const newStr = newValue != null ? JSON.stringify(newValue) : null
+  const recordChanges = () => {
+    const stmt = conn.prepare(
+      'INSERT INTO task_changes (task_id, field, old_value, new_value, changed_by) VALUES (?, ?, ?, ?, ?)'
+    )
 
-    // Only record actual changes
-    if (oldStr !== newStr) {
-      stmt.run(taskId, field, oldStr, newStr, changedBy)
+    for (const [field, newValue] of Object.entries(newPatch)) {
+      const oldValue = oldTask[field]
+      // Stringify for comparison (handles objects like depends_on)
+      const oldStr = oldValue != null ? JSON.stringify(oldValue) : null
+      const newStr = newValue != null ? JSON.stringify(newValue) : null
+
+      // Only record actual changes
+      if (oldStr !== newStr) {
+        stmt.run(taskId, field, oldStr, newStr, changedBy)
+      }
     }
+  }
+
+  // DL-20: If db was provided, caller is responsible for transaction.
+  // Otherwise, wrap in our own transaction for atomicity.
+  if (db) {
+    recordChanges()
+  } else {
+    conn.transaction(recordChanges)()
   }
 }
 

@@ -23,12 +23,26 @@ export function deleteSetting(db: Database.Database, key: string): void {
   db.prepare('DELETE FROM settings WHERE key = ?').run(key)
 }
 
-export function getSettingJson<T>(db: Database.Database, key: string): T | null {
+export function getSettingJson<T>(
+  db: Database.Database,
+  key: string,
+  validator?: (value: unknown) => value is T
+): T | null {
   const raw = getSetting(db, key)
   if (!raw) return null
   try {
-    return JSON.parse(raw) as T
-  } catch {
+    const parsed: unknown = JSON.parse(raw)
+    // DL-9: Optional validation to prevent unsafe deserialization
+    if (validator && !validator(parsed)) {
+      console.warn(`[settings-queries] Validation failed for setting "${key}"`)
+      return null
+    }
+    return parsed as T
+  } catch (err) {
+    // DL-25: Log parse errors instead of swallowing silently
+    console.warn(
+      `[settings-queries] Failed to parse JSON for setting "${key}": ${err instanceof Error ? err.message : String(err)}`
+    )
     return null
   }
 }

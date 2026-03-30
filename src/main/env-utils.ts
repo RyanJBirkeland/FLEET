@@ -35,6 +35,12 @@ export function getOAuthToken(): string | null {
   const tokenPath = join(homedir(), '.bde', 'oauth-token')
   try {
     if (existsSync(tokenPath)) {
+      // DL-7: Verify token file has restrictive permissions (user-only read/write)
+      const stats = require('node:fs').statSync(tokenPath)
+      const mode = stats.mode & 0o777
+      if (mode !== 0o600) {
+        console.warn(`[env-utils] OAuth token file has insecure permissions: ${mode.toString(8)}. Expected: 600`)
+      }
       _cachedOAuthToken = readFileSync(tokenPath, 'utf8').trim()
     } else {
       _cachedOAuthToken = null
@@ -80,6 +86,7 @@ export async function refreshOAuthTokenFromKeychain(): Promise<boolean> {
     if (!token || typeof token !== 'string') return false
 
     const tokenPath = join(homedir(), '.bde', 'oauth-token')
+    // DL-7: Enforce restrictive permissions (user-only read/write)
     writeFileSync(tokenPath, token, { encoding: 'utf8', mode: 0o600 })
     invalidateOAuthToken() // Force re-read on next call
     return true
