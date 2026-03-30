@@ -11,6 +11,12 @@
    preserved in components — not overridden here.
 ──────────────────────────────────────────────────────── */
 
+/* ── PR Station: Root ─────────────────────────────────── */
+
+.pr-station {
+  background: var(--neon-bg);
+}
+
 /* ── PR Station: View Header ───────────────────────────── */
 
 .pr-station__view-header {
@@ -24,6 +30,87 @@
 .pr-station__view-title {
   color: var(--neon-text);
   text-shadow: 0 0 8px var(--neon-cyan);
+}
+
+/* ── PR Station: Filters ───────────────────────────────── */
+
+.pr-station-filters {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--neon-cyan-border);
+}
+
+.pr-station-filters__repos {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.pr-station-filters__sort {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.pr-station-filters__sort-label {
+  font-size: 10px;
+  color: var(--neon-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  opacity: 0.5;
+}
+
+.pr-station-filters__sort-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.pr-station-filters__sort-select {
+  appearance: none;
+  background: var(--neon-surface-dim);
+  border: 1px solid var(--neon-cyan-border);
+  border-radius: 4px;
+  color: var(--neon-text);
+  font-size: 12px;
+  padding: 3px 24px 3px 8px;
+  cursor: pointer;
+  outline: none;
+}
+
+.pr-station-filters__sort-select:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: 0 0 6px var(--neon-cyan-glow);
+}
+
+.pr-station-filters__sort-icon {
+  position: absolute;
+  right: 6px;
+  color: var(--neon-text-muted);
+  pointer-events: none;
+}
+
+/* ── PR Station: Scoped button overrides ───────────────── */
+
+.pr-station-filters .bde-btn--ghost {
+  color: var(--neon-text-muted);
+  border-color: transparent;
+  background: var(--neon-surface-dim);
+}
+
+.pr-station-filters .bde-btn--ghost:hover {
+  color: var(--neon-text);
+  background: var(--neon-surface-subtle);
+}
+
+.pr-station-filters .bde-btn--primary {
+  background: var(--neon-cyan-surface);
+  color: var(--neon-cyan);
+  border-color: var(--neon-cyan);
 }
 
 /* ── PR Station: Panels ────────────────────────────────── */

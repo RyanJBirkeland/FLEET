@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
 
 // Mock stores and hooks
 vi.mock('../../stores/gitTree', () => ({
@@ -94,6 +94,9 @@ const mockStoreState = {
   repoPaths: ['/repo/bde'],
   activeRepo: '/repo/bde',
   branches: ['main', 'feat/test'],
+  commitLoading: false,
+  pushLoading: false,
+  lastError: null as string | null,
   fetchStatus: vi.fn(),
   selectFile: vi.fn(),
   clearSelection: vi.fn(),
@@ -105,7 +108,8 @@ const mockStoreState = {
   push: vi.fn(),
   fetchBranches: vi.fn(),
   setActiveRepo: vi.fn(),
-  loadRepoPaths: vi.fn()
+  loadRepoPaths: vi.fn(),
+  clearError: vi.fn()
 }
 
 describe('GitTreeView', () => {
@@ -442,6 +446,59 @@ describe('GitTreeView', () => {
     it('shows zero staged count when no staged files', () => {
       render(<GitTreeView />)
       expect(screen.getByTestId('staged-count')).toHaveTextContent('0')
+    })
+  })
+
+  describe('Error banner', () => {
+    function renderWithError(lastError: string): void {
+      const state = { ...mockStoreState, lastError }
+      vi.mocked(useGitTreeStore).mockImplementation((selector) => {
+        if (typeof selector === 'function') return selector(state as any)
+        return state as any
+      })
+      ;(useGitTreeStore as any).getState = vi.fn(() => state)
+      render(<GitTreeView />)
+    }
+
+    it('shows error banner when lastError is set', () => {
+      renderWithError('Commit failed: conflict')
+      expect(screen.getByRole('alert')).toBeInTheDocument()
+      expect(screen.getByText('Commit failed: conflict')).toBeInTheDocument()
+    })
+
+    it('does not show error banner when lastError is null', () => {
+      render(<GitTreeView />)
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    })
+
+    it('shows Retry button in error banner', () => {
+      renderWithError('Commit failed: conflict')
+      expect(screen.getByLabelText('Retry failed operation')).toBeInTheDocument()
+    })
+
+    it('shows Dismiss button in error banner', () => {
+      renderWithError('Commit failed: conflict')
+      expect(screen.getByLabelText('Dismiss error')).toBeInTheDocument()
+    })
+
+    it('calls clearError and commit on Retry when error starts with non-Push', () => {
+      renderWithError('Commit failed: conflict')
+      fireEvent.click(screen.getByLabelText('Retry failed operation'))
+      expect(mockStoreState.clearError).toHaveBeenCalled()
+      expect(mockStoreState.commit).toHaveBeenCalledWith('/repo/bde')
+    })
+
+    it('calls clearError and push on Retry when error starts with "Push"', () => {
+      renderWithError('Push failed: auth error')
+      fireEvent.click(screen.getByLabelText('Retry failed operation'))
+      expect(mockStoreState.clearError).toHaveBeenCalled()
+      expect(mockStoreState.push).toHaveBeenCalledWith('/repo/bde')
+    })
+
+    it('calls clearError when Dismiss button clicked', () => {
+      renderWithError('Some error')
+      fireEvent.click(screen.getByLabelText('Dismiss error'))
+      expect(mockStoreState.clearError).toHaveBeenCalled()
     })
   })
 })

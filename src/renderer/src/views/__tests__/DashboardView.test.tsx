@@ -58,6 +58,8 @@ Object.defineProperty(window, 'api', {
 import DashboardView from '../DashboardView'
 import { useSprintUI } from '../../stores/sprintUI'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
+import { useSprintTasks } from '../../stores/sprintTasks'
+import { useCostDataStore } from '../../stores/costData'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -260,5 +262,217 @@ describe('DashboardView', () => {
       await vi.advanceTimersByTimeAsync(1)
     })
     expect(screen.getByText('2')).toBeInTheDocument()
+  })
+
+  // ---------- Branch coverage: SuccessRing (rate null vs values) ----------
+
+  it('shows "No terminal tasks" when no done/failed tasks', async () => {
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByText('No terminal tasks')).toBeInTheDocument()
+  })
+
+  it('shows success ring with percentage when done tasks exist', async () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [
+          { id: '1', status: 'done', title: 'T1', completed_at: new Date().toISOString() },
+          { id: '2', status: 'done', title: 'T2', completed_at: new Date().toISOString() },
+          { id: '3', status: 'failed', title: 'T3' }
+        ],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    // 2 done, 1 failed = 67%
+    expect(screen.getByText('67%')).toBeInTheDocument()
+    expect(screen.getByText(/2✓/)).toBeInTheDocument()
+    expect(screen.getByText(/1✗/)).toBeInTheDocument()
+  })
+
+  it('shows success ring with high rate (>=80) cyan accent', async () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [
+          { id: '1', status: 'done', title: 'T1', completed_at: new Date().toISOString() },
+          { id: '2', status: 'done', title: 'T2', completed_at: new Date().toISOString() },
+          { id: '3', status: 'done', title: 'T3', completed_at: new Date().toISOString() },
+          { id: '4', status: 'done', title: 'T4', completed_at: new Date().toISOString() },
+          { id: '5', status: 'failed', title: 'T5' }
+        ],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByText('80%')).toBeInTheDocument()
+  })
+
+  // ---------- Branch coverage: avgDuration (null vs value) ----------
+
+  it('shows dash when no agent durations available', async () => {
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    // avgDuration is null, should show '—'
+    expect(screen.getByText('—')).toBeInTheDocument()
+  })
+
+  it('shows formatted duration when agent runs have duration', async () => {
+    vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
+      selector({
+        localAgents: [
+          { id: 'a1', durationMs: 120000, costUsd: 0.5, startedAt: new Date().toISOString(), taskTitle: 'T1' },
+          { id: 'a2', durationMs: 180000, costUsd: 0.3, startedAt: new Date().toISOString(), taskTitle: 'T2' }
+        ],
+        totalCost: 0.8,
+        fetchLocalAgents: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    // avg = 150000ms = 150s = 2m 30s
+    expect(screen.getByText('2m 30s')).toBeInTheDocument()
+    expect(screen.getByText('2 runs tracked')).toBeInTheDocument()
+  })
+
+  it('shows hours in duration for long runs', async () => {
+    vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
+      selector({
+        localAgents: [
+          { id: 'a1', durationMs: 7200000, costUsd: 1.0, startedAt: new Date().toISOString(), taskTitle: 'T1' }
+        ],
+        totalCost: 1.0,
+        fetchLocalAgents: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    // 7200000ms = 2h 0m
+    expect(screen.getByText('2h 0m')).toBeInTheDocument()
+  })
+
+  it('shows seconds for short durations', async () => {
+    vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
+      selector({
+        localAgents: [
+          { id: 'a1', durationMs: 45000, costUsd: 0.1, startedAt: new Date().toISOString(), taskTitle: 'T1' }
+        ],
+        totalCost: 0.1,
+        fetchLocalAgents: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByText('45s')).toBeInTheDocument()
+  })
+
+  // ---------- Branch coverage: recentCompletions ----------
+
+  it('renders Recent Completions card', () => {
+    render(<DashboardView />)
+    expect(screen.getByText('Recent Completions')).toBeInTheDocument()
+  })
+
+  it('shows recent completions when done tasks exist', async () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [
+          { id: '1', status: 'done', title: 'Implement feature X', completed_at: new Date().toISOString() }
+        ],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByText('Implement feature X')).toBeInTheDocument()
+    expect(screen.getByText('just now')).toBeInTheDocument()
+  })
+
+  // ---------- Branch coverage: error states with retry ----------
+
+  it('shows error state with retry button when all fetches fail', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(window.api.dashboard.completionsPerHour).mockRejectedValue(new Error('fail'))
+    vi.mocked(window.api.dashboard.recentEvents).mockRejectedValue(new Error('fail'))
+    vi.mocked(window.api.getPrList).mockRejectedValue(new Error('fail'))
+
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+
+    expect(screen.getByText('Retry')).toBeInTheDocument()
+    consoleSpy.mockRestore()
+  })
+
+  it('retries fetching data when Retry button clicked', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.mocked(window.api.dashboard.completionsPerHour).mockRejectedValue(new Error('fail'))
+    vi.mocked(window.api.dashboard.recentEvents).mockRejectedValue(new Error('fail'))
+    vi.mocked(window.api.getPrList).mockRejectedValue(new Error('fail'))
+
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+
+    const callCountBefore = vi.mocked(window.api.dashboard.completionsPerHour).mock.calls.length
+    const retryBtn = screen.getByText('Retry')
+    await act(async () => { fireEvent.click(retryBtn) })
+
+    expect(vi.mocked(window.api.dashboard.completionsPerHour).mock.calls.length).toBeGreaterThan(callCountBefore)
+    consoleSpy.mockRestore()
+  })
+
+  // ---------- Branch coverage: loading state ----------
+
+  it('shows Loading... text during initial load with no chart data', () => {
+    render(<DashboardView />)
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+  })
+
+  // ---------- Branch coverage: clicking Queued and PRs stats ----------
+
+  it('clicking Queued stat navigates to Sprint with todo filter', () => {
+    render(<DashboardView />)
+    const queuedElements = screen.getAllByText('Queued')
+    const queuedStat = queuedElements
+      .find((el) => el.closest('[role="button"]'))!
+      .closest('[role="button"]')!
+    fireEvent.click(queuedStat)
+
+    expect(useSprintUI.getState().statusFilter).toBe('todo')
+    expect(usePanelLayoutStore.getState().activeView).toBe('sprint')
+  })
+
+  it('clicking PRs stat navigates to Sprint with awaiting-review filter', () => {
+    render(<DashboardView />)
+    const prsElements = screen.getAllByText('PRs')
+    const prsStat = prsElements
+      .find((el) => el.closest('[role="button"]'))!
+      .closest('[role="button"]')!
+    fireEvent.click(prsStat)
+
+    expect(useSprintUI.getState().statusFilter).toBe('awaiting-review')
+    expect(usePanelLayoutStore.getState().activeView).toBe('sprint')
+  })
+
+  // ---------- Branch coverage: cost trend data ----------
+
+  it('renders cost trend chart with agent data', async () => {
+    vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
+      selector({
+        localAgents: [
+          { id: 'a1', durationMs: 60000, costUsd: 0.5, startedAt: new Date().toISOString(), taskTitle: 'Task A' },
+          { id: 'a2', durationMs: 120000, costUsd: 1.2, startedAt: new Date().toISOString(), taskTitle: 'Task B' }
+        ],
+        totalCost: 1.7,
+        fetchLocalAgents: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    await act(async () => { await vi.advanceTimersByTimeAsync(1) })
+    expect(screen.getByText(/last 2 runs/)).toBeInTheDocument()
+    expect(screen.getByText('$1.70')).toBeInTheDocument()
   })
 })

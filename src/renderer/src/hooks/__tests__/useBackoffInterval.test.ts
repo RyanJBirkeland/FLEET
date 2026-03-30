@@ -109,4 +109,64 @@ describe('useBackoffInterval', () => {
     await vi.advanceTimersByTimeAsync(3 * BASE_MS)
     expect(cb).toHaveBeenCalledTimes(3)
   })
+
+  it('skips callback when document is hidden', async () => {
+    const cb = vi.fn()
+    renderHook(() => useBackoffInterval(cb, BASE_MS))
+
+    // Initial tick
+    await vi.advanceTimersByTimeAsync(1)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    // Make document hidden
+    Object.defineProperty(document, 'hidden', { value: true, writable: true, configurable: true })
+
+    // Next tick should skip callback
+    await vi.advanceTimersByTimeAsync(BASE_MS)
+    expect(cb).toHaveBeenCalledTimes(1) // still 1, not called when hidden
+
+    // Restore
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true })
+  })
+
+  it('fires shortly after document becomes visible', async () => {
+    const cb = vi.fn()
+    renderHook(() => useBackoffInterval(cb, BASE_MS))
+
+    // Initial tick
+    await vi.advanceTimersByTimeAsync(1)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    // Make document hidden
+    Object.defineProperty(document, 'hidden', { value: true, writable: true, configurable: true })
+
+    // Advance past several intervals — hidden, so only reschedules
+    await vi.advanceTimersByTimeAsync(BASE_MS * 3)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    // Become visible again
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+
+    // Should fire at 100ms after visibility change
+    await vi.advanceTimersByTimeAsync(101)
+    expect(cb).toHaveBeenCalledTimes(2)
+  })
+
+  it('does not fire after unmount even on visibility change', async () => {
+    const cb = vi.fn()
+    const { unmount } = renderHook(() => useBackoffInterval(cb, BASE_MS))
+
+    // Initial tick
+    await vi.advanceTimersByTimeAsync(1)
+    expect(cb).toHaveBeenCalledTimes(1)
+
+    unmount()
+
+    // Dispatch visibility change — should NOT fire
+    Object.defineProperty(document, 'hidden', { value: false, writable: true, configurable: true })
+    document.dispatchEvent(new Event('visibilitychange'))
+    await vi.advanceTimersByTimeAsync(200)
+    expect(cb).toHaveBeenCalledTimes(1)
+  })
 })

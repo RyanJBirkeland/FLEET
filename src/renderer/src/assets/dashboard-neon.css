@@ -1,0 +1,185 @@
+/* src/renderer/src/assets/dashboard-neon.css */
+/* ═══════════════════════════════════════════════════════
+   Neon Dashboard View — Ops Deck, Stats, Charts, Feed
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Root Container ── */
+.dashboard-root {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--neon-bg);
+  position: relative;
+  overflow: hidden;
+}
+
+/* ── Background Gradient Overlay ── */
+.dashboard-bg-gradient {
+  position: absolute;
+  inset: 0;
+  background: var(--neon-bg-gradient);
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ── Content Layer (above effects) ── */
+.dashboard-content {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Status Bar Extras ── */
+.dashboard-status-loading {
+  opacity: 0.5;
+}
+
+.dashboard-status-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dashboard-retry-btn {
+  background: none;
+  border-radius: 3px;
+  padding: 1px 6px;
+  font-size: 9px;
+  cursor: pointer;
+  line-height: 14px;
+}
+
+/* ── 3-Column Ops Deck Grid ── */
+.dashboard-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 200px 1fr 240px;
+  gap: 12px;
+  padding: 12px;
+  overflow: auto;
+}
+
+/* ── Column Stacks ── */
+.dashboard-col {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.dashboard-col--center {
+  gap: 12px;
+}
+
+/* ── Stats Row (Success Rate + Avg Duration) ── */
+.dashboard-stats-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+/* ── Chart Subtitle / Muted Captions ── */
+.dashboard-chart-caption {
+  color: var(--neon-text-dim);
+  font-size: 9px;
+  margin-top: 6px;
+}
+
+/* ── Avg Duration Value ── */
+.dashboard-duration-value {
+  color: var(--neon-text);
+  font-size: 20px;
+  font-weight: 800;
+  text-shadow: var(--neon-blue-glow);
+}
+
+.dashboard-duration-meta {
+  color: var(--neon-text-dim);
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.85;
+}
+
+/* ── Feed Container ── */
+.dashboard-feed-scroll {
+  overflow: auto;
+  max-height: 240px;
+}
+
+/* ── Recent Completions ── */
+.dashboard-completions-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-completions-empty {
+  color: var(--neon-text-dim);
+  font-size: 11px;
+}
+
+.dashboard-completion-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.dashboard-completion-title {
+  color: var(--neon-text);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.dashboard-completion-time {
+  color: var(--neon-text-dim);
+  font-size: 9px;
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.85;
+}
+
+/* ── Cost Card Value ── */
+.dashboard-cost-value {
+  color: var(--neon-text);
+  font-size: 24px;
+  font-weight: 800;
+  text-shadow: var(--neon-orange-glow);
+}
+
+/* ── Success Ring ── */
+.dashboard-ring {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dashboard-ring__svg {
+  transform: rotate(-90deg);
+}
+
+.dashboard-ring__bg {
+  fill: none;
+  stroke: var(--neon-surface-dim);
+  stroke-width: 6;
+}
+
+.dashboard-ring__rate {
+  font-size: 20px;
+  font-weight: 800;
+}
+
+.dashboard-ring__breakdown {
+  color: var(--neon-text-dim);
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+.dashboard-ring-empty {
+  color: var(--neon-text-dim);
+  font-size: 11px;
+}

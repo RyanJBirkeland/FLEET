@@ -1,5 +1,5 @@
 import Database from 'better-sqlite3'
-import { mkdirSync, existsSync, chmodSync, statSync } from 'fs'
+import { mkdirSync, existsSync, chmodSync, statSync, unlinkSync } from 'fs'
 import path from 'path'
 import { BDE_DIR as DB_DIR, BDE_DB_PATH as DB_PATH } from './paths'
 
@@ -52,6 +52,11 @@ export function backupDatabase(): void {
   const resolvedDbDir = path.resolve(DB_DIR)
   if (!resolvedPath.startsWith(resolvedDbDir)) {
     throw new Error('Invalid backup path: path traversal detected')
+  }
+
+  // Remove existing backup — VACUUM INTO does not overwrite
+  if (existsSync(backupPath)) {
+    unlinkSync(backupPath)
   }
 
   // DL-11: Propagate VACUUM INTO failures instead of swallowing

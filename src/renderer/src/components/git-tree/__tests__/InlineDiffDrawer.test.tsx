@@ -83,4 +83,86 @@ describe('InlineDiffDrawer', () => {
     render(<InlineDiffDrawer selectedFile={rootFile} diffContent={diffContent} onClose={vi.fn()} />)
     expect(screen.getByRole('region', { name: /Diff for README.md/ })).toBeInTheDocument()
   })
+
+  // ---------- Branch coverage: expand/collapse toggle ----------
+
+  it('starts in collapsed state', () => {
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={diffContent} onClose={vi.fn()} />
+    )
+    expect(container.querySelector('.git-diff-drawer--expanded')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Expand diff to fullscreen')).toBeInTheDocument()
+  })
+
+  it('expands when expand button is clicked', () => {
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={diffContent} onClose={vi.fn()} />
+    )
+    fireEvent.click(screen.getByLabelText('Expand diff to fullscreen'))
+    expect(container.querySelector('.git-diff-drawer--expanded')).toBeInTheDocument()
+    expect(screen.getByLabelText('Collapse diff')).toBeInTheDocument()
+  })
+
+  it('collapses when collapse button is clicked after expanding', () => {
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={diffContent} onClose={vi.fn()} />
+    )
+    fireEvent.click(screen.getByLabelText('Expand diff to fullscreen'))
+    expect(container.querySelector('.git-diff-drawer--expanded')).toBeInTheDocument()
+    fireEvent.click(screen.getByLabelText('Collapse diff'))
+    expect(container.querySelector('.git-diff-drawer--expanded')).not.toBeInTheDocument()
+  })
+
+  it('shows title attribute on file path', () => {
+    render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={diffContent} onClose={vi.fn()} />
+    )
+    const pathElement = screen.getByText('src/foo.ts')
+    expect(pathElement.getAttribute('title')).toBe('src/foo.ts')
+  })
+
+  it('expand button title changes between Expand and Collapse', () => {
+    render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={diffContent} onClose={vi.fn()} />
+    )
+    const expandBtn = screen.getByLabelText('Expand diff to fullscreen')
+    expect(expandBtn.getAttribute('title')).toBe('Expand')
+    fireEvent.click(expandBtn)
+    const collapseBtn = screen.getByLabelText('Collapse diff')
+    expect(collapseBtn.getAttribute('title')).toBe('Collapse')
+  })
+
+  // ---------- Branch coverage: line class names ----------
+
+  it('applies add class to + lines', () => {
+    const addDiff = '+new line'
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={addDiff} onClose={vi.fn()} />
+    )
+    expect(container.querySelector('.git-diff-drawer__line--add')).toBeInTheDocument()
+  })
+
+  it('applies delete class to - lines', () => {
+    const delDiff = '-removed line'
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={delDiff} onClose={vi.fn()} />
+    )
+    expect(container.querySelector('.git-diff-drawer__line--delete')).toBeInTheDocument()
+  })
+
+  it('applies meta class to @@ lines', () => {
+    const metaDiff = '@@ -1,3 +1,3 @@'
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={metaDiff} onClose={vi.fn()} />
+    )
+    expect(container.querySelector('.git-diff-drawer__line--meta')).toBeInTheDocument()
+  })
+
+  it('applies default class to context lines', () => {
+    const contextDiff = ' unchanged line'
+    const { container } = render(
+      <InlineDiffDrawer selectedFile={selectedFile} diffContent={contextDiff} onClose={vi.fn()} />
+    )
+    expect(container.querySelector('.git-diff-drawer__line--default')).toBeInTheDocument()
+  })
 })

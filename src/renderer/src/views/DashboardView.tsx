@@ -22,7 +22,7 @@ import {
   type ChartBar
 } from '../components/neon'
 import { neonVar } from '../components/neon/types'
-import { tokens } from '../design-system/tokens'
+import '../assets/dashboard-neon.css'
 import {
   Activity,
   GitPullRequest,
@@ -213,66 +213,34 @@ export default function DashboardView() {
 
   return (
     <motion.div
+      className="dashboard-root"
       variants={VARIANTS.fadeIn}
       initial="initial"
       animate="animate"
       transition={transition}
-      style={{
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-        background: 'var(--neon-bg)',
-        position: 'relative',
-        overflow: 'hidden'
-      }}
     >
       {/* Background effects */}
       {!reduced && <ScanlineOverlay />}
       {!reduced && <ParticleField />}
-      <div
-        style={{
-          position: 'absolute',
-          inset: 0,
-          background: 'var(--neon-bg-gradient)',
-          pointerEvents: 'none',
-          zIndex: 0
-        }}
-      />
+      <div className="dashboard-bg-gradient" />
 
       {/* Content (above effects) */}
-      <div
-        style={{
-          position: 'relative',
-          zIndex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          height: '100%'
-        }}
-      >
+      <div className="dashboard-content">
         <StatusBar title="BDE Command Center" status="ok">
           {loading && !chartData.length ? (
-            <span style={{ opacity: 0.5 }}>Loading...</span>
+            <span className="dashboard-status-loading">Loading...</span>
           ) : fetchError ? (
             <span
-              style={{
-                color: neonVar('red', 'color'),
-                display: 'inline-flex',
-                alignItems: 'center',
-                gap: '6px'
-              }}
+              className="dashboard-status-error"
+              style={{ color: neonVar('red', 'color') }}
             >
               {Object.values(cardErrors).join(' · ') || 'Failed to load dashboard data'}
               <button
                 onClick={() => fetchDashboardData()}
+                className="dashboard-retry-btn"
                 style={{
-                  background: 'none',
                   border: `1px solid ${neonVar('red', 'color')}`,
-                  color: neonVar('red', 'color'),
-                  borderRadius: '3px',
-                  padding: '1px 6px',
-                  fontSize: '9px',
-                  cursor: 'pointer',
-                  lineHeight: '14px'
+                  color: neonVar('red', 'color')
                 }}
               >
                 Retry
@@ -284,18 +252,9 @@ export default function DashboardView() {
         </StatusBar>
 
         {/* 3-column Ops Deck grid */}
-        <div
-          style={{
-            flex: 1,
-            display: 'grid',
-            gridTemplateColumns: '200px 1fr 240px',
-            gap: '12px',
-            padding: '12px',
-            overflow: 'auto'
-          }}
-        >
+        <div className="dashboard-grid">
           {/* Left: Stats Stack */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="dashboard-col">
             <StatCounter
               label="Active"
               value={stats.active}
@@ -335,7 +294,7 @@ export default function DashboardView() {
           </div>
 
           {/* Center: Main Stage */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div className="dashboard-col dashboard-col--center">
             <NeonCard accent="purple" title="Pipeline" icon={<Activity size={12} />}>
               <PipelineFlow stages={pipelineStages} />
             </NeonCard>
@@ -346,29 +305,20 @@ export default function DashboardView() {
               icon={<Zap size={12} />}
             >
               <MiniChart data={chartData} height={120} />
-              <div style={{ color: 'rgba(255, 255, 255, 0.3)', fontSize: '9px', marginTop: '6px' }}>
-                last 24 hours
-              </div>
+              <div className="dashboard-chart-caption">last 24 hours</div>
             </NeonCard>
 
             {/* Stats row: Success Rate + Avg Duration */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+            <div className="dashboard-stats-row">
               <NeonCard accent="cyan" title="Success Rate" icon={<Target size={12} />}>
                 <SuccessRing rate={successRate} done={stats.done} failed={stats.failed} />
               </NeonCard>
 
               <NeonCard accent="blue" title="Avg Duration" icon={<Clock size={12} />}>
-                <div
-                  style={{
-                    color: tokens.neon.text,
-                    fontSize: '20px',
-                    fontWeight: 800,
-                    textShadow: 'var(--neon-blue-glow)'
-                  }}
-                >
+                <div className="dashboard-duration-value">
                   {avgDuration != null ? formatDuration(avgDuration) : '—'}
                 </div>
-                <div style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '10px', marginTop: '4px' }}>
+                <div className="dashboard-duration-meta">
                   {localAgents.filter((a) => a.durationMs != null).length} runs tracked
                 </div>
               </NeonCard>
@@ -376,57 +326,33 @@ export default function DashboardView() {
 
             <NeonCard accent="orange" title="Cost / Run" icon={<TrendingUp size={12} />}>
               <MiniChart data={costTrendData} height={80} />
-              <div style={{ color: 'rgba(255, 255, 255, 0.3)', fontSize: '9px', marginTop: '6px' }}>
+              <div className="dashboard-chart-caption">
                 last {costTrendData.length} runs
               </div>
             </NeonCard>
           </div>
 
           {/* Right: Feed + Recent + Cost */}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div className="dashboard-col">
             <NeonCard accent="purple" title="Feed" style={{ flex: 1, minHeight: 0 }}>
-              <div style={{ overflow: 'auto', maxHeight: '240px' }}>
+              <div className="dashboard-feed-scroll">
                 <ActivityFeed events={feedEvents} />
               </div>
             </NeonCard>
 
             <NeonCard accent="cyan" title="Recent Completions" icon={<CheckCircle size={12} />}>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+              <div className="dashboard-completions-list">
                 {recentCompletions.length === 0 ? (
-                  <div style={{ color: tokens.neon.textDim, fontSize: tokens.size.xs }}>
+                  <div className="dashboard-completions-empty">
                     No completions yet
                   </div>
                 ) : (
                   recentCompletions.map((t) => (
-                    <div
-                      key={t.id}
-                      style={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        gap: '8px'
-                      }}
-                    >
-                      <span
-                        style={{
-                          color: tokens.neon.text,
-                          fontSize: '11px',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          flex: 1
-                        }}
-                      >
+                    <div key={t.id} className="dashboard-completion-row">
+                      <span className="dashboard-completion-title">
                         {t.title}
                       </span>
-                      <span
-                        style={{
-                          color: 'rgba(255, 255, 255, 0.35)',
-                          fontSize: '9px',
-                          whiteSpace: 'nowrap',
-                          flexShrink: 0
-                        }}
-                      >
+                      <span className="dashboard-completion-time">
                         {timeAgo(t.completed_at!)}
                       </span>
                     </div>
@@ -436,14 +362,7 @@ export default function DashboardView() {
             </NeonCard>
 
             <NeonCard accent="orange" title="Cost 24h" icon={<DollarSign size={12} />}>
-              <div
-                style={{
-                  color: '#fff',
-                  fontSize: '24px',
-                  fontWeight: 800,
-                  textShadow: 'var(--neon-orange-glow)'
-                }}
-              >
+              <div className="dashboard-cost-value">
                 ${totalCost.toFixed(2)}
               </div>
             </NeonCard>
@@ -466,7 +385,7 @@ function SuccessRing({
 }) {
   if (rate === null) {
     return (
-      <div style={{ color: tokens.neon.textDim, fontSize: tokens.size.xs }}>
+      <div className="dashboard-ring-empty">
         No terminal tasks
       </div>
     )
@@ -480,15 +399,13 @@ function SuccessRing({
   const accent = rate >= 80 ? 'cyan' : rate >= 50 ? 'orange' : 'red'
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+    <div className="dashboard-ring">
+      <svg width={size} height={size} className="dashboard-ring__svg">
         <circle
           cx={size / 2}
           cy={size / 2}
           r={r}
-          fill="none"
-          stroke="rgba(255, 255, 255, 0.08)"
-          strokeWidth={stroke}
+          className="dashboard-ring__bg"
         />
         <circle
           cx={size / 2}
@@ -507,16 +424,15 @@ function SuccessRing({
       </svg>
       <div>
         <div
+          className="dashboard-ring__rate"
           style={{
             color: neonVar(accent, 'color'),
-            fontSize: '20px',
-            fontWeight: 800,
             textShadow: neonVar(accent, 'glow')
           }}
         >
           {rate}%
         </div>
-        <div style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '9px' }}>
+        <div className="dashboard-ring__breakdown">
           {done}✓ {failed}✗
         </div>
       </div>

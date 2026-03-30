@@ -272,6 +272,133 @@ describe('useDesktopNotifications', () => {
     expect(secondCount).toBe(1) // Still 1, not 2
   })
 
+  it('includes "PR ready" in message when task has pr_url', () => {
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    const task: SprintTask = {
+      id: 'task-pr',
+      title: 'Add feature',
+      repo: 'bde',
+      status: TASK_STATUS.ACTIVE,
+      priority: 1,
+      notes: null,
+      spec: null,
+      prompt: 'Add feature',
+      agent_run_id: 'agent-pr',
+      pr_number: 42,
+      pr_status: 'open',
+      pr_mergeable_state: null,
+      pr_url: 'https://github.com/user/repo/pull/42',
+      claimed_by: null,
+      started_at: new Date().toISOString(),
+      completed_at: null,
+      retry_count: 0,
+      fast_fail_count: 0,
+      template_name: null,
+      depends_on: null,
+      updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    }
+
+    useSprintTasks.setState({ tasks: [task] })
+    rerender()
+
+    useSprintTasks.setState({
+      tasks: [{ ...task, status: TASK_STATUS.DONE, completed_at: new Date().toISOString() }]
+    })
+    rerender()
+
+    const notifications = useNotificationsStore.getState().notifications
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0].message).toContain('PR ready')
+  })
+
+  it('does not fire for prMergedMap entries set to false', () => {
+    const task: SprintTask = {
+      id: 'task-notmerged',
+      title: 'Not merged',
+      repo: 'bde',
+      status: TASK_STATUS.DONE,
+      priority: 1,
+      notes: null,
+      spec: null,
+      prompt: 'Task',
+      agent_run_id: null,
+      pr_number: 99,
+      pr_status: 'open',
+      pr_mergeable_state: null,
+      pr_url: 'https://github.com/user/repo/pull/99',
+      claimed_by: null,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      retry_count: 0,
+      fast_fail_count: 0,
+      template_name: null,
+      depends_on: null,
+      updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    }
+
+    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    // Set merged to false — should NOT fire
+    useSprintTasks.setState({ prMergedMap: { 'task-notmerged': false } })
+    rerender()
+
+    const notifications = useNotificationsStore.getState().notifications
+    expect(notifications).toHaveLength(0)
+  })
+
+  it('does not fire merged notification when task is not found in tasks array', () => {
+    useSprintTasks.setState({ tasks: [], prMergedMap: {} })
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    // A merged ID with no corresponding task
+    useSprintTasks.setState({ prMergedMap: { 'nonexistent-task': true } })
+    rerender()
+
+    const notifications = useNotificationsStore.getState().notifications
+    expect(notifications).toHaveLength(0)
+  })
+
+  it('handles pr_number null in merged notification message', () => {
+    const task: SprintTask = {
+      id: 'task-no-pr-num',
+      title: 'No PR number',
+      repo: 'bde',
+      status: TASK_STATUS.DONE,
+      priority: 1,
+      notes: null,
+      spec: null,
+      prompt: 'Task',
+      agent_run_id: null,
+      pr_number: null,
+      pr_status: null,
+      pr_mergeable_state: null,
+      pr_url: null,
+      claimed_by: null,
+      started_at: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
+      retry_count: 0,
+      fast_fail_count: 0,
+      template_name: null,
+      depends_on: null,
+      updated_at: new Date().toISOString(),
+      created_at: new Date().toISOString()
+    }
+
+    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    useSprintTasks.setState({ prMergedMap: { 'task-no-pr-num': true } })
+    rerender()
+
+    const notifications = useNotificationsStore.getState().notifications
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0].message).toContain('unknown')
+  })
+
   it('skips initial render (does not fire for pre-existing done tasks)', () => {
     // Start with a task already in done state
     const task: SprintTask = {
