@@ -76,7 +76,10 @@ export async function spawnAdhocAgent(args: {
       env: env as Record<string, string>,
       permissionMode: 'bypassPermissions',
       allowDangerouslySkipPermissions: true,
-      settingSources: ['user', 'project', 'local']
+      settingSources: ['user', 'project', 'local'],
+      // Keep session alive for multi-turn conversation — don't exit after
+      // the model's first response. Session ends via close() or abort.
+      maxTurns: Infinity
     }
   })
 
@@ -100,6 +103,13 @@ export async function spawnAdhocAgent(args: {
   // Track for steering / kill
   adhocSessions.set(meta.id, {
     async send(message: string) {
+      // Emit user message event so it appears in the console UI
+      emitAgentEvent(meta.id, {
+        type: 'agent:user_message',
+        text: message,
+        timestamp: Date.now()
+      })
+
       const userMsg: import('@anthropic-ai/claude-agent-sdk').SDKUserMessage = {
         type: 'user',
         message: { role: 'user', content: message },
