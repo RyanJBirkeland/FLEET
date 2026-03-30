@@ -197,6 +197,11 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Test event system mixing**: Never combine async `userEvent.type()` with sync `fireEvent.keyDown()` — the async state updates from `userEvent` may not have settled when the sync event fires, causing stale closure reads. Use either all-sync (`fireEvent.change` + `fireEvent.keyDown`) or all-async (`userEvent.type` + `userEvent.keyboard`).
 - **Light mode CSS tokens**: All `*-neon.css` files use `var(--neon-*)` and `var(--bde-*)` tokens instead of hardcoded `rgba()`. Light theme works via `html.theme-light` class (toggled in Settings > Appearance) which overrides tokens in `base.css` and `neon.css`. No view-specific `html.theme-light` blocks needed.
 - **Dashboard uses CSS classes**: `DashboardView.tsx` uses `dashboard-neon.css` classes (`.dashboard-*` prefix) — no inline styles. Don't reintroduce `style={{}}` props; add CSS classes instead.
+- **Adhoc agent user messages**: `adhocHandle.send()` in `adhoc-agent.ts` must emit `agent:user_message` event BEFORE sending to SDK — otherwise user messages don't appear in the Agents console. The SDK stream only emits bot responses.
+- **SDK maxTurns for interactive sessions**: `sdk.query()` defaults to ending after the model's response completes (no pending tool calls = done). Set `maxTurns: Infinity` for multi-turn adhoc/assistant agents. Single-turn queries (spec checks, synthesizer) use `maxTurns: 1`.
+- **Tear-off windows**: `src/main/tearoff-manager.ts` manages lifecycle. Query-param routing (`?view=X&windowId=Y`) in `App.tsx` → `TearoffShell`. Cross-window drag via IPC relay through main process (32ms cursor polling). Multi-tab tear-offs use `PanelRenderer` with independent `panelLayout` store per window. State persists to `tearoff.windows` setting and restores on startup.
+- **Tear-off `persistable` flag**: `panelLayout.ts` has `persistable: boolean` — tear-off windows set it to `false` on mount to prevent their store mutations from overwriting the main window's saved layout in `panel.layout` setting.
+- **Shared view resolver**: `src/renderer/src/lib/view-resolver.tsx` has lazy view imports and `resolveView()`. Both `PanelLeaf.tsx` and `TearoffShell.tsx` import from here — don't duplicate lazy imports.
 
 ## Packaging
 
