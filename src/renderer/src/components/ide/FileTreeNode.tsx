@@ -47,8 +47,20 @@ export function FileTreeNode({
   })
   const [children, setChildren] = useState<DirEntry[]>([])
   const [loadError, setLoadError] = useState(false)
+  const [refreshTrigger, setRefreshTrigger] = useState(0)
   const isExpanded = expandedDirs[fullPath] ?? false
   const isActive = activeFilePath === fullPath
+
+  // IDE-13: Listen for filesystem changes and refresh expanded directories
+  useEffect(() => {
+    const cleanup = window.api.onDirChanged((changedPath: string) => {
+      // Refresh if this directory or a parent directory changed
+      if (fullPath === changedPath || fullPath.startsWith(changedPath + '/')) {
+        setRefreshTrigger((prev) => prev + 1)
+      }
+    })
+    return cleanup
+  }, [fullPath])
 
   useEffect(() => {
     if (type === 'directory' && isExpanded) {
@@ -67,7 +79,7 @@ export function FileTreeNode({
         })
         .catch(() => setLoadError(true))
     }
-  }, [type, fullPath, isExpanded])
+  }, [type, fullPath, isExpanded, refreshTrigger])
 
   const paddingLeft = 8 + depth * 16
 
