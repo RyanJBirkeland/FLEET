@@ -1,10 +1,14 @@
 /**
- * Ad-hoc agent spawning — launches interactive Claude sessions via SDK v2 Session API.
+ * Ad-hoc agent spawning — launches interactive Claude sessions via SDK query API
+ * with session resumption for multi-turn conversations.
  *
- * Uses unstable_v2_createSession() for multi-turn conversations. The key insight:
- * session.stream() yields messages for ONE turn, then returns on 'result' message.
- * For multi-turn, we call stream() again after each send(). The queryIterator is
- * preserved across calls so messages continue from where the previous turn left off.
+ * Each turn is a separate query() call. The first turn creates a session; subsequent
+ * turns use `resume: sessionId` to continue the same conversation. This gives us
+ * access to cwd, settingSources, and permissionMode (v1 Options) while supporting
+ * multi-turn via session resumption.
+ *
+ * The v2 Session API (unstable_v2_createSession) doesn't support cwd or
+ * settingSources, so agents spawned with it can't find CLAUDE.md or project context.
  */
 import { randomUUID } from 'node:crypto'
 import { basename } from 'node:path'
@@ -17,7 +21,7 @@ import { createLogger } from './logger'
 
 const log = createLogger('adhoc-agent')
 
-/** Wrapper around an SDK Session for ad-hoc agent management */
+/** Wrapper around an SDK session for ad-hoc agent management */
 interface AdhocSession {
   send(message: string): Promise<void>
   close(): void
@@ -47,13 +51,15 @@ export async function spawnAdhocAgent(args: {
     taskContent: args.task
   })
 
-  // Create a persistent session (v2 API) for multi-turn conversations
-  const session = sdk.unstable_v2_createSession({
+  // Shared options for all turns (v1 Options — has cwd + settingSources)
+  const baseOptions = {
     model,
+    cwd: args.repoPath,
     env: env as Record<string, string>,
-    permissionMode: 'default',
-    canUseTool: async () => ({ behavior: 'allow' as const })
-  })
+    permissionMode: 'bypassPermissions' as const,
+    allowDangerouslySkipPermissions: true,
+    settingSources: ['user' as const, 'project' as const, 'local' as const]
+  }
 
   // Record in agent_runs
   const repo = basename(args.repoPath).toLowerCase()
@@ -72,24 +78,42 @@ export async function spawnAdhocAgent(args: {
     ''
   )
 
-  // Shared state for the conversation loop
+  // State shared across turns
+  let sessionId: string | null = null
   let closed = false
   const startedAt = Date.now()
   let costUsd = 0
   let tokensIn = 0
   let tokensOut = 0
 
-  // Process one turn's stream output — call after each send()
-  async function consumeTurn(): Promise<void> {
+  /**
+   * Run one conversation turn: create a query (first turn) or resume (subsequent turns).
+   * Consumes all messages until the iterator completes (result message).
+   */
+  async function runTurn(message: string): Promise<void> {
+    if (closed) return
+
+    const options = sessionId
+      ? { ...baseOptions, resume: sessionId }
+      : baseOptions
+
+    const queryHandle = sdk.query({ prompt: message, options })
+
     try {
-      for await (const raw of session.stream()) {
+      for await (const raw of queryHandle) {
         const events = mapRawMessage(raw)
         for (const event of events) {
           emitAgentEvent(meta.id, event)
         }
-        // Track cost/token fields
+
+        // Extract session ID from system init message
         if (typeof raw === 'object' && raw !== null) {
           const r = raw as Record<string, unknown>
+          if (r.type === 'system' && r.subtype === 'init' && typeof r.session_id === 'string') {
+            sessionId = r.session_id
+            log.info(`[adhoc] ${meta.id} session ID: ${sessionId}`)
+          }
+          // Track cost/token fields
           if (typeof r.cost_usd === 'number') costUsd = r.cost_usd
           if (typeof r.total_cost_usd === 'number') costUsd = r.total_cost_usd
           if (typeof r.tokens_in === 'number') tokensIn = r.tokens_in
@@ -101,7 +125,7 @@ export async function spawnAdhocAgent(args: {
           }
         }
       }
-      log.info(`[adhoc] ${meta.id} turn complete, session still alive`)
+      log.info(`[adhoc] ${meta.id} turn complete, session alive`)
     } catch (err) {
       log.error(`[adhoc] ${meta.id} turn error: ${err instanceof Error ? err.message : String(err)}`)
       emitAgentEvent(meta.id, {
@@ -112,7 +136,7 @@ export async function spawnAdhocAgent(args: {
     }
   }
 
-  // Complete the session — emit completed event and clean up
+  /** Complete the session — emit completed event and clean up */
   function completeSession(): void {
     if (closed) return
     closed = true
@@ -135,7 +159,6 @@ export async function spawnAdhocAgent(args: {
     }).catch(() => {})
 
     adhocSessions.delete(meta.id)
-    session.close()
     log.info(`[adhoc] ${meta.id} session completed after ${Math.round(durationMs / 1000)}s`)
   }
 
@@ -151,21 +174,20 @@ export async function spawnAdhocAgent(args: {
         timestamp: Date.now()
       })
 
-      // Send the message and consume the turn's response
-      await session.send(message)
-      await consumeTurn()
+      // Run the next turn with session resumption
+      await runTurn(message)
     },
     close() {
       completeSession()
     }
   })
 
-  // Start: send initial prompt and consume first turn
+  // Start first turn
   emitAgentEvent(meta.id, { type: 'agent:started', model, timestamp: Date.now() })
-  log.info(`[adhoc] ${meta.id} starting session`)
+  log.info(`[adhoc] ${meta.id} starting session in ${args.repoPath}`)
 
-  session.send(prompt).then(() => consumeTurn()).catch((err) => {
-    log.error(`[adhoc] ${meta.id} initial prompt failed: ${err}`)
+  runTurn(prompt).catch((err) => {
+    log.error(`[adhoc] ${meta.id} initial turn failed: ${err}`)
     completeSession()
   })
 
