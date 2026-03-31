@@ -605,6 +605,11 @@ export async function handleUpdateDependencies(
 // QA-15: Individual DELETE endpoint for tasks
 export async function handleDeleteTask(res: http.ServerResponse, id: string): Promise<void> {
   try {
+    const existing = getTask(id)
+    if (!existing) {
+      sendJson(res, 404, { error: `Task ${id} not found` })
+      return
+    }
     deleteTask(id)
     sendJson(res, 200, { ok: true, id })
   } catch (err) {
