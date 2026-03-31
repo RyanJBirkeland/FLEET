@@ -1,9 +1,15 @@
 /**
- * Ad-hoc agent spawning — launches interactive Claude sessions via SDK query API
- * with AsyncIterable prompt for multi-turn conversations.
+ * Ad-hoc agent spawning — launches interactive Claude sessions via SDK v2 Session API
+ * for persistent multi-turn conversations.
  *
- * Uses query() with streamInput() for follow-up messages — the session stays alive
- * until explicitly closed, unlike a string prompt which is single-turn.
+ * Uses unstable_v2_createSession() which provides a proper multi-turn interface:
+ * - session.send(message) to send follow-up messages
+ * - session.stream() to consume response messages
+ * - session.close() to end the session
+ *
+ * Previous approach using query() with streamInput() didn't work because query()
+ * is a single-turn API — the iterator terminates when the model emits a 'result'
+ * message, regardless of maxTurns or canUseTool settings.
  */
 import { randomUUID } from 'node:crypto'
 import { basename } from 'node:path'
@@ -12,8 +18,11 @@ import { buildAgentEnvWithAuth } from './env-utils'
 import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
 import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
+import { createLogger } from './logger'
 
-/** Wrapper around an SDK Query for ad-hoc agent management */
+const log = createLogger('adhoc-agent')
+
+/** Wrapper around an SDK Session for ad-hoc agent management */
 interface AdhocSession {
   send(message: string): Promise<void>
   close(): void
@@ -33,13 +42,9 @@ export async function spawnAdhocAgent(args: {
   assistant?: boolean
 }): Promise<SpawnLocalAgentResult> {
   const model = args.model || 'claude-sonnet-4-5'
-
   const env = buildAgentEnvWithAuth()
 
-  // Create multi-turn query with an async iterable prompt.
-  // The initial message is yielded immediately; follow-ups come via streamInput().
   const sdk = await import('@anthropic-ai/claude-agent-sdk')
-  const sessionId = randomUUID()
 
   // Build composed prompt with preamble
   const prompt = buildAgentPrompt({
@@ -47,44 +52,12 @@ export async function spawnAdhocAgent(args: {
     taskContent: args.task
   })
 
-  // Create the initial user message
-  const initialMessage: import('@anthropic-ai/claude-agent-sdk').SDKUserMessage = {
-    type: 'user',
-    message: { role: 'user', content: prompt },
-    parent_tool_use_id: null,
-    session_id: sessionId
-  }
-
-  // AbortController used to cleanly resolve the generator promise on session close
-  const sessionAbort = new AbortController()
-
-  // Use an async generator that yields the first message then stays open
-  async function* initialPrompt() {
-    yield initialMessage
-    // Generator stays open until sessionAbort.abort() is called on close()
-    // Follow-up messages go through queryHandle.streamInput()
-    await new Promise<void>((resolve) => {
-      sessionAbort.signal.addEventListener('abort', () => resolve(), { once: true })
-    })
-  }
-
-  const queryHandle = sdk.query({
-    prompt: initialPrompt(),
-    options: {
-      model,
-      cwd: args.repoPath,
-      env: env as Record<string, string>,
-      permissionMode: 'bypassPermissions',
-      allowDangerouslySkipPermissions: true,
-      settingSources: ['user', 'project', 'local'],
-      maxTurns: Infinity,
-      // Keep the SDK's stdin open for multi-turn conversation. The SDK calls
-      // transport.endInput() after streamInput() unless hasBidirectionalNeeds()
-      // is true. Providing canUseTool makes it return true, keeping the session
-      // alive for follow-up messages via streamInput(). Always returns true
-      // since we're in bypassPermissions mode.
-      canUseTool: async () => ({ behavior: 'allow' as const })
-    }
+  // Create a persistent session (v2 API) — this stays alive for multi-turn
+  const session = sdk.unstable_v2_createSession({
+    model,
+    env: env as Record<string, string>,
+    permissionMode: 'default',
+    canUseTool: async () => ({ behavior: 'allow' as const })
   })
 
   // Record in agent_runs
@@ -113,27 +86,20 @@ export async function spawnAdhocAgent(args: {
         text: message,
         timestamp: Date.now()
       })
-
-      const userMsg: import('@anthropic-ai/claude-agent-sdk').SDKUserMessage = {
-        type: 'user',
-        message: { role: 'user', content: message },
-        parent_tool_use_id: null,
-        session_id: sessionId
-      }
-      await queryHandle.streamInput(
-        (async function* () {
-          yield userMsg
-        })()
-      )
+      await session.send(message)
     },
     close() {
-      sessionAbort.abort()
-      queryHandle.close()
+      session.close()
     }
   })
 
-  // Consume messages in the background — do NOT await
-  consumeStream(meta.id, model, queryHandle).catch(() => {})
+  // Send the initial prompt
+  session.send(prompt).catch((err) => {
+    log.error(`[adhoc] ${meta.id} failed to send initial prompt: ${err}`)
+  })
+
+  // Consume stream in the background — do NOT await
+  consumeStream(meta.id, model, session).catch(() => {})
 
   return {
     id: meta.id,
@@ -148,7 +114,7 @@ export async function spawnAdhocAgent(args: {
 async function consumeStream(
   agentId: string,
   model: string,
-  queryHandle: AsyncIterable<unknown> & { close(): void }
+  session: { stream(): AsyncGenerator<unknown, void>; close(): void }
 ): Promise<void> {
   const startedAt = Date.now()
   let costUsd = 0
@@ -157,10 +123,14 @@ async function consumeStream(
   let exitCode = 0
 
   emitAgentEvent(agentId, { type: 'agent:started', model, timestamp: Date.now() })
+  log.info(`[adhoc] ${agentId} stream consumer started`)
 
   try {
     try {
-      for await (const raw of queryHandle) {
+      let messageCount = 0
+      for await (const raw of session.stream()) {
+        messageCount++
+
         const events = mapRawMessage(raw)
         for (const event of events) {
           emitAgentEvent(agentId, event)
@@ -181,7 +151,9 @@ async function consumeStream(
           }
         }
       }
+      log.info(`[adhoc] ${agentId} stream ended after ${messageCount} messages`)
     } catch (err) {
+      log.error(`[adhoc] ${agentId} stream error: ${err instanceof Error ? err.message : String(err)}`)
       emitAgentEvent(agentId, {
         type: 'agent:error',
         message: err instanceof Error ? err.message : String(err),
@@ -211,8 +183,6 @@ async function consumeStream(
     }
   } finally {
     adhocSessions.delete(agentId)
-    queryHandle.close()
+    session.close()
   }
 }
-
-// mapRawMessage and emitAgentEvent are imported from agent-event-mapper.ts
