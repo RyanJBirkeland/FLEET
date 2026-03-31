@@ -403,7 +403,8 @@ describe('DashboardView', () => {
     render(<DashboardView />)
     await act(async () => { await vi.advanceTimersByTimeAsync(1) })
 
-    expect(screen.getByText('Retry')).toBeInTheDocument()
+    const retryBtns = screen.getAllByText('Retry')
+    expect(retryBtns.length).toBeGreaterThanOrEqual(1)
     consoleSpy.mockRestore()
   })
 
@@ -417,8 +418,9 @@ describe('DashboardView', () => {
     await act(async () => { await vi.advanceTimersByTimeAsync(1) })
 
     const callCountBefore = vi.mocked(window.api.dashboard.completionsPerHour).mock.calls.length
-    const retryBtn = screen.getByText('Retry')
-    await act(async () => { fireEvent.click(retryBtn) })
+    // Click the first retry button (chart card)
+    const retryBtns = screen.getAllByText('Retry')
+    await act(async () => { fireEvent.click(retryBtns[0]) })
 
     expect(vi.mocked(window.api.dashboard.completionsPerHour).mock.calls.length).toBeGreaterThan(callCountBefore)
     consoleSpy.mockRestore()
