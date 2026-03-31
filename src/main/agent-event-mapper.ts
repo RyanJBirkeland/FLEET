@@ -44,7 +44,9 @@ export function mapRawMessage(raw: unknown): AgentEvent[] {
         }
       }
     }
-  } else if (msgType === 'tool_result' || msgType === 'result') {
+  } else if (msgType === 'result') {
+    // SDK end-of-turn signal — not a tool result. Skip it.
+  } else if (msgType === 'tool_result') {
     const content = msg.content ?? msg.output
     events.push({
       type: 'agent:tool_result',
