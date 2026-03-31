@@ -58,7 +58,6 @@ export default function DashboardView() {
   const [feedEvents, setFeedEvents] = useState<FeedEvent[]>([])
   const [prCount, setPrCount] = useState(0)
   const [loading, setLoading] = useState(true)
-  const [fetchError, setFetchError] = useState(false)
   const [cardErrors, setCardErrors] = useState<{ chart?: string; feed?: string; prs?: string }>({})
 
   // Derived stats
@@ -129,13 +128,7 @@ export default function DashboardView() {
     }
   }, [])
 
-  // Fetch all dashboard data — errors are caught per-fetch so backoff only
-  // triggers on total failure. Jitter prevents thundering herd across views.
-  const fetchDashboardData = useCallback(async (): Promise<void> => {
-    setLoading(true)
-    setFetchError(false)
-    const errors: { chart?: string; feed?: string; prs?: string } = {}
-
+  const fetchCompletionsChart = useCallback(async (): Promise<void> => {
     try {
       const data = await window.api.dashboard?.completionsPerHour()
       if (cancelledRef.current || !data) return
@@ -153,11 +146,14 @@ export default function DashboardView() {
           label: d.hour
         }))
       )
+      setCardErrors((prev) => ({ ...prev, chart: undefined }))
     } catch (err) {
       console.error('[Dashboard] Failed to fetch completions:', err)
-      errors.chart = 'Failed to load completions'
+      setCardErrors((prev) => ({ ...prev, chart: 'Failed to load completions' }))
     }
+  }, [])
 
+  const fetchActivityFeed = useCallback(async (): Promise<void> => {
     try {
       const events = await window.api.dashboard?.recentEvents(30)
       if (cancelledRef.current || !events) return
@@ -174,27 +170,36 @@ export default function DashboardView() {
           timestamp: e.timestamp
         }))
       )
+      setCardErrors((prev) => ({ ...prev, feed: undefined }))
     } catch (err) {
       console.error('[Dashboard] Failed to fetch events:', err)
-      errors.feed = 'Failed to load activity feed'
+      setCardErrors((prev) => ({ ...prev, feed: 'Failed to load activity feed' }))
     }
+  }, [])
 
+  const fetchPRCount = useCallback(async (): Promise<void> => {
     try {
       const prs = await window.api.getPrList()
       if (cancelledRef.current) return
       setPrCount(prs?.prs?.length ?? 0)
+      setCardErrors((prev) => ({ ...prev, prs: undefined }))
     } catch (err) {
       console.error('[Dashboard] Failed to fetch PR list:', err)
-      errors.prs = 'Failed to load PR data'
-    }
-
-    if (!cancelledRef.current) {
-      const anyError = Object.keys(errors).length > 0
-      setCardErrors(errors)
-      setFetchError(anyError)
-      setLoading(false)
+      setCardErrors((prev) => ({ ...prev, prs: 'Failed to load PR data' }))
     }
   }, [])
+
+  // Fetch all dashboard data — errors are caught per-fetch so backoff only
+  // triggers on total failure. Jitter prevents thundering herd across views.
+  const fetchDashboardData = useCallback(async (): Promise<void> => {
+    setLoading(true)
+
+    await Promise.all([fetchCompletionsChart(), fetchActivityFeed(), fetchPRCount()])
+
+    if (!cancelledRef.current) {
+      setLoading(false)
+    }
+  }, [fetchCompletionsChart, fetchActivityFeed, fetchPRCount])
 
   // Keep sprint task stats fresh — polls + reacts to sprint:externalChange IPC
   useSprintPolling()
@@ -229,22 +234,12 @@ export default function DashboardView() {
         <StatusBar title="BDE Command Center" status="ok">
           {loading && !chartData.length ? (
             <span className="dashboard-status-loading">Loading...</span>
-          ) : fetchError ? (
+          ) : Object.values(cardErrors).filter(Boolean).length > 0 ? (
             <span
               className="dashboard-status-error"
               style={{ color: neonVar('red', 'color') }}
             >
-              {Object.values(cardErrors).join(' · ') || 'Failed to load dashboard data'}
-              <button
-                onClick={() => fetchDashboardData()}
-                className="dashboard-retry-btn"
-                style={{
-                  border: `1px solid ${neonVar('red', 'color')}`,
-                  color: neonVar('red', 'color')
-                }}
-              >
-                Retry
-              </button>
+              {Object.values(cardErrors).filter(Boolean).length} card{Object.values(cardErrors).filter(Boolean).length !== 1 ? 's' : ''} failed
             </span>
           ) : (
             'SYS.OK'
@@ -279,10 +274,10 @@ export default function DashboardView() {
             />
             <StatCounter
               label="PRs"
-              value={prCount}
-              accent="blue"
+              value={cardErrors.prs ? 0 : prCount}
+              accent={cardErrors.prs ? 'red' : 'blue'}
               icon={<GitPullRequest size={10} />}
-              onClick={() => navigateToSprintWithFilter('awaiting-review')}
+              onClick={() => cardErrors.prs ? fetchPRCount() : navigateToSprintWithFilter('awaiting-review')}
             />
             <StatCounter
               label="Done"
@@ -304,8 +299,26 @@ export default function DashboardView() {
               title="Completions / Hour"
               icon={<Zap size={12} />}
             >
-              <MiniChart data={chartData} height={120} />
-              <div className="dashboard-chart-caption">last 24 hours</div>
+              {cardErrors.chart ? (
+                <div className="dashboard-card-error">
+                  <div className="dashboard-card-error__message">{cardErrors.chart}</div>
+                  <button
+                    className="dashboard-card-error__retry"
+                    onClick={() => fetchCompletionsChart()}
+                    style={{
+                      border: `1px solid ${neonVar('red', 'color')}`,
+                      color: neonVar('red', 'color')
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <MiniChart data={chartData} height={120} />
+                  <div className="dashboard-chart-caption">last 24 hours</div>
+                </>
+              )}
             </NeonCard>
 
             {/* Stats row: Success Rate + Avg Duration */}
@@ -335,9 +348,25 @@ export default function DashboardView() {
           {/* Right: Feed + Recent + Cost */}
           <div className="dashboard-col">
             <NeonCard accent="purple" title="Feed" style={{ flex: 1, minHeight: 0 }}>
-              <div className="dashboard-feed-scroll">
-                <ActivityFeed events={feedEvents} />
-              </div>
+              {cardErrors.feed ? (
+                <div className="dashboard-card-error">
+                  <div className="dashboard-card-error__message">{cardErrors.feed}</div>
+                  <button
+                    className="dashboard-card-error__retry"
+                    onClick={() => fetchActivityFeed()}
+                    style={{
+                      border: `1px solid ${neonVar('red', 'color')}`,
+                      color: neonVar('red', 'color')
+                    }}
+                  >
+                    Retry
+                  </button>
+                </div>
+              ) : (
+                <div className="dashboard-feed-scroll">
+                  <ActivityFeed events={feedEvents} />
+                </div>
+              )}
             </NeonCard>
 
             <NeonCard accent="cyan" title="Recent Completions" icon={<CheckCircle size={12} />}>

@@ -183,3 +183,34 @@
   color: var(--neon-text-dim);
   font-size: 11px;
 }
+
+/* ── Card Error State ── */
+.dashboard-card-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bde-space-2);
+  padding: var(--bde-space-4);
+  min-height: 120px;
+}
+
+.dashboard-card-error__message {
+  font-size: var(--bde-size-sm);
+  color: var(--neon-red);
+  text-align: center;
+}
+
+.dashboard-card-error__retry {
+  padding: 4px 12px;
+  border-radius: var(--bde-radius-sm);
+  background: rgba(255, 50, 50, 0.1);
+  font-size: var(--bde-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background var(--bde-transition-fast);
+}
+
+.dashboard-card-error__retry:hover {
+  background: rgba(255, 50, 50, 0.2);
+}
