@@ -141,10 +141,10 @@ export function TearoffShell({ view, windowId }: TearoffShellProps): React.React
   const focusedLeaf = focusedPanelId ? findLeaf(root, focusedPanelId) : null
 
   useEffect(() => {
-    const unsub = window.api.tearoff.onConfirmClose(() => {
+    if (!window.api?.tearoff?.onConfirmClose) return
+    return window.api.tearoff.onConfirmClose(() => {
       setShowDialog(true)
     })
-    return unsub
   }, [])
 
   // Close this tear-off window when drag completes to another window
@@ -197,7 +197,7 @@ export function TearoffShell({ view, windowId }: TearoffShellProps): React.React
   }, [isMultiTab, focusedLeaf])
 
   function handleReturn(): void {
-    window.api.tearoff.returnToMain(windowId)
+    window.api?.tearoff?.returnToMain(windowId)
   }
 
   function handleReturnAll(): void {
@@ -207,7 +207,7 @@ export function TearoffShell({ view, windowId }: TearoffShellProps): React.React
 
   function handleDialogClose(action: 'return' | 'close', remember: boolean): void {
     setShowDialog(false)
-    void window.api.tearoff.closeConfirmed({ action, remember })
+    void window.api?.tearoff?.closeConfirmed({ action, remember })
   }
 
   return (
