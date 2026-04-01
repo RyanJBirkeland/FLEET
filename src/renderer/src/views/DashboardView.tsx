@@ -28,6 +28,7 @@ import {
   Zap,
   AlertTriangle,
   XCircle,
+  Plus,
   Clock,
   TrendingUp,
   Target
@@ -138,9 +139,9 @@ export default function DashboardView() {
   return (
     <motion.div
       className="dashboard-root"
-      variants={VARIANTS.fadeIn}
-      initial="initial"
-      animate="animate"
+      variants={reduced ? undefined : VARIANTS.fadeIn}
+      initial={reduced ? undefined : 'initial'}
+      animate={reduced ? undefined : 'animate'}
       transition={transition}
     >
       {/* Background effects (ScanlineOverlay removed for data readability) */}
@@ -171,10 +172,27 @@ export default function DashboardView() {
           )}
         </StatusBar>
 
-        {/* 3-column Ops Deck grid */}
-        <div className="dashboard-grid">
+        {/* 3-column Ops Deck grid or onboarding */}
+        {tasks.length === 0 ? (
+          <div className="dashboard-onboarding">
+            <NeonCard accent="cyan" title="Welcome to BDE">
+              <div className="dashboard-onboarding__content">
+                <p className="dashboard-onboarding__text">
+                  Create your first sprint task to see the pipeline in action.
+                </p>
+                <button
+                  className="dashboard-onboarding__cta"
+                  onClick={() => setView('task-workbench')}
+                >
+                  <Plus size={14} /> Create First Task
+                </button>
+              </div>
+            </NeonCard>
+          </div>
+        ) : (
+        <div className="dashboard-grid" role="region" aria-label="Dashboard overview">
           {/* Left: Stats Stack */}
-          <div className="dashboard-col">
+          <div className="dashboard-col" role="region" aria-label="Task statistics">
             <StatCounter
               label="Active"
               value={stats.active}
@@ -206,10 +224,10 @@ export default function DashboardView() {
             />
             <StatCounter
               label="PRs"
-              value={cardErrors.prs ? 0 : prCount}
+              value={cardErrors.prs ? '—' : prCount}
               accent={cardErrors.prs ? 'red' : 'blue'}
               icon={<GitPullRequest size={10} />}
-              onClick={() => cardErrors.prs ? useDashboardDataStore.getState().fetchAll() : navigateToSprintWithFilter('awaiting-review')}
+              onClick={() => navigateToSprintWithFilter('awaiting-review')}
             />
             <StatCounter
               label="Done"
@@ -218,11 +236,46 @@ export default function DashboardView() {
               icon={<CheckCircle size={10} />}
               onClick={() => navigateToSprintWithFilter('done')}
             />
+            <button
+              className="dashboard-new-task-btn"
+              onClick={() => setView('task-workbench')}
+            >
+              <Plus size={12} /> New Task
+            </button>
           </div>
 
           {/* Center: Main Stage */}
           <div className="dashboard-col dashboard-col--center">
-            <NeonCard accent="purple" title="Pipeline" icon={<Activity size={12} />}>
+            {(stats.failed > 0 || partitions.awaitingReview.length > 0 || stats.blocked > 0) && (
+              <NeonCard accent="red" title="Attention">
+                {stats.failed > 0 && (
+                  <div className="dashboard-attention-item" role="button" tabIndex={0}
+                    onClick={() => navigateToSprintWithFilter('failed')}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateToSprintWithFilter('failed') } }}>
+                    <XCircle size={12} />
+                    <span>{stats.failed} failed task{stats.failed !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+                {partitions.awaitingReview.length > 0 && (
+                  <div className="dashboard-attention-item" role="button" tabIndex={0}
+                    onClick={() => navigateToSprintWithFilter('awaiting-review')}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateToSprintWithFilter('awaiting-review') } }}>
+                    <GitPullRequest size={12} />
+                    <span>{partitions.awaitingReview.length} PR{partitions.awaitingReview.length !== 1 ? 's' : ''} awaiting review</span>
+                  </div>
+                )}
+                {stats.blocked > 0 && (
+                  <div className="dashboard-attention-item" role="button" tabIndex={0}
+                    onClick={() => navigateToSprintWithFilter('blocked')}
+                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateToSprintWithFilter('blocked') } }}>
+                    <AlertTriangle size={12} />
+                    <span>{stats.blocked} blocked task{stats.blocked !== 1 ? 's' : ''}</span>
+                  </div>
+                )}
+              </NeonCard>
+            )}
+
+            <NeonCard accent="cyan" title="Pipeline" icon={<Activity size={12} />}>
               <SankeyPipeline
                 stages={{
                   queued: partitions.todo.length,
@@ -238,7 +291,7 @@ export default function DashboardView() {
 
             <NeonCard
               accent="cyan"
-              title="Completions / Hour"
+              title="Completions by Hour"
               icon={<Zap size={12} />}
             >
               {cardErrors.chart ? (
@@ -282,7 +335,7 @@ export default function DashboardView() {
 
           {/* Right: Feed + Recent + Cost */}
           <div className="dashboard-col">
-            <NeonCard accent="purple" title="Feed" style={{ flex: 1, minHeight: 0 }}>
+            <NeonCard accent="blue" title="Feed" style={{ flex: 1, minHeight: 0 }}>
               {cardErrors.feed ? (
                 <div className="dashboard-card-error">
                   <div className="dashboard-card-error__message">{cardErrors.feed}</div>
@@ -351,6 +404,7 @@ export default function DashboardView() {
             </NeonCard>
           </div>
         </div>
+        )}
       </div>
     </motion.div>
   )

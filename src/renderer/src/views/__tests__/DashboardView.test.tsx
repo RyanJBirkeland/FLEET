@@ -10,7 +10,7 @@ const { mockFetchAll } = vi.hoisted(() => ({ mockFetchAll: vi.fn() }))
 vi.mock('../../stores/sprintTasks', () => ({
   useSprintTasks: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
     selector({
-      tasks: [],
+      tasks: [{ id: 'seed-1', status: 'queued', title: 'Seed task' }],
       loading: false,
       loadData: vi.fn().mockResolvedValue(undefined)
     })
@@ -147,7 +147,7 @@ describe('DashboardView', () => {
       loading: false
     })
     render(<DashboardView />)
-    expect(screen.getByText('Completions / Hour')).toBeInTheDocument()
+    expect(screen.getByText('Completions by Hour')).toBeInTheDocument()
   })
 
   it('renders feed events from recentEvents', () => {
@@ -366,6 +366,66 @@ describe('DashboardView', () => {
 
     expect(useSprintUI.getState().statusFilter).toBe('awaiting-review')
     expect(usePanelLayoutStore.getState().activeView).toBe('sprint')
+  })
+
+  // ---------- Branch coverage: onboarding state ----------
+
+  it('shows onboarding card when no tasks exist', () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    expect(screen.getByText('Welcome to BDE')).toBeInTheDocument()
+    expect(screen.getByText('Create First Task')).toBeInTheDocument()
+  })
+
+  it('clicking Create First Task navigates to task workbench', () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    fireEvent.click(screen.getByText('Create First Task'))
+    expect(usePanelLayoutStore.getState().activeView).toBe('task-workbench')
+  })
+
+  // ---------- Branch coverage: attention card ----------
+
+  it('shows attention card when there are failed tasks', () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [
+          { id: '1', status: 'failed', title: 'Broken task' },
+          { id: '2', status: 'queued', title: 'Other task' }
+        ],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    expect(screen.getByText('Attention')).toBeInTheDocument()
+    expect(screen.getByText('1 failed task')).toBeInTheDocument()
+  })
+
+  it('does not show attention card when no issues', () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [
+          { id: '1', status: 'done', title: 'Done task', completed_at: new Date().toISOString() }
+        ],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
+    render(<DashboardView />)
+    expect(screen.queryByText('Attention')).not.toBeInTheDocument()
   })
 
   // ---------- Branch coverage: cost trend data ----------
