@@ -5,6 +5,12 @@
  * All BDE agents get a universal preamble + role-specific instructions + task context.
  */
 
+import { pipelinePersonality } from '../agent-system/personality/pipeline-personality'
+import { assistantPersonality } from '../agent-system/personality/assistant-personality'
+import type { AgentPersonality } from '../agent-system/personality/types'
+import { getAllMemory } from '../agent-system/memory'
+import { getAllSkills } from '../agent-system/skills'
+
 export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer'
 
 export interface BuildPromptInput {
@@ -15,6 +21,9 @@ export interface BuildPromptInput {
   messages?: Array<{ role: string; content: string }> // for copilot chat
   formContext?: { title: string; repo: string; spec: string } // for copilot
   codebaseContext?: string // for synthesizer (file tree, relevant files)
+
+  // NEW: native system control
+  useNativeSystem?: boolean  // Default false during migration
 }
 
 // ---------------------------------------------------------------------------
@@ -91,17 +100,99 @@ Keep playgrounds focused on one component or layout at a time. Do NOT run
 \`open\` or start a localhost server — BDE renders the HTML natively.`
 
 // ---------------------------------------------------------------------------
+// Native System Support
+// ---------------------------------------------------------------------------
+
+/**
+ * Get personality for agent type
+ */
+function getPersonality(agentType: AgentType): AgentPersonality {
+  switch (agentType) {
+    case 'pipeline':
+      return pipelinePersonality
+    case 'assistant':
+    case 'adhoc':
+      return assistantPersonality
+    case 'copilot':
+    case 'synthesizer':
+      // Minimal personality for text-only agents
+      return {
+        voice: 'Be concise. Keep responses under 500 words. Use markdown for structure.',
+        roleFrame: 'You are a text-only assistant. You cannot use tools or open URLs.',
+        constraints: ['No tool access', 'Text responses only'],
+        patterns: ['Focus on clarity', 'Use examples']
+      }
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Main Prompt Builder
 // ---------------------------------------------------------------------------
 
+/**
+ * Build agent prompt with universal preamble, role-specific instructions, and task content.
+ *
+ * This is the universal prompt builder for all BDE agents (pipeline, assistant, adhoc,
+ * copilot, synthesizer). All agent spawning paths must use this function instead of
+ * inline prompt assembly.
+ *
+ * **Native System Integration:**
+ * When `useNativeSystem` is true, injects:
+ * - Personality (voice, roleFrame, constraints) specific to the agent type
+ * - Memory modules (IPC conventions, testing patterns, architecture rules)
+ * - Skills (ONLY for assistant/adhoc agents — pipeline agents do not get skills)
+ *
+ * When `useNativeSystem` is false/undefined, uses legacy `ROLE_INSTRUCTIONS` for
+ * backward compatibility.
+ *
+ * **Conditional Sections:**
+ * - Branch info appended if `branch` is provided
+ * - Playground instructions appended if `playgroundEnabled` is true
+ * - Copilot conversation appended if `messages` array is provided
+ * - Synthesizer codebase context appended if `codebaseContext` is provided
+ *
+ * @param input - Prompt configuration object
+ * @param input.agentType - Type of agent: pipeline, assistant, adhoc, copilot, synthesizer
+ * @param input.taskContent - Spec, prompt, or user message (optional)
+ * @param input.branch - Git branch for pipeline/adhoc agents (optional)
+ * @param input.playgroundEnabled - Whether to include playground instructions (optional)
+ * @param input.messages - Copilot chat message history (optional)
+ * @param input.formContext - Copilot form context (title, repo, spec) (optional)
+ * @param input.codebaseContext - Synthesizer codebase context (file tree, relevant files) (optional)
+ * @param input.useNativeSystem - Enable BDE-native personality, memory, and skills (default: false)
+ * @returns Complete prompt string ready for agent spawning
+ */
 export function buildAgentPrompt(input: BuildPromptInput): string {
-  const { agentType, taskContent, branch, playgroundEnabled, messages, codebaseContext } = input
+  const { agentType, taskContent, branch, playgroundEnabled, messages, codebaseContext, useNativeSystem } = input
 
   // Start with universal preamble
   let prompt = UNIVERSAL_PREAMBLE
 
-  // Add role-specific instructions
-  prompt += '\n\n' + ROLE_INSTRUCTIONS[agentType]
+  if (useNativeSystem) {
+    // NEW: Inject personality
+    const personality = getPersonality(agentType)
+    prompt += '\n\n## Voice\n' + personality.voice
+    prompt += '\n\n## Your Role\n' + personality.roleFrame
+    prompt += '\n\n## Constraints\n' + personality.constraints.map(c => `- ${c}`).join('\n')
+
+    // NEW: Inject memory (all agents get this)
+    prompt += '\n\n## BDE Conventions\n'
+    prompt += getAllMemory()
+
+    // NEW: Inject skills (interactive agents only)
+    if (agentType === 'assistant' || agentType === 'adhoc') {
+      prompt += '\n\n## Available Skills\n'
+      prompt += getAllSkills()
+    }
+
+    // NEW: Plugin disable note
+    prompt += '\n\n## Note\n'
+    prompt += 'You have BDE-native skills and conventions loaded. '
+    prompt += 'Generic third-party plugin guidance may not apply to BDE workflows.'
+  } else {
+    // Existing behavior (use role instructions)
+    prompt += '\n\n' + ROLE_INSTRUCTIONS[agentType]
+  }
 
   // Add conditional operational appendices
   if (branch) {
