@@ -16,7 +16,7 @@ import type { AgentEvent } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
 import DOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
-import { getSettingJson } from '../settings'
+
 
 // ---------------------------------------------------------------------------
 // Types
@@ -171,15 +171,11 @@ export async function runAgent(
     return
   }
 
-  // Read useNativeSystem setting
-  const useNativeSystem = getSettingJson<boolean>('agentManager.useNativeSystem') ?? false
-
   const prompt = buildAgentPrompt({
     agentType: 'pipeline',
     taskContent,
     branch: worktree.branch,
-    playgroundEnabled: task.playground_enabled,
-    useNativeSystem
+    playgroundEnabled: task.playground_enabled
   })
 
   let handle: AgentHandle

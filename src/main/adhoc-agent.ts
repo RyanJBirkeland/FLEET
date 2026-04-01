@@ -18,7 +18,6 @@ import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
 import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
 import { createLogger } from './logger'
-import { getSettingJson } from './settings'
 
 const log = createLogger('adhoc-agent')
 
@@ -46,14 +45,10 @@ export async function spawnAdhocAgent(args: {
 
   const sdk = await import('@anthropic-ai/claude-agent-sdk')
 
-  // Read useNativeSystem setting
-  const useNativeSystem = getSettingJson<boolean>('agentManager.useNativeSystem') ?? false
-
   // Build composed prompt with preamble
   const prompt = buildAgentPrompt({
     agentType: args.assistant ? 'assistant' : 'adhoc',
-    taskContent: args.task,
-    useNativeSystem
+    taskContent: args.task
   })
 
   // Shared options for all turns (v1 Options — has cwd + settingSources)

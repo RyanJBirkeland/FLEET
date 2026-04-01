@@ -541,6 +541,13 @@ export const migrations: Migration[] = [
         VALUES ('agentManager.useNativeSystem', 'false')
       `).run()
     }
+  },
+  {
+    version: 19,
+    description: 'Remove agentManager.useNativeSystem setting (native system is now unconditional)',
+    up: (db) => {
+      db.prepare("DELETE FROM settings WHERE key = 'agentManager.useNativeSystem'").run()
+    }
   }
 ]
 
