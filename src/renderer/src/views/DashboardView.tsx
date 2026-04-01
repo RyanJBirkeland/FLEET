@@ -63,6 +63,10 @@ export default function DashboardView() {
     [setStatusFilter, setSearchQuery, setView]
   )
 
+  const handleCompletionClick = useCallback((_task: typeof recentCompletions[number]) => {
+    navigateToSprintWithFilter('done')
+  }, [navigateToSprintWithFilter])
+
   const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
   // Derived stats
@@ -286,7 +290,19 @@ export default function DashboardView() {
                   </div>
                 ) : (
                   recentCompletions.map((t) => (
-                    <div key={t.id} className="dashboard-completion-row">
+                    <div
+                      key={t.id}
+                      className="dashboard-completion-row"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => handleCompletionClick(t)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          handleCompletionClick(t)
+                        }
+                      }}
+                    >
                       <span className="dashboard-completion-title">
                         {t.title}
                       </span>
