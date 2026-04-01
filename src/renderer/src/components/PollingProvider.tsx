@@ -1,3 +1,4 @@
+import React from 'react'
 import type { ReactNode } from 'react'
 import { useSprintPolling } from '../hooks/useSprintPolling'
 import { usePrStatusPolling } from '../hooks/usePrStatusPolling'
@@ -7,7 +8,7 @@ import { useGitStatusPolling } from '../hooks/useGitStatusPolling'
 import { useAgentSessionPolling } from '../hooks/useAgentSessionPolling'
 import { useCostPolling } from '../hooks/useCostPolling'
 
-export function PollingProvider({ children }: { children: ReactNode }) {
+export function PollingProvider({ children }: { children: ReactNode }): React.JSX.Element {
   useSprintPolling()
   usePrStatusPolling()
   useHealthCheckPolling()
