@@ -442,7 +442,7 @@ describe('DashboardView', () => {
       })
     )
     render(<DashboardView />)
-    expect(screen.getByText(/last 2 runs/)).toBeInTheDocument()
+    expect(screen.getByText(/2 runs · avg/)).toBeInTheDocument()
     expect(screen.getByText('$1.70')).toBeInTheDocument()
   })
 })
