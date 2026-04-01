@@ -132,10 +132,34 @@ function getPersonality(agentType: AgentType): AgentPersonality {
 /**
  * Build agent prompt with universal preamble, role-specific instructions, and task content.
  *
- * When useNativeSystem is true, injects BDE-specific personality, memory, and skills
- * instead of generic role instructions. This provides agents with BDE-aware guidance.
+ * This is the universal prompt builder for all BDE agents (pipeline, assistant, adhoc,
+ * copilot, synthesizer). All agent spawning paths must use this function instead of
+ * inline prompt assembly.
  *
- * @param input - Prompt configuration including agent type, task content, and native system flag
+ * **Native System Integration:**
+ * When `useNativeSystem` is true, injects:
+ * - Personality (voice, roleFrame, constraints) specific to the agent type
+ * - Memory modules (IPC conventions, testing patterns, architecture rules)
+ * - Skills (ONLY for assistant/adhoc agents — pipeline agents do not get skills)
+ *
+ * When `useNativeSystem` is false/undefined, uses legacy `ROLE_INSTRUCTIONS` for
+ * backward compatibility.
+ *
+ * **Conditional Sections:**
+ * - Branch info appended if `branch` is provided
+ * - Playground instructions appended if `playgroundEnabled` is true
+ * - Copilot conversation appended if `messages` array is provided
+ * - Synthesizer codebase context appended if `codebaseContext` is provided
+ *
+ * @param input - Prompt configuration object
+ * @param input.agentType - Type of agent: pipeline, assistant, adhoc, copilot, synthesizer
+ * @param input.taskContent - Spec, prompt, or user message (optional)
+ * @param input.branch - Git branch for pipeline/adhoc agents (optional)
+ * @param input.playgroundEnabled - Whether to include playground instructions (optional)
+ * @param input.messages - Copilot chat message history (optional)
+ * @param input.formContext - Copilot form context (title, repo, spec) (optional)
+ * @param input.codebaseContext - Synthesizer codebase context (file tree, relevant files) (optional)
+ * @param input.useNativeSystem - Enable BDE-native personality, memory, and skills (default: false)
  * @returns Complete prompt string ready for agent spawning
  */
 export function buildAgentPrompt(input: BuildPromptInput): string {
