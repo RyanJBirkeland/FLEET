@@ -172,7 +172,24 @@ export default function DashboardView() {
           )}
         </StatusBar>
 
-        {/* 3-column Ops Deck grid */}
+        {/* 3-column Ops Deck grid or onboarding */}
+        {tasks.length === 0 ? (
+          <div className="dashboard-onboarding">
+            <NeonCard accent="cyan" title="Welcome to BDE">
+              <div className="dashboard-onboarding__content">
+                <p className="dashboard-onboarding__text">
+                  Create your first sprint task to see the pipeline in action.
+                </p>
+                <button
+                  className="dashboard-onboarding__cta"
+                  onClick={() => setView('task-workbench')}
+                >
+                  <Plus size={14} /> Create First Task
+                </button>
+              </div>
+            </NeonCard>
+          </div>
+        ) : (
         <div className="dashboard-grid">
           {/* Left: Stats Stack */}
           <div className="dashboard-col">
@@ -387,6 +404,7 @@ export default function DashboardView() {
             </NeonCard>
           </div>
         </div>
+        )}
       </div>
     </motion.div>
   )

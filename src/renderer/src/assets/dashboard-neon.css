@@ -271,6 +271,49 @@
   border-style: solid;
 }
 
+/* ── Onboarding State ── */
+.dashboard-onboarding {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+}
+
+.dashboard-onboarding__content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+}
+
+.dashboard-onboarding__text {
+  color: var(--neon-text-dim);
+  font-size: 14px;
+  line-height: 1.5;
+  max-width: 300px;
+}
+
+.dashboard-onboarding__cta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border: 1px solid var(--neon-cyan-border);
+  border-radius: 8px;
+  background: var(--neon-cyan-surface);
+  color: var(--neon-cyan);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.dashboard-onboarding__cta:hover {
+  background: var(--neon-cyan-border);
+}
+
 /* ── Attention Card ── */
 .dashboard-attention-item {
   display: flex;
