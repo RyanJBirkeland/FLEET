@@ -3,6 +3,8 @@ import { getAllSkills, getSkillList } from '../index'
 import { systemIntrospectionSkill } from '../system-introspection'
 import { taskOrchestrationSkill } from '../task-orchestration'
 import { codePatternsSkill } from '../code-patterns'
+import { prReviewSkill } from '../pr-review'
+import { debuggingSkill } from '../debugging'
 
 describe('Skills System', () => {
   describe('getAllSkills', () => {
@@ -11,6 +13,8 @@ describe('Skills System', () => {
       expect(skills).toContain('System Introspection')
       expect(skills).toContain('Task Orchestration')
       expect(skills).toContain('BDE Code Patterns')
+      expect(skills).toContain('PR Review')
+      expect(skills).toContain('Debugging')
     })
 
     it('should separate skills with markdown dividers', () => {
@@ -22,10 +26,12 @@ describe('Skills System', () => {
   describe('getSkillList', () => {
     it('should return all skills as structured data', () => {
       const skills = getSkillList()
-      expect(skills).toHaveLength(3)
+      expect(skills).toHaveLength(5)
       expect(skills[0].id).toBe('system-introspection')
       expect(skills[1].id).toBe('task-orchestration')
       expect(skills[2].id).toBe('code-patterns')
+      expect(skills[3].id).toBe('pr-review')
+      expect(skills[4].id).toBe('debugging')
     })
   })
 
@@ -42,6 +48,19 @@ describe('Skills System', () => {
 
     it('code patterns should have capability', () => {
       expect(codePatternsSkill.capabilities).toContain('code-generation')
+    })
+
+    it('pr review should have capabilities', () => {
+      expect(prReviewSkill.capabilities).toContain('gh-cli')
+      expect(prReviewSkill.capabilities).toContain('git-rebase')
+      expect(prReviewSkill.capabilities).toContain('pr-station')
+    })
+
+    it('debugging should have capabilities', () => {
+      expect(debuggingSkill.capabilities).toContain('file-read-logs')
+      expect(debuggingSkill.capabilities).toContain('sqlite-query')
+      expect(debuggingSkill.capabilities).toContain('git-worktree')
+      expect(debuggingSkill.capabilities).toContain('queue-api-call')
     })
 
     it('all skills should have required fields', () => {

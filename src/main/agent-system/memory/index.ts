@@ -10,7 +10,7 @@ import { architectureRules } from './architecture-rules'
  * standards (coverage thresholds, test organization), and architecture rules
  * (process boundaries, Zustand patterns, IPC surface minimalism).
  *
- * This function is called by `buildAgentPrompt()` when `useNativeSystem` is true.
+ * This function is called by `buildAgentPrompt()` for all BDE agents.
  * The returned text is injected into agent prompts under the "## BDE Conventions" section.
  *
  * @returns Markdown string with all memory modules concatenated (separated by "---")

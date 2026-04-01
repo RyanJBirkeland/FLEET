@@ -1,6 +1,8 @@
 import { systemIntrospectionSkill } from './system-introspection'
 import { taskOrchestrationSkill } from './task-orchestration'
 import { codePatternsSkill } from './code-patterns'
+import { prReviewSkill } from './pr-review'
+import { debuggingSkill } from './debugging'
 
 /**
  * Consolidate all skill guidance into a single markdown string for interactive agents.
@@ -9,8 +11,7 @@ import { codePatternsSkill } from './code-patterns'
  * (querying SQLite, reading logs), task orchestration (creating tasks, setting dependencies),
  * and code patterns (generating BDE-idiomatic code like IPC handlers, Zustand stores).
  *
- * This function is called by `buildAgentPrompt()` when `useNativeSystem` is true AND
- * the agent type is assistant or adhoc. Pipeline agents do not receive skills since
+ * This function is called by `buildAgentPrompt()` when the agent type is assistant or adhoc. Pipeline agents do not receive skills since
  * they execute specs, not open-ended exploration.
  *
  * @returns Markdown string with all skill guidance concatenated (separated by "---")
@@ -19,7 +20,9 @@ export function getAllSkills(): string {
   const skills = [
     systemIntrospectionSkill,
     taskOrchestrationSkill,
-    codePatternsSkill
+    codePatternsSkill,
+    prReviewSkill,
+    debuggingSkill
   ]
 
   return skills.map(s => s.guidance).join('\n\n---\n\n')
@@ -44,6 +47,8 @@ export function getSkillList() {
   return [
     systemIntrospectionSkill,
     taskOrchestrationSkill,
-    codePatternsSkill
+    codePatternsSkill,
+    prReviewSkill,
+    debuggingSkill
   ]
 }
