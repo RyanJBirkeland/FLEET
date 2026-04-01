@@ -1,0 +1,224 @@
+import type { StatusFilter } from '../../stores/sprintUI'
+import { neonVar } from './types'
+import { formatCount, STAGE_CONFIG, STAGE_TO_FILTER, type SankeyStageKey } from './sankey-utils'
+import '../../assets/sankey-pipeline-neon.css'
+
+interface SankeyPipelineProps {
+  stages: {
+    queued: number
+    active: number
+    review: number
+    done: number
+    blocked: number
+    failed: number
+  }
+  onStageClick?: (filter: StatusFilter) => void
+  animated?: boolean
+  className?: string
+}
+
+/** Node layout positions within the SVG viewBox (540x160). */
+const NODE_POS: Record<SankeyStageKey, { x: number; y: number; w: number; h: number }> = {
+  queued:  { x: 8,   y: 25, w: 82,  h: 65 },
+  active:  { x: 160, y: 22, w: 80,  h: 55 },
+  review:  { x: 310, y: 22, w: 85,  h: 55 },
+  done:    { x: 455, y: 18, w: 75,  h: 50 },
+  blocked: { x: 160, y: 105, w: 80, h: 40 },
+  failed:  { x: 355, y: 100, w: 75, h: 40 },
+}
+
+/** Stage render order (main path then branches). */
+const STAGE_ORDER: SankeyStageKey[] = ['queued', 'active', 'review', 'done', 'blocked', 'failed']
+
+/** Main flow connections: from → to (happy path). */
+const MAIN_FLOWS: [SankeyStageKey, SankeyStageKey][] = [
+  ['queued', 'active'],
+  ['active', 'review'],
+  ['review', 'done'],
+]
+
+/** Branch flow connections (problem paths). */
+const BRANCH_FLOWS: [SankeyStageKey, SankeyStageKey][] = [
+  ['active', 'blocked'],
+  ['active', 'failed'],
+  ['review', 'failed'],
+]
+
+function flowPath(
+  from: SankeyStageKey,
+  to: SankeyStageKey
+): string {
+  const a = NODE_POS[from]
+  const b = NODE_POS[to]
+  const x1 = a.x + a.w
+  const y1 = a.y + a.h / 2
+  const x2 = b.x
+  const y2 = b.y + b.h / 2
+  const cpx = (x1 + x2) / 2
+  return `M ${x1} ${y1} C ${cpx} ${y1}, ${cpx} ${y2}, ${x2} ${y2}`
+}
+
+/**
+ * SankeyPipeline — SVG-based Sankey pipeline visualization.
+ * Renders stage nodes connected by flow paths with click interaction
+ * and keyboard accessibility.
+ */
+export function SankeyPipeline({
+  stages,
+  onStageClick,
+  className = '',
+}: SankeyPipelineProps) {
+  function handleClick(key: SankeyStageKey) {
+    onStageClick?.(STAGE_TO_FILTER[key])
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent, key: SankeyStageKey) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault()
+      onStageClick?.(STAGE_TO_FILTER[key])
+    }
+  }
+
+  return (
+    <svg
+      className={className}
+      viewBox="0 0 540 160"
+      xmlns="http://www.w3.org/2000/svg"
+      role="img"
+      aria-label="Task pipeline flow"
+    >
+      <defs>
+        <filter id="sankey-glow">
+          <feGaussianBlur stdDeviation="2" result="b" />
+          <feMerge>
+            <feMergeNode in="b" />
+            <feMergeNode in="SourceGraphic" />
+          </feMerge>
+        </filter>
+      </defs>
+
+      {/* Layer 1 — Flow paths (behind nodes) */}
+      {MAIN_FLOWS.map(([from, to]) => {
+        const config = STAGE_CONFIG[from]
+        return (
+          <path
+            key={`main-${from}-${to}`}
+            data-role="sankey-flow-main"
+            d={flowPath(from, to)}
+            fill="none"
+            stroke={neonVar(config.accent, 'border')}
+            strokeWidth={16}
+            strokeLinecap="round"
+            strokeOpacity={0.18}
+          />
+        )
+      })}
+
+      {BRANCH_FLOWS.map(([from, to]) => (
+        <path
+          key={`branch-${from}-${to}`}
+          data-role="sankey-flow-branch"
+          d={flowPath(from, to)}
+          fill="none"
+          stroke={neonVar('red', 'border')}
+          strokeWidth={4}
+          strokeLinecap="round"
+          strokeOpacity={0.1}
+        />
+      ))}
+
+      {/* Layer 2 — Nodes */}
+      {STAGE_ORDER.map((key) => {
+        const config = STAGE_CONFIG[key]
+        const pos = NODE_POS[key]
+        const count = stages[key]
+        const rx = 6
+
+        return (
+          <g
+            key={key}
+            data-role="sankey-node"
+            data-stage={key}
+            className="sankey-node"
+            role="button"
+            tabIndex={0}
+            aria-label={`${count} ${key} tasks — click to view`}
+            onClick={() => handleClick(key)}
+            onKeyDown={(e) => handleKeyDown(e, key)}
+          >
+            {/* Background rect */}
+            <rect
+              className="sankey-node__bg"
+              x={pos.x}
+              y={pos.y}
+              width={pos.w}
+              height={pos.h}
+              rx={rx}
+              fill={neonVar(config.accent, 'surface')}
+              stroke={neonVar(config.accent, 'border')}
+              strokeWidth={1.5}
+              filter="url(#sankey-glow)"
+            />
+
+            {/* Focus ring */}
+            <rect
+              className="sankey-node__focus-ring"
+              x={pos.x - 2}
+              y={pos.y - 2}
+              width={pos.w + 4}
+              height={pos.h + 4}
+              rx={rx + 2}
+              fill="none"
+              stroke={neonVar(config.accent, 'color')}
+              strokeWidth={2}
+            />
+
+            {/* Pulse ring for active node */}
+            {key === 'active' && (
+              <rect
+                className="sankey-pulse-ring"
+                x={pos.x - 4}
+                y={pos.y - 4}
+                width={pos.w + 8}
+                height={pos.h + 8}
+                rx={rx + 4}
+                fill="none"
+                stroke={neonVar(config.accent, 'color')}
+                strokeWidth={1.5}
+              />
+            )}
+
+            {/* Count text */}
+            <text
+              x={pos.x + pos.w / 2}
+              y={pos.y + (config.problem ? pos.h / 2 - 1 : pos.h / 2 - 4)}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={neonVar(config.accent, 'color')}
+              fontSize={config.problem ? 14 : 18}
+              fontWeight={700}
+              style={{ textShadow: neonVar(config.accent, 'glow') }}
+            >
+              {formatCount(count)}
+            </text>
+
+            {/* Label text */}
+            <text
+              x={pos.x + pos.w / 2}
+              y={pos.y + (config.problem ? pos.h / 2 + 12 : pos.h / 2 + 14)}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill={neonVar(config.accent, 'color')}
+              fontSize={9}
+              fontWeight={600}
+              letterSpacing="0.5"
+              opacity={0.8}
+            >
+              {config.label}
+            </text>
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
