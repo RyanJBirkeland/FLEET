@@ -49,7 +49,7 @@ describe('Agent System Integration', () => {
 
     it('exports getSkillList function that returns skill objects', () => {
       const skillList = getSkillList()
-      expect(skillList.length).toBe(3)
+      expect(skillList.length).toBe(5)
       expect(skillList[0]).toHaveProperty('id')
       expect(skillList[0]).toHaveProperty('trigger')
       expect(skillList[0]).toHaveProperty('description')
@@ -58,12 +58,11 @@ describe('Agent System Integration', () => {
   })
 
   describe('Prompt Composer Integration', () => {
-    it('includes native system when useNativeSystem is true for pipeline agent', () => {
+    it('includes personality and memory for pipeline agent', () => {
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
         taskContent: 'Build feature X',
-        branch: 'feat/test',
-        useNativeSystem: true
+        branch: 'feat/test'
       })
 
       expect(prompt).toContain('## Voice')
@@ -76,11 +75,10 @@ describe('Agent System Integration', () => {
       expect(prompt).toContain('Build feature X')
     })
 
-    it('includes native system when useNativeSystem is true for assistant agent', () => {
+    it('includes personality, memory, and skills for assistant agent', () => {
       const prompt = buildAgentPrompt({
         agentType: 'assistant',
-        taskContent: 'Help me understand X',
-        useNativeSystem: true
+        taskContent: 'Help me understand X'
       })
 
       expect(prompt).toContain('## Voice')
@@ -92,41 +90,14 @@ describe('Agent System Integration', () => {
       expect(prompt).toContain('System Introspection')
     })
 
-    it('excludes skills for pipeline agents even when useNativeSystem is true', () => {
-      const prompt = buildAgentPrompt({
-        agentType: 'pipeline',
-        taskContent: 'Build feature X',
-        branch: 'feat/test',
-        useNativeSystem: true
-      })
-
-      expect(prompt).not.toContain('## Available Skills')
-    })
-
-    it('uses legacy role instructions when useNativeSystem is false', () => {
-      const prompt = buildAgentPrompt({
-        agentType: 'pipeline',
-        taskContent: 'Build feature X',
-        branch: 'feat/test',
-        useNativeSystem: false
-      })
-
-      expect(prompt).not.toContain('## Voice')
-      expect(prompt).not.toContain('## BDE Conventions')
-      expect(prompt).toContain('## Your Mission')
-      expect(prompt).toContain('Build feature X')
-    })
-
-    it('defaults to legacy behavior when useNativeSystem is undefined', () => {
+    it('excludes skills for pipeline agents', () => {
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
         taskContent: 'Build feature X',
         branch: 'feat/test'
       })
 
-      expect(prompt).not.toContain('## Voice')
-      expect(prompt).not.toContain('## BDE Conventions')
-      expect(prompt).toContain('## Your Mission')
+      expect(prompt).not.toContain('## Available Skills')
     })
   })
 })

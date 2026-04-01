@@ -141,9 +141,9 @@ describe('buildAgentPrompt', () => {
     expect(prompt).not.toContain('## Generation Instructions')
   })
 
-  it('pipeline role contains mission text', () => {
+  it('pipeline role contains personality text', () => {
     const prompt = buildAgentPrompt(baseInput)
-    expect(prompt).toContain('executing a sprint task')
+    expect(prompt).toContain('pipeline agent')
   })
 
   it('assistant role mentions interactive assistant', () => {
@@ -151,11 +151,11 @@ describe('buildAgentPrompt', () => {
     expect(prompt).toContain('interactive BDE assistant')
   })
 
-  it('copilot role mentions text-only', () => {
+  it('copilot role mentions spec drafting', () => {
     const prompt = buildAgentPrompt({
       agentType: 'copilot',
       messages: [{ role: 'user', content: 'hi' }]
     })
-    expect(prompt).toContain('text-only')
+    expect(prompt).toContain('spec drafting')
   })
 })

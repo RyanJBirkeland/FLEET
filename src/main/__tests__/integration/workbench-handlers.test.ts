@@ -9,8 +9,8 @@ describe('workbench handlers', () => {
         repo: 'BDE',
         spec: ''
       })
-      expect(prompt).toContain('text-only assistant')
-      expect(prompt).toContain('cannot open URLs')
+      expect(prompt).toContain('text-only spec drafting')
+      expect(prompt).toContain('Cannot open URLs')
     })
 
     it('includes conversation history', () => {
