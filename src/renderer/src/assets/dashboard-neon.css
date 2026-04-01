@@ -218,3 +218,25 @@
 .dashboard-card-error__retry:hover {
   background: rgba(255, 50, 50, 0.2);
 }
+
+/* ── Responsive Breakpoints ── */
+
+/* Collapse to 2 columns at narrow widths */
+@media (max-width: 900px) {
+  .dashboard-grid {
+    grid-template-columns: 180px 1fr;
+  }
+  .dashboard-col:nth-child(3) {
+    grid-column: 1 / -1;
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+}
+
+/* Single column for very narrow */
+@media (max-width: 600px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
