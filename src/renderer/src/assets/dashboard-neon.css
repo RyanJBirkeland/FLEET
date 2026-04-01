@@ -82,7 +82,7 @@
 /* ── Chart Subtitle / Muted Captions ── */
 .dashboard-chart-caption {
   color: var(--neon-text-dim);
-  font-size: 9px;
+  font-size: 11px;
   margin-top: 6px;
 }
 
@@ -137,7 +137,7 @@
 
 .dashboard-completion-time {
   color: var(--neon-text-dim);
-  font-size: 9px;
+  font-size: 11px;
   white-space: nowrap;
   flex-shrink: 0;
   opacity: 0.85;
@@ -175,7 +175,7 @@
 
 .dashboard-ring__breakdown {
   color: var(--neon-text-dim);
-  font-size: 9px;
+  font-size: 11px;
   opacity: 0.85;
 }
 
