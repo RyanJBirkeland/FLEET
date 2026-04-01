@@ -9,6 +9,7 @@ import { renderAgentMarkdown } from '../../lib/render-agent-markdown'
 
 interface ConsoleLineProps {
   block: ChatBlock
+  onPlaygroundClick?: (block: { filename: string; html: string; sizeBytes: number }) => void
 }
 
 function formatTime(ts: number): string {
@@ -56,7 +57,7 @@ function getToolMeta(toolName: string): ToolMeta {
   return TOOL_MAP[toolName.toLowerCase()] ?? { letter: '\u2022', iconClass: 'console-tool-icon--default' }
 }
 
-export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
+export function ConsoleLine({ block, onPlaygroundClick }: ConsoleLineProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
 
   switch (block.type) {
@@ -257,7 +258,7 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
 
     case 'error':
       return (
-        <div className="console-line" data-testid="console-line-error">
+        <div className="console-line console-line--error" data-testid="console-line-error">
           <span className="console-prefix console-prefix--error">[error]</span>
           <span className="console-line__content">{block.message}</span>
           <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
@@ -321,7 +322,7 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
     case 'tool_group': {
       const total = block.tools.length
       if (total === 1) {
-        return <ConsoleLine block={block.tools[0]} />
+        return <ConsoleLine block={block.tools[0]} onPlaygroundClick={onPlaygroundClick} />
       }
       const counts: Record<string, number> = {}
       for (const t of block.tools) {
@@ -367,7 +368,7 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
           {expanded && (
             <div className="console-tool-group__items">
               {block.tools.map((tool, i) => (
-                <ConsoleLine key={i} block={tool} />
+                <ConsoleLine key={i} block={tool} onPlaygroundClick={onPlaygroundClick} />
               ))}
             </div>
           )}
@@ -377,10 +378,18 @@ export function ConsoleLine({ block }: ConsoleLineProps): React.JSX.Element {
 
     case 'playground':
       return (
-        <div className="console-line" data-testid="console-line-playground">
+        <div
+          className="console-line console-line--playground"
+          data-testid="console-line-playground"
+          role="button"
+          tabIndex={0}
+          onClick={() => onPlaygroundClick?.(block)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlaygroundClick?.(block) } }}
+          style={{ cursor: onPlaygroundClick ? 'pointer' : undefined }}
+        >
           <span className="console-prefix console-prefix--play">[play]</span>
           <span className="console-line__content">
-            {block.filename} ({Math.ceil(block.sizeBytes / 1024)}KB) — clickable
+            {block.filename} ({Math.ceil(block.sizeBytes / 1024)}KB)
           </span>
           <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
         </div>

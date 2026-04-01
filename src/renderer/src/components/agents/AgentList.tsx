@@ -17,6 +17,8 @@ interface AgentListProps {
   onKill?: () => void
   filter?: string
   loading?: boolean
+  fetchError?: string | null
+  onRetry?: () => void
 }
 
 export interface AgentGroups {
@@ -54,17 +56,20 @@ function GroupHeader({
   count,
   open,
   onToggle,
-  showPulse
+  showPulse,
+  collapsible = true
 }: {
   label: string
   count: number
   open: boolean
   onToggle: () => void
   showPulse?: boolean
+  collapsible?: boolean
 }) {
+  const Tag = collapsible ? 'button' : 'div'
   return (
-    <button
-      onClick={onToggle}
+    <Tag
+      {...(collapsible ? { onClick: onToggle } : {})}
       style={{
         display: 'flex',
         alignItems: 'center',
@@ -73,20 +78,22 @@ function GroupHeader({
         padding: `${tokens.space[1]} ${tokens.space[3]}`,
         background: 'none',
         border: 'none',
-        cursor: 'pointer',
+        cursor: collapsible ? 'pointer' : 'default',
         color: neonVar('purple', 'color'),
         fontSize: tokens.size.xs,
         textTransform: 'uppercase',
         letterSpacing: '0.05em'
       }}
     >
-      <ChevronRight
-        size={12}
-        style={{
-          transform: open ? 'rotate(90deg)' : undefined,
-          transition: tokens.transition.fast
-        }}
-      />
+      {collapsible && (
+        <ChevronRight
+          size={12}
+          style={{
+            transform: open ? 'rotate(90deg)' : undefined,
+            transition: tokens.transition.fast
+          }}
+        />
+      )}
       {showPulse && (
         <span
           style={{
@@ -101,11 +108,11 @@ function GroupHeader({
       )}
       {label}
       <span style={{ color: tokens.color.textDim }}>({count})</span>
-    </button>
+    </Tag>
   )
 }
 
-export function AgentList({ agents, selectedId, onSelect, onKill, filter, loading }: AgentListProps) {
+export function AgentList({ agents, selectedId, onSelect, onKill, filter, loading, fetchError, onRetry }: AgentListProps) {
   const [searchText, setSearchText] = useState(filter ?? '')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
@@ -182,7 +189,73 @@ export function AgentList({ agents, selectedId, onSelect, onKill, filter, loadin
 
       {/* Agent groups */}
       <div style={{ flex: 1, overflow: 'auto' }}>
-        {loading && agents.length === 0 && (
+        {fetchError && agents.length === 0 && (
+          <div
+            style={{
+              padding: tokens.space[4],
+              textAlign: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: tokens.space[2]
+            }}
+          >
+            <span style={{ color: neonVar('red', 'color'), fontSize: tokens.size.sm }}>
+              {fetchError}
+            </span>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                style={{
+                  padding: `${tokens.space[1]} ${tokens.space[3]}`,
+                  background: 'var(--neon-surface-deep, rgba(10,0,21,0.4))',
+                  border: `1px solid ${neonVar('cyan', 'border')}`,
+                  borderRadius: tokens.radius.sm,
+                  color: neonVar('cyan', 'color'),
+                  fontSize: tokens.size.xs,
+                  cursor: 'pointer'
+                }}
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
+        {fetchError && agents.length > 0 && (
+          <div
+            style={{
+              padding: `${tokens.space[1]} ${tokens.space[2]}`,
+              background: neonVar('orange', 'surface'),
+              borderBottom: `1px solid ${neonVar('orange', 'border')}`,
+              color: neonVar('orange', 'color'),
+              fontSize: tokens.size.xs,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}
+          >
+            <span>Refresh failed — showing cached list</span>
+            {onRetry && (
+              <button
+                onClick={onRetry}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: neonVar('orange', 'color'),
+                  cursor: 'pointer',
+                  fontSize: tokens.size.xs,
+                  textDecoration: 'underline',
+                  padding: 0
+                }}
+              >
+                Retry
+              </button>
+            )}
+          </div>
+        )}
+
+        {loading && agents.length === 0 && !fetchError && (
           <div
             style={{
               padding: tokens.space[2],
@@ -206,6 +279,7 @@ export function AgentList({ agents, selectedId, onSelect, onKill, filter, loadin
               open
               onToggle={() => {}}
               showPulse
+              collapsible={false}
             />
             {groups.running.map((a) => (
               <AgentCard
@@ -227,6 +301,7 @@ export function AgentList({ agents, selectedId, onSelect, onKill, filter, loadin
               open
               onToggle={() => {}}
               showPulse={false}
+              collapsible={false}
             />
             {groups.recent.map((a) => (
               <AgentCard

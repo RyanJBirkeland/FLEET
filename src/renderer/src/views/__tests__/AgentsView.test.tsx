@@ -157,13 +157,13 @@ describe('AgentsView', () => {
     expect(screen.getByTestId('agent-console')).toHaveTextContent('agent-2')
   })
 
-  it('shows Launchpad when Spawn Agent button clicked', () => {
+  it('shows Launchpad when New Agent button clicked', () => {
     mockAgentHistoryState.agents = [
       { id: 'agent-1', startedAt: new Date().toISOString(), status: 'complete' }
     ]
     render(<AgentsView />)
     // Click spawn button
-    fireEvent.click(screen.getByTitle('Spawn Agent'))
+    fireEvent.click(screen.getByTitle('New Agent'))
     expect(screen.getByTestId('agent-launchpad')).toBeInTheDocument()
   })
 
@@ -173,44 +173,6 @@ describe('AgentsView', () => {
     // Click the "Spawned" button in the mock launchpad
     fireEvent.click(screen.getByText('Spawned'))
     expect(mockAgentHistoryState.fetchAgents).toHaveBeenCalled()
-  })
-
-  // ---------- Branch coverage: Launch BDE Assistant button ----------
-
-  it('spawns BDE assistant on button click', async () => {
-    render(<AgentsView />)
-    // Wait for getRepoPaths to resolve
-    await act(async () => { await new Promise(r => setTimeout(r, 0)) })
-    await act(async () => {
-      fireEvent.click(screen.getByTitle('Launch BDE Assistant'))
-    })
-    expect(window.api.spawnAssistant).toHaveBeenCalledWith({ repoPath: '/repo/bde' })
-  })
-
-  it('shows error toast when no repo path found', async () => {
-    vi.mocked(window.api.getRepoPaths).mockResolvedValue({})
-    const { toast } = await import('../../stores/toasts')
-    render(<AgentsView />)
-    // Wait for getRepoPaths to resolve with empty
-    await act(async () => { await new Promise(r => setTimeout(r, 0)) })
-    await act(async () => {
-      fireEvent.click(screen.getByTitle('Launch BDE Assistant'))
-    })
-    expect(toast.error).toHaveBeenCalledWith('No repo path found')
-  })
-
-  it('shows error toast when spawn fails', async () => {
-    // Reset getRepoPaths to return valid paths for this test
-    vi.mocked(window.api.getRepoPaths).mockResolvedValue({ BDE: '/repo/bde' })
-    vi.mocked(window.api.spawnAssistant).mockRejectedValue(new Error('spawn fail'))
-    const { toast } = await import('../../stores/toasts')
-    render(<AgentsView />)
-    // Wait for getRepoPaths to resolve
-    await act(async () => { await new Promise(r => setTimeout(r, 0)) })
-    await act(async () => {
-      fireEvent.click(screen.getByTitle('Launch BDE Assistant'))
-    })
-    expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('spawn fail'))
   })
 
   // ---------- Branch coverage: bde:open-spawn-modal event ----------

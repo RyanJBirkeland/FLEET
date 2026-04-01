@@ -11,6 +11,7 @@ import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { ConsoleHeader } from './ConsoleHeader'
 import { ConsoleLine } from './ConsoleLine'
 import { CommandBar } from './CommandBar'
+import { PlaygroundModal } from './PlaygroundModal'
 
 const EMPTY_EVENTS: never[] = []
 
@@ -24,6 +25,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
   const parentRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
+  const [playgroundBlock, setPlaygroundBlock] = useState<{ filename: string; html: string; sizeBytes: number } | null>(null)
 
   // Load agent meta and events
   const agents = useAgentHistoryStore((s) => s.agents)
@@ -100,7 +102,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
                     transform: `translateY(${virtualRow.start}px)`
                   }}
                 >
-                  <ConsoleLine block={blocks[virtualRow.index]} />
+                  <ConsoleLine block={blocks[virtualRow.index]} onPlaygroundClick={setPlaygroundBlock} />
                 </div>
               ))}
             </div>
@@ -128,6 +130,15 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
         disabled={agent.status !== 'running'}
         disabledReason={agent.status !== 'running' ? 'Agent not running' : undefined}
       />
+
+      {playgroundBlock && (
+        <PlaygroundModal
+          html={playgroundBlock.html}
+          filename={playgroundBlock.filename}
+          sizeBytes={playgroundBlock.sizeBytes}
+          onClose={() => setPlaygroundBlock(null)}
+        />
+      )}
     </div>
   )
 }

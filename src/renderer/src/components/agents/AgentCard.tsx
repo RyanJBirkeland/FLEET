@@ -9,6 +9,7 @@ import { tokens } from '../../design-system/tokens'
 import { NeonCard } from '../neon/NeonCard'
 import { type NeonAccent, neonVar } from '../neon/types'
 import { toast } from '../../stores/toasts'
+import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 
 interface AgentCardProps {
   agent: AgentMeta
@@ -38,6 +39,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) 
   const accent = STATUS_ACCENTS[agent.status] ?? 'purple'
   const isRunning = agent.status === 'running'
   const SourceIcon = agent.source === 'bde' ? Bot : Cpu
+  const { confirm, confirmProps } = useConfirm()
 
   // Live duration ticker for running agents
   const [, setTick] = useState(0)
@@ -49,6 +51,14 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) 
 
   const handleKill = async (e: React.MouseEvent) => {
     e.stopPropagation()
+    const label = agent.task.length > 40 ? agent.task.slice(0, 40) + '\u2026' : agent.task
+    const ok = await confirm({
+      title: 'Stop Agent',
+      message: `Stop "${label}"? Any uncommitted work will be lost.`,
+      confirmLabel: 'Stop',
+      variant: 'danger'
+    })
+    if (!ok) return
     try {
       // Pipeline agents are keyed by sprintTaskId in AgentManager, adhoc agents by id
       const killId = agent.sprintTaskId ?? agent.id
@@ -62,6 +72,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) 
   }
 
   return (
+    <>
     <button
       onClick={onClick}
       style={{
@@ -164,5 +175,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) 
         </div>
       </NeonCard>
     </button>
+    <ConfirmModal {...confirmProps} />
+    </>
   )
 }

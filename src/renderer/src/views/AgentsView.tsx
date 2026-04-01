@@ -25,22 +25,14 @@ export function AgentsView() {
   const activeView = usePanelLayoutStore((s) => s.activeView)
   const agents = useAgentHistoryStore((s) => s.agents)
   const agentsLoading = useAgentHistoryStore((s) => s.loading)
+  const fetchError = useAgentHistoryStore((s) => s.fetchError)
   const fetchAgents = useAgentHistoryStore((s) => s.fetchAgents)
   const initEvents = useAgentEventsStore((s) => s.init)
   const loadHistory = useAgentEventsStore((s) => s.loadHistory)
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showLaunchpad, setShowLaunchpad] = useState(false)
-  const [repoPaths, setRepoPaths] = useState<Record<string, string>>({})
   const cleanupRef = useRef<(() => void) | null>(null)
-
-  // Fetch repo paths on mount
-  useEffect(() => {
-    window.api
-      .getRepoPaths()
-      .then(setRepoPaths)
-      .catch(() => {})
-  }, [])
 
   // Initialize event listener once
   useEffect(() => {
@@ -209,62 +201,28 @@ export function AgentsView() {
             >
               Fleet
             </span>
-            <div style={{ display: 'flex', gap: 6 }}>
-              <button
-                onClick={async () => {
-                  const repoPath = repoPaths['BDE'] || repoPaths[Object.keys(repoPaths)[0]]
-                  if (!repoPath) {
-                    toast.error('No repo path found')
-                    return
-                  }
-                  try {
-                    await window.api.spawnAssistant({ repoPath })
-                    toast.success('BDE Assistant spawned')
-                    fetchAgents()
-                  } catch (err) {
-                    toast.error(`Failed to spawn assistant: ${err instanceof Error ? err.message : 'Unknown error'}`)
-                  }
-                }}
-                title="Launch BDE Assistant"
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  border: '1px solid var(--neon-purple-border)',
-                  background: 'var(--neon-purple-surface)',
-                  color: 'var(--neon-purple)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                <Activity size={12} />
-              </button>
-              <button
-                onClick={() => {
-                  setSelectedId(null)
-                  setShowLaunchpad(true)
-                }}
-                title="Spawn Agent"
-                style={{
-                  width: 24,
-                  height: 24,
-                  borderRadius: 6,
-                  border: '1px solid var(--neon-cyan-border)',
-                  background: 'var(--neon-cyan-surface)',
-                  color: 'var(--neon-cyan)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  cursor: 'pointer',
-                  padding: 0
-                }}
-              >
-                <Plus size={12} />
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setSelectedId(null)
+                setShowLaunchpad(true)
+              }}
+              title="New Agent"
+              style={{
+                width: 24,
+                height: 24,
+                borderRadius: 6,
+                border: '1px solid var(--neon-cyan-border)',
+                background: 'var(--neon-cyan-surface)',
+                color: 'var(--neon-cyan)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                padding: 0
+              }}
+            >
+              <Plus size={12} />
+            </button>
           </div>
 
           <AgentList
@@ -273,6 +231,8 @@ export function AgentsView() {
             onSelect={handleSelectAgent}
             onKill={fetchAgents}
             loading={agentsLoading}
+            fetchError={fetchError}
+            onRetry={fetchAgents}
           />
         </div>
 
