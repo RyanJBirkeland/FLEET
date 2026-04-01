@@ -222,7 +222,7 @@ export default function DashboardView() {
 
           {/* Center: Main Stage */}
           <div className="dashboard-col dashboard-col--center">
-            <NeonCard accent="purple" title="Pipeline" icon={<Activity size={12} />}>
+            <NeonCard accent="cyan" title="Pipeline" icon={<Activity size={12} />}>
               <SankeyPipeline
                 stages={{
                   queued: partitions.todo.length,
@@ -282,7 +282,7 @@ export default function DashboardView() {
 
           {/* Right: Feed + Recent + Cost */}
           <div className="dashboard-col">
-            <NeonCard accent="purple" title="Feed" style={{ flex: 1, minHeight: 0 }}>
+            <NeonCard accent="blue" title="Feed" style={{ flex: 1, minHeight: 0 }}>
               {cardErrors.feed ? (
                 <div className="dashboard-card-error">
                   <div className="dashboard-card-error__message">{cardErrors.feed}</div>
