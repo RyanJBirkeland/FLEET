@@ -17,21 +17,21 @@ export interface StageConfig {
 }
 
 export const STAGE_CONFIG: Record<SankeyStageKey, StageConfig> = {
-  queued:  { accent: 'orange', label: 'QUEUED',  problem: false },
-  active:  { accent: 'cyan',   label: 'ACTIVE',  problem: false },
-  review:  { accent: 'purple', label: 'REVIEW',  problem: false },
-  done:    { accent: 'blue',   label: 'DONE',    problem: false },
-  blocked: { accent: 'red',    label: 'BLOCKED', problem: true },
-  failed:  { accent: 'red',    label: 'FAILED',  problem: true },
+  queued: { accent: 'orange', label: 'QUEUED', problem: false },
+  active: { accent: 'cyan', label: 'ACTIVE', problem: false },
+  review: { accent: 'purple', label: 'REVIEW', problem: false },
+  done: { accent: 'blue', label: 'DONE', problem: false },
+  blocked: { accent: 'red', label: 'BLOCKED', problem: true },
+  failed: { accent: 'red', label: 'FAILED', problem: true }
 }
 
 export const STAGE_TO_FILTER: Record<SankeyStageKey, StatusFilter> = {
-  queued:  'todo',
-  active:  'in-progress',
-  review:  'awaiting-review',
-  done:    'done',
+  queued: 'todo',
+  active: 'in-progress',
+  review: 'awaiting-review',
+  done: 'done',
   blocked: 'blocked',
-  failed:  'failed',
+  failed: 'failed'
 }
 
 /** Happy path stage keys in flow order. */

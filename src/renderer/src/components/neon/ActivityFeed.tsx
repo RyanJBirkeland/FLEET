@@ -25,7 +25,7 @@ function formatRelativeTime(timestamp: number): string {
   return `${Math.floor(hours / 24)}d ago`
 }
 
-export function ActivityFeed({ events, maxItems, onEventClick }: ActivityFeedProps) {
+export function ActivityFeed({ events, maxItems, onEventClick }: ActivityFeedProps): JSX.Element {
   const displayed = maxItems ? events.slice(0, maxItems) : events
 
   if (displayed.length === 0) {
@@ -73,10 +73,14 @@ export function ActivityFeed({ events, maxItems, onEventClick }: ActivityFeedPro
               : {})
           }}
           onMouseEnter={
-            onEventClick ? (e) => ((e.currentTarget as HTMLDivElement).style.opacity = '0.75') : undefined
+            onEventClick
+              ? (e) => ((e.currentTarget as HTMLDivElement).style.opacity = '0.75')
+              : undefined
           }
           onMouseLeave={
-            onEventClick ? (e) => ((e.currentTarget as HTMLDivElement).style.opacity = '1') : undefined
+            onEventClick
+              ? (e) => ((e.currentTarget as HTMLDivElement).style.opacity = '1')
+              : undefined
           }
         >
           <div
