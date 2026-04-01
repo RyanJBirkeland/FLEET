@@ -258,7 +258,7 @@ export function ConsoleLine({ block, onPlaygroundClick }: ConsoleLineProps): Rea
 
     case 'error':
       return (
-        <div className="console-line" data-testid="console-line-error">
+        <div className="console-line console-line--error" data-testid="console-line-error">
           <span className="console-prefix console-prefix--error">[error]</span>
           <span className="console-line__content">{block.message}</span>
           <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>

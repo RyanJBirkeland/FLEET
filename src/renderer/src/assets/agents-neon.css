@@ -267,6 +267,13 @@
   background: var(--neon-surface-dim);
 }
 
+/* Error line emphasis */
+.console-line--error {
+  background: var(--neon-red-surface);
+  border-left: 3px solid var(--neon-red);
+  padding-left: 9px;
+}
+
 /* Console Line Prefixes */
 .console-prefix {
   font-weight: 600;
