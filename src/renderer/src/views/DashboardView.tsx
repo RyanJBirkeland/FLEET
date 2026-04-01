@@ -277,7 +277,7 @@ export default function DashboardView() {
                 </div>
               ) : (
                 <div className="dashboard-feed-scroll">
-                  <ActivityFeed events={feedEvents} />
+                  <ActivityFeed events={feedEvents} onEventClick={() => setView('agents')} />
                 </div>
               )}
             </NeonCard>
