@@ -1,3 +1,4 @@
+import { useReducedMotion } from 'framer-motion'
 import type { StatusFilter } from '../../stores/sprintUI'
 import { neonVar } from './types'
 import { formatCount, STAGE_CONFIG, STAGE_TO_FILTER, type SankeyStageKey } from './sankey-utils'
@@ -63,11 +64,34 @@ function flowPath(
  * Renders stage nodes connected by flow paths with click interaction
  * and keyboard accessibility.
  */
+/** Composite path through happy-path node centers: queued → active → review → done. */
+function buildHappyPathD(): string {
+  const nodes: SankeyStageKey[] = ['queued', 'active', 'review', 'done']
+  const centers = nodes.map((k) => {
+    const p = NODE_POS[k]
+    return { x: p.x + p.w / 2, y: p.y + p.h / 2 }
+  })
+  let d = `M ${centers[0].x} ${centers[0].y}`
+  for (let i = 0; i < centers.length - 1; i++) {
+    const c1 = centers[i]
+    const c2 = centers[i + 1]
+    const cpx = (c1.x + c2.x) / 2
+    d += ` C ${cpx} ${c1.y}, ${cpx} ${c2.y}, ${c2.x} ${c2.y}`
+  }
+  return d
+}
+
+const HAPPY_PATH_D = buildHappyPathD()
+
 export function SankeyPipeline({
   stages,
   onStageClick,
+  animated,
   className = '',
 }: SankeyPipelineProps) {
+  const reduced = useReducedMotion()
+  const showParticles = animated !== false && !reduced
+
   function handleClick(key: SankeyStageKey) {
     onStageClick?.(STAGE_TO_FILTER[key])
   }
@@ -219,6 +243,27 @@ export function SankeyPipeline({
           </g>
         )
       })}
+
+      {/* Layer 3 — Ambient particles along happy path */}
+      {showParticles && (
+        <>
+          <circle className="sankey-particle" r={3.5} fill="currentColor" filter="url(#sankey-glow)" opacity={0}>
+            <animateMotion dur="7s" repeatCount="indefinite" begin="0s" path={HAPPY_PATH_D} />
+            <animate attributeName="fill" values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff" dur="7s" repeatCount="indefinite" begin="0s" />
+            <animate attributeName="opacity" values="0;0.85;0.85;0.85;0" dur="7s" repeatCount="indefinite" begin="0s" />
+          </circle>
+          <circle className="sankey-particle" r={2.5} fill="currentColor" filter="url(#sankey-glow)" opacity={0}>
+            <animateMotion dur="6s" repeatCount="indefinite" begin="2.5s" path={HAPPY_PATH_D} />
+            <animate attributeName="fill" values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff" dur="6s" repeatCount="indefinite" begin="2.5s" />
+            <animate attributeName="opacity" values="0;0.7;0.7;0.7;0" dur="6s" repeatCount="indefinite" begin="2.5s" />
+          </circle>
+          <circle className="sankey-particle" r={2} fill="currentColor" filter="url(#sankey-glow)" opacity={0}>
+            <animateMotion dur="8s" repeatCount="indefinite" begin="5s" path={HAPPY_PATH_D} />
+            <animate attributeName="fill" values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff" dur="8s" repeatCount="indefinite" begin="5s" />
+            <animate attributeName="opacity" values="0;0.6;0.6;0.6;0" dur="8s" repeatCount="indefinite" begin="5s" />
+          </circle>
+        </>
+      )}
     </svg>
   )
 }

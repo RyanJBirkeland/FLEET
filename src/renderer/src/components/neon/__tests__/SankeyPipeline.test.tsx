@@ -82,6 +82,22 @@ describe('SankeyPipeline', () => {
   })
 })
 
+describe('SankeyPipeline particles', () => {
+  it('renders ambient particles when animated', () => {
+    const { container } = render(<SankeyPipeline stages={defaultStages} />)
+    const particles = container.querySelectorAll('.sankey-particle')
+    expect(particles.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('hides particles when animated=false', () => {
+    const { container } = render(
+      <SankeyPipeline stages={defaultStages} animated={false} />
+    )
+    const particles = container.querySelectorAll('.sankey-particle')
+    expect(particles).toHaveLength(0)
+  })
+})
+
 describe('sankey-utils', () => {
   describe('formatCount', () => {
     it('returns number as string for counts under 1000', () => {
