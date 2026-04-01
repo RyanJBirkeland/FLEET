@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
 import type { StatusFilter } from '../../stores/sprintUI'
 import type { NeonAccent } from './types'
@@ -22,12 +22,12 @@ interface SankeyPipelineProps {
 
 /** Node layout positions within the SVG viewBox (540x160). */
 const NODE_POS: Record<SankeyStageKey, { x: number; y: number; w: number; h: number }> = {
-  queued:  { x: 8,   y: 25, w: 82,  h: 65 },
-  active:  { x: 160, y: 22, w: 80,  h: 55 },
-  review:  { x: 310, y: 22, w: 85,  h: 55 },
-  done:    { x: 455, y: 18, w: 75,  h: 50 },
+  queued: { x: 8, y: 25, w: 82, h: 65 },
+  active: { x: 160, y: 22, w: 80, h: 55 },
+  review: { x: 310, y: 22, w: 85, h: 55 },
+  done: { x: 455, y: 18, w: 75, h: 50 },
   blocked: { x: 160, y: 105, w: 80, h: 40 },
-  failed:  { x: 355, y: 100, w: 75, h: 40 },
+  failed: { x: 355, y: 100, w: 75, h: 40 }
 }
 
 /** Stage render order (main path then branches). */
@@ -37,20 +37,17 @@ const STAGE_ORDER: SankeyStageKey[] = ['queued', 'active', 'review', 'done', 'bl
 const MAIN_FLOWS: [SankeyStageKey, SankeyStageKey][] = [
   ['queued', 'active'],
   ['active', 'review'],
-  ['review', 'done'],
+  ['review', 'done']
 ]
 
 /** Branch flow connections (problem paths). */
 const BRANCH_FLOWS: [SankeyStageKey, SankeyStageKey][] = [
   ['active', 'blocked'],
   ['active', 'failed'],
-  ['review', 'failed'],
+  ['review', 'failed']
 ]
 
-function flowPath(
-  from: SankeyStageKey,
-  to: SankeyStageKey
-): string {
+function flowPath(from: SankeyStageKey, to: SankeyStageKey): string {
   const a = NODE_POS[from]
   const b = NODE_POS[to]
   const x1 = a.x + a.w
@@ -89,19 +86,29 @@ export function SankeyPipeline({
   stages,
   onStageClick,
   animated,
-  className = '',
-}: SankeyPipelineProps) {
+  className = ''
+}: SankeyPipelineProps): JSX.Element {
   const reduced = useReducedMotion()
   const showParticles = animated !== false && !reduced
 
   // --- Transition detection ---
   const prevStagesRef = useRef(stages)
-  const [transitions, setTransitions] = useState<Array<{
-    id: string
-    to: SankeyStageKey
-    accent: NeonAccent
-    startTime: number
-  }>>([])
+  const timeoutRefs = useRef<number[]>([])
+  const [transitions, setTransitions] = useState<
+    Array<{
+      id: string
+      to: SankeyStageKey
+      accent: NeonAccent
+      startTime: number
+    }>
+  >([])
+
+  // Clean up all timeouts on unmount
+  useEffect(() => {
+    return () => {
+      timeoutRefs.current.forEach((id) => clearTimeout(id))
+    }
+  }, [])
 
   useEffect(() => {
     const prev = prevStagesRef.current
@@ -118,30 +125,31 @@ export function SankeyPipeline({
           id: `${key}-${Date.now()}`,
           to: key as SankeyStageKey,
           accent: STAGE_CONFIG[key as SankeyStageKey].accent,
-          startTime: Date.now(),
+          startTime: Date.now()
         })
       }
     }
 
     if (newTransitions.length > 0) {
-      setTransitions(t => [...t, ...newTransitions])
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- Intentional: transition detection requires synchronous state update to trigger animation ripples before the next paint
+      setTransitions((t) => [...t, ...newTransitions])
       // Clean up after animation duration (800ms)
-      setTimeout(() => {
-        setTransitions(t =>
-          t.filter(tr => !newTransitions.some(n => n.id === tr.id))
-        )
+      const timeoutId = window.setTimeout(() => {
+        setTransitions((t) => t.filter((tr) => !newTransitions.some((n) => n.id === tr.id)))
+        timeoutRefs.current = timeoutRefs.current.filter((id) => id !== timeoutId)
       }, 800)
+      timeoutRefs.current.push(timeoutId)
     }
   }, [stages, reduced, animated])
 
   // Set of stage keys with active transitions (for count flash)
-  const flashingStages = new Set(transitions.map(t => t.to))
+  const flashingStages = useMemo(() => new Set(transitions.map((t) => t.to)), [transitions])
 
-  function handleClick(key: SankeyStageKey) {
+  function handleClick(key: SankeyStageKey): void {
     onStageClick?.(STAGE_TO_FILTER[key])
   }
 
-  function handleKeyDown(e: React.KeyboardEvent, key: SankeyStageKey) {
+  function handleKeyDown(e: React.KeyboardEvent, key: SankeyStageKey): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
       onStageClick?.(STAGE_TO_FILTER[key])
@@ -293,26 +301,80 @@ export function SankeyPipeline({
       {/* Layer 3 — Ambient particles along happy path */}
       {showParticles && (
         <>
-          <circle className="sankey-particle" r={3.5} fill="currentColor" filter="url(#sankey-glow)" opacity={0}>
+          <circle
+            className="sankey-particle"
+            r={3.5}
+            fill="currentColor"
+            filter="url(#sankey-glow)"
+            opacity={0}
+          >
             <animateMotion dur="7s" repeatCount="indefinite" begin="0s" path={HAPPY_PATH_D} />
-            <animate attributeName="fill" values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff" dur="7s" repeatCount="indefinite" begin="0s" />
-            <animate attributeName="opacity" values="0;0.85;0.85;0.85;0" dur="7s" repeatCount="indefinite" begin="0s" />
+            <animate
+              attributeName="fill"
+              values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff"
+              dur="7s"
+              repeatCount="indefinite"
+              begin="0s"
+            />
+            <animate
+              attributeName="opacity"
+              values="0;0.85;0.85;0.85;0"
+              dur="7s"
+              repeatCount="indefinite"
+              begin="0s"
+            />
           </circle>
-          <circle className="sankey-particle" r={2.5} fill="currentColor" filter="url(#sankey-glow)" opacity={0}>
+          <circle
+            className="sankey-particle"
+            r={2.5}
+            fill="currentColor"
+            filter="url(#sankey-glow)"
+            opacity={0}
+          >
             <animateMotion dur="6s" repeatCount="indefinite" begin="2.5s" path={HAPPY_PATH_D} />
-            <animate attributeName="fill" values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff" dur="6s" repeatCount="indefinite" begin="2.5s" />
-            <animate attributeName="opacity" values="0;0.7;0.7;0.7;0" dur="6s" repeatCount="indefinite" begin="2.5s" />
+            <animate
+              attributeName="fill"
+              values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff"
+              dur="6s"
+              repeatCount="indefinite"
+              begin="2.5s"
+            />
+            <animate
+              attributeName="opacity"
+              values="0;0.7;0.7;0.7;0"
+              dur="6s"
+              repeatCount="indefinite"
+              begin="2.5s"
+            />
           </circle>
-          <circle className="sankey-particle" r={2} fill="currentColor" filter="url(#sankey-glow)" opacity={0}>
+          <circle
+            className="sankey-particle"
+            r={2}
+            fill="currentColor"
+            filter="url(#sankey-glow)"
+            opacity={0}
+          >
             <animateMotion dur="8s" repeatCount="indefinite" begin="5s" path={HAPPY_PATH_D} />
-            <animate attributeName="fill" values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff" dur="8s" repeatCount="indefinite" begin="5s" />
-            <animate attributeName="opacity" values="0;0.6;0.6;0.6;0" dur="8s" repeatCount="indefinite" begin="5s" />
+            <animate
+              attributeName="fill"
+              values="#ffa500;#0ff;#b482ff;#0080ff;#0080ff"
+              dur="8s"
+              repeatCount="indefinite"
+              begin="5s"
+            />
+            <animate
+              attributeName="opacity"
+              values="0;0.6;0.6;0.6;0"
+              dur="8s"
+              repeatCount="indefinite"
+              begin="5s"
+            />
           </circle>
         </>
       )}
 
       {/* Layer 4 — Transition ripple effects */}
-      {transitions.map(t => {
+      {transitions.map((t) => {
         const pos = NODE_POS[t.to]
         return (
           <rect

@@ -34,7 +34,7 @@ import {
   Target
 } from 'lucide-react'
 
-export default function DashboardView() {
+export default function DashboardView(): JSX.Element {
   const reduced = useReducedMotion()
   const tasks = useSprintTasks((s) => s.tasks)
   const totalCost = useCostDataStore((s) => s.totalCost)
@@ -44,31 +44,32 @@ export default function DashboardView() {
   const setView = usePanelLayoutStore((s) => s.setView)
 
   // Dashboard data from centralized polling
-  const { chartData, feedEvents, prCount, loading, cardErrors, lastFetchedAt } = useDashboardDataStore(
-    useShallow((s) => ({
-      chartData: s.chartData,
-      feedEvents: s.feedEvents,
-      prCount: s.prCount,
-      loading: s.loading,
-      cardErrors: s.cardErrors,
-      lastFetchedAt: s.lastFetchedAt,
-    }))
-  )
+  const { chartData, feedEvents, prCount, loading, cardErrors, lastFetchedAt } =
+    useDashboardDataStore(
+      useShallow((s) => ({
+        chartData: s.chartData,
+        feedEvents: s.feedEvents,
+        prCount: s.prCount,
+        loading: s.loading,
+        cardErrors: s.cardErrors,
+        lastFetchedAt: s.lastFetchedAt
+      }))
+    )
 
-  // Tick counter to re-evaluate freshness every 10s
-  const [tick, setTick] = useState(0)
+  // Timestamp counter to re-evaluate freshness every 10s
+  const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
-    const interval = setInterval(() => setTick(n => n + 1), 10_000)
+    const interval = setInterval(() => setNow(Date.now()), 10_000)
     return () => clearInterval(interval)
   }, [])
 
   // Freshness: how long ago data was last fetched, and whether it's stale (>2min)
   const freshness = useMemo(() => {
     if (!lastFetchedAt) return { text: '', stale: false }
-    const ago = Math.floor((Date.now() - lastFetchedAt) / 1000)
+    const ago = Math.floor((now - lastFetchedAt) / 1000)
     const text = ago < 10 ? 'just now' : ago < 60 ? `${ago}s ago` : `${Math.floor(ago / 60)}m ago`
     return { text, stale: ago > 120 }
-  }, [lastFetchedAt, tick])
+  }, [lastFetchedAt, now])
 
   /** Navigate to Sprint Center with a pre-applied status filter. */
   const navigateToSprintWithFilter = useCallback(
@@ -80,31 +81,44 @@ export default function DashboardView() {
     [setStatusFilter, setSearchQuery, setView]
   )
 
-  const handleCompletionClick = useCallback((_task: typeof recentCompletions[number]) => {
+  const keyDownFor = useCallback(
+    (filter: StatusFilter) => (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault()
+        navigateToSprintWithFilter(filter)
+      }
+    },
+    [navigateToSprintWithFilter]
+  )
+
+  const handleCompletionClick = useCallback(() => {
     navigateToSprintWithFilter('done')
   }, [navigateToSprintWithFilter])
 
   const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
-  // Derived stats
+  // Derived stats (single-pass)
   const stats = useMemo(() => {
-    const active = tasks.filter((t) => t.status === 'active').length
-    const queued = tasks.filter((t) => t.status === 'queued').length
-    const blocked = tasks.filter((t) => t.status === 'blocked').length
-    const done = tasks.filter((t) => t.status === 'done').length
-    const failed = tasks.filter((t) =>
-      ['failed', 'error', 'cancelled'].includes(t.status)
-    ).length
-    return { active, queued, blocked, done, failed }
+    const counts = { active: 0, queued: 0, blocked: 0, done: 0, failed: 0, actualFailed: 0 }
+    for (const t of tasks) {
+      if (t.status === 'active') counts.active++
+      else if (t.status === 'queued') counts.queued++
+      else if (t.status === 'blocked') counts.blocked++
+      else if (t.status === 'done') counts.done++
+      else if (t.status === 'failed' || t.status === 'error' || t.status === 'cancelled') {
+        counts.failed++
+        if (t.status !== 'cancelled') counts.actualFailed++
+      }
+    }
+    return counts
   }, [tasks])
 
   // Success rate — excludes cancelled tasks (intentional user action, not system failure)
   const successRate = useMemo(() => {
-    const actualFailed = tasks.filter((t) => ['failed', 'error'].includes(t.status)).length
-    const terminal = stats.done + actualFailed
+    const terminal = stats.done + stats.actualFailed
     if (terminal === 0) return null
     return Math.round((stats.done / terminal) * 100)
-  }, [tasks, stats])
+  }, [stats])
 
   // Average duration from agent cost records
   const avgDuration = useMemo(() => {
@@ -127,6 +141,11 @@ export default function DashboardView() {
     }))
   }, [localAgents])
 
+  const costAvg = useMemo(() => {
+    if (costTrendData.length === 0) return null
+    return (costTrendData.reduce((s, d) => s + d.value, 0) / costTrendData.length).toFixed(2)
+  }, [costTrendData])
+
   // Recent completions — last 5 done tasks
   const recentCompletions = useMemo(() => {
     return tasks
@@ -134,6 +153,8 @@ export default function DashboardView() {
       .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
       .slice(0, 5)
   }, [tasks])
+
+  const errorCount = useMemo(() => Object.values(cardErrors).filter(Boolean).length, [cardErrors])
 
   const transition = reduced ? REDUCED_TRANSITION : SPRINGS.snappy
 
@@ -154,19 +175,20 @@ export default function DashboardView() {
         <StatusBar title="BDE Command Center" status={freshness.stale ? 'warning' : 'ok'}>
           {loading && !chartData.length ? (
             <span className="dashboard-status-loading">Loading...</span>
-          ) : Object.values(cardErrors).filter(Boolean).length > 0 ? (
-            <span
-              className="dashboard-status-error"
-              style={{ color: neonVar('red', 'color') }}
-            >
-              {Object.values(cardErrors).filter(Boolean).length} card{Object.values(cardErrors).filter(Boolean).length !== 1 ? 's' : ''} failed
+          ) : errorCount > 0 ? (
+            <span className="dashboard-status-error" style={{ color: neonVar('red', 'color') }}>
+              {errorCount} card
+              {errorCount !== 1 ? 's' : ''} failed
             </span>
           ) : (
             <span className="dashboard-status-ok">
               SYS.OK
               {freshness.text && (
-                <span className={`dashboard-status-freshness${freshness.stale ? ' dashboard-status-freshness--stale' : ''}`}>
-                  {' · '}{freshness.text}
+                <span
+                  className={`dashboard-status-freshness${freshness.stale ? ' dashboard-status-freshness--stale' : ''}`}
+                >
+                  {' · '}
+                  {freshness.text}
                 </span>
               )}
             </span>
@@ -191,220 +213,226 @@ export default function DashboardView() {
             </NeonCard>
           </div>
         ) : (
-        <div className="dashboard-grid" role="region" aria-label="Dashboard overview">
-          {/* Left: Stats Stack */}
-          <div className="dashboard-col" role="region" aria-label="Task statistics">
-            <StatCounter
-              label="Active"
-              value={stats.active}
-              accent="cyan"
-              suffix="live"
-              icon={<Zap size={10} />}
-              onClick={() => navigateToSprintWithFilter('in-progress')}
-            />
-            <StatCounter
-              label="Queued"
-              value={stats.queued}
-              accent="orange"
-              icon={<Activity size={10} />}
-              onClick={() => navigateToSprintWithFilter('todo')}
-            />
-            <StatCounter
-              label="Blocked"
-              value={stats.blocked}
-              accent="red"
-              icon={<AlertTriangle size={10} />}
-              onClick={() => navigateToSprintWithFilter('blocked')}
-            />
-            <StatCounter
-              label="Failed"
-              value={stats.failed}
-              accent="red"
-              icon={<XCircle size={10} />}
-              onClick={() => navigateToSprintWithFilter('failed')}
-            />
-            <StatCounter
-              label="PRs"
-              value={cardErrors.prs ? '—' : prCount}
-              accent={cardErrors.prs ? 'red' : 'blue'}
-              icon={<GitPullRequest size={10} />}
-              onClick={() => navigateToSprintWithFilter('awaiting-review')}
-            />
-            <StatCounter
-              label="Done"
-              value={stats.done}
-              accent="cyan"
-              icon={<CheckCircle size={10} />}
-              onClick={() => navigateToSprintWithFilter('done')}
-            />
-            <button
-              className="dashboard-new-task-btn"
-              onClick={() => setView('task-workbench')}
-            >
-              <Plus size={12} /> New Task
-            </button>
-          </div>
-
-          {/* Center: Main Stage */}
-          <div className="dashboard-col dashboard-col--center">
-            {(stats.failed > 0 || partitions.awaitingReview.length > 0 || stats.blocked > 0) && (
-              <NeonCard accent="red" title="Attention">
-                {stats.failed > 0 && (
-                  <div className="dashboard-attention-item" role="button" tabIndex={0}
-                    onClick={() => navigateToSprintWithFilter('failed')}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateToSprintWithFilter('failed') } }}>
-                    <XCircle size={12} />
-                    <span>{stats.failed} failed task{stats.failed !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-                {partitions.awaitingReview.length > 0 && (
-                  <div className="dashboard-attention-item" role="button" tabIndex={0}
-                    onClick={() => navigateToSprintWithFilter('awaiting-review')}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateToSprintWithFilter('awaiting-review') } }}>
-                    <GitPullRequest size={12} />
-                    <span>{partitions.awaitingReview.length} PR{partitions.awaitingReview.length !== 1 ? 's' : ''} awaiting review</span>
-                  </div>
-                )}
-                {stats.blocked > 0 && (
-                  <div className="dashboard-attention-item" role="button" tabIndex={0}
-                    onClick={() => navigateToSprintWithFilter('blocked')}
-                    onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigateToSprintWithFilter('blocked') } }}>
-                    <AlertTriangle size={12} />
-                    <span>{stats.blocked} blocked task{stats.blocked !== 1 ? 's' : ''}</span>
-                  </div>
-                )}
-              </NeonCard>
-            )}
-
-            <NeonCard accent="cyan" title="Pipeline" icon={<Activity size={12} />}>
-              <SankeyPipeline
-                stages={{
-                  queued: partitions.todo.length,
-                  active: partitions.inProgress.length,
-                  review: partitions.awaitingReview.length,
-                  done: partitions.done.length,
-                  blocked: partitions.blocked.length,
-                  failed: partitions.failed.length,
-                }}
-                onStageClick={navigateToSprintWithFilter}
+          <div className="dashboard-grid" role="region" aria-label="Dashboard overview">
+            {/* Left: Stats Stack */}
+            <div className="dashboard-col" role="region" aria-label="Task statistics">
+              <StatCounter
+                label="Active"
+                value={stats.active}
+                accent="cyan"
+                suffix="live"
+                icon={<Zap size={10} />}
+                onClick={() => navigateToSprintWithFilter('in-progress')}
               />
-            </NeonCard>
+              <StatCounter
+                label="Queued"
+                value={stats.queued}
+                accent="orange"
+                icon={<Activity size={10} />}
+                onClick={() => navigateToSprintWithFilter('todo')}
+              />
+              <StatCounter
+                label="Blocked"
+                value={stats.blocked}
+                accent="red"
+                icon={<AlertTriangle size={10} />}
+                onClick={() => navigateToSprintWithFilter('blocked')}
+              />
+              <StatCounter
+                label="Failed"
+                value={stats.failed}
+                accent="red"
+                icon={<XCircle size={10} />}
+                onClick={() => navigateToSprintWithFilter('failed')}
+              />
+              <StatCounter
+                label="PRs"
+                value={cardErrors.prs ? '—' : prCount}
+                accent={cardErrors.prs ? 'red' : 'blue'}
+                icon={<GitPullRequest size={10} />}
+                onClick={() => navigateToSprintWithFilter('awaiting-review')}
+              />
+              <StatCounter
+                label="Done"
+                value={stats.done}
+                accent="cyan"
+                icon={<CheckCircle size={10} />}
+                onClick={() => navigateToSprintWithFilter('done')}
+              />
+              <button className="dashboard-new-task-btn" onClick={() => setView('task-workbench')}>
+                <Plus size={12} /> New Task
+              </button>
+            </div>
 
-            <NeonCard
-              accent="cyan"
-              title="Completions by Hour"
-              icon={<Zap size={12} />}
-            >
-              {cardErrors.chart ? (
-                <div className="dashboard-card-error">
-                  <div className="dashboard-card-error__message">{cardErrors.chart}</div>
-                  <button
-                    className="dashboard-card-error__retry"
-                    onClick={() => useDashboardDataStore.getState().fetchAll()}
-                    style={{
-                      border: `1px solid ${neonVar('red', 'color')}`,
-                      color: neonVar('red', 'color')
-                    }}
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                <>
-                  <MiniChart data={chartData} height={120} />
-                  <div className="dashboard-chart-caption">completions per hour, last 24h</div>
-                </>
+            {/* Center: Main Stage */}
+            <div className="dashboard-col dashboard-col--center">
+              {(stats.failed > 0 || partitions.awaitingReview.length > 0 || stats.blocked > 0) && (
+                <NeonCard accent="red" title="Attention">
+                  {stats.failed > 0 && (
+                    <div
+                      className="dashboard-attention-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigateToSprintWithFilter('failed')}
+                      onKeyDown={keyDownFor('failed')}
+                    >
+                      <XCircle size={12} />
+                      <span>
+                        {stats.failed} failed task{stats.failed !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                  {partitions.awaitingReview.length > 0 && (
+                    <div
+                      className="dashboard-attention-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigateToSprintWithFilter('awaiting-review')}
+                      onKeyDown={keyDownFor('awaiting-review')}
+                    >
+                      <GitPullRequest size={12} />
+                      <span>
+                        {partitions.awaitingReview.length} PR
+                        {partitions.awaitingReview.length !== 1 ? 's' : ''} awaiting review
+                      </span>
+                    </div>
+                  )}
+                  {stats.blocked > 0 && (
+                    <div
+                      className="dashboard-attention-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigateToSprintWithFilter('blocked')}
+                      onKeyDown={keyDownFor('blocked')}
+                    >
+                      <AlertTriangle size={12} />
+                      <span>
+                        {stats.blocked} blocked task{stats.blocked !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                  )}
+                </NeonCard>
               )}
-            </NeonCard>
 
-            {/* Stats row: Success Rate + Avg Duration */}
-            <div className="dashboard-stats-row">
-              <NeonCard accent="cyan" title="Success Rate" icon={<Target size={12} />}>
-                <SuccessRing rate={successRate} done={stats.done} failed={stats.failed} />
+              <NeonCard accent="cyan" title="Pipeline" icon={<Activity size={12} />}>
+                <SankeyPipeline
+                  stages={{
+                    queued: partitions.todo.length,
+                    active: partitions.inProgress.length,
+                    review: partitions.awaitingReview.length,
+                    done: partitions.done.length,
+                    blocked: partitions.blocked.length,
+                    failed: partitions.failed.length
+                  }}
+                  onStageClick={navigateToSprintWithFilter}
+                />
               </NeonCard>
 
-              <NeonCard accent="blue" title="Avg Duration" icon={<Clock size={12} />}>
-                <div className="dashboard-duration-value">
-                  {avgDuration != null ? formatDuration(avgDuration) : '—'}
+              <NeonCard accent="cyan" title="Completions by Hour" icon={<Zap size={12} />}>
+                {cardErrors.chart ? (
+                  <div className="dashboard-card-error">
+                    <div className="dashboard-card-error__message">{cardErrors.chart}</div>
+                    <button
+                      className="dashboard-card-error__retry"
+                      onClick={() => useDashboardDataStore.getState().fetchAll()}
+                      style={{
+                        border: `1px solid ${neonVar('red', 'color')}`,
+                        color: neonVar('red', 'color')
+                      }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <MiniChart data={chartData} height={120} />
+                    <div className="dashboard-chart-caption">completions per hour, last 24h</div>
+                  </>
+                )}
+              </NeonCard>
+
+              {/* Stats row: Success Rate + Avg Duration */}
+              <div className="dashboard-stats-row">
+                <NeonCard accent="cyan" title="Success Rate" icon={<Target size={12} />}>
+                  <SuccessRing rate={successRate} done={stats.done} failed={stats.failed} />
+                </NeonCard>
+
+                <NeonCard accent="blue" title="Avg Duration" icon={<Clock size={12} />}>
+                  <div className="dashboard-duration-value">
+                    {avgDuration != null ? formatDuration(avgDuration) : '—'}
+                  </div>
+                  <div className="dashboard-duration-meta">
+                    {localAgents.filter((a) => a.durationMs != null).length} runs tracked
+                  </div>
+                </NeonCard>
+              </div>
+            </div>
+
+            {/* Right: Feed + Recent + Cost */}
+            <div className="dashboard-col">
+              <NeonCard accent="blue" title="Feed" style={{ flex: 1, minHeight: 0 }}>
+                {cardErrors.feed ? (
+                  <div className="dashboard-card-error">
+                    <div className="dashboard-card-error__message">{cardErrors.feed}</div>
+                    <button
+                      className="dashboard-card-error__retry"
+                      onClick={() => useDashboardDataStore.getState().fetchAll()}
+                      style={{
+                        border: `1px solid ${neonVar('red', 'color')}`,
+                        color: neonVar('red', 'color')
+                      }}
+                    >
+                      Retry
+                    </button>
+                  </div>
+                ) : (
+                  <div className="dashboard-feed-scroll">
+                    <ActivityFeed events={feedEvents} onEventClick={() => setView('agents')} />
+                  </div>
+                )}
+              </NeonCard>
+
+              <NeonCard accent="cyan" title="Recent Completions" icon={<CheckCircle size={12} />}>
+                <div className="dashboard-completions-list">
+                  {recentCompletions.length === 0 ? (
+                    <div className="dashboard-completions-empty">No completions yet</div>
+                  ) : (
+                    recentCompletions.map((t) => (
+                      <div
+                        key={t.id}
+                        className="dashboard-completion-row"
+                        role="button"
+                        tabIndex={0}
+                        onClick={handleCompletionClick}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            handleCompletionClick()
+                          }
+                        }}
+                      >
+                        <span className="dashboard-completion-title">{t.title}</span>
+                        <span className="dashboard-completion-time">
+                          {timeAgo(t.completed_at!)}
+                        </span>
+                      </div>
+                    ))
+                  )}
                 </div>
-                <div className="dashboard-duration-meta">
-                  {localAgents.filter((a) => a.durationMs != null).length} runs tracked
+              </NeonCard>
+
+              <NeonCard accent="orange" title="Cost / Run" icon={<TrendingUp size={12} />}>
+                <MiniChart data={costTrendData} height={80} />
+                <div className="dashboard-chart-caption">
+                  {costTrendData.length} runs{costAvg && ` · avg $${costAvg}`}
                 </div>
+              </NeonCard>
+
+              <NeonCard accent="orange" title="Cost 24h" icon={<DollarSign size={12} />}>
+                <div className="dashboard-cost-value">${totalCost.toFixed(2)}</div>
               </NeonCard>
             </div>
           </div>
-
-          {/* Right: Feed + Recent + Cost */}
-          <div className="dashboard-col">
-            <NeonCard accent="blue" title="Feed" style={{ flex: 1, minHeight: 0 }}>
-              {cardErrors.feed ? (
-                <div className="dashboard-card-error">
-                  <div className="dashboard-card-error__message">{cardErrors.feed}</div>
-                  <button
-                    className="dashboard-card-error__retry"
-                    onClick={() => useDashboardDataStore.getState().fetchAll()}
-                    style={{
-                      border: `1px solid ${neonVar('red', 'color')}`,
-                      color: neonVar('red', 'color')
-                    }}
-                  >
-                    Retry
-                  </button>
-                </div>
-              ) : (
-                <div className="dashboard-feed-scroll">
-                  <ActivityFeed events={feedEvents} onEventClick={() => setView('agents')} />
-                </div>
-              )}
-            </NeonCard>
-
-            <NeonCard accent="cyan" title="Recent Completions" icon={<CheckCircle size={12} />}>
-              <div className="dashboard-completions-list">
-                {recentCompletions.length === 0 ? (
-                  <div className="dashboard-completions-empty">
-                    No completions yet
-                  </div>
-                ) : (
-                  recentCompletions.map((t) => (
-                    <div
-                      key={t.id}
-                      className="dashboard-completion-row"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => handleCompletionClick(t)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault()
-                          handleCompletionClick(t)
-                        }
-                      }}
-                    >
-                      <span className="dashboard-completion-title">
-                        {t.title}
-                      </span>
-                      <span className="dashboard-completion-time">
-                        {timeAgo(t.completed_at!)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </NeonCard>
-
-            <NeonCard accent="orange" title="Cost / Run" icon={<TrendingUp size={12} />}>
-              <MiniChart data={costTrendData} height={80} />
-              <div className="dashboard-chart-caption">
-                {costTrendData.length} runs{costTrendData.length > 0 && ` · avg $${(costTrendData.reduce((s, d) => s + d.value, 0) / costTrendData.length).toFixed(2)}`}
-              </div>
-            </NeonCard>
-
-            <NeonCard accent="orange" title="Cost 24h" icon={<DollarSign size={12} />}>
-              <div className="dashboard-cost-value">
-                ${totalCost.toFixed(2)}
-              </div>
-            </NeonCard>
-          </div>
-        </div>
         )}
       </div>
     </motion.div>
@@ -420,13 +448,9 @@ function SuccessRing({
   rate: number | null
   done: number
   failed: number
-}) {
+}): JSX.Element {
   if (rate === null) {
-    return (
-      <div className="dashboard-ring-empty">
-        No terminal tasks
-      </div>
-    )
+    return <div className="dashboard-ring-empty">No terminal tasks</div>
   }
 
   const size = 64
@@ -439,12 +463,7 @@ function SuccessRing({
   return (
     <div className="dashboard-ring">
       <svg width={size} height={size} className="dashboard-ring__svg">
-        <circle
-          cx={size / 2}
-          cy={size / 2}
-          r={r}
-          className="dashboard-ring__bg"
-        />
+        <circle cx={size / 2} cy={size / 2} r={r} className="dashboard-ring__bg" />
         <circle
           cx={size / 2}
           cy={size / 2}
