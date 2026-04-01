@@ -11,8 +11,6 @@ import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import { useSprintEvents } from '../../stores/sprintEvents'
 import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
-import { useSprintPolling } from '../../hooks/useSprintPolling'
-import { usePrStatusPolling } from '../../hooks/usePrStatusPolling'
 import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcuts'
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { useHealthCheckPolling } from '../../hooks/useHealthCheck'
@@ -120,9 +118,6 @@ export function SprintPipeline() {
   )
   useTaskToasts(tasks, logDrawerTaskId, handleViewOutput)
 
-  // Polling hooks
-  useSprintPolling()
-  usePrStatusPolling()
   // SP-7: Wire setConflictDrawerOpen to actual function (wrapped to match Dispatch<SetStateAction> signature)
   useSprintKeyboardShortcuts({
     openWorkbench: () => setView('task-workbench'),
