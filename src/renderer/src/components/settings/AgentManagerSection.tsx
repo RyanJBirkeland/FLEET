@@ -11,6 +11,7 @@ const DEFAULT_MODEL = 'claude-sonnet-4-5'
 const DEFAULT_WORKTREE_BASE = '~/worktrees/bde'
 const DEFAULT_MAX_RUNTIME_MINUTES = 60
 const DEFAULT_AUTO_START = true
+const DEFAULT_USE_NATIVE_SYSTEM = false
 
 export function AgentManagerSection(): React.JSX.Element {
   const [maxConcurrent, setMaxConcurrent] = useState(DEFAULT_MAX_CONCURRENT)
@@ -18,23 +19,26 @@ export function AgentManagerSection(): React.JSX.Element {
   const [worktreeBase, setWorktreeBase] = useState(DEFAULT_WORKTREE_BASE)
   const [maxRuntimeMinutes, setMaxRuntimeMinutes] = useState(DEFAULT_MAX_RUNTIME_MINUTES)
   const [autoStart, setAutoStart] = useState(DEFAULT_AUTO_START)
+  const [useNativeSystem, setUseNativeSystem] = useState(DEFAULT_USE_NATIVE_SYSTEM)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
     async function loadSettings(): Promise<void> {
-      const [maxC, model, wtBase, maxRtMs, autoS] = await Promise.all([
+      const [maxC, model, wtBase, maxRtMs, autoS, useNative] = await Promise.all([
         window.api.settings.getJson('agentManager.maxConcurrent'),
         window.api.settings.get('agentManager.defaultModel'),
         window.api.settings.get('agentManager.worktreeBase'),
         window.api.settings.getJson('agentManager.maxRuntimeMs'),
-        window.api.settings.getJson('agentManager.autoStart')
+        window.api.settings.getJson('agentManager.autoStart'),
+        window.api.settings.getJson('agentManager.useNativeSystem')
       ])
       if (typeof maxC === 'number') setMaxConcurrent(maxC)
       if (typeof model === 'string' && model) setDefaultModel(model)
       if (typeof wtBase === 'string' && wtBase) setWorktreeBase(wtBase)
       if (typeof maxRtMs === 'number') setMaxRuntimeMinutes(maxRtMs / 60_000)
       if (typeof autoS === 'boolean') setAutoStart(autoS)
+      if (typeof useNative === 'boolean') setUseNativeSystem(useNative)
     }
     void loadSettings()
   }, [])
@@ -47,7 +51,8 @@ export function AgentManagerSection(): React.JSX.Element {
         window.api.settings.set('agentManager.defaultModel', defaultModel),
         window.api.settings.set('agentManager.worktreeBase', worktreeBase),
         window.api.settings.setJson('agentManager.maxRuntimeMs', maxRuntimeMinutes * 60_000),
-        window.api.settings.setJson('agentManager.autoStart', autoStart)
+        window.api.settings.setJson('agentManager.autoStart', autoStart),
+        window.api.settings.setJson('agentManager.useNativeSystem', useNativeSystem)
       ])
       setDirty(false)
       toast.success('Agent Manager settings saved')
@@ -56,7 +61,7 @@ export function AgentManagerSection(): React.JSX.Element {
     } finally {
       setSaving(false)
     }
-  }, [maxConcurrent, defaultModel, worktreeBase, maxRuntimeMinutes, autoStart])
+  }, [maxConcurrent, defaultModel, worktreeBase, maxRuntimeMinutes, autoStart, useNativeSystem])
 
   function markDirty(): void {
     setDirty(true)
@@ -134,6 +139,22 @@ export function AgentManagerSection(): React.JSX.Element {
           }}
         />
       </label>
+
+      <label className="settings-field">
+        <span className="settings-field__label">Use native agent system</span>
+        <input
+          type="checkbox"
+          checked={useNativeSystem}
+          onChange={(e) => {
+            setUseNativeSystem(e.target.checked)
+            markDirty()
+          }}
+        />
+      </label>
+      <p className="settings-field__hint" style={{ marginTop: '-8px', marginBottom: '12px' }}>
+        Custom BDE-specific agent personality and skills instead of third-party plugins.
+        Restart BDE after changing this setting.
+      </p>
 
       <p className="settings-field__hint">Changes require app restart to take effect.</p>
 
