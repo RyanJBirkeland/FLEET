@@ -214,3 +214,21 @@
 .dashboard-card-error__retry:hover {
   background: rgba(255, 50, 50, 0.2);
 }
+
+/* ── Status Bar Freshness Indicator ── */
+.dashboard-status-ok {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.dashboard-status-freshness {
+  color: var(--neon-text-dim);
+  font-size: 10px;
+  opacity: 0.6;
+}
+
+.dashboard-status-freshness--stale {
+  color: var(--neon-orange);
+  opacity: 1;
+}
