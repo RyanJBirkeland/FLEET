@@ -11,15 +11,15 @@ import {
   StatusBar,
   StatCounter,
   NeonCard,
-  PipelineFlow,
+  SankeyPipeline,
   MiniChart,
   ActivityFeed,
   ScanlineOverlay,
   ParticleField,
-  type PipelineStage,
   type ChartBar
 } from '../components/neon'
 import { neonVar } from '../components/neon/types'
+import { partitionSprintTasks } from '../lib/partitionSprintTasks'
 import '../assets/dashboard-neon.css'
 import {
   Activity,
@@ -62,6 +62,8 @@ export default function DashboardView() {
     },
     [setStatusFilter, setSearchQuery, setView]
   )
+
+  const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
   // Derived stats
   const stats = useMemo(() => {
@@ -110,17 +112,6 @@ export default function DashboardView() {
       .sort((a, b) => new Date(b.completed_at!).getTime() - new Date(a.completed_at!).getTime())
       .slice(0, 5)
   }, [tasks])
-
-  // Pipeline stages
-  const pipelineStages: PipelineStage[] = useMemo(
-    () => [
-      { label: 'queued', count: stats.queued, accent: 'orange' },
-      { label: 'active', count: stats.active, accent: 'cyan' },
-      { label: 'blocked', count: stats.blocked, accent: 'red' },
-      { label: 'done', count: stats.done, accent: 'blue' }
-    ],
-    [stats]
-  )
 
   const transition = reduced ? REDUCED_TRANSITION : SPRINGS.snappy
 
@@ -199,7 +190,17 @@ export default function DashboardView() {
           {/* Center: Main Stage */}
           <div className="dashboard-col dashboard-col--center">
             <NeonCard accent="purple" title="Pipeline" icon={<Activity size={12} />}>
-              <PipelineFlow stages={pipelineStages} />
+              <SankeyPipeline
+                stages={{
+                  queued: partitions.todo.length,
+                  active: partitions.inProgress.length,
+                  review: partitions.awaitingReview.length,
+                  done: partitions.done.length,
+                  blocked: partitions.blocked.length,
+                  failed: partitions.failed.length,
+                }}
+                onStageClick={navigateToSprintWithFilter}
+              />
             </NeonCard>
 
             <NeonCard
