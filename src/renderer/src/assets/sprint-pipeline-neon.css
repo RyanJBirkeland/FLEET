@@ -1114,6 +1114,29 @@
   color: var(--neon-purple);
 }
 
+/* ── Task Pill: Duration (completed tasks) ── */
+.task-pill__duration {
+  font-size: 10px;
+  color: var(--neon-text-dim);
+  font-family: var(--bde-font-code);
+}
+
+/* ── Task Pill: Activity Dot (active tasks) ── */
+.task-pill__activity {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--neon-cyan);
+  animation: pipeline-pulse 2s ease-in-out infinite;
+  flex-shrink: 0;
+}
+
+/* ── Task Pill: Multi-select highlight ── */
+.task-pill--multi-selected {
+  border-color: var(--neon-cyan-border);
+  box-shadow: 0 0 8px var(--neon-cyan-glow);
+}
+
 /* ── Reduced Motion ── */
 @media (prefers-reduced-motion: reduce) {
   .pipeline-stage__dot--active {

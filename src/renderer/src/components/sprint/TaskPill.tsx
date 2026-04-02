@@ -5,11 +5,21 @@ import type { LucideIcon } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { useSprintUI } from '../../stores/sprintUI'
 
 interface TaskPillProps {
   task: SprintTask
   selected: boolean
+  multiSelected?: boolean
   onClick: (id: string) => void
+}
+
+function formatDuration(startedAt: string, completedAt: string): string {
+  const ms = new Date(completedAt).getTime() - new Date(startedAt).getTime()
+  const min = Math.floor(ms / 60000)
+  if (min < 60) return `${min}m`
+  const hr = Math.floor(min / 60)
+  return `${hr}h ${min % 60}m`
 }
 
 function getStatusClass(status: string, prStatus?: string | null): string {
@@ -29,7 +39,7 @@ function getFailureInfo(task: SprintTask): { icon: LucideIcon; label: string; cl
   return { icon: XCircle, label: 'Agent failed', className: 'task-pill__fail--agent' }
 }
 
-export function TaskPill({ task, selected, onClick }: TaskPillProps) {
+export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillProps) {
   const [elapsed, setElapsed] = useState('')
   const [arriving, setArriving] = useState(false)
   const prevStatusRef = useRef(task.status)
@@ -61,17 +71,29 @@ export function TaskPill({ task, selected, onClick }: TaskPillProps) {
     'task-pill',
     statusClass,
     selected ? 'task-pill--selected' : '',
+    multiSelected ? 'task-pill--multi-selected' : '',
     arriving ? 'task-pill--arriving' : '',
     isZombie ? 'task-pill--zombie' : ''
   ]
     .filter(Boolean)
     .join(' ')
 
+  const handleClick = (e: React.MouseEvent) => {
+    if (e.shiftKey) {
+      useSprintUI.getState().toggleTaskSelection(task.id)
+    } else if (e.metaKey || e.ctrlKey) {
+      useSprintUI.getState().toggleTaskSelection(task.id)
+    } else {
+      useSprintUI.getState().clearSelection()
+      onClick(task.id)
+    }
+  }
+
   return (
     <motion.div
       layoutId={task.id}
       className={classes}
-      onClick={() => onClick(task.id)}
+      onClick={handleClick}
       role="button"
       tabIndex={0}
       aria-label={`Task: ${task.title}, status: ${task.status}`}
@@ -96,6 +118,14 @@ export function TaskPill({ task, selected, onClick }: TaskPillProps) {
         {task.repo}
       </span>
       {elapsed && <span className="task-pill__time">{elapsed}</span>}
+      {task.status === 'done' && task.started_at && task.completed_at && (
+        <span className="task-pill__duration">
+          {formatDuration(task.started_at, task.completed_at)}
+        </span>
+      )}
+      {task.status === 'active' && !isZombie && (
+        <span className="task-pill__activity" />
+      )}
     </motion.div>
   )
 }
