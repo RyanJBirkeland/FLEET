@@ -59,9 +59,6 @@ declare global {
       spawnLocalAgent: (
         ...args: IpcArgs<'local:spawnClaudeAgent'>
       ) => Promise<IpcResult<'local:spawnClaudeAgent'>>
-      spawnAssistant: (
-        ...args: IpcArgs<'agent:spawnAssistant'>
-      ) => Promise<IpcResult<'agent:spawnAssistant'>>
       steerAgent: (agentId: string, message: string) => Promise<IpcResult<'agent:steer'>>
       killAgent: (...args: IpcArgs<'agent:kill'>) => Promise<IpcResult<'agent:kill'>>
       tailAgentLog: (

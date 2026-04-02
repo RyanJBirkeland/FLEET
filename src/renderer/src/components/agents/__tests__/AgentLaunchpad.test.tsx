@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 const mockSpawnAgent = vi.fn().mockResolvedValue({ pid: 1, logPath: '/tmp/log', id: 'agent-1' })
 const mockFetchProcesses = vi.fn()
@@ -12,8 +13,8 @@ const mockTemplates = [
     icon: '🧹',
     accent: 'cyan',
     description: 'Audit',
-    questions: [{ id: 'scope', label: 'Pick scope', type: 'choice', choices: ['All', 'Some'] }],
-    promptTemplate: 'Audit {{scope}}',
+    questions: [],
+    promptTemplate: 'Audit the codebase for clean code issues.',
     order: 0,
     builtIn: true
   }
@@ -64,56 +65,72 @@ Object.defineProperty(window, 'api', {
 })
 
 import { AgentLaunchpad } from '../AgentLaunchpad'
+import { toast } from '../../../stores/toasts'
 
 describe('AgentLaunchpad', () => {
   const onAgentSpawned = vi.fn()
 
-  beforeEach(() => vi.clearAllMocks())
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockGetRepoPaths.mockResolvedValue({ bde: '/Users/test/projects/BDE' })
+  })
 
-  it('renders the grid phase by default', () => {
+  it('renders LaunchpadGrid with templates', () => {
     render(<AgentLaunchpad onAgentSpawned={onAgentSpawned} />)
     expect(screen.getByTestId('launchpad-grid')).toBeInTheDocument()
+    expect(screen.getByText('Clean Code')).toBeInTheDocument()
   })
 
-  it('transitions to configure phase when a tile is clicked', () => {
-    render(<AgentLaunchpad onAgentSpawned={onAgentSpawned} />)
-    fireEvent.click(screen.getByText('Clean Code'))
-    expect(screen.getByTestId('launchpad-configure')).toBeInTheDocument()
-  })
-
-  it('transitions to review phase when configure completes', () => {
-    render(<AgentLaunchpad onAgentSpawned={onAgentSpawned} />)
-    // Click tile to enter configure
-    fireEvent.click(screen.getByText('Clean Code'))
-    // Answer the question
-    fireEvent.click(screen.getByText('All'))
-    // Should be on review now
-    expect(screen.getByTestId('launchpad-review')).toBeInTheDocument()
-  })
-
-  it('spawns agent from review and calls onAgentSpawned', async () => {
+  it('spawns agent with assistant:true on custom prompt via Enter', async () => {
+    const user = userEvent.setup()
     render(<AgentLaunchpad onAgentSpawned={onAgentSpawned} />)
 
-    // Wait for repoPaths to load
     await waitFor(() => expect(mockGetRepoPaths).toHaveBeenCalled())
 
-    fireEvent.click(screen.getByText('Clean Code'))
-    fireEvent.click(screen.getByText('All'))
-
-    // Now on review — click spawn
-    fireEvent.click(screen.getByText(/Spawn/i))
+    const input = screen.getByPlaceholderText('What would you like to work on?')
+    await user.type(input, 'Fix the bug{Enter}')
 
     await waitFor(() => {
       expect(mockSpawnAgent).toHaveBeenCalledWith(
-        expect.objectContaining({ task: expect.stringContaining('Audit All') })
+        expect.objectContaining({
+          task: 'Fix the bug',
+          assistant: true
+        })
+      )
+    })
+    expect(onAgentSpawned).toHaveBeenCalled()
+  })
+
+  it('spawns agent with template prompt on tile click (variables stripped via assemblePrompt)', async () => {
+    render(<AgentLaunchpad onAgentSpawned={onAgentSpawned} />)
+
+    await waitFor(() => expect(mockGetRepoPaths).toHaveBeenCalled())
+
+    await userEvent.click(screen.getByText('Clean Code'))
+
+    await waitFor(() => {
+      expect(mockSpawnAgent).toHaveBeenCalledWith(
+        expect.objectContaining({
+          task: 'Audit the codebase for clean code issues.',
+          assistant: true
+        })
       )
     })
   })
 
-  it('returns to grid when back is clicked from configure', () => {
+  it('shows error toast when repo path not found', async () => {
+    mockGetRepoPaths.mockResolvedValue({})
+    const user = userEvent.setup()
     render(<AgentLaunchpad onAgentSpawned={onAgentSpawned} />)
-    fireEvent.click(screen.getByText('Clean Code'))
-    fireEvent.click(screen.getByTitle(/back/i))
-    expect(screen.getByTestId('launchpad-grid')).toBeInTheDocument()
+
+    await waitFor(() => expect(mockGetRepoPaths).toHaveBeenCalled())
+
+    const input = screen.getByPlaceholderText('What would you like to work on?')
+    await user.type(input, 'Do something{Enter}')
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(expect.stringContaining('Repo path not found'))
+    })
+    expect(mockSpawnAgent).not.toHaveBeenCalled()
   })
 })

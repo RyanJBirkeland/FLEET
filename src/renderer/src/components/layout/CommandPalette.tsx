@@ -115,7 +115,11 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
               toast.error('No repo path found')
               return
             }
-            await window.api.spawnAssistant({ repoPath })
+            await window.api.spawnLocalAgent({
+              task: 'You are now ready to assist. Wait for the user\'s first message.',
+              repoPath,
+              assistant: true
+            })
             toast.success('BDE Assistant spawned')
             setView('agents')
           } catch (err) {
