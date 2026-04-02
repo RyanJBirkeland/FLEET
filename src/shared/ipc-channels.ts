@@ -145,10 +145,6 @@ export interface AgentChannels {
     args: [args: SpawnLocalAgentArgs]
     result: SpawnLocalAgentResult
   }
-  'agent:spawnAssistant': {
-    args: [args: { repoPath: string; model?: string }]
-    result: SpawnLocalAgentResult
-  }
   'local:getAgentProcesses': {
     args: []
     result: {

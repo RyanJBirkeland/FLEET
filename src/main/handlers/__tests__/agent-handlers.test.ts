@@ -80,7 +80,6 @@ describe('registerAgentHandlers', () => {
     const channels = vi.mocked(safeHandle).mock.calls.map(([ch]) => ch)
     expect(channels).toContain('local:getAgentProcesses')
     expect(channels).toContain('local:spawnClaudeAgent')
-    expect(channels).toContain('agent:spawnAssistant')
     expect(channels).toContain('local:tailAgentLog')
     expect(channels).toContain('agent:steer')
     expect(channels).toContain('agent:kill')
@@ -291,44 +290,3 @@ describe('local:spawnClaudeAgent handler', () => {
   })
 })
 
-describe('agent:spawnAssistant handler', () => {
-  beforeEach(() => {
-    vi.clearAllMocks()
-  })
-
-  it('spawns an assistant agent with default message', async () => {
-    const spawnResult = { id: 'assistant-1', pid: 0, logPath: '/path/to/log', interactive: true }
-    vi.mocked(spawnAdhocAgent).mockResolvedValue(spawnResult as any)
-
-    const handler = captureHandler('agent:spawnAssistant')
-    const result = await handler(mockEvent, {
-      repoPath: '/Users/test/projects/BDE',
-      model: 'claude-sonnet-4-5'
-    })
-
-    expect(spawnAdhocAgent).toHaveBeenCalledWith({
-      task: 'You are now ready to assist. Wait for the user\'s first message.',
-      repoPath: '/Users/test/projects/BDE',
-      model: 'claude-sonnet-4-5',
-      assistant: true
-    })
-    expect(result).toEqual(spawnResult)
-  })
-
-  it('uses default model when not specified', async () => {
-    const spawnResult = { id: 'assistant-2', pid: 0, logPath: '/path/to/log', interactive: true }
-    vi.mocked(spawnAdhocAgent).mockResolvedValue(spawnResult as any)
-
-    const handler = captureHandler('agent:spawnAssistant')
-    await handler(mockEvent, {
-      repoPath: '/Users/test/projects/BDE'
-    })
-
-    expect(spawnAdhocAgent).toHaveBeenCalledWith({
-      task: 'You are now ready to assist. Wait for the user\'s first message.',
-      repoPath: '/Users/test/projects/BDE',
-      model: undefined,
-      assistant: true
-    })
-  })
-})
