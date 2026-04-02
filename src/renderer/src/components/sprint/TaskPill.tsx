@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
+import { AlertTriangle, Clock, Zap, GitBranch, Slash, XCircle } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
@@ -17,6 +19,14 @@ function getStatusClass(status: string, prStatus?: string | null): string {
   if ((status === 'active' || status === 'done') && prStatus === 'open') return 'task-pill--review'
   if (status === 'done') return 'task-pill--done'
   return ''
+}
+
+function getFailureInfo(task: SprintTask): { icon: LucideIcon; label: string; className: string } | null {
+  if (task.status !== 'failed' && task.status !== 'error' && task.status !== 'cancelled') return null
+  if (task.fast_fail_count >= 3) return { icon: Zap, label: 'Fast-fail', className: 'task-pill__fail--fastfail' }
+  if (task.pr_url || task.pr_status === 'branch_only') return { icon: GitBranch, label: 'Push failed', className: 'task-pill__fail--push' }
+  if (task.status === 'cancelled') return { icon: Slash, label: 'Cancelled', className: 'task-pill__fail--cancelled' }
+  return { icon: XCircle, label: 'Agent failed', className: 'task-pill__fail--agent' }
 }
 
 export function TaskPill({ task, selected, onClick }: TaskPillProps) {
@@ -41,12 +51,18 @@ export function TaskPill({ task, selected, onClick }: TaskPillProps) {
     return () => clearInterval(interval)
   }, [task.status, task.started_at])
 
+  const isZombie = task.status === 'active' && (!!task.pr_url || !!task.pr_status)
+  const isStale = task.status === 'active' && !!task.started_at &&
+    (Date.now() - new Date(task.started_at).getTime() > (task.max_runtime_ms ?? 3600000))
+  const failureInfo = getFailureInfo(task)
+
   const statusClass = getStatusClass(task.status, task.pr_status)
   const classes = [
     'task-pill',
     statusClass,
     selected ? 'task-pill--selected' : '',
-    arriving ? 'task-pill--arriving' : ''
+    arriving ? 'task-pill--arriving' : '',
+    isZombie ? 'task-pill--zombie' : ''
   ]
     .filter(Boolean)
     .join(' ')
@@ -69,6 +85,9 @@ export function TaskPill({ task, selected, onClick }: TaskPillProps) {
       data-testid="task-pill"
     >
       <div className="task-pill__dot" style={{ background: getDotColor(task.status) }} />
+      {failureInfo && <failureInfo.icon size={10} className={failureInfo.className} title={failureInfo.label} />}
+      {isZombie && <AlertTriangle size={12} className="task-pill__zombie-icon" title="Agent finished but task not marked done" />}
+      {isStale && !isZombie && <Clock size={12} className="task-pill__stale-icon" title="Task may be stuck" />}
       <span className="task-pill__title" title={task.title}>{task.title}</span>
       <span
         className="task-pill__badge"

@@ -516,6 +516,27 @@
   animation: task-arrive 500ms ease-out;
 }
 
+.task-pill--zombie {
+  border-color: var(--neon-orange-border);
+  background: var(--neon-orange-surface);
+}
+
+.task-pill__zombie-icon {
+  color: var(--neon-orange);
+  flex-shrink: 0;
+}
+
+.task-pill__stale-icon {
+  color: var(--neon-red);
+  flex-shrink: 0;
+  animation: pipeline-pulse 2s ease-in-out infinite;
+}
+
+.task-pill__fail--push { color: var(--neon-orange); flex-shrink: 0; }
+.task-pill__fail--agent { color: var(--neon-red); flex-shrink: 0; }
+.task-pill__fail--fastfail { color: var(--neon-red); flex-shrink: 0; }
+.task-pill__fail--cancelled { color: var(--neon-text-dim); flex-shrink: 0; }
+
 /* ── Detail Drawer ── */
 .task-drawer {
   flex-shrink: 0;
