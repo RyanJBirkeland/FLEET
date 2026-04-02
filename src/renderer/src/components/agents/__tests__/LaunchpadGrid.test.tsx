@@ -3,7 +3,6 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { LaunchpadGrid } from '../LaunchpadGrid'
 import { DEFAULT_TEMPLATES } from '../../../lib/default-templates'
-import type { RecentTask } from '../../../lib/launchpad-types'
 
 const mockRepos = [
   { label: 'BDE', owner: 'owner', color: '#fff' },
@@ -17,78 +16,80 @@ vi.mock('../../../hooks/useRepoOptions', () => ({
 describe('LaunchpadGrid', () => {
   const onSelectTemplate = vi.fn()
   const onCustomPrompt = vi.fn()
-  const onSelectRecent = vi.fn()
 
   const defaultProps = {
     templates: DEFAULT_TEMPLATES.filter((t) => !t.hidden),
-    recents: [] as RecentTask[],
     onSelectTemplate,
     onCustomPrompt,
-    onSelectRecent
+    spawning: false
   }
 
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('renders the header with dot and title', () => {
-    render(<LaunchpadGrid {...defaultProps} />)
-    expect(screen.getByText(/New Agent Session/i)).toBeInTheDocument()
-  })
-
-  it('renders all visible template tiles', () => {
+  it('renders quick action tiles from templates', () => {
     render(<LaunchpadGrid {...defaultProps} />)
     expect(screen.getByText('Clean Code')).toBeInTheDocument()
     expect(screen.getByText('Fix Bug')).toBeInTheDocument()
     expect(screen.getByText('New Feature')).toBeInTheDocument()
   })
 
-  it('calls onSelectTemplate when a tile is clicked', () => {
+  it('renders repo chip and model pills', () => {
     render(<LaunchpadGrid {...defaultProps} />)
-    fireEvent.click(screen.getByText('Clean Code'))
-    expect(onSelectTemplate).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'builtin-clean-code' })
-    )
+    expect(screen.getByText(/BDE/)).toBeInTheDocument()
+    expect(screen.getByText('Sonnet')).toBeInTheDocument()
   })
 
-  it('renders recent tasks when provided', () => {
-    const recents: RecentTask[] = [
-      { prompt: 'Fix the login bug', repo: 'BDE', model: 'sonnet', timestamp: Date.now() - 3600000 }
-    ]
-    render(<LaunchpadGrid {...defaultProps} recents={recents} />)
-    expect(screen.getByText(/Fix the login bug/)).toBeInTheDocument()
-  })
-
-  it('calls onSelectRecent when a recent item is clicked', () => {
-    const recents: RecentTask[] = [
-      { prompt: 'Fix the login bug', repo: 'BDE', model: 'sonnet', timestamp: Date.now() }
-    ]
-    render(<LaunchpadGrid {...defaultProps} recents={recents} />)
-    fireEvent.click(screen.getByText(/Fix the login bug/))
-    expect(onSelectRecent).toHaveBeenCalledWith(recents[0])
-  })
-
-  it('renders prompt input', () => {
+  it('renders chat input with placeholder "What would you like to work on?"', () => {
     render(<LaunchpadGrid {...defaultProps} />)
-    expect(screen.getByPlaceholderText(/describe a custom task/i)).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText('What would you like to work on?')
+    ).toBeInTheDocument()
   })
 
-  it('renders model pills with Sonnet active by default', () => {
-    render(<LaunchpadGrid {...defaultProps} />)
-    const sonnet = screen.getByText('Sonnet')
-    expect(sonnet).toBeInTheDocument()
-    expect(sonnet.closest('button')).toHaveClass('launchpad__model-pill--active')
-  })
-
-  it('calls onCustomPrompt when Enter is pressed with text', async () => {
+  it('Enter on textarea calls onCustomPrompt', async () => {
     const user = userEvent.setup()
     render(<LaunchpadGrid {...defaultProps} />)
-    const input = screen.getByPlaceholderText(/describe a custom task/i)
+    const input = screen.getByPlaceholderText('What would you like to work on?')
     await user.type(input, 'Do something custom{Enter}')
     expect(onCustomPrompt).toHaveBeenCalledWith(
       'Do something custom',
-      expect.any(String), // repo
-      expect.any(String) // model
+      expect.any(String),
+      expect.any(String)
     )
+  })
+
+  it('Shift+Enter does NOT submit', async () => {
+    const user = userEvent.setup()
+    render(<LaunchpadGrid {...defaultProps} />)
+    const input = screen.getByPlaceholderText('What would you like to work on?')
+    await user.type(input, 'text{Shift>}{Enter}{/Shift}')
+    expect(onCustomPrompt).not.toHaveBeenCalled()
+  })
+
+  it('clicking tile calls onSelectTemplate', () => {
+    render(<LaunchpadGrid {...defaultProps} />)
+    fireEvent.click(screen.getByText('Clean Code'))
+    expect(onSelectTemplate).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'builtin-clean-code' }),
+      expect.any(String),
+      expect.any(String)
+    )
+  })
+
+  it('tiles and textarea disabled when spawning is true', () => {
+    render(<LaunchpadGrid {...defaultProps} spawning={true} />)
+    const tiles = screen.getAllByRole('button', { name: /Clean Code|Fix Bug|New Feature/i })
+    for (const tile of tiles) {
+      expect(tile).toBeDisabled()
+    }
+    const input = screen.getByPlaceholderText('What would you like to work on?')
+    expect(input).toBeDisabled()
+  })
+
+  it('does not render a "Recent" section', () => {
+    render(<LaunchpadGrid {...defaultProps} />)
+    expect(screen.queryByText(/Recent/i)).not.toBeInTheDocument()
   })
 })

@@ -62,8 +62,6 @@ const api = {
   // Local agent process detection + spawning
   getAgentProcesses: () => typedInvoke('local:getAgentProcesses'),
   spawnLocalAgent: (args: SpawnLocalAgentArgs) => typedInvoke('local:spawnClaudeAgent', args),
-  spawnAssistant: (args: { repoPath: string; model?: string }) =>
-    typedInvoke('agent:spawnAssistant', args),
   steerAgent: (agentId: string, message: string) =>
     typedInvoke('agent:steer', { agentId, message }),
   killAgent: (agentId: string) => typedInvoke('agent:kill', agentId),

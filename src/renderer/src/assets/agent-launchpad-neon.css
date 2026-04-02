@@ -1,6 +1,6 @@
 /* src/renderer/src/assets/agent-launchpad-neon.css */
 /* ═══════════════════════════════════════════════════════
-   Agent Launchpad — Tile Grid, Configure Chat, Review
+   Agent Launchpad — Single-screen session launcher
    Uses var(--neon-*) tokens from neon.css
    ═══════════════════════════════════════════════════════ */
 
@@ -80,6 +80,13 @@
   transform: translateY(0);
 }
 
+.launchpad__tile:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
 .launchpad__tile-icon {
   font-size: 28px;
   margin-bottom: 8px;
@@ -147,6 +154,11 @@
 
 .launchpad__prompt-input:focus {
   border-color: var(--neon-cyan-border);
+}
+
+.launchpad__prompt-input:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 /* ── Repo Chip ── */
