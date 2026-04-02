@@ -144,7 +144,7 @@ describe('AgentConsole', () => {
       return selector(state)
     })
     vi.mocked(useAgentEventsStore).mockImplementation((selector: any) => {
-      const state = { events: { 'test-agent-1': [] } }
+      const state = { events: { 'test-agent-1': [] }, evictedAgents: {} }
       return selector(state)
     })
     render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
@@ -229,7 +229,7 @@ describe('AgentConsole', () => {
   })
 
   it('removes pending message when real user_message event arrives', () => {
-    let eventState = { events: { 'test-agent-1': mockEvents } }
+    let eventState = { events: { 'test-agent-1': mockEvents }, evictedAgents: {} }
     vi.mocked(useAgentEventsStore).mockImplementation((selector: any) => {
       return selector(eventState)
     })
@@ -255,7 +255,8 @@ describe('AgentConsole', () => {
             timestamp: Date.now()
           }
         ]
-      }
+      },
+      evictedAgents: {}
     }
 
     // Re-mock the store with updated events
