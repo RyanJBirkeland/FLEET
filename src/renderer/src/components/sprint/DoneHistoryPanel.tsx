@@ -29,7 +29,6 @@ export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPan
     if (focusable.length === 0) return
 
     const first = focusable[0]
-    const last = focusable[focusable.length - 1]
     first.focus()
 
     const handleTab = (e: KeyboardEvent) => {
