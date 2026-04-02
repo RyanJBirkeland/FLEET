@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
@@ -21,6 +21,17 @@ function getStatusClass(status: string, prStatus?: string | null): string {
 
 export function TaskPill({ task, selected, onClick }: TaskPillProps) {
   const [elapsed, setElapsed] = useState('')
+  const [arriving, setArriving] = useState(false)
+  const prevStatusRef = useRef(task.status)
+
+  useEffect(() => {
+    if (task.status !== prevStatusRef.current) {
+      prevStatusRef.current = task.status
+      setArriving(true)
+      const timer = setTimeout(() => setArriving(false), 500)
+      return () => clearTimeout(timer)
+    }
+  }, [task.status])
 
   useEffect(() => {
     if (task.status !== 'active' || !task.started_at) return
@@ -30,7 +41,12 @@ export function TaskPill({ task, selected, onClick }: TaskPillProps) {
   }, [task.status, task.started_at])
 
   const statusClass = getStatusClass(task.status, task.pr_status)
-  const classes = ['task-pill', statusClass, selected ? 'task-pill--selected' : '']
+  const classes = [
+    'task-pill',
+    statusClass,
+    selected ? 'task-pill--selected' : '',
+    arriving ? 'task-pill--arriving' : ''
+  ]
     .filter(Boolean)
     .join(' ')
 

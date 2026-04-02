@@ -262,7 +262,7 @@ export function SprintPipeline() {
         <div className="pipeline-empty-state">
           <p className="pipeline-empty-state__title">No tasks yet</p>
           <p className="pipeline-empty-state__hint">
-            Open Task Workbench (Cmd+0) to create your first task
+            Press N to create your first task
           </p>
         </div>
       )}

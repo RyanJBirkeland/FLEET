@@ -14,16 +14,25 @@ export function useSprintKeyboardShortcuts({
   openWorkbench,
   setConflictDrawerOpen
 }: UseSprintKeyboardShortcutsArgs): void {
-  const selectedTaskId = useSprintUI((s) => s.selectedTaskId)
-  const setLogDrawerTaskId = useSprintUI((s) => s.setLogDrawerTaskId)
-
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // If SpecDrawer is open, let it handle Escape (unsaved-changes guard)
-        if (selectedTaskId) return
-        setLogDrawerTaskId(null)
+        const state = useSprintUI.getState()
+
+        // If spec panel is open, let SpecPanel handle Escape (unsaved-changes guard)
+        if (state.specPanelOpen) return
+
+        // If drawer open or task selected → close drawer + deselect
+        if (state.drawerOpen || state.selectedTaskId) {
+          state.setSelectedTaskId(null)
+          state.setDrawerOpen(false)
+          return
+        }
+
+        // Otherwise → close log/conflict/health drawers
+        state.setLogDrawerTaskId(null)
         setConflictDrawerOpen(false)
+        state.setHealthCheckDrawerOpen(false)
         return
       }
 
@@ -44,5 +53,5 @@ export function useSprintKeyboardShortcuts({
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedTaskId, setLogDrawerTaskId, openWorkbench, setConflictDrawerOpen])
+  }, [openWorkbench, setConflictDrawerOpen])
 }

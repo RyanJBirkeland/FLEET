@@ -4,7 +4,6 @@ import { useSprintUI } from '../stores/sprintUI'
 import { useConfirm } from '../components/ui/ConfirmModal'
 import { toast } from '../stores/toasts'
 import { TASK_STATUS } from '../../../shared/constants'
-import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 import type { SprintTask } from '../../../shared/types'
 import { useTaskWorkbenchStore } from '../stores/taskWorkbench'
 import { usePanelLayoutStore } from '../stores/panelLayout'
@@ -19,47 +18,11 @@ export function useSprintTaskActions() {
   const launchTask = useSprintTasks((s) => s.launchTask)
   const loadData = useSprintTasks((s) => s.loadData)
   const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
-  const setTasks = useSprintTasks((s) => s.setTasks)
 
   const { confirm, confirmProps } = useConfirm()
 
   const loadTask = useTaskWorkbenchStore((s) => s.loadTask)
   const setView = usePanelLayoutStore((s) => s.setView)
-
-  // --- Drag-and-drop status change (needs current tasks for WIP check) ---
-  const handleDragEnd = useCallback(
-    (taskId: string, newStatus: SprintTask['status'], tasks: SprintTask[]) => {
-      const task = tasks.find((t) => t.id === taskId)
-      if (!task || task.status === newStatus) return
-      // Block transitions into In Progress when WIP limit reached
-      if (newStatus === TASK_STATUS.ACTIVE && task.status !== TASK_STATUS.ACTIVE) {
-        const activeCount = tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
-        if (activeCount >= WIP_LIMIT_IN_PROGRESS) {
-          toast.error(`In Progress is full (${WIP_LIMIT_IN_PROGRESS}/${WIP_LIMIT_IN_PROGRESS})`)
-          return
-        }
-      }
-      updateTask(taskId, { status: newStatus })
-    },
-    [updateTask]
-  )
-
-  // --- Within-column reorder (optimistic only — no column_order column in DB yet) ---
-  const handleReorder = useCallback(
-    (_status: SprintTask['status'], orderedIds: string[]) => {
-      const current = useSprintTasks.getState().tasks
-      const idOrder = new Map(orderedIds.map((id, i) => [id, i]))
-      setTasks(
-        [...current].sort((a, b) => {
-          const ai = idOrder.get(a.id)
-          const bi = idOrder.get(b.id)
-          if (ai !== undefined && bi !== undefined) return ai - bi
-          return 0
-        })
-      )
-    },
-    [setTasks]
-  )
 
   // --- Push backlog task to sprint queue ---
   const handlePushToSprint = useCallback(
@@ -170,8 +133,6 @@ export function useSprintTaskActions() {
   )
 
   return {
-    handleDragEnd,
-    handleReorder,
     handlePushToSprint,
     handleViewSpec,
     handleSaveSpec,
