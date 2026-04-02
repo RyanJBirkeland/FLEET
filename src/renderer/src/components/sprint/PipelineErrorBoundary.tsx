@@ -16,9 +16,9 @@ export class PipelineErrorBoundary extends Component<Props, State> {
     return { hasError: true, error }
   }
 
-  handleRetry = () => this.setState({ hasError: false, error: null })
+  handleRetry = (): void => this.setState({ hasError: false, error: null })
 
-  render() {
+  render(): React.ReactNode {
     if (this.state.hasError) {
       return (
         <div className="pipeline-error-boundary">

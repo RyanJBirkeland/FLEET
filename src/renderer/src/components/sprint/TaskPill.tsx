@@ -45,7 +45,7 @@ function getFailureInfo(
   return { icon: XCircle, label: 'Agent failed', className: 'task-pill__fail--agent' }
 }
 
-export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillProps) {
+export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillProps): React.JSX.Element {
   const [elapsed, setElapsed] = useState('')
   const [arriving, setArriving] = useState(false)
   const prevStatusRef = useRef(task.status)
@@ -71,6 +71,7 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
   const isStale =
     task.status === 'active' &&
     !!task.started_at &&
+    // eslint-disable-next-line react-hooks/purity -- Date.now() in render is intentional for stale detection
     Date.now() - new Date(task.started_at).getTime() > (task.max_runtime_ms ?? 3600000)
   const failureInfo = getFailureInfo(task)
 
@@ -86,7 +87,7 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
     .filter(Boolean)
     .join(' ')
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleClick = (e: React.MouseEvent): void => {
     if (e.shiftKey) {
       useSprintUI.getState().toggleTaskSelection(task.id)
     } else if (e.metaKey || e.ctrlKey) {

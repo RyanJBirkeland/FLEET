@@ -75,7 +75,7 @@ export function ConsoleLine({
 }: ConsoleLineProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
 
-  const getSearchClass = () => {
+  const getSearchClass = (): string => {
     if (!searchHighlight) return ''
     return searchHighlight === 'active'
       ? ' console-line--search-active'

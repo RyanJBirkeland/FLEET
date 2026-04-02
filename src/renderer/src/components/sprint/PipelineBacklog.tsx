@@ -17,7 +17,7 @@ export function PipelineBacklog({
   onTaskClick,
   onAddToQueue,
   onRerun
-}: PipelineBacklogProps) {
+}: PipelineBacklogProps): React.JSX.Element {
   const [failedExpanded, setFailedExpanded] = useState(false)
   const visibleFailed = failedExpanded ? failed : failed.slice(0, FAILED_VISIBLE_LIMIT)
   const hiddenCount = failed.length - FAILED_VISIBLE_LIMIT

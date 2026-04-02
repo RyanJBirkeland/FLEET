@@ -19,7 +19,7 @@ const MERGE_STRATEGIES: { value: MergeMethod; label: string }[] = [
   { value: 'rebase', label: 'Rebase' }
 ]
 
-export function MergeButton({ pr, mergeability, onMerged }: MergeButtonProps) {
+export function MergeButton({ pr, mergeability, onMerged }: MergeButtonProps): React.JSX.Element {
   const repoOptions = useRepoOptions()
   const { confirm, confirmProps } = useConfirm()
   const [method, setMethod] = useState<MergeMethod>('squash')
@@ -35,7 +35,7 @@ export function MergeButton({ pr, mergeability, onMerged }: MergeButtonProps) {
 
   useEffect(() => {
     if (!dropdownOpen) return
-    function handleOutside(e: MouseEvent) {
+    function handleOutside(e: MouseEvent): void {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
         closeDropdown()
       }
@@ -50,7 +50,7 @@ export function MergeButton({ pr, mergeability, onMerged }: MergeButtonProps) {
     setMerging(false)
   }, [pr.number, pr.repo])
 
-  async function handleMerge() {
+  async function handleMerge(): Promise<void> {
     const repo = repoOptions.find((r) => r.label === pr.repo)
     if (!repo) return
 

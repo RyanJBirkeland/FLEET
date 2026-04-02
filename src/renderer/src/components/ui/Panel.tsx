@@ -7,7 +7,7 @@ type PanelProps = {
   className?: string
 }
 
-export function Panel({ title, actions, children, className }: PanelProps) {
+export function Panel({ title, actions, children, className }: PanelProps): React.JSX.Element {
   const classes = ['bde-panel', className].filter(Boolean).join(' ')
 
   return (

@@ -34,7 +34,7 @@ export function useSprintKeyboardShortcuts({
   onDelete
 }: UseSprintKeyboardShortcutsArgs): void {
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         const state = useSprintUI.getState()
 

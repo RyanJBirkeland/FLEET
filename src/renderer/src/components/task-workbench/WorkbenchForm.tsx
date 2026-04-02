@@ -21,7 +21,7 @@ interface WorkbenchFormProps {
   onSendCopilotMessage: (message: string) => void
 }
 
-export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
+export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): React.JSX.Element {
   const title = useTaskWorkbenchStore((s) => s.title)
   const repo = useTaskWorkbenchStore((s) => s.repo)
   const priority = useTaskWorkbenchStore((s) => s.priority)
@@ -264,7 +264,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
 
   // Keyboard shortcuts: Cmd+Enter to submit
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Enter' && e.metaKey) {
         e.preventDefault()
         const structural = useTaskWorkbenchStore.getState().structuralChecks

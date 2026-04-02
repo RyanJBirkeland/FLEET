@@ -170,6 +170,7 @@ export function Onboarding({ onReady }: OnboardingProps): React.JSX.Element {
   }, [onReady])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     runCheck()
   }, [runCheck])
 

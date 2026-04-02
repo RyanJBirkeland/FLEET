@@ -6,7 +6,7 @@ interface PRStationChecksProps {
   loading: boolean
 }
 
-function CheckIcon({ run }: { run: CheckRun }) {
+function CheckIcon({ run }: { run: CheckRun }): React.JSX.Element {
   if (run.status !== 'completed') {
     return <Loader2 size={14} className="pr-detail__check-spinner" />
   }
@@ -22,7 +22,7 @@ function checkStatusClass(run: CheckRun): string {
   return 'pr-detail__check--fail'
 }
 
-export function PRStationChecks({ checks, loading }: PRStationChecksProps) {
+export function PRStationChecks({ checks, loading }: PRStationChecksProps): React.JSX.Element {
   if (loading) {
     return (
       <div className="pr-detail__section">

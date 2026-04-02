@@ -76,6 +76,7 @@ export function useTaskToasts(
   const initializedRef = useRef(false)
   // Stable ref so the effect doesn't re-run when the callback identity changes
   const onViewOutputRef = useRef(onViewOutput)
+  // eslint-disable-next-line react-hooks/refs -- sync ref for stable callback identity
   onViewOutputRef.current = onViewOutput
 
   useEffect(() => {

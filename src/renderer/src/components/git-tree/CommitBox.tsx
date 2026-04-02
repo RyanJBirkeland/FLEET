@@ -108,4 +108,3 @@ export function CommitBox({
   )
 }
 
-export default CommitBox

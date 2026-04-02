@@ -8,7 +8,7 @@ interface LiveActivityStripProps {
   onSelectAgent: (id: string) => void
 }
 
-export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps) {
+export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps): React.JSX.Element {
   const agents = useAgentHistoryStore((state) => state.agents)
   const runningAgents = agents.filter((agent) => agent.status === 'running')
 

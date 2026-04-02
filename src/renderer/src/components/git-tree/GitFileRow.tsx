@@ -106,4 +106,3 @@ export function GitFileRow({
   )
 }
 
-export default GitFileRow

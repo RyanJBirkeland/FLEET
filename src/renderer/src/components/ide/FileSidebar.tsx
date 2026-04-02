@@ -36,6 +36,7 @@ export function FileSidebar({ onOpenFile }: FileSidebarProps): React.JSX.Element
       return null
     }
     // Block null bytes and other control characters
+    // eslint-disable-next-line no-control-regex -- intentional control character detection
     if (/[\x00-\x1f\x7f]/.test(trimmed)) {
       return null
     }

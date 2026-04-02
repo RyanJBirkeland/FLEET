@@ -20,7 +20,7 @@ export function PipelineStage({
   selectedTaskId,
   onTaskClick,
   doneFooter
-}: PipelineStageProps) {
+}: PipelineStageProps): React.JSX.Element {
   const empty = tasks.length === 0 && !doneFooter
 
   return (

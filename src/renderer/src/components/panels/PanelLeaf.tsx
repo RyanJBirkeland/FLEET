@@ -9,6 +9,7 @@ import { resolveView } from '../../lib/view-resolver'
 // Lazy view preloading map — trigger on hover in ActivityBar
 // ---------------------------------------------------------------------------
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const VIEW_LOADERS: Partial<Record<View, () => Promise<unknown>>> = {
   dashboard: () => import('../../views/DashboardView'),
   sprint: () => import('../../views/SprintView'),
@@ -160,4 +161,3 @@ export function PanelLeaf({ node }: PanelLeafProps): React.ReactElement {
   )
 }
 
-export default PanelLeaf

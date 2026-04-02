@@ -61,7 +61,7 @@ export default function SettingsView(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('connections')
   const ActiveSection = SECTION_MAP[activeTab]
 
-  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number): void => {
     let nextIndex = index
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault()

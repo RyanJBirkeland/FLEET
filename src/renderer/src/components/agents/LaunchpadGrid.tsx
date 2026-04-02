@@ -64,7 +64,7 @@ export function LaunchpadGrid({
   onSelectTemplate,
   onCustomPrompt,
   spawning
-}: LaunchpadGridProps) {
+}: LaunchpadGridProps): React.JSX.Element {
   const repos = useRepoOptions()
   const [prompt, setPrompt] = useState('')
   const [repo, setRepo] = useState(repos[0]?.label ?? '')

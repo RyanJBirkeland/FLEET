@@ -8,11 +8,27 @@ import type { SprintTask } from '../../../shared/types'
 import { useTaskWorkbenchStore } from '../stores/taskWorkbench'
 import { usePanelLayoutStore } from '../stores/panelLayout'
 
+interface SprintTaskActions {
+  handlePushToSprint: (task: SprintTask) => void
+  handleViewSpec: (task: SprintTask) => void
+  handleSaveSpec: (taskId: string, spec: string) => void
+  handleMarkDone: (task: SprintTask) => Promise<void>
+  handleStop: (task: SprintTask) => Promise<void>
+  handleRerun: (task: SprintTask) => Promise<void>
+  handleUpdateTitle: (patch: { id: string; title: string }) => void
+  handleUpdatePriority: (patch: { id: string; priority: number }) => void
+  handleRetry: (task: SprintTask) => void
+  handleEditInWorkbench: (task: SprintTask) => void
+  launchTask: (task: SprintTask) => void
+  deleteTask: (id: string) => Promise<void>
+  confirmProps: ReturnType<typeof useConfirm>['confirmProps']
+}
+
 /**
  * useSprintTaskActions — all task mutation callbacks for SprintCenter.
  * Owns the confirm modal state so callers just spread `confirmProps` onto <ConfirmModal />.
  */
-export function useSprintTaskActions() {
+export function useSprintTaskActions(): SprintTaskActions {
   const updateTask = useSprintTasks((s) => s.updateTask)
   const deleteTask = useSprintTasks((s) => s.deleteTask)
   const launchTask = useSprintTasks((s) => s.launchTask)

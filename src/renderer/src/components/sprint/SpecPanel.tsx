@@ -10,7 +10,7 @@ export interface SpecPanelProps {
   onSave: (newSpec: string) => void
 }
 
-export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) {
+export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps): React.JSX.Element {
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState(spec)
   const [saving, setSaving] = useState(false)
@@ -24,7 +24,7 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
   }, [spec, editing])
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         if (editing) {
           setEditing(false)
@@ -51,7 +51,7 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
     const first = focusable[0]
     first.focus()
 
-    const handleTab = (e: KeyboardEvent) => {
+    const handleTab = (e: KeyboardEvent): void => {
       if (e.key !== 'Tab') return
       // Re-query in case DOM changed (edit mode toggle)
       const current = panel.querySelectorAll<HTMLElement>(
@@ -73,7 +73,7 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
     return () => panel.removeEventListener('keydown', handleTab)
   }, [editing])
 
-  const handleSave = async () => {
+  const handleSave = async (): Promise<void> => {
     setSaving(true)
     try {
       await onSave(draft)

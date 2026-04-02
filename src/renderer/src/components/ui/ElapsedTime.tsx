@@ -5,7 +5,7 @@ type ElapsedTimeProps = {
   startedAtMs: number
 }
 
-export function ElapsedTime({ startedAtMs }: ElapsedTimeProps) {
+export function ElapsedTime({ startedAtMs }: ElapsedTimeProps): React.JSX.Element {
   const [, tick] = useState(0)
 
   useEffect(() => {

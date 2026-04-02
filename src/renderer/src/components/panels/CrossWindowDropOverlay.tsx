@@ -111,11 +111,14 @@ export function CrossWindowDropOverlay({
   // Recompute hit info whenever cursor position changes
   useEffect(() => {
     if (!active) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHitInfo(null)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnnouncement('')
       return
     }
     const info = findPanelUnderCursor(localX, localY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHitInfo(info)
     setAnnouncement(info ? `Drop zone: ${info.zone}` : 'Drag in progress')
   }, [active, localX, localY])
@@ -151,4 +154,3 @@ export function CrossWindowDropOverlay({
   )
 }
 
-export default CrossWindowDropOverlay

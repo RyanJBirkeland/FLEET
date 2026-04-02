@@ -14,7 +14,7 @@ export function WorkbenchActions({
   onLaunch,
   onCancel,
   submitting
-}: WorkbenchActionsProps) {
+}: WorkbenchActionsProps): React.JSX.Element {
   const mode = useTaskWorkbenchStore((s) => s.mode)
   const structural = useTaskWorkbenchStore((s) => s.structuralChecks)
   const operational = useTaskWorkbenchStore((s) => s.operationalChecks)

@@ -33,9 +33,15 @@ afterEach(() => cleanup())
 // ResizeObserver is not available in jsdom
 if (typeof globalThis.ResizeObserver === 'undefined') {
   globalThis.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
+    observe(): void {
+      /* noop */
+    }
+    unobserve(): void {
+      /* noop */
+    }
+    disconnect(): void {
+      /* noop */
+    }
   }
 }
 

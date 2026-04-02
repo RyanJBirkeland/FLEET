@@ -283,4 +283,3 @@ export function TearoffShell({ view, windowId }: TearoffShellProps): React.React
   )
 }
 
-export default TearoffShell

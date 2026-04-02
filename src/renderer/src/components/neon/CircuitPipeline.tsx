@@ -29,7 +29,7 @@ export function CircuitPipeline({
   animated = true,
   compact = false,
   className = ''
-}: CircuitPipelineProps) {
+}: CircuitPipelineProps): React.JSX.Element {
   const isHorizontal = orientation === 'horizontal'
   const nodeSize = compact ? 64 : 80
   const connectorThickness = compact ? 2 : 3

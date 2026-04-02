@@ -4,6 +4,6 @@ type KbdProps = {
   children: ReactNode
 }
 
-export function Kbd({ children }: KbdProps) {
+export function Kbd({ children }: KbdProps): React.JSX.Element {
   return <kbd className="bde-kbd">{children}</kbd>
 }

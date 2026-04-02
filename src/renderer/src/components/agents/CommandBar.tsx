@@ -19,6 +19,7 @@ export function CommandBar({
   const inputRef = useRef<HTMLInputElement>(null)
 
   // Show autocomplete when typing /
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (value.startsWith('/') && value.length > 0) {
       setShowAutocomplete(true)
@@ -26,6 +27,7 @@ export function CommandBar({
       setShowAutocomplete(false)
     }
   }, [value])
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const handleSubmit = useCallback((): void => {
     const trimmed = value.trim()

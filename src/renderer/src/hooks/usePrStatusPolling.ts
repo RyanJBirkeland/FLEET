@@ -19,13 +19,16 @@ export function usePrStatusPolling(): void {
   const setPrMergedMap = useSprintTasks((s) => s.setPrMergedMap)
 
   const prMergedRef = useRef(prMergedMap)
+  // eslint-disable-next-line react-hooks/refs -- sync ref for async callback
   prMergedRef.current = prMergedMap
   const updateTaskRef = useRef(updateTask)
+  // eslint-disable-next-line react-hooks/refs -- sync ref for async callback
   updateTaskRef.current = updateTask
 
   const setConflicts = usePrConflictsStore((s) => s.setConflicts)
   const prevConflictIdsRef = useRef<Set<string>>(new Set())
   const tasksRef = useRef(tasks)
+  // eslint-disable-next-line react-hooks/refs -- sync ref for async callback
   tasksRef.current = tasks
 
   const pollPrStatuses = useCallback(

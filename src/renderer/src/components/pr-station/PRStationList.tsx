@@ -15,7 +15,7 @@ interface PRStationListProps {
   onPrsChange?: (prs: OpenPr[]) => void
 }
 
-function CIBadge({ summary }: { summary: CheckRunSummary | undefined }) {
+function CIBadge({ summary }: { summary: CheckRunSummary | undefined }): React.JSX.Element {
   if (!summary || summary.total === 0) {
     return (
       <span className="pr-station__ci pr-station__ci--none" title="No checks">
@@ -56,7 +56,7 @@ export function PRStationList({
   removedKeys,
   prs: externalPrs,
   onPrsChange
-}: PRStationListProps) {
+}: PRStationListProps): React.JSX.Element {
   const repoOptions = useRepoOptions()
   const [internalPrs, setInternalPrs] = useState<OpenPr[]>([])
   const [checks, setChecks] = useState<Record<string, CheckRunSummary>>({})

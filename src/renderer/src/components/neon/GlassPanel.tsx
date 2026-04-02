@@ -22,7 +22,7 @@ export function GlassPanel({
   children,
   className = '',
   style
-}: GlassPanelProps) {
+}: GlassPanelProps): React.JSX.Element {
   const borderVal = accent ? neonVar(accent, 'border') : tokens.neon.surfaceDim
   return (
     <div

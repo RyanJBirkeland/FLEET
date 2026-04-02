@@ -35,7 +35,7 @@ import type { SprintTask } from '../../../../shared/types'
 
 import '../../assets/sprint-pipeline-neon.css'
 
-export function SprintPipeline() {
+export function SprintPipeline(): React.JSX.Element {
   // --- Store state ---
   const { tasks, loading, loadError } = useSprintTasks(
     useShallow((s) => ({
@@ -181,7 +181,7 @@ export function SprintPipeline() {
     async (task: SprintTask) => {
       try {
         await updateTask(task.id, { status: 'queued' })
-      } catch (err) {
+      } catch (_err) {
         // Error already shown by updateTask, no need to show again
         // The store will revert the optimistic update
       }

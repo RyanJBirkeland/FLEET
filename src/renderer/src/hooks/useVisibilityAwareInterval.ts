@@ -8,6 +8,7 @@ import { useEffect, useRef } from 'react'
  */
 export function useVisibilityAwareInterval(callback: () => void, intervalMs: number | null): void {
   const savedCallback = useRef(callback)
+  // eslint-disable-next-line react-hooks/refs -- sync ref for stable callback identity
   savedCallback.current = callback
 
   useEffect(() => {

@@ -11,7 +11,7 @@ interface AgentLaunchpadProps {
   onAgentSpawned: () => void
 }
 
-export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps) {
+export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps): React.JSX.Element {
   const [repoPaths, setRepoPaths] = useState<Record<string, string>>({})
 
   const templates = usePromptTemplatesStore((s) => s.templates)

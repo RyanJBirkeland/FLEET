@@ -14,7 +14,7 @@ export function Badge({
   children,
   className,
   style
-}: BadgeProps) {
+}: BadgeProps): React.JSX.Element {
   const cls = [`bde-badge`, `bde-badge--${variant}`, `bde-badge--${size}`, className]
     .filter(Boolean)
     .join(' ')

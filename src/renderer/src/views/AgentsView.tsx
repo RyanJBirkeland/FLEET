@@ -20,7 +20,7 @@ import { tokens } from '../design-system/tokens'
 import { toast } from '../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
-export function AgentsView() {
+export function AgentsView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const activeView = usePanelLayoutStore((s) => s.activeView)
   const agents = useAgentHistoryStore((s) => s.agents)
@@ -78,6 +78,7 @@ export function AgentsView() {
 
   // Build line chart data: agent completions per hour over the last 6 hours
   const activityChartData = useMemo((): ChartBar[] => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() in memo is intentional for time bucketing
     const now = Date.now()
     const sixHoursAgo = now - 6 * 3600 * 1000
     const buckets: { hour: number; count: number }[] = []

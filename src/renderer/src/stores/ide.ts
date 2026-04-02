@@ -281,7 +281,7 @@ export const useIDEStore = create<IDEState>((set) => ({
 
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 let lastSerialized = ''
-let lastToSave: any = null
+let lastToSave: unknown = null
 
 function flushPersistence(): void {
   if (persistTimer) {

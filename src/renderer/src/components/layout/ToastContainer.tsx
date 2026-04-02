@@ -2,7 +2,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useToastStore, type Toast } from '../../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
-function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }) {
+function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }): React.JSX.Element {
   const modifier =
     toast.type === 'success'
       ? 'toast--success'
@@ -47,7 +47,7 @@ function ToastItem({ toast, onDismiss }: { toast: Toast; onDismiss: () => void }
   )
 }
 
-export function ToastContainer() {
+export function ToastContainer(): React.JSX.Element | null {
   const toasts = useToastStore((s) => s.toasts)
   const removeToast = useToastStore((s) => s.removeToast)
   const reduced = useReducedMotion()

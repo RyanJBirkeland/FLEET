@@ -20,7 +20,7 @@ export function NeonCard({
   children,
   className = '',
   style
-}: NeonCardProps) {
+}: NeonCardProps): React.JSX.Element {
   const cardStyle: React.CSSProperties = {
     '--card-accent': neonVar(accent, 'color'),
     '--card-accent-border': neonVar(accent, 'border'),

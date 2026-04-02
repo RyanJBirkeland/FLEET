@@ -47,7 +47,7 @@ export function TaskDetailDrawer({
   onViewAgents,
   onUnblock,
   onRetry
-}: TaskDetailDrawerProps) {
+}: TaskDetailDrawerProps): React.JSX.Element {
   const [elapsed, setElapsed] = useState('')
   const [width, setWidth] = useState(DEFAULT_DRAWER_WIDTH)
   const dragging = useRef(false)
@@ -56,6 +56,7 @@ export function TaskDetailDrawer({
 
   useEffect(() => {
     if (task.status !== 'active' || !task.started_at) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setElapsed(formatElapsed(task.started_at))
     const interval = setInterval(() => setElapsed(formatElapsed(task.started_at!)), 10000)
     return () => clearInterval(interval)
@@ -114,6 +115,7 @@ export function TaskDetailDrawer({
     [width]
   )
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const depIds = useMemo(() => task?.depends_on?.map((d) => d.id) ?? [], [task?.depends_on])
   const allTasks = useSprintTasks((s) => s.tasks)
   const depTasks = useMemo(
@@ -308,7 +310,7 @@ function ActionButtons({
   onEdit: (t: SprintTask) => void
   onUnblock?: (t: SprintTask) => void
   onRetry?: (t: SprintTask) => void
-}) {
+}): React.JSX.Element {
   switch (task.status) {
     case 'backlog':
       return (

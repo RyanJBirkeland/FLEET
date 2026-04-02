@@ -36,7 +36,7 @@ function formatTime(ts: number): string {
   })
 }
 
-export function ChatBubble({ variant, text, timestamp }: ChatBubbleProps) {
+export function ChatBubble({ variant, text, timestamp }: ChatBubbleProps): React.JSX.Element {
   const bubbleStyle: CSSProperties = {
     ...variantStyles[variant],
     maxWidth: '85%',

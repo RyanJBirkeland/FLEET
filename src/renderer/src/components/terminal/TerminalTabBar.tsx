@@ -56,6 +56,7 @@ export function TerminalTabBar({
   }, [])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     checkOverflow()
     window.addEventListener('resize', checkOverflow)
     return () => window.removeEventListener('resize', checkOverflow)
@@ -79,18 +80,18 @@ export function TerminalTabBar({
   // Close context menu on click outside
   useEffect(() => {
     if (!contextMenu) return
-    const handleClick = () => setContextMenu(null)
+    const handleClick = (): void => setContextMenu(null)
     window.addEventListener('click', handleClick)
     return () => window.removeEventListener('click', handleClick)
   }, [contextMenu])
 
-  const handleDoubleClick = (tab: TerminalTab) => {
+  const handleDoubleClick = (tab: TerminalTab): void => {
     if (!onRenameTab) return
     setEditingTabId(tab.id)
     setEditValue(tab.title)
   }
 
-  const handleRenameSubmit = () => {
+  const handleRenameSubmit = (): void => {
     if (editingTabId && onRenameTab && editValue.trim()) {
       onRenameTab(editingTabId, editValue.trim())
     }
@@ -98,34 +99,34 @@ export function TerminalTabBar({
     setEditValue('')
   }
 
-  const handleRenameCancel = () => {
+  const handleRenameCancel = (): void => {
     setEditingTabId(null)
     setEditValue('')
   }
 
-  const handleContextMenu = (e: React.MouseEvent, tab: TerminalTab) => {
+  const handleContextMenu = (e: React.MouseEvent, tab: TerminalTab): void => {
     e.preventDefault()
     setContextMenu({ x: e.clientX, y: e.clientY, tabId: tab.id })
   }
 
-  const handleMiddleClick = (e: React.MouseEvent, tabId: string) => {
+  const handleMiddleClick = (e: React.MouseEvent, tabId: string): void => {
     if (e.button === 1) {
       e.preventDefault()
       onCloseTab(tabId)
     }
   }
 
-  const handleDragStart = (e: React.DragEvent, idx: number) => {
+  const handleDragStart = (e: React.DragEvent, idx: number): void => {
     setDraggedTabIdx(idx)
     e.dataTransfer.effectAllowed = 'move'
   }
 
-  const handleDragOver = (e: React.DragEvent) => {
+  const handleDragOver = (e: React.DragEvent): void => {
     e.preventDefault()
     e.dataTransfer.dropEffect = 'move'
   }
 
-  const handleDrop = (e: React.DragEvent, targetIdx: number) => {
+  const handleDrop = (e: React.DragEvent, targetIdx: number): void => {
     e.preventDefault()
     if (draggedTabIdx !== null && draggedTabIdx !== targetIdx && onReorderTab) {
       onReorderTab(draggedTabIdx, targetIdx)
@@ -133,7 +134,7 @@ export function TerminalTabBar({
     setDraggedTabIdx(null)
   }
 
-  const scrollTabs = (direction: 'left' | 'right') => {
+  const scrollTabs = (direction: 'left' | 'right'): void => {
     const container = tabsContainerRef.current
     if (!container) return
     const scrollAmount = 200

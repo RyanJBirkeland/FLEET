@@ -12,14 +12,14 @@ interface CloseButtonProps {
   onClosed?: (pr: OpenPr) => void
 }
 
-export function CloseButton({ pr, onClosed }: CloseButtonProps) {
+export function CloseButton({ pr, onClosed }: CloseButtonProps): React.JSX.Element {
   const repoOptions = useRepoOptions()
   const { confirm, confirmProps } = useConfirm()
   const [closing, setClosing] = useState(false)
 
   const disabled = closing || pr.merged === true
 
-  async function handleClose() {
+  async function handleClose(): Promise<void> {
     const repo = repoOptions.find((r) => r.label === pr.repo)
     if (!repo) return
 

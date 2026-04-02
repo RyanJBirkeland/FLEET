@@ -86,4 +86,3 @@ export function InlineDiffDrawer({
   )
 }
 
-export default InlineDiffDrawer

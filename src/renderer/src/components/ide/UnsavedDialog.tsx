@@ -5,6 +5,7 @@ export interface UnsavedDialogResult {
   confirmProps: ReturnType<typeof useConfirm>['confirmProps']
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useUnsavedDialog(): UnsavedDialogResult {
   const { confirm, confirmProps } = useConfirm()
 

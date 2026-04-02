@@ -11,7 +11,7 @@ interface PipelineFlowProps {
   stages: PipelineStage[]
 }
 
-export function PipelineFlow({ stages }: PipelineFlowProps) {
+export function PipelineFlow({ stages }: PipelineFlowProps): React.JSX.Element {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[1], flexWrap: 'wrap' }}>
       {stages.map((stage, i) => (

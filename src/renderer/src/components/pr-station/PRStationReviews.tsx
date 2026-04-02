@@ -8,7 +8,7 @@ interface PRStationReviewsProps {
   loading: boolean
 }
 
-function ReviewStateBadge({ state }: { state: PrReview['state'] }) {
+function ReviewStateBadge({ state }: { state: PrReview['state'] }): React.JSX.Element | null {
   switch (state) {
     case 'APPROVED':
       return (
@@ -52,7 +52,7 @@ function latestReviewPerUser(reviews: PrReview[]): PrReview[] {
   return Array.from(map.values())
 }
 
-export function PRStationReviews({ reviews, loading }: PRStationReviewsProps) {
+export function PRStationReviews({ reviews, loading }: PRStationReviewsProps): React.JSX.Element {
   if (loading) {
     return (
       <div className="pr-detail__section">

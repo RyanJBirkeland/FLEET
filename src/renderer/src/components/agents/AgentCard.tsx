@@ -40,7 +40,7 @@ interface StatusIndicatorProps {
   accent: NeonAccent
 }
 
-function StatusIndicator({ status, accent }: StatusIndicatorProps) {
+function StatusIndicator({ status, accent }: StatusIndicatorProps): React.JSX.Element {
   const iconColor = neonVar(accent, 'color')
   const iconSize = 14
 
@@ -78,7 +78,7 @@ function StatusIndicator({ status, accent }: StatusIndicatorProps) {
   }
 }
 
-export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) {
+export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps): React.JSX.Element {
   const accent = STATUS_ACCENTS[agent.status] ?? 'purple'
   const isRunning = agent.status === 'running'
   const SourceIcon = agent.source === 'bde' ? Bot : Cpu
@@ -92,7 +92,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) 
     return () => clearInterval(id)
   }, [isRunning])
 
-  const handleKill = async (e: React.MouseEvent) => {
+  const handleKill = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()
     const label = agent.task.length > 40 ? agent.task.slice(0, 40) + '\u2026' : agent.task
     const ok = await confirm({

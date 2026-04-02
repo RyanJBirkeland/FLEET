@@ -23,7 +23,7 @@ interface AgentConsoleProps {
   onCommand: (cmd: string, args?: string) => void
 }
 
-export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps) {
+export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
@@ -123,7 +123,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
     }
   }, [blocks.length, virtualizer])
 
-  const handleScroll = () => {
+  const handleScroll = (): void => {
     const el = parentRef.current
     if (!el) return
     const threshold = 100
@@ -132,7 +132,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
     setShowJumpButton(!atBottom && blocks.length > 0)
   }
 
-  const handleJumpToLatest = () => {
+  const handleJumpToLatest = (): void => {
     if (blocks.length > 0) {
       virtualizer.scrollToIndex(blocks.length - 1, { align: 'end' })
       isAtBottomRef.current = true
@@ -140,32 +140,32 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
     }
   }
 
-  const handleSteer = (message: string) => {
+  const handleSteer = (message: string): void => {
     setPendingMessages((prev) => [...prev, message])
     onSteer(message)
   }
 
   // Search handlers
-  const handleSearchChange = (query: string) => {
+  const handleSearchChange = (query: string): void => {
     setSearchQuery(query)
     setActiveMatchIndex(0)
   }
 
-  const handleSearchNext = () => {
+  const handleSearchNext = (): void => {
     if (matchingIndices.length === 0) return
     const nextIndex = (activeMatchIndex + 1) % matchingIndices.length
     setActiveMatchIndex(nextIndex)
     virtualizer.scrollToIndex(matchingIndices[nextIndex], { align: 'center' })
   }
 
-  const handleSearchPrev = () => {
+  const handleSearchPrev = (): void => {
     if (matchingIndices.length === 0) return
     const prevIndex = activeMatchIndex === 0 ? matchingIndices.length - 1 : activeMatchIndex - 1
     setActiveMatchIndex(prevIndex)
     virtualizer.scrollToIndex(matchingIndices[prevIndex], { align: 'center' })
   }
 
-  const handleSearchClose = () => {
+  const handleSearchClose = (): void => {
     setSearchOpen(false)
     setSearchQuery('')
     setActiveMatchIndex(0)
@@ -173,7 +173,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
 
   // Keyboard shortcut for Cmd+F
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault()
         setSearchOpen(true)

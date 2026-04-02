@@ -94,4 +94,3 @@ export function BranchSelector({
   )
 }
 
-export default BranchSelector

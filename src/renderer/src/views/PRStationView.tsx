@@ -17,7 +17,7 @@ import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/
 
 type DetailTab = 'info' | 'diff'
 
-export default function PRStationView() {
+export default function PRStationView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const repoOptions = useRepoOptions()
   const [selectedPr, setSelectedPr] = useState<OpenPr | null>(null)

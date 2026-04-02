@@ -72,6 +72,7 @@ export function FileContextMenu({
     }
     if (top < 0) top = 8
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setPosition({ top, left })
   }, [target.x, target.y])
 

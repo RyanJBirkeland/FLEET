@@ -11,7 +11,7 @@ const STATUS_ICON_MAP: Record<
   pending: { Icon: Loader2, className: 'wb-check-icon--pending', label: 'Pending' }
 }
 
-function CheckIcon({ status }: { status: CheckResult['status'] }) {
+function CheckIcon({ status }: { status: CheckResult['status'] }): React.JSX.Element {
   const { Icon, className, label } = STATUS_ICON_MAP[status]
   return (
     <span className={`wb-check-icon ${className}`} aria-label={label} role="img">
@@ -20,7 +20,7 @@ function CheckIcon({ status }: { status: CheckResult['status'] }) {
   )
 }
 
-export function ReadinessChecks() {
+export function ReadinessChecks(): React.JSX.Element | null {
   const structural = useTaskWorkbenchStore((s) => s.structuralChecks)
   const semantic = useTaskWorkbenchStore((s) => s.semanticChecks)
   const operational = useTaskWorkbenchStore((s) => s.operationalChecks)

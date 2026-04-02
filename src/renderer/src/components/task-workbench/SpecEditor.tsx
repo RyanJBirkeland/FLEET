@@ -31,7 +31,7 @@ interface SpecEditorProps {
   generating: boolean
 }
 
-export function SpecEditor({ onRequestGenerate, onRequestResearch, generating }: SpecEditorProps) {
+export function SpecEditor({ onRequestGenerate, onRequestResearch, generating }: SpecEditorProps): React.JSX.Element {
   const spec = useTaskWorkbenchStore((s) => s.spec)
   const setField = useTaskWorkbenchStore((s) => s.setField)
   const setSpecType = useTaskWorkbenchStore((s) => s.setSpecType)

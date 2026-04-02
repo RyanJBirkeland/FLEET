@@ -11,7 +11,7 @@ export function DiffCommentComposer({
   onSubmit,
   onCancel,
   initialBody = ''
-}: DiffCommentComposerProps) {
+}: DiffCommentComposerProps): React.JSX.Element {
   const [body, setBody] = useState(initialBody)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 

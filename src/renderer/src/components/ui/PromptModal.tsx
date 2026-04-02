@@ -37,6 +37,7 @@ export function PromptModal({
   const inputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const valueRef = useRef(value)
+  // eslint-disable-next-line react-hooks/refs -- sync ref for escape key handler
   valueRef.current = value
   useFocusTrap(dialogRef, open)
 
@@ -129,6 +130,7 @@ export function PromptModal({
  * usePrompt — stateful hook for managing PromptModal visibility.
  * Returns a `prompt` function and props to spread onto <PromptModal />.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePrompt(): {
   prompt: (opts: {
     message: string

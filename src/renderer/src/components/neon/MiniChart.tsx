@@ -30,7 +30,7 @@ function smoothPath(points: [number, number][]): string {
   return d.join(' ')
 }
 
-export function MiniChart({ data, height = 80 }: MiniChartProps) {
+export function MiniChart({ data, height = 80 }: MiniChartProps): React.JSX.Element {
   const uid = useId()
   const [hover, setHover] = useState<number | null>(null)
 

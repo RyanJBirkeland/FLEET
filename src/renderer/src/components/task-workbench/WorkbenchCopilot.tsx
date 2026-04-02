@@ -9,7 +9,7 @@ function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
-function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () => void }) {
+function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () => void }): React.JSX.Element {
   const isUser = msg.role === 'user'
   const isSystem = msg.role === 'system'
 
@@ -36,7 +36,7 @@ function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () =
   )
 }
 
-export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
+export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps): React.JSX.Element {
   const messages = useTaskWorkbenchStore((s) => s.copilotMessages)
   const loading = useTaskWorkbenchStore((s) => s.copilotLoading)
   const addMessage = useTaskWorkbenchStore((s) => s.addCopilotMessage)

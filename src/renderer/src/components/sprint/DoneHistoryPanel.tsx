@@ -7,11 +7,11 @@ interface DoneHistoryPanelProps {
   onClose: () => void
 }
 
-export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPanelProps) {
+export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPanelProps): React.JSX.Element {
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleEscape)
@@ -31,7 +31,7 @@ export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPan
     const first = focusable[0]
     first.focus()
 
-    const handleTab = (e: KeyboardEvent) => {
+    const handleTab = (e: KeyboardEvent): void => {
       if (e.key !== 'Tab') return
       const current = panel.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'

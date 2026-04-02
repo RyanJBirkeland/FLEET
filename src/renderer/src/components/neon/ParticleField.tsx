@@ -14,7 +14,8 @@ const SIZE_RANGE_PX = 2
 const TOP_OFFSET_PCT = 20
 const TOP_RANGE_PCT = 80
 
-export function ParticleField({ density = 18 }: ParticleFieldProps) {
+export function ParticleField({ density = 18 }: ParticleFieldProps): React.JSX.Element {
+  /* eslint-disable react-hooks/purity -- decorative randomized particles are intentionally impure */
   const particles = useMemo(() => {
     return Array.from({ length: density }, (_, i) => ({
       id: i,
@@ -27,6 +28,7 @@ export function ParticleField({ density = 18 }: ParticleFieldProps) {
       size: `${SIZE_MIN_PX + Math.random() * SIZE_RANGE_PX}px`
     }))
   }, [density])
+  /* eslint-enable react-hooks/purity */
 
   return (
     <div

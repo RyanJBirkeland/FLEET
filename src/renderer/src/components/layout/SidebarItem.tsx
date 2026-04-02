@@ -36,18 +36,18 @@ export function SidebarItem({
   isOpen,
   onActivate,
   onContextAction
-}: SidebarItemProps) {
+}: SidebarItemProps): React.JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
   const triggerId = `sidebar-trigger-${view}`
 
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleContextMenu = (e: React.MouseEvent): void => {
     e.preventDefault()
     e.stopPropagation()
     setContextMenu({ x: e.clientX, y: e.clientY })
   }
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
     // Shift+F10 or ContextMenu key opens context menu
     if ((e.key === 'F10' && e.shiftKey) || e.key === 'ContextMenu') {
       e.preventDefault()

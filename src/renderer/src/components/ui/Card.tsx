@@ -8,7 +8,7 @@ type CardProps = {
   active?: boolean
 }
 
-export function Card({ children, padding = 'md', className, onClick, active = false }: CardProps) {
+export function Card({ children, padding = 'md', className, onClick, active = false }: CardProps): React.JSX.Element {
   const classes = [
     'bde-card',
     `bde-card--pad-${padding}`,

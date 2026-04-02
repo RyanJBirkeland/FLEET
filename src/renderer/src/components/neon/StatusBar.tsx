@@ -21,7 +21,7 @@ const STATUS_GLOWS = {
   warning: '0 0 8px var(--neon-orange)'
 } as const
 
-export function StatusBar({ title, status, accent = 'purple', children }: StatusBarProps) {
+export function StatusBar({ title, status, accent = 'purple', children }: StatusBarProps): React.JSX.Element {
   return (
     <div
       style={{
