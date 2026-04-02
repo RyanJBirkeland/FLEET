@@ -24,6 +24,7 @@ const mocks = vi.hoisted(() => {
 
   const mockSetConflictDrawerOpen = vi.fn()
   const mockSetHealthCheckDrawerOpen = vi.fn()
+  const mockSetStatusFilter = vi.fn()
 
   const uiState = {
     selectedTaskId: null as string | null,
@@ -39,7 +40,8 @@ const mocks = vi.hoisted(() => {
     setDoneViewOpen: mockSetDoneViewOpen,
     setLogDrawerTaskId: vi.fn(),
     setConflictDrawerOpen: mockSetConflictDrawerOpen,
-    setHealthCheckDrawerOpen: mockSetHealthCheckDrawerOpen
+    setHealthCheckDrawerOpen: mockSetHealthCheckDrawerOpen,
+    setStatusFilter: mockSetStatusFilter
   }
 
   return {
@@ -52,6 +54,7 @@ const mocks = vi.hoisted(() => {
     mockSetDoneViewOpen,
     mockSetConflictDrawerOpen,
     mockSetHealthCheckDrawerOpen,
+    mockSetStatusFilter,
     mockSetView,
     storeState,
     uiState
@@ -278,7 +281,8 @@ describe('SprintPipeline', () => {
       setSpecPanelOpen: mocks.mockSetSpecPanelOpen,
       setDoneViewOpen: mocks.mockSetDoneViewOpen,
       setConflictDrawerOpen: mocks.mockSetConflictDrawerOpen,
-      setHealthCheckDrawerOpen: mocks.mockSetHealthCheckDrawerOpen
+      setHealthCheckDrawerOpen: mocks.mockSetHealthCheckDrawerOpen,
+      setStatusFilter: mocks.mockSetStatusFilter
     })
   })
 
@@ -375,42 +379,49 @@ describe('SprintPipeline - additional scenarios', () => {
       setSpecPanelOpen: mocks.mockSetSpecPanelOpen,
       setDoneViewOpen: mocks.mockSetDoneViewOpen,
       setConflictDrawerOpen: mocks.mockSetConflictDrawerOpen,
-      setHealthCheckDrawerOpen: mocks.mockSetHealthCheckDrawerOpen
+      setHealthCheckDrawerOpen: mocks.mockSetHealthCheckDrawerOpen,
+      setStatusFilter: mocks.mockSetStatusFilter
     })
     mocks.mockSetSelectedTaskId.mockClear()
     mocks.mockSetDoneViewOpen.mockClear()
   })
 
-  it('shows header stats: active count, queued count, done count', async () => {
+  it('shows header stats for all 6 buckets', async () => {
     const tasks = [
       makeTask({ id: 'a1', status: 'active' }),
       makeTask({ id: 'a2', status: 'active' }),
       makeTask({ id: 'q1', status: 'queued' }),
+      makeTask({ id: 'b1', status: 'blocked' }),
       makeTask({ id: 'd1', status: 'done' }),
       makeTask({ id: 'd2', status: 'done' }),
-      makeTask({ id: 'd3', status: 'done' })
+      makeTask({ id: 'd3', status: 'done' }),
+      makeTask({ id: 'f1', status: 'failed' })
     ]
     Object.assign(mocks.storeState, { tasks })
 
     const { SprintPipeline } = await import('../SprintPipeline')
     render(<SprintPipeline />)
-    // Stats use <b> tags so text is split across elements — check container
     const header = document.querySelector('.sprint-pipeline__stats')!
     expect(header.textContent).toContain('2')
     expect(header.textContent).toContain('active')
     expect(header.textContent).toContain('1')
     expect(header.textContent).toContain('queued')
+    expect(header.textContent).toContain('blocked')
+    expect(header.textContent).toContain('review')
+    expect(header.textContent).toContain('failed')
     expect(header.textContent).toContain('3')
     expect(header.textContent).toContain('done')
   })
 
-  it('shows 0 active, 0 queued, 0 done when tasks is empty', async () => {
+  it('shows 0 for all stats when tasks is empty', async () => {
     const { SprintPipeline } = await import('../SprintPipeline')
     render(<SprintPipeline />)
     const header = document.querySelector('.sprint-pipeline__stats')!
-    expect(header.textContent).toContain('0')
     expect(header.textContent).toContain('active')
     expect(header.textContent).toContain('queued')
+    expect(header.textContent).toContain('blocked')
+    expect(header.textContent).toContain('review')
+    expect(header.textContent).toContain('failed')
     expect(header.textContent).toContain('done')
   })
 
@@ -434,31 +445,7 @@ describe('SprintPipeline - additional scenarios', () => {
     expect(mocks.mockSetSelectedTaskId).toHaveBeenCalledWith('queued-1')
   })
 
-  it('shows "View all" link in done footer when more than 5 done tasks', async () => {
-    const doneTasks = Array.from({ length: 7 }, (_, i) =>
-      makeTask({ id: `d${i}`, status: 'done' })
-    )
-    Object.assign(mocks.storeState, { tasks: doneTasks })
-
-    const { SprintPipeline } = await import('../SprintPipeline')
-    render(<SprintPipeline />)
-    expect(screen.getByText('View all →')).toBeInTheDocument()
-  })
-
-  it('calls setDoneViewOpen(true) when "View all" link is clicked', async () => {
-    const doneTasks = Array.from({ length: 7 }, (_, i) =>
-      makeTask({ id: `d${i}`, status: 'done' })
-    )
-    Object.assign(mocks.storeState, { tasks: doneTasks })
-
-    const { SprintPipeline } = await import('../SprintPipeline')
-    const { fireEvent: fe } = await import('@testing-library/react')
-    render(<SprintPipeline />)
-    fe.click(screen.getByText('View all →'))
-    expect(mocks.mockSetDoneViewOpen).toHaveBeenCalledWith(true)
-  })
-
-  it('does not show "View all" footer when 5 or fewer done tasks', async () => {
+  it('shows done summary button when more than 3 done tasks', async () => {
     const doneTasks = Array.from({ length: 5 }, (_, i) =>
       makeTask({ id: `d${i}`, status: 'done' })
     )
@@ -466,7 +453,31 @@ describe('SprintPipeline - additional scenarios', () => {
 
     const { SprintPipeline } = await import('../SprintPipeline')
     render(<SprintPipeline />)
-    expect(screen.queryByText('View all →')).not.toBeInTheDocument()
+    expect(screen.getByText('5 completed · View all')).toBeInTheDocument()
+  })
+
+  it('calls setDoneViewOpen(true) when done summary is clicked', async () => {
+    const doneTasks = Array.from({ length: 5 }, (_, i) =>
+      makeTask({ id: `d${i}`, status: 'done' })
+    )
+    Object.assign(mocks.storeState, { tasks: doneTasks })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    const { fireEvent: fe } = await import('@testing-library/react')
+    render(<SprintPipeline />)
+    fe.click(screen.getByText('5 completed · View all'))
+    expect(mocks.mockSetDoneViewOpen).toHaveBeenCalledWith(true)
+  })
+
+  it('does not show done summary when 3 or fewer done tasks', async () => {
+    const doneTasks = Array.from({ length: 3 }, (_, i) =>
+      makeTask({ id: `d${i}`, status: 'done' })
+    )
+    Object.assign(mocks.storeState, { tasks: doneTasks })
+
+    const { SprintPipeline } = await import('../SprintPipeline')
+    render(<SprintPipeline />)
+    expect(screen.queryByText(/completed · View all/)).not.toBeInTheDocument()
   })
 
     it('does not auto-select when selectedTaskId is already set', async () => {

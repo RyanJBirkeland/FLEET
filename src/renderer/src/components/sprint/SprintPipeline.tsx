@@ -71,6 +71,7 @@ export function SprintPipeline() {
   const setLogDrawerTaskId = useSprintUI((s) => s.setLogDrawerTaskId)
   const setConflictDrawerOpen = useSprintUI((s) => s.setConflictDrawerOpen)
   const setHealthCheckDrawerOpen = useSprintUI((s) => s.setHealthCheckDrawerOpen)
+  const setStatusFilter = useSprintUI((s) => s.setStatusFilter)
 
   const setView = usePanelLayoutStore((s) => s.setView)
 
@@ -79,6 +80,7 @@ export function SprintPipeline() {
     handleSaveSpec,
     handleStop,
     handleRerun,
+    handleRetry,
     launchTask,
     deleteTask,
     confirmProps
@@ -196,24 +198,37 @@ export function SprintPipeline() {
   )
 
   // Stats
-  const activeCount = partition.inProgress.length
-  const queuedCount = partition.todo.length
-  const doneCount = partition.done.length
+  const headerStats = useMemo(
+    () => [
+      { label: 'active', count: partition.inProgress.length, filter: 'in-progress' as const },
+      { label: 'queued', count: partition.todo.length, filter: 'todo' as const },
+      { label: 'blocked', count: partition.blocked.length, filter: 'blocked' as const },
+      { label: 'review', count: partition.awaitingReview.length, filter: 'awaiting-review' as const },
+      { label: 'failed', count: partition.failed.length, filter: 'failed' as const },
+      { label: 'done', count: partition.done.length, filter: 'done' as const }
+    ],
+    [partition]
+  )
 
   return (
     <div className="sprint-pipeline" data-testid="sprint-pipeline">
       <header className="sprint-pipeline__header">
         <h1 className="sprint-pipeline__title">Task Pipeline</h1>
         <div className="sprint-pipeline__stats">
-          <span className="sprint-pipeline__stat">
-            <b>{activeCount}</b> active
-          </span>
-          <span className="sprint-pipeline__stat">
-            <b>{queuedCount}</b> queued
-          </span>
-          <span className="sprint-pipeline__stat">
-            <b>{doneCount}</b> done
-          </span>
+          {headerStats.map((stat) => (
+            <span
+              key={stat.label}
+              className={`sprint-pipeline__stat sprint-pipeline__stat--${stat.label} sprint-pipeline__stat--clickable`}
+              onClick={() => setStatusFilter(stat.filter)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') setStatusFilter(stat.filter)
+              }}
+            >
+              <b className="sprint-pipeline__stat-count">{stat.count}</b> {stat.label}
+            </span>
+          ))}
         </div>
         {conflictingTasks.length > 0 && (
           <button
@@ -314,21 +329,18 @@ export function SprintPipeline() {
             <PipelineStage
               name="done"
               label="Done"
-              tasks={partition.done.slice(0, 5)}
+              tasks={partition.done.slice(0, 3)}
               count={`${partition.done.length}`}
               selectedTaskId={selectedTaskId}
               onTaskClick={handleTaskClick}
               doneFooter={
-                partition.done.length > 5 ? (
-                  <div className="pipeline-stage__done-footer">
-                    Showing 5 of {partition.done.length} ·{' '}
-                    <button
-                      className="pipeline-stage__done-link"
-                      onClick={() => setDoneViewOpen(true)}
-                    >
-                      View all &rarr;
-                    </button>
-                  </div>
+                partition.done.length > 3 ? (
+                  <button
+                    className="pipeline-stage__done-summary"
+                    onClick={() => setDoneViewOpen(true)}
+                  >
+                    {partition.done.length} completed · View all
+                  </button>
                 ) : undefined
               }
             />
@@ -351,6 +363,7 @@ export function SprintPipeline() {
             }}
             onViewAgents={() => setView('agents')}
             onUnblock={handleUnblock}
+            onRetry={handleRetry}
           />
         )}
       </div>

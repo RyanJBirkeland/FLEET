@@ -31,6 +31,9 @@ export function PipelineStage({
       <div className="pipeline-stage__header">
         <div className={`pipeline-stage__name pipeline-stage__name--${name}`}>{label}</div>
         {!empty && <div className="pipeline-stage__count">{count}</div>}
+        {label === 'Review' && tasks.length > 0 && (
+          <span className="pipeline-stage__subtitle">PRs awaiting merge</span>
+        )}
       </div>
       {!empty && (
         <div className="pipeline-stage__cards">
