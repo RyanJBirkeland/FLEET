@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from '../../stores/toasts'
+import { renderAgentMarkdown } from '../../lib/render-agent-markdown'
 
 export interface SpecPanelProps {
   taskTitle: string
@@ -88,9 +89,9 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
                 }}
               />
             ) : (
-              <pre style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', margin: 0 }}>
-                {spec}
-              </pre>
+              <div className="spec-panel__rendered">
+                {renderAgentMarkdown(spec)}
+              </div>
             )}
           </div>
           <div className="spec-panel__actions">
