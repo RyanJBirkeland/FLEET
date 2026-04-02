@@ -107,9 +107,9 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
       data-testid="task-pill"
     >
       <div className="task-pill__dot" style={{ background: getDotColor(task.status) }} />
-      {failureInfo && <failureInfo.icon size={10} className={failureInfo.className} title={failureInfo.label} />}
-      {isZombie && <AlertTriangle size={12} className="task-pill__zombie-icon" title="Agent finished but task not marked done" />}
-      {isStale && !isZombie && <Clock size={12} className="task-pill__stale-icon" title="Task may be stuck" />}
+      {failureInfo && <span title={failureInfo.label}><failureInfo.icon size={10} className={failureInfo.className} aria-label={failureInfo.label} /></span>}
+      {isZombie && <span title="Agent finished but task not marked done"><AlertTriangle size={12} className="task-pill__zombie-icon" aria-label="Zombie task" /></span>}
+      {isStale && !isZombie && <span title="Task may be stuck"><Clock size={12} className="task-pill__stale-icon" aria-label="Stale task" /></span>}
       <span className="task-pill__title" title={task.title}>{task.title}</span>
       <span
         className="task-pill__badge"

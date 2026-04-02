@@ -6,7 +6,7 @@
 import { useEffect, type Dispatch, type SetStateAction } from 'react'
 import { useSprintUI } from '../stores/sprintUI'
 import { useSprintTasks } from '../stores/sprintTasks'
-import type { SprintTask } from '../../../../shared/types'
+import type { SprintTask } from '../../../shared/types'
 
 interface UseSprintKeyboardShortcutsArgs {
   openWorkbench: () => void
