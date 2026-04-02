@@ -90,7 +90,7 @@ export const usePendingReviewStore = create<PendingReviewStore>((set, get) => ({
 // Auto-persist to localStorage whenever pendingComments changes (debounced 500ms)
 let persistTimer: ReturnType<typeof setTimeout> | null = null
 
-function flushToStorage() {
+function flushToStorage(): void {
   if (persistTimer) clearTimeout(persistTimer)
   try {
     const state = usePendingReviewStore.getState()

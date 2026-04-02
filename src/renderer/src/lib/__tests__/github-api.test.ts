@@ -527,13 +527,17 @@ describe('mergePR', () => {
   it('throws on merge failure with message', async () => {
     mockGithubFetch.mockResolvedValue(ipcResponse({ message: 'Merge conflict' }, 405))
 
-    await expect(mergePR('owner', 'repo', 42)).rejects.toThrow('Merge failed: unable to merge pull request (status 405)')
+    await expect(mergePR('owner', 'repo', 42)).rejects.toThrow(
+      'Merge failed: unable to merge pull request (status 405)'
+    )
   })
 
   it('throws with unknown when body has no message', async () => {
     mockGithubFetch.mockResolvedValue(ipcResponse({}, 500))
 
-    await expect(mergePR('owner', 'repo', 42)).rejects.toThrow('Merge failed: unable to merge pull request (status 500)')
+    await expect(mergePR('owner', 'repo', 42)).rejects.toThrow(
+      'Merge failed: unable to merge pull request (status 500)'
+    )
   })
 })
 
@@ -556,13 +560,17 @@ describe('closePR', () => {
   it('throws on non-ok response with message', async () => {
     mockGithubFetch.mockResolvedValue(ipcResponse({ message: 'Not Found' }, 404))
 
-    await expect(closePR('owner', 'repo', 42)).rejects.toThrow('Close failed: unable to close pull request (status 404)')
+    await expect(closePR('owner', 'repo', 42)).rejects.toThrow(
+      'Close failed: unable to close pull request (status 404)'
+    )
   })
 
   it('throws with unknown when body has no message', async () => {
     mockGithubFetch.mockResolvedValue(ipcResponse({}, 422))
 
-    await expect(closePR('owner', 'repo', 42)).rejects.toThrow('Close failed: unable to close pull request (status 422)')
+    await expect(closePR('owner', 'repo', 42)).rejects.toThrow(
+      'Close failed: unable to close pull request (status 422)'
+    )
   })
 })
 

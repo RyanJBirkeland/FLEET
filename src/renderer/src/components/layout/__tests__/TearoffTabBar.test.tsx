@@ -10,17 +10,13 @@ const tabs: PanelTab[] = [
 
 describe('TearoffTabBar', () => {
   it('renders all tab labels', () => {
-    render(
-      <TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />
-    )
+    render(<TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />)
     expect(screen.getByText('Agents')).toBeInTheDocument()
     expect(screen.getByText('IDE')).toBeInTheDocument()
   })
 
   it('renders with role tablist', () => {
-    render(
-      <TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />
-    )
+    render(<TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />)
     expect(screen.getByRole('tablist')).toBeInTheDocument()
   })
 
@@ -34,9 +30,7 @@ describe('TearoffTabBar', () => {
   })
 
   it('sets aria-selected on active tab', () => {
-    render(
-      <TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />
-    )
+    render(<TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />)
     const tabEls = screen.getAllByRole('tab')
     expect(tabEls[0]).toHaveAttribute('aria-selected', 'true')
     expect(tabEls[1]).toHaveAttribute('aria-selected', 'false')
@@ -65,12 +59,7 @@ describe('TearoffTabBar', () => {
     const onSelectTab = vi.fn()
     const onCloseTab = vi.fn()
     render(
-      <TearoffTabBar
-        tabs={tabs}
-        activeTab={0}
-        onSelectTab={onSelectTab}
-        onCloseTab={onCloseTab}
-      />
+      <TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={onSelectTab} onCloseTab={onCloseTab} />
     )
     fireEvent.click(screen.getByLabelText('Close Agents'))
     expect(onCloseTab).toHaveBeenCalledTimes(1)
@@ -90,9 +79,7 @@ describe('TearoffTabBar', () => {
   })
 
   it('shows close buttons when multiple tabs', () => {
-    render(
-      <TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />
-    )
+    render(<TearoffTabBar tabs={tabs} activeTab={0} onSelectTab={vi.fn()} onCloseTab={vi.fn()} />)
     expect(screen.getByLabelText('Close Agents')).toBeInTheDocument()
     expect(screen.getByLabelText('Close IDE')).toBeInTheDocument()
   })

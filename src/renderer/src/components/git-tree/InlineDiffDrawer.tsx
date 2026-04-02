@@ -47,7 +47,9 @@ export function InlineDiffDrawer({
     >
       {/* Drawer header */}
       <div className="git-diff-drawer__header">
-        <span className="git-diff-drawer__path" title={selectedFile.path}>{selectedFile.path}</span>
+        <span className="git-diff-drawer__path" title={selectedFile.path}>
+          {selectedFile.path}
+        </span>
         <div className="git-diff-drawer__header-actions">
           <button
             onClick={() => setExpanded(!expanded)}
@@ -84,4 +86,3 @@ export function InlineDiffDrawer({
   )
 }
 
-export default InlineDiffDrawer

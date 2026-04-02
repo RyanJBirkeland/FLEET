@@ -42,7 +42,6 @@ vi.mock('../../../stores/panelLayout', () => {
   }
 })
 
-
 describe('NeonSidebar', () => {
   it('renders pinned view icons', async () => {
     const { NeonSidebar } = await import('../NeonSidebar')

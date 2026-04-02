@@ -8,7 +8,7 @@ interface DiffCommentWidgetProps {
   comments: PrComment[]
 }
 
-export function DiffCommentWidget({ comments }: DiffCommentWidgetProps) {
+export function DiffCommentWidget({ comments }: DiffCommentWidgetProps): React.JSX.Element | null {
   const [collapsed, setCollapsed] = useState(false)
   // Note: Reply UI is not yet implemented - placeholder for future enhancement
   // The API (replyToComment) exists but UI integration requires:

@@ -25,7 +25,6 @@ vi.mock('../../../stores/panelLayout', () => ({
   findLeaf: vi.fn((_root: any, panelId: string) => (panelId === 'p1' ? mockLeaf : null))
 }))
 
-
 vi.mock('../../../stores/costData', () => ({
   useCostDataStore: vi.fn((sel: any) => sel({ totalCost: 4.2 }))
 }))

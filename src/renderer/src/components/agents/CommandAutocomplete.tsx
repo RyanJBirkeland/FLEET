@@ -31,6 +31,7 @@ export function CommandAutocomplete({
 
   // Reset selection when filtered commands change
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIndex(0)
   }, [query])
 

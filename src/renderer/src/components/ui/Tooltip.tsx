@@ -6,7 +6,7 @@ type TooltipProps = {
   side?: 'top' | 'bottom' | 'left' | 'right'
 }
 
-export function Tooltip({ content, children, side = 'top' }: TooltipProps) {
+export function Tooltip({ content, children, side = 'top' }: TooltipProps): React.JSX.Element {
   return (
     <span className={`bde-tooltip bde-tooltip--${side}`} data-tooltip={content}>
       {children}

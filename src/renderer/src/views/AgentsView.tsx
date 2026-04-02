@@ -20,7 +20,7 @@ import { tokens } from '../design-system/tokens'
 import { toast } from '../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
-export function AgentsView() {
+export function AgentsView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const activeView = usePanelLayoutStore((s) => s.activeView)
   const agents = useAgentHistoryStore((s) => s.agents)
@@ -78,6 +78,7 @@ export function AgentsView() {
 
   // Build line chart data: agent completions per hour over the last 6 hours
   const activityChartData = useMemo((): ChartBar[] => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() in memo is intentional for time bucketing
     const now = Date.now()
     const sixHoursAgo = now - 6 * 3600 * 1000
     const buckets: { hour: number; count: number }[] = []
@@ -91,10 +92,7 @@ export function AgentsView() {
     for (const agent of agents) {
       const started = new Date(agent.startedAt).getTime()
       if (started < sixHoursAgo) continue
-      const bucketIdx = Math.min(
-        Math.floor((started - sixHoursAgo) / 3600000),
-        buckets.length - 1
-      )
+      const bucketIdx = Math.min(Math.floor((started - sixHoursAgo) / 3600000), buckets.length - 1)
       buckets[bucketIdx].count++
     }
 
@@ -124,7 +122,9 @@ export function AgentsView() {
           try {
             await window.api.killAgent(selectedId)
           } catch (err) {
-            toast.error(`Failed to stop agent: ${err instanceof Error ? err.message : 'Unknown error'}`)
+            toast.error(
+              `Failed to stop agent: ${err instanceof Error ? err.message : 'Unknown error'}`
+            )
           }
           break
         case '/retry':
@@ -300,7 +300,11 @@ export function AgentsView() {
           Activity
         </button>
         {!chartCollapsed && (
-          <NeonCard accent="cyan" title="Agent Activity — Last 6 Hours" icon={<Activity size={12} />}>
+          <NeonCard
+            accent="cyan"
+            title="Agent Activity — Last 6 Hours"
+            icon={<Activity size={12} />}
+          >
             <MiniChart data={activityChartData} height={80} />
             <div
               style={{

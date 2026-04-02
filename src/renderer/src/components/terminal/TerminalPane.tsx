@@ -13,10 +13,12 @@ import 'xterm/css/xterm.css'
 const terminalInstances = new Map<string, Terminal>()
 const searchAddons = new Map<string, SearchAddon>()
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function clearTerminal(tabId: string): void {
   terminalInstances.get(tabId)?.clear()
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getSearchAddon(tabId: string): SearchAddon | undefined {
   return searchAddons.get(tabId)
 }

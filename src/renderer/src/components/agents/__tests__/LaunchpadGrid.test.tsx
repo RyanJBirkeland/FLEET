@@ -43,9 +43,7 @@ describe('LaunchpadGrid', () => {
 
   it('renders chat input with placeholder "What would you like to work on?"', () => {
     render(<LaunchpadGrid {...defaultProps} />)
-    expect(
-      screen.getByPlaceholderText('What would you like to work on?')
-    ).toBeInTheDocument()
+    expect(screen.getByPlaceholderText('What would you like to work on?')).toBeInTheDocument()
   })
 
   it('Enter on textarea calls onCustomPrompt', async () => {

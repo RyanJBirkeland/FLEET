@@ -9,7 +9,7 @@ function formatTime(ts: number): string {
   return new Date(ts).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
-function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () => void }) {
+function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () => void }): React.JSX.Element {
   const isUser = msg.role === 'user'
   const isSystem = msg.role === 'system'
 
@@ -36,7 +36,7 @@ function MessageBubble({ msg, onInsert }: { msg: CopilotMessage; onInsert?: () =
   )
 }
 
-export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
+export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps): React.JSX.Element {
   const messages = useTaskWorkbenchStore((s) => s.copilotMessages)
   const loading = useTaskWorkbenchStore((s) => s.copilotLoading)
   const addMessage = useTaskWorkbenchStore((s) => s.addCopilotMessage)
@@ -114,7 +114,13 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
     // Create empty assistant message and start streaming state BEFORE the IPC call
     // to prevent the race condition where chunks arrive before startStreaming is called
     const msgId = `assistant-${Date.now()}`
-    addMessage({ id: msgId, role: 'assistant', content: '', timestamp: Date.now(), insertable: true })
+    addMessage({
+      id: msgId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      insertable: true
+    })
     useTaskWorkbenchStore.getState().startStreaming(msgId, '') // placeholder streamId
 
     try {
@@ -165,7 +171,12 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
       {/* Header */}
       <div className="wb-copilot__header">
         <span className="wb-copilot__title">AI Copilot</span>
-        <button onClick={onClose} className="wb-copilot__close" title="Close copilot" aria-label="Close AI Copilot">
+        <button
+          onClick={onClose}
+          className="wb-copilot__close"
+          title="Close copilot"
+          aria-label="Close AI Copilot"
+        >
           ×
         </button>
       </div>

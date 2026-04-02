@@ -27,6 +27,7 @@ interface Rect {
 // Hit-testing — exported for unit tests
 // ---------------------------------------------------------------------------
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function getDropZone(x: number, y: number, rect: Rect): DropZone {
   const pctX = (x - rect.left) / rect.width
   const pctY = (y - rect.top) / rect.height
@@ -120,4 +121,3 @@ export function PanelDropOverlay({ panelId, onDrop }: PanelDropOverlayProps): Re
   )
 }
 
-export default PanelDropOverlay

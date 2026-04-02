@@ -8,7 +8,7 @@ interface ConflictBannerProps {
   mergeableState: string | null | undefined
 }
 
-export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerProps) {
+export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerProps): React.JSX.Element | null {
   const repoOptions = useRepoOptions()
   const [conflictFiles, setConflictFiles] = useState<string[]>([])
   const [loading, setLoading] = useState(false)
@@ -16,7 +16,9 @@ export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerPr
 
   useEffect(() => {
     if (mergeableState !== 'dirty') {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setConflictFiles([])
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError(null)
       return
     }
@@ -24,7 +26,9 @@ export function PRStationConflictBanner({ pr, mergeableState }: ConflictBannerPr
     const repo = repoOptions.find((r) => r.label === pr.repo)
     if (!repo) return
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null)
     window.api
       .checkConflictFiles({ owner: repo.owner, repo: repo.label, prNumber: pr.number })

@@ -17,12 +17,12 @@ const SORT_OPTIONS: { value: PRFilters['sort']; label: string }[] = [
   { value: 'title', label: 'Title' }
 ]
 
-export function PRStationFilters({ filters, repos, onChange }: PRStationFiltersProps) {
-  function handleRepoClick(repo: string | null) {
+export function PRStationFilters({ filters, repos, onChange }: PRStationFiltersProps): React.JSX.Element {
+  function handleRepoClick(repo: string | null): void {
     onChange({ ...filters, repo })
   }
 
-  function handleSortChange(e: React.ChangeEvent<HTMLSelectElement>) {
+  function handleSortChange(e: React.ChangeEvent<HTMLSelectElement>): void {
     onChange({ ...filters, sort: e.target.value as PRFilters['sort'] })
   }
 

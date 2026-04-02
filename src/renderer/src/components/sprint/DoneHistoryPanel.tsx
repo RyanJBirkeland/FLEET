@@ -7,11 +7,11 @@ interface DoneHistoryPanelProps {
   onClose: () => void
 }
 
-export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPanelProps) {
+export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPanelProps): React.JSX.Element {
   const panelRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', handleEscape)
@@ -31,7 +31,7 @@ export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPan
     const first = focusable[0]
     first.focus()
 
-    const handleTab = (e: KeyboardEvent) => {
+    const handleTab = (e: KeyboardEvent): void => {
       if (e.key !== 'Tab') return
       const current = panel.querySelectorAll<HTMLElement>(
         'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
@@ -53,11 +53,24 @@ export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPan
   }, [tasks])
 
   return (
-    <div className="done-history-overlay" onClick={onClose} role="dialog" aria-modal="true" aria-label="Completed Tasks">
+    <div
+      className="done-history-overlay"
+      onClick={onClose}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Completed Tasks"
+    >
       <div className="done-history" ref={panelRef} onClick={(e) => e.stopPropagation()}>
         <div className="done-history__header">
           <div className="done-history__title">Completed Tasks ({tasks.length})</div>
-          <button className="done-history__close" onClick={onClose} data-testid="dhp-close" aria-label="Close">✕</button>
+          <button
+            className="done-history__close"
+            onClick={onClose}
+            data-testid="dhp-close"
+            aria-label="Close"
+          >
+            ✕
+          </button>
         </div>
         <div className="done-history__list" role="list">
           {tasks.map((task) => (
@@ -82,11 +95,7 @@ export function DoneHistoryPanel({ tasks, onTaskClick, onClose }: DoneHistoryPan
               </span>
             </div>
           ))}
-          {tasks.length === 0 && (
-            <div className="done-history__empty">
-              No completed tasks yet
-            </div>
-          )}
+          {tasks.length === 0 && <div className="done-history__empty">No completed tasks yet</div>}
         </div>
       </div>
     </div>

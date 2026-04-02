@@ -20,7 +20,7 @@ interface BranchInfo {
   loading: boolean
 }
 
-export function ConflictDrawer({ open, tasks, onClose }: ConflictDrawerProps) {
+export function ConflictDrawer({ open, tasks, onClose }: ConflictDrawerProps): React.JSX.Element {
   const [resolving, setResolving] = useState<string | null>(null)
   const [branchInfo, setBranchInfo] = useState<Record<string, BranchInfo>>({})
   const [expandedId, setExpandedId] = useState<string | null>(null)

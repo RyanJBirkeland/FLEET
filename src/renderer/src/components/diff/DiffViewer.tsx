@@ -448,7 +448,7 @@ function PlainDiffContent({
 
 // ─── Main DiffViewer ─────────────────────────────────────
 
-function VirtualizedDiffBanner({ onForceFullDiff }: { onForceFullDiff: () => void }) {
+function VirtualizedDiffBanner({ onForceFullDiff }: { onForceFullDiff: () => void }): React.JSX.Element {
   return (
     <div className="diff-virtualized-banner">
       <span className="diff-virtualized-banner__text">
@@ -721,7 +721,9 @@ function DiffViewer({
     <div className="diff-view-container">
       <FileList files={files} activeFileIndex={activeFileIndex} onSelect={scrollToFile} />
       <div className="diff-content" ref={containerRef}>
-        {shouldShowBanner && <VirtualizedDiffBanner onForceFullDiff={() => setForceFullDiff(true)} />}
+        {shouldShowBanner && (
+          <VirtualizedDiffBanner onForceFullDiff={() => setForceFullDiff(true)} />
+        )}
         {useVirtualization ? (
           <VirtualizedDiffContent
             rows={flatRows}

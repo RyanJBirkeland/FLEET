@@ -5,7 +5,7 @@ import { WorkbenchForm } from './WorkbenchForm'
 import { WorkbenchCopilot } from './WorkbenchCopilot'
 import '../../assets/task-workbench-neon.css'
 
-export function TaskWorkbench() {
+export function TaskWorkbench(): React.JSX.Element {
   const copilotVisible = useTaskWorkbenchStore((s) => s.copilotVisible)
   const toggleCopilot = useTaskWorkbenchStore((s) => s.toggleCopilot)
   const containerRef = useRef<HTMLDivElement>(null)

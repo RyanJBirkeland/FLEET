@@ -48,18 +48,14 @@ describe('renderAgentMarkdown', () => {
   })
 
   it('handles heading mid-text (only at line start)', () => {
-    const { container } = render(
-      <>{renderAgentMarkdown('Result\n## Next Step\nDo the thing')}</>
-    )
+    const { container } = render(<>{renderAgentMarkdown('Result\n## Next Step\nDo the thing')}</>)
     const heading = container.querySelector('.console-md-heading')
     expect(heading).toBeInTheDocument()
     expect(heading?.textContent).toBe('Next Step')
   })
 
   it('does not render script tags as HTML', () => {
-    const { container } = render(
-      <>{renderAgentMarkdown('<script>alert("xss")</script>')}</>
-    )
+    const { container } = render(<>{renderAgentMarkdown('<script>alert("xss")</script>')}</>)
     expect(container.querySelector('script')).toBeNull()
     // React auto-escapes, so script tag text appears as literal text
     expect(container.textContent).toContain('<script>')

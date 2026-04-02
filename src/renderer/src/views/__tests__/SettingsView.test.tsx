@@ -70,7 +70,10 @@ describe('SettingsView', () => {
 
   it('defaults to Connections tab', () => {
     render(<SettingsView />)
-    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
     expect(screen.getByTestId('section-connections')).toBeInTheDocument()
   })
 
@@ -114,14 +117,20 @@ describe('SettingsView', () => {
     const connectionsTab = screen.getByRole('tab', { name: /Connections/ })
     fireEvent.keyDown(connectionsTab, { key: 'ArrowRight' })
     // Repositories is the second tab
-    expect(screen.getByRole('tab', { name: /Repositories/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Repositories/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
   })
 
   it('ArrowDown moves to next tab', () => {
     render(<SettingsView />)
     const connectionsTab = screen.getByRole('tab', { name: /Connections/ })
     fireEvent.keyDown(connectionsTab, { key: 'ArrowDown' })
-    expect(screen.getByRole('tab', { name: /Repositories/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Repositories/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
   })
 
   it('ArrowLeft wraps from first tab to last tab', () => {
@@ -145,7 +154,10 @@ describe('SettingsView', () => {
     fireEvent.click(screen.getByRole('tab', { name: /About/ }))
     const aboutTab = screen.getByRole('tab', { name: /About/ })
     fireEvent.keyDown(aboutTab, { key: 'ArrowRight' })
-    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
   })
 
   it('Home key moves to first tab', () => {
@@ -154,7 +166,10 @@ describe('SettingsView', () => {
     fireEvent.click(screen.getByRole('tab', { name: /About/ }))
     const aboutTab = screen.getByRole('tab', { name: /About/ })
     fireEvent.keyDown(aboutTab, { key: 'Home' })
-    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
   })
 
   it('End key moves to last tab', () => {
@@ -168,7 +183,10 @@ describe('SettingsView', () => {
     render(<SettingsView />)
     const connectionsTab = screen.getByRole('tab', { name: /Connections/ })
     fireEvent.keyDown(connectionsTab, { key: 'a' })
-    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('tab', { name: /Connections/ })).toHaveAttribute(
+      'aria-selected',
+      'true'
+    )
   })
 
   // ---------- Branch coverage: tabpanel aria-label ----------
@@ -195,9 +213,7 @@ describe('SettingsView', () => {
   it('renders Agent section when tab clicked', () => {
     render(<SettingsView />)
     // There are two tabs with "Agent" in the name, use exact match
-    const agentTab = screen.getAllByRole('tab').find(
-      (t) => t.textContent === 'Agent'
-    )!
+    const agentTab = screen.getAllByRole('tab').find((t) => t.textContent === 'Agent')!
     fireEvent.click(agentTab)
     expect(screen.getByTestId('section-agent')).toBeInTheDocument()
   })

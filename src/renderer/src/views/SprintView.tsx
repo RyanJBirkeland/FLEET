@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 import { SprintPipeline } from '../components/sprint/SprintPipeline'
 
-export default function SprintView() {
+export default function SprintView(): React.JSX.Element {
   const reduced = useReducedMotion()
   return (
     <motion.div

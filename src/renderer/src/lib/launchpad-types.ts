@@ -55,4 +55,3 @@ export interface PromptTemplate {
   /** Display sort position (lower = first) */
   order: number
 }
-

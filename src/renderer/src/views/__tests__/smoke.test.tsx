@@ -207,7 +207,14 @@ Object.defineProperty(window, 'api', {
       status: vi.fn().mockResolvedValue({
         running: false,
         shuttingDown: false,
-        concurrency: { maxSlots: 0, effectiveSlots: 0, activeCount: 0, recoveryDueAt: null, consecutiveRateLimits: 0, atFloor: false },
+        concurrency: {
+          maxSlots: 0,
+          effectiveSlots: 0,
+          activeCount: 0,
+          recoveryDueAt: null,
+          consecutiveRateLimits: 0,
+          atFloor: false
+        },
         activeAgents: []
       }),
       kill: vi.fn().mockResolvedValue({ ok: true })

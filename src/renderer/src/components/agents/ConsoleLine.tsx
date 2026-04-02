@@ -16,7 +16,11 @@ interface ConsoleLineProps {
 
 function formatTime(ts: number): string {
   try {
-    return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    return new Date(ts).toLocaleTimeString([], {
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit'
+    })
   } catch {
     return ''
   }
@@ -52,19 +56,30 @@ const TOOL_MAP: Record<string, ToolMeta> = {
   glob: { letter: 'F', iconClass: 'console-tool-icon--glob' },
   agent: { letter: 'A', iconClass: 'console-tool-icon--agent' },
   list: { letter: 'L', iconClass: 'console-tool-icon--default' },
-  task: { letter: 'T', iconClass: 'console-tool-icon--default' },
+  task: { letter: 'T', iconClass: 'console-tool-icon--default' }
 }
 
 function getToolMeta(toolName: string): ToolMeta {
-  return TOOL_MAP[toolName.toLowerCase()] ?? { letter: '\u2022', iconClass: 'console-tool-icon--default' }
+  return (
+    TOOL_MAP[toolName.toLowerCase()] ?? {
+      letter: '\u2022',
+      iconClass: 'console-tool-icon--default'
+    }
+  )
 }
 
-export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: ConsoleLineProps): React.JSX.Element {
+export function ConsoleLine({
+  block,
+  onPlaygroundClick,
+  searchHighlight
+}: ConsoleLineProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
 
-  const getSearchClass = () => {
+  const getSearchClass = (): string => {
     if (!searchHighlight) return ''
-    return searchHighlight === 'active' ? ' console-line--search-active' : ' console-line--search-match'
+    return searchHighlight === 'active'
+      ? ' console-line--search-active'
+      : ' console-line--search-match'
   }
 
   switch (block.type) {
@@ -82,7 +97,9 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
       return (
         <div className={`console-line${getSearchClass()}`} data-testid="console-line-text">
           <span className="console-prefix console-prefix--agent">[agent]</span>
-          <span className={`console-line__content${isGrouped ? ' console-line__content--grouped' : ''}`}>
+          <span
+            className={`console-line__content${isGrouped ? ' console-line__content--grouped' : ''}`}
+          >
             {renderAgentMarkdown(block.text)}
           </span>
           <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
@@ -92,7 +109,10 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
 
     case 'user_message':
       return (
-        <div className={`console-line${block.pending ? ' console-line--pending' : ''}${getSearchClass()}`} data-testid="console-line-user">
+        <div
+          className={`console-line${block.pending ? ' console-line--pending' : ''}${getSearchClass()}`}
+          data-testid="console-line-user"
+        >
           <span className="console-prefix console-prefix--user">[user]</span>
           <span className="console-line__content">{block.text}</span>
           <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
@@ -116,7 +136,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left',
+              textAlign: 'left'
             }}
             aria-label={expanded ? 'Collapse thinking' : 'Expand thinking'}
           >
@@ -124,7 +144,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               size={14}
               className="console-line__chevron"
               style={{
-                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)'
               }}
             />
             <span className="console-prefix console-prefix--think">[think]</span>
@@ -135,9 +155,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
             <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
           </button>
           {expanded && block.text && (
-            <div className="console-line__expanded-content">
-              {block.text}
-            </div>
+            <div className="console-line__expanded-content">{block.text}</div>
           )}
         </div>
       )
@@ -161,7 +179,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left',
+              textAlign: 'left'
             }}
             aria-label={expanded ? 'Collapse tool call' : 'Expand tool call'}
           >
@@ -169,10 +187,12 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               size={14}
               className="console-line__chevron"
               style={{
-                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)'
               }}
             />
-            <span className={`console-tool-icon ${meta.iconClass}`} title={block.tool}>{meta.letter}</span>
+            <span className={`console-tool-icon ${meta.iconClass}`} title={block.tool}>
+              {meta.letter}
+            </span>
             <span className="console-prefix console-prefix--tool">[tool]</span>
             <span className="console-line__content">
               {block.tool} — {block.summary}
@@ -183,9 +203,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
             <div className="console-line__detail">
               {(() => {
                 const summary = formatToolSummary(block.tool, block.input)
-                return summary ? (
-                  <div className="console-line__tool-summary">{summary}</div>
-                ) : null
+                return summary ? <div className="console-line__tool-summary">{summary}</div> : null
               })()}
               <div className="console-line__detail-label">Input</div>
               <pre className="console-line__json">
@@ -215,7 +233,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left',
+              textAlign: 'left'
             }}
             aria-label={expanded ? 'Collapse tool pair' : 'Expand tool pair'}
           >
@@ -223,15 +241,19 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               size={14}
               className="console-line__chevron"
               style={{
-                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)'
               }}
             />
-            <span className={`console-tool-icon ${meta.iconClass}`} title={block.tool}>{meta.letter}</span>
+            <span className={`console-tool-icon ${meta.iconClass}`} title={block.tool}>
+              {meta.letter}
+            </span>
             <span className="console-prefix console-prefix--tool">[tool]</span>
             <span className="console-line__content">
               {block.tool} — {block.summary}
             </span>
-            <span className={`console-badge ${block.result.success ? 'console-badge--success' : 'console-badge--danger'}`}>
+            <span
+              className={`console-badge ${block.result.success ? 'console-badge--success' : 'console-badge--danger'}`}
+            >
               {block.result.success ? 'success' : 'failed'}
             </span>
             <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
@@ -241,7 +263,9 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               {(() => {
                 const summary = formatToolSummary(block.tool, block.input)
                 return summary ? (
-                  <div className="console-line__tool-summary" style={{ paddingLeft: '24px' }}>{summary}</div>
+                  <div className="console-line__tool-summary" style={{ paddingLeft: '24px' }}>
+                    {summary}
+                  </div>
                 ) : null
               })()}
               {block.input !== undefined && (
@@ -277,7 +301,10 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
 
     case 'error':
       return (
-        <div className={`console-line console-line--error${getSearchClass()}`} data-testid="console-line-error">
+        <div
+          className={`console-line console-line--error${getSearchClass()}`}
+          data-testid="console-line-error"
+        >
           <span className="console-prefix console-prefix--error">[error]</span>
           <span className="console-line__content">{block.message}</span>
           <span className="console-line__timestamp">{formatTime(block.timestamp)}</span>
@@ -302,10 +329,14 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
           className={`console-completion-card${success ? '' : ' console-completion-card--failed'}`}
           data-testid="console-line-completed"
         >
-          <div className={`console-completion-card__header ${success ? 'console-completion-card__header--success' : 'console-completion-card__header--failed'}`}>
+          <div
+            className={`console-completion-card__header ${success ? 'console-completion-card__header--success' : 'console-completion-card__header--failed'}`}
+          >
             <span>{success ? '\u2713' : '\u2717'}</span>
             <span>
-              {success ? 'Agent completed successfully' : `Agent failed (exit code ${block.exitCode})`}
+              {success
+                ? 'Agent completed successfully'
+                : `Agent failed (exit code ${block.exitCode})`}
             </span>
           </div>
           <div className="console-completion-card__stats">
@@ -316,7 +347,9 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               <div className="console-completion-card__stat-label">Duration</div>
             </div>
             <div className="console-completion-card__stat">
-              <div className={`console-completion-card__stat-value ${success ? 'console-completion-card__stat-value--cyan' : 'console-completion-card__stat-value--red'}`}>
+              <div
+                className={`console-completion-card__stat-value ${success ? 'console-completion-card__stat-value--cyan' : 'console-completion-card__stat-value--red'}`}
+              >
                 ${block.costUsd.toFixed(2)}
               </div>
               <div className="console-completion-card__stat-label">Cost</div>
@@ -341,7 +374,13 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
     case 'tool_group': {
       const total = block.tools.length
       if (total === 1) {
-        return <ConsoleLine block={block.tools[0]} onPlaygroundClick={onPlaygroundClick} searchHighlight={searchHighlight} />
+        return (
+          <ConsoleLine
+            block={block.tools[0]}
+            onPlaygroundClick={onPlaygroundClick}
+            searchHighlight={searchHighlight}
+          />
+        )
       }
       const counts: Record<string, number> = {}
       for (const t of block.tools) {
@@ -367,7 +406,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               cursor: 'pointer',
               padding: 0,
               width: '100%',
-              textAlign: 'left',
+              textAlign: 'left'
             }}
             aria-label={expanded ? 'Collapse tool group' : 'Expand tool group'}
           >
@@ -375,7 +414,7 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
               size={14}
               className="console-line__chevron"
               style={{
-                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                transform: expanded ? 'rotate(90deg)' : 'rotate(0deg)'
               }}
             />
             <span className="console-prefix console-prefix--tool">[tools]</span>
@@ -387,7 +426,12 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
           {expanded && (
             <div className="console-tool-group__items">
               {block.tools.map((tool, i) => (
-                <ConsoleLine key={i} block={tool} onPlaygroundClick={onPlaygroundClick} searchHighlight={searchHighlight} />
+                <ConsoleLine
+                  key={i}
+                  block={tool}
+                  onPlaygroundClick={onPlaygroundClick}
+                  searchHighlight={searchHighlight}
+                />
               ))}
             </div>
           )}
@@ -403,7 +447,12 @@ export function ConsoleLine({ block, onPlaygroundClick, searchHighlight }: Conso
           role="button"
           tabIndex={0}
           onClick={() => onPlaygroundClick?.(block)}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onPlaygroundClick?.(block) } }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onPlaygroundClick?.(block)
+            }
+          }}
           style={{ cursor: onPlaygroundClick ? 'pointer' : undefined }}
         >
           <span className="console-prefix console-prefix--play">[play]</span>

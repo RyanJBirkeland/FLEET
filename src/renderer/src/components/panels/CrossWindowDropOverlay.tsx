@@ -35,13 +35,37 @@ function zoneStyle(zone: DropZone, rect: DOMRect): React.CSSProperties {
 
   switch (zone) {
     case 'top':
-      return { ...base, top: rect.top, left: rect.left, width: rect.width, height: rect.height * 0.5 }
+      return {
+        ...base,
+        top: rect.top,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height * 0.5
+      }
     case 'bottom':
-      return { ...base, top: rect.top + rect.height * 0.5, left: rect.left, width: rect.width, height: rect.height * 0.5 }
+      return {
+        ...base,
+        top: rect.top + rect.height * 0.5,
+        left: rect.left,
+        width: rect.width,
+        height: rect.height * 0.5
+      }
     case 'left':
-      return { ...base, top: rect.top, left: rect.left, width: rect.width * 0.5, height: rect.height }
+      return {
+        ...base,
+        top: rect.top,
+        left: rect.left,
+        width: rect.width * 0.5,
+        height: rect.height
+      }
     case 'right':
-      return { ...base, top: rect.top, left: rect.left + rect.width * 0.5, width: rect.width * 0.5, height: rect.height }
+      return {
+        ...base,
+        top: rect.top,
+        left: rect.left + rect.width * 0.5,
+        width: rect.width * 0.5,
+        height: rect.height
+      }
     case 'center':
       return {
         ...base,
@@ -87,11 +111,14 @@ export function CrossWindowDropOverlay({
   // Recompute hit info whenever cursor position changes
   useEffect(() => {
     if (!active) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setHitInfo(null)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAnnouncement('')
       return
     }
     const info = findPanelUnderCursor(localX, localY)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setHitInfo(info)
     setAnnouncement(info ? `Drop zone: ${info.zone}` : 'Drag in progress')
   }, [active, localX, localY])
@@ -117,10 +144,13 @@ export function CrossWindowDropOverlay({
           cursor: 'crosshair'
         }}
       />
-      {hitInfo && <div data-testid="drop-zone-highlight" style={zoneStyle(hitInfo.zone, hitInfo.rect)} />}
-      <div className="sr-only" aria-live="polite" role="status">{announcement}</div>
+      {hitInfo && (
+        <div data-testid="drop-zone-highlight" style={zoneStyle(hitInfo.zone, hitInfo.rect)} />
+      )}
+      <div className="sr-only" aria-live="polite" role="status">
+        {announcement}
+      </div>
     </>
   )
 }
 
-export default CrossWindowDropOverlay

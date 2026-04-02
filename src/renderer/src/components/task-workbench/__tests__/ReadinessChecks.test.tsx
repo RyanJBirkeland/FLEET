@@ -14,7 +14,7 @@ describe('ReadinessChecks', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [],
       semanticChecks: [],
-      operationalChecks: [],
+      operationalChecks: []
     })
     const { container } = render(<ReadinessChecks />)
     expect(container.firstChild).toBeNull()
@@ -22,9 +22,7 @@ describe('ReadinessChecks', () => {
 
   it('renders when checks are present', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }]
     })
     render(<ReadinessChecks />)
     expect(screen.getByText('1/1 passing')).toBeInTheDocument()
@@ -34,11 +32,11 @@ describe('ReadinessChecks', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [
         { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' },
+        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' }
       ],
       semanticChecks: [
-        { id: 'clarity', label: 'Clarity', tier: 2, status: 'pass', message: 'Clear' },
-      ],
+        { id: 'clarity', label: 'Clarity', tier: 2, status: 'pass', message: 'Clear' }
+      ]
     })
     render(<ReadinessChecks />)
     expect(screen.getByText('2/3 passing')).toBeInTheDocument()
@@ -46,9 +44,7 @@ describe('ReadinessChecks', () => {
 
   it('shows pass icon for passing checks', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }]
     })
     render(<ReadinessChecks />)
     const icon = screen.getByTitle('Title').querySelector('[aria-label="Passed"]')
@@ -57,9 +53,7 @@ describe('ReadinessChecks', () => {
 
   it('shows fail icon for failing checks', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' },
-      ],
+      structuralChecks: [{ id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' }]
     })
     render(<ReadinessChecks />)
     const icon = screen.getByTitle('Repo').querySelector('[aria-label="Failed"]')
@@ -68,9 +62,7 @@ describe('ReadinessChecks', () => {
 
   it('shows warn icon for warning checks', () => {
     useTaskWorkbenchStore.setState({
-      semanticChecks: [
-        { id: 'scope', label: 'Scope', tier: 2, status: 'warn', message: 'Vague' },
-      ],
+      semanticChecks: [{ id: 'scope', label: 'Scope', tier: 2, status: 'warn', message: 'Vague' }]
     })
     render(<ReadinessChecks />)
     const icon = screen.getByTitle('Scope').querySelector('[aria-label="Warning"]')
@@ -80,8 +72,8 @@ describe('ReadinessChecks', () => {
   it('shows pending icon for pending checks', () => {
     useTaskWorkbenchStore.setState({
       operationalChecks: [
-        { id: 'auth', label: 'Auth', tier: 3, status: 'pending', message: 'Checking...' },
-      ],
+        { id: 'auth', label: 'Auth', tier: 3, status: 'pending', message: 'Checking...' }
+      ]
     })
     render(<ReadinessChecks />)
     const icon = screen.getByTitle('Auth').querySelector('[aria-label="Pending"]')
@@ -92,11 +84,11 @@ describe('ReadinessChecks', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [
         { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' },
+        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' }
       ],
       semanticChecks: [
-        { id: 'clarity', label: 'Clarity', tier: 2, status: 'warn', message: 'Vague' },
-      ],
+        { id: 'clarity', label: 'Clarity', tier: 2, status: 'warn', message: 'Vague' }
+      ]
     })
     render(<ReadinessChecks />)
 
@@ -107,10 +99,8 @@ describe('ReadinessChecks', () => {
 
   it('is collapsed by default', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
-      checksExpanded: false,
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
+      checksExpanded: false
     })
     render(<ReadinessChecks />)
 
@@ -120,10 +110,8 @@ describe('ReadinessChecks', () => {
 
   it('expands when toggle button is clicked', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
-      checksExpanded: false,
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
+      checksExpanded: false
     })
     render(<ReadinessChecks />)
 
@@ -135,10 +123,8 @@ describe('ReadinessChecks', () => {
 
   it('shows expanded icon when expanded', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
-      checksExpanded: true,
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
+      checksExpanded: true
     })
     render(<ReadinessChecks />)
 
@@ -148,9 +134,9 @@ describe('ReadinessChecks', () => {
   it('displays check details when expanded', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'Looks good' },
+        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'Looks good' }
       ],
-      checksExpanded: true,
+      checksExpanded: true
     })
     render(<ReadinessChecks />)
 
@@ -162,12 +148,12 @@ describe('ReadinessChecks', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [
         { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Required' },
+        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Required' }
       ],
       semanticChecks: [
-        { id: 'clarity', label: 'Clarity', tier: 2, status: 'warn', message: 'Could be clearer' },
+        { id: 'clarity', label: 'Clarity', tier: 2, status: 'warn', message: 'Could be clearer' }
       ],
-      checksExpanded: true,
+      checksExpanded: true
     })
     render(<ReadinessChecks />)
 
@@ -181,10 +167,8 @@ describe('ReadinessChecks', () => {
 
   it('collapses when toggle button is clicked while expanded', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
-      checksExpanded: true,
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
+      checksExpanded: true
     })
     render(<ReadinessChecks />)
 
@@ -197,9 +181,9 @@ describe('ReadinessChecks', () => {
   it('hides details when collapsed', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'Looks good' },
+        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'Looks good' }
       ],
-      checksExpanded: false,
+      checksExpanded: false
     })
     render(<ReadinessChecks />)
 
@@ -210,9 +194,7 @@ describe('ReadinessChecks', () => {
 
   it('has danger border when there are failures', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' },
-      ],
+      structuralChecks: [{ id: 'repo', label: 'Repo', tier: 1, status: 'fail', message: 'Missing' }]
     })
     const { container } = render(<ReadinessChecks />)
 
@@ -222,12 +204,10 @@ describe('ReadinessChecks', () => {
 
   it('has normal border when no failures', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
       semanticChecks: [
-        { id: 'clarity', label: 'Clarity', tier: 2, status: 'warn', message: 'Vague' },
-      ],
+        { id: 'clarity', label: 'Clarity', tier: 2, status: 'warn', message: 'Vague' }
+      ]
     })
     const { container } = render(<ReadinessChecks />)
 
@@ -238,15 +218,13 @@ describe('ReadinessChecks', () => {
 
   it('combines all three check types', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
       semanticChecks: [
-        { id: 'clarity', label: 'Clarity', tier: 2, status: 'pass', message: 'Clear' },
+        { id: 'clarity', label: 'Clarity', tier: 2, status: 'pass', message: 'Clear' }
       ],
       operationalChecks: [
-        { id: 'auth', label: 'Auth', tier: 3, status: 'pass', message: 'Authenticated' },
-      ],
+        { id: 'auth', label: 'Auth', tier: 3, status: 'pass', message: 'Authenticated' }
+      ]
     })
     render(<ReadinessChecks />)
 
@@ -256,15 +234,13 @@ describe('ReadinessChecks', () => {
   it('maintains check order: structural, semantic, operational', () => {
     useTaskWorkbenchStore.setState({
       structuralChecks: [
-        { id: 'struct-1', label: 'Struct', tier: 1, status: 'pass', message: 'A' },
+        { id: 'struct-1', label: 'Struct', tier: 1, status: 'pass', message: 'A' }
       ],
-      semanticChecks: [
-        { id: 'sem-1', label: 'Semantic', tier: 2, status: 'pass', message: 'B' },
-      ],
+      semanticChecks: [{ id: 'sem-1', label: 'Semantic', tier: 2, status: 'pass', message: 'B' }],
       operationalChecks: [
-        { id: 'op-1', label: 'Operational', tier: 3, status: 'pass', message: 'C' },
+        { id: 'op-1', label: 'Operational', tier: 3, status: 'pass', message: 'C' }
       ],
-      checksExpanded: true,
+      checksExpanded: true
     })
     render(<ReadinessChecks />)
 
@@ -276,11 +252,9 @@ describe('ReadinessChecks', () => {
 
   it('handles empty check arrays gracefully', () => {
     useTaskWorkbenchStore.setState({
-      structuralChecks: [
-        { id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
-      ],
+      structuralChecks: [{ id: 'title', label: 'Title', tier: 1, status: 'pass', message: 'OK' }],
       semanticChecks: [],
-      operationalChecks: [],
+      operationalChecks: []
     })
     render(<ReadinessChecks />)
 

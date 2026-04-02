@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 import { TaskWorkbench } from '../components/task-workbench/TaskWorkbench'
 
-export default function TaskWorkbenchView() {
+export default function TaskWorkbenchView(): React.JSX.Element {
   const reduced = useReducedMotion()
   return (
     <motion.div

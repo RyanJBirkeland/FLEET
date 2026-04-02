@@ -8,14 +8,14 @@ interface LiveActivityStripProps {
   onSelectAgent: (id: string) => void
 }
 
-export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps) {
+export function LiveActivityStrip({ onSelectAgent }: LiveActivityStripProps): React.JSX.Element {
   const agents = useAgentHistoryStore((state) => state.agents)
   const runningAgents = agents.filter((agent) => agent.status === 'running')
 
   // Only subscribe to events for running agents to avoid unnecessary re-renders
   const events = useAgentEventsStore(
     useShallow((state) => {
-      const relevantEvents: Record<string, typeof state.events[string]> = {}
+      const relevantEvents: Record<string, (typeof state.events)[string]> = {}
       for (const agent of runningAgents) {
         relevantEvents[agent.id] = state.events[agent.id]
       }

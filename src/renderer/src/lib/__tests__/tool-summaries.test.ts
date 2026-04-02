@@ -39,7 +39,7 @@ describe('formatToolSummary', () => {
     it('returns file_path with offset', () => {
       const result = formatToolSummary('read', {
         file_path: '/foo/bar.ts',
-        offset: 10,
+        offset: 10
       })
       expect(result).toBe('/foo/bar.ts:10')
     })
@@ -48,7 +48,7 @@ describe('formatToolSummary', () => {
       const result = formatToolSummary('read', {
         file_path: '/foo/bar.ts',
         offset: 10,
-        limit: 20,
+        limit: 20
       })
       expect(result).toBe('/foo/bar.ts:10-29')
     })
@@ -69,7 +69,7 @@ describe('formatToolSummary', () => {
       const result = formatToolSummary('Edit', {
         file_path: '/foo/bar.ts',
         old_string: 'const x = 1',
-        new_string: 'const x = 2',
+        new_string: 'const x = 2'
       })
       expect(result).toBe('/foo/bar.ts — replace "const x = 1" → "const x = 2"')
     })
@@ -79,7 +79,7 @@ describe('formatToolSummary', () => {
       const result = formatToolSummary('edit', {
         file_path: '/foo/bar.ts',
         old_string: longOld,
-        new_string: 'new',
+        new_string: 'new'
       })
       expect(result).toBe(`/foo/bar.ts — replace "${'a'.repeat(30)}..." → "new"`)
     })
@@ -89,7 +89,7 @@ describe('formatToolSummary', () => {
       const result = formatToolSummary('edit', {
         file_path: '/foo/bar.ts',
         old_string: 'old',
-        new_string: longNew,
+        new_string: longNew
       })
       expect(result).toBe(`/foo/bar.ts — replace "old" → "${'b'.repeat(30)}..."`)
     })
@@ -97,7 +97,7 @@ describe('formatToolSummary', () => {
     it('returns null if file_path is missing', () => {
       const result = formatToolSummary('edit', {
         old_string: 'old',
-        new_string: 'new',
+        new_string: 'new'
       })
       expect(result).toBeNull()
     })
@@ -105,7 +105,7 @@ describe('formatToolSummary', () => {
     it('returns null if old_string is missing', () => {
       const result = formatToolSummary('edit', {
         file_path: '/foo/bar.ts',
-        new_string: 'new',
+        new_string: 'new'
       })
       expect(result).toBeNull()
     })
@@ -113,7 +113,7 @@ describe('formatToolSummary', () => {
     it('returns null if new_string is missing', () => {
       const result = formatToolSummary('edit', {
         file_path: '/foo/bar.ts',
-        old_string: 'old',
+        old_string: 'old'
       })
       expect(result).toBeNull()
     })
@@ -123,7 +123,7 @@ describe('formatToolSummary', () => {
     it('returns file_path with character count', () => {
       const result = formatToolSummary('Write', {
         file_path: '/foo/bar.ts',
-        content: 'hello world',
+        content: 'hello world'
       })
       expect(result).toBe('/foo/bar.ts (11 chars)')
     })
@@ -132,7 +132,7 @@ describe('formatToolSummary', () => {
       const longContent = 'x'.repeat(12345)
       const result = formatToolSummary('write', {
         file_path: '/foo/bar.ts',
-        content: longContent,
+        content: longContent
       })
       expect(result).toBe('/foo/bar.ts (12,345 chars)')
     })
@@ -150,7 +150,7 @@ describe('formatToolSummary', () => {
     it('returns null if content is not a string', () => {
       const result = formatToolSummary('write', {
         file_path: '/foo/bar.ts',
-        content: 123,
+        content: 123
       })
       expect(result).toBeNull()
     })
@@ -165,7 +165,7 @@ describe('formatToolSummary', () => {
     it('returns pattern with path', () => {
       const result = formatToolSummary('grep', {
         pattern: 'function.*test',
-        path: '/src',
+        path: '/src'
       })
       expect(result).toBe('pattern "function.*test" in /src')
     })
@@ -201,7 +201,7 @@ describe('formatToolSummary', () => {
   describe('Agent', () => {
     it('returns prompt', () => {
       const result = formatToolSummary('Agent', {
-        prompt: 'Write a function to calculate fibonacci',
+        prompt: 'Write a function to calculate fibonacci'
       })
       expect(result).toBe('Write a function to calculate fibonacci')
     })

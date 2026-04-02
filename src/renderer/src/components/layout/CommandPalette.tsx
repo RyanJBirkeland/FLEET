@@ -58,7 +58,9 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
   // Fetch recent agents when palette opens
   useEffect(() => {
     if (!open) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuery('')
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIndex(0)
     requestAnimationFrame(() => inputRef.current?.focus())
 
@@ -77,6 +79,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       })
   }, [open])
 
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   const commands = useMemo<Command[]>(() => {
     const navCommands: { view: View; label: string; hint: string }[] = [
       { view: 'dashboard', label: 'Go to Dashboard', hint: '\u23181' },
@@ -116,14 +119,16 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
               return
             }
             await window.api.spawnLocalAgent({
-              task: 'You are now ready to assist. Wait for the user\'s first message.',
+              task: "You are now ready to assist. Wait for the user's first message.",
               repoPath,
               assistant: true
             })
             toast.success('BDE Assistant spawned')
             setView('agents')
           } catch (err) {
-            toast.error(`Failed to spawn assistant: ${err instanceof Error ? err.message : 'Unknown error'}`)
+            toast.error(
+              `Failed to spawn assistant: ${err instanceof Error ? err.message : 'Unknown error'}`
+            )
           }
         }
       },
@@ -168,7 +173,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
           try {
             await Promise.all(processes.map((p) => killLocalAgent(p.pid)))
             toast.success(`Killed ${processes.length} agent${processes.length > 1 ? 's' : ''}`)
-          } catch (error) {
+          } catch (_error) {
             toast.error('Failed to kill some agents')
           }
           onClose()
@@ -277,6 +282,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
   }, [flatItems, selectedIndex])
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSelectedIndex(0)
   }, [query])
 

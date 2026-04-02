@@ -59,7 +59,9 @@ describe('ActivityFeed', () => {
 
   it('calls onEventClick when an event is clicked', () => {
     const onClick = vi.fn()
-    const events = [{ id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }]
+    const events = [
+      { id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }
+    ]
     render(<ActivityFeed events={events} onEventClick={onClick} />)
     const eventRow = screen.getByText('Task completed').closest('[role="button"]')!
     fireEvent.click(eventRow)
@@ -67,14 +69,18 @@ describe('ActivityFeed', () => {
   })
 
   it('does not add role=button when onEventClick is not provided', () => {
-    const events = [{ id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }]
+    const events = [
+      { id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }
+    ]
     const { container } = render(<ActivityFeed events={events} />)
     expect(container.querySelector('[role="button"]')).toBeNull()
   })
 
   it('calls onEventClick on Enter key press', () => {
     const onClick = vi.fn()
-    const events = [{ id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }]
+    const events = [
+      { id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }
+    ]
     render(<ActivityFeed events={events} onEventClick={onClick} />)
     const eventRow = screen.getByText('Task completed').closest('[role="button"]')!
     fireEvent.keyDown(eventRow, { key: 'Enter' })
@@ -83,7 +89,9 @@ describe('ActivityFeed', () => {
 
   it('calls onEventClick on Space key press', () => {
     const onClick = vi.fn()
-    const events = [{ id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }]
+    const events = [
+      { id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }
+    ]
     render(<ActivityFeed events={events} onEventClick={onClick} />)
     const eventRow = screen.getByText('Task completed').closest('[role="button"]')!
     fireEvent.keyDown(eventRow, { key: ' ' })
@@ -92,7 +100,9 @@ describe('ActivityFeed', () => {
 
   it('sets cursor pointer style when onEventClick is provided', () => {
     const onClick = vi.fn()
-    const events = [{ id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }]
+    const events = [
+      { id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }
+    ]
     render(<ActivityFeed events={events} onEventClick={onClick} />)
     const eventRow = screen.getByText('Task completed').closest('[role="button"]') as HTMLElement
     expect(eventRow.style.cursor).toBe('pointer')

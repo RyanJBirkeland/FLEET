@@ -43,7 +43,7 @@ function estimateCost(events: AgentEvent[], model: string): number {
   return events.length * perEventCost
 }
 
-export function ConsoleHeader({ agent, events }: ConsoleHeaderProps) {
+export function ConsoleHeader({ agent, events }: ConsoleHeaderProps): React.JSX.Element {
   const isRunning = agent.status === 'running'
   const [duration, setDuration] = useState(formatDuration(agent.startedAt, agent.finishedAt))
 
@@ -63,13 +63,14 @@ export function ConsoleHeader({ agent, events }: ConsoleHeaderProps) {
   const costUsd = completedEvent?.costUsd ?? agent.costUsd
 
   // Estimate cost for running agents with no final cost yet (only if there are events)
-  const estimatedCost = isRunning && costUsd == null && events.length > 0 ? estimateCost(events, agent.model) : null
+  const estimatedCost =
+    isRunning && costUsd == null && events.length > 0 ? estimateCost(events, agent.model) : null
 
-  const handleOpenShell = () => {
+  const handleOpenShell = (): void => {
     useTerminalStore.getState().addTab(undefined, agent.repoPath)
   }
 
-  const handleStop = async () => {
+  const handleStop = async (): Promise<void> => {
     try {
       await window.api.killAgent(agent.id)
     } catch (err) {
@@ -77,7 +78,7 @@ export function ConsoleHeader({ agent, events }: ConsoleHeaderProps) {
     }
   }
 
-  const handleCopyLog = async () => {
+  const handleCopyLog = async (): Promise<void> => {
     try {
       const result = await window.api.tailAgentLog({ logPath: agent.logPath, fromByte: 0 })
       await navigator.clipboard.writeText(result.content)

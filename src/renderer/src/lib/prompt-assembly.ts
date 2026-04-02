@@ -32,4 +32,3 @@ export function assemblePrompt(template: PromptTemplate, answers: Record<string,
 
   return prompt.trim()
 }
-

@@ -30,7 +30,7 @@ interface PRStationDetailProps {
   onMerged?: (pr: OpenPr) => void
 }
 
-function FileStatusIcon({ status }: { status: string }) {
+function FileStatusIcon({ status }: { status: string }): React.JSX.Element {
   switch (status) {
     case 'added':
       return <FilePlus2 size={14} className="pr-detail__file-icon--added" />
@@ -70,7 +70,7 @@ function safeLabelColor(color: string): string {
   return /^[0-9a-fA-F]{6}$/.test(color) ? `#${color}` : 'var(--neon-text-dim)'
 }
 
-export function PRStationDetail({ pr, mergeability, onMerged }: PRStationDetailProps) {
+export function PRStationDetail({ pr, mergeability, onMerged }: PRStationDetailProps): React.JSX.Element {
   const repoOptions = useRepoOptions()
   const [detail, setDetail] = useState<PRDetailData | null>(null)
   const [files, setFiles] = useState<PRFile[]>([])
@@ -84,14 +84,14 @@ export function PRStationDetail({ pr, mergeability, onMerged }: PRStationDetailP
   const [commentsLoading, setCommentsLoading] = useState(true)
   const [retryKey, setRetryKey] = useState(0)
 
-  const handleRetry = () => {
+  const handleRetry = (): void => {
     setRetryKey((k) => k + 1)
   }
 
   useEffect(() => {
     const controller = new AbortController()
 
-    async function fetchAll() {
+    async function fetchAll(): Promise<void> {
       const repo = repoOptions.find((r) => r.label === pr.repo)
       if (!repo) return
 

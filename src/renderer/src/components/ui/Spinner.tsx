@@ -3,7 +3,7 @@ type SpinnerProps = {
   color?: string
 }
 
-export function Spinner({ size = 'md', color }: SpinnerProps) {
+export function Spinner({ size = 'md', color }: SpinnerProps): React.JSX.Element {
   return (
     <span
       className={`bde-spinner bde-spinner--${size}`}

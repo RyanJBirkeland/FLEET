@@ -7,7 +7,7 @@ interface PipelineFilterBarProps {
   tasks: SprintTask[]
 }
 
-export function PipelineFilterBar({ tasks }: PipelineFilterBarProps) {
+export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.Element | null {
   const searchQuery = useSprintUI((s) => s.searchQuery)
   const setSearchQuery = useSprintUI((s) => s.setSearchQuery)
   const repoFilter = useSprintUI((s) => s.repoFilter)

@@ -43,7 +43,11 @@ describe('groupUnifiedAgents', () => {
   })
 
   it('places a running agent into active bucket', () => {
-    const agent = makeAgent({ status: 'running', updatedAt: NOW - ONE_HOUR, startedAt: NOW - 2 * ONE_HOUR })
+    const agent = makeAgent({
+      status: 'running',
+      updatedAt: NOW - ONE_HOUR,
+      startedAt: NOW - 2 * ONE_HOUR
+    })
     const result = groupUnifiedAgents([agent])
     expect(result.active).toHaveLength(1)
     expect(result.active[0].id).toBe(agent.id)
@@ -90,9 +94,17 @@ describe('groupUnifiedAgents', () => {
   })
 
   it('sorts active bucket by startedAt descending', () => {
-    const older = makeAgent({ status: 'running', startedAt: NOW - 3 * ONE_HOUR, updatedAt: NOW - ONE_HOUR })
+    const older = makeAgent({
+      status: 'running',
+      startedAt: NOW - 3 * ONE_HOUR,
+      updatedAt: NOW - ONE_HOUR
+    })
     const newer = makeAgent({ status: 'running', startedAt: NOW - ONE_HOUR, updatedAt: NOW - 100 })
-    const middle = makeAgent({ status: 'running', startedAt: NOW - 2 * ONE_HOUR, updatedAt: NOW - 30 * 60 * 1000 })
+    const middle = makeAgent({
+      status: 'running',
+      startedAt: NOW - 2 * ONE_HOUR,
+      updatedAt: NOW - 30 * 60 * 1000
+    })
 
     const result = groupUnifiedAgents([older, newer, middle])
 

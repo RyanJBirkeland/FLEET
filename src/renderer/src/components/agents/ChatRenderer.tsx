@@ -16,7 +16,7 @@ import { PlaygroundModal } from './PlaygroundModal'
 
 // --- Block Renderers ---
 
-function StartedBlock({ model, timestamp }: { model: string; timestamp: number }) {
+function StartedBlock({ model, timestamp }: { model: string; timestamp: number }): React.JSX.Element {
   return (
     <div
       style={{
@@ -39,7 +39,7 @@ function CompletedBlock({
   exitCode: number
   costUsd: number
   durationMs: number
-}) {
+}): React.JSX.Element {
   const durationSec = (durationMs / 1000).toFixed(1)
   const color = exitCode === 0 ? tokens.color.success : tokens.color.danger
   return (
@@ -57,7 +57,7 @@ function CompletedBlock({
   )
 }
 
-function RateLimitedBlock({ attempt, retryDelayMs }: { attempt: number; retryDelayMs: number }) {
+function RateLimitedBlock({ attempt, retryDelayMs }: { attempt: number; retryDelayMs: number }): React.JSX.Element {
   return (
     <div
       style={{
@@ -76,10 +76,7 @@ function RateLimitedBlock({ attempt, retryDelayMs }: { attempt: number; retryDel
 
 type PlaygroundEvent = { html: string; filename: string; sizeBytes: number }
 
-function renderBlock(
-  block: ChatBlock,
-  onPlaygroundClick: (event: PlaygroundEvent) => void
-) {
+function renderBlock(block: ChatBlock, onPlaygroundClick: (event: PlaygroundEvent) => void): React.JSX.Element | null {
   switch (block.type) {
     case 'started':
       return <StartedBlock model={block.model} timestamp={block.timestamp} />
@@ -141,7 +138,11 @@ function renderBlock(
           filename={block.filename}
           sizeBytes={block.sizeBytes}
           onClick={() =>
-            onPlaygroundClick({ html: block.html, filename: block.filename, sizeBytes: block.sizeBytes })
+            onPlaygroundClick({
+              html: block.html,
+              filename: block.filename,
+              sizeBytes: block.sizeBytes
+            })
           }
         />
       )
@@ -160,7 +161,7 @@ interface ChatRendererProps {
   events: AgentEvent[]
 }
 
-export function ChatRenderer({ events }: ChatRendererProps) {
+export function ChatRenderer({ events }: ChatRendererProps): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement>(null)
   const blocks = useMemo(() => pairEvents(events), [events])
   const isAtBottomRef = useRef(true)
@@ -180,7 +181,7 @@ export function ChatRenderer({ events }: ChatRendererProps) {
     }
   }, [blocks.length, virtualizer])
 
-  const handleScroll = () => {
+  const handleScroll = (): void => {
     const el = parentRef.current
     if (!el) return
     const threshold = 100

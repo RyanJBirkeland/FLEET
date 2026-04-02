@@ -2,7 +2,7 @@ interface ScanlineOverlayProps {
   opacity?: number
 }
 
-export function ScanlineOverlay({ opacity }: ScanlineOverlayProps) {
+export function ScanlineOverlay({ opacity }: ScanlineOverlayProps): React.JSX.Element {
   return (
     <div
       aria-hidden="true"

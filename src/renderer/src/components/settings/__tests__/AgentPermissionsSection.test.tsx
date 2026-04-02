@@ -23,9 +23,7 @@ describe('AgentPermissionsSection', () => {
     render(<AgentPermissionsSection />)
     expect(screen.getByText(/BDE agents need permission/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /Accept Recommended/i })).toBeInTheDocument()
-    expect(
-      screen.getByRole('button', { name: /I'll Configure Manually/i })
-    ).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /I'll Configure Manually/i })).toBeInTheDocument()
   })
 
   it('hides consent banner after accepting defaults', async () => {

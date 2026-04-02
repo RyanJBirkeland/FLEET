@@ -18,7 +18,7 @@ type ReviewEvent = 'COMMENT' | 'APPROVE' | 'REQUEST_CHANGES'
 
 const EMPTY_COMMENTS: [] = []
 
-export function ReviewSubmitDialog({ pr, prKey, onClose, onSubmitted }: ReviewSubmitDialogProps) {
+export function ReviewSubmitDialog({ pr, prKey, onClose, onSubmitted }: ReviewSubmitDialogProps): React.JSX.Element {
   const repoOptions = useRepoOptions()
   const [body, setBody] = useState('')
   const [event, setEvent] = useState<ReviewEvent>('COMMENT')
@@ -45,7 +45,7 @@ export function ReviewSubmitDialog({ pr, prKey, onClose, onSubmitted }: ReviewSu
     // Focus first element
     focusableElements[0]?.focus()
 
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key !== 'Tab') return
 
       const firstElement = focusableElements[0]
@@ -70,7 +70,7 @@ export function ReviewSubmitDialog({ pr, prKey, onClose, onSubmitted }: ReviewSu
     return () => dialog.removeEventListener('keydown', handleKeyDown)
   }, [submitting]) // Re-run when submitting state changes (may disable buttons)
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<void> => {
     if (!repo) return
     setSubmitting(true)
     try {
@@ -119,7 +119,9 @@ export function ReviewSubmitDialog({ pr, prKey, onClose, onSubmitted }: ReviewSu
         aria-modal="true"
         aria-labelledby="review-dialog-title"
       >
-        <h3 className="review-dialog__title" id="review-dialog-title">Submit Review</h3>
+        <h3 className="review-dialog__title" id="review-dialog-title">
+          Submit Review
+        </h3>
 
         <textarea
           className="review-dialog__body"

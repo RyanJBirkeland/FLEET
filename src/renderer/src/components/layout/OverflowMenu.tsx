@@ -19,12 +19,12 @@ export function OverflowMenu({
   onPin,
   onActivate,
   onClose
-}: OverflowMenuProps) {
+}: OverflowMenuProps): React.JSX.Element | null {
   const menuRef = useRef<HTMLDivElement>(null)
 
   // Handle click outside
   useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
+    const handleClickOutside = (e: MouseEvent): void => {
       if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose()
       }
@@ -43,7 +43,7 @@ export function OverflowMenu({
 
   // Handle Escape key
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
+    const handleEscape = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         onClose()
       }
@@ -62,17 +62,17 @@ export function OverflowMenu({
     transform: 'translate(-50%, -100%)'
   }
 
-  const handleItemClick = (view: View) => {
+  const handleItemClick = (view: View): void => {
     onActivate(view)
     onClose()
   }
 
-  const handlePinClick = (e: React.MouseEvent, view: View) => {
+  const handlePinClick = (e: React.MouseEvent, view: View): void => {
     e.stopPropagation()
     onPin(view)
   }
 
-  const handleCustomizeClick = () => {
+  const handleCustomizeClick = (): void => {
     onActivate('settings')
     onClose()
   }

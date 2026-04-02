@@ -7,7 +7,7 @@ interface NeonBadgeProps {
   pulse?: boolean
 }
 
-export function NeonBadge({ accent, label, pulse = false }: NeonBadgeProps) {
+export function NeonBadge({ accent, label, pulse = false }: NeonBadgeProps): React.JSX.Element {
   return (
     <span
       className={pulse ? 'neon-pulse' : ''}

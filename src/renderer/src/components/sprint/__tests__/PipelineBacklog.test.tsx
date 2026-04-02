@@ -26,7 +26,7 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
     depends_on: null,
     updated_at: '2026-01-01T00:00:00Z',
     created_at: '2026-01-01T00:00:00Z',
-    ...overrides,
+    ...overrides
   }
 }
 
@@ -100,7 +100,9 @@ describe('PipelineBacklog', () => {
   })
 
   it('renders failed tasks when present', () => {
-    const failed = [makeTask({ id: 'f1', title: 'Failed Task', status: 'failed', notes: 'Something went wrong' })]
+    const failed = [
+      makeTask({ id: 'f1', title: 'Failed Task', status: 'failed', notes: 'Something went wrong' })
+    ]
     render(
       <PipelineBacklog
         backlog={[]}

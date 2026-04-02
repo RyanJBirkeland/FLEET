@@ -237,10 +237,8 @@ export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
 }))
 
 // Persist copilot messages to localStorage on change
-useTaskWorkbenchStore.subscribe(
-  (state, prev) => {
-    if (state.copilotMessages !== prev.copilotMessages && !state.streamingMessageId) {
-      persistMessages(state.copilotMessages)
-    }
+useTaskWorkbenchStore.subscribe((state, prev) => {
+  if (state.copilotMessages !== prev.copilotMessages && !state.streamingMessageId) {
+    persistMessages(state.copilotMessages)
   }
-)
+})

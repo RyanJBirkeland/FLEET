@@ -23,11 +23,15 @@ interface AgentConsoleProps {
   onCommand: (cmd: string, args?: string) => void
 }
 
-export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps) {
+export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps): React.JSX.Element {
   const parentRef = useRef<HTMLDivElement>(null)
   const isAtBottomRef = useRef(true)
   const [showJumpButton, setShowJumpButton] = useState(false)
-  const [playgroundBlock, setPlaygroundBlock] = useState<{ filename: string; html: string; sizeBytes: number } | null>(null)
+  const [playgroundBlock, setPlaygroundBlock] = useState<{
+    filename: string
+    html: string
+    sizeBytes: number
+  } | null>(null)
   const [pendingMessages, setPendingMessages] = useState<string[]>([])
 
   // Search state
@@ -72,9 +76,16 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
         return block.model.toLowerCase().includes(lowerQuery)
       case 'tool_call':
       case 'tool_pair':
-        return block.summary.toLowerCase().includes(lowerQuery) || block.tool.toLowerCase().includes(lowerQuery)
+        return (
+          block.summary.toLowerCase().includes(lowerQuery) ||
+          block.tool.toLowerCase().includes(lowerQuery)
+        )
       case 'tool_group':
-        return block.tools.some((t) => t.summary.toLowerCase().includes(lowerQuery) || t.tool.toLowerCase().includes(lowerQuery))
+        return block.tools.some(
+          (t) =>
+            t.summary.toLowerCase().includes(lowerQuery) ||
+            t.tool.toLowerCase().includes(lowerQuery)
+        )
       case 'playground':
         return block.filename.toLowerCase().includes(lowerQuery)
       default:
@@ -85,7 +96,9 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
   // Compute matching block indices
   const matchingIndices = useMemo(() => {
     if (!searchQuery) return []
-    return blocks.map((block, i) => (blockMatchesQuery(block, searchQuery) ? i : -1)).filter((i) => i !== -1)
+    return blocks
+      .map((block, i) => (blockMatchesQuery(block, searchQuery) ? i : -1))
+      .filter((i) => i !== -1)
   }, [blocks, searchQuery, blockMatchesQuery])
 
   const virtualizer = useVirtualizer({
@@ -110,7 +123,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
     }
   }, [blocks.length, virtualizer])
 
-  const handleScroll = () => {
+  const handleScroll = (): void => {
     const el = parentRef.current
     if (!el) return
     const threshold = 100
@@ -119,7 +132,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
     setShowJumpButton(!atBottom && blocks.length > 0)
   }
 
-  const handleJumpToLatest = () => {
+  const handleJumpToLatest = (): void => {
     if (blocks.length > 0) {
       virtualizer.scrollToIndex(blocks.length - 1, { align: 'end' })
       isAtBottomRef.current = true
@@ -127,32 +140,32 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
     }
   }
 
-  const handleSteer = (message: string) => {
+  const handleSteer = (message: string): void => {
     setPendingMessages((prev) => [...prev, message])
     onSteer(message)
   }
 
   // Search handlers
-  const handleSearchChange = (query: string) => {
+  const handleSearchChange = (query: string): void => {
     setSearchQuery(query)
     setActiveMatchIndex(0)
   }
 
-  const handleSearchNext = () => {
+  const handleSearchNext = (): void => {
     if (matchingIndices.length === 0) return
     const nextIndex = (activeMatchIndex + 1) % matchingIndices.length
     setActiveMatchIndex(nextIndex)
     virtualizer.scrollToIndex(matchingIndices[nextIndex], { align: 'center' })
   }
 
-  const handleSearchPrev = () => {
+  const handleSearchPrev = (): void => {
     if (matchingIndices.length === 0) return
     const prevIndex = activeMatchIndex === 0 ? matchingIndices.length - 1 : activeMatchIndex - 1
     setActiveMatchIndex(prevIndex)
     virtualizer.scrollToIndex(matchingIndices[prevIndex], { align: 'center' })
   }
 
-  const handleSearchClose = () => {
+  const handleSearchClose = (): void => {
     setSearchOpen(false)
     setSearchQuery('')
     setActiveMatchIndex(0)
@@ -160,7 +173,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
 
   // Keyboard shortcut for Cmd+F
   useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'f') {
         e.preventDefault()
         setSearchOpen(true)
@@ -173,7 +186,13 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
   if (!agent) {
     return (
       <div className="agent-console">
-        <div style={{ padding: '16px', color: 'var(--neon-text-dim, rgba(255,255,255,0.3))', textAlign: 'center' }}>
+        <div
+          style={{
+            padding: '16px',
+            color: 'var(--neon-text-dim, rgba(255,255,255,0.3))',
+            textAlign: 'center'
+          }}
+        >
           Agent not found
         </div>
       </div>
@@ -185,9 +204,7 @@ export function AgentConsole({ agentId, onSteer, onCommand }: AgentConsoleProps)
       <ConsoleHeader agent={agent} events={events} />
 
       {wasEvicted && (
-        <div className="console-cap-banner">
-          Older events were trimmed (showing last 2,000)
-        </div>
+        <div className="console-cap-banner">Older events were trimmed (showing last 2,000)</div>
       )}
 
       {searchOpen && (

@@ -168,7 +168,8 @@ function App(): React.JSX.Element {
       if (payload.zone === 'center') {
         store.addTab(payload.targetPanelId, payload.view as View)
       } else {
-        const direction = (payload.zone === 'left' || payload.zone === 'right') ? 'horizontal' : 'vertical'
+        const direction =
+          payload.zone === 'left' || payload.zone === 'right' ? 'horizontal' : 'vertical'
         store.splitPanel(payload.targetPanelId, direction, payload.view as View)
       }
     })
@@ -307,48 +308,48 @@ function App(): React.JSX.Element {
 
   return (
     <PollingProvider>
-    <div className="app-shell elevation-0">
-      <a
-        href="#main-content"
-        className="sr-only"
-        style={{
-          position: 'absolute',
-          top: '-40px',
-          left: 0,
-          background: 'var(--bde-text)',
-          color: 'var(--bde-bg)',
-          padding: '8px 16px',
-          zIndex: 9999,
-          transition: 'top 0.2s'
-        }}
-        onFocus={(e) => {
-          e.currentTarget.style.top = '0'
-        }}
-        onBlur={(e) => {
-          e.currentTarget.style.top = '-40px'
-        }}
-      >
-        Skip to main content
-      </a>
-      <UnifiedHeader />
-      <div className="app-shell__body">
-        <NeonSidebar model={DEFAULT_MODEL.modelId} />
-        <main id="main-content" className="app-shell__content" aria-label="Main content">
-          <PanelRenderer node={root} />
-        </main>
+      <div className="app-shell elevation-0">
+        <a
+          href="#main-content"
+          className="sr-only"
+          style={{
+            position: 'absolute',
+            top: '-40px',
+            left: 0,
+            background: 'var(--bde-text)',
+            color: 'var(--bde-bg)',
+            padding: '8px 16px',
+            zIndex: 9999,
+            transition: 'top 0.2s'
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.top = '0'
+          }}
+          onBlur={(e) => {
+            e.currentTarget.style.top = '-40px'
+          }}
+        >
+          Skip to main content
+        </a>
+        <UnifiedHeader />
+        <div className="app-shell__body">
+          <NeonSidebar model={DEFAULT_MODEL.modelId} />
+          <main id="main-content" className="app-shell__content" aria-label="Main content">
+            <PanelRenderer node={root} />
+          </main>
+        </div>
+        <CommandPalette open={paletteOpen} onClose={closePalette} />
+        <AnimatePresence>
+          {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
+        </AnimatePresence>
+        <ToastContainer />
+        <CrossWindowDropOverlay
+          active={crossDrop.active}
+          localX={crossDrop.localX}
+          localY={crossDrop.localY}
+          onDrop={crossDrop.handleDrop}
+        />
       </div>
-      <CommandPalette open={paletteOpen} onClose={closePalette} />
-      <AnimatePresence>
-        {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
-      </AnimatePresence>
-      <ToastContainer />
-      <CrossWindowDropOverlay
-        active={crossDrop.active}
-        localX={crossDrop.localX}
-        localY={crossDrop.localY}
-        onDrop={crossDrop.handleDrop}
-      />
-    </div>
     </PollingProvider>
   )
 }

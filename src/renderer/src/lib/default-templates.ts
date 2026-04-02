@@ -260,10 +260,7 @@ export const DEFAULT_TEMPLATES: PromptTemplate[] = [
         id: 'scope',
         label: 'Which PRs should I fix?',
         type: 'choice',
-        choices: [
-          'All open PRs with conflicts',
-          'Specific PR — I\'ll provide the number'
-        ],
+        choices: ['All open PRs with conflicts', "Specific PR — I'll provide the number"],
         default: 'All open PRs with conflicts'
       },
       {

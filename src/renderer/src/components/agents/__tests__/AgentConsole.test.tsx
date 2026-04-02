@@ -183,7 +183,10 @@ describe('AgentConsole', () => {
 
   it('shows trimmed events banner when evictedAgents flag is set', () => {
     vi.mocked(useAgentEventsStore).mockImplementation((selector: any) => {
-      const state = { events: { 'test-agent-1': mockEvents }, evictedAgents: { 'test-agent-1': true } }
+      const state = {
+        events: { 'test-agent-1': mockEvents },
+        evictedAgents: { 'test-agent-1': true }
+      }
       return selector(state)
     })
     render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
@@ -196,7 +199,9 @@ describe('AgentConsole', () => {
       return selector(state)
     })
     render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
-    expect(screen.queryByText('Older events were trimmed (showing last 2,000)')).not.toBeInTheDocument()
+    expect(
+      screen.queryByText('Older events were trimmed (showing last 2,000)')
+    ).not.toBeInTheDocument()
   })
 
   it('shows pending message optimistically when steering', () => {
@@ -216,7 +221,9 @@ describe('AgentConsole', () => {
 
   it('applies pending CSS class to optimistic messages', () => {
     const onSteer = vi.fn()
-    const { container } = render(<AgentConsole agentId="test-agent-1" onSteer={onSteer} onCommand={vi.fn()} />)
+    const { container } = render(
+      <AgentConsole agentId="test-agent-1" onSteer={onSteer} onCommand={vi.fn()} />
+    )
 
     // Send a message
     const sendButton = screen.getByText('Send')
@@ -235,7 +242,9 @@ describe('AgentConsole', () => {
     })
 
     const onSteer = vi.fn()
-    const { rerender, container } = render(<AgentConsole agentId="test-agent-1" onSteer={onSteer} onCommand={vi.fn()} />)
+    const { rerender, container } = render(
+      <AgentConsole agentId="test-agent-1" onSteer={onSteer} onCommand={vi.fn()} />
+    )
 
     // Send a message to create pending state
     const sendButton = screen.getByText('Send')

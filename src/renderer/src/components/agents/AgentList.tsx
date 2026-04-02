@@ -32,6 +32,7 @@ export interface AgentGroups {
 
 const RECENT_THRESHOLD_MS = 24 * 60 * 60 * 1000
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function groupAgents(agents: AgentMeta[]): AgentGroups {
   const now = Date.now()
   const running: AgentMeta[] = []
@@ -68,7 +69,7 @@ function GroupHeader({
   onToggle: () => void
   showPulse?: boolean
   collapsible?: boolean
-}) {
+}): React.JSX.Element {
   const Tag = collapsible ? 'button' : 'div'
   return (
     <Tag
@@ -127,7 +128,7 @@ export function AgentList({
   displayedCount,
   hasMore: _hasMore,
   onLoadMore: _onLoadMore
-}: AgentListProps) {
+}: AgentListProps): React.JSX.Element {
   const [searchText, setSearchText] = useState(filter ?? '')
   const [historyOpen, setHistoryOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)

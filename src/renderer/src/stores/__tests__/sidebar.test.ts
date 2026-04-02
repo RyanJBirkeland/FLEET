@@ -78,7 +78,10 @@ describe('sidebar store', () => {
       'sidebar.pinnedViews',
       expect.stringContaining('dashboard')
     )
-    expect(mockSet).toHaveBeenCalledWith('sidebar.pinnedViews', expect.not.stringContaining('settings'))
+    expect(mockSet).toHaveBeenCalledWith(
+      'sidebar.pinnedViews',
+      expect.not.stringContaining('settings')
+    )
   })
 
   it('persists pinned views when pinning', async () => {

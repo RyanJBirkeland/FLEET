@@ -61,7 +61,10 @@ export function UnifiedHeader(): React.JSX.Element {
             showClose={tabs.length > 1}
             draggable
             onDragStart={(e) => {
-              e.dataTransfer.setData('application/bde-panel', JSON.stringify({ sourcePanelId: focusedPanelId ?? '', sourceTabIndex: index }))
+              e.dataTransfer.setData(
+                'application/bde-panel',
+                JSON.stringify({ sourcePanelId: focusedPanelId ?? '', sourceTabIndex: index })
+              )
               startDrag({
                 sourcePanelId: focusedPanelId ?? '',
                 sourceTabIndex: index,

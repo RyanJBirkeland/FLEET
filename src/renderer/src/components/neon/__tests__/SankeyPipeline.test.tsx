@@ -4,7 +4,12 @@ import { formatCount, STAGE_CONFIG, STAGE_TO_FILTER } from '../sankey-utils'
 import { SankeyPipeline } from '../SankeyPipeline'
 
 const defaultStages = {
-  queued: 5, active: 3, review: 2, done: 12, blocked: 1, failed: 2,
+  queued: 5,
+  active: 3,
+  review: 2,
+  done: 12,
+  blocked: 1,
+  failed: 2
 }
 
 describe('SankeyPipeline', () => {
@@ -57,9 +62,7 @@ describe('SankeyPipeline', () => {
   })
 
   it('applies custom className', () => {
-    const { container } = render(
-      <SankeyPipeline stages={defaultStages} className="my-custom" />
-    )
+    const { container } = render(<SankeyPipeline stages={defaultStages} className="my-custom" />)
     expect(container.firstChild).toHaveClass('my-custom')
   })
 
@@ -90,9 +93,7 @@ describe('SankeyPipeline particles', () => {
   })
 
   it('hides particles when animated=false', () => {
-    const { container } = render(
-      <SankeyPipeline stages={defaultStages} animated={false} />
-    )
+    const { container } = render(<SankeyPipeline stages={defaultStages} animated={false} />)
     const particles = container.querySelectorAll('.sankey-particle')
     expect(particles).toHaveLength(0)
   })
@@ -104,9 +105,7 @@ describe('SankeyPipeline transitions', () => {
       <SankeyPipeline stages={{ ...defaultStages, queued: 5 }} />
     )
     act(() => {
-      rerender(
-        <SankeyPipeline stages={{ ...defaultStages, queued: 4, active: 4 }} />
-      )
+      rerender(<SankeyPipeline stages={{ ...defaultStages, queued: 4, active: 4 }} />)
     })
     // Active stage node should now show count 4
     const activeNode = container.querySelector('[data-stage="active"]')
@@ -114,13 +113,9 @@ describe('SankeyPipeline transitions', () => {
   })
 
   it('adds ripple element to destination node on count increase', () => {
-    const { container, rerender } = render(
-      <SankeyPipeline stages={defaultStages} />
-    )
+    const { container, rerender } = render(<SankeyPipeline stages={defaultStages} />)
     act(() => {
-      rerender(
-        <SankeyPipeline stages={{ ...defaultStages, active: 4 }} />
-      )
+      rerender(<SankeyPipeline stages={{ ...defaultStages, active: 4 }} />)
     })
     const ripple = container.querySelector('.sankey-ripple')
     expect(ripple).toBeInTheDocument()

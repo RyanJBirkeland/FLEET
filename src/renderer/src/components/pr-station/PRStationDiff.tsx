@@ -14,7 +14,7 @@ import { useRepoOptions } from '../../hooks/useRepoOptions'
 
 const EMPTY_PENDING: PendingComment[] = []
 
-export function PRStationDiff({ pr }: { pr: OpenPr }) {
+export function PRStationDiff({ pr }: { pr: OpenPr }): React.JSX.Element {
   const repoOptions = useRepoOptions()
   const [files, setFiles] = useState<DiffFile[]>([])
   const [loading, setLoading] = useState(true)
@@ -60,14 +60,19 @@ export function PRStationDiff({ pr }: { pr: OpenPr }) {
   useEffect(() => {
     const repoOption = repoOptions.find((r) => r.label === pr.repo)
     if (!repoOption) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setError('Unknown repo')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setLoading(false)
       return
     }
     let cancelled = false
     abortRef.current?.abort()
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null)
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSizeWarning(null)
     rawRef.current = null
 

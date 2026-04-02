@@ -61,7 +61,7 @@ function CommentCard({
   login: string
   body: string
   createdAt: string
-}) {
+}): React.JSX.Element {
   // renderMarkdown() returns sanitized HTML (uses DOMPurify internally)
   const sanitizedHtml = renderMarkdown(body)
   return (
@@ -79,7 +79,7 @@ export function PRStationConversation({
   reviewComments,
   issueComments,
   loading
-}: ConversationProps) {
+}: ConversationProps): React.JSX.Element {
   if (loading) {
     return (
       <div className="pr-detail__section">

@@ -20,7 +20,7 @@ export function Input({
   disabled = false,
   className,
   'aria-label': ariaLabel
-}: InputProps) {
+}: InputProps): React.JSX.Element {
   const classes = [
     'bde-input',
     prefix && 'bde-input--has-prefix',

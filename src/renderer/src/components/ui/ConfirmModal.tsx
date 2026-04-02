@@ -104,6 +104,7 @@ export function ConfirmModal({
  * useConfirm — stateful hook for managing ConfirmModal visibility.
  * Returns a `confirm` function and props to spread onto <ConfirmModal />.
  */
+// eslint-disable-next-line react-refresh/only-export-components
 export function useConfirm(): {
   confirm: (opts: {
     message: string

@@ -7,7 +7,7 @@ interface NeonProgressProps {
   label?: string
 }
 
-export function NeonProgress({ value, accent, label }: NeonProgressProps) {
+export function NeonProgress({ value, accent, label }: NeonProgressProps): React.JSX.Element {
   const clamped = Math.max(0, Math.min(100, value))
 
   return (

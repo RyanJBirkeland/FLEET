@@ -41,9 +41,7 @@ export const useAgentEventsStore = create<AgentEventsState>((set) => ({
         ...state.events,
         [agentId]: wasEvicted ? history.slice(-MAX_EVENTS_PER_AGENT) : history
       },
-      evictedAgents: wasEvicted
-        ? { ...state.evictedAgents, [agentId]: true }
-        : state.evictedAgents
+      evictedAgents: wasEvicted ? { ...state.evictedAgents, [agentId]: true } : state.evictedAgents
     }))
   },
 

@@ -11,7 +11,7 @@ interface AgentLaunchpadProps {
   onAgentSpawned: () => void
 }
 
-export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps) {
+export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps): React.JSX.Element {
   const [repoPaths, setRepoPaths] = useState<Record<string, string>>({})
 
   const templates = usePromptTemplatesStore((s) => s.templates)
@@ -22,7 +22,10 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps) {
 
   useEffect(() => {
     loadTemplates()
-    window.api.getRepoPaths().then(setRepoPaths).catch(() => {})
+    window.api
+      .getRepoPaths()
+      .then(setRepoPaths)
+      .catch(() => {})
   }, [loadTemplates])
 
   const visibleTemplates = templates.filter((t) => !t.hidden)

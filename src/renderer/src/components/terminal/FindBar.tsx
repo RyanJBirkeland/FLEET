@@ -18,8 +18,11 @@ export function FindBar(): React.JSX.Element | null {
       inputRef.current?.focus()
       inputRef.current?.select()
     } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setQuery('')
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResultIndex(-1)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResultCount(0)
       if (activeTabId) {
         getSearchAddon(activeTabId)?.clearDecorations()
@@ -50,7 +53,9 @@ export function FindBar(): React.JSX.Element | null {
       addon.findNext(query, { incremental: true })
     } else {
       addon.clearDecorations()
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResultIndex(-1)
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setResultCount(0)
     }
   }, [query, activeTabId])

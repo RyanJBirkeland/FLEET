@@ -8,7 +8,7 @@ interface ThinkingBlockProps {
   timestamp?: number
 }
 
-export function ThinkingBlock({ tokenCount, text }: ThinkingBlockProps) {
+export function ThinkingBlock({ tokenCount, text }: ThinkingBlockProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
 
   return (

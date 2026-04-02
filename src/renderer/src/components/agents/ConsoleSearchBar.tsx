@@ -20,7 +20,7 @@ export function ConsoleSearchBar({
   activeMatch,
   onNext,
   onPrev
-}: ConsoleSearchBarProps) {
+}: ConsoleSearchBarProps): React.JSX.Element {
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
@@ -28,7 +28,7 @@ export function ConsoleSearchBar({
     inputRef.current?.focus()
   }, [])
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>): void => {
     if (e.key === 'Escape') {
       onClose()
     } else if (e.key === 'Enter') {
@@ -75,11 +75,7 @@ export function ConsoleSearchBar({
           <ChevronDown size={14} />
         </button>
       </div>
-      <button
-        className="console-search-bar__close-btn"
-        onClick={onClose}
-        aria-label="Close search"
-      >
+      <button className="console-search-bar__close-btn" onClick={onClose} aria-label="Close search">
         <X size={14} />
       </button>
     </div>

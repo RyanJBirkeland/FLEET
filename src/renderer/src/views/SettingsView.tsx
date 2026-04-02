@@ -4,7 +4,18 @@
  */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Palette, Plug, GitBranch, FileText, Bot, Info, Cpu, DollarSign, Brain, Shield } from 'lucide-react'
+import {
+  Palette,
+  Plug,
+  GitBranch,
+  FileText,
+  Bot,
+  Info,
+  Cpu,
+  DollarSign,
+  Brain,
+  Shield
+} from 'lucide-react'
 import { AppearanceSection } from '../components/settings/AppearanceSection'
 import { ConnectionsSection } from '../components/settings/ConnectionsSection'
 import { RepositoriesSection } from '../components/settings/RepositoriesSection'
@@ -50,7 +61,7 @@ export default function SettingsView(): React.JSX.Element {
   const [activeTab, setActiveTab] = useState<TabId>('connections')
   const ActiveSection = SECTION_MAP[activeTab]
 
-  const handleTabKeyDown = (e: React.KeyboardEvent, index: number) => {
+  const handleTabKeyDown = (e: React.KeyboardEvent, index: number): void => {
     let nextIndex = index
     if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
       e.preventDefault()
