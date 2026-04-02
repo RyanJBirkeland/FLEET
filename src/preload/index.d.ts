@@ -278,6 +278,31 @@ declare global {
         viewsChanged: (payload: { windowId: string; views: string[] }) => void
       }
 
+      // Code Review
+      review: {
+        getDiff: (
+          payload: { worktreePath: string; base: string }
+        ) => Promise<IpcResult<'review:getDiff'>>
+        getCommits: (
+          payload: { worktreePath: string; base: string }
+        ) => Promise<IpcResult<'review:getCommits'>>
+        getFileDiff: (
+          payload: { worktreePath: string; filePath: string; base: string }
+        ) => Promise<IpcResult<'review:getFileDiff'>>
+        mergeLocally: (
+          payload: { taskId: string; strategy: 'squash' | 'merge' | 'rebase' }
+        ) => Promise<IpcResult<'review:mergeLocally'>>
+        createPr: (
+          payload: { taskId: string; title: string; body: string }
+        ) => Promise<IpcResult<'review:createPr'>>
+        requestRevision: (
+          payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh' }
+        ) => Promise<IpcResult<'review:requestRevision'>>
+        discard: (
+          payload: { taskId: string }
+        ) => Promise<IpcResult<'review:discard'>>
+      }
+
       // Spec Synthesizer
       synthesizeSpec: (
         ...args: IpcArgs<'synthesizer:generate'>

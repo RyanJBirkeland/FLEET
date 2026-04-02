@@ -540,6 +540,48 @@ export interface DashboardChannels {
   'agent:recentEvents': { args: [limit?: number]; result: DashboardEvent[] }
 }
 
+/** Code review operations */
+export interface ReviewChannels {
+  'review:getDiff': {
+    args: [payload: { worktreePath: string; base: string }]
+    result: {
+      files: Array<{
+        path: string
+        status: string
+        additions: number
+        deletions: number
+        patch: string
+      }>
+    }
+  }
+  'review:getCommits': {
+    args: [payload: { worktreePath: string; base: string }]
+    result: {
+      commits: Array<{ hash: string; message: string; author: string; date: string }>
+    }
+  }
+  'review:getFileDiff': {
+    args: [payload: { worktreePath: string; filePath: string; base: string }]
+    result: { diff: string }
+  }
+  'review:mergeLocally': {
+    args: [payload: { taskId: string; strategy: 'squash' | 'merge' | 'rebase' }]
+    result: { success: boolean; conflicts?: string[]; error?: string }
+  }
+  'review:createPr': {
+    args: [payload: { taskId: string; title: string; body: string }]
+    result: { prUrl: string }
+  }
+  'review:requestRevision': {
+    args: [payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh' }]
+    result: { success: boolean }
+  }
+  'review:discard': {
+    args: [payload: { taskId: string }]
+    result: { success: boolean }
+  }
+}
+
 /** Spec synthesizer AI-powered generation */
 export interface SynthesizerChannels {
   'synthesizer:generate': {
@@ -579,5 +621,6 @@ export type IpcChannelMap = SettingsChannels &
   PlaygroundChannels &
   DashboardChannels &
   SynthesizerChannels &
+  ReviewChannels &
   TearoffChannels &
   ClaudeConfigChannels
