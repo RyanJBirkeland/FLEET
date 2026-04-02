@@ -36,6 +36,7 @@ interface LocalAgentsState extends LogPollerState {
     task: string
     repoPath: string
     model?: string
+    assistant?: boolean
   }) => Promise<{ pid: number; logPath: string; id: string }>
   sendToAgent: (pid: number, message: string) => Promise<void>
   killLocalAgent: (pid: number) => Promise<void>
