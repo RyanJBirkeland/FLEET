@@ -616,12 +616,22 @@ export class AgentManagerImpl implements AgentManager {
 
   // ---- pruneLoop ----
 
+  private _isReviewTask(taskId: string): boolean {
+    try {
+      const task = this.repo.getTask(taskId)
+      return task?.status === 'review'
+    } catch {
+      return false
+    }
+  }
+
   private async _pruneLoop(): Promise<void> {
     try {
       await pruneStaleWorktrees(
         this.config.worktreeBase,
         (id: string) => this._activeAgents.has(id),
-        this.logger
+        this.logger,
+        (id: string) => this._isReviewTask(id)
       )
     } catch (err) {
       this.logger.error(`[agent-manager] Worktree prune error: ${err}`)
@@ -656,7 +666,8 @@ export class AgentManagerImpl implements AgentManager {
     pruneStaleWorktrees(
       this.config.worktreeBase,
       (id: string) => this._activeAgents.has(id),
-      this.logger
+      this.logger,
+      (id: string) => this._isReviewTask(id)
     ).catch((err) => {
       this.logger.error(`[agent-manager] Initial worktree prune error: ${err}`)
     })

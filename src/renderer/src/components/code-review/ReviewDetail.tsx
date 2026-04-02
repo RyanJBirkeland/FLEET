@@ -1,0 +1,45 @@
+import { useCodeReviewStore, type ReviewTab } from '../../stores/codeReview'
+import { ChangesTab } from './ChangesTab'
+import { CommitsTab } from './CommitsTab'
+import { ConversationTab } from './ConversationTab'
+
+const TABS: { key: ReviewTab; label: string }[] = [
+  { key: 'changes', label: 'Changes' },
+  { key: 'commits', label: 'Commits' },
+  { key: 'conversation', label: 'Conversation' },
+]
+
+export function ReviewDetail(): React.JSX.Element {
+  const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
+  const activeTab = useCodeReviewStore((s) => s.activeTab)
+  const setActiveTab = useCodeReviewStore((s) => s.setActiveTab)
+
+  if (!selectedTaskId) {
+    return (
+      <div className="cr-detail cr-detail--empty">Select a task to review</div>
+    )
+  }
+
+  return (
+    <div className="cr-detail">
+      <div className="cr-detail__tabs" role="tablist">
+        {TABS.map((tab) => (
+          <button
+            key={tab.key}
+            role="tab"
+            aria-selected={activeTab === tab.key}
+            className={`cr-detail__tab${activeTab === tab.key ? ' cr-detail__tab--active' : ''}`}
+            onClick={() => setActiveTab(tab.key)}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+      <div className="cr-detail__content" role="tabpanel">
+        {activeTab === 'changes' && <ChangesTab />}
+        {activeTab === 'commits' && <CommitsTab />}
+        {activeTab === 'conversation' && <ConversationTab />}
+      </div>
+    </div>
+  )
+}

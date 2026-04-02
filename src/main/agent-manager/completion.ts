@@ -236,7 +236,8 @@ async function createNewPr(
   return { prUrl: null, prNumber: null }
 }
 
-async function findOrCreatePR(
+/** Exported for use by the review-approve-push flow (push + PR creation deferred from agent completion). */
+export async function findOrCreatePR(
   worktreePath: string,
   branch: string,
   title: string,
@@ -250,7 +251,7 @@ async function findOrCreatePR(
 }
 
 export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): Promise<void> {
-  const { taskId, worktreePath, title, ghRepo, onTaskTerminal, agentSummary, retryCount, repo } =
+  const { taskId, worktreePath, title, onTaskTerminal, agentSummary, retryCount, repo } =
     opts
 
   // 0. Guard: worktree must still exist (macOS /tmp can evict it)
@@ -333,7 +334,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     // Continue — push will fail naturally if there are no commits
   }
 
-  // 3. Check if there are any commits to push
+  // 3. Check if there are any commits
   try {
     const { stdout: diffOut } = await execFile(
       'git',
@@ -347,64 +348,34 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
       const isTerminal = resolveFailure({ taskId, retryCount, notes: summaryNote, repo }, logger)
       if (isTerminal) {
         logger.warn(
-          `[completion] Task ${taskId}: no commits to push on branch ${branch} — exhausted retries`
+          `[completion] Task ${taskId}: no commits on branch ${branch} — exhausted retries`
         )
         await onTaskTerminal(taskId, 'failed')
       } else {
         logger.warn(
-          `[completion] Task ${taskId}: no commits to push on branch ${branch} — requeuing (retry ${retryCount + 1}/${MAX_RETRIES})`
+          `[completion] Task ${taskId}: no commits on branch ${branch} — requeuing (retry ${retryCount + 1}/${MAX_RETRIES})`
         )
       }
       return
     }
   } catch {
-    // If rev-list fails, try pushing anyway
+    // If rev-list fails, continue — commits may still exist
   }
 
-  // 4. Push branch to origin (run pre-push hooks for secret scanning)
-  logger.info(`[completion] Task ${taskId}: pushing branch ${branch}`)
+  // 4. Transition to review — preserve worktree for code review.
+  // Push + PR creation deferred to explicit user/UI action.
+  logger.info(`[completion] Task ${taskId}: agent finished with commits on branch ${branch} — transitioning to review`)
   try {
-    await execFile('git', ['push', 'origin', branch], {
-      cwd: worktreePath,
-      env: buildAgentEnv()
+    repo.updateTask(taskId, {
+      status: 'review',
+      worktree_path: worktreePath,
+      claimed_by: null
     })
   } catch (err) {
-    logger.error(`[completion] git push failed for task ${taskId} (branch ${branch}): ${err}`)
-    try {
-      repo.updateTask(taskId, {
-        status: 'error',
-        notes: `git push failed for branch ${branch}: ${err}`,
-        claimed_by: null,
-        completed_at: new Date().toISOString()
-      })
-    } catch (e) {
-      logger.warn(`[completion] Failed to update task ${taskId} after push error: ${e}`)
-    }
-    await onTaskTerminal(taskId, 'error')
-    return
+    logger.error(`[completion] Failed to update task ${taskId} to review status: ${err}`)
   }
-
-  // 5. Find or create PR
-  const { prUrl, prNumber } = await findOrCreatePR(worktreePath, branch, title, ghRepo, logger)
-
-  // 6. Update task with PR info (task stays active; SprintPrPoller handles done on merge)
-  try {
-    if (prUrl !== null && prNumber !== null) {
-      repo.updateTask(taskId, { pr_status: 'open', pr_url: prUrl, pr_number: prNumber })
-    } else {
-      // Branch pushed but PR creation exhausted retries — mark as branch_only
-      // so the UI shows a "Create PR" link instead of silently orphaning
-      repo.updateTask(taskId, {
-        pr_status: 'branch_only',
-        notes: `Branch ${branch} pushed to ${ghRepo} but PR creation failed after ${PR_CREATE_MAX_ATTEMPTS} attempts. To create the PR manually: gh pr create --head ${branch} --repo ${ghRepo}`
-      })
-      logger.warn(
-        `[completion] Task ${taskId}: branch ${branch} pushed, PR creation failed — set pr_status=branch_only`
-      )
-    }
-  } catch (err) {
-    logger.error(`[completion] Failed to update task ${taskId} with PR info: ${err}`)
-  }
+  // NOTE: Do NOT call onTaskTerminal — review is not a terminal status.
+  // Do NOT clean up worktree — it stays alive for review.
 }
 
 export function resolveFailure(opts: ResolveFailureOpts, logger?: Logger): boolean {

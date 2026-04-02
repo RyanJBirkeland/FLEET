@@ -373,6 +373,23 @@ const api = {
       ipcRenderer.send('tearoff:viewsChanged', payload)
   },
 
+  // Code Review
+  review: {
+    getDiff: (payload: { worktreePath: string; base: string }) =>
+      typedInvoke('review:getDiff', payload),
+    getCommits: (payload: { worktreePath: string; base: string }) =>
+      typedInvoke('review:getCommits', payload),
+    getFileDiff: (payload: { worktreePath: string; filePath: string; base: string }) =>
+      typedInvoke('review:getFileDiff', payload),
+    mergeLocally: (payload: { taskId: string; strategy: 'squash' | 'merge' | 'rebase' }) =>
+      typedInvoke('review:mergeLocally', payload),
+    createPr: (payload: { taskId: string; title: string; body: string }) =>
+      typedInvoke('review:createPr', payload),
+    requestRevision: (payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh' }) =>
+      typedInvoke('review:requestRevision', payload),
+    discard: (payload: { taskId: string }) => typedInvoke('review:discard', payload)
+  },
+
   // Spec Synthesizer
   synthesizeSpec: (args: import('../shared/types').SynthesizeRequest) =>
     typedInvoke('synthesizer:generate', args),

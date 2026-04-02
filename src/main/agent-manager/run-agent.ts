@@ -484,16 +484,23 @@ export async function runAgent(
   // Safe to remove from active map now — completion handler has updated the DB
   activeAgents.delete(task.id)
 
-  // Cleanup worktree (fire-and-forget)
-  cleanupWorktree({
-    repoPath,
-    worktreePath: worktree.worktreePath,
-    branch: worktree.branch
-  }).catch((cleanupErr: unknown) => {
-    logger.warn(
-      `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
+  // Cleanup worktree — but skip for review tasks (worktree preserved for code review)
+  const currentTask = repo.getTask(task.id)
+  if (currentTask?.status !== 'review') {
+    cleanupWorktree({
+      repoPath,
+      worktreePath: worktree.worktreePath,
+      branch: worktree.branch
+    }).catch((cleanupErr: unknown) => {
+      logger.warn(
+        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
+      )
+    })
+  } else {
+    logger.info(
+      `[agent-manager] Preserving worktree for review task ${task.id} at ${worktree.worktreePath}`
     )
-  })
+  }
 
   logger.info(`[agent-manager] Agent completed for task ${task.id} (${ffResult})`)
 }

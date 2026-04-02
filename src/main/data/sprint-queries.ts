@@ -66,7 +66,8 @@ export const UPDATE_ALLOWLIST = new Set([
   'playground_enabled',
   'needs_review',
   'max_runtime_ms',
-  'spec_type'
+  'spec_type',
+  'worktree_path'
 ])
 
 export interface QueueStats {
@@ -74,6 +75,7 @@ export interface QueueStats {
   backlog: number
   queued: number
   active: number
+  review: number
   done: number
   failed: number
   cancelled: number
@@ -390,6 +392,7 @@ export function getQueueStats(): QueueStats {
     backlog: 0,
     queued: 0,
     active: 0,
+    review: 0,
     done: 0,
     failed: 0,
     cancelled: 0,
