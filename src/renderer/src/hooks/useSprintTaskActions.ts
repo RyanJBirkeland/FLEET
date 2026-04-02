@@ -107,6 +107,27 @@ export function useSprintTaskActions() {
     [loadData]
   )
 
+  // --- Retry errored/failed task in-place ---
+  const handleRetry = useCallback(
+    async (task: SprintTask) => {
+      const ok = await confirm({
+        title: 'Retry Task',
+        message: `Retry "${task.title.slice(0, 50)}"? Previous agent work and logs will be cleared.`,
+        confirmLabel: 'Retry',
+        variant: 'danger'
+      })
+      if (!ok) return
+      try {
+        await window.api.sprint.retry(task.id)
+        toast.success('Task re-queued for retry')
+        loadData()
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to retry task')
+      }
+    },
+    [confirm, loadData]
+  )
+
   // --- Inline title edit ---
   const handleUpdateTitle = useCallback(
     (patch: { id: string; title: string }) => {
@@ -141,6 +162,7 @@ export function useSprintTaskActions() {
     handleRerun,
     handleUpdateTitle,
     handleUpdatePriority,
+    handleRetry,
     handleEditInWorkbench,
     launchTask,
     deleteTask,
