@@ -623,6 +623,15 @@
   margin-bottom: 4px;
 }
 
+.console-line__tool-summary {
+  font-size: 12px;
+  color: var(--neon-text);
+  font-family: var(--bde-font-code);
+  padding: 4px 0;
+  border-bottom: 1px solid var(--neon-purple-border);
+  margin-bottom: 4px;
+}
+
 .console-line__json {
   margin: 0;
   padding: 8px;

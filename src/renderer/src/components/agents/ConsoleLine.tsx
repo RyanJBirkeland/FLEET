@@ -6,6 +6,7 @@ import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 import type { ChatBlock } from '../../lib/pair-events'
 import { renderAgentMarkdown } from '../../lib/render-agent-markdown'
+import { formatToolSummary } from '../../lib/tool-summaries'
 
 interface ConsoleLineProps {
   block: ChatBlock
@@ -174,6 +175,12 @@ export function ConsoleLine({ block, onPlaygroundClick }: ConsoleLineProps): Rea
           </button>
           {expanded && block.input !== undefined && (
             <div className="console-line__detail">
+              {(() => {
+                const summary = formatToolSummary(block.tool, block.input)
+                return summary ? (
+                  <div className="console-line__tool-summary">{summary}</div>
+                ) : null
+              })()}
               <div className="console-line__detail-label">Input</div>
               <pre className="console-line__json">
                 <code>{JSON.stringify(block.input, null, 2)}</code>
@@ -225,6 +232,12 @@ export function ConsoleLine({ block, onPlaygroundClick }: ConsoleLineProps): Rea
           </button>
           {expanded && (
             <div className="console-line__detail-group">
+              {(() => {
+                const summary = formatToolSummary(block.tool, block.input)
+                return summary ? (
+                  <div className="console-line__tool-summary" style={{ paddingLeft: '24px' }}>{summary}</div>
+                ) : null
+              })()}
               {block.input !== undefined && (
                 <div className="console-line__detail">
                   <div className="console-line__detail-label">Input</div>
