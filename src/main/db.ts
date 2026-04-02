@@ -622,6 +622,16 @@ export const migrations: Migration[] = [
         db.exec('PRAGMA foreign_keys = ON;')
       }
     }
+  },
+  {
+    version: 21,
+    description: 'Add worktree_path column to sprint_tasks for review status',
+    up: (db) => {
+      const cols = (db.pragma('table_info(sprint_tasks)') as { name: string }[]).map((c) => c.name)
+      if (!cols.includes('worktree_path')) {
+        db.exec('ALTER TABLE sprint_tasks ADD COLUMN worktree_path TEXT')
+      }
+    }
   }
 ]
 

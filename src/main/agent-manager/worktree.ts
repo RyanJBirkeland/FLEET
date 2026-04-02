@@ -268,7 +268,8 @@ export async function cleanupWorktree(opts: CleanupWorktreeOpts): Promise<void> 
 export async function pruneStaleWorktrees(
   worktreeBase: string,
   isActive: (taskId: string) => boolean,
-  logger?: Logger
+  logger?: Logger,
+  isReview?: (taskId: string) => boolean
 ): Promise<number> {
   let pruned = 0
 
@@ -291,18 +292,22 @@ export async function pruneStaleWorktrees(
     }
 
     for (const taskId of taskDirs) {
-      if (!isActive(taskId)) {
-        const worktreePath = path.join(repoDir, taskId)
-        try {
-          // Use shell rm -rf instead of rmSync to avoid Electron's ASAR
-          // interception, which treats .asar files as directories and
-          // fails with ENOTDIR when trying to rmdir them.
-          const env = buildAgentEnv()
-          await execFileAsync('rm', ['-rf', worktreePath], { env })
-          pruned++
-        } catch (err) {
-          log.warn(`[worktree] Failed to remove stale worktree directory: ${err}`)
-        }
+      if (isActive(taskId)) continue
+      // Skip worktrees belonging to tasks in review status
+      if (isReview?.(taskId)) {
+        log.info(`[worktree] Skipping prune of review worktree for task ${taskId}`)
+        continue
+      }
+      const worktreePath = path.join(repoDir, taskId)
+      try {
+        // Use shell rm -rf instead of rmSync to avoid Electron's ASAR
+        // interception, which treats .asar files as directories and
+        // fails with ENOTDIR when trying to rmdir them.
+        const env = buildAgentEnv()
+        await execFileAsync('rm', ['-rf', worktreePath], { env })
+        pruned++
+      } catch (err) {
+        log.warn(`[worktree] Failed to remove stale worktree directory: ${err}`)
       }
     }
   }

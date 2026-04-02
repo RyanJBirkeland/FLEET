@@ -55,6 +55,7 @@ export interface SprintTask {
   max_runtime_ms?: number | null
   spec_type?: string | null
   needs_review?: boolean
+  worktree_path?: string | null
   updated_at: string
   created_at: string
 }
