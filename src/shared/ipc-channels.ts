@@ -137,8 +137,6 @@ export interface PrChannels {
     result: PrListPayload
   }
 }
-
-
 /** Agent lifecycle and interaction */
 export interface AgentChannels {
   'local:spawnClaudeAgent': {
