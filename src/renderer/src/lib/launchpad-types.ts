@@ -55,23 +55,3 @@ export interface PromptTemplate {
   /** Display sort position (lower = first) */
   order: number
 }
-
-/** A recently-spawned task stored in localStorage */
-export interface RecentTask {
-  /** The full assembled prompt text */
-  prompt: string
-  /** Which template was used (if any) — matches PromptTemplate.id */
-  templateId?: string
-  /** Repository name (e.g. "BDE") */
-  repo: string
-  /** Model id (e.g. "sonnet") */
-  model: string
-  /** Timestamp in ms (Date.now()) */
-  timestamp: number
-}
-
-/** localStorage key for recent task history */
-export const RECENT_TASKS_KEY = 'bde-spawn-history'
-
-/** Maximum number of recent tasks to store */
-export const RECENT_TASKS_LIMIT = 20
