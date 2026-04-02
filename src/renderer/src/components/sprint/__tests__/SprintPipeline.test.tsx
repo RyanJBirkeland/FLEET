@@ -67,6 +67,7 @@ vi.mock('framer-motion', () => ({
   LayoutGroup: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="layout-group">{children}</div>
   ),
+  useReducedMotion: () => false,
   motion: {
     div: ({ children, className, ...rest }: any) => (
       <div className={className} {...rest}>

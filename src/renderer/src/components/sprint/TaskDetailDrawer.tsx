@@ -134,11 +134,22 @@ export function TaskDetailDrawer({
       <div
         className="task-drawer__resize-handle"
         onMouseDown={handleResizeStart}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowLeft') {
+            e.preventDefault()
+            setWidth((w) => Math.max(MIN_DRAWER_WIDTH, w - (e.shiftKey ? 50 : 10)))
+          } else if (e.key === 'ArrowRight') {
+            e.preventDefault()
+            setWidth((w) => Math.min(MAX_DRAWER_WIDTH, w + (e.shiftKey ? 50 : 10)))
+          }
+        }}
         role="separator"
         aria-orientation="vertical"
         aria-label="Resize drawer"
+        aria-valuenow={width}
+        aria-valuemin={MIN_DRAWER_WIDTH}
+        aria-valuemax={MAX_DRAWER_WIDTH}
         tabIndex={0}
-        style={{ cursor: 'col-resize' }}
       />
       {/* Header */}
       <div className="task-drawer__head">
@@ -146,7 +157,7 @@ export function TaskDetailDrawer({
         <div className="task-drawer__status">
           <span
             className="task-drawer__status-dot"
-            style={{ background: getDotColor(task.status) }}
+            style={{ background: getDotColor(task.status, task.pr_status) }}
           />
           <span>{task.status}</span>
           {elapsed && <span> — {elapsed}</span>}
@@ -252,11 +263,10 @@ export function TaskDetailDrawer({
                 if (!/^[a-zA-Z0-9/_.-]+$/.test(branch)) return null
                 return (
                   <a
-                    className="task-drawer__btn task-drawer__btn--primary"
+                    className="task-drawer__btn task-drawer__btn--primary task-drawer__branch-only-link"
                     href={`https://github.com/${encodeURIComponent(ghRepo)}/pull/new/${encodeURIComponent(branch)}`}
                     target="_blank"
                     rel="noreferrer"
-                    style={{ marginTop: '8px', display: 'inline-block' }}
                   >
                     Create PR →
                   </a>

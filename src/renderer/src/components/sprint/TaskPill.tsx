@@ -106,7 +106,7 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
       transition={SPRINGS.default}
       data-testid="task-pill"
     >
-      <div className="task-pill__dot" style={{ background: getDotColor(task.status) }} />
+      <div className="task-pill__dot" style={{ background: getDotColor(task.status, task.pr_status) }} />
       {failureInfo && <span title={failureInfo.label}><failureInfo.icon size={10} className={failureInfo.className} aria-label={failureInfo.label} /></span>}
       {isZombie && <span title="Agent finished but task not marked done"><AlertTriangle size={12} className="task-pill__zombie-icon" aria-label="Zombie task" /></span>}
       {isStale && !isZombie && <span title="Task may be stuck"><Clock size={12} className="task-pill__stale-icon" aria-label="Stale task" /></span>}

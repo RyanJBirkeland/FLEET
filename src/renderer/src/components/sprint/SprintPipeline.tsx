@@ -4,7 +4,8 @@
  */
 import { useEffect, useCallback, useMemo } from 'react'
 import { useShallow } from 'zustand/react/shallow'
-import { LayoutGroup } from 'framer-motion'
+import { motion, LayoutGroup } from 'framer-motion'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintUI } from '../../stores/sprintUI'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
@@ -19,7 +20,6 @@ import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { Button } from '../ui/Button'
 import { toast } from '../../stores/toasts'
-import { Spinner } from '../ui/Spinner'
 import { PipelineBacklog } from './PipelineBacklog'
 import { PipelineStage } from './PipelineStage'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
@@ -29,6 +29,7 @@ import { DoneHistoryPanel } from './DoneHistoryPanel'
 import { ConflictDrawer } from './ConflictDrawer'
 import { HealthCheckDrawer } from './HealthCheckDrawer'
 import { PipelineFilterBar } from './PipelineFilterBar'
+import { NeonCard } from '../neon'
 import { GitMerge, HeartPulse } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 
@@ -77,6 +78,8 @@ export function SprintPipeline() {
   const searchQuery = useSprintUI((s) => s.searchQuery)
 
   const setView = usePanelLayoutStore((s) => s.setView)
+  const reduced = useReducedMotion()
+  const openWorkbench = useCallback(() => setView('task-workbench'), [setView])
 
   // --- Extracted hooks ---
   const {
@@ -224,7 +227,14 @@ export function SprintPipeline() {
   )
 
   return (
-    <div className="sprint-pipeline" data-testid="sprint-pipeline">
+    <motion.div
+      className="sprint-pipeline"
+      data-testid="sprint-pipeline"
+      variants={VARIANTS.fadeIn}
+      initial="initial"
+      animate="animate"
+      transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
+    >
       <header className="sprint-pipeline__header">
         <h1 className="sprint-pipeline__title">Task Pipeline</h1>
         <div className="sprint-pipeline__stats">
@@ -270,16 +280,22 @@ export function SprintPipeline() {
       <PipelineFilterBar tasks={tasks} />
 
       {loading && tasks.length === 0 && (
-        <div className="pipeline-empty-state">
-          <Spinner size="md" />
-          <p className="pipeline-empty-state__title">Loading tasks...</p>
+        <div className="sprint-pipeline__body">
+          <div className="pipeline-sidebar" style={{ opacity: 0.3 }}>
+            <div className="bde-skeleton" style={{ height: 200 }} />
+          </div>
+          <div className="pipeline-center" style={{ opacity: 0.3 }}>
+            <div className="bde-skeleton" style={{ height: 64 }} />
+            <div className="bde-skeleton" style={{ height: 64 }} />
+            <div className="bde-skeleton" style={{ height: 64 }} />
+          </div>
         </div>
       )}
 
       {loadError && (
         <div className="pipeline-empty-state">
           <p className="pipeline-empty-state__title">Error loading tasks</p>
-          <p className="pipeline-empty-state__hint" style={{ marginBottom: '12px' }}>
+          <p className="pipeline-empty-state__hint pipeline-empty-state__hint--spaced">
             {loadError}
           </p>
           <Button variant="primary" size="sm" onClick={loadData} disabled={loading}>
@@ -289,11 +305,15 @@ export function SprintPipeline() {
       )}
 
       {!loading && !loadError && tasks.length === 0 && (
-        <div className="pipeline-empty-state">
-          <p className="pipeline-empty-state__title">No tasks yet</p>
-          <p className="pipeline-empty-state__hint">
-            Press N to create your first task
-          </p>
+        <div style={{ padding: '40px', display: 'flex', justifyContent: 'center' }}>
+          <NeonCard accent="purple" title="No tasks yet">
+            <p className="sprint-pipeline__empty-text">
+              Create your first task to start the pipeline.
+            </p>
+            <button className="task-drawer__btn task-drawer__btn--primary" onClick={openWorkbench}>
+              New Task
+            </button>
+          </NeonCard>
         </div>
       )}
 
@@ -416,6 +436,6 @@ export function SprintPipeline() {
         onClose={() => setHealthCheckDrawerOpen(false)}
         onDismiss={dismissTask}
       />
-    </div>
+    </motion.div>
   )
 }

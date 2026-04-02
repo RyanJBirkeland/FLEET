@@ -126,6 +126,12 @@
   margin-bottom: 12px;
 }
 
+.sprint-pipeline__empty-text {
+  color: var(--neon-text-dim);
+  font-size: 12px;
+  margin: 0 0 12px;
+}
+
 .sprint-pipeline__body {
   display: flex;
   flex: 1;
