@@ -19,9 +19,7 @@ let mockState = {
 }
 
 vi.mock('../../stores/sprintUI', () => {
-  const store = vi.fn((sel: (s: unknown) => unknown) =>
-    sel(mockState)
-  )
+  const store = vi.fn((sel: (s: unknown) => unknown) => sel(mockState))
   ;(store as any).getState = () => mockState
   return { useSprintUI: store }
 })

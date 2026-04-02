@@ -1,7 +1,10 @@
 import { Check, AlertTriangle, X, Loader2 } from 'lucide-react'
 import { useTaskWorkbenchStore, type CheckResult } from '../../stores/taskWorkbench'
 
-const STATUS_ICON_MAP: Record<CheckResult['status'], { Icon: typeof Check; className: string; label: string }> = {
+const STATUS_ICON_MAP: Record<
+  CheckResult['status'],
+  { Icon: typeof Check; className: string; label: string }
+> = {
   pass: { Icon: Check, className: 'wb-check-icon--pass', label: 'Passed' },
   warn: { Icon: AlertTriangle, className: 'wb-check-icon--warn', label: 'Warning' },
   fail: { Icon: X, className: 'wb-check-icon--fail', label: 'Failed' },
@@ -33,7 +36,12 @@ export function ReadinessChecks() {
 
   return (
     <div className={`wb-checks${hasFailures ? ' wb-checks--has-fail' : ''}`}>
-      <button onClick={toggleExpanded} className="wb-checks__summary" aria-expanded={expanded} aria-label="Toggle readiness checks">
+      <button
+        onClick={toggleExpanded}
+        className="wb-checks__summary"
+        aria-expanded={expanded}
+        aria-label="Toggle readiness checks"
+      >
         <span>{expanded ? '\u25be' : '\u25b8'}</span>
         <span className="wb-checks__icons">
           {allChecks.map((c) => (

@@ -109,9 +109,7 @@ export function TicketEditor({ initialTickets }: TicketEditorProps): React.JSX.E
         })
 
         // Mark as created
-        setTickets((prev) =>
-          prev.map((t) => (t._id === _id ? { ...t, created: true } : t))
-        )
+        setTickets((prev) => prev.map((t) => (t._id === _id ? { ...t, created: true } : t)))
         successCount++
         results.push({ id: _id, success: true })
       } catch (err) {

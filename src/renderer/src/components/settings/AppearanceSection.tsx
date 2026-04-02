@@ -39,16 +39,22 @@ function useTearoffClosePreference(): [string | null, () => void] {
   const [pref, setPrefState] = useState<string | null>(null)
 
   useEffect(() => {
-    window.api?.settings?.get('tearoff.closeAction').then((val) => {
-      setPrefState(val ?? null)
-    }).catch(() => {})
+    window.api?.settings
+      ?.get('tearoff.closeAction')
+      .then((val) => {
+        setPrefState(val ?? null)
+      })
+      .catch(() => {})
   }, [])
 
   const reset = useCallback(() => {
-    window.api?.settings?.delete('tearoff.closeAction').then(() => {
-      setPrefState(null)
-      toast.success('Tear-off close preference reset — you\'ll be asked next time')
-    }).catch(() => {})
+    window.api?.settings
+      ?.delete('tearoff.closeAction')
+      .then(() => {
+        setPrefState(null)
+        toast.success("Tear-off close preference reset — you'll be asked next time")
+      })
+      .catch(() => {})
   }, [])
 
   return [pref, reset]

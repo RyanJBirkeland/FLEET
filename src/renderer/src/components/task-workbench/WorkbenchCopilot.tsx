@@ -114,7 +114,13 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
     // Create empty assistant message and start streaming state BEFORE the IPC call
     // to prevent the race condition where chunks arrive before startStreaming is called
     const msgId = `assistant-${Date.now()}`
-    addMessage({ id: msgId, role: 'assistant', content: '', timestamp: Date.now(), insertable: true })
+    addMessage({
+      id: msgId,
+      role: 'assistant',
+      content: '',
+      timestamp: Date.now(),
+      insertable: true
+    })
     useTaskWorkbenchStore.getState().startStreaming(msgId, '') // placeholder streamId
 
     try {
@@ -165,7 +171,12 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps) {
       {/* Header */}
       <div className="wb-copilot__header">
         <span className="wb-copilot__title">AI Copilot</span>
-        <button onClick={onClose} className="wb-copilot__close" title="Close copilot" aria-label="Close AI Copilot">
+        <button
+          onClick={onClose}
+          className="wb-copilot__close"
+          title="Close copilot"
+          aria-label="Close AI Copilot"
+        >
           ×
         </button>
       </div>

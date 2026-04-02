@@ -56,7 +56,13 @@ function CloseDialog({ onClose }: CloseDialogProps): React.ReactElement {
   }, [handleClose])
 
   return (
-    <div ref={dialogRef} className="tearoff-shell__dialog-overlay" role="dialog" aria-modal aria-labelledby="tearoff-close-dialog-heading">
+    <div
+      ref={dialogRef}
+      className="tearoff-shell__dialog-overlay"
+      role="dialog"
+      aria-modal
+      aria-labelledby="tearoff-close-dialog-heading"
+    >
       <div className="tearoff-shell__dialog">
         <p id="tearoff-close-dialog-heading">Return this tab to the main window?</p>
         <label className="tearoff-shell__dialog-remember">
@@ -71,7 +77,11 @@ function CloseDialog({ onClose }: CloseDialogProps): React.ReactElement {
           <button className="bde-btn bde-btn--ghost" onClick={() => handleClose('close')}>
             Close
           </button>
-          <button ref={returnBtnRef} className="bde-btn bde-btn--primary" onClick={() => handleClose('return')}>
+          <button
+            ref={returnBtnRef}
+            className="bde-btn bde-btn--primary"
+            onClick={() => handleClose('return')}
+          >
             Return
           </button>
         </div>
@@ -105,7 +115,11 @@ export function TearoffShell({ view, windowId }: TearoffShellProps): React.React
     usePanelLayoutStore.getState().setPersistable(false)
     if (initialViews.length <= 1) {
       const leaf = createLeaf(initialViews[0] || view)
-      usePanelLayoutStore.setState({ root: leaf, focusedPanelId: leaf.panelId, activeView: initialViews[0] || view })
+      usePanelLayoutStore.setState({
+        root: leaf,
+        focusedPanelId: leaf.panelId,
+        activeView: initialViews[0] || view
+      })
     } else {
       // Restore multiple views as tabs in a single leaf
       const leaf = createLeaf(initialViews[0])
@@ -114,7 +128,11 @@ export function TearoffShell({ view, windowId }: TearoffShellProps): React.React
         const updated = addTab(current, leaf.panelId, initialViews[i])
         if (updated) current = updated
       }
-      usePanelLayoutStore.setState({ root: current, focusedPanelId: leaf.panelId, activeView: initialViews[0] })
+      usePanelLayoutStore.setState({
+        root: current,
+        focusedPanelId: leaf.panelId,
+        activeView: initialViews[0]
+      })
     }
   }, []) // only on mount — view is static from query params
 

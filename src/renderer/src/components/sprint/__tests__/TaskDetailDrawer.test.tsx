@@ -371,7 +371,8 @@ describe('TaskDetailDrawer - additional status combos', () => {
       ...baseTask,
       status: 'done',
       pr_status: 'branch_only',
-      notes: 'Branch agent/fix-foo pushed to RyanBirkeland/BDE but PR creation failed after 3 attempts'
+      notes:
+        'Branch agent/fix-foo pushed to RyanBirkeland/BDE but PR creation failed after 3 attempts'
     }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
     const section = screen.getByTestId('branch-only-section')

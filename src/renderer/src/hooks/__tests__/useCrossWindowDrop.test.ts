@@ -27,15 +27,21 @@ function makeTearoffMock(): TearoffMock & {
   const mock: TearoffMock = {
     onDragIn: vi.fn((cb) => {
       dragInCb = cb
-      return () => { dragInCb = null }
+      return () => {
+        dragInCb = null
+      }
     }),
     onDragMove: vi.fn((cb) => {
       dragMoveCb = cb
-      return () => { dragMoveCb = null }
+      return () => {
+        dragMoveCb = null
+      }
     }),
     onDragCancel: vi.fn((cb) => {
       dragCancelCb = cb
-      return () => { dragCancelCb = null }
+      return () => {
+        dragCancelCb = null
+      }
     }),
     sendDropComplete: vi.fn()
   }

@@ -75,11 +75,7 @@ export function ConsoleSearchBar({
           <ChevronDown size={14} />
         </button>
       </div>
-      <button
-        className="console-search-bar__close-btn"
-        onClick={onClose}
-        aria-label="Close search"
-      >
+      <button className="console-search-bar__close-btn" onClick={onClose} aria-label="Close search">
         <X size={14} />
       </button>
     </div>

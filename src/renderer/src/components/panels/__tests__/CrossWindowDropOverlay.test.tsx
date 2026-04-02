@@ -39,39 +39,21 @@ describe('CrossWindowDropOverlay', () => {
 
   it('renders nothing when active=false', () => {
     const { queryByTestId } = render(
-      <CrossWindowDropOverlay
-        active={false}
-        localX={100}
-        localY={100}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={false} localX={100} localY={100} onDrop={onDrop} />
     )
     expect(queryByTestId('cross-window-drop-overlay')).toBeNull()
   })
 
   it('renders the overlay div when active=true', () => {
     const { getByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={100}
-        localY={100}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={100} localY={100} onDrop={onDrop} />
     )
     expect(getByTestId('cross-window-drop-overlay')).toBeTruthy()
   })
 
   it('overlay has correct fixed-position styles', () => {
     const { getByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={0}
-        localY={0}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={0} localY={0} onDrop={onDrop} />
     )
     const overlay = getByTestId('cross-window-drop-overlay')
     expect(overlay.style.position).toBe('fixed')
@@ -83,13 +65,7 @@ describe('CrossWindowDropOverlay', () => {
     injectPanel('panel-1', { left: 0, top: 0, width: 400, height: 300 })
 
     const { getByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={200}
-        localY={150}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={200} localY={150} onDrop={onDrop} />
     )
 
     const overlay = getByTestId('cross-window-drop-overlay')
@@ -106,13 +82,7 @@ describe('CrossWindowDropOverlay', () => {
     injectPanel('panel-center', { left: 0, top: 0, width: 400, height: 300 })
 
     const { getByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={200}
-        localY={150}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={200} localY={150} onDrop={onDrop} />
     )
 
     await act(async () => {
@@ -126,13 +96,7 @@ describe('CrossWindowDropOverlay', () => {
     // No panels injected
 
     const { getByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={200}
-        localY={150}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={200} localY={150} onDrop={onDrop} />
     )
 
     await act(async () => {
@@ -146,13 +110,7 @@ describe('CrossWindowDropOverlay', () => {
     injectPanel('panel-hl', { left: 0, top: 0, width: 400, height: 300 })
 
     const { getByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={200}
-        localY={150}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={200} localY={150} onDrop={onDrop} />
     )
 
     expect(getByTestId('drop-zone-highlight')).toBeTruthy()
@@ -160,13 +118,7 @@ describe('CrossWindowDropOverlay', () => {
 
   it('does not show zone highlight when cursor is not over any panel', () => {
     const { queryByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={9999}
-        localY={9999}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={9999} localY={9999} onDrop={onDrop} />
     )
 
     expect(queryByTestId('drop-zone-highlight')).toBeNull()
@@ -176,28 +128,14 @@ describe('CrossWindowDropOverlay', () => {
     injectPanel('panel-move', { left: 500, top: 500, width: 400, height: 300 })
 
     const { rerender, queryByTestId } = render(
-      <CrossWindowDropOverlay
-        active={true}
-        localX={100}
-        localY={100}
-
-        onDrop={onDrop}
-      />
+      <CrossWindowDropOverlay active={true} localX={100} localY={100} onDrop={onDrop} />
     )
 
     // Not over panel initially
     expect(queryByTestId('drop-zone-highlight')).toBeNull()
 
     await act(async () => {
-      rerender(
-        <CrossWindowDropOverlay
-          active={true}
-          localX={700}
-          localY={650}
-  
-          onDrop={onDrop}
-        />
-      )
+      rerender(<CrossWindowDropOverlay active={true} localX={700} localY={650} onDrop={onDrop} />)
     })
 
     // Now over panel

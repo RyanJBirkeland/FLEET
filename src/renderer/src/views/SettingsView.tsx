@@ -4,7 +4,18 @@
  */
 import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Palette, Plug, GitBranch, FileText, Bot, Info, Cpu, DollarSign, Brain, Shield } from 'lucide-react'
+import {
+  Palette,
+  Plug,
+  GitBranch,
+  FileText,
+  Bot,
+  Info,
+  Cpu,
+  DollarSign,
+  Brain,
+  Shield
+} from 'lucide-react'
 import { AppearanceSection } from '../components/settings/AppearanceSection'
 import { ConnectionsSection } from '../components/settings/ConnectionsSection'
 import { RepositoriesSection } from '../components/settings/RepositoriesSection'

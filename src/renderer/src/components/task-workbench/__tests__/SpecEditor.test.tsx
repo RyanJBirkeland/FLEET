@@ -8,7 +8,7 @@ describe('SpecEditor', () => {
   const defaultProps = {
     onRequestGenerate: vi.fn(),
     onRequestResearch: vi.fn(),
-    generating: false,
+    generating: false
   }
 
   beforeEach(() => {
@@ -42,7 +42,9 @@ describe('SpecEditor', () => {
   it('displays spec value from store', () => {
     useTaskWorkbenchStore.setState({ spec: 'My custom spec content' })
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
     expect(textarea.value).toBe('My custom spec content')
   })
 
@@ -153,7 +155,9 @@ describe('SpecEditor', () => {
 
   it('handles Tab key to insert spaces', () => {
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
 
     fireEvent.change(textarea, { target: { value: 'Line 1' } })
     textarea.setSelectionRange(6, 6) // At end
@@ -165,7 +169,9 @@ describe('SpecEditor', () => {
   it('inserts two spaces at cursor position on Tab', () => {
     useTaskWorkbenchStore.setState({ spec: 'Hello World' })
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
 
     textarea.setSelectionRange(5, 5) // After "Hello"
     fireEvent.keyDown(textarea, { key: 'Tab' })
@@ -176,7 +182,9 @@ describe('SpecEditor', () => {
   it('replaces selection with spaces on Tab', () => {
     useTaskWorkbenchStore.setState({ spec: 'Hello World' })
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
 
     textarea.setSelectionRange(0, 5) // Select "Hello"
     fireEvent.keyDown(textarea, { key: 'Tab' })
@@ -187,7 +195,9 @@ describe('SpecEditor', () => {
   it('handles Tab key to insert spaces instead of default behavior', () => {
     useTaskWorkbenchStore.setState({ spec: 'Test' })
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
 
     textarea.setSelectionRange(4, 4) // At end
     fireEvent.keyDown(textarea, { key: 'Tab', preventDefault: () => {} })
@@ -234,7 +244,9 @@ describe('SpecEditor', () => {
   it('handles empty spec gracefully', () => {
     useTaskWorkbenchStore.setState({ spec: '' })
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
 
     expect(textarea.value).toBe('')
   })
@@ -242,7 +254,7 @@ describe('SpecEditor', () => {
   it('renders all four template buttons in order', () => {
     render(<SpecEditor {...defaultProps} />)
     const buttons = screen.getAllByRole('button')
-    const templateButtons = buttons.filter(b =>
+    const templateButtons = buttons.filter((b) =>
       ['Feature', 'Bug Fix', 'Refactor', 'Test'].includes(b.textContent || '')
     )
 
@@ -256,13 +268,15 @@ describe('SpecEditor', () => {
   it('updates cursor position after Tab insertion', async () => {
     useTaskWorkbenchStore.setState({ spec: 'Test' })
     render(<SpecEditor {...defaultProps} />)
-    const textarea = screen.getByPlaceholderText(/Describe what the agent should do/) as HTMLTextAreaElement
+    const textarea = screen.getByPlaceholderText(
+      /Describe what the agent should do/
+    ) as HTMLTextAreaElement
 
     textarea.setSelectionRange(2, 2) // After "Te"
     fireEvent.keyDown(textarea, { key: 'Tab' })
 
     // The cursor position update happens in requestAnimationFrame
-    await new Promise(resolve => requestAnimationFrame(resolve))
+    await new Promise((resolve) => requestAnimationFrame(resolve))
 
     expect(textarea.selectionStart).toBe(4)
     expect(textarea.selectionEnd).toBe(4)

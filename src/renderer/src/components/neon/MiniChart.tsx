@@ -67,8 +67,7 @@ export function MiniChart({ data, height = 80 }: MiniChartProps) {
 
   // Closed path for gradient fill (line + bottom edge)
   const fillPath =
-    linePath +
-    ` L ${points[points.length - 1][0]},${height} L ${points[0][0]},${height} Z`
+    linePath + ` L ${points[points.length - 1][0]},${height} L ${points[0][0]},${height} Z`
 
   return (
     <div style={{ height, position: 'relative' }}>
@@ -160,9 +159,7 @@ export function MiniChart({ data, height = 80 }: MiniChartProps) {
         >
           <strong>{formatValue(data[hover].value)}</strong>
           {data[hover].label && (
-            <span style={{ opacity: 0.7, marginLeft: 6 }}>
-              {formatLabel(data[hover].label!)}
-            </span>
+            <span style={{ opacity: 0.7, marginLeft: 6 }}>{formatLabel(data[hover].label!)}</span>
           )}
         </div>
       )}

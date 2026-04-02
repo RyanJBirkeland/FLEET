@@ -91,7 +91,7 @@ vi.mock('../../components/neon', () => ({
 Object.defineProperty(window, 'api', {
   value: {
     getRepoPaths: vi.fn().mockResolvedValue({ BDE: '/repo/bde' }),
-    spawnLocalAgent: vi.fn().mockResolvedValue({ pid: 1, logPath: "/tmp/log", id: "agent-1" }),
+    spawnLocalAgent: vi.fn().mockResolvedValue({ pid: 1, logPath: '/tmp/log', id: 'agent-1' }),
     steerAgent: vi.fn().mockResolvedValue({ ok: true }),
     killAgent: vi.fn().mockResolvedValue(undefined),
     sprint: { update: vi.fn().mockResolvedValue(undefined) }

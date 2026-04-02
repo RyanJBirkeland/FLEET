@@ -73,7 +73,11 @@ describe('computeStructuralChecks with specType', () => {
 
   it('test type: no headings is warn (advisory) not fail', () => {
     const checks = computeStructuralChecks(
-      { title: 'Test', repo: 'BDE', spec: 'Run the integration test suite for authentication module' },
+      {
+        title: 'Test',
+        repo: 'BDE',
+        spec: 'Run the integration test suite for authentication module'
+      },
       'test'
     )
     const structure = checks.find((c) => c.id === 'spec-structure')
@@ -90,20 +94,14 @@ describe('computeStructuralChecks with specType', () => {
   })
 
   it('null specType defaults to feature profile (required)', () => {
-    const checks = computeStructuralChecks(
-      { title: 'Fix', repo: 'BDE', spec: 'Short' },
-      null
-    )
+    const checks = computeStructuralChecks({ title: 'Fix', repo: 'BDE', spec: 'Short' }, null)
     const specPresent = checks.find((c) => c.id === 'spec-present')
     expect(specPresent?.status).toBe('fail')
   })
 
   it('refactor type: uses 30-char threshold', () => {
     const spec = 'Refactor the auth module code here'
-    const checks = computeStructuralChecks(
-      { title: 'Refactor', repo: 'BDE', spec },
-      'refactor'
-    )
+    const checks = computeStructuralChecks({ title: 'Refactor', repo: 'BDE', spec }, 'refactor')
     const specPresent = checks.find((c) => c.id === 'spec-present')
     expect(specPresent?.status).toBe('pass')
   })

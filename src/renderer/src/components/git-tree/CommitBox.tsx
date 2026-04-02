@@ -54,7 +54,9 @@ export function CommitBox({
         className="git-commit-box__textarea"
       />
       {commitMessage.length > 0 && (
-        <div className={`git-commit-box__char-count${isOverLimit ? ' git-commit-box__char-count--over' : ''}`}>
+        <div
+          className={`git-commit-box__char-count${isOverLimit ? ' git-commit-box__char-count--over' : ''}`}
+        >
           {charCount}/72
         </div>
       )}
@@ -78,9 +80,15 @@ export function CommitBox({
           }
           className={`git-commit-box__commit-btn ${canCommit ? 'git-commit-box__commit-btn--enabled' : 'git-commit-box__commit-btn--disabled'}`}
         >
-          {commitLoading ? <Loader2 size={14} className="bde-spin" /> : <GitCommitHorizontal size={14} />}
+          {commitLoading ? (
+            <Loader2 size={14} className="bde-spin" />
+          ) : (
+            <GitCommitHorizontal size={14} />
+          )}
           {commitLoading ? 'Committing...' : 'Commit'}
-          {!commitLoading && stagedCount > 0 && <span className="git-commit-box__count">({stagedCount})</span>}
+          {!commitLoading && stagedCount > 0 && (
+            <span className="git-commit-box__count">({stagedCount})</span>
+          )}
         </button>
 
         {/* Push button */}

@@ -226,8 +226,20 @@ describe('WorkbenchActions', () => {
       structuralChecks: [
         { id: 'title-present', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
         { id: 'repo-selected', label: 'Repo', tier: 1, status: 'pass', message: 'OK' },
-        { id: 'spec-present', label: 'Spec', tier: 1, status: 'warn', message: 'Short spec (advisory)' },
-        { id: 'spec-structure', label: 'Structure', tier: 1, status: 'warn', message: 'No headings (advisory)' }
+        {
+          id: 'spec-present',
+          label: 'Spec',
+          tier: 1,
+          status: 'warn',
+          message: 'Short spec (advisory)'
+        },
+        {
+          id: 'spec-structure',
+          label: 'Structure',
+          tier: 1,
+          status: 'warn',
+          message: 'No headings (advisory)'
+        }
       ]
     })
     render(<WorkbenchActions {...defaultProps} />)

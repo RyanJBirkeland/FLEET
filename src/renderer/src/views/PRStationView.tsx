@@ -191,7 +191,10 @@ export default function PRStationView() {
                   />
                 </div>
               ) : (
-                <PRStationDiff key={`${selectedPr.repo}-${selectedPr.number}-${refreshKey}`} pr={selectedPr} />
+                <PRStationDiff
+                  key={`${selectedPr.repo}-${selectedPr.number}-${refreshKey}`}
+                  pr={selectedPr}
+                />
               )}
             </>
           ) : (

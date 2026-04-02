@@ -189,7 +189,15 @@ describe('LiveActivityStrip', () => {
   it('shows tool_result summary', () => {
     mockAgents = [makeAgent()]
     mockEvents = {
-      'agent-1': [{ type: 'agent:tool_result', tool: 'Read', success: true, summary: 'Read 50 lines', timestamp: Date.now() }]
+      'agent-1': [
+        {
+          type: 'agent:tool_result',
+          tool: 'Read',
+          success: true,
+          summary: 'Read 50 lines',
+          timestamp: Date.now()
+        }
+      ]
     }
 
     render(<LiveActivityStrip onSelectAgent={mockOnSelectAgent} />)
@@ -199,7 +207,15 @@ describe('LiveActivityStrip', () => {
   it('shows tool_result fallback when no summary', () => {
     mockAgents = [makeAgent()]
     mockEvents = {
-      'agent-1': [{ type: 'agent:tool_result', tool: 'Bash', success: true, summary: '', timestamp: Date.now() }]
+      'agent-1': [
+        {
+          type: 'agent:tool_result',
+          tool: 'Bash',
+          success: true,
+          summary: '',
+          timestamp: Date.now()
+        }
+      ]
     }
 
     render(<LiveActivityStrip onSelectAgent={mockOnSelectAgent} />)
@@ -229,7 +245,9 @@ describe('LiveActivityStrip', () => {
   it('shows rate_limited event with retry delay', () => {
     mockAgents = [makeAgent()]
     mockEvents = {
-      'agent-1': [{ type: 'agent:rate_limited', retryDelayMs: 30000, attempt: 1, timestamp: Date.now() }]
+      'agent-1': [
+        { type: 'agent:rate_limited', retryDelayMs: 30000, attempt: 1, timestamp: Date.now() }
+      ]
     }
 
     render(<LiveActivityStrip onSelectAgent={mockOnSelectAgent} />)
@@ -249,7 +267,17 @@ describe('LiveActivityStrip', () => {
   it('shows completed event', () => {
     mockAgents = [makeAgent()]
     mockEvents = {
-      'agent-1': [{ type: 'agent:completed', exitCode: 0, costUsd: 0, tokensIn: 0, tokensOut: 0, durationMs: 0, timestamp: Date.now() }]
+      'agent-1': [
+        {
+          type: 'agent:completed',
+          exitCode: 0,
+          costUsd: 0,
+          tokensIn: 0,
+          tokensOut: 0,
+          durationMs: 0,
+          timestamp: Date.now()
+        }
+      ]
     }
 
     render(<LiveActivityStrip onSelectAgent={mockOnSelectAgent} />)
@@ -259,7 +287,15 @@ describe('LiveActivityStrip', () => {
   it('shows playground event with filename', () => {
     mockAgents = [makeAgent()]
     mockEvents = {
-      'agent-1': [{ type: 'agent:playground', filename: 'test.ts', html: '', sizeBytes: 100, timestamp: Date.now() }]
+      'agent-1': [
+        {
+          type: 'agent:playground',
+          filename: 'test.ts',
+          html: '',
+          sizeBytes: 100,
+          timestamp: Date.now()
+        }
+      ]
     }
 
     render(<LiveActivityStrip onSelectAgent={mockOnSelectAgent} />)

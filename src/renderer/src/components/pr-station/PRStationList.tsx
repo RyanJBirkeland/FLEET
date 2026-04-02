@@ -128,11 +128,7 @@ export function PRStationList({
 
       <div className="pr-station-list__rows">
         {error ? (
-          <EmptyState
-            icon={<CircleX size={24} />}
-            title="Failed to load PRs"
-            description={error}
-          />
+          <EmptyState icon={<CircleX size={24} />} title="Failed to load PRs" description={error} />
         ) : loading && prs.length === 0 ? (
           <div className="pr-station-list__loading">
             <div className="sprint-board__skeleton" />

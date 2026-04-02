@@ -31,11 +31,17 @@ function getStatusClass(status: string, prStatus?: string | null): string {
   return ''
 }
 
-function getFailureInfo(task: SprintTask): { icon: LucideIcon; label: string; className: string } | null {
-  if (task.status !== 'failed' && task.status !== 'error' && task.status !== 'cancelled') return null
-  if (task.fast_fail_count >= 3) return { icon: Zap, label: 'Fast-fail', className: 'task-pill__fail--fastfail' }
-  if (task.pr_url || task.pr_status === 'branch_only') return { icon: GitBranch, label: 'Push failed', className: 'task-pill__fail--push' }
-  if (task.status === 'cancelled') return { icon: Slash, label: 'Cancelled', className: 'task-pill__fail--cancelled' }
+function getFailureInfo(
+  task: SprintTask
+): { icon: LucideIcon; label: string; className: string } | null {
+  if (task.status !== 'failed' && task.status !== 'error' && task.status !== 'cancelled')
+    return null
+  if (task.fast_fail_count >= 3)
+    return { icon: Zap, label: 'Fast-fail', className: 'task-pill__fail--fastfail' }
+  if (task.pr_url || task.pr_status === 'branch_only')
+    return { icon: GitBranch, label: 'Push failed', className: 'task-pill__fail--push' }
+  if (task.status === 'cancelled')
+    return { icon: Slash, label: 'Cancelled', className: 'task-pill__fail--cancelled' }
   return { icon: XCircle, label: 'Agent failed', className: 'task-pill__fail--agent' }
 }
 
@@ -62,8 +68,10 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
   }, [task.status, task.started_at])
 
   const isZombie = task.status === 'active' && (!!task.pr_url || !!task.pr_status)
-  const isStale = task.status === 'active' && !!task.started_at &&
-    (Date.now() - new Date(task.started_at).getTime() > (task.max_runtime_ms ?? 3600000))
+  const isStale =
+    task.status === 'active' &&
+    !!task.started_at &&
+    Date.now() - new Date(task.started_at).getTime() > (task.max_runtime_ms ?? 3600000)
   const failureInfo = getFailureInfo(task)
 
   const statusClass = getStatusClass(task.status, task.pr_status)
@@ -106,11 +114,32 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
       transition={SPRINGS.default}
       data-testid="task-pill"
     >
-      <div className="task-pill__dot" style={{ background: getDotColor(task.status, task.pr_status) }} />
-      {failureInfo && <span title={failureInfo.label}><failureInfo.icon size={10} className={failureInfo.className} aria-label={failureInfo.label} /></span>}
-      {isZombie && <span title="Agent finished but task not marked done"><AlertTriangle size={12} className="task-pill__zombie-icon" aria-label="Zombie task" /></span>}
-      {isStale && !isZombie && <span title="Task may be stuck"><Clock size={12} className="task-pill__stale-icon" aria-label="Stale task" /></span>}
-      <span className="task-pill__title" title={task.title}>{task.title}</span>
+      <div
+        className="task-pill__dot"
+        style={{ background: getDotColor(task.status, task.pr_status) }}
+      />
+      {failureInfo && (
+        <span title={failureInfo.label}>
+          <failureInfo.icon
+            size={10}
+            className={failureInfo.className}
+            aria-label={failureInfo.label}
+          />
+        </span>
+      )}
+      {isZombie && (
+        <span title="Agent finished but task not marked done">
+          <AlertTriangle size={12} className="task-pill__zombie-icon" aria-label="Zombie task" />
+        </span>
+      )}
+      {isStale && !isZombie && (
+        <span title="Task may be stuck">
+          <Clock size={12} className="task-pill__stale-icon" aria-label="Stale task" />
+        </span>
+      )}
+      <span className="task-pill__title" title={task.title}>
+        {task.title}
+      </span>
       <span
         className="task-pill__badge"
         style={{ background: 'var(--neon-cyan-surface)', color: 'var(--neon-cyan)' }}
@@ -123,9 +152,7 @@ export function TaskPill({ task, selected, multiSelected, onClick }: TaskPillPro
           {formatDuration(task.started_at, task.completed_at)}
         </span>
       )}
-      {task.status === 'active' && !isZombie && (
-        <span className="task-pill__activity" />
-      )}
+      {task.status === 'active' && !isZombie && <span className="task-pill__activity" />}
     </motion.div>
   )
 }

@@ -32,12 +32,7 @@ describe('PromptModal', () => {
 
   it('renders nothing when open is false', () => {
     const { container } = render(
-      <PromptModal
-        open={false}
-        message="Enter name:"
-        onConfirm={onConfirm}
-        onCancel={onCancel}
-      />
+      <PromptModal open={false} message="Enter name:" onConfirm={onConfirm} onCancel={onCancel} />
     )
     expect(container.textContent).toBe('')
   })

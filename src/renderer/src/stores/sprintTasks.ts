@@ -57,7 +57,10 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set({ loadError: null, loading: true })
     try {
       const result = (await window.api.sprint.list()) as SprintTask[]
-      const incoming = (Array.isArray(result) ? result : []).map(t => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) }))
+      const incoming = (Array.isArray(result) ? result : []).map((t) => ({
+        ...t,
+        depends_on: sanitizeDependsOn(t.depends_on)
+      }))
 
       set((s) => {
         const now = Date.now()
@@ -148,7 +151,11 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
               })()
             : s.pendingUpdates,
           tasks: serverTask?.id
-            ? s.tasks.map((t) => (t.id === taskId ? { ...serverTask, depends_on: sanitizeDependsOn(serverTask.depends_on) } : t))
+            ? s.tasks.map((t) =>
+                t.id === taskId
+                  ? { ...serverTask, depends_on: sanitizeDependsOn(serverTask.depends_on) }
+                  : t
+              )
             : s.tasks
         }
       })
@@ -328,7 +335,11 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set((s) => ({
       tasks: s.tasks.map((t) => {
         if (t.id !== update.taskId) return t
-        const merged = { ...t, ...update, depends_on: sanitizeDependsOn((update as any).depends_on ?? t.depends_on) } as SprintTask
+        const merged = {
+          ...t,
+          ...update,
+          depends_on: sanitizeDependsOn((update as any).depends_on ?? t.depends_on)
+        } as SprintTask
         if (merged.status === TASK_STATUS.DONE && merged.pr_url && !merged.pr_status) {
           merged.pr_status = PR_STATUS.OPEN
         }
@@ -348,5 +359,6 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set((s) => ({ prMergedMap: updater(s.prMergedMap) }))
   },
 
-  setTasks: (tasks): void => set({ tasks: tasks.map(t => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) })) })
+  setTasks: (tasks): void =>
+    set({ tasks: tasks.map((t) => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) })) })
 }))

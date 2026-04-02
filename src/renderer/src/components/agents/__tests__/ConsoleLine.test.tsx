@@ -60,7 +60,7 @@ describe('ConsoleLine', () => {
       summary: 'Running ls',
       input: { command: 'ls' },
       result: { success: true, summary: 'Output', output: 'file.txt' },
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     const icon = container.querySelector('.console-tool-icon--bash')
@@ -74,7 +74,7 @@ describe('ConsoleLine', () => {
       tool: 'Read',
       summary: 'Reading file',
       input: { path: 'file.txt' },
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     const icon = container.querySelector('.console-tool-icon--read')
@@ -87,7 +87,7 @@ describe('ConsoleLine', () => {
       type: 'tool_call',
       tool: 'CustomTool',
       summary: 'Doing something',
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     const icon = container.querySelector('.console-tool-icon--default')
@@ -99,7 +99,7 @@ describe('ConsoleLine', () => {
     const block: ChatBlock = {
       type: 'text',
       text: '\u2705 **Step 1 PASSED**: Run `npm test`',
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     expect(container.querySelector('.console-md-bold')?.textContent).toBe('Step 1 PASSED')
@@ -111,7 +111,7 @@ describe('ConsoleLine', () => {
     const block: ChatBlock = {
       type: 'text',
       text: 'Line one\nLine two',
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     expect(container.querySelector('.console-line__content--grouped')).toBeInTheDocument()
@@ -121,7 +121,7 @@ describe('ConsoleLine', () => {
     const block: ChatBlock = {
       type: 'text',
       text: 'Just one line',
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     expect(container.querySelector('.console-line__content--grouped')).not.toBeInTheDocument()
@@ -156,7 +156,7 @@ describe('ConsoleLine', () => {
       tokensIn: 380000,
       tokensOut: 24000,
       durationMs: 723000,
-      timestamp: Date.now(),
+      timestamp: Date.now()
     }
     const { container } = render(<ConsoleLine block={block} />)
     expect(container.querySelector('.console-completion-card--failed')).toBeInTheDocument()

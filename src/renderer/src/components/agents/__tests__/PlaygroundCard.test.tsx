@@ -7,7 +7,7 @@ describe('PlaygroundCard', () => {
   const defaultProps = {
     filename: 'preview.html',
     sizeBytes: 1234,
-    onClick,
+    onClick
   }
 
   it('renders filename and file size', () => {

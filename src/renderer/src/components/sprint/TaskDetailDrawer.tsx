@@ -114,16 +114,10 @@ export function TaskDetailDrawer({
     [width]
   )
 
-  const depIds = useMemo(
-    () => task?.depends_on?.map((d) => d.id) ?? [],
-    [task?.depends_on]
-  )
+  const depIds = useMemo(() => task?.depends_on?.map((d) => d.id) ?? [], [task?.depends_on])
   const allTasks = useSprintTasks((s) => s.tasks)
   const depTasks = useMemo(
-    () =>
-      depIds.length === 0
-        ? []
-        : allTasks.filter((t) => depIds.includes(t.id)),
+    () => (depIds.length === 0 ? [] : allTasks.filter((t) => depIds.includes(t.id))),
     [depIds, allTasks]
   )
   const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)

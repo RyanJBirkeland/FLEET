@@ -230,8 +230,20 @@ describe('DashboardView', () => {
     vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
       selector({
         localAgents: [
-          { id: 'a1', durationMs: 120000, costUsd: 0.5, startedAt: new Date().toISOString(), taskTitle: 'T1' },
-          { id: 'a2', durationMs: 180000, costUsd: 0.3, startedAt: new Date().toISOString(), taskTitle: 'T2' }
+          {
+            id: 'a1',
+            durationMs: 120000,
+            costUsd: 0.5,
+            startedAt: new Date().toISOString(),
+            taskTitle: 'T1'
+          },
+          {
+            id: 'a2',
+            durationMs: 180000,
+            costUsd: 0.3,
+            startedAt: new Date().toISOString(),
+            taskTitle: 'T2'
+          }
         ],
         totalCost: 0.8,
         fetchLocalAgents: vi.fn()
@@ -247,7 +259,13 @@ describe('DashboardView', () => {
     vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
       selector({
         localAgents: [
-          { id: 'a1', durationMs: 7200000, costUsd: 1.0, startedAt: new Date().toISOString(), taskTitle: 'T1' }
+          {
+            id: 'a1',
+            durationMs: 7200000,
+            costUsd: 1.0,
+            startedAt: new Date().toISOString(),
+            taskTitle: 'T1'
+          }
         ],
         totalCost: 1.0,
         fetchLocalAgents: vi.fn()
@@ -262,7 +280,13 @@ describe('DashboardView', () => {
     vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
       selector({
         localAgents: [
-          { id: 'a1', durationMs: 45000, costUsd: 0.1, startedAt: new Date().toISOString(), taskTitle: 'T1' }
+          {
+            id: 'a1',
+            durationMs: 45000,
+            costUsd: 0.1,
+            startedAt: new Date().toISOString(),
+            taskTitle: 'T1'
+          }
         ],
         totalCost: 0.1,
         fetchLocalAgents: vi.fn()
@@ -283,7 +307,12 @@ describe('DashboardView', () => {
     vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
       selector({
         tasks: [
-          { id: '1', status: 'done', title: 'Implement feature X', completed_at: new Date().toISOString() }
+          {
+            id: '1',
+            status: 'done',
+            title: 'Implement feature X',
+            completed_at: new Date().toISOString()
+          }
         ],
         loading: false,
         loadData: vi.fn()
@@ -434,8 +463,20 @@ describe('DashboardView', () => {
     vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
       selector({
         localAgents: [
-          { id: 'a1', durationMs: 60000, costUsd: 0.5, startedAt: new Date().toISOString(), taskTitle: 'Task A' },
-          { id: 'a2', durationMs: 120000, costUsd: 1.2, startedAt: new Date().toISOString(), taskTitle: 'Task B' }
+          {
+            id: 'a1',
+            durationMs: 60000,
+            costUsd: 0.5,
+            startedAt: new Date().toISOString(),
+            taskTitle: 'Task A'
+          },
+          {
+            id: 'a2',
+            durationMs: 120000,
+            costUsd: 1.2,
+            startedAt: new Date().toISOString(),
+            taskTitle: 'Task B'
+          }
         ],
         totalCost: 1.7,
         fetchLocalAgents: vi.fn()

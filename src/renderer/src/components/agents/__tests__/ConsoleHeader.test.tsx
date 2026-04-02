@@ -72,7 +72,12 @@ describe('ConsoleHeader', () => {
   })
 
   it('hides Stop button when agent is not running', () => {
-    const doneAgent = { ...baseAgent, status: 'done' as const, finishedAt: new Date().toISOString(), exitCode: 0 }
+    const doneAgent = {
+      ...baseAgent,
+      status: 'done' as const,
+      finishedAt: new Date().toISOString(),
+      exitCode: 0
+    }
     render(<ConsoleHeader agent={doneAgent} events={[]} />)
     expect(screen.queryByLabelText('Stop agent')).not.toBeInTheDocument()
   })
@@ -144,7 +149,15 @@ describe('ConsoleHeader', () => {
 
   it('shows cost when present in completed event', () => {
     const events: AgentEvent[] = [
-      { type: 'agent:completed', exitCode: 0, costUsd: 0.1234, tokensIn: 0, tokensOut: 0, durationMs: 0, timestamp: Date.now() }
+      {
+        type: 'agent:completed',
+        exitCode: 0,
+        costUsd: 0.1234,
+        tokensIn: 0,
+        tokensOut: 0,
+        durationMs: 0,
+        timestamp: Date.now()
+      }
     ]
     render(<ConsoleHeader agent={baseAgent} events={events} />)
     expect(screen.getByText('$0.1234')).toBeInTheDocument()

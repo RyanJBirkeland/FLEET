@@ -63,7 +63,8 @@ export function ConsoleHeader({ agent, events }: ConsoleHeaderProps) {
   const costUsd = completedEvent?.costUsd ?? agent.costUsd
 
   // Estimate cost for running agents with no final cost yet (only if there are events)
-  const estimatedCost = isRunning && costUsd == null && events.length > 0 ? estimateCost(events, agent.model) : null
+  const estimatedCost =
+    isRunning && costUsd == null && events.length > 0 ? estimateCost(events, agent.model) : null
 
   const handleOpenShell = () => {
     useTerminalStore.getState().addTab(undefined, agent.repoPath)

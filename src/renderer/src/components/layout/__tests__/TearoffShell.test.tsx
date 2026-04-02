@@ -13,9 +13,13 @@ const { mockSetPersistable, mockSetState, getRoot, setRoot, getFocusedPanelId, s
       mockSetPersistable: vi.fn(),
       mockSetState: vi.fn(),
       getRoot: () => root,
-      setRoot: (r: any) => { root = r },
+      setRoot: (r: any) => {
+        root = r
+      },
       getFocusedPanelId: () => focusedPanelId,
-      setFocusedPanelId: (id: string) => { focusedPanelId = id }
+      setFocusedPanelId: (id: string) => {
+        focusedPanelId = id
+      }
     }
   })
 
@@ -92,7 +96,13 @@ vi.mock('../../panels/CrossWindowDropOverlay', () => ({
 // ---------------------------------------------------------------------------
 
 vi.mock('../../../hooks/useCrossWindowDrop', () => ({
-  useCrossWindowDrop: () => ({ active: false, localX: 0, localY: 0, viewKey: null, handleDrop: vi.fn() })
+  useCrossWindowDrop: () => ({
+    active: false,
+    localX: 0,
+    localY: 0,
+    viewKey: null,
+    handleDrop: vi.fn()
+  })
 }))
 
 // ---------------------------------------------------------------------------

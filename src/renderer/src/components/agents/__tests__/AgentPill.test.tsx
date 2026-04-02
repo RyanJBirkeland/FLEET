@@ -61,9 +61,7 @@ describe('AgentPill', () => {
 
   it('truncates long task names', () => {
     const longTask = 'A'.repeat(25)
-    render(
-      <AgentPill {...defaultProps} agent={{ ...baseAgent, task: longTask }} />
-    )
+    render(<AgentPill {...defaultProps} agent={{ ...baseAgent, task: longTask }} />)
     expect(screen.getByText('A'.repeat(20) + '…')).toBeInTheDocument()
   })
 

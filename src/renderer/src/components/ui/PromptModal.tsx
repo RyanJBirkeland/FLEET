@@ -114,12 +114,7 @@ export function PromptModal({
               <Button variant="ghost" size="sm" onClick={onCancel}>
                 {cancelLabel}
               </Button>
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={handleConfirm}
-                disabled={!value.trim()}
-              >
+              <Button variant="primary" size="sm" onClick={handleConfirm} disabled={!value.trim()}>
                 {confirmLabel}
               </Button>
             </div>

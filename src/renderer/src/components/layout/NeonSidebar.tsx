@@ -19,19 +19,27 @@ export function NeonSidebar({ model }: NeonSidebarProps): React.JSX.Element {
   const pinnedViews = useSidebarStore((s) => s.pinnedViews)
   const { pinView, unpinView } = useSidebarStore()
 
-  const { root, focusedPanelId, activeView, setView, splitPanel, addTab, closeTab, findPanelByView } =
-    usePanelLayoutStore(
-      useShallow((s) => ({
-        root: s.root,
-        focusedPanelId: s.focusedPanelId,
-        activeView: s.activeView,
-        setView: s.setView,
-        splitPanel: s.splitPanel,
-        addTab: s.addTab,
-        closeTab: s.closeTab,
-        findPanelByView: s.findPanelByView
-      }))
-    )
+  const {
+    root,
+    focusedPanelId,
+    activeView,
+    setView,
+    splitPanel,
+    addTab,
+    closeTab,
+    findPanelByView
+  } = usePanelLayoutStore(
+    useShallow((s) => ({
+      root: s.root,
+      focusedPanelId: s.focusedPanelId,
+      activeView: s.activeView,
+      setView: s.setView,
+      splitPanel: s.splitPanel,
+      addTab: s.addTab,
+      closeTab: s.closeTab,
+      findPanelByView: s.findPanelByView
+    }))
+  )
 
   const openViews = getOpenViews(root)
   const unpinnedViews = getUnpinnedViews(pinnedViews)

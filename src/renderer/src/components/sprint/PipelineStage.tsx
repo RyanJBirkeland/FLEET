@@ -24,8 +24,15 @@ export function PipelineStage({
   const empty = tasks.length === 0 && !doneFooter
 
   return (
-    <div className={`pipeline-stage${empty ? ' pipeline-stage--empty' : ''}`} data-testid={`pipeline-stage-${name}`} role="region" aria-label={label}>
-      <div className={`pipeline-stage__dot pipeline-stage__dot--${name}${empty ? ' pipeline-stage__dot--dim' : ''}`}>
+    <div
+      className={`pipeline-stage${empty ? ' pipeline-stage--empty' : ''}`}
+      data-testid={`pipeline-stage-${name}`}
+      role="region"
+      aria-label={label}
+    >
+      <div
+        className={`pipeline-stage__dot pipeline-stage__dot--${name}${empty ? ' pipeline-stage__dot--dim' : ''}`}
+      >
         {tasks.length}
       </div>
       <div className="pipeline-stage__header">

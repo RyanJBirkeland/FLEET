@@ -226,11 +226,15 @@ export default function GitTreeView(): React.ReactElement {
             files={unstaged}
             isStaged={false}
             selectedPath={selectedFile?.path}
-            onStageAll={unstaged.length > 0 ? () => {
-              if (!activeRepo) return
-              const paths = unstaged.map((f) => f.path)
-              window.api.gitStage(activeRepo, paths).then(() => fetchStatus(activeRepo))
-            } : undefined}
+            onStageAll={
+              unstaged.length > 0
+                ? () => {
+                    if (!activeRepo) return
+                    const paths = unstaged.map((f) => f.path)
+                    window.api.gitStage(activeRepo, paths).then(() => fetchStatus(activeRepo))
+                  }
+                : undefined
+            }
             onStageFile={handleStageFile}
             onUnstageFile={handleUnstageFile}
             onSelectFile={(path) => handleSelectFile(path, false)}
@@ -244,11 +248,15 @@ export default function GitTreeView(): React.ReactElement {
             files={untracked}
             isStaged={false}
             selectedPath={selectedFile?.path}
-            onStageAll={untracked.length > 0 ? () => {
-              if (!activeRepo) return
-              const paths = untracked.map((f) => f.path)
-              window.api.gitStage(activeRepo, paths).then(() => fetchStatus(activeRepo))
-            } : undefined}
+            onStageAll={
+              untracked.length > 0
+                ? () => {
+                    if (!activeRepo) return
+                    const paths = untracked.map((f) => f.path)
+                    window.api.gitStage(activeRepo, paths).then(() => fetchStatus(activeRepo))
+                  }
+                : undefined
+            }
             onStageFile={handleStageFile}
             onUnstageFile={handleUnstageFile}
             onSelectFile={(path) => handleSelectFile(path, false)}

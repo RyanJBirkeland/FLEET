@@ -9,15 +9,17 @@ vi.mock('../WorkbenchForm', () => ({
         Send to Copilot
       </button>
     </div>
-  ),
+  )
 }))
 
 vi.mock('../WorkbenchCopilot', () => ({
   WorkbenchCopilot: ({ onClose }: { onClose: () => void }) => (
     <div data-testid="workbench-copilot">
-      <button data-testid="close-copilot" onClick={onClose}>Close</button>
+      <button data-testid="close-copilot" onClick={onClose}>
+        Close
+      </button>
     </div>
-  ),
+  )
 }))
 
 import { TaskWorkbench } from '../TaskWorkbench'
@@ -30,7 +32,7 @@ describe('TaskWorkbench', () => {
 
     // Mock workbench API
     ;(window.api as any).workbench = {
-      chat: vi.fn().mockResolvedValue({ content: 'AI response' }),
+      chat: vi.fn().mockResolvedValue({ content: 'AI response' })
     }
   })
 
@@ -88,7 +90,7 @@ describe('TaskWorkbench', () => {
       copilotVisible: true,
       title: 'Test Task',
       repo: 'BDE',
-      spec: 'Test spec',
+      spec: 'Test spec'
     })
 
     render(<TaskWorkbench />)
@@ -99,7 +101,7 @@ describe('TaskWorkbench', () => {
     await waitFor(() => {
       expect((window.api as any).workbench.chat).toHaveBeenCalledWith({
         messages: [{ role: 'user', content: 'test message' }],
-        formContext: { title: 'Test Task', repo: 'BDE', spec: 'Test spec' },
+        formContext: { title: 'Test Task', repo: 'BDE', spec: 'Test spec' }
       })
     })
   })
@@ -128,7 +130,7 @@ describe('TaskWorkbench', () => {
     await waitFor(() => {
       const messages = useTaskWorkbenchStore.getState().copilotMessages
       expect(messages.length).toBeGreaterThan(initialMessageCount)
-      expect(messages.some(m => m.role === 'user' && m.content === 'test message')).toBe(true)
+      expect(messages.some((m) => m.role === 'user' && m.content === 'test message')).toBe(true)
     })
   })
 
@@ -141,13 +143,13 @@ describe('TaskWorkbench', () => {
 
     await waitFor(() => {
       const messages = useTaskWorkbenchStore.getState().copilotMessages
-      expect(messages.some(m => m.role === 'assistant' && m.content === 'AI response')).toBe(true)
+      expect(messages.some((m) => m.role === 'assistant' && m.content === 'AI response')).toBe(true)
     })
   })
 
   it('sets loading state during API call', async () => {
     let resolveChat: (value: any) => void = () => {}
-    const chatPromise = new Promise(resolve => {
+    const chatPromise = new Promise((resolve) => {
       resolveChat = resolve
     })
     ;(window.api as any).workbench.chat = vi.fn().mockReturnValue(chatPromise)
@@ -179,7 +181,9 @@ describe('TaskWorkbench', () => {
 
     await waitFor(() => {
       const messages = useTaskWorkbenchStore.getState().copilotMessages
-      const assistantMsg = messages.find(m => m.role === 'assistant' && m.content === 'AI response')
+      const assistantMsg = messages.find(
+        (m) => m.role === 'assistant' && m.content === 'AI response'
+      )
       expect(assistantMsg?.insertable).toBe(true)
     })
   })
@@ -195,7 +199,7 @@ describe('TaskWorkbench', () => {
 
     await waitFor(() => {
       const messages = useTaskWorkbenchStore.getState().copilotMessages
-      expect(messages.some(m => m.content.includes('Failed to reach Claude'))).toBe(true)
+      expect(messages.some((m) => m.content.includes('Failed to reach Claude'))).toBe(true)
     })
   })
 
@@ -239,7 +243,7 @@ describe('TaskWorkbench', () => {
       copilotVisible: true,
       title: 'Build feature X',
       repo: 'life-os',
-      spec: '## Problem\nNeed X\n## Solution\nBuild X',
+      spec: '## Problem\nNeed X\n## Solution\nBuild X'
     })
 
     render(<TaskWorkbench />)
@@ -253,8 +257,8 @@ describe('TaskWorkbench', () => {
         formContext: {
           title: 'Build feature X',
           repo: 'life-os',
-          spec: '## Problem\nNeed X\n## Solution\nBuild X',
-        },
+          spec: '## Problem\nNeed X\n## Solution\nBuild X'
+        }
       })
     })
   })

@@ -107,28 +107,65 @@ describe('CommitBox', () => {
   // ---------- Branch coverage: commitLoading ----------
 
   it('shows "Committing..." text when commitLoading is true', () => {
-    render(<CommitBox {...defaultProps} commitMessage="feat: test" stagedCount={2} commitLoading={true} />)
+    render(
+      <CommitBox
+        {...defaultProps}
+        commitMessage="feat: test"
+        stagedCount={2}
+        commitLoading={true}
+      />
+    )
     expect(screen.getByText('Committing...')).toBeInTheDocument()
   })
 
   it('disables commit when commitLoading is true even with message and staged files', () => {
-    render(<CommitBox {...defaultProps} commitMessage="feat: test" stagedCount={2} commitLoading={true} />)
+    render(
+      <CommitBox
+        {...defaultProps}
+        commitMessage="feat: test"
+        stagedCount={2}
+        commitLoading={true}
+      />
+    )
     expect(screen.getByLabelText('Commit staged changes')).toBeDisabled()
   })
 
   it('shows spinner icon when commitLoading is true', () => {
-    render(<CommitBox {...defaultProps} commitMessage="feat: test" stagedCount={2} commitLoading={true} />)
+    render(
+      <CommitBox
+        {...defaultProps}
+        commitMessage="feat: test"
+        stagedCount={2}
+        commitLoading={true}
+      />
+    )
     expect(screen.getByLabelText('Commit staged changes').getAttribute('aria-busy')).toBe('true')
   })
 
   it('hides staged count badge when commitLoading is true', () => {
-    render(<CommitBox {...defaultProps} commitMessage="feat: test" stagedCount={2} commitLoading={true} />)
+    render(
+      <CommitBox
+        {...defaultProps}
+        commitMessage="feat: test"
+        stagedCount={2}
+        commitLoading={true}
+      />
+    )
     expect(screen.queryByText('(2)')).not.toBeInTheDocument()
   })
 
   it('shows commit title "Committing..." when commitLoading', () => {
-    render(<CommitBox {...defaultProps} commitMessage="feat: test" stagedCount={2} commitLoading={true} />)
-    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe('Committing...')
+    render(
+      <CommitBox
+        {...defaultProps}
+        commitMessage="feat: test"
+        stagedCount={2}
+        commitLoading={true}
+      />
+    )
+    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe(
+      'Committing...'
+    )
   })
 
   // ---------- Branch coverage: pushLoading ----------
@@ -196,17 +233,23 @@ describe('CommitBox', () => {
 
   it('shows "No staged changes" title when stagedCount is 0 and not loading', () => {
     render(<CommitBox {...defaultProps} commitMessage="msg" stagedCount={0} />)
-    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe('No staged changes')
+    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe(
+      'No staged changes'
+    )
   })
 
   it('shows "Enter a commit message" title when message empty but staged > 0', () => {
     render(<CommitBox {...defaultProps} commitMessage="" stagedCount={1} />)
-    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe('Enter a commit message')
+    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe(
+      'Enter a commit message'
+    )
   })
 
   it('shows keyboard shortcut title when commit is enabled', () => {
     render(<CommitBox {...defaultProps} commitMessage="msg" stagedCount={1} />)
-    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe('Commit staged changes (⌘↵)')
+    expect(screen.getByLabelText('Commit staged changes').getAttribute('title')).toBe(
+      'Commit staged changes (⌘↵)'
+    )
   })
 
   // ---------- Branch coverage: Cmd+Enter when canCommit is false ----------
@@ -214,7 +257,13 @@ describe('CommitBox', () => {
   it('does not commit on Cmd+Enter when commitLoading', () => {
     const onCommit = vi.fn()
     render(
-      <CommitBox {...defaultProps} commitMessage="feat: test" stagedCount={1} commitLoading={true} onCommit={onCommit} />
+      <CommitBox
+        {...defaultProps}
+        commitMessage="feat: test"
+        stagedCount={1}
+        commitLoading={true}
+        onCommit={onCommit}
+      />
     )
     const textarea = screen.getByLabelText('Commit message')
     fireEvent.keyDown(textarea, { key: 'Enter', metaKey: true })

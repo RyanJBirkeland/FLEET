@@ -90,9 +90,7 @@ export function AgentPermissionsSection(): React.JSX.Element {
   const [loading, setLoading] = useState(true)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [consented, setConsented] = useState(
-    () => localStorage.getItem(CONSENT_KEY) === 'true'
-  )
+  const [consented, setConsented] = useState(() => localStorage.getItem(CONSENT_KEY) === 'true')
   const [newDenyRule, setNewDenyRule] = useState('')
   const denyInputRef = useRef<HTMLInputElement>(null)
 
@@ -189,24 +187,14 @@ export function AgentPermissionsSection(): React.JSX.Element {
       {!consented && (
         <div className="permissions-banner">
           <p className="permissions-banner__text">
-            BDE agents need permission to use tools on your machine. Choose a preset to get
-            started, or configure permissions manually.
+            BDE agents need permission to use tools on your machine. Choose a preset to get started,
+            or configure permissions manually.
           </p>
           <div className="permissions-banner__actions">
-            <Button
-              variant="primary"
-              size="sm"
-              type="button"
-              onClick={handleAcceptRecommended}
-            >
+            <Button variant="primary" size="sm" type="button" onClick={handleAcceptRecommended}>
               Accept Recommended
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              type="button"
-              onClick={handleConfigureManually}
-            >
+            <Button variant="ghost" size="sm" type="button" onClick={handleConfigureManually}>
               I&apos;ll Configure Manually
             </Button>
           </div>
@@ -232,12 +220,7 @@ export function AgentPermissionsSection(): React.JSX.Element {
           >
             Restrictive
           </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            type="button"
-            onClick={() => applyPreset('permissive')}
-          >
+          <Button variant="ghost" size="sm" type="button" onClick={() => applyPreset('permissive')}>
             Permissive
           </Button>
         </div>
@@ -299,8 +282,8 @@ export function AgentPermissionsSection(): React.JSX.Element {
       </div>
 
       <p className="permissions-info">
-        Pipeline agents automatically receive allow rules for their required tools. These
-        settings apply as the default baseline.
+        Pipeline agents automatically receive allow rules for their required tools. These settings
+        apply as the default baseline.
       </p>
 
       <div className="settings-field__row">

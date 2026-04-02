@@ -68,7 +68,9 @@ export function FileSidebar({ onOpenFile }: FileSidebarProps): React.JSX.Element
     try {
       await window.api.createDir(`${parentPath}/${sanitized}`)
     } catch (err) {
-      toast.error(`Failed to create folder: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      toast.error(
+        `Failed to create folder: ${err instanceof Error ? err.message : 'Unknown error'}`
+      )
     }
   }
 
@@ -116,24 +118,21 @@ export function FileSidebar({ onOpenFile }: FileSidebarProps): React.JSX.Element
       )
   }
 
-  const handleContextMenu = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault()
-      let el = e.target as HTMLElement | null
-      while (el && !el.dataset.path) {
-        if (el.classList.contains('ide-sidebar')) break
-        el = el.parentElement
-      }
-      if (!el?.dataset.path) return
-      setContextMenu({
-        x: e.clientX,
-        y: e.clientY,
-        path: el.dataset.path,
-        type: el.dataset.type === 'folder' ? 'directory' : 'file'
-      })
-    },
-    []
-  )
+  const handleContextMenu = useCallback((e: React.MouseEvent) => {
+    e.preventDefault()
+    let el = e.target as HTMLElement | null
+    while (el && !el.dataset.path) {
+      if (el.classList.contains('ide-sidebar')) break
+      el = el.parentElement
+    }
+    if (!el?.dataset.path) return
+    setContextMenu({
+      x: e.clientX,
+      y: e.clientY,
+      path: el.dataset.path,
+      type: el.dataset.type === 'folder' ? 'directory' : 'file'
+    })
+  }, [])
 
   return (
     <div className="ide-sidebar" onContextMenu={handleContextMenu}>

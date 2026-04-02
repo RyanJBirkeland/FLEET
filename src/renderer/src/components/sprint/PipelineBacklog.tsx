@@ -16,7 +16,7 @@ export function PipelineBacklog({
   failed,
   onTaskClick,
   onAddToQueue,
-  onRerun,
+  onRerun
 }: PipelineBacklogProps) {
   const [failedExpanded, setFailedExpanded] = useState(false)
   const visibleFailed = failedExpanded ? failed : failed.slice(0, FAILED_VISIBLE_LIMIT)
@@ -35,7 +35,12 @@ export function PipelineBacklog({
             aria-label={task.title}
             tabIndex={0}
             onClick={() => onTaskClick(task.id)}
-            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTaskClick(task.id) } }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault()
+                onTaskClick(task.id)
+              }
+            }}
           >
             <div className="backlog-card__title">{task.title}</div>
             <div className="backlog-card__meta">
@@ -53,11 +58,7 @@ export function PipelineBacklog({
             </button>
           </div>
         ))}
-        {backlog.length === 0 && (
-          <div className="pipeline-sidebar__empty">
-            No backlog tasks
-          </div>
-        )}
+        {backlog.length === 0 && <div className="pipeline-sidebar__empty">No backlog tasks</div>}
       </div>
       {failed.length > 0 && (
         <div className="pipeline-sidebar__section">
@@ -72,10 +73,18 @@ export function PipelineBacklog({
               aria-label={task.title}
               tabIndex={0}
               onClick={() => onTaskClick(task.id)}
-              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onTaskClick(task.id) } }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  onTaskClick(task.id)
+                }
+              }}
             >
               <div className="failed-card__title">{task.title}</div>
-              <div className="failed-card__meta failed-card__notes" title={task.notes || 'No details'}>
+              <div
+                className="failed-card__meta failed-card__notes"
+                title={task.notes || 'No details'}
+              >
                 {task.notes || 'No details'}
               </div>
               <button
@@ -90,18 +99,12 @@ export function PipelineBacklog({
             </div>
           ))}
           {!failedExpanded && hiddenCount > 0 && (
-            <button
-              className="pipeline-sidebar__expand"
-              onClick={() => setFailedExpanded(true)}
-            >
+            <button className="pipeline-sidebar__expand" onClick={() => setFailedExpanded(true)}>
               +{hiddenCount} more...
             </button>
           )}
           {failedExpanded && failed.length > FAILED_VISIBLE_LIMIT && (
-            <button
-              className="pipeline-sidebar__expand"
-              onClick={() => setFailedExpanded(false)}
-            >
+            <button className="pipeline-sidebar__expand" onClick={() => setFailedExpanded(false)}>
               Show less
             </button>
           )}

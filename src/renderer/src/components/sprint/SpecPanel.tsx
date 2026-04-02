@@ -104,7 +104,9 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
         >
           <div className="spec-panel__header">
             <div className="spec-panel__title">Spec — {taskTitle}</div>
-            <button className="spec-panel__close" onClick={onClose}>×</button>
+            <button className="spec-panel__close" onClick={onClose}>
+              ×
+            </button>
           </div>
           <div className="spec-panel__body">
             {editing ? (
@@ -114,9 +116,7 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps) 
                 onChange={(e) => setDraft(e.target.value)}
               />
             ) : (
-              <div className="spec-panel__rendered">
-                {renderAgentMarkdown(spec)}
-              </div>
+              <div className="spec-panel__rendered">{renderAgentMarkdown(spec)}</div>
             )}
           </div>
           <div className="spec-panel__actions">

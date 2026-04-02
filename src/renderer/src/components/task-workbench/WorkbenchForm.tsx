@@ -82,7 +82,18 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
         }
       }
     },
-    [mode, taskId, title, repo, priority, spec, dependsOn, playgroundEnabled, createTask, updateTask]
+    [
+      mode,
+      taskId,
+      title,
+      repo,
+      priority,
+      spec,
+      dependsOn,
+      playgroundEnabled,
+      createTask,
+      updateTask
+    ]
   )
 
   // Debounced semantic checks (Tier 2) — runs 2s after spec stops changing
@@ -191,7 +202,9 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
           // Collect ALL warnings: operational + advisory structural/semantic
           const allStructural = useTaskWorkbenchStore.getState().structuralChecks
           const allSemantic = useTaskWorkbenchStore.getState().semanticChecks
-          const advisoryWarnings = [...allStructural, ...allSemantic].filter((c) => c.status === 'warn')
+          const advisoryWarnings = [...allStructural, ...allSemantic].filter(
+            (c) => c.status === 'warn'
+          )
           const opWarnings = opChecks.filter((c) => c.status === 'warn')
           const allWarnings = [...advisoryWarnings, ...opWarnings]
           if (allWarnings.length > 0) {
@@ -302,10 +315,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps) {
       </div>
 
       <div>
-        <button
-          onClick={() => setField('advancedOpen', !advancedOpen)}
-          className="wb-form__toggle"
-        >
+        <button onClick={() => setField('advancedOpen', !advancedOpen)} className="wb-form__toggle">
           {advancedOpen ? '\u25be' : '\u25b8'} More options
         </button>
         {advancedOpen && (

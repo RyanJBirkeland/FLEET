@@ -15,7 +15,10 @@ interface FormSnapshot {
   spec: string
 }
 
-export function computeStructuralChecks(form: FormSnapshot, specType?: SpecType | null): CheckResult[] {
+export function computeStructuralChecks(
+  form: FormSnapshot,
+  specType?: SpecType | null
+): CheckResult[] {
   // When specType is explicitly provided (including null), use the validation profile.
   // When specType is undefined (legacy call with no second arg), use legacy permissive behavior.
   const useProfile = specType !== undefined
@@ -76,7 +79,9 @@ export function computeStructuralChecks(form: FormSnapshot, specType?: SpecType 
   // Spec has structure (markdown headings)
   const skipStructure = profile && profile.specStructure.behavior === 'skip'
   if (!skipStructure) {
-    const headingThreshold = profile ? (profile.specStructure.threshold ?? MIN_HEADING_COUNT) : MIN_HEADING_COUNT
+    const headingThreshold = profile
+      ? (profile.specStructure.threshold ?? MIN_HEADING_COUNT)
+      : MIN_HEADING_COUNT
     const structureAdvisory = profile ? profile.specStructure.behavior === 'advisory' : false
     const headingCount = (form.spec.match(/^## /gm) ?? []).length
     let structureStatus: 'pass' | 'warn' | 'fail'

@@ -142,7 +142,13 @@ vi.mock('../../../hooks/useHealthCheck', () => ({
 
 vi.mock('../../../stores/healthCheck', () => ({
   useHealthCheckStore: vi.fn((sel: (s: unknown) => unknown) =>
-    sel({ stuckTaskIds: [], dismissedIds: [], setStuckTasks: vi.fn(), dismiss: vi.fn(), clearDismissed: vi.fn() })
+    sel({
+      stuckTaskIds: [],
+      dismissedIds: [],
+      setStuckTasks: vi.fn(),
+      dismiss: vi.fn(),
+      clearDismissed: vi.fn()
+    })
   ),
   useVisibleStuckTasks: vi.fn(() => ({
     visibleStuckTasks: [],
@@ -156,7 +162,15 @@ vi.mock('../PipelineBacklog', () => ({
 }))
 
 vi.mock('../PipelineStage', () => ({
-  PipelineStage: ({ name, label, doneFooter }: { name: string; label: string; doneFooter?: React.ReactNode }) => (
+  PipelineStage: ({
+    name,
+    label,
+    doneFooter
+  }: {
+    name: string
+    label: string
+    doneFooter?: React.ReactNode
+  }) => (
     <div data-testid={`pipeline-stage-${name}`}>
       {label}
       {doneFooter}
@@ -165,45 +179,82 @@ vi.mock('../PipelineStage', () => ({
 }))
 
 vi.mock('../TaskDetailDrawer', () => ({
-  TaskDetailDrawer: ({ task, onClose, onViewLogs, onOpenSpec, onEdit, onViewAgents }: {
-    task: SprintTask;
-    onClose: () => void;
-    onViewLogs: (t: SprintTask) => void;
-    onOpenSpec: () => void;
-    onEdit: (t: SprintTask) => void;
-    onViewAgents: (id: string) => void;
-    onLaunch: (t: SprintTask) => void;
-    onStop: (t: SprintTask) => void;
-    onMarkDone: (t: SprintTask) => void;
-    onRerun: (t: SprintTask) => void;
-    onDelete: (t: SprintTask) => void;
+  TaskDetailDrawer: ({
+    task,
+    onClose,
+    onViewLogs,
+    onOpenSpec,
+    onEdit,
+    onViewAgents
+  }: {
+    task: SprintTask
+    onClose: () => void
+    onViewLogs: (t: SprintTask) => void
+    onOpenSpec: () => void
+    onEdit: (t: SprintTask) => void
+    onViewAgents: (id: string) => void
+    onLaunch: (t: SprintTask) => void
+    onStop: (t: SprintTask) => void
+    onMarkDone: (t: SprintTask) => void
+    onRerun: (t: SprintTask) => void
+    onDelete: (t: SprintTask) => void
   }) => (
     <div data-testid="task-detail-drawer">
       Drawer: {task.title}
-      <button data-testid="drawer-close" onClick={onClose}>Close</button>
-      <button data-testid="drawer-logs" onClick={() => onViewLogs(task)}>Logs</button>
-      <button data-testid="drawer-spec" onClick={onOpenSpec}>Spec</button>
-      <button data-testid="drawer-edit" onClick={() => onEdit(task)}>Edit</button>
-      <button data-testid="drawer-agents" onClick={() => onViewAgents(task.agent_run_id ?? '')}>Agents</button>
+      <button data-testid="drawer-close" onClick={onClose}>
+        Close
+      </button>
+      <button data-testid="drawer-logs" onClick={() => onViewLogs(task)}>
+        Logs
+      </button>
+      <button data-testid="drawer-spec" onClick={onOpenSpec}>
+        Spec
+      </button>
+      <button data-testid="drawer-edit" onClick={() => onEdit(task)}>
+        Edit
+      </button>
+      <button data-testid="drawer-agents" onClick={() => onViewAgents(task.agent_run_id ?? '')}>
+        Agents
+      </button>
     </div>
   )
 }))
 
 vi.mock('../SpecPanel', () => ({
-  SpecPanel: ({ taskTitle, onClose, onSave }: { taskTitle: string; onClose: () => void; onSave: (spec: string) => void }) => (
+  SpecPanel: ({
+    taskTitle,
+    onClose,
+    onSave
+  }: {
+    taskTitle: string
+    onClose: () => void
+    onSave: (spec: string) => void
+  }) => (
     <div data-testid="spec-panel">
       Spec: {taskTitle}
-      <button data-testid="spec-close" onClick={onClose}>Close Spec</button>
-      <button data-testid="spec-save" onClick={() => onSave('new spec content')}>Save Spec</button>
+      <button data-testid="spec-close" onClick={onClose}>
+        Close Spec
+      </button>
+      <button data-testid="spec-save" onClick={() => onSave('new spec content')}>
+        Save Spec
+      </button>
     </div>
   )
 }))
 
 vi.mock('../DoneHistoryPanel', () => ({
-  DoneHistoryPanel: ({ onClose }: { onClose: () => void; tasks: any[]; onTaskClick: (id: string) => void }) => (
+  DoneHistoryPanel: ({
+    onClose
+  }: {
+    onClose: () => void
+    tasks: any[]
+    onTaskClick: (id: string) => void
+  }) => (
     <div data-testid="done-history-panel">
       DoneHistoryPanel
-      <button data-testid="dhp-close" onClick={onClose}>Close Done</button>
+      <button data-testid="dhp-close" onClick={onClose}>
+        Close Done
+      </button>
     </div>
   )
 }))
@@ -214,15 +265,38 @@ vi.mock('../ConflictDrawer', () => ({
 }))
 
 vi.mock('../HealthCheckDrawer', () => ({
-  HealthCheckDrawer: ({ open, tasks }: { open: boolean; tasks: any[]; onClose: () => void; onDismiss: (id: string) => void }) =>
-    open ? <div data-testid="health-check-drawer">Stuck: {tasks.length}</div> : null
+  HealthCheckDrawer: ({
+    open,
+    tasks
+  }: {
+    open: boolean
+    tasks: any[]
+    onClose: () => void
+    onDismiss: (id: string) => void
+  }) => (open ? <div data-testid="health-check-drawer">Stuck: {tasks.length}</div> : null)
 }))
 
 vi.mock('../NewTicketModal', () => ({
-  NewTicketModal: ({ onClose, onCreate }: { onClose: () => void; onCreate: (data: any) => void; open: boolean }) => (
+  NewTicketModal: ({
+    onClose,
+    onCreate
+  }: {
+    onClose: () => void
+    onCreate: (data: any) => void
+    open: boolean
+  }) => (
     <div data-testid="new-ticket-modal">
-      <button data-testid="ntm-close" onClick={onClose}>Close</button>
-      <button data-testid="ntm-create" onClick={() => onCreate({ title: 'New Task', repo: 'BDE', prompt: null, priority: 3, depends_on: null })}>Create</button>
+      <button data-testid="ntm-close" onClick={onClose}>
+        Close
+      </button>
+      <button
+        data-testid="ntm-create"
+        onClick={() =>
+          onCreate({ title: 'New Task', repo: 'BDE', prompt: null, priority: 3, depends_on: null })
+        }
+      >
+        Create
+      </button>
     </div>
   )
 }))
@@ -447,9 +521,7 @@ describe('SprintPipeline - additional scenarios', () => {
   })
 
   it('shows done summary button when more than 3 done tasks', async () => {
-    const doneTasks = Array.from({ length: 5 }, (_, i) =>
-      makeTask({ id: `d${i}`, status: 'done' })
-    )
+    const doneTasks = Array.from({ length: 5 }, (_, i) => makeTask({ id: `d${i}`, status: 'done' }))
     Object.assign(mocks.storeState, { tasks: doneTasks })
 
     const { SprintPipeline } = await import('../SprintPipeline')
@@ -458,9 +530,7 @@ describe('SprintPipeline - additional scenarios', () => {
   })
 
   it('calls setDoneViewOpen(true) when done summary is clicked', async () => {
-    const doneTasks = Array.from({ length: 5 }, (_, i) =>
-      makeTask({ id: `d${i}`, status: 'done' })
-    )
+    const doneTasks = Array.from({ length: 5 }, (_, i) => makeTask({ id: `d${i}`, status: 'done' }))
     Object.assign(mocks.storeState, { tasks: doneTasks })
 
     const { SprintPipeline } = await import('../SprintPipeline')
@@ -471,9 +541,7 @@ describe('SprintPipeline - additional scenarios', () => {
   })
 
   it('does not show done summary when 3 or fewer done tasks', async () => {
-    const doneTasks = Array.from({ length: 3 }, (_, i) =>
-      makeTask({ id: `d${i}`, status: 'done' })
-    )
+    const doneTasks = Array.from({ length: 3 }, (_, i) => makeTask({ id: `d${i}`, status: 'done' }))
     Object.assign(mocks.storeState, { tasks: doneTasks })
 
     const { SprintPipeline } = await import('../SprintPipeline')
@@ -481,7 +549,7 @@ describe('SprintPipeline - additional scenarios', () => {
     expect(screen.queryByText(/completed · View all/)).not.toBeInTheDocument()
   })
 
-    it('does not auto-select when selectedTaskId is already set', async () => {
+  it('does not auto-select when selectedTaskId is already set', async () => {
     const tasks = [makeTask({ id: 'active-1', status: 'active' })]
     Object.assign(mocks.storeState, { tasks })
     Object.assign(mocks.uiState, { selectedTaskId: 'already-set' })
@@ -563,5 +631,4 @@ describe('SprintPipeline - additional scenarios', () => {
     expect(mocks.mockSetDrawerOpen).toHaveBeenCalledWith(false)
     expect(mocks.mockSetSelectedTaskId).toHaveBeenCalledWith(null)
   })
-
 })

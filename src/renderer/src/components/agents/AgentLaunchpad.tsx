@@ -22,7 +22,10 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps) {
 
   useEffect(() => {
     loadTemplates()
-    window.api.getRepoPaths().then(setRepoPaths).catch(() => {})
+    window.api
+      .getRepoPaths()
+      .then(setRepoPaths)
+      .catch(() => {})
   }, [loadTemplates])
 
   const visibleTemplates = templates.filter((t) => !t.hidden)

@@ -80,13 +80,15 @@ export const useSprintUI = create<SprintUIState>((set, get) => ({
     set((s) => ({ generatingIds: updater(s.generatingIds) }))
   },
   addGeneratingId: (id): void => {
-    set((s) => ({ generatingIds: s.generatingIds.includes(id) ? s.generatingIds : [...s.generatingIds, id] }))
+    set((s) => ({
+      generatingIds: s.generatingIds.includes(id) ? s.generatingIds : [...s.generatingIds, id]
+    }))
   },
   removeGeneratingId: (id): void => {
     set((s) => ({ generatingIds: s.generatingIds.filter((gid) => gid !== id) }))
   },
   clearTaskIfSelected: (taskId): void => {
-    set((s) => s.selectedTaskId === taskId ? { selectedTaskId: null, drawerOpen: false } : s)
+    set((s) => (s.selectedTaskId === taskId ? { selectedTaskId: null, drawerOpen: false } : s))
   },
 
   toggleTaskSelection: (id): void => {

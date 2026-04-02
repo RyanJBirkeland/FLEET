@@ -201,17 +201,14 @@ export function SprintPipeline() {
     [deleteTask]
   )
 
-  const handleUnblock = useCallback(
-    async (task: SprintTask) => {
-      try {
-        await window.api.sprint.unblockTask(task.id)
-        toast.success(`Task unblocked - dependencies will be re-checked`)
-      } catch (err) {
-        toast.error(`Failed to unblock: ${err instanceof Error ? err.message : String(err)}`)
-      }
-    },
-    []
-  )
+  const handleUnblock = useCallback(async (task: SprintTask) => {
+    try {
+      await window.api.sprint.unblockTask(task.id)
+      toast.success(`Task unblocked - dependencies will be re-checked`)
+    } catch (err) {
+      toast.error(`Failed to unblock: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [])
 
   // Stats
   const headerStats = useMemo(
@@ -219,7 +216,11 @@ export function SprintPipeline() {
       { label: 'active', count: partition.inProgress.length, filter: 'in-progress' as const },
       { label: 'queued', count: partition.todo.length, filter: 'todo' as const },
       { label: 'blocked', count: partition.blocked.length, filter: 'blocked' as const },
-      { label: 'review', count: partition.awaitingReview.length, filter: 'awaiting-review' as const },
+      {
+        label: 'review',
+        count: partition.awaitingReview.length,
+        filter: 'awaiting-review' as const
+      },
       { label: 'failed', count: partition.failed.length, filter: 'failed' as const },
       { label: 'done', count: partition.done.length, filter: 'done' as const }
     ],
@@ -318,90 +319,93 @@ export function SprintPipeline() {
       )}
 
       <PipelineErrorBoundary fallbackLabel="Pipeline crashed">
-      <div className="sprint-pipeline__body" style={{ display: tasks.length === 0 ? 'none' : undefined }}>
-        <PipelineBacklog
-          backlog={partition.backlog}
-          failed={partition.failed}
-          onTaskClick={handleTaskClick}
-          onAddToQueue={handleAddToQueue}
-          onRerun={handleRerun}
-        />
-
-        <div className="pipeline-center">
-          <LayoutGroup>
-            <PipelineStage
-              name="queued"
-              label="Queued"
-              tasks={partition.todo}
-              count={`${partition.todo.length}`}
-              selectedTaskId={selectedTaskId}
-              onTaskClick={handleTaskClick}
-            />
-            <PipelineStage
-              name="blocked"
-              label="Blocked"
-              tasks={partition.blocked}
-              count={`${partition.blocked.length}`}
-              selectedTaskId={selectedTaskId}
-              onTaskClick={handleTaskClick}
-            />
-            <PipelineStage
-              name="active"
-              label="Active"
-              tasks={partition.inProgress}
-              count={`${partition.inProgress.length}/5`}
-              selectedTaskId={selectedTaskId}
-              onTaskClick={handleTaskClick}
-            />
-            <PipelineStage
-              name="review"
-              label="Review"
-              tasks={partition.awaitingReview}
-              count={`${partition.awaitingReview.length}`}
-              selectedTaskId={selectedTaskId}
-              onTaskClick={handleTaskClick}
-            />
-            <PipelineStage
-              name="done"
-              label="Done"
-              tasks={partition.done.slice(0, 3)}
-              count={`${partition.done.length}`}
-              selectedTaskId={selectedTaskId}
-              onTaskClick={handleTaskClick}
-              doneFooter={
-                partition.done.length > 3 ? (
-                  <button
-                    className="pipeline-stage__done-summary"
-                    onClick={() => setDoneViewOpen(true)}
-                  >
-                    {partition.done.length} completed · View all
-                  </button>
-                ) : undefined
-              }
-            />
-          </LayoutGroup>
-        </div>
-
-        {drawerOpen && selectedTask && (
-          <TaskDetailDrawer
-            task={selectedTask}
-            onClose={handleCloseDrawer}
-            onLaunch={launchTask}
-            onStop={handleStop}
+        <div
+          className="sprint-pipeline__body"
+          style={{ display: tasks.length === 0 ? 'none' : undefined }}
+        >
+          <PipelineBacklog
+            backlog={partition.backlog}
+            failed={partition.failed}
+            onTaskClick={handleTaskClick}
+            onAddToQueue={handleAddToQueue}
             onRerun={handleRerun}
-            onDelete={handleDeleteTask}
-            onViewLogs={() => setView('agents')}
-            onOpenSpec={() => setSpecPanelOpen(true)}
-            onEdit={() => {
-              useTaskWorkbenchStore.getState().loadTask(selectedTask)
-              setView('task-workbench')
-            }}
-            onViewAgents={() => setView('agents')}
-            onUnblock={handleUnblock}
-            onRetry={handleRetry}
           />
-        )}
-      </div>
+
+          <div className="pipeline-center">
+            <LayoutGroup>
+              <PipelineStage
+                name="queued"
+                label="Queued"
+                tasks={partition.todo}
+                count={`${partition.todo.length}`}
+                selectedTaskId={selectedTaskId}
+                onTaskClick={handleTaskClick}
+              />
+              <PipelineStage
+                name="blocked"
+                label="Blocked"
+                tasks={partition.blocked}
+                count={`${partition.blocked.length}`}
+                selectedTaskId={selectedTaskId}
+                onTaskClick={handleTaskClick}
+              />
+              <PipelineStage
+                name="active"
+                label="Active"
+                tasks={partition.inProgress}
+                count={`${partition.inProgress.length}/5`}
+                selectedTaskId={selectedTaskId}
+                onTaskClick={handleTaskClick}
+              />
+              <PipelineStage
+                name="review"
+                label="Review"
+                tasks={partition.awaitingReview}
+                count={`${partition.awaitingReview.length}`}
+                selectedTaskId={selectedTaskId}
+                onTaskClick={handleTaskClick}
+              />
+              <PipelineStage
+                name="done"
+                label="Done"
+                tasks={partition.done.slice(0, 3)}
+                count={`${partition.done.length}`}
+                selectedTaskId={selectedTaskId}
+                onTaskClick={handleTaskClick}
+                doneFooter={
+                  partition.done.length > 3 ? (
+                    <button
+                      className="pipeline-stage__done-summary"
+                      onClick={() => setDoneViewOpen(true)}
+                    >
+                      {partition.done.length} completed · View all
+                    </button>
+                  ) : undefined
+                }
+              />
+            </LayoutGroup>
+          </div>
+
+          {drawerOpen && selectedTask && (
+            <TaskDetailDrawer
+              task={selectedTask}
+              onClose={handleCloseDrawer}
+              onLaunch={launchTask}
+              onStop={handleStop}
+              onRerun={handleRerun}
+              onDelete={handleDeleteTask}
+              onViewLogs={() => setView('agents')}
+              onOpenSpec={() => setSpecPanelOpen(true)}
+              onEdit={() => {
+                useTaskWorkbenchStore.getState().loadTask(selectedTask)
+                setView('task-workbench')
+              }}
+              onViewAgents={() => setView('agents')}
+              onUnblock={handleUnblock}
+              onRetry={handleRetry}
+            />
+          )}
+        </div>
       </PipelineErrorBoundary>
 
       {specPanelOpen && selectedTask?.spec && (

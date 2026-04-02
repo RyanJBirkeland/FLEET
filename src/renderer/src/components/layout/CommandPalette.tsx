@@ -116,14 +116,16 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
               return
             }
             await window.api.spawnLocalAgent({
-              task: 'You are now ready to assist. Wait for the user\'s first message.',
+              task: "You are now ready to assist. Wait for the user's first message.",
               repoPath,
               assistant: true
             })
             toast.success('BDE Assistant spawned')
             setView('agents')
           } catch (err) {
-            toast.error(`Failed to spawn assistant: ${err instanceof Error ? err.message : 'Unknown error'}`)
+            toast.error(
+              `Failed to spawn assistant: ${err instanceof Error ? err.message : 'Unknown error'}`
+            )
           }
         }
       },

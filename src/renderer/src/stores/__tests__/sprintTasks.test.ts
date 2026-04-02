@@ -594,7 +594,9 @@ describe('sprintTasks store', () => {
         pendingCreates: []
       })
 
-      useSprintTasks.getState().mergeSseUpdate({ taskId: 't1', status: 'backlog', notes: 'sse notes' })
+      useSprintTasks
+        .getState()
+        .mergeSseUpdate({ taskId: 't1', status: 'backlog', notes: 'sse notes' })
 
       const updated = useSprintTasks.getState().tasks[0]
       // Pending field (status) should be preserved from local
@@ -629,7 +631,9 @@ describe('sprintTasks store', () => {
         makeTask('t1', { status: 'active', notes: 'updated' })
       )
 
-      const updatePromise = useSprintTasks.getState().updateTask('t1', { status: 'active', notes: 'updated' })
+      const updatePromise = useSprintTasks
+        .getState()
+        .updateTask('t1', { status: 'active', notes: 'updated' })
 
       // Pending fields should be tracked immediately (before IPC resolves)
       const pending = useSprintTasks.getState().pendingUpdates['t1']
@@ -638,7 +642,10 @@ describe('sprintTasks store', () => {
       expect(pending.fields).toContain('notes')
 
       // IPC should have been called
-      expect(window.api.sprint.update).toHaveBeenCalledWith('t1', { status: 'active', notes: 'updated' })
+      expect(window.api.sprint.update).toHaveBeenCalledWith('t1', {
+        status: 'active',
+        notes: 'updated'
+      })
 
       await updatePromise
     })
@@ -654,7 +661,9 @@ describe('sprintTasks store', () => {
 
       let resolveUpdate!: (v: SprintTask) => void
       ;(window.api.sprint.update as ReturnType<typeof vi.fn>).mockReturnValue(
-        new Promise<SprintTask>((res) => { resolveUpdate = res })
+        new Promise<SprintTask>((res) => {
+          resolveUpdate = res
+        })
       )
 
       const updatePromise = useSprintTasks.getState().updateTask('t1', { status: 'active' })

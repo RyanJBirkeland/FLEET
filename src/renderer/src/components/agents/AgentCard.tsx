@@ -46,7 +46,14 @@ function StatusIndicator({ status, accent }: StatusIndicatorProps) {
 
   switch (status) {
     case 'running':
-      return <Loader size={iconSize} className="agent-card__status-spinner" aria-label="Running" style={{ color: iconColor }} />
+      return (
+        <Loader
+          size={iconSize}
+          className="agent-card__status-spinner"
+          aria-label="Running"
+          style={{ color: iconColor }}
+        />
+      )
     case 'done':
       return <CheckCircle size={iconSize} aria-label="Done" style={{ color: iconColor }} />
     case 'failed':
@@ -109,108 +116,125 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps) 
 
   return (
     <>
-    <button
-      onClick={onClick}
-      style={{
-        all: 'unset',
-        display: 'block',
-        width: '100%',
-        padding: `${tokens.space[2]} ${tokens.space[3]}`,
-        cursor: 'pointer',
-        boxSizing: 'border-box'
-      }}
-    >
-      <NeonCard
-        accent={accent}
+      <button
+        onClick={onClick}
         style={{
-          padding: tokens.space[2],
-          boxShadow: selected
-            ? `0 0 16px ${neonVar(accent, 'glow')}, var(--neon-glass-shadow), var(--neon-glass-edge)`
-            : undefined,
-          border: selected ? `1px solid ${neonVar(accent, 'color')}` : undefined,
-          transform: selected ? 'scale(1.02)' : undefined
+          all: 'unset',
+          display: 'block',
+          width: '100%',
+          padding: `${tokens.space[2]} ${tokens.space[3]}`,
+          cursor: 'pointer',
+          boxSizing: 'border-box'
         }}
       >
-        <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
-          {/* Top row: status icon + task title + kill button */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[2] }}>
-            <StatusIndicator status={agent.status} accent={accent} />
-            <span
-              style={{
-                fontSize: tokens.size.md,
-                color: tokens.color.text,
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
-                flex: 1
-              }}
-            >
-              {agent.task.slice(0, 80)}
-            </span>
-            {isRunning && (
-              <button
-                onClick={handleKill}
-                title="Stop agent"
-                aria-label="Stop agent"
+        <NeonCard
+          accent={accent}
+          style={{
+            padding: tokens.space[2],
+            boxShadow: selected
+              ? `0 0 16px ${neonVar(accent, 'glow')}, var(--neon-glass-shadow), var(--neon-glass-edge)`
+              : undefined,
+            border: selected ? `1px solid ${neonVar(accent, 'color')}` : undefined,
+            transform: selected ? 'scale(1.02)' : undefined
+          }}
+        >
+          <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
+            {/* Top row: status icon + task title + kill button */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: tokens.space[2] }}>
+              <StatusIndicator status={agent.status} accent={accent} />
+              <span
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  width: 18,
-                  height: 18,
-                  padding: 0,
-                  background: 'var(--neon-surface-deep, rgba(10,0,21,0.4))',
-                  border: `1px solid ${neonVar('red', 'border')}`,
-                  borderRadius: tokens.radius.sm,
-                  cursor: 'pointer',
-                  color: neonVar('red', 'color'),
-                  flexShrink: 0,
-                  transition: tokens.transition.fast
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.background = neonVar('red', 'surface')
-                  e.currentTarget.style.boxShadow = `0 0 8px ${neonVar('red', 'glow')}`
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.background = 'var(--neon-surface-deep, rgba(10,0,21,0.4))'
-                  e.currentTarget.style.boxShadow = 'none'
+                  fontSize: tokens.size.md,
+                  color: tokens.color.text,
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap',
+                  flex: 1
                 }}
               >
-                <X size={12} />
-              </button>
-            )}
+                {agent.task.slice(0, 80)}
+              </span>
+              {isRunning && (
+                <button
+                  onClick={handleKill}
+                  title="Stop agent"
+                  aria-label="Stop agent"
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 18,
+                    height: 18,
+                    padding: 0,
+                    background: 'var(--neon-surface-deep, rgba(10,0,21,0.4))',
+                    border: `1px solid ${neonVar('red', 'border')}`,
+                    borderRadius: tokens.radius.sm,
+                    cursor: 'pointer',
+                    color: neonVar('red', 'color'),
+                    flexShrink: 0,
+                    transition: tokens.transition.fast
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = neonVar('red', 'surface')
+                    e.currentTarget.style.boxShadow = `0 0 8px ${neonVar('red', 'glow')}`
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--neon-surface-deep, rgba(10,0,21,0.4))'
+                    e.currentTarget.style.boxShadow = 'none'
+                  }}
+                >
+                  <X size={12} />
+                </button>
+              )}
+            </div>
+            {/* Bottom row: meta info */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: tokens.space[2],
+                paddingLeft: 14
+              }}
+            >
+              <SourceIcon size={10} color={tokens.color.textDim} />
+              <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>
+                {agent.model}
+              </span>
+              <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>·</span>
+              <Clock size={10} color={neonVar(accent, 'color')} />
+              <span style={{ fontSize: tokens.size.xs, color: neonVar(accent, 'color') }}>
+                {formatDuration(agent.startedAt, agent.finishedAt)}
+              </span>
+              {/* Status label for terminal statuses */}
+              {(agent.status === 'done' ||
+                agent.status === 'failed' ||
+                agent.status === 'cancelled') && (
+                <>
+                  <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>·</span>
+                  <span
+                    style={{
+                      fontSize: tokens.size.xs,
+                      color: neonVar(accent, 'color'),
+                      fontWeight: 700
+                    }}
+                  >
+                    {agent.status === 'done'
+                      ? 'Done'
+                      : agent.status === 'failed'
+                        ? 'Failed'
+                        : 'Cancelled'}
+                  </span>
+                </>
+              )}
+              <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>·</span>
+              <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>
+                {agent.repo}
+              </span>
+            </div>
           </div>
-          {/* Bottom row: meta info */}
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: tokens.space[2], paddingLeft: 14 }}
-          >
-            <SourceIcon size={10} color={tokens.color.textDim} />
-            <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>
-              {agent.model}
-            </span>
-            <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>·</span>
-            <Clock size={10} color={neonVar(accent, 'color')} />
-            <span style={{ fontSize: tokens.size.xs, color: neonVar(accent, 'color') }}>
-              {formatDuration(agent.startedAt, agent.finishedAt)}
-            </span>
-            {/* Status label for terminal statuses */}
-            {(agent.status === 'done' || agent.status === 'failed' || agent.status === 'cancelled') && (
-              <>
-                <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>·</span>
-                <span style={{ fontSize: tokens.size.xs, color: neonVar(accent, 'color'), fontWeight: 700 }}>
-                  {agent.status === 'done' ? 'Done' : agent.status === 'failed' ? 'Failed' : 'Cancelled'}
-                </span>
-              </>
-            )}
-            <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>·</span>
-            <span style={{ fontSize: tokens.size.xs, color: tokens.color.textMuted }}>
-              {agent.repo}
-            </span>
-          </div>
-        </div>
-      </NeonCard>
-    </button>
-    <ConfirmModal {...confirmProps} />
+        </NeonCard>
+      </button>
+      <ConfirmModal {...confirmProps} />
     </>
   )
 }

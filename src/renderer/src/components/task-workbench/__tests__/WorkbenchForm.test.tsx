@@ -297,7 +297,10 @@ describe('WorkbenchForm', () => {
 
     await waitFor(() => {
       expect(mockCreate).toHaveBeenCalled()
-      expect(mockUpdate).toHaveBeenCalledWith('new-1', expect.objectContaining({ status: 'queued' }))
+      expect(mockUpdate).toHaveBeenCalledWith(
+        'new-1',
+        expect.objectContaining({ status: 'queued' })
+      )
     })
   })
 

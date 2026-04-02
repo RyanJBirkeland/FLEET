@@ -76,10 +76,7 @@ function RateLimitedBlock({ attempt, retryDelayMs }: { attempt: number; retryDel
 
 type PlaygroundEvent = { html: string; filename: string; sizeBytes: number }
 
-function renderBlock(
-  block: ChatBlock,
-  onPlaygroundClick: (event: PlaygroundEvent) => void
-) {
+function renderBlock(block: ChatBlock, onPlaygroundClick: (event: PlaygroundEvent) => void) {
   switch (block.type) {
     case 'started':
       return <StartedBlock model={block.model} timestamp={block.timestamp} />
@@ -141,7 +138,11 @@ function renderBlock(
           filename={block.filename}
           sizeBytes={block.sizeBytes}
           onClick={() =>
-            onPlaygroundClick({ html: block.html, filename: block.filename, sizeBytes: block.sizeBytes })
+            onPlaygroundClick({
+              html: block.html,
+              filename: block.filename,
+              sizeBytes: block.sizeBytes
+            })
           }
         />
       )

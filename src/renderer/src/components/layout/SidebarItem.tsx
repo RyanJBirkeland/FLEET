@@ -61,10 +61,13 @@ export function SidebarItem({
     setContextMenu(null)
   }, [])
 
-  const handleMenuAction = useCallback((action: string) => {
-    onContextAction(action, view)
-    setContextMenu(null)
-  }, [onContextAction, view])
+  const handleMenuAction = useCallback(
+    (action: string) => {
+      onContextAction(action, view)
+      setContextMenu(null)
+    },
+    [onContextAction, view]
+  )
 
   // Auto-focus first menu item when menu opens
   useEffect(() => {
@@ -74,44 +77,47 @@ export function SidebarItem({
     }
   }, [contextMenu])
 
-  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const menu = menuRef.current
-    if (!menu) return
-    const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
-    const currentIndex = items.indexOf(e.target as HTMLElement)
+  const handleMenuKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      const menu = menuRef.current
+      if (!menu) return
+      const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+      const currentIndex = items.indexOf(e.target as HTMLElement)
 
-    switch (e.key) {
-      case 'ArrowDown': {
-        e.preventDefault()
-        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
-        items[next]?.focus()
-        break
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault()
+          const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+          items[next]?.focus()
+          break
+        }
+        case 'ArrowUp': {
+          e.preventDefault()
+          const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+          items[prev]?.focus()
+          break
+        }
+        case 'Home':
+          e.preventDefault()
+          items[0]?.focus()
+          break
+        case 'End':
+          e.preventDefault()
+          items[items.length - 1]?.focus()
+          break
+        case 'Enter':
+        case ' ':
+          e.preventDefault()
+          if (currentIndex >= 0) handleMenuAction(MENU_ITEMS[currentIndex].action)
+          break
+        case 'Escape':
+          e.preventDefault()
+          closeContextMenu()
+          break
       }
-      case 'ArrowUp': {
-        e.preventDefault()
-        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
-        items[prev]?.focus()
-        break
-      }
-      case 'Home':
-        e.preventDefault()
-        items[0]?.focus()
-        break
-      case 'End':
-        e.preventDefault()
-        items[items.length - 1]?.focus()
-        break
-      case 'Enter':
-      case ' ':
-        e.preventDefault()
-        if (currentIndex >= 0) handleMenuAction(MENU_ITEMS[currentIndex].action)
-        break
-      case 'Escape':
-        e.preventDefault()
-        closeContextMenu()
-        break
-    }
-  }, [handleMenuAction, closeContextMenu])
+    },
+    [handleMenuAction, closeContextMenu]
+  )
 
   const handleMenuBlur = useCallback((e: React.FocusEvent) => {
     // Close if focus leaves the menu entirely

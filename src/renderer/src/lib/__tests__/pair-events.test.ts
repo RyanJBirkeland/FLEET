@@ -166,7 +166,7 @@ describe('pairEvents', () => {
     const events: AgentEvent[] = [
       { type: 'agent:text', text: 'First line', timestamp: 3000 },
       { type: 'agent:text', text: 'Second line', timestamp: 3100 },
-      { type: 'agent:text', text: 'Third line', timestamp: 3200 },
+      { type: 'agent:text', text: 'Third line', timestamp: 3200 }
     ]
 
     const blocks = pairEvents(events)
@@ -175,7 +175,7 @@ describe('pairEvents', () => {
     expect(blocks[0]).toEqual({
       type: 'text',
       text: 'First line\nSecond line\nThird line',
-      timestamp: 3000,
+      timestamp: 3000
     })
   })
 
@@ -183,7 +183,7 @@ describe('pairEvents', () => {
     const events: AgentEvent[] = [
       { type: 'agent:text', text: 'Before', timestamp: 3000 },
       { type: 'agent:tool_call', tool: 'Bash', summary: 'Run ls', timestamp: 3100 },
-      { type: 'agent:text', text: 'After', timestamp: 3200 },
+      { type: 'agent:text', text: 'After', timestamp: 3200 }
     ]
 
     const blocks = pairEvents(events)
@@ -195,9 +195,7 @@ describe('pairEvents', () => {
   })
 
   it('preserves single text block without modification', () => {
-    const events: AgentEvent[] = [
-      { type: 'agent:text', text: 'Only one', timestamp: 3000 },
-    ]
+    const events: AgentEvent[] = [{ type: 'agent:text', text: 'Only one', timestamp: 3000 }]
 
     const blocks = pairEvents(events)
 
@@ -262,11 +260,29 @@ describe('pairEvents', () => {
     const events: AgentEvent[] = [
       { type: 'agent:text', text: 'Starting', timestamp: 1000 },
       { type: 'agent:tool_call', tool: 'Bash', summary: 'ls', timestamp: 2000 },
-      { type: 'agent:tool_result', tool: 'Bash', summary: 'output', success: true, timestamp: 2100 },
+      {
+        type: 'agent:tool_result',
+        tool: 'Bash',
+        summary: 'output',
+        success: true,
+        timestamp: 2100
+      },
       { type: 'agent:tool_call', tool: 'Read', summary: 'file.txt', timestamp: 3000 },
-      { type: 'agent:tool_result', tool: 'Read', summary: 'contents', success: true, timestamp: 3100 },
+      {
+        type: 'agent:tool_result',
+        tool: 'Read',
+        summary: 'contents',
+        success: true,
+        timestamp: 3100
+      },
       { type: 'agent:tool_call', tool: 'Bash', summary: 'npm test', timestamp: 4000 },
-      { type: 'agent:tool_result', tool: 'Bash', summary: 'passed', success: true, timestamp: 4100 },
+      {
+        type: 'agent:tool_result',
+        tool: 'Bash',
+        summary: 'passed',
+        success: true,
+        timestamp: 4100
+      },
       { type: 'agent:text', text: 'Done', timestamp: 5000 }
     ]
 

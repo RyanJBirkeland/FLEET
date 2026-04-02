@@ -119,7 +119,9 @@ export function ReviewSubmitDialog({ pr, prKey, onClose, onSubmitted }: ReviewSu
         aria-modal="true"
         aria-labelledby="review-dialog-title"
       >
-        <h3 className="review-dialog__title" id="review-dialog-title">Submit Review</h3>
+        <h3 className="review-dialog__title" id="review-dialog-title">
+          Submit Review
+        </h3>
 
         <textarea
           className="review-dialog__body"

@@ -234,7 +234,13 @@ describe('IDEStore', () => {
       useIDEStore.setState((s) => ({
         openTabs: [
           ...s.openTabs,
-          { id: 'tab-2', filePath: '/test/file.ts', displayName: 'file.ts', language: 'typescript', isDirty: false }
+          {
+            id: 'tab-2',
+            filePath: '/test/file.ts',
+            displayName: 'file.ts',
+            language: 'typescript',
+            isDirty: false
+          }
         ]
       }))
       setFileContent('/test/file.ts', 'const x = 1')
