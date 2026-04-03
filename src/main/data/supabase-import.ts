@@ -135,6 +135,7 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
     'queued',
     'blocked',
     'active',
+    'review',
     'done',
     'cancelled',
     'failed',
