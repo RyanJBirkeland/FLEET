@@ -76,6 +76,25 @@ vi.mock('../../agent-history', () => ({
   updateAgentMeta: vi.fn().mockResolvedValue(undefined)
 }))
 
+// Mock node:fs/promises so checkOAuthToken reads a valid token on CI
+vi.mock('node:fs/promises', async () => {
+  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+  return {
+    ...actual,
+    readFile: vi.fn().mockResolvedValue('test-oauth-token-valid-for-ci-mock'),
+    stat: vi.fn().mockResolvedValue({ mtimeMs: Date.now() - 60_000 })
+  }
+})
+
+// Mock env-utils refresh functions used by checkOAuthToken
+vi.mock('../../env-utils', () => ({
+  refreshOAuthTokenFromKeychain: vi.fn().mockResolvedValue(false),
+  invalidateOAuthToken: vi.fn(),
+  getOAuthToken: vi.fn().mockReturnValue('test-oauth-token'),
+  buildAgentEnv: vi.fn().mockReturnValue({ PATH: '/usr/bin' }),
+  buildAgentEnvWithAuth: vi.fn().mockReturnValue({ PATH: '/usr/bin', ANTHROPIC_API_KEY: 'test-token' })
+}))
+
 // ---------------------------------------------------------------------------
 // Imports (after mocks)
 // ---------------------------------------------------------------------------

@@ -2,7 +2,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('node:fs', async () => {
   const actual = await vi.importActual('node:fs')
-  return { ...actual, readFileSync: vi.fn(), existsSync: vi.fn(), writeFileSync: vi.fn() }
+  return {
+    ...actual,
+    readFileSync: vi.fn(),
+    existsSync: vi.fn(),
+    writeFileSync: vi.fn(),
+    statSync: vi.fn().mockReturnValue({ mode: 0o100600 })
+  }
 })
 
 vi.mock('node:child_process', async () => {
