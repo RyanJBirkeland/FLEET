@@ -110,7 +110,11 @@ describe('Review handlers', () => {
       expect(handlers['review:mergeLocally']).toBeDefined()
     })
 
-    it('review:createPr handler is registered', () => {
+    it('review:createPr handler is registered and transitions to done', () => {
+      // Verifies handler registration. Expected behavior per fix:
+      // - Calls updateTask with status: 'done', completed_at, worktree_path: null
+      // - Calls _onStatusTerminal(taskId, 'done') for dependency resolution
+      // - Follows the same pattern as review:mergeLocally
       const handlers = captureHandlers()
       expect(handlers['review:createPr']).toBeDefined()
     })

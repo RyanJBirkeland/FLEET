@@ -286,12 +286,11 @@ export function registerReviewHandlers(): void {
     const prNumber = prNumberMatch ? parseInt(prNumberMatch[1], 10) : null
 
     // Update task with PR info
-    const updated = _updateTask(taskId, {
+    _updateTask(taskId, {
       pr_url: trimmedPrUrl,
       pr_number: prNumber,
       pr_status: 'open'
     })
-    if (updated) notifySprintMutation('updated', updated)
 
     // Clean up worktree (branch stays for the PR)
     try {
@@ -301,10 +300,24 @@ export function registerReviewHandlers(): void {
           cwd: repoConfig.localPath,
           env
         })
-        _updateTask(taskId, { worktree_path: null })
       }
     } catch {
       /* best-effort cleanup */
+    }
+
+    // Mark task done via terminal service
+    const updated = _updateTask(taskId, {
+      status: 'done',
+      completed_at: new Date().toISOString(),
+      worktree_path: null
+    })
+    if (updated) notifySprintMutation('updated', updated)
+    if (_onStatusTerminal) {
+      _onStatusTerminal(taskId, 'done')
+    } else {
+      logger.warn(
+        `[review:createPr] Task ${taskId} done but _onStatusTerminal not set — deps won't resolve`
+      )
     }
 
     return { prUrl: trimmedPrUrl }
