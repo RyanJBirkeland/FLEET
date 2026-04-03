@@ -11,6 +11,7 @@ import { Download, RefreshCw, BarChart, ExternalLink } from 'lucide-react'
 import { AGENT_HISTORY_LIMIT, FLASH_DURATION_MS } from '../../lib/constants'
 import { useCostDataStore } from '../../stores/costData'
 import { formatDurationMs } from '../../lib/format'
+import { SettingsCard } from './SettingsCard'
 
 // ── Formatting helpers ──────────────────────────────────
 
@@ -313,18 +314,12 @@ export function CostSection(): React.JSX.Element {
 
   return (
     <div className="cost-view cost-view--glass" style={{ height: '100%' }}>
-      <div className="cost-view__header-actions">
-        <Button variant="ghost" size="sm" onClick={fetchData} title="Refresh data">
-          <RefreshCw size={14} />
-        </Button>
-        <Button variant="ghost" size="sm" onClick={handleExport} title="Copy CSV to clipboard">
-          <Download size={14} />
-          {copied ? 'Copied!' : 'Export CSV'}
-        </Button>
-      </div>
-
       <div className="cost-view__scroll">
-        <div className="cost-view__panels">{summary && <ClaudeCodePanel summary={summary} />}</div>
+        {summary && (
+          <SettingsCard title="Claude Code Usage" subtitle="API costs and token usage">
+            <ClaudeCodePanel summary={summary} />
+          </SettingsCard>
+        )}
 
         {sortedRuns.length === 0 ? (
           <EmptyState
@@ -333,15 +328,34 @@ export function CostSection(): React.JSX.Element {
             description="Complete a task to see cost breakdown"
           />
         ) : (
-          <>
-            <h3 className="cost-section__title bde-section-title">Recent Agent Runs</h3>
+          <SettingsCard
+            title="Task History"
+            noPadding
+            footer={
+              <>
+                <Button variant="ghost" size="sm" onClick={fetchData} title="Refresh data">
+                  <RefreshCw size={14} />
+                  Refresh
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={handleExport}
+                  title="Copy CSV to clipboard"
+                >
+                  <Download size={14} />
+                  {copied ? 'Copied!' : 'Export CSV'}
+                </Button>
+              </>
+            }
+          >
             <TaskTable
               runs={sortedRuns}
               sortField={sortField}
               onSort={setSortField}
               onRowClick={handleRowClick}
             />
-          </>
+          </SettingsCard>
         )}
       </div>
     </div>

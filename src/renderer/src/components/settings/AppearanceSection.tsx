@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useThemeStore } from '../../stores/theme'
 import { toast } from '../../stores/toasts'
+import { SettingsCard } from './SettingsCard'
 
 const ACCENT_PRESETS = [
   { color: '#00D37F', label: 'Green' },
@@ -67,10 +68,8 @@ export function AppearanceSection(): React.JSX.Element {
   const [tearoffPref, resetTearoffPref] = useTearoffClosePreference()
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-section__title bde-section-title">Appearance</h2>
-      <div className="settings-field">
-        <span className="settings-field__label">Theme</span>
+    <>
+      <SettingsCard title="Theme" subtitle="Choose your visual theme">
         <div className="settings-theme-buttons">
           <button
             className={`bde-btn bde-btn--sm ${theme === 'dark' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
@@ -97,9 +96,9 @@ export function AppearanceSection(): React.JSX.Element {
             Warm
           </button>
         </div>
-      </div>
-      <div className="settings-field">
-        <span className="settings-field__label">Accent Color</span>
+      </SettingsCard>
+
+      <SettingsCard title="Accent Color">
         <div className="settings-colors">
           {ACCENT_PRESETS.map(({ color, label }) => (
             <button
@@ -114,11 +113,9 @@ export function AppearanceSection(): React.JSX.Element {
             />
           ))}
         </div>
-      </div>
+      </SettingsCard>
 
-      {/* Tear-off window behavior */}
-      <div className="settings-field">
-        <span className="settings-field__label">Tear-Off Window Close</span>
+      <SettingsCard title="Tear-Off Windows" subtitle="Window close behavior">
         <div className="settings-theme-buttons">
           {tearoffPref ? (
             <>
@@ -137,7 +134,7 @@ export function AppearanceSection(): React.JSX.Element {
             <span style={{ fontSize: 12, color: 'var(--bde-text-dim)' }}>Ask each time</span>
           )}
         </div>
-      </div>
-    </section>
+      </SettingsCard>
+    </>
   )
 }

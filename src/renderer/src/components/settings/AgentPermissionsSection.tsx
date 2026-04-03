@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
+import { SettingsCard } from './SettingsCard'
 
 const CONSENT_KEY = 'bde-permissions-consent'
 
@@ -180,10 +181,32 @@ export function AgentPermissionsSection(): React.JSX.Element {
     }
   }, [allow, deny])
 
-  return (
-    <section className="settings-section">
-      <h2 className="settings-section__title bde-section-title">Agent Permissions</h2>
+  const saveFooter = (
+    <div className="settings-field__row">
+      <div className="settings-field__status">
+        {dirty && (
+          <span style={{ color: 'var(--bde-text-muted)', fontSize: 'var(--bde-size-sm)' }}>
+            Unsaved changes
+          </span>
+        )}
+      </div>
+      <div className="settings-field__actions">
+        <Button
+          variant="primary"
+          size="sm"
+          type="button"
+          onClick={handleSave}
+          disabled={!dirty || saving}
+          loading={saving}
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      </div>
+    </div>
+  )
 
+  return (
+    <div>
       {!consented && (
         <div className="permissions-banner">
           <p className="permissions-banner__text">
@@ -201,8 +224,7 @@ export function AgentPermissionsSection(): React.JSX.Element {
         </div>
       )}
 
-      <div className="settings-field">
-        <span className="settings-field__label">Presets</span>
+      <SettingsCard title="Presets" subtitle="Quick-apply permission configurations">
         <div className="permissions-presets">
           <Button
             variant="ghost"
@@ -224,10 +246,9 @@ export function AgentPermissionsSection(): React.JSX.Element {
             Permissive
           </Button>
         </div>
-      </div>
+      </SettingsCard>
 
-      <div className="settings-field">
-        <span className="settings-field__label">Allowed Tools</span>
+      <SettingsCard title="Tool Rules" footer={saveFooter}>
         <div className="permissions-tools" aria-label="Allowed tools">
           {loading ? (
             <span style={{ color: 'var(--bde-text-muted)', fontSize: 'var(--bde-size-sm)' }}>
@@ -248,10 +269,14 @@ export function AgentPermissionsSection(): React.JSX.Element {
             ))
           )}
         </div>
-      </div>
 
-      <div className="settings-field">
-        <span className="settings-field__label">Blocked Commands</span>
+        <p className="permissions-info">
+          Pipeline agents automatically receive allow rules for their required tools. These settings
+          apply as the default baseline.
+        </p>
+      </SettingsCard>
+
+      <SettingsCard title="Deny Rules" subtitle="Custom tool deny patterns">
         <div className="permissions-deny-list" aria-label="Blocked commands">
           {deny.map((rule) => (
             <div key={rule} className="permissions-deny-rule">
@@ -279,34 +304,7 @@ export function AgentPermissionsSection(): React.JSX.Element {
             aria-label="Add blocked command"
           />
         </div>
-      </div>
-
-      <p className="permissions-info">
-        Pipeline agents automatically receive allow rules for their required tools. These settings
-        apply as the default baseline.
-      </p>
-
-      <div className="settings-field__row">
-        <div className="settings-field__status">
-          {dirty && (
-            <span style={{ color: 'var(--bde-text-muted)', fontSize: 'var(--bde-size-sm)' }}>
-              Unsaved changes
-            </span>
-          )}
-        </div>
-        <div className="settings-field__actions">
-          <Button
-            variant="primary"
-            size="sm"
-            type="button"
-            onClick={handleSave}
-            disabled={!dirty || saving}
-            loading={saving}
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
-      </div>
-    </section>
+      </SettingsCard>
+    </div>
   )
 }
