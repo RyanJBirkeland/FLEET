@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'fs'
-import { join, basename } from 'path'
+import { join } from 'path'
 import { BDE_MEMORY_DIR } from '../../paths'
 import { getSettingJson, setSettingJson } from '../../settings'
 
@@ -45,8 +45,7 @@ export function getUserMemory(): UserMemoryResult {
 
     try {
       const content = readFileSync(fullPath, 'utf-8')
-      const name = basename(relativePath)
-      sections.push(`### ${name}\n\n${content}`)
+      sections.push(`### ${relativePath}\n\n${content}`)
       totalBytes += Buffer.byteLength(content, 'utf-8')
       remaining[relativePath] = true
     } catch {
