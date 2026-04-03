@@ -16,27 +16,39 @@
 .unified-header {
   height: 44px;
   display: flex;
-  align-items: center;
+  align-items: stretch;
   background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-deep) 100%);
   border-bottom: 1px solid var(--neon-purple-border);
   -webkit-app-region: drag;
   flex-shrink: 0;
   position: relative;
   z-index: 10;
-  /* macOS traffic lights (hiddenInset) need ~80px clearance on the left */
-  padding-left: 80px;
+  overflow: hidden;
 }
 
-.unified-header__logo {
-  width: 44px;
+/* Left zone — spans sidebar width, contains traffic lights + logo.
+   macOS hiddenInset traffic lights sit at ~(12,16) and span ~70px.
+   The "B" logo is only visible when traffic lights don't cover it. */
+.unified-header__traffic-lights {
+  width: 52px;
+  min-width: 52px;
   height: 100%;
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-right: 1px solid var(--neon-purple-surface);
+  border-right: 1px solid var(--neon-purple-border);
+}
+
+.unified-header__logo {
   -webkit-app-region: no-drag;
   cursor: pointer;
   transition: background 150ms ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .unified-header__logo:hover {
@@ -54,12 +66,13 @@
 .unified-header__tabs {
   flex: 1;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   height: 100%;
   padding: 0 8px;
-  gap: 0;
+  gap: 2px;
   overflow-x: auto;
   overflow-y: hidden;
+  min-width: 0;
 }
 
 .unified-header__tabs::-webkit-scrollbar {
@@ -77,24 +90,22 @@
 
 /* ── Header Tab ── */
 .header-tab {
-  height: 32px;
+  height: 28px;
   display: flex;
   align-items: center;
-  padding: 0 14px;
+  padding: 0 12px;
   gap: 6px;
   font-size: 11px;
   color: var(--neon-text-dim);
   cursor: pointer;
   -webkit-app-region: no-drag;
-  border-radius: 8px 8px 0 0;
+  border-radius: 6px;
   transition:
     color 150ms ease,
     background 150ms ease;
   white-space: nowrap;
-  position: relative;
-  bottom: -1px;
+  flex-shrink: 0;
   border: 1px solid transparent;
-  border-bottom: none;
 }
 
 .header-tab:hover {
@@ -103,11 +114,9 @@
 }
 
 .header-tab--active {
-  height: 34px;
   color: var(--neon-text);
   background: var(--neon-surface-deep);
   border-color: var(--neon-purple-border);
-  border-bottom-color: transparent;
   font-weight: 500;
 }
 
@@ -176,7 +185,7 @@
   flex-direction: column;
   align-items: center;
   gap: 4px;
-  padding: 0 6px 8px;
+  padding: 0 4px 8px;
 }
 
 /* ── Sidebar Item ── */
@@ -399,18 +408,19 @@
 
 /* ── Model Badge ── */
 .sidebar-model-badge {
-  padding: 3px 6px;
+  padding: 3px 4px;
   border-radius: 6px;
   background: var(--neon-purple-surface);
   border: 1px solid var(--neon-purple-border);
-  font-size: 8px;
+  font-size: 7px;
   color: var(--neon-purple);
   font-family: var(--bde-font-code);
   text-align: center;
-  max-width: 44px;
+  max-width: 48px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.2;
 }
 
 /* ── View Skeleton Loading State ── */

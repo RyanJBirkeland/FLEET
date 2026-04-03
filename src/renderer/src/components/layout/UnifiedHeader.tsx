@@ -58,16 +58,18 @@ export function UnifiedHeader(): React.JSX.Element {
 
   return (
     <div className="unified-header">
-      {/* Logo zone - 52px */}
-      <div
-        className="unified-header__logo"
-        onClick={handleLogoClick}
-        onKeyDown={handleLogoKeyDown}
-        role="button"
-        tabIndex={0}
-        aria-label="Go to Dashboard"
-      >
-        <span className="unified-header__logo-letter">B</span>
+      {/* Left zone — matches sidebar width (52px), contains logo + traffic light clearance */}
+      <div className="unified-header__traffic-lights">
+        <div
+          className="unified-header__logo"
+          onClick={handleLogoClick}
+          onKeyDown={handleLogoKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-label="Go to Dashboard"
+        >
+          <span className="unified-header__logo-letter">B</span>
+        </div>
       </div>
 
       {/* Tab strip - flex:1 */}
