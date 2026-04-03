@@ -5,6 +5,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
+import { SettingsCard } from './SettingsCard'
 
 const DEFAULT_MAX_CONCURRENT = 2
 const DEFAULT_MODEL = 'claude-sonnet-4-5'
@@ -63,9 +64,22 @@ export function AgentManagerSection(): React.JSX.Element {
   }
 
   return (
-    <section className="settings-section">
-      <h2 className="settings-section__title bde-section-title">Agent Manager</h2>
-
+    <SettingsCard
+      title="Pipeline Configuration"
+      subtitle="Changes take effect on next app restart"
+      footer={
+        <Button
+          variant="primary"
+          size="sm"
+          onClick={handleSave}
+          disabled={!dirty || saving}
+          loading={saving}
+          type="button"
+        >
+          {saving ? 'Saving...' : 'Save'}
+        </Button>
+      }
+    >
       <label className="settings-field">
         <span className="settings-field__label">Max concurrent agents</span>
         <input
@@ -134,24 +148,6 @@ export function AgentManagerSection(): React.JSX.Element {
           }}
         />
       </label>
-
-      <p className="settings-field__hint">Changes require app restart to take effect.</p>
-
-      <div className="settings-field__row">
-        <div className="settings-field__status" />
-        <div className="settings-field__actions">
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleSave}
-            disabled={!dirty || saving}
-            loading={saving}
-            type="button"
-          >
-            {saving ? 'Saving...' : 'Save'}
-          </Button>
-        </div>
-      </div>
-    </section>
+    </SettingsCard>
   )
 }
