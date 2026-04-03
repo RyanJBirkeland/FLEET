@@ -1,24 +1,15 @@
 import { useCallback } from 'react'
 import { useSprintTasks } from '../stores/sprintTasks'
-import { useSprintUI } from '../stores/sprintUI'
 import { useConfirm } from '../components/ui/ConfirmModal'
 import { toast } from '../stores/toasts'
 import { TASK_STATUS } from '../../../shared/constants'
 import type { SprintTask } from '../../../shared/types'
-import { useTaskWorkbenchStore } from '../stores/taskWorkbench'
-import { usePanelLayoutStore } from '../stores/panelLayout'
 
 interface SprintTaskActions {
-  handlePushToSprint: (task: SprintTask) => Promise<void>
-  handleViewSpec: (task: SprintTask) => void
   handleSaveSpec: (taskId: string, spec: string) => Promise<void>
-  handleMarkDone: (task: SprintTask) => Promise<void>
   handleStop: (task: SprintTask) => Promise<void>
   handleRerun: (task: SprintTask) => Promise<void>
-  handleUpdateTitle: (patch: { id: string; title: string }) => void
-  handleUpdatePriority: (patch: { id: string; priority: number }) => void
   handleRetry: (task: SprintTask) => void
-  handleEditInWorkbench: (task: SprintTask) => void
   launchTask: (task: SprintTask) => void
   deleteTask: (id: string) => Promise<void>
   confirmProps: ReturnType<typeof useConfirm>['confirmProps']
@@ -33,31 +24,8 @@ export function useSprintTaskActions(): SprintTaskActions {
   const deleteTask = useSprintTasks((s) => s.deleteTask)
   const launchTask = useSprintTasks((s) => s.launchTask)
   const loadData = useSprintTasks((s) => s.loadData)
-  const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
 
   const { confirm, confirmProps } = useConfirm()
-
-  const loadTask = useTaskWorkbenchStore((s) => s.loadTask)
-  const setView = usePanelLayoutStore((s) => s.setView)
-
-  // --- Push backlog task to sprint queue ---
-  const handlePushToSprint = useCallback(
-    async (task: SprintTask) => {
-      try {
-        await updateTask(task.id, { status: TASK_STATUS.QUEUED })
-        toast.success('Pushed to Sprint')
-      } catch (err) {
-        toast.error(`Failed to push: ${err instanceof Error ? err.message : String(err)}`)
-      }
-    },
-    [updateTask]
-  )
-
-  // --- Open spec drawer ---
-  const handleViewSpec = useCallback(
-    (task: SprintTask) => setSelectedTaskId(task.id),
-    [setSelectedTaskId]
-  )
 
   // --- Save spec from drawer ---
   const handleSaveSpec = useCallback(
@@ -65,20 +33,6 @@ export function useSprintTaskActions(): SprintTaskActions {
       return updateTask(taskId, { spec })
     },
     [updateTask]
-  )
-
-  // --- Mark task done (with confirm) ---
-  const handleMarkDone = useCallback(
-    async (task: SprintTask) => {
-      const message = task.pr_url
-        ? 'Mark as done? The open PR will remain open on GitHub.'
-        : 'Mark as done?'
-      const ok = await confirm({ message, confirmLabel: 'Mark Done' })
-      if (!ok) return
-      updateTask(task.id, { status: TASK_STATUS.DONE, completed_at: new Date().toISOString() })
-      toast.success('Marked as done')
-    },
-    [updateTask, confirm]
   )
 
   // --- Stop running agent (with confirm) ---
@@ -148,42 +102,11 @@ export function useSprintTaskActions(): SprintTaskActions {
     [confirm, loadData]
   )
 
-  // --- Inline title edit ---
-  const handleUpdateTitle = useCallback(
-    (patch: { id: string; title: string }) => {
-      updateTask(patch.id, { title: patch.title })
-    },
-    [updateTask]
-  )
-
-  // --- Inline priority edit ---
-  const handleUpdatePriority = useCallback(
-    (patch: { id: string; priority: number }) => {
-      updateTask(patch.id, { priority: patch.priority })
-    },
-    [updateTask]
-  )
-
-  // --- Edit task in workbench ---
-  const handleEditInWorkbench = useCallback(
-    (task: SprintTask) => {
-      loadTask(task)
-      setView('task-workbench')
-    },
-    [loadTask, setView]
-  )
-
   return {
-    handlePushToSprint,
-    handleViewSpec,
     handleSaveSpec,
-    handleMarkDone,
     handleStop,
     handleRerun,
-    handleUpdateTitle,
-    handleUpdatePriority,
     handleRetry,
-    handleEditInWorkbench,
     launchTask,
     deleteTask,
     confirmProps

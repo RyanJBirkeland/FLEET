@@ -38,8 +38,6 @@ interface LocalAgentsState extends LogPollerState {
     model?: string
     assistant?: boolean
   }) => Promise<{ pid: number; logPath: string; id: string }>
-  sendToAgent: (pid: number, message: string) => Promise<void>
-  killLocalAgent: (pid: number) => Promise<void>
   selectLocalAgent: (pid: number | null) => void
   startLogPolling: (logPath: string) => () => void
   stopLogPolling: () => void
@@ -96,18 +94,6 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
           } finally {
             set({ isSpawning: false })
           }
-        },
-
-        sendToAgent: async (_pid, _message) => {
-          throw new Error(
-            'Direct PID-based messaging removed. Use agent:steer with an agent ID instead.'
-          )
-        },
-
-        killLocalAgent: async (_pid): Promise<void> => {
-          throw new Error(
-            'Local PID-based agent kill removed. Use agent:kill with an agent ID instead.'
-          )
         },
 
         selectLocalAgent: (pid): void => {

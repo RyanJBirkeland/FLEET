@@ -18,7 +18,6 @@ interface SprintUIState {
   searchQuery: string
   statusFilter: StatusFilter
   generatingIds: string[]
-  selectedTaskIds: string[]
   drawerOpen: boolean
   specPanelOpen: boolean
   doneViewOpen: boolean
@@ -40,8 +39,6 @@ interface SprintUIState {
   addGeneratingId: (id: string) => void
   removeGeneratingId: (id: string) => void
   clearTaskIfSelected: (taskId: string) => void
-  toggleTaskSelection: (id: string) => void
-  selectRange: (fromId: string, toId: string, taskList: string[]) => void
   clearSelection: () => void
 }
 
@@ -52,7 +49,6 @@ export const useSprintUI = create<SprintUIState>((set, get) => ({
   searchQuery: '',
   statusFilter: 'all',
   generatingIds: [],
-  selectedTaskIds: [],
   drawerOpen: false,
   specPanelOpen: false,
   doneViewOpen: false,
@@ -91,34 +87,7 @@ export const useSprintUI = create<SprintUIState>((set, get) => ({
     set((s) => (s.selectedTaskId === taskId ? { selectedTaskId: null, drawerOpen: false } : s))
   },
 
-  toggleTaskSelection: (id): void => {
-    set((s) => {
-      const isSelected = s.selectedTaskIds.includes(id)
-      return {
-        selectedTaskIds: isSelected
-          ? s.selectedTaskIds.filter((taskId) => taskId !== id)
-          : [...s.selectedTaskIds, id]
-      }
-    })
-  },
-
-  selectRange: (fromId, toId, taskList): void => {
-    const fromIndex = taskList.indexOf(fromId)
-    const toIndex = taskList.indexOf(toId)
-
-    if (fromIndex === -1 || toIndex === -1) {
-      set({ selectedTaskIds: [] })
-      return
-    }
-
-    const start = Math.min(fromIndex, toIndex)
-    const end = Math.max(fromIndex, toIndex)
-    const selectedTaskIds = taskList.slice(start, end + 1)
-
-    set({ selectedTaskIds })
-  },
-
   clearSelection: (): void => {
-    set({ selectedTaskIds: [] })
+    // No-op for now, kept for TaskPill compatibility
   }
 }))

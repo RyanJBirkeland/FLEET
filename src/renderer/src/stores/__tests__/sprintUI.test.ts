@@ -99,70 +99,10 @@ describe('sprintUI store', () => {
     expect(useSprintUI.getState().statusFilter).toBe('all')
   })
 
-  // --- Bulk selection tests ---
-
-  it('starts with empty selectedTaskIds', () => {
-    const state = useSprintUI.getState()
-    expect(state.selectedTaskIds).toEqual([])
-  })
-
-  it('toggleTaskSelection adds task id when not present', () => {
-    useSprintUI.getState().toggleTaskSelection('task-1')
-    expect(useSprintUI.getState().selectedTaskIds).toEqual(['task-1'])
-  })
-
-  it('toggleTaskSelection removes task id when present', () => {
-    useSprintUI.getState().toggleTaskSelection('task-1')
-    useSprintUI.getState().toggleTaskSelection('task-1')
-    expect(useSprintUI.getState().selectedTaskIds).toEqual([])
-  })
-
-  it('toggleTaskSelection can toggle multiple tasks', () => {
-    useSprintUI.getState().toggleTaskSelection('task-1')
-    useSprintUI.getState().toggleTaskSelection('task-2')
-    expect(useSprintUI.getState().selectedTaskIds).toEqual(['task-1', 'task-2'])
-  })
-
-  it('selectRange selects all tasks between fromId and toId', () => {
-    const taskList = ['task-1', 'task-2', 'task-3', 'task-4', 'task-5']
-    useSprintUI.getState().selectRange('task-2', 'task-4', taskList)
-    expect(useSprintUI.getState().selectedTaskIds).toEqual(['task-2', 'task-3', 'task-4'])
-  })
-
-  it('selectRange works in reverse order', () => {
-    const taskList = ['task-1', 'task-2', 'task-3', 'task-4', 'task-5']
-    useSprintUI.getState().selectRange('task-4', 'task-2', taskList)
-    expect(useSprintUI.getState().selectedTaskIds).toEqual(['task-2', 'task-3', 'task-4'])
-  })
-
-  it('selectRange selects single task if fromId equals toId', () => {
-    const taskList = ['task-1', 'task-2', 'task-3']
-    useSprintUI.getState().selectRange('task-2', 'task-2', taskList)
-    expect(useSprintUI.getState().selectedTaskIds).toEqual(['task-2'])
-  })
-
-  it('selectRange handles fromId not in list', () => {
-    const taskList = ['task-1', 'task-2', 'task-3']
-    useSprintUI.getState().selectRange('invalid-id', 'task-2', taskList)
-    expect(useSprintUI.getState().selectedTaskIds).toEqual([])
-  })
-
-  it('selectRange handles toId not in list', () => {
-    const taskList = ['task-1', 'task-2', 'task-3']
-    useSprintUI.getState().selectRange('task-1', 'invalid-id', taskList)
-    expect(useSprintUI.getState().selectedTaskIds).toEqual([])
-  })
-
-  it('clearSelection clears all selected tasks', () => {
-    useSprintUI.getState().toggleTaskSelection('task-1')
-    useSprintUI.getState().toggleTaskSelection('task-2')
-    useSprintUI.getState().clearSelection()
-    expect(useSprintUI.getState().selectedTaskIds).toEqual([])
-  })
-
+  // clearSelection kept for backward compatibility (no-op)
   it('clearSelection is idempotent', () => {
     useSprintUI.getState().clearSelection()
     useSprintUI.getState().clearSelection()
-    expect(useSprintUI.getState().selectedTaskIds).toEqual([])
+    // No-op, just shouldn't throw
   })
 })

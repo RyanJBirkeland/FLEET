@@ -100,26 +100,13 @@ describe('useSprintTaskActions', () => {
   it('returns all expected action functions', () => {
     const { result } = renderHook(() => useSprintTaskActions())
 
-    expect(typeof result.current.handlePushToSprint).toBe('function')
-    expect(typeof result.current.handleViewSpec).toBe('function')
     expect(typeof result.current.handleSaveSpec).toBe('function')
-    expect(typeof result.current.handleMarkDone).toBe('function')
     expect(typeof result.current.handleStop).toBe('function')
     expect(typeof result.current.handleRerun).toBe('function')
-    expect(typeof result.current.handleUpdateTitle).toBe('function')
-    expect(typeof result.current.handleUpdatePriority).toBe('function')
+    expect(typeof result.current.handleRetry).toBe('function')
     expect(typeof result.current.launchTask).toBe('function')
     expect(typeof result.current.deleteTask).toBe('function')
     expect(result.current.confirmProps).toBeDefined()
-  })
-
-  it('handleViewSpec calls setSelectedTaskId with the task id', () => {
-    const { result } = renderHook(() => useSprintTaskActions())
-    const mockTask = { id: 'task-123' } as Parameters<typeof result.current.handleViewSpec>[0]
-
-    result.current.handleViewSpec(mockTask)
-
-    expect(mockSetSelectedTaskId).toHaveBeenCalledWith('task-123')
   })
 
   it('handleSaveSpec calls updateTask with the spec patch', () => {
@@ -130,22 +117,6 @@ describe('useSprintTaskActions', () => {
     expect(mockUpdateTask).toHaveBeenCalledWith('task-abc', { spec: 'new spec content' })
   })
 
-  it('handleUpdateTitle calls updateTask with title patch', () => {
-    const { result } = renderHook(() => useSprintTaskActions())
-
-    result.current.handleUpdateTitle({ id: 'task-1', title: 'New Title' })
-
-    expect(mockUpdateTask).toHaveBeenCalledWith('task-1', { title: 'New Title' })
-  })
-
-  it('handleUpdatePriority calls updateTask with priority patch', () => {
-    const { result } = renderHook(() => useSprintTaskActions())
-
-    result.current.handleUpdatePriority({ id: 'task-1', priority: 3 })
-
-    expect(mockUpdateTask).toHaveBeenCalledWith('task-1', { priority: 3 })
-  })
-
   it('launchTask is the store launchTask function', () => {
     const { result } = renderHook(() => useSprintTaskActions())
     expect(result.current.launchTask).toBe(mockLaunchTask)
@@ -154,87 +125,6 @@ describe('useSprintTaskActions', () => {
   it('deleteTask is the store deleteTask function', () => {
     const { result } = renderHook(() => useSprintTaskActions())
     expect(result.current.deleteTask).toBe(mockDeleteTask)
-  })
-
-  // --- handlePushToSprint ---
-
-  it('handlePushToSprint calls updateTask with queued status and shows success toast', async () => {
-    const { toast } = await import('../../stores/toasts')
-    const { result } = renderHook(() => useSprintTaskActions())
-    const task = makeTask({ status: 'backlog' })
-    await result.current.handlePushToSprint(task)
-    expect(mockUpdateTask).toHaveBeenCalledWith(task.id, { status: 'queued' })
-    expect(toast.success).toHaveBeenCalledWith('Pushed to Sprint')
-  })
-
-  // --- handleMarkDone ---
-
-  it('handleMarkDone updates task to done when user confirms (no PR)', async () => {
-    const { toast } = await import('../../stores/toasts')
-    const { result } = renderHook(() => useSprintTaskActions())
-    const task = makeTask({ id: 'task-done', status: 'active', pr_url: null })
-
-    // Start the mark done — it will wait for confirm
-    let promise: Promise<void>
-    act(() => {
-      promise = result.current.handleMarkDone(task)
-    })
-
-    // confirmProps should now be open
-    expect(result.current.confirmProps.open).toBe(true)
-    expect(result.current.confirmProps.message).toBe('Mark as done?')
-
-    // Confirm
-    act(() => {
-      result.current.confirmProps.onConfirm()
-    })
-
-    await act(async () => {
-      await promise!
-    })
-
-    expect(mockUpdateTask).toHaveBeenCalledWith(
-      'task-done',
-      expect.objectContaining({ status: 'done' })
-    )
-    expect(toast.success).toHaveBeenCalledWith('Marked as done')
-  })
-
-  it('handleMarkDone shows PR warning message when task has pr_url', async () => {
-    const { result } = renderHook(() => useSprintTaskActions())
-    const task = makeTask({ status: 'active', pr_url: 'https://github.com/org/repo/pull/1' })
-
-    act(() => {
-      void result.current.handleMarkDone(task)
-    })
-
-    expect(result.current.confirmProps.message).toContain('open PR will remain open')
-
-    act(() => {
-      result.current.confirmProps.onCancel()
-    })
-  })
-
-  it('handleMarkDone does nothing when user cancels', async () => {
-    const { toast } = await import('../../stores/toasts')
-    const { result } = renderHook(() => useSprintTaskActions())
-    const task = makeTask({ status: 'active' })
-
-    let promise: Promise<void>
-    act(() => {
-      promise = result.current.handleMarkDone(task)
-    })
-
-    act(() => {
-      result.current.confirmProps.onCancel()
-    })
-
-    await act(async () => {
-      await promise!
-    })
-
-    expect(mockUpdateTask).not.toHaveBeenCalled()
-    expect(toast.success).not.toHaveBeenCalled()
   })
 
   // --- handleStop ---

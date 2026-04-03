@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { usePanelLayoutStore, findLeaf, type View } from '../../stores/panelLayout'
-import { useLocalAgentsStore } from '../../stores/localAgents'
 import { useAgentHistoryStore, type AgentMeta } from '../../stores/agentHistory'
 import { toast } from '../../stores/toasts'
 import { Kbd } from '../ui/Kbd'
@@ -53,7 +52,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
   useFocusTrap(paletteRef, open)
   const setView = usePanelLayoutStore((s) => s.setView)
   const selectAgent = useAgentHistoryStore((s) => s.selectAgent)
-  const { confirm, confirmProps } = useConfirm()
+  const { confirmProps } = useConfirm()
 
   // Fetch recent agents when palette opens
   useEffect(() => {
@@ -144,39 +143,6 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
           requestAnimationFrame(() => {
             window.dispatchEvent(new CustomEvent('bde:open-spawn-modal'))
           })
-        }
-      },
-      {
-        id: 'action-kill-all',
-        label: 'Kill All',
-        category: 'action',
-        hint: 'Kill all running',
-        action: async () => {
-          const processes = useLocalAgentsStore.getState().processes
-          const killLocalAgent = useLocalAgentsStore.getState().killLocalAgent
-
-          if (processes.length === 0) {
-            toast.info('No running agents to kill')
-            onClose()
-            return
-          }
-
-          const confirmed = await confirm({
-            message: `Kill ${processes.length} running agent${processes.length > 1 ? 's' : ''}?`,
-            variant: 'danger'
-          })
-
-          if (!confirmed) {
-            return
-          }
-
-          try {
-            await Promise.all(processes.map((p) => killLocalAgent(p.pid)))
-            toast.success(`Killed ${processes.length} agent${processes.length > 1 ? 's' : ''}`)
-          } catch (_error) {
-            toast.error('Failed to kill some agents')
-          }
-          onClose()
         }
       }
     ]

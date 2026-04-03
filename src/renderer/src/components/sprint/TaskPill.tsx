@@ -92,15 +92,9 @@ export function TaskPill({
     .filter(Boolean)
     .join(' ')
 
-  const handleClick = (e: React.MouseEvent): void => {
-    if (e.shiftKey) {
-      useSprintUI.getState().toggleTaskSelection(task.id)
-    } else if (e.metaKey || e.ctrlKey) {
-      useSprintUI.getState().toggleTaskSelection(task.id)
-    } else {
-      useSprintUI.getState().clearSelection()
-      onClick(task.id)
-    }
+  const handleClick = (): void => {
+    useSprintUI.getState().clearSelection()
+    onClick(task.id)
   }
 
   return (

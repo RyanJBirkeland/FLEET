@@ -106,18 +106,6 @@ describe('localAgents store', () => {
     expect(useLocalAgentsStore.getState().spawnedAgents[0].model).toBe('sonnet')
   })
 
-  it('sendToAgent throws (removed functionality)', async () => {
-    await expect(useLocalAgentsStore.getState().sendToAgent(123, 'hello')).rejects.toThrow(
-      'Direct PID-based messaging removed'
-    )
-  })
-
-  it('killLocalAgent throws (removed functionality)', async () => {
-    await expect(useLocalAgentsStore.getState().killLocalAgent(100)).rejects.toThrow(
-      'Local PID-based agent kill removed'
-    )
-  })
-
   it('log polling accumulates content and advances logNextByte', async () => {
     vi.mocked(window.api.tailAgentLog)
       .mockResolvedValueOnce({ content: 'chunk1 ', nextByte: 7 })
