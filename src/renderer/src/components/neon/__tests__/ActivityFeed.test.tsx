@@ -98,13 +98,13 @@ describe('ActivityFeed', () => {
     expect(onClick).toHaveBeenCalledWith(events[0])
   })
 
-  it('sets cursor pointer style when onEventClick is provided', () => {
+  it('sets clickable class when onEventClick is provided', () => {
     const onClick = vi.fn()
     const events = [
       { id: '1', label: 'Task completed', accent: 'cyan' as const, timestamp: Date.now() }
     ]
     render(<ActivityFeed events={events} onEventClick={onClick} />)
     const eventRow = screen.getByText('Task completed').closest('[role="button"]') as HTMLElement
-    expect(eventRow.style.cursor).toBe('pointer')
+    expect(eventRow).toHaveClass('activity-feed__item--clickable')
   })
 })

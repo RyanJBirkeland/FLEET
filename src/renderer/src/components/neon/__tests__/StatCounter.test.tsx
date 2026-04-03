@@ -84,11 +84,11 @@ describe('StatCounter', () => {
     expect(handleClick).toHaveBeenCalledTimes(1)
   })
 
-  it('has cursor pointer when clickable', () => {
+  it('has clickable class when clickable', () => {
     const handleClick = vi.fn()
     render(<StatCounter label="Active" value={5} accent="cyan" onClick={handleClick} />)
     const button = screen.getByRole('button')
-    expect(button.style.cursor).toBe('pointer')
+    expect(button).toHaveClass('stat-counter--clickable')
   })
 
   it('does not have role=button when onClick is not provided', () => {
@@ -133,19 +133,13 @@ describe('StatCounter', () => {
     expect(el).not.toHaveAttribute('tabindex')
   })
 
-  it('changes opacity on mouse hover when clickable', () => {
+  it('has hover styles via CSS when clickable', () => {
     const handleClick = vi.fn()
     render(<StatCounter label="Active" value={5} accent="cyan" onClick={handleClick} />)
     const button = screen.getByRole('button')
 
-    // Initial opacity should be 1
-    expect(button.style.opacity).toBe('1')
-
-    fireEvent.mouseEnter(button)
-    expect(button.style.opacity).toBe('0.85')
-
-    fireEvent.mouseLeave(button)
-    expect(button.style.opacity).toBe('1')
+    // Hover behavior is now handled by CSS, just verify the clickable class is present
+    expect(button).toHaveClass('stat-counter--clickable')
   })
 
   it('renders string value correctly', () => {

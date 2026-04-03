@@ -1,6 +1,7 @@
 @import './base.css';
 @import './design-system.css';
 @import './neon.css';
+@import './neon-primitives.css';
 @import './neon-shell.css';
 @import './agents-neon.css';
 @import './sprint-neon.css';

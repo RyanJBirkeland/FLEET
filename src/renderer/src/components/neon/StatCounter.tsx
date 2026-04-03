@@ -1,6 +1,4 @@
-import { useState } from 'react'
 import { type NeonAccent, neonVar } from './types'
-import { tokens } from '../../design-system/tokens'
 
 interface StatCounterProps {
   label: string
@@ -24,11 +22,11 @@ export function StatCounter({
   icon,
   onClick
 }: StatCounterProps): React.JSX.Element {
-  const [hovered, setHovered] = useState(false)
   const isClickable = !!onClick
 
   return (
     <div
+      className={`stat-counter ${isClickable ? 'stat-counter--clickable' : ''}`}
       role={isClickable ? 'button' : undefined}
       tabIndex={isClickable ? 0 : undefined}
       onClick={onClick}
@@ -42,48 +40,25 @@ export function StatCounter({
             }
           : undefined
       }
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
       style={{
         background: neonVar(accent, 'surface'),
-        border: `1px solid ${neonVar(accent, 'border')}`,
-        borderRadius: tokens.radius.lg,
-        padding: tokens.space[3],
-        cursor: isClickable ? 'pointer' : undefined,
-        opacity: isClickable && hovered ? 0.85 : 1,
-        transform: isClickable && hovered ? 'translateY(-1px)' : undefined,
-        transition: 'opacity 0.15s ease, transform 0.15s ease'
+        border: `1px solid ${neonVar(accent, 'border')}`
       }}
     >
       <div
         data-role="stat-label"
+        className="stat-counter__label"
         style={{
-          color: neonVar(accent, 'color'),
-          fontSize: tokens.size.xs,
-          textTransform: 'uppercase',
-          letterSpacing: '1.5px',
-          fontWeight: 600,
-          display: 'flex',
-          alignItems: 'center',
-          gap: tokens.space[1]
+          color: neonVar(accent, 'color')
         }}
       >
         {icon}
         {label}
       </div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: tokens.space[1],
-          marginTop: tokens.space[1]
-        }}
-      >
+      <div className="stat-counter__value-row">
         <span
+          className="stat-counter__value"
           style={{
-            color: tokens.neon.text,
-            fontSize: tokens.size.xxl,
-            fontWeight: 800,
             textShadow: neonVar(accent, 'glow')
           }}
         >
@@ -91,10 +66,9 @@ export function StatCounter({
         </span>
         {suffix && (
           <span
+            className="stat-counter__suffix"
             style={{
-              color: neonVar(accent, 'color'),
-              fontSize: tokens.size.xs,
-              opacity: 0.6
+              color: neonVar(accent, 'color')
             }}
           >
             {suffix}
@@ -102,14 +76,7 @@ export function StatCounter({
         )}
       </div>
       {trend && (
-        <div
-          style={{
-            color: trend.direction === 'down' ? 'var(--neon-cyan)' : 'var(--neon-red)',
-            fontSize: tokens.size.xs,
-            marginTop: tokens.space[1],
-            opacity: 0.7
-          }}
-        >
+        <div className={`stat-counter__trend stat-counter__trend--${trend.direction}`}>
           {trend.direction === 'down' ? '↓' : '↑'} {trend.label}
         </div>
       )}

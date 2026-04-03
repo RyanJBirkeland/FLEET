@@ -1,5 +1,4 @@
 import { type NeonAccent, neonVar } from './types'
-import { tokens } from '../../design-system/tokens'
 
 export interface FeedEvent {
   id: string
@@ -33,24 +32,15 @@ export function ActivityFeed({
   const displayed = maxItems ? events.slice(0, maxItems) : events
 
   if (displayed.length === 0) {
-    return (
-      <div
-        style={{
-          color: tokens.neon.textDim,
-          fontSize: tokens.size.xs,
-          padding: `${tokens.space[3]} 0`
-        }}
-      >
-        No recent activity
-      </div>
-    )
+    return <div className="activity-feed__empty">No recent activity</div>
   }
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: tokens.space[1] }}>
+    <div className="activity-feed">
       {displayed.map((event) => (
         <div
           key={event.id}
+          className={`activity-feed__item ${onEventClick ? 'activity-feed__item--clickable' : ''}`}
           onClick={onEventClick ? () => onEventClick(event) : undefined}
           onKeyDown={
             onEventClick
@@ -64,60 +54,16 @@ export function ActivityFeed({
           }
           role={onEventClick ? 'button' : undefined}
           tabIndex={onEventClick ? 0 : undefined}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: tokens.space[1],
-            ...(onEventClick
-              ? {
-                  cursor: 'pointer',
-                  opacity: 1,
-                  transition: 'opacity 0.15s'
-                }
-              : {})
-          }}
-          onMouseEnter={
-            onEventClick
-              ? (e) => ((e.currentTarget as HTMLDivElement).style.opacity = '0.75')
-              : undefined
-          }
-          onMouseLeave={
-            onEventClick
-              ? (e) => ((e.currentTarget as HTMLDivElement).style.opacity = '1')
-              : undefined
-          }
         >
           <div
+            className="activity-feed__dot"
             style={{
-              width: '5px',
-              height: '5px',
-              borderRadius: '50%',
               background: neonVar(event.accent, 'color'),
-              boxShadow: neonVar(event.accent, 'glow'),
-              flexShrink: 0
+              boxShadow: neonVar(event.accent, 'glow')
             }}
           />
-          <span
-            style={{
-              color: tokens.neon.textMuted,
-              fontSize: tokens.size.xs,
-              flex: 1,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
-          >
-            {event.label}
-          </span>
-          <span
-            style={{
-              color: tokens.neon.textDim,
-              fontSize: tokens.size.xs,
-              flexShrink: 0
-            }}
-          >
-            {formatRelativeTime(event.timestamp)}
-          </span>
+          <span className="activity-feed__label">{event.label}</span>
+          <span className="activity-feed__timestamp">{formatRelativeTime(event.timestamp)}</span>
         </div>
       ))}
     </div>

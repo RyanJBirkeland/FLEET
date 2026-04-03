@@ -17,14 +17,12 @@ describe('NeonBadge', () => {
 
   it('adds pulse class when pulse prop is true', () => {
     const { container } = render(<NeonBadge accent="cyan" label="live" pulse />)
-    expect(container.firstChild).toHaveClass('neon-pulse')
+    expect(container.firstChild).toHaveClass('neon-badge--pulse')
   })
 
-  it('applies token-based sizing and spacing', () => {
+  it('has base badge class', () => {
     const { container } = render(<NeonBadge accent="cyan" label="test" />)
     const badge = container.firstChild as HTMLElement
-    expect(badge.style.fontSize).toBe('11px')
-    expect(badge.style.padding).toBe('2px 8px')
-    expect(badge.style.borderRadius).toBe('9999px')
+    expect(badge).toHaveClass('neon-badge')
   })
 })

@@ -28,44 +28,33 @@ export function NeonCard({
     '--card-accent-glow': neonVar(accent, 'glow'),
     background: `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${tokens.neon.surfaceDeep})`,
     border: `1px solid ${neonVar(accent, 'border')}`,
-    borderRadius: tokens.radius.xl,
-    backdropFilter: 'var(--neon-glass-blur)',
-    WebkitBackdropFilter: 'var(--neon-glass-blur)',
-    boxShadow: `var(--neon-glass-shadow), var(--neon-glass-edge)`,
-    padding: title ? '0' : tokens.space[3],
-    overflow: 'hidden',
-    transition: `box-shadow ${tokens.transition.base}, transform ${tokens.transition.base}`,
     ...style
   } as React.CSSProperties
 
   return (
-    <div className={`neon-card ${className}`.trim()} style={cardStyle}>
+    <div
+      className={`neon-card ${title ? 'neon-card--with-title' : 'neon-card--no-title'} ${className}`.trim()}
+      style={cardStyle}
+    >
       {title && (
         <div
+          className="neon-card__header"
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: tokens.space[2],
-            padding: `${tokens.space[2]} ${tokens.space[3]}`,
             borderBottom: `1px solid ${neonVar(accent, 'border')}`
           }}
         >
-          {icon && <span style={{ color: neonVar(accent, 'color'), display: 'flex' }}>{icon}</span>}
-          <span
-            style={{
-              color: neonVar(accent, 'color'),
-              fontSize: tokens.size.xs,
-              textTransform: 'uppercase',
-              letterSpacing: '1px',
-              fontWeight: 600
-            }}
-          >
+          {icon && (
+            <span className="neon-card__icon" style={{ color: neonVar(accent, 'color') }}>
+              {icon}
+            </span>
+          )}
+          <span className="neon-card__title" style={{ color: neonVar(accent, 'color') }}>
             {title}
           </span>
-          {action && <span style={{ marginLeft: 'auto' }}>{action}</span>}
+          {action && <span className="neon-card__action">{action}</span>}
         </div>
       )}
-      <div style={{ padding: title ? tokens.space[3] : '0' }}>{children}</div>
+      <div className={title ? 'neon-card__body' : 'neon-card__body--no-title'}>{children}</div>
     </div>
   )
 }

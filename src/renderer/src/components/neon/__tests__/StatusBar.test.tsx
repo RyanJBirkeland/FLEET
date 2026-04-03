@@ -23,10 +23,10 @@ describe('StatusBar', () => {
     expect(screen.getByText('SYS.OK')).toBeInTheDocument()
   })
 
-  it('uses red dot for error status', () => {
+  it('uses error class for error status', () => {
     const { container } = render(<StatusBar title="Test" status="error" />)
     const dot = container.querySelector('[data-role="status-dot"]') as HTMLElement
-    expect(dot.style.background).toBe('var(--neon-red)')
+    expect(dot).toHaveClass('status-bar__dot--error')
   })
 
   it('accepts accent prop for title color', () => {
