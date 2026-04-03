@@ -902,6 +902,32 @@
   border-color: var(--bde-accent);
 }
 
+.prompt-modal__textarea {
+  width: 100%;
+  padding: var(--bde-space-2) var(--bde-space-3);
+  background: var(--bde-bg-elevated);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-md);
+  color: var(--bde-text);
+  font-family: var(--bde-font-ui);
+  font-size: var(--bde-size-md);
+  line-height: 1.5;
+  outline: none;
+  transition: border-color 0.15s ease;
+  resize: vertical;
+  min-height: 120px;
+}
+
+.prompt-modal__textarea:focus {
+  border-color: var(--bde-accent);
+}
+
+.prompt-modal__hint {
+  font-size: var(--bde-size-sm);
+  color: var(--bde-text-muted);
+  font-style: italic;
+}
+
 .prompt-modal__actions {
   display: flex;
   justify-content: flex-end;
