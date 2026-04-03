@@ -107,7 +107,6 @@ Replace with Lucide icons for consistency:
 
 ```tsx
 import { ChevronRight, ChevronDown } from 'lucide-react'
-
 ;<button onClick={() => setField('advancedOpen', !advancedOpen)} className="wb-form__toggle">
   {advancedOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
   More options

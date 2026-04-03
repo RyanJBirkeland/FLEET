@@ -119,19 +119,75 @@ export function SprintPipeline(): React.JSX.Element {
     const emptyBucket: SprintTask[] = []
     switch (statusFilter) {
       case 'backlog':
-        return { ...partition, todo: emptyBucket, blocked: emptyBucket, inProgress: emptyBucket, awaitingReview: emptyBucket, done: emptyBucket, failed: emptyBucket }
+        return {
+          ...partition,
+          todo: emptyBucket,
+          blocked: emptyBucket,
+          inProgress: emptyBucket,
+          awaitingReview: emptyBucket,
+          done: emptyBucket,
+          failed: emptyBucket
+        }
       case 'todo':
-        return { ...partition, backlog: emptyBucket, blocked: emptyBucket, inProgress: emptyBucket, awaitingReview: emptyBucket, done: emptyBucket, failed: emptyBucket }
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          blocked: emptyBucket,
+          inProgress: emptyBucket,
+          awaitingReview: emptyBucket,
+          done: emptyBucket,
+          failed: emptyBucket
+        }
       case 'blocked':
-        return { ...partition, backlog: emptyBucket, todo: emptyBucket, inProgress: emptyBucket, awaitingReview: emptyBucket, done: emptyBucket, failed: emptyBucket }
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          todo: emptyBucket,
+          inProgress: emptyBucket,
+          awaitingReview: emptyBucket,
+          done: emptyBucket,
+          failed: emptyBucket
+        }
       case 'in-progress':
-        return { ...partition, backlog: emptyBucket, todo: emptyBucket, blocked: emptyBucket, awaitingReview: emptyBucket, done: emptyBucket, failed: emptyBucket }
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          todo: emptyBucket,
+          blocked: emptyBucket,
+          awaitingReview: emptyBucket,
+          done: emptyBucket,
+          failed: emptyBucket
+        }
       case 'awaiting-review':
-        return { ...partition, backlog: emptyBucket, todo: emptyBucket, blocked: emptyBucket, inProgress: emptyBucket, done: emptyBucket, failed: emptyBucket }
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          todo: emptyBucket,
+          blocked: emptyBucket,
+          inProgress: emptyBucket,
+          done: emptyBucket,
+          failed: emptyBucket
+        }
       case 'done':
-        return { ...partition, backlog: emptyBucket, todo: emptyBucket, blocked: emptyBucket, inProgress: emptyBucket, awaitingReview: emptyBucket, failed: emptyBucket }
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          todo: emptyBucket,
+          blocked: emptyBucket,
+          inProgress: emptyBucket,
+          awaitingReview: emptyBucket,
+          failed: emptyBucket
+        }
       case 'failed':
-        return { ...partition, backlog: emptyBucket, todo: emptyBucket, blocked: emptyBucket, inProgress: emptyBucket, awaitingReview: emptyBucket, done: emptyBucket }
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          todo: emptyBucket,
+          blocked: emptyBucket,
+          inProgress: emptyBucket,
+          awaitingReview: emptyBucket,
+          done: emptyBucket
+        }
       default:
         return partition
     }

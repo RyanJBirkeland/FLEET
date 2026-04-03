@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { GitBranch, ChevronDown } from 'lucide-react'
 
 // ---------------------------------------------------------------------------
@@ -23,6 +23,7 @@ export function BranchSelector({
   onCheckout
 }: BranchSelectorProps): React.ReactElement {
   const [isOpen, setIsOpen] = useState(false)
+  const dropdownRef = useRef<HTMLDivElement>(null)
 
   const isDisabled = hasUncommittedChanges
 
@@ -39,6 +40,46 @@ export function BranchSelector({
     onCheckout(branch)
     setIsOpen(false)
   }
+
+  // Auto-focus first option when dropdown opens
+  useEffect(() => {
+    if (isOpen && dropdownRef.current) {
+      const firstOption = dropdownRef.current.querySelector<HTMLButtonElement>('[role="option"]')
+      firstOption?.focus()
+    }
+  }, [isOpen])
+
+  // Keyboard navigation for dropdown
+  const handleDropdownKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const dropdown = dropdownRef.current
+    if (!dropdown) return
+    const items = Array.from(dropdown.querySelectorAll<HTMLElement>('[role="option"]'))
+    const currentIndex = items.indexOf(e.target as HTMLElement)
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault()
+        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+        items[next]?.focus()
+        break
+      }
+      case 'ArrowUp': {
+        e.preventDefault()
+        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+        items[prev]?.focus()
+        break
+      }
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        ;(e.target as HTMLElement).click()
+        break
+      case 'Escape':
+        e.preventDefault()
+        setIsOpen(false)
+        break
+    }
+  }, [])
 
   function handleKeyDown(e: React.KeyboardEvent): void {
     if (e.key === 'Escape') setIsOpen(false)
@@ -70,7 +111,13 @@ export function BranchSelector({
         <>
           {/* Backdrop to close on outside click */}
           <div className="git-branch-selector__backdrop" onClick={() => setIsOpen(false)} />
-          <div role="listbox" aria-label="Branches" className="git-branch-selector__dropdown">
+          <div
+            ref={dropdownRef}
+            role="listbox"
+            aria-label="Branches"
+            className="git-branch-selector__dropdown"
+            onKeyDown={handleDropdownKeyDown}
+          >
             {branches.length === 0 ? (
               <div className="git-branch-selector__empty">No branches found</div>
             ) : (
@@ -78,6 +125,7 @@ export function BranchSelector({
                 <button
                   key={branch}
                   role="option"
+                  tabIndex={-1}
                   aria-selected={branch === currentBranch}
                   onClick={() => handleSelect(branch)}
                   className={`git-branch-selector__option ${branch === currentBranch ? 'git-branch-selector__option--current' : ''}`}

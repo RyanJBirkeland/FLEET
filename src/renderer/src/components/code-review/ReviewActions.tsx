@@ -145,9 +145,7 @@ export function ReviewActions(): React.JSX.Element {
           <select
             className="cr-actions__strategy"
             value={mergeStrategy}
-            onChange={(e) =>
-              setMergeStrategy(e.target.value as 'squash' | 'merge' | 'rebase')
-            }
+            onChange={(e) => setMergeStrategy(e.target.value as 'squash' | 'merge' | 'rebase')}
             disabled={!!actionInFlight}
           >
             <option value="squash">Squash</option>

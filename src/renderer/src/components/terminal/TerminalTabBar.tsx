@@ -43,6 +43,7 @@ export function TerminalTabBar({
   const [showRightScroll, setShowRightScroll] = useState(false)
   const tabsContainerRef = useRef<HTMLDivElement>(null)
   const editInputRef = useRef<HTMLInputElement>(null)
+  const contextMenuRef = useRef<HTMLDivElement>(null)
 
   // Check for overflow and show scroll arrows
   const checkOverflow = useCallback(() => {
@@ -84,6 +85,46 @@ export function TerminalTabBar({
     window.addEventListener('click', handleClick)
     return () => window.removeEventListener('click', handleClick)
   }, [contextMenu])
+
+  // Auto-focus first menu item when context menu opens
+  useEffect(() => {
+    if (contextMenu && contextMenuRef.current) {
+      const firstItem = contextMenuRef.current.querySelector<HTMLButtonElement>('[role="menuitem"]')
+      firstItem?.focus()
+    }
+  }, [contextMenu])
+
+  // Keyboard navigation for context menu
+  const handleContextMenuKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const menu = contextMenuRef.current
+    if (!menu) return
+    const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+    const currentIndex = items.indexOf(e.target as HTMLElement)
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault()
+        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+        items[next]?.focus()
+        break
+      }
+      case 'ArrowUp': {
+        e.preventDefault()
+        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+        items[prev]?.focus()
+        break
+      }
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        ;(e.target as HTMLElement).click()
+        break
+      case 'Escape':
+        e.preventDefault()
+        setContextMenu(null)
+        break
+    }
+  }, [])
 
   const handleDoubleClick = (tab: TerminalTab): void => {
     if (!onRenameTab) return
@@ -286,12 +327,18 @@ export function TerminalTabBar({
 
       {contextMenu && (
         <div
+          ref={contextMenuRef}
+          role="menu"
+          aria-label="Tab actions"
           className="terminal-tab-bar__context-menu"
           style={{ left: contextMenu.x, top: contextMenu.y }}
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={handleContextMenuKeyDown}
         >
           {onRenameTab && (
             <button
+              role="menuitem"
+              tabIndex={-1}
               className="terminal-tab-bar__context-menu-item"
               onClick={() => {
                 const tab = tabs.find((t) => t.id === contextMenu.tabId)
@@ -304,6 +351,8 @@ export function TerminalTabBar({
           )}
           {onDuplicateTab && (
             <button
+              role="menuitem"
+              tabIndex={-1}
               className="terminal-tab-bar__context-menu-item"
               onClick={() => {
                 onDuplicateTab(contextMenu.tabId)
@@ -315,6 +364,8 @@ export function TerminalTabBar({
           )}
           {onCloseOthers && tabs.length > 1 && (
             <button
+              role="menuitem"
+              tabIndex={-1}
               className="terminal-tab-bar__context-menu-item"
               onClick={() => {
                 onCloseOthers(contextMenu.tabId)
@@ -326,6 +377,8 @@ export function TerminalTabBar({
           )}
           {onCloseAll && tabs.length > 1 && (
             <button
+              role="menuitem"
+              tabIndex={-1}
               className="terminal-tab-bar__context-menu-item"
               onClick={() => {
                 onCloseAll()

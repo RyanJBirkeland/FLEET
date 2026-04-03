@@ -12,11 +12,7 @@ interface UseRovingTabIndexParams {
   onSelect: (index: number) => void
 }
 
-export function useRovingTabIndex({
-  count,
-  activeIndex,
-  onSelect
-}: UseRovingTabIndexParams): {
+export function useRovingTabIndex({ count, activeIndex, onSelect }: UseRovingTabIndexParams): {
   getTabProps: (index: number) => {
     tabIndex: number
     onKeyDown: (e: React.KeyboardEvent) => void
