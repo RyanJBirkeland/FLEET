@@ -31,30 +31,28 @@ import {
   Plus,
   Clock,
   TrendingUp,
-  Target
+  Target,
+  Eye
 } from 'lucide-react'
 
 export default function DashboardView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const tasks = useSprintTasks((s) => s.tasks)
-  const totalCost = useCostDataStore((s) => s.totalCost)
   const localAgents = useCostDataStore((s) => s.localAgents)
   const setStatusFilter = useSprintUI((s) => s.setStatusFilter)
   const setSearchQuery = useSprintUI((s) => s.setSearchQuery)
   const setView = usePanelLayoutStore((s) => s.setView)
 
   // Dashboard data from centralized polling
-  const { chartData, feedEvents, prCount, loading, cardErrors, lastFetchedAt } =
-    useDashboardDataStore(
-      useShallow((s) => ({
-        chartData: s.chartData,
-        feedEvents: s.feedEvents,
-        prCount: s.prCount,
-        loading: s.loading,
-        cardErrors: s.cardErrors,
-        lastFetchedAt: s.lastFetchedAt
-      }))
-    )
+  const { chartData, feedEvents, loading, cardErrors, lastFetchedAt } = useDashboardDataStore(
+    useShallow((s) => ({
+      chartData: s.chartData,
+      feedEvents: s.feedEvents,
+      loading: s.loading,
+      cardErrors: s.cardErrors,
+      lastFetchedAt: s.lastFetchedAt
+    }))
+  )
 
   // Timestamp counter to re-evaluate freshness every 10s
   const [now, setNow] = useState(() => Date.now())
@@ -98,7 +96,7 @@ export default function DashboardView(): React.JSX.Element {
   const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
   // Dashboard metrics — extracted to reusable hook
-  const { stats, successRate, avgDuration, costTrendData, costAvg, recentCompletions } =
+  const { stats, successRate, avgDuration, costTrendData, costAvg, recentCompletions, cost24h } =
     useDashboardMetrics()
 
   const errorCount = useMemo(() => Object.values(cardErrors).filter(Boolean).length, [cardErrors])
@@ -193,9 +191,16 @@ export default function DashboardView(): React.JSX.Element {
                 onClick={() => navigateToSprintWithFilter('failed')}
               />
               <StatCounter
+                label="Review"
+                value={stats.review}
+                accent="blue"
+                icon={<Eye size={10} />}
+                onClick={() => navigateToSprintWithFilter('awaiting-review')}
+              />
+              <StatCounter
                 label="PRs"
-                value={cardErrors.prs ? '—' : prCount}
-                accent={cardErrors.prs ? 'red' : 'blue'}
+                value={partitions.awaitingReview.length}
+                accent="blue"
                 icon={<GitPullRequest size={10} />}
                 onClick={() => navigateToSprintWithFilter('awaiting-review')}
               />
@@ -376,7 +381,7 @@ export default function DashboardView(): React.JSX.Element {
               </NeonCard>
 
               <NeonCard accent="orange" title="Cost 24h" icon={<DollarSign size={12} />}>
-                <div className="dashboard-cost-value">${totalCost.toFixed(2)}</div>
+                <div className="dashboard-cost-value">${cost24h.toFixed(2)}</div>
               </NeonCard>
             </div>
           </div>

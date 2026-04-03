@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { useCostDataStore } from '../stores/costData'
 import type { ChartBar } from '../components/neon'
@@ -8,6 +8,7 @@ interface DashboardStats {
   active: number
   queued: number
   blocked: number
+  review: number
   done: number
   failed: number
   actualFailed: number
@@ -20,6 +21,7 @@ interface DashboardMetrics {
   costTrendData: ChartBar[]
   costAvg: string | null
   recentCompletions: SprintTask[]
+  cost24h: number
 }
 
 /** Truncate a string to maxLen characters, adding ellipsis if needed. */
@@ -35,13 +37,21 @@ export function useDashboardMetrics(): DashboardMetrics {
   const tasks = useSprintTasks((s) => s.tasks)
   const localAgents = useCostDataStore((s) => s.localAgents)
 
+  // Track current time for 24h cost calculation (updates every 60s)
+  const [now, setNow] = useState(() => Date.now())
+  useEffect(() => {
+    const interval = setInterval(() => setNow(Date.now()), 60_000)
+    return () => clearInterval(interval)
+  }, [])
+
   // Derived stats (single-pass)
   const stats = useMemo((): DashboardStats => {
-    const counts = { active: 0, queued: 0, blocked: 0, done: 0, failed: 0, actualFailed: 0 }
+    const counts = { active: 0, queued: 0, blocked: 0, review: 0, done: 0, failed: 0, actualFailed: 0 }
     for (const t of tasks) {
       if (t.status === 'active') counts.active++
       else if (t.status === 'queued') counts.queued++
       else if (t.status === 'blocked') counts.blocked++
+      else if (t.status === 'review') counts.review++
       else if (t.status === 'done') counts.done++
       else if (t.status === 'failed' || t.status === 'error' || t.status === 'cancelled') {
         counts.failed++
@@ -92,12 +102,21 @@ export function useDashboardMetrics(): DashboardMetrics {
       .slice(0, 5)
   }, [tasks])
 
+  // Cost 24h — sum cost of agent runs started within last 24 hours
+  const cost24h = useMemo(() => {
+    const cutoff = now - 24 * 60 * 60 * 1000
+    return localAgents
+      .filter((a) => new Date(a.startedAt).getTime() >= cutoff)
+      .reduce((sum, a) => sum + (a.costUsd ?? 0), 0)
+  }, [localAgents, now])
+
   return {
     stats,
     successRate,
     avgDuration,
     costTrendData,
     costAvg,
-    recentCompletions
+    recentCompletions,
+    cost24h
   }
 }

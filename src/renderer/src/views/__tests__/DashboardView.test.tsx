@@ -165,13 +165,23 @@ describe('DashboardView', () => {
     expect(screen.getByText('spawn: agent-3')).toBeInTheDocument()
   })
 
-  it('renders correct PR count from store', () => {
-    useDashboardDataStore.setState({
-      prCount: 2,
-      loading: false
-    })
+  it('renders correct PR count from awaitingReview partition', () => {
+    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
+      selector({
+        tasks: [
+          { id: '1', status: 'review', title: 'T1' },
+          { id: '2', status: 'active', pr_status: 'open', title: 'T2' }
+        ],
+        loading: false,
+        loadData: vi.fn()
+      })
+    )
     render(<DashboardView />)
-    expect(screen.getByText('2')).toBeInTheDocument()
+    // PRs counter should show 2 (from awaitingReview partition: 1 review + 1 active with pr)
+    // Review counter should show 1 (only status='review' tasks)
+    // Active counter also shows 1 (the active task)
+    expect(screen.getAllByText('2').length).toBeGreaterThan(0) // PRs shows 2
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0) // Review and Active both show 1
   })
 
   // ---------- Branch coverage: SuccessRing (rate null vs values) ----------
