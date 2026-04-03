@@ -67,7 +67,8 @@ export const UPDATE_ALLOWLIST = new Set([
   'needs_review',
   'max_runtime_ms',
   'spec_type',
-  'worktree_path'
+  'worktree_path',
+  'session_id'
 ])
 
 export interface QueueStats {
