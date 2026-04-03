@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Pin, Settings } from 'lucide-react'
 import { GlassPanel } from '../neon/GlassPanel'
@@ -21,6 +21,7 @@ export function OverflowMenu({
   onClose
 }: OverflowMenuProps): React.JSX.Element | null {
   const menuRef = useRef<HTMLDivElement>(null)
+  const [focusedIndex, setFocusedIndex] = useState(0)
 
   // Handle click outside
   useEffect(() => {
@@ -41,17 +42,35 @@ export function OverflowMenu({
     }
   }, [onClose])
 
-  // Handle Escape key
+  // Handle Escape key and arrow navigation
   useEffect(() => {
-    const handleEscape = (e: KeyboardEvent): void => {
+    const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
         onClose()
+        return
+      }
+
+      const itemCount = unpinnedViews.length
+      if (itemCount === 0) return
+
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        setFocusedIndex((prev) => (prev + 1) % itemCount)
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        setFocusedIndex((prev) => (prev === 0 ? itemCount - 1 : prev - 1))
       }
     }
 
-    document.addEventListener('keydown', handleEscape)
-    return () => document.removeEventListener('keydown', handleEscape)
-  }, [onClose])
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, unpinnedViews.length])
+
+  // Move focus when focusedIndex changes (including initial mount)
+  useEffect(() => {
+    const items = menuRef.current?.querySelectorAll<HTMLElement>('[role="menuitem"]')
+    items?.[focusedIndex]?.focus()
+  }, [focusedIndex])
 
   if (!anchorRect) return null
 
@@ -92,8 +111,8 @@ export function OverflowMenu({
             All views are pinned
           </div>
         ) : (
-          <div>
-            {unpinnedViews.map((view) => {
+          <div role="menu">
+            {unpinnedViews.map((view, index) => {
               const Icon = VIEW_ICONS[view]
               const label = VIEW_LABELS[view]
 
@@ -102,6 +121,14 @@ export function OverflowMenu({
                   key={view}
                   className="overflow-menu__item"
                   onClick={() => handleItemClick(view)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleItemClick(view)
+                    }
+                  }}
+                  role="menuitem"
+                  tabIndex={index === focusedIndex ? 0 : -1}
                 >
                   <Icon size={14} strokeWidth={1.5} />
                   <span>{label}</span>
@@ -110,6 +137,7 @@ export function OverflowMenu({
                     onClick={(e) => handlePinClick(e, view)}
                     aria-label={`Pin ${label} to sidebar`}
                     title="Pin to sidebar"
+                    type="button"
                   >
                     <Pin size={12} />
                   </button>
