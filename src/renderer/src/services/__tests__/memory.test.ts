@@ -5,7 +5,7 @@ describe('memory service', () => {
   beforeEach(() => {
     // window.api is mocked globally via vitest setup
     vi.mocked(window.api.listMemoryFiles).mockResolvedValue([
-      { path: '/mem/note.md', name: 'note.md', size: 128, modifiedAt: 1710000000000 }
+      { path: '/mem/note.md', name: 'note.md', size: 128, modifiedAt: 1710000000000, active: true }
     ])
     vi.mocked(window.api.readMemoryFile).mockResolvedValue('# Note content')
     vi.mocked(window.api.writeMemoryFile).mockResolvedValue(undefined)

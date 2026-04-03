@@ -67,6 +67,10 @@ vi.mock('node:fs/promises', async () => {
   }
 })
 
+vi.mock('../../agent-system/memory/user-memory', () => ({
+  getUserMemory: vi.fn(() => ({ content: '', totalBytes: 0, fileCount: 0 }))
+}))
+
 // Mock env-utils refresh functions used by checkOAuthToken
 vi.mock('../../env-utils', () => ({
   refreshOAuthTokenFromKeychain: vi.fn().mockResolvedValue(false),

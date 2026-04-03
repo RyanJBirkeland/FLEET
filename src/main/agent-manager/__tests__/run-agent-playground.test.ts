@@ -48,6 +48,10 @@ vi.mock('../../agent-event-mapper', () => ({
   emitAgentEvent: vi.fn()
 }))
 
+vi.mock('../../agent-system/memory/user-memory', () => ({
+  getUserMemory: vi.fn(() => ({ content: '', totalBytes: 0, fileCount: 0 }))
+}))
+
 // ---------------------------------------------------------------------------
 // Pure helper tests
 // ---------------------------------------------------------------------------

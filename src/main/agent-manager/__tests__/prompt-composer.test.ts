@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { buildAgentPrompt, type AgentType } from '../prompt-composer'
+
+// Mock getUserMemory — default returns no files
+vi.mock('../../agent-system/memory/user-memory', () => ({
+  getUserMemory: vi.fn(() => ({ content: '', totalBytes: 0, fileCount: 0 }))
+}))
+
+// Re-import to get the mocked version for test manipulation
+import { getUserMemory } from '../../agent-system/memory/user-memory'
+const mockGetUserMemory = vi.mocked(getUserMemory)
 
 describe('buildAgentPrompt', () => {
   describe('universal preamble', () => {
@@ -263,6 +272,50 @@ describe('buildAgentPrompt', () => {
       buildAgentPrompt(input)
 
       expect(input).toEqual(inputCopy)
+    })
+  })
+
+  describe('user memory injection', () => {
+    it('includes User Knowledge section when getUserMemory returns files', () => {
+      mockGetUserMemory.mockReturnValueOnce({
+        content: '### notes.md\n\nAlways use camelCase for variables.',
+        totalBytes: 42,
+        fileCount: 1
+      })
+
+      const prompt = buildAgentPrompt({ agentType: 'pipeline' })
+
+      expect(prompt).toContain('## User Knowledge')
+      expect(prompt).toContain('### notes.md')
+      expect(prompt).toContain('Always use camelCase for variables.')
+    })
+
+    it('does not include User Knowledge section when getUserMemory returns 0 files', () => {
+      mockGetUserMemory.mockReturnValueOnce({
+        content: '',
+        totalBytes: 0,
+        fileCount: 0
+      })
+
+      const prompt = buildAgentPrompt({ agentType: 'pipeline' })
+
+      expect(prompt).not.toContain('## User Knowledge')
+    })
+
+    it('injects user memory for all agent types', () => {
+      const types: AgentType[] = ['pipeline', 'assistant', 'adhoc', 'copilot', 'synthesizer']
+
+      for (const agentType of types) {
+        mockGetUserMemory.mockReturnValueOnce({
+          content: '### test.md\n\nTest content',
+          totalBytes: 20,
+          fileCount: 1
+        })
+
+        const prompt = buildAgentPrompt({ agentType })
+        expect(prompt).toContain('## User Knowledge')
+        expect(prompt).toContain('### test.md')
+      }
     })
   })
 
