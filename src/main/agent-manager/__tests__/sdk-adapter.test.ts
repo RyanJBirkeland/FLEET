@@ -14,6 +14,15 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => {
   throw new Error('SDK not available')
 })
 
+// Mock env-utils so getOAuthToken returns a token on CI
+vi.mock('../../env-utils', () => ({
+  getOAuthToken: vi.fn().mockReturnValue('test-oauth-token'),
+  buildAgentEnv: vi.fn().mockReturnValue({ PATH: '/usr/bin', HOME: '/home/test' }),
+  buildAgentEnvWithAuth: vi.fn().mockReturnValue({ PATH: '/usr/bin', HOME: '/home/test', ANTHROPIC_API_KEY: 'test-oauth-token' }),
+  invalidateOAuthToken: vi.fn(),
+  refreshOAuthTokenFromKeychain: vi.fn().mockResolvedValue(false)
+}))
+
 import { spawnAgent } from '../sdk-adapter'
 import { spawn } from 'node:child_process'
 

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, act } from '@testing-library/react'
 
 // All vi.mock calls are hoisted — cannot reference variables declared outside them.
@@ -104,6 +104,8 @@ vi.mock('../../../design-system/tokens', () => ({
 
 import { TerminalPane, clearTerminal, getSearchAddon } from '../TerminalPane'
 
+let originalApi: typeof window.api
+
 beforeEach(() => {
   vi.clearAllMocks()
   vi.spyOn(window, 'requestAnimationFrame').mockImplementation(function (cb) {
@@ -111,7 +113,10 @@ beforeEach(() => {
     return 0
   })
 
+  // Save original and mock only terminal methods
+  originalApi = window.api
   window.api = {
+    ...window.api,
     terminal: {
       create: vi.fn().mockResolvedValue('pty-1'),
       write: vi.fn(),
@@ -120,13 +125,17 @@ beforeEach(() => {
       onData: vi.fn(() => vi.fn()),
       onExit: vi.fn()
     }
-  } as unknown as typeof window.api
+  }
 
   global.ResizeObserver = class {
     observe = vi.fn()
     unobserve = vi.fn()
     disconnect = vi.fn()
   } as unknown as typeof ResizeObserver
+})
+
+afterEach(() => {
+  window.api = originalApi
 })
 
 describe('TerminalPane', () => {

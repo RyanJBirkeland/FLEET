@@ -1,28 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-
-// Mock window.api before importing store
-const mockCompletionsPerHour = vi.fn()
-const mockRecentEvents = vi.fn()
-const mockGetPrList = vi.fn()
-
-Object.defineProperty(window, 'api', {
-  value: {
-    getPrList: mockGetPrList,
-    dashboard: {
-      completionsPerHour: mockCompletionsPerHour,
-      recentEvents: mockRecentEvents
-    }
-  },
-  writable: true,
-  configurable: true
-})
-
-// Import AFTER mocks are set up
 import { useDashboardDataStore } from '../dashboardData'
 
 describe('dashboardDataStore', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Reset mocks to default values
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([])
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
+
     // Reset store to initial state
     useDashboardDataStore.setState({
       chartData: [],
@@ -43,15 +29,15 @@ describe('dashboardDataStore', () => {
   })
 
   it('fetchAll populates all fields on success', async () => {
-    mockCompletionsPerHour.mockResolvedValue([
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([
       { hour: '10:00', count: 5 },
       { hour: '11:00', count: 3 }
     ])
-    mockRecentEvents.mockResolvedValue([
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([
       { id: 1, agent_id: 'a1', event_type: 'complete', payload: '{}', timestamp: 1000 },
       { id: 2, agent_id: 'a2', event_type: 'error', payload: '{}', timestamp: 2000 }
     ])
-    mockGetPrList.mockResolvedValue({ prs: [{ number: 1 }, { number: 2 }, { number: 3 }] })
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [{ number: 1 }, { number: 2 }, { number: 3 }] })
 
     await useDashboardDataStore.getState().fetchAll()
 
@@ -78,9 +64,9 @@ describe('dashboardDataStore', () => {
   })
 
   it('fetchAll sets cardErrors on partial failure', async () => {
-    mockCompletionsPerHour.mockRejectedValue(new Error('network'))
-    mockRecentEvents.mockResolvedValue([])
-    mockGetPrList.mockResolvedValue({ prs: [] })
+    ;(window.api.dashboard.completionsPerHour as any).mockRejectedValue(new Error('network'))
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
 
     await useDashboardDataStore.getState().fetchAll()
 
@@ -94,17 +80,17 @@ describe('dashboardDataStore', () => {
 
   it('fetchAll clears previous errors on success', async () => {
     // First call: set errors
-    mockCompletionsPerHour.mockRejectedValue(new Error('fail'))
-    mockRecentEvents.mockRejectedValue(new Error('fail'))
-    mockGetPrList.mockRejectedValue(new Error('fail'))
+    ;(window.api.dashboard.completionsPerHour as any).mockRejectedValue(new Error('fail'))
+    ;(window.api.dashboard.recentEvents as any).mockRejectedValue(new Error('fail'))
+    ;(window.api.getPrList as any).mockRejectedValue(new Error('fail'))
 
     await useDashboardDataStore.getState().fetchAll()
     expect(Object.keys(useDashboardDataStore.getState().cardErrors).length).toBeGreaterThan(0)
 
     // Second call: all succeed
-    mockCompletionsPerHour.mockResolvedValue([])
-    mockRecentEvents.mockResolvedValue([])
-    mockGetPrList.mockResolvedValue({ prs: [] })
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([])
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
 
     await useDashboardDataStore.getState().fetchAll()
 
@@ -113,9 +99,9 @@ describe('dashboardDataStore', () => {
   })
 
   it('fetchAll sets loading false after completion', async () => {
-    mockCompletionsPerHour.mockResolvedValue([])
-    mockRecentEvents.mockResolvedValue([])
-    mockGetPrList.mockResolvedValue({ prs: [] })
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([])
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
 
     expect(useDashboardDataStore.getState().loading).toBe(true)
 
@@ -125,9 +111,9 @@ describe('dashboardDataStore', () => {
   })
 
   it('fetchAll handles null/undefined API responses gracefully', async () => {
-    mockCompletionsPerHour.mockResolvedValue(null)
-    mockRecentEvents.mockResolvedValue(null)
-    mockGetPrList.mockResolvedValue(null)
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue(null)
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue(null)
+    ;(window.api.getPrList as any).mockResolvedValue(null)
 
     await useDashboardDataStore.getState().fetchAll()
 
@@ -140,9 +126,9 @@ describe('dashboardDataStore', () => {
 
   it('fetchAll maps accent cycle correctly for many data points', async () => {
     const data = Array.from({ length: 7 }, (_, i) => ({ hour: `${i}:00`, count: i + 1 }))
-    mockCompletionsPerHour.mockResolvedValue(data)
-    mockRecentEvents.mockResolvedValue([])
-    mockGetPrList.mockResolvedValue({ prs: [] })
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue(data)
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
 
     await useDashboardDataStore.getState().fetchAll()
 
@@ -152,11 +138,11 @@ describe('dashboardDataStore', () => {
   })
 
   it('fetchAll maps unknown event types to purple accent', async () => {
-    mockCompletionsPerHour.mockResolvedValue([])
-    mockRecentEvents.mockResolvedValue([
+    ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([])
+    ;(window.api.dashboard.recentEvents as any).mockResolvedValue([
       { id: 10, agent_id: 'x', event_type: 'unknown_type', payload: '{}', timestamp: 500 }
     ])
-    mockGetPrList.mockResolvedValue({ prs: [] })
+    ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
 
     await useDashboardDataStore.getState().fetchAll()
 

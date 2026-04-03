@@ -123,7 +123,8 @@ vi.stubGlobal('api', {
       avgCostPerTask: null,
       mostExpensiveTask: null
     }),
-    agentRuns: vi.fn().mockResolvedValue([])
+    agentRuns: vi.fn().mockResolvedValue([]),
+    getAgentHistory: vi.fn().mockResolvedValue([])
   },
   settings: {
     get: vi.fn().mockResolvedValue(null),

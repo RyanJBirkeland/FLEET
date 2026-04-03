@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { AgentCard } from '../AgentCard'
@@ -41,11 +41,20 @@ describe('AgentCard', () => {
     onClick: vi.fn()
   }
 
+  let originalApi: typeof window.api
+
   beforeEach(() => {
     vi.clearAllMocks()
+    // Save original and mock only killAgent
+    originalApi = window.api
     window.api = {
+      ...window.api,
       killAgent: vi.fn().mockResolvedValue({ ok: true })
-    } as any
+    }
+  })
+
+  afterEach(() => {
+    window.api = originalApi
   })
 
   it('renders agent task name', () => {
