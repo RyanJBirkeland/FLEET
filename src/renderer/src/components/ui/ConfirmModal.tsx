@@ -3,7 +3,7 @@
  * Renders a modal overlay with a message, confirm, and cancel buttons.
  * Supports keyboard: Enter to confirm, Escape to cancel.
  */
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useId } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './Button'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
@@ -33,6 +33,8 @@ export function ConfirmModal({
   const reduced = useReducedMotion()
   const confirmRef = useRef<HTMLButtonElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
+  const messageId = useId()
   useFocusTrap(dialogRef, open)
 
   useEffect(() => {
@@ -69,15 +71,15 @@ export function ConfirmModal({
             onKeyDown={handleKeyDown}
             role="alertdialog"
             aria-modal="true"
-            aria-labelledby={title ? 'confirm-modal-title' : undefined}
-            aria-describedby="confirm-modal-message"
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={messageId}
           >
             {title && (
-              <div className="confirm-modal__title" id="confirm-modal-title">
+              <div className="confirm-modal__title" id={titleId}>
                 {title}
               </div>
             )}
-            <div className="confirm-modal__message" id="confirm-modal-message">
+            <div className="confirm-modal__message" id={messageId}>
               {message}
             </div>
             <div className="confirm-modal__actions">

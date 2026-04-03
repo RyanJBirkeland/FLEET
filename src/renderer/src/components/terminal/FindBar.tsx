@@ -109,13 +109,24 @@ export function FindBar(): React.JSX.Element | null {
         className="terminal-find__btn"
         onClick={findPrevious}
         title="Previous match (Shift+Enter)"
+        aria-label="Previous match"
       >
         <ChevronUp size={14} />
       </button>
-      <button className="terminal-find__btn" onClick={findNext} title="Next match (Enter)">
+      <button
+        className="terminal-find__btn"
+        onClick={findNext}
+        title="Next match (Enter)"
+        aria-label="Next match"
+      >
         <ChevronDown size={14} />
       </button>
-      <button className="terminal-find__btn" onClick={close} title="Close (Escape)">
+      <button
+        className="terminal-find__btn"
+        onClick={close}
+        title="Close (Escape)"
+        aria-label="Close find"
+      >
         <X size={14} />
       </button>
     </div>

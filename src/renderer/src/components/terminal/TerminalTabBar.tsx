@@ -199,6 +199,7 @@ export function TerminalTabBar({
           <button
             className="terminal-tab-bar__scroll terminal-tab-bar__scroll--left"
             onClick={() => scrollTabs('left')}
+            aria-label="Scroll tabs left"
           >
             <ChevronLeft size={16} />
           </button>
@@ -259,6 +260,7 @@ export function TerminalTabBar({
                       e.stopPropagation()
                       onCloseTab(tab.id)
                     }}
+                    aria-label="Close tab"
                   >
                     <X size={10} />
                   </button>
@@ -272,6 +274,7 @@ export function TerminalTabBar({
           <button
             className="terminal-tab-bar__scroll terminal-tab-bar__scroll--right"
             onClick={() => scrollTabs('right')}
+            aria-label="Scroll tabs right"
           >
             <ChevronRight size={16} />
           </button>
@@ -283,6 +286,7 @@ export function TerminalTabBar({
               className="terminal-tab-bar__btn terminal-tab-bar__btn--add"
               onClick={() => onAddTab()}
               title="New terminal (⌘T)"
+              aria-label="New terminal"
             >
               <Plus size={16} />
             </button>
@@ -290,6 +294,7 @@ export function TerminalTabBar({
               className="terminal-tab-bar__btn terminal-tab-bar__btn--shell"
               onClick={() => setShowShellPicker(!showShellPicker)}
               title="Choose shell"
+              aria-label="Choose shell"
             >
               <ChevronDown size={12} />
             </button>
@@ -309,6 +314,7 @@ export function TerminalTabBar({
               className="terminal-tab-bar__btn terminal-tab-bar__btn--agent"
               onClick={() => setShowAgentPicker(!showAgentPicker)}
               title="Watch agent output"
+              aria-label="Watch agent output"
             >
               <Bot size={16} />
             </button>

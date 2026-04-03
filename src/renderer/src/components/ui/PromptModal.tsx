@@ -3,7 +3,7 @@
  * Renders a modal overlay with a message, text input, confirm, and cancel buttons.
  * Supports keyboard: Enter to confirm, Escape to cancel.
  */
-import { useEffect, useRef, useCallback, useState } from 'react'
+import { useEffect, useRef, useCallback, useState, useId } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Button } from './Button'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
@@ -37,6 +37,8 @@ export function PromptModal({
   const inputRef = useRef<HTMLInputElement>(null)
   const dialogRef = useRef<HTMLDivElement>(null)
   const valueRef = useRef(value)
+  const titleId = useId()
+  const messageId = useId()
   // eslint-disable-next-line react-hooks/refs -- sync ref for escape key handler
   valueRef.current = value
   useFocusTrap(dialogRef, open)
@@ -91,15 +93,15 @@ export function PromptModal({
             onKeyDown={handleKeyDown}
             role="dialog"
             aria-modal="true"
-            aria-labelledby={title ? 'prompt-modal-title' : undefined}
-            aria-describedby="prompt-modal-message"
+            aria-labelledby={title ? titleId : undefined}
+            aria-describedby={messageId}
           >
             {title && (
-              <div className="prompt-modal__title" id="prompt-modal-title">
+              <div className="prompt-modal__title" id={titleId}>
                 {title}
               </div>
             )}
-            <div className="prompt-modal__message" id="prompt-modal-message">
+            <div className="prompt-modal__message" id={messageId}>
               {message}
             </div>
             <input

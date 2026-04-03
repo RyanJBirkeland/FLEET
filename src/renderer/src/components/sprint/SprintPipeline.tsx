@@ -2,7 +2,7 @@
  * SprintPipeline — Three-zone neon pipeline layout:
  * Left: PipelineBacklog | Center: Pipeline stages | Right: TaskDetailDrawer (conditional)
  */
-import { useEffect, useCallback, useMemo } from 'react'
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { motion, LayoutGroup } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
@@ -98,6 +98,8 @@ export function SprintPipeline(): React.JSX.Element {
   const { visibleStuckTasks, dismissTask } = useVisibleStuckTasks()
 
   // --- Local UI state ---
+  const [statusAnnouncement, setStatusAnnouncement] = useState('')
+  const prevTasksRef = useRef<Map<string, string>>(new Map())
 
   // Filter + partition tasks
   const filteredTasks = useMemo(() => {
@@ -251,6 +253,41 @@ export function SprintPipeline(): React.JSX.Element {
     }
   }, [tasks, selectedTaskId, partition, setSelectedTaskId])
 
+  // Track status changes for aria-live announcements
+  useEffect(() => {
+    const prev = prevTasksRef.current
+    const current = new Map(tasks.map((t) => [t.id, t.status]))
+
+    // Find changed status
+    for (const [id, status] of current) {
+      const prevStatus = prev.get(id)
+      if (prevStatus && prevStatus !== status) {
+        const task = tasks.find((t) => t.id === id)
+        if (task) {
+          const statusLabel =
+            status === 'queued'
+              ? 'queued'
+              : status === 'active'
+                ? 'active'
+                : status === 'blocked'
+                  ? 'blocked'
+                  : status === 'review'
+                    ? 'review'
+                    : status === 'done'
+                      ? 'done'
+                      : status
+          // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: announcing external state changes for a11y
+          setStatusAnnouncement(`Task "${task.title}" moved to ${statusLabel}`)
+          // Clear after 5 seconds to avoid stale announcements
+          setTimeout(() => setStatusAnnouncement(''), 5000)
+          break // Only announce one change per update
+        }
+      }
+    }
+
+    prevTasksRef.current = current
+  }, [tasks])
+
   // --- Callbacks ---
   const handleTaskClick = useCallback(
     (id: string) => {
@@ -318,6 +355,21 @@ export function SprintPipeline(): React.JSX.Element {
       animate="animate"
       transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
     >
+      {/* Visually hidden live region for status announcements */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+        style={{
+          position: 'absolute',
+          left: '-10000px',
+          width: '1px',
+          height: '1px',
+          overflow: 'hidden'
+        }}
+      >
+        {statusAnnouncement}
+      </div>
       <header className="sprint-pipeline__header">
         <h1 className="sprint-pipeline__title">Task Pipeline</h1>
         <div className="sprint-pipeline__stats">

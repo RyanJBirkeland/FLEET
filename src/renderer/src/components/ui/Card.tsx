@@ -25,8 +25,21 @@ export function Card({
     .filter(Boolean)
     .join(' ')
 
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (onClick && (e.key === 'Enter' || e.key === ' ')) {
+      e.preventDefault()
+      onClick()
+    }
+  }
+
   return (
-    <div className={classes} onClick={onClick}>
+    <div
+      className={classes}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? handleKeyDown : undefined}
+    >
       {children}
     </div>
   )

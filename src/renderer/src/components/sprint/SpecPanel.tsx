@@ -104,7 +104,7 @@ export function SpecPanel({ taskTitle, spec, onClose, onSave }: SpecPanelProps):
         >
           <div className="spec-panel__header">
             <div className="spec-panel__title">Spec — {taskTitle}</div>
-            <button className="spec-panel__close" onClick={onClose}>
+            <button className="spec-panel__close" onClick={onClose} aria-label="Close spec panel">
               ×
             </button>
           </div>
