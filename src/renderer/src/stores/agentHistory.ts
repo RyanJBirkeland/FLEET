@@ -3,6 +3,17 @@ import type { AgentMeta } from '../../../shared/types'
 import { createLogPollerActions, type LogPollerState } from '../lib/logPoller'
 import { AGENT_LIST_FETCH_LIMIT } from '../lib/constants'
 
+/**
+ * Agent runtime monitoring store for Agents view and log streaming.
+ *
+ * NOTE: This store queries agent_runs table similarly to costData store,
+ * but serves a DIFFERENT purpose. This is intentional separation of concerns:
+ * - agentHistory: runtime metadata (status, logPath, pid, bin, source) for agent list/logs
+ * - costData: cost tracking fields (durationMs, numTurns, cache stats) for Dashboard
+ *
+ * Only 8 fields overlap (id, model, timestamps, tokens). Consolidating would
+ * mix unrelated concerns and complicate the interface.
+ */
 interface AgentHistoryState extends LogPollerState {
   agents: AgentMeta[]
   selectedId: string | null
