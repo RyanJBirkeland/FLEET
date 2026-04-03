@@ -3,8 +3,9 @@
  * Split view: sandboxed iframe (preview) + syntax-highlighted source code.
  * Supports Split, Preview-only, and Source-only view modes.
  */
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { X, Columns, Eye, Code, ExternalLink } from 'lucide-react'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 
 type ViewMode = 'split' | 'preview' | 'source'
 
@@ -116,6 +117,10 @@ export function PlaygroundModal({
   onClose
 }: PlaygroundModalProps): React.JSX.Element {
   const [viewMode, setViewMode] = useState<ViewMode>('split')
+  const modalRef = useRef<HTMLDivElement>(null)
+
+  // Trap focus inside modal
+  useFocusTrap(modalRef, true)
 
   // Escape to close
   const handleKeyDown = useCallback(
@@ -159,7 +164,7 @@ export function PlaygroundModal({
       }}
       data-testid="playground-modal-overlay"
     >
-      <div className="playground-modal" data-testid="playground-modal">
+      <div ref={modalRef} className="playground-modal" data-testid="playground-modal">
         {/* Toolbar */}
         <div className="playground-modal__toolbar">
           {/* Filename + size */}

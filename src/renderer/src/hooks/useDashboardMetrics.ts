@@ -46,7 +46,15 @@ export function useDashboardMetrics(): DashboardMetrics {
 
   // Derived stats (single-pass)
   const stats = useMemo((): DashboardStats => {
-    const counts = { active: 0, queued: 0, blocked: 0, review: 0, done: 0, failed: 0, actualFailed: 0 }
+    const counts = {
+      active: 0,
+      queued: 0,
+      blocked: 0,
+      review: 0,
+      done: 0,
+      failed: 0,
+      actualFailed: 0
+    }
     for (const t of tasks) {
       if (t.status === 'active') counts.active++
       else if (t.status === 'queued') counts.queued++

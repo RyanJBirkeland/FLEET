@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
 import {
   Bell,
   CheckCircle2,
@@ -35,6 +35,7 @@ export function NotificationBell(): React.JSX.Element {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const listRef = useRef<HTMLDivElement>(null)
 
   const notifications = useNotificationsStore((s) => s.notifications)
   const markAsRead = useNotificationsStore((s) => s.markAsRead)
@@ -62,6 +63,47 @@ export function NotificationBell(): React.JSX.Element {
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [isOpen])
+
+  // Auto-focus first notification when dropdown opens
+  useEffect(() => {
+    if (isOpen && listRef.current && notifications.length > 0) {
+      const firstItem = listRef.current.querySelector<HTMLButtonElement>('[role="menuitem"]')
+      firstItem?.focus()
+    }
+  }, [isOpen, notifications.length])
+
+  // Keyboard navigation for dropdown
+  const handleListKeyDown = useCallback((e: React.KeyboardEvent) => {
+    const list = listRef.current
+    if (!list) return
+    const items = Array.from(list.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+    const currentIndex = items.indexOf(e.target as HTMLElement)
+
+    switch (e.key) {
+      case 'ArrowDown': {
+        e.preventDefault()
+        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+        items[next]?.focus()
+        break
+      }
+      case 'ArrowUp': {
+        e.preventDefault()
+        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+        items[prev]?.focus()
+        break
+      }
+      case 'Enter':
+      case ' ':
+        e.preventDefault()
+        ;(e.target as HTMLElement).click()
+        break
+      case 'Escape':
+        e.preventDefault()
+        setIsOpen(false)
+        buttonRef.current?.focus()
+        break
+    }
+  }, [])
 
   const handleNotificationClick = (id: string, viewLink?: string): void => {
     markAsRead(id)
@@ -119,7 +161,13 @@ export function NotificationBell(): React.JSX.Element {
             )}
           </div>
 
-          <div className="notification-bell__list">
+          <div
+            ref={listRef}
+            role="menu"
+            aria-label="Notifications"
+            className="notification-bell__list"
+            onKeyDown={handleListKeyDown}
+          >
             {notifications.length === 0 ? (
               <div className="notification-bell__empty">
                 <Bell size={32} />
@@ -133,6 +181,8 @@ export function NotificationBell(): React.JSX.Element {
                 return (
                   <button
                     key={notification.id}
+                    role="menuitem"
+                    tabIndex={-1}
                     className={`notification-item ${colorClass} ${
                       notification.read ? 'notification-item--read' : ''
                     }`}

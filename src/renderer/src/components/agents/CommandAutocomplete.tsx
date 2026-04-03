@@ -69,10 +69,12 @@ export function CommandAutocomplete({
   }
 
   return (
-    <div className="command-autocomplete">
+    <div role="listbox" aria-label="Available commands" className="command-autocomplete">
       {filteredCommands.map((cmd, index) => (
         <div
           key={cmd.name}
+          role="option"
+          aria-selected={index === selectedIndex}
           className={`command-autocomplete__item ${
             index === selectedIndex ? 'command-autocomplete__item--active' : ''
           }`}

@@ -613,15 +613,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 
 vi.mock('../../../lib/github-api', () => ({
-  getPRDetail: vi
-    .fn()
-    .mockResolvedValue({
-      title: 'Test PR',
-      body: 'Description',
-      additions: 10,
-      deletions: 5,
-      labels: []
-    }),
+  getPRDetail: vi.fn().mockResolvedValue({
+    title: 'Test PR',
+    body: 'Description',
+    additions: 10,
+    deletions: 5,
+    labels: []
+  }),
   getPRFiles: vi
     .fn()
     .mockResolvedValue([

@@ -83,7 +83,9 @@ export function ConnectionsSection(): React.JSX.Element {
       setGhDirty(false)
       toast.success('GitHub token saved')
     } catch (e) {
-      toast.error(`Failed to save GitHub token: ${e instanceof Error ? e.message : 'Unknown error'}`)
+      toast.error(
+        `Failed to save GitHub token: ${e instanceof Error ? e.message : 'Unknown error'}`
+      )
     }
   }, [ghToken])
 
