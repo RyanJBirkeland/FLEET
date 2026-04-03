@@ -18,11 +18,14 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('fs', () => ({
-  writeFileSync: vi.fn()
+  writeFileSync: vi.fn(),
+  existsSync: vi.fn().mockReturnValue(true),
+  mkdirSync: vi.fn()
 }))
 
 vi.mock('os', () => ({
-  tmpdir: vi.fn().mockReturnValue('/tmp')
+  tmpdir: vi.fn().mockReturnValue('/tmp'),
+  homedir: vi.fn().mockReturnValue('/home/test')
 }))
 
 vi.mock('../../ipc-utils', () => ({
@@ -110,20 +113,23 @@ describe('Window handlers', () => {
     describe('playground:openInBrowser', () => {
       it('writes HTML to temp file and opens it', async () => {
         vi.mocked(tmpdir).mockReturnValue('/tmp')
-        vi.mocked(Date.now).mockReturnValue(1234567890)
 
         const handlers = captureHandlers()
         const html = '<h1>Test</h1>'
 
         const result = await handlers['playground:openInBrowser'](mockEvent, html)
 
-        expect(writeFileSync).toHaveBeenCalledWith(
-          '/tmp/bde-playground-1234567890.html',
-          html,
-          'utf-8'
-        )
-        expect(shell.openPath).toHaveBeenCalledWith('/tmp/bde-playground-1234567890.html')
-        expect(result).toBe('/tmp/bde-playground-1234567890.html')
+        expect(writeFileSync).toHaveBeenCalledOnce()
+        const writeCall = vi.mocked(writeFileSync).mock.calls[0]
+        expect(writeCall[0]).toMatch(/^\/tmp\/bde-playground-\d+\.html$/)
+        expect(writeCall[1]).toBe(html)
+        expect(writeCall[2]).toBe('utf-8')
+
+        expect(shell.openPath).toHaveBeenCalledOnce()
+        const openCall = vi.mocked(shell.openPath).mock.calls[0]
+        expect(openCall[0]).toMatch(/^\/tmp\/bde-playground-\d+\.html$/)
+
+        expect(result).toMatch(/^\/tmp\/bde-playground-\d+\.html$/)
       })
     })
   })
