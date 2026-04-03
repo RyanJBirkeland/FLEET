@@ -5,7 +5,7 @@
  * into pinned (MEMORY.md), daily logs, projects, and other. Keyboard-navigable.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { FileText, Search, X } from 'lucide-react'
+import { Brain, FileText, Search, X } from 'lucide-react'
 import { toast } from '../../stores/toasts'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { Button } from '../ui/Button'
@@ -84,6 +84,7 @@ export function MemorySection(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<memoryService.MemorySearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
+  const [activeFiles, setActiveFiles] = useState<Record<string, boolean>>({})
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
   const { confirm, confirmProps } = useConfirm()
@@ -101,9 +102,19 @@ export function MemorySection(): React.JSX.Element {
     }
   }, [])
 
+  const loadActiveFiles = useCallback(async () => {
+    try {
+      const result = await memoryService.getActiveFiles()
+      setActiveFiles(result)
+    } catch {
+      // Silently fall back — active state is non-critical
+    }
+  }, [])
+
   useEffect(() => {
     loadFiles()
-  }, [loadFiles])
+    loadActiveFiles()
+  }, [loadFiles, loadActiveFiles])
 
   const openFile = useCallback(async (path: string) => {
     setLoadingContent(true)
@@ -196,6 +207,19 @@ export function MemorySection(): React.JSX.Element {
     setSearchResults([])
   }, [])
 
+  const toggleActive = useCallback(
+    async (path: string) => {
+      const newActive = !activeFiles[path]
+      try {
+        const updated = await memoryService.setFileActive(path, newActive)
+        setActiveFiles(updated)
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : 'Failed to toggle')
+      }
+    },
+    [activeFiles]
+  )
+
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
       // Only intercept Cmd+S when the memory editor textarea is focused
@@ -268,12 +292,14 @@ export function MemorySection(): React.JSX.Element {
     el?.scrollIntoView({ block: 'nearest' })
   }, [focusIndex])
 
+  const activeCount = Object.keys(activeFiles).length
+  const activeTotalBytes = useMemo(
+    () => files.filter((f) => activeFiles[f.path]).reduce((sum, f) => sum + f.size, 0),
+    [files, activeFiles]
+  )
+
   return (
-    <SettingsCard
-      title="Agent Memory"
-      subtitle="Browse and edit agent memory files"
-      noPadding
-    >
+    <SettingsCard title="Agent Memory" subtitle="Browse and edit agent memory files" noPadding>
       <div className="memory-view__content">
         <div className="memory-sidebar">
           <div className="memory-sidebar__header">
@@ -300,6 +326,12 @@ export function MemorySection(): React.JSX.Element {
               </Button>
             </div>
           </div>
+
+          {activeCount > 0 && (
+            <div className="memory-sidebar__active-summary">
+              {activeCount} file{activeCount !== 1 ? 's' : ''} active for agents
+            </div>
+          )}
 
           {newFilePrompt && (
             <div className="memory-sidebar__new-file">
@@ -368,7 +400,9 @@ export function MemorySection(): React.JSX.Element {
                           {result.matches.slice(0, 2).map((match, idx) => (
                             <div key={idx} className="memory-search-result__match">
                               <span className="memory-search-result__line">{match.line}:</span>
-                              <span className="memory-search-result__content">{match.content}</span>
+                              <span className="memory-search-result__content">
+                                {match.content}
+                              </span>
                             </div>
                           ))}
                         </div>
@@ -391,12 +425,34 @@ export function MemorySection(): React.JSX.Element {
                     data-memory-index={0}
                     onClick={() => handleSelectFile(pinned.path)}
                   >
-                    <span className="memory-file__name">
-                      <span className="memory-file__pin">{'\uD83D\uDCCC'}</span> {pinned.name}
-                    </span>
-                    <span className="memory-file__meta">
-                      {formatRelativeTime(pinned.modifiedAt)} &middot; {formatSize(pinned.size)}
-                    </span>
+                    <div className="memory-file__info">
+                      <span className="memory-file__name">
+                        <span className="memory-file__pin">{'\uD83D\uDCCC'}</span> {pinned.name}
+                      </span>
+                      <span className="memory-file__meta">
+                        {formatRelativeTime(pinned.modifiedAt)} &middot;{' '}
+                        {formatSize(pinned.size)}
+                      </span>
+                    </div>
+                    <button
+                      className={`memory-file__toggle ${activeFiles[pinned.path] ? 'memory-file__toggle--active' : ''}`}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        toggleActive(pinned.path)
+                      }}
+                      title={
+                        activeFiles[pinned.path]
+                          ? 'Included in agent prompts'
+                          : 'Not included in agent prompts'
+                      }
+                      aria-label={
+                        activeFiles[pinned.path]
+                          ? 'Remove from agent knowledge'
+                          : 'Add to agent knowledge'
+                      }
+                    >
+                      <Brain size={14} />
+                    </button>
                   </button>
                 )}
 
@@ -412,10 +468,31 @@ export function MemorySection(): React.JSX.Element {
                           data-memory-index={idx}
                           onClick={() => handleSelectFile(f.path)}
                         >
-                          <span className="memory-file__name">{f.name}</span>
-                          <span className="memory-file__meta">
-                            {formatRelativeTime(f.modifiedAt)} &middot; {formatSize(f.size)}
-                          </span>
+                          <div className="memory-file__info">
+                            <span className="memory-file__name">{f.name}</span>
+                            <span className="memory-file__meta">
+                              {formatRelativeTime(f.modifiedAt)} &middot; {formatSize(f.size)}
+                            </span>
+                          </div>
+                          <button
+                            className={`memory-file__toggle ${activeFiles[f.path] ? 'memory-file__toggle--active' : ''}`}
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              toggleActive(f.path)
+                            }}
+                            title={
+                              activeFiles[f.path]
+                                ? 'Included in agent prompts'
+                                : 'Not included in agent prompts'
+                            }
+                            aria-label={
+                              activeFiles[f.path]
+                                ? 'Remove from agent knowledge'
+                                : 'Add to agent knowledge'
+                            }
+                          >
+                            <Brain size={14} />
+                          </button>
                         </button>
                       )
                     })}
@@ -454,6 +531,24 @@ export function MemorySection(): React.JSX.Element {
                   memory/{selectedPath}
                   {isDirty && <span className="memory-editor__dirty"> &bull;</span>}
                 </span>
+                {selectedPath && (
+                  <button
+                    className={`memory-editor__agent-toggle ${activeFiles[selectedPath] ? 'memory-editor__agent-toggle--active' : ''}`}
+                    onClick={() => toggleActive(selectedPath)}
+                    title={
+                      activeFiles[selectedPath]
+                        ? 'Remove from agent knowledge'
+                        : 'Add to agent knowledge'
+                    }
+                  >
+                    <Brain size={14} />
+                    <span>
+                      {activeFiles[selectedPath]
+                        ? 'Agent Knowledge: On'
+                        : 'Agent Knowledge: Off'}
+                    </span>
+                  </button>
+                )}
                 <div className="memory-editor__actions">
                   <Button variant="ghost" size="sm" onClick={discard} disabled={!isDirty}>
                     Discard
@@ -463,6 +558,15 @@ export function MemorySection(): React.JSX.Element {
                   </Button>
                 </div>
               </div>
+              {activeCount > 0 && (
+                <div
+                  className={`memory-editor__size-banner ${activeTotalBytes > 30720 ? 'memory-editor__size-banner--warn' : ''}`}
+                >
+                  {activeCount} file{activeCount !== 1 ? 's' : ''} active (
+                  {(activeTotalBytes / 1024).toFixed(1)} KB total)
+                  {activeTotalBytes > 30720 && ' \u2014 Large memory may slow agent responses'}
+                </div>
+              )}
               <textarea
                 ref={editorRef}
                 className="memory-editor__textarea"

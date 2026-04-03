@@ -9,7 +9,7 @@ export interface MemorySearchResult {
 }
 
 export async function listFiles(): Promise<
-  { path: string; name: string; size: number; modifiedAt: number }[]
+  { path: string; name: string; size: number; modifiedAt: number; active: boolean }[]
 > {
   return window.api.listMemoryFiles()
 }
@@ -24,4 +24,15 @@ export async function writeFile(path: string, content: string): Promise<void> {
 
 export async function search(query: string): Promise<MemorySearchResult[]> {
   return window.api.searchMemory(query)
+}
+
+export async function getActiveFiles(): Promise<Record<string, boolean>> {
+  return window.api.getActiveMemoryFiles()
+}
+
+export async function setFileActive(
+  path: string,
+  active: boolean
+): Promise<Record<string, boolean>> {
+  return window.api.setMemoryFileActive(path, active)
 }
