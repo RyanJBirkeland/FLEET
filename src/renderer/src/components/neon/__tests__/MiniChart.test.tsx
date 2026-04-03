@@ -1,7 +1,6 @@
 import { render, fireEvent } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { MiniChart, type ChartBar } from '../MiniChart'
-import { tokens } from '../../../design-system/tokens'
 
 const data: ChartBar[] = [
   { value: 70, accent: 'cyan' },
