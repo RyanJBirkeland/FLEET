@@ -5,13 +5,24 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IpcMainInvokeEvent } from 'electron'
 
 vi.mock('electron', () => ({
-  shell: { openExternal: vi.fn().mockResolvedValue(undefined) },
+  shell: {
+    openExternal: vi.fn().mockResolvedValue(undefined),
+    openPath: vi.fn().mockResolvedValue('')
+  },
   BrowserWindow: {
     getFocusedWindow: vi.fn(() => ({ setTitle: vi.fn() }))
   },
   ipcMain: {
     on: vi.fn()
   }
+}))
+
+vi.mock('fs', () => ({
+  writeFileSync: vi.fn()
+}))
+
+vi.mock('os', () => ({
+  tmpdir: vi.fn().mockReturnValue('/tmp')
 }))
 
 vi.mock('../../ipc-utils', () => ({
@@ -21,17 +32,20 @@ vi.mock('../../ipc-utils', () => ({
 import { registerWindowHandlers } from '../window-handlers'
 import { safeHandle } from '../../ipc-utils'
 import { ipcMain, shell } from 'electron'
+import { writeFileSync } from 'fs'
+import { tmpdir } from 'os'
 
 describe('Window handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
   })
 
-  it('registers 1 safeHandle channel and 1 ipcMain.on listener', () => {
+  it('registers 2 safeHandle channels and 1 ipcMain.on listener', () => {
     registerWindowHandlers()
 
-    expect(safeHandle).toHaveBeenCalledTimes(1)
+    expect(safeHandle).toHaveBeenCalledTimes(2)
     expect(safeHandle).toHaveBeenCalledWith('window:openExternal', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('playground:openInBrowser', expect.any(Function))
     expect(ipcMain.on).toHaveBeenCalledWith('window:setTitle', expect.any(Function))
   })
 
@@ -90,6 +104,26 @@ describe('Window handlers', () => {
         )
 
         expect(shell.openExternal).not.toHaveBeenCalled()
+      })
+    })
+
+    describe('playground:openInBrowser', () => {
+      it('writes HTML to temp file and opens it', async () => {
+        vi.mocked(tmpdir).mockReturnValue('/tmp')
+        vi.mocked(Date.now).mockReturnValue(1234567890)
+
+        const handlers = captureHandlers()
+        const html = '<h1>Test</h1>'
+
+        const result = await handlers['playground:openInBrowser'](mockEvent, html)
+
+        expect(writeFileSync).toHaveBeenCalledWith(
+          '/tmp/bde-playground-1234567890.html',
+          html,
+          'utf-8'
+        )
+        expect(shell.openPath).toHaveBeenCalledWith('/tmp/bde-playground-1234567890.html')
+        expect(result).toBe('/tmp/bde-playground-1234567890.html')
       })
     })
   })
