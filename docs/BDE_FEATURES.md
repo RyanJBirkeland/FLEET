@@ -9,8 +9,8 @@ This document is auto-loaded by all BDE agents via the `@` directive in CLAUDE.m
 1. **Create** — Task Workbench: draft specs with AI copilot assistance, define dependencies between tasks, run readiness checks before queuing
 2. **Queue** — Tasks enter the Sprint Pipeline with status `queued`. External services (Life OS, claude-chat-service, claude-task-runner) can submit tasks via the Queue API on port 18790
 3. **Execute** — Agent Manager claims queued tasks, spawns pipeline agents in isolated git worktrees. Agents write code, run tests, and commit. If `playground_enabled` is set, HTML file writes render inline via Dev Playground
-4. **Review** — Agents push branches and open PRs automatically. PR Station provides full code review (CI status, diffs, inline comments, merge controls). Sprint PR Poller auto-tracks merge/close every 60s
-5. **Complete** — Merged PRs mark tasks `done`. Dependency resolution automatically unblocks downstream tasks with satisfied dependencies
+4. **Review** — Agents complete work and transition tasks to `review` status, preserving the worktree. Code Review Station provides diff inspection, commit history, and action buttons (merge locally, create PR, request revision, discard). Users review changes before integration
+5. **Complete** — Merged PRs or local merges mark tasks `done`. Dependency resolution automatically unblocks downstream tasks with satisfied dependencies
 
 **Supporting views:** Dashboard (aggregated metrics), IDE (Monaco editor + terminal), Source Control (git staging/commits/push), Settings (9 configuration tabs)
 
@@ -30,12 +30,12 @@ Planning and spec creation interface. Users draft task specs with AI copilot ass
 
 Execution monitoring view. Shows tasks flowing through stages as a vertical pipeline with real-time status updates.
 
-- **Task statuses**: `backlog` | `queued` | `blocked` | `active` | `done` | `cancelled` | `failed` | `error`
+- **Task statuses**: `backlog` | `queued` | `blocked` | `active` | `review` | `done` | `cancelled` | `failed` | `error`
 - **UI partitions** (7 buckets): `backlog`, `todo`, `blocked`, `inProgress`, `awaitingReview`, `done`, `failed`. All UI components must use `partitionSprintTasks()` from the sprint tasks store — never map raw statuses directly
 - **awaitingReview**: Tasks that are `active` or `done` with `pr_status=open` — shown separately so users can see what needs human review
 - **failed bucket**: Combines `failed` + `error` + `cancelled` statuses
 - **done sorting**: Most recent `completed_at` first
-- Related: Task Workbench, Agent Manager, PR Station
+- Related: Task Workbench, Agent Manager, Code Review Station
 
 ### Task Dependencies
 
@@ -81,7 +81,7 @@ BDE spawns five types of AI agents, each with different capabilities and context
 | Copilot | Task Workbench | Yes (chat) | None (text-only) | No | No |
 | Synthesizer | Task Workbench | No (single-turn) | None | No | No |
 
-- **Pipeline**: Executes sprint tasks autonomously. Works in isolated git worktree. Commits, pushes branch, opens PR on completion. Prompt includes task spec/prompt and branch name
+- **Pipeline**: Executes sprint tasks autonomously. Works in isolated git worktree. Commits changes and transitions to `review` status, preserving worktree for human inspection. Prompt includes task spec/prompt and branch name
 - **Adhoc**: User-spawned one-off tasks from the Agents view. Multi-turn sessions via SDK `query()` with session resumption (`resume: sessionId`). Works in repo directory directly
 - **Assistant**: Same as adhoc but with assistant role framing — answers questions, suggests approaches, recommends Dev Playground for visual/UI work
 - **Copilot**: Text-only spec drafting helper in Task Workbench. ~500 word limit. Cannot use tools, open URLs, or explore code. Helps users refine task specs through conversation
@@ -96,7 +96,7 @@ Orchestrates pipeline agent lifecycle. Core module: `src/main/agent-manager/`.
 - **Drain loop**: Continuously watches for `queued` tasks, claims them (sets `claimed_by`), spawns agents in git worktrees via SDK
 - **WIP limit**: `MAX_ACTIVE_TASKS` concurrent agents, enforced at Queue API claim endpoint
 - **Watchdog**: Monitors agent health with configurable timeout. Default 1 hour, overridable per-task via `max_runtime_ms` field
-- **Completion flow**: Agent exits normally → classify exit → push branch → open PR via `gh` CLI → mark task `done` → resolve dependents. On failure: retry up to 3x, then mark `failed`
+- **Completion flow**: Agent exits normally → classify exit → mark task `review` → preserve worktree for human review. On failure: retry up to 3x, then mark `failed`. Human actions in Code Review Station (merge locally, create PR, revise, discard) determine final task status
 - **Fast-fail detection**: 3 failures within 30s of starting = exhausted. Task marked `error` with diagnostic notes pointing to `~/.bde/agent-manager.log`
 - **Worktree isolation**: Each pipeline agent gets `~/worktrees/bde/agent/<task-slug>`. Worktree cleaned up after completion (success or failure). Stale worktrees from previous runs should be cleaned with `git worktree prune`
 - **Config**: Max concurrent agents, worktree base path, and max runtime are read once at startup. Changes via Settings UI take effect on next app restart
@@ -117,17 +117,21 @@ Inline HTML rendering for visual prototyping, UI exploration, and interactive to
 
 ## Code Review
 
-### PR Station
+### Code Review Station
 
-Full-featured code review dashboard for GitHub pull requests across all configured repositories.
+Human-in-the-loop review interface for agent work before integration. Agents complete tasks by transitioning to `review` status instead of automatically opening PRs.
 
-- **PR list**: Multi-repo view with filter chips (by repo), status filtering (open/draft), sorting by title/date/checks. Real-time CI badge updates
-- **Detail panel**: PR metadata, branch info, CI check status with failure annotations, merge status flags, conflict detection warnings
-- **Diff viewer**: Side-by-side file diffs with syntax highlighting. Per-file status badges (Added/Deleted/Modified). Inline comment indicators with reply threads
-- **Review workflow**: Inline comments on diff lines, batch review submission dialog (approve/request changes/comment), conversation timeline showing all review activity
-- **Merge controls**: Squash, merge commit, or rebase strategies. Merge button disabled if conflicts detected or required checks failing. Confirmation dialog before merge
-- **GitHub API**: All calls proxied through `github:fetch` IPC (token never in renderer). Response caching with 30s TTL via `github-cache.ts`. Call `invalidateCache()` after mutations
-- Related: Sprint PR Poller, Sprint Pipeline
+- **Review queue**: List of tasks in `review` status awaiting human inspection. Shows task title, branch name, and last commit message
+- **Diff inspection**: ChangesTab displays git diff of all modified files with syntax highlighting. Side-by-side view showing additions (green), deletions (red), and context
+- **Commit history**: CommitsTab shows all commits in the agent's branch with messages, timestamps, and file change counts
+- **Conversation**: ConversationTab displays the full agent chat log for context on decisions made during execution
+- **Review actions**:
+  - **Merge Locally** — Fast-forward merge the agent's branch into the current branch and mark task `done`. Worktree cleaned up automatically
+  - **Create PR** — Push the branch and open a GitHub pull request. Task remains `review` until PR is merged (tracked by Sprint PR Poller)
+  - **Request Revision** — Return task to `queued` status for the agent to retry. Worktree preserved for incremental work
+  - **Discard** — Mark task `cancelled` and clean up the worktree. Used when the work is no longer needed
+- **Worktree preservation**: Agent worktrees stay intact at `review` status, allowing humans to inspect the full working directory before integration decisions
+- Related: Sprint PR Poller, Sprint Pipeline, Agent Manager (completion flow)
 
 ### Sprint PR Poller
 
@@ -137,7 +141,7 @@ Background process that automatically tracks PR outcomes for sprint tasks.
 - **Watches**: Tasks with `pr_status=open` — polls their GitHub PR for merge/close events
 - **Auto-transitions**: Merged PR → task marked `done`. Closed PR → task marked `cancelled`. Both trigger dependency resolution via `TaskTerminalService`
 - **PR fields** (`pr_url`, `pr_number`, `pr_status`): Set internally by completion handler and poller — NOT patchable via Queue API `GENERAL_PATCH_FIELDS`
-- Related: PR Station, Agent Manager (completion flow)
+- Related: Code Review Station, Agent Manager (completion flow)
 
 ## Development Tools
 
@@ -162,7 +166,7 @@ Git workflow interface for staging, committing, and pushing across configured re
 - **Inline diff**: Click any file to preview diff in a drawer. Shows additions (green), deletions (red), and unchanged context lines
 - **Error handling**: Persistent error banner at bottom with Retry and Dismiss buttons for commit/push failures
 - **Auto-refresh**: Polls git status every 30s while the view is visible
-- Related: IDE, PR Station
+- Related: IDE, Code Review Station
 
 ## App Shell
 
@@ -186,7 +190,7 @@ Flexible split-pane layout system for arranging views side-by-side with drag-and
 - **Drag-and-drop**: 5-zone drop targets (top/bottom/left/right/center) for docking views. Visual overlay shows target zone during drag
 - **Persistence**: Layout tree and active tabs saved to `panel.layout` setting on every mutation. Restored on app launch
 - **Tear-off windows**: Views can be torn off into separate Electron windows. Each tear-off has its own independent panel layout. Tear-off windows set `persistable: false` to prevent overwriting the main window's saved layout
-- **View shortcuts**: Dashboard (Cmd+1), Agents (Cmd+2), IDE (Cmd+3), Task Pipeline (Cmd+4), PR Station (Cmd+5), Source Control (Cmd+6), Settings (Cmd+7)
+- **View shortcuts**: Dashboard (Cmd+1), Agents (Cmd+2), IDE (Cmd+3), Task Pipeline (Cmd+4), Code Review (Cmd+5), Source Control (Cmd+6), Settings (Cmd+7)
 - Related: All views
 
 ### Settings
