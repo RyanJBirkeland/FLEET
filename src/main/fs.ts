@@ -5,6 +5,7 @@ import { homedir, tmpdir } from 'os'
 import { dialog } from 'electron'
 import { safeHandle } from './ipc-utils'
 import { BDE_MEMORY_DIR, BDE_AGENT_LOGS_DIR as AGENT_LOGS_ROOT } from './paths'
+import { getSettingJson, setSettingJson } from './settings'
 
 const OPENCLAW_MEMORY_DIR = resolve(homedir(), '.openclaw', 'workspace', 'memory')
 
@@ -25,6 +26,7 @@ export interface MemoryFile {
   name: string
   size: number
   modifiedAt: number
+  active: boolean
 }
 const TMP_ROOT = resolve(tmpdir())
 const MAX_READ_BYTES = 10 * 1024 * 1024 // 10 MB
@@ -47,14 +49,21 @@ export function validateLogPath(p: string): string {
   return resolved
 }
 
-async function listMemoryFiles(): Promise<MemoryFile[]> {
+async function listMemoryFiles(
+  activeFiles?: Record<string, boolean>
+): Promise<MemoryFile[]> {
   const files: MemoryFile[] = []
-  await walkDir(MEMORY_ROOT, '', files)
+  await walkDir(MEMORY_ROOT, '', files, activeFiles)
   files.sort((a, b) => b.modifiedAt - a.modifiedAt)
   return files
 }
 
-async function walkDir(root: string, relative: string, out: MemoryFile[]): Promise<void> {
+async function walkDir(
+  root: string,
+  relative: string,
+  out: MemoryFile[],
+  activeFiles?: Record<string, boolean>
+): Promise<void> {
   const dir = join(root, relative)
   let entries
   try {
@@ -65,7 +74,7 @@ async function walkDir(root: string, relative: string, out: MemoryFile[]): Promi
   for (const entry of entries) {
     const relPath = relative ? `${relative}/${entry.name}` : entry.name
     if (entry.isDirectory()) {
-      await walkDir(root, relPath, out)
+      await walkDir(root, relPath, out, activeFiles)
     } else if (entry.name.endsWith('.md')) {
       try {
         const info = await stat(join(root, relPath))
@@ -73,7 +82,8 @@ async function walkDir(root: string, relative: string, out: MemoryFile[]): Promi
           path: relPath,
           name: entry.name,
           size: info.size,
-          modifiedAt: info.mtimeMs
+          modifiedAt: info.mtimeMs,
+          active: activeFiles ? activeFiles[relPath] === true : false
         })
       } catch {
         // skip files we can't stat
@@ -198,12 +208,30 @@ async function openDirectoryDialog(): Promise<string | null> {
   return result.canceled ? null : (result.filePaths[0] ?? null)
 }
 
+const ACTIVE_FILES_SETTING = 'memory.activeFiles'
+
 export function registerFsHandlers(): void {
-  safeHandle('memory:listFiles', () => listMemoryFiles())
+  safeHandle('memory:listFiles', () => {
+    const activeFiles = getSettingJson<Record<string, boolean>>(ACTIVE_FILES_SETTING) ?? {}
+    return listMemoryFiles(activeFiles)
+  })
   safeHandle('memory:readFile', (_e, path: string) => readMemoryFile(path))
   safeHandle('memory:writeFile', (_e, path: string, content: string) =>
     writeMemoryFile(path, content)
   )
+  safeHandle('memory:getActiveFiles', () => {
+    return getSettingJson<Record<string, boolean>>(ACTIVE_FILES_SETTING) ?? {}
+  })
+  safeHandle('memory:setFileActive', (_e, path: string, active: boolean) => {
+    const current = getSettingJson<Record<string, boolean>>(ACTIVE_FILES_SETTING) ?? {}
+    if (active) {
+      current[path] = true
+    } else {
+      delete current[path]
+    }
+    setSettingJson(ACTIVE_FILES_SETTING, current)
+    return current
+  })
 
   // Attachment file handlers - scope to IDE root when available
   safeHandle('fs:openFileDialog', (_e, opts?: { filters?: Electron.FileFilter[] }) =>
