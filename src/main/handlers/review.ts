@@ -163,14 +163,41 @@ export function registerReviewHandlers(): void {
     if (!repoConfig) throw new Error(`Repo "${task.repo}" not found in settings`)
     const repoPath = repoConfig.localPath
 
+    // Verify clean working tree before merge
+    try {
+      const { stdout: statusOut } = await execFileAsync('git', ['status', '--porcelain'], {
+        cwd: repoPath,
+        env
+      })
+      if (statusOut.trim()) {
+        throw new Error(
+          'Working tree has uncommitted changes. Commit or stash them before merging.'
+        )
+      }
+    } catch (err: unknown) {
+      const errMsg = err instanceof Error ? err.message : String(err)
+      return { success: false, error: errMsg }
+    }
+
     try {
       if (strategy === 'squash') {
         await execFileAsync('git', ['merge', '--squash', branch], { cwd: repoPath, env })
         // Commit the squash merge
-        await execFileAsync('git', ['commit', '-m', `${task.title} (#${taskId})`], {
-          cwd: repoPath,
-          env
-        })
+        try {
+          await execFileAsync('git', ['commit', '-m', `${task.title} (#${taskId})`], {
+            cwd: repoPath,
+            env
+          })
+        } catch (commitErr: unknown) {
+          // Squash merge succeeded but commit failed — unstage to prevent silent corruption
+          logger.error(`[review:mergeLocally] Squash commit failed for task ${taskId}, unstaging`)
+          try {
+            await execFileAsync('git', ['reset', 'HEAD'], { cwd: repoPath, env })
+          } catch {
+            logger.warn(`[review:mergeLocally] git reset HEAD failed — manual cleanup required`)
+          }
+          throw commitErr
+        }
       } else if (strategy === 'rebase') {
         // Rebase the branch onto main, then fast-forward main
         await execFileAsync('git', ['rebase', 'HEAD', branch], { cwd: repoPath, env })

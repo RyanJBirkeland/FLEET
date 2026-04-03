@@ -101,13 +101,19 @@ describe('ReviewActions', () => {
     })
   })
 
-  it('create PR calls review.createPr on click', async () => {
+  it('create PR shows confirm dialog and calls review.createPr on confirm', async () => {
     sprintState.tasks = [
       { id: 't1', title: 'Review task', repo: 'bde', status: 'review', spec: '## Spec', updated_at: '2026-04-01T00:00:00Z' }
     ]
     useCodeReviewStore.setState({ selectedTaskId: 't1' })
     render(<ReviewActions />)
     fireEvent.click(screen.getByText('Create PR'))
+    // Wait for confirm dialog to appear
+    await waitFor(() => {
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
+    })
+    // Click the confirm button
+    fireEvent.click(screen.getAllByText('Create PR')[1]) // Second "Create PR" is the confirm button
     await waitFor(() => {
       expect(window.api.review.createPr).toHaveBeenCalledWith({
         taskId: 't1',
