@@ -1,6 +1,17 @@
 import { create } from 'zustand'
 import type { AgentCostRecord } from '../../../shared/types'
 
+/**
+ * Cost tracking store for agent execution costs and metrics.
+ *
+ * NOTE: This store queries agent_runs table similarly to agentHistory store,
+ * but serves a DIFFERENT purpose. This is intentional separation of concerns:
+ * - costData: cost tracking fields (durationMs, numTurns, cache stats) for Dashboard metrics
+ * - agentHistory: runtime metadata (status, logPath, pid, bin) for Agents view
+ *
+ * Only 8 fields overlap (id, model, timestamps, tokens). Consolidating would
+ * mix unrelated concerns and force components to handle irrelevant data.
+ */
 interface CostDataState {
   localAgents: AgentCostRecord[]
   isFetching: boolean
