@@ -27,6 +27,9 @@ const api = {
   writeMemoryFile: (path: string, content: string) =>
     typedInvoke('memory:writeFile', path, content),
   searchMemory: (query: string) => typedInvoke('memory:search', query),
+  getActiveMemoryFiles: () => typedInvoke('memory:getActiveFiles'),
+  setMemoryFileActive: (path: string, active: boolean) =>
+    typedInvoke('memory:setFileActive', path, active),
   setTitle: (title: string): void => ipcRenderer.send('window:setTitle', title),
 
   // Settings CRUD

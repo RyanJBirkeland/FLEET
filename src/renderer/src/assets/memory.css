@@ -60,8 +60,18 @@
 
 /* File items — glass-aware hover/active */
 .memory-file {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   border-radius: var(--bde-radius-sm);
   transition: background 0.12s;
+}
+
+.memory-file__info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
 }
 
 .memory-file:hover {
@@ -213,4 +223,63 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+/* Active summary in sidebar */
+.memory-sidebar__active-summary {
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--neon-accent, #0ff);
+  opacity: 0.8;
+}
+
+/* Toggle icon on file rows */
+.memory-file__toggle {
+  all: unset;
+  cursor: pointer;
+  opacity: 0.3;
+  transition: opacity 0.15s;
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  padding: 2px;
+}
+.memory-file__toggle:hover {
+  opacity: 0.6;
+}
+.memory-file__toggle--active {
+  opacity: 1;
+  color: var(--neon-accent, #0ff);
+}
+
+/* Editor toolbar agent toggle */
+.memory-editor__agent-toggle {
+  all: unset;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 4px;
+  color: var(--neon-text-muted, #888);
+  transition: color 0.15s, background 0.15s;
+}
+.memory-editor__agent-toggle:hover {
+  background: var(--bde-overlay);
+}
+.memory-editor__agent-toggle--active {
+  color: var(--neon-accent, #0ff);
+}
+
+/* Size warning banner */
+.memory-editor__size-banner {
+  padding: 6px 12px;
+  font-size: 11px;
+  color: var(--neon-text-muted, #888);
+  border-bottom: 1px solid var(--bde-border);
+}
+.memory-editor__size-banner--warn {
+  color: var(--neon-warning, #f90);
+  background: var(--bde-overlay);
 }

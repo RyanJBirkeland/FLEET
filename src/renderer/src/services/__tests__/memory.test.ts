@@ -1,17 +1,19 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { listFiles, readFile, writeFile, search } from '../memory'
+import { listFiles, readFile, writeFile, search, getActiveFiles, setFileActive } from '../memory'
 
 describe('memory service', () => {
   beforeEach(() => {
     // window.api is mocked globally via vitest setup
     vi.mocked(window.api.listMemoryFiles).mockResolvedValue([
-      { path: '/mem/note.md', name: 'note.md', size: 128, modifiedAt: 1710000000000 }
+      { path: '/mem/note.md', name: 'note.md', size: 128, modifiedAt: 1710000000000, active: true }
     ])
     vi.mocked(window.api.readMemoryFile).mockResolvedValue('# Note content')
     vi.mocked(window.api.writeMemoryFile).mockResolvedValue(undefined)
     vi.mocked(window.api.searchMemory).mockResolvedValue([
       { path: '/mem/note.md', matches: [{ line: 1, content: '# Note content' }] }
     ])
+    vi.mocked(window.api.getActiveMemoryFiles).mockResolvedValue({ '/mem/note.md': true })
+    vi.mocked(window.api.setMemoryFileActive).mockResolvedValue({ '/mem/note.md': false })
   })
 
   it('listFiles delegates to window.api.listMemoryFiles', async () => {
@@ -37,5 +39,17 @@ describe('memory service', () => {
     expect(window.api.searchMemory).toHaveBeenCalledWith('note')
     expect(result).toHaveLength(1)
     expect(result[0].matches[0].content).toBe('# Note content')
+  })
+
+  it('getActiveFiles delegates to window.api.getActiveMemoryFiles', async () => {
+    const result = await getActiveFiles()
+    expect(window.api.getActiveMemoryFiles).toHaveBeenCalled()
+    expect(result).toEqual({ '/mem/note.md': true })
+  })
+
+  it('setFileActive delegates to window.api.setMemoryFileActive', async () => {
+    const result = await setFileActive('/mem/note.md', false)
+    expect(window.api.setMemoryFileActive).toHaveBeenCalledWith('/mem/note.md', false)
+    expect(result).toEqual({ '/mem/note.md': false })
   })
 })

@@ -483,7 +483,13 @@ describe('IPC handler registration', () => {
   // -------------------------------------------------------------------------
   describe('fs-handlers', () => {
     it('registers all expected channel names', () => {
-      const expected = ['memory:listFiles', 'memory:readFile', 'memory:writeFile']
+      const expected = [
+        'memory:listFiles',
+        'memory:readFile',
+        'memory:writeFile',
+        'memory:getActiveFiles',
+        'memory:setFileActive'
+      ]
       for (const ch of expected) {
         expect(handlers.has(ch), `missing channel: ${ch}`).toBe(true)
       }

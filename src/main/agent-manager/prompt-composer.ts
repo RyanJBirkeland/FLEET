@@ -12,6 +12,7 @@ import { synthesizerPersonality } from '../agent-system/personality/synthesizer-
 import { adhocPersonality } from '../agent-system/personality/adhoc-personality'
 import type { AgentPersonality } from '../agent-system/personality/types'
 import { getAllMemory } from '../agent-system/memory'
+import { getUserMemory } from '../agent-system/memory/user-memory'
 import { getAllSkills } from '../agent-system/skills'
 
 export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer'
@@ -154,6 +155,13 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
   // Inject memory (all agents get this)
   prompt += '\n\n## BDE Conventions\n'
   prompt += getAllMemory()
+
+  // Inject user memory (files toggled active in Settings > Memory)
+  const userMem = getUserMemory()
+  if (userMem.fileCount > 0) {
+    prompt += '\n\n## User Knowledge\n'
+    prompt += userMem.content
+  }
 
   // Inject skills (interactive agents only)
   if (agentType === 'assistant' || agentType === 'adhoc') {

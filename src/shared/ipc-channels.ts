@@ -326,7 +326,7 @@ export interface TearoffChannels {
 export interface MemoryChannels {
   'memory:listFiles': {
     args: []
-    result: { path: string; name: string; size: number; modifiedAt: number }[]
+    result: { path: string; name: string; size: number; modifiedAt: number; active: boolean }[]
   }
   'memory:readFile': {
     args: [path: string]
@@ -342,6 +342,14 @@ export interface MemoryChannels {
       path: string
       matches: Array<{ line: number; content: string }>
     }>
+  }
+  'memory:getActiveFiles': {
+    args: []
+    result: Record<string, boolean>
+  }
+  'memory:setFileActive': {
+    args: [path: string, active: boolean]
+    result: Record<string, boolean>
   }
 }
 
