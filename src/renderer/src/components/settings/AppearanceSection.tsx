@@ -76,6 +76,7 @@ export function AppearanceSection(): React.JSX.Element {
             className={`bde-btn bde-btn--sm ${theme === 'dark' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
             onClick={() => setTheme('dark')}
             type="button"
+            aria-pressed={theme === 'dark'}
           >
             Dark
           </button>
@@ -83,6 +84,7 @@ export function AppearanceSection(): React.JSX.Element {
             className={`bde-btn bde-btn--sm ${theme === 'light' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
             onClick={() => setTheme('light')}
             type="button"
+            aria-pressed={theme === 'light'}
           >
             Light
           </button>
@@ -90,6 +92,7 @@ export function AppearanceSection(): React.JSX.Element {
             className={`bde-btn bde-btn--sm ${theme === 'warm' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
             onClick={() => setTheme('warm')}
             type="button"
+            aria-pressed={theme === 'warm'}
           >
             Warm
           </button>
@@ -106,6 +109,7 @@ export function AppearanceSection(): React.JSX.Element {
               onClick={() => setAccent(color)}
               title={label}
               aria-label={label}
+              aria-pressed={accent === color}
               type="button"
             />
           ))}

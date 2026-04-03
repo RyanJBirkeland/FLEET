@@ -38,6 +38,21 @@ export function FileContextMenu({
       if (e.key === 'Escape') {
         e.preventDefault()
         onClose()
+      } else if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+        e.preventDefault()
+        const menu = menuRef.current
+        if (!menu) return
+        const items = Array.from(menu.querySelectorAll<HTMLElement>('[role="menuitem"]'))
+        const currentIndex = items.indexOf(document.activeElement as HTMLElement)
+        if (currentIndex === -1) return
+
+        if (e.key === 'ArrowDown') {
+          const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+          items[next]?.focus()
+        } else {
+          const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+          items[prev]?.focus()
+        }
       }
     }
     document.addEventListener('mousedown', handleMouseDown)

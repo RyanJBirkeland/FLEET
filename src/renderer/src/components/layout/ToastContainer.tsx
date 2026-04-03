@@ -18,11 +18,20 @@ function ToastItem({
 
   const hasAction = toast.onUndo || toast.onAction
 
+  const handleKeyDown = (e: React.KeyboardEvent): void => {
+    if (e.key === 'Enter' || e.key === 'Escape' || e.key === ' ') {
+      e.preventDefault()
+      onDismiss()
+    }
+  }
+
   return (
     <div
       className={`toast ${modifier} ${hasAction ? 'toast--has-action' : ''}`}
       role={toast.type === 'error' ? 'alert' : 'status'}
       onClick={onDismiss}
+      onKeyDown={handleKeyDown}
+      tabIndex={0}
     >
       <span className="toast__message">{toast.message}</span>
       {toast.onUndo && (

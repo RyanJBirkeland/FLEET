@@ -73,15 +73,19 @@ describe('ConfirmModal accessibility', () => {
   it('has aria-describedby pointing to the message element', () => {
     render(<ConfirmModal {...defaultProps} />)
     const dialog = screen.getByRole('alertdialog')
-    expect(dialog).toHaveAttribute('aria-describedby', 'confirm-modal-message')
-    expect(document.getElementById('confirm-modal-message')).toBeInTheDocument()
+    const describedby = dialog.getAttribute('aria-describedby')
+    expect(describedby).toBeTruthy()
+    expect(document.getElementById(describedby!)).toBeInTheDocument()
+    expect(document.getElementById(describedby!)).toHaveTextContent('Are you sure?')
   })
 
   it('has aria-labelledby when title is provided', () => {
     render(<ConfirmModal {...defaultProps} title="Confirm Delete" />)
     const dialog = screen.getByRole('alertdialog')
-    expect(dialog).toHaveAttribute('aria-labelledby', 'confirm-modal-title')
-    expect(document.getElementById('confirm-modal-title')).toBeInTheDocument()
+    const labelledby = dialog.getAttribute('aria-labelledby')
+    expect(labelledby).toBeTruthy()
+    expect(document.getElementById(labelledby!)).toBeInTheDocument()
+    expect(document.getElementById(labelledby!)).toHaveTextContent('Confirm Delete')
   })
 
   it('does not have aria-labelledby when title is not provided', () => {
