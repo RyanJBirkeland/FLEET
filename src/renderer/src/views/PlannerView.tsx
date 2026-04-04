@@ -39,10 +39,14 @@ export default function PlannerView(): React.JSX.Element {
     setShowCreateModal(true)
   }
 
-  const handleAddTask = (): void => {
-    // TODO: Open add task modal/form
-    console.log('Add task clicked')
-  }
+  const handleAddTask = useCallback((): void => {
+    const workbenchStore = useTaskWorkbenchStore.getState()
+    const panelStore = usePanelLayoutStore.getState()
+
+    workbenchStore.resetForm()
+    workbenchStore.setField('pendingGroupId', selectedGroupId)
+    panelStore.setView('task-workbench')
+  }, [selectedGroupId])
 
   const handleEditTask = useCallback(
     (taskId: string): void => {

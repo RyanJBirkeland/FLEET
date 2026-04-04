@@ -37,6 +37,7 @@ interface TaskWorkbenchState {
   maxCostUsd: number | null
   model: string
   specType: SpecType | null
+  pendingGroupId: string | null
 
   // --- Copilot ---
   copilotVisible: boolean
@@ -121,6 +122,7 @@ function defaults(): Pick<
   | 'maxCostUsd'
   | 'model'
   | 'specType'
+  | 'pendingGroupId'
   | 'copilotVisible'
   | 'copilotMessages'
   | 'copilotLoading'
@@ -147,6 +149,7 @@ function defaults(): Pick<
     maxCostUsd: null,
     model: '',
     specType: null,
+    pendingGroupId: null,
     copilotVisible: true,
     copilotMessages: (() => {
       const persisted = loadPersistedMessages()
