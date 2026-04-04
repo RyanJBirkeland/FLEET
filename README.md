@@ -28,6 +28,16 @@ Claude Code is already great at writing code. What it doesn't have out of the bo
 
 BDE adds all of this. It doesn't replace Claude Code — it wraps it in the infrastructure needed to run it as a development pipeline.
 
+### The Cognitive Load Problem
+
+Running AI agents manually is surprisingly exhausting. You're context-switching between terminal tabs, remembering which branch is which, mentally tracking what depends on what, catching failures by accident, and trying to review diffs while three other sessions are still running. The agents are doing the coding — but *you're* doing all the project management in your head.
+
+That's the kind of invisible overhead that leads to burnout. Not from the work itself, but from juggling the meta-work around it.
+
+BDE externalizes all of that. The Dashboard shows you pipeline health at a glance — how many sessions are active, what's blocked, what just finished, what failed. The Sprint Pipeline gives you a single visual flow of every task through every stage. Cost charts show spend trends so you're not surprised. Activity feeds surface errors the moment they happen, not when you remember to check.
+
+The goal is simple: **you should be able to look at one screen and know exactly what's happening across all your concurrent work** — then make decisions (review, retry, reprioritize) without holding any of it in your head.
+
 | | Using Claude Code directly | Using Claude Code via BDE |
 |---|---|---|
 | **Sessions** | One at a time, manually started | Fleet running in parallel, auto-claimed from queue |
@@ -37,6 +47,7 @@ BDE adds all of this. It doesn't replace Claude Code — it wraps it in the infr
 | **Coordination** | You remember which tasks depend on which | Declarative hard/soft dependencies with auto-resolution |
 | **When it fails** | You notice, restart manually | Auto-retry (up to 3x), fast-fail detection, watchdog kill |
 | **Observability** | Scroll through terminal output | Dashboard, pipeline view, cost charts, event streams |
+| **Cognitive load** | You track everything in your head | One screen shows all concurrent work, decisions, and status |
 
 ---
 
