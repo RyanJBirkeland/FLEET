@@ -87,11 +87,6 @@ vi.mock('../../agent-manager/dependency-index', () => ({
   detectCycle: vi.fn().mockReturnValue(null)
 }))
 
-// Mock queue-api/router (needed by sprint-listeners)
-vi.mock('../../queue-api/router', () => ({
-  sseBroadcaster: { broadcast: vi.fn() }
-}))
-
 // Mock spec-semantic-check
 const mockCheckSpecSemantic = vi.fn().mockResolvedValue({
   passed: true,
