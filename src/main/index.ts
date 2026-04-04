@@ -121,6 +121,7 @@ app.whenReady().then(() => {
     getTask,
     updateTask,
     getTasksWithDependencies,
+    getSetting,
     logger: createLogger('task-terminal')
   })
   setOnStatusTerminal(terminalService.onStatusTerminal)

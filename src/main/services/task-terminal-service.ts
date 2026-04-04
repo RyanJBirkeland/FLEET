@@ -5,7 +5,7 @@ import type { SprintTask, TaskDependency } from '../../shared/types'
 
 const TERMINAL_STATUSES = new Set(['done', 'failed', 'error', 'cancelled'])
 
-type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes'> & {
+type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes' | 'title'> & {
   depends_on: TaskDependency[] | null
 }
 
@@ -13,6 +13,7 @@ export interface TaskTerminalServiceDeps {
   getTask: (id: string) => TaskSlice | null
   updateTask: (id: string, patch: Record<string, unknown>) => unknown
   getTasksWithDependencies: () => Array<{ id: string; depends_on: TaskDependency[] | null }>
+  getSetting?: (key: string) => string | null
   logger: { info: (msg: string) => void; warn: (msg: string) => void; error: (msg: string) => void }
 }
 
@@ -32,7 +33,15 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
     if (!TERMINAL_STATUSES.has(status)) return
     try {
       rebuildIndex()
-      resolveDependents(taskId, status, depIndex, deps.getTask, deps.updateTask, deps.logger)
+      resolveDependents(
+        taskId,
+        status,
+        depIndex,
+        deps.getTask,
+        deps.updateTask,
+        deps.logger,
+        deps.getSetting
+      )
     } catch (err) {
       deps.logger.error(`[task-terminal-service] resolveDependents failed for ${taskId}: ${err}`)
     }

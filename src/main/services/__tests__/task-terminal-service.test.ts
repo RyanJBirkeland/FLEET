@@ -4,9 +4,18 @@ import type { TaskTerminalServiceDeps } from '../task-terminal-service'
 
 function makeDeps(overrides: Partial<TaskTerminalServiceDeps> = {}): TaskTerminalServiceDeps {
   return {
-    getTask: vi.fn().mockReturnValue({ id: 't1', status: 'done', depends_on: null, notes: null }),
+    getTask: vi
+      .fn()
+      .mockReturnValue({
+        id: 't1',
+        title: 'Test Task',
+        status: 'done',
+        depends_on: null,
+        notes: null
+      }),
     updateTask: vi.fn(),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
+    getSetting: vi.fn().mockReturnValue(null),
     logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
     ...overrides
   }
@@ -19,10 +28,12 @@ describe('createTaskTerminalService', () => {
         .fn()
         .mockReturnValue([{ id: 't2', depends_on: [{ id: 't1', type: 'hard' }] }]),
       getTask: vi.fn().mockImplementation((id: string) => {
-        if (id === 't1') return { id: 't1', status: 'done', depends_on: null, notes: null }
+        if (id === 't1')
+          return { id: 't1', title: 'Task 1', status: 'done', depends_on: null, notes: null }
         if (id === 't2')
           return {
             id: 't2',
+            title: 'Task 2',
             status: 'blocked',
             depends_on: [{ id: 't1', type: 'hard' }],
             notes: null

@@ -12,6 +12,8 @@ const softDep = (id: string): TaskDependency => ({ id, type: 'soft' })
 type MockTask = {
   id: string
   status: string
+  title?: string
+  notes?: string | null
   depends_on: TaskDependency[] | null
 }
 
@@ -259,5 +261,210 @@ describe('resolveDependents', () => {
 
     resolveDependents('B', 'done', index, getTask, update)
     expect(update).toHaveBeenCalledWith('A', { status: 'queued' })
+  })
+
+  describe('cascade cancellation', () => {
+    it('does not cascade cancel by default (backward compatibility)', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+
+      // No getSetting provided, should default to 'continue'
+      resolveDependents('A', 'failed', index, getTask, updateTask)
+
+      // Task stays blocked with updated notes (no cancellation)
+      expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
+      expect(updateTask).not.toHaveBeenCalledWith(
+        'B',
+        expect.objectContaining({ status: 'cancelled' })
+      )
+    })
+
+    it('does not cascade cancel when setting is "continue"', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('continue')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
+      expect(updateTask).not.toHaveBeenCalledWith(
+        'B',
+        expect.objectContaining({ status: 'cancelled' })
+      )
+    })
+
+    it('cascade cancels blocked downstream tasks when hard dep fails and setting is "cancel"', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+    })
+
+    it('cascade cancels with error status', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'error', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'error', index, getTask, updateTask, undefined, getSetting)
+
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+    })
+
+    it('cascade cancels with cancelled status', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'cancelled', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'cancelled', index, getTask, updateTask, undefined, getSetting)
+
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+    })
+
+    it('recursively cancels cascade (A -> B -> C chain)', () => {
+      const index = makeIndex({ A: ['B'], B: ['C'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', title: 'Task B', depends_on: [hardDep('A')] },
+        C: { id: 'C', status: 'blocked', title: 'Task C', depends_on: [hardDep('B')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      // B should be cancelled due to A failing
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+
+      // C should be cancelled due to B being cancelled (recursive)
+      expect(updateTask).toHaveBeenCalledWith('C', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task B" failed'
+      })
+    })
+
+    it('does not cancel soft dependents', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [softDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      // Soft deps unblock on failure, not cancel
+      expect(updateTask).toHaveBeenCalledWith('B', { status: 'queued' })
+    })
+
+    it('only cancels tasks with hard dependency on failed task', () => {
+      // B depends on A (hard), C depends on A (soft), both blocked
+      const index = makeIndex({ A: ['B', 'C'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] },
+        C: { id: 'C', status: 'blocked', depends_on: [softDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      // B (hard) cancelled
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+
+      // C (soft) unblocked
+      expect(updateTask).toHaveBeenCalledWith('C', { status: 'queued' })
+    })
+
+    it('does not cancel non-blocked dependents', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'active', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      // B is already active, not blocked, so no cancellation
+      expect(updateTask).not.toHaveBeenCalled()
+    })
+
+    it('fan-in: only cancels if hard dep on failed task exists', () => {
+      // C depends on A (hard, failed) and B (hard, active)
+      const index = makeIndex({ A: ['C'], B: ['C'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'active', depends_on: null },
+        C: { id: 'C', status: 'blocked', depends_on: [hardDep('A'), hardDep('B')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      // C should be cancelled because it has a hard dep on failed A
+      expect(updateTask).toHaveBeenCalledWith('C', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+    })
+
+    it('uses task ID as fallback when title is missing', () => {
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [hardDep('A')] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "A" failed'
+      })
+    })
   })
 })
