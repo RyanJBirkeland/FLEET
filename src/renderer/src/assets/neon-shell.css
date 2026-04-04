@@ -4,8 +4,28 @@
    ═══════════════════════════════════════════════════════ */
 
 /* ── App Shell Background ── */
+/* padding-top creates a native titlebar inset zone above the header.
+   macOS hiddenInset renders traffic lights as a native overlay at ~(12, 4-18).
+   This 28px zone (standard macOS titlebar height) gives them dedicated space
+   so they don't sit on top of the UnifiedHeader content.
+   The zone inherits the app background and has -webkit-app-region: drag
+   so it acts as a seamless extension of the titlebar. */
 .app-shell {
   background: var(--neon-bg);
+  padding-top: 28px;
+}
+
+/* The inset zone above the header needs to be draggable */
+.app-shell::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 28px;
+  -webkit-app-region: drag;
+  background: linear-gradient(180deg, var(--neon-purple-surface) 0%, var(--neon-surface-deep) 100%);
+  z-index: 11;
 }
 
 .app-shell__body {
