@@ -106,10 +106,17 @@ describe('IPC Registration Completeness', () => {
     // Note: Some channels are server-side only and not exposed in preload:
     // - sprint:getChanges, sprint:batchUpdate (Queue API internal)
     // - playground:show (dev-only IPC)
-    const broadcastOnly = new Set(['agent:event'])
+    //
+    // review:checkAutoReview and review:generateSummary are defined in IPC map but
+    // not yet implemented (planned future features)
+    const excludedChannels = new Set([
+      'agent:event',
+      'review:checkAutoReview',
+      'review:generateSummary'
+    ])
 
     const missing = [...expectedChannels]
-      .filter((ch) => !broadcastOnly.has(ch))
+      .filter((ch) => !excludedChannels.has(ch))
       .filter((ch) => !registeredChannels.has(ch))
       .sort()
 

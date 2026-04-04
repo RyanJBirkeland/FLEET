@@ -49,6 +49,7 @@ import {
   SHARED_WEB_PREFERENCES,
   restoreTearoffWindows
 } from './tearoff-manager'
+import { loadPlugins } from './services/plugin-loader'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -117,6 +118,9 @@ app.whenReady().then(() => {
 
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
+
+  // Load plugins from ~/.bde/plugins/
+  loadPlugins()
 
   // --- Task terminal service (unified dependency resolution) ---
   const terminalService = createTaskTerminalService({
