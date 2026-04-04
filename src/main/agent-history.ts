@@ -307,9 +307,7 @@ export function finalizeStaleAgentRuns(maxAgeMs: number = 2 * 60 * 60 * 1000): n
  * Any record whose sprint_task_id is not in the active set gets finalized as 'failed'.
  * Called periodically by orphan recovery to catch agents that died without clean shutdown.
  */
-export function reconcileRunningAgentRuns(
-  isAgentActive: (taskId: string) => boolean
-): number {
+export function reconcileRunningAgentRuns(isAgentActive: (taskId: string) => boolean): number {
   const db = getDb()
   const rows = db
     .prepare(`SELECT id, sprint_task_id FROM agent_runs WHERE status = 'running'`)

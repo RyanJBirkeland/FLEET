@@ -802,12 +802,8 @@ export const migrations: Migration[] = [
       ).map((c) => c.name)
 
       if (!cols.includes('sprint_id')) {
-        db.exec(
-          'ALTER TABLE sprint_tasks ADD COLUMN sprint_id TEXT REFERENCES sprints(id)'
-        )
-        db.exec(
-          'CREATE INDEX IF NOT EXISTS idx_sprint_tasks_sprint ON sprint_tasks(sprint_id)'
-        )
+        db.exec('ALTER TABLE sprint_tasks ADD COLUMN sprint_id TEXT REFERENCES sprints(id)')
+        db.exec('CREATE INDEX IF NOT EXISTS idx_sprint_tasks_sprint ON sprint_tasks(sprint_id)')
       }
     }
   }

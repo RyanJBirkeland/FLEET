@@ -561,13 +561,88 @@ export function registerReviewHandlers(): void {
     return { summary: '' }
   })
 
-  // review:checkAutoReview — check if task qualifies for auto-review (stub, not implemented)
-  safeHandle('review:checkAutoReview', async (_e, _payload) => {
-    logger.warn('review:checkAutoReview called but not implemented — returning no auto-actions')
+  // review:checkAutoReview — check if task qualifies for auto-review
+  safeHandle('review:checkAutoReview', async (_e, payload) => {
+    const { taskId } = payload
+
+    const task = _getTask(taskId)
+    if (!task) throw new Error(`Task ${taskId} not found`)
+    if (!task.worktree_path) {
+      return {
+        shouldAutoMerge: false,
+        shouldAutoApprove: false,
+        matchedRule: null
+      }
+    }
+
+    // Load auto-review rules from settings
+    const rules =
+      getSettingJson<
+        Array<{
+          id: string
+          name: string
+          enabled: boolean
+          conditions: {
+            maxLinesChanged?: number
+            filePatterns?: string[]
+            excludePatterns?: string[]
+          }
+          action: 'auto-merge' | 'auto-approve'
+        }>
+      >('autoReview.rules')
+    if (!rules || rules.length === 0) {
+      return {
+        shouldAutoMerge: false,
+        shouldAutoApprove: false,
+        matchedRule: null
+      }
+    }
+
+    // Get file diff stats
+    const { stdout: numstatOut } = await execFileAsync(
+      'git',
+      ['diff', '--numstat', 'origin/main...HEAD'],
+      { cwd: task.worktree_path, env }
+    )
+
+    if (!numstatOut.trim()) {
+      // No changes — don't auto-merge
+      return {
+        shouldAutoMerge: false,
+        shouldAutoApprove: false,
+        matchedRule: null
+      }
+    }
+
+    // Parse numstat into file summaries
+    const files = numstatOut
+      .trim()
+      .split('\n')
+      .filter(Boolean)
+      .map((line) => {
+        const parts = line.split('\t')
+        const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10)
+        const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10)
+        const filePath = parts.slice(2).join('\t')
+        return { path: filePath, additions, deletions }
+      })
+
+    // Evaluate rules (import dynamically to avoid circular deps)
+    const { evaluateAutoReviewRules } = await import('../services/auto-review')
+    const result = evaluateAutoReviewRules(rules, files)
+
+    if (!result) {
+      return {
+        shouldAutoMerge: false,
+        shouldAutoApprove: false,
+        matchedRule: null
+      }
+    }
+
     return {
-      shouldAutoMerge: false,
-      shouldAutoApprove: false,
-      matchedRule: null
+      shouldAutoMerge: result.action === 'auto-merge',
+      shouldAutoApprove: result.action === 'auto-approve',
+      matchedRule: result.rule.name
     }
   })
 }

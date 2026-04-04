@@ -524,7 +524,145 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
   } catch (err) {
     logger.error(`[completion] Failed to update task ${taskId} to review status: ${err}`)
   }
-  // NOTE: Do NOT call onTaskTerminal — review is not a terminal status.
+
+  // 5. Check auto-review rules — if qualified, auto-merge
+  const { getSettingJson } = await import('../settings')
+  const rules =
+    getSettingJson<
+      Array<{
+        id: string
+        name: string
+        enabled: boolean
+        conditions: {
+          maxLinesChanged?: number
+          filePatterns?: string[]
+          excludePatterns?: string[]
+        }
+        action: 'auto-merge' | 'auto-approve'
+      }>
+    >('autoReview.rules')
+
+  if (rules && rules.length > 0) {
+    try {
+      // Get file diff stats
+      const { stdout: numstatOut } = await execFile(
+        'git',
+        ['diff', '--numstat', 'origin/main...HEAD'],
+        { cwd: worktreePath, env: buildAgentEnv() }
+      )
+
+      if (numstatOut.trim()) {
+        // Parse numstat into file summaries
+        const files = numstatOut
+          .trim()
+          .split('\n')
+          .filter(Boolean)
+          .map((line) => {
+            const parts = line.split('\t')
+            const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10)
+            const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10)
+            const filePath = parts.slice(2).join('\t')
+            return { path: filePath, additions, deletions }
+          })
+
+        // Evaluate rules
+        const { evaluateAutoReviewRules } = await import('../services/auto-review')
+        const result = evaluateAutoReviewRules(rules, files)
+
+        if (result && result.action === 'auto-merge') {
+          logger.info(
+            `[completion] Task ${taskId} qualifies for auto-merge (rule: ${result.rule.name}) — merging`
+          )
+
+          // Get task to find repo name
+          const task = repo.getTask(taskId)
+          if (!task) {
+            logger.error(`[completion] Task ${taskId} not found for auto-merge`)
+            return
+          }
+
+          const repos = getSettingJson<Array<{ name: string; localPath: string }>>('repos')
+          const repoConfig = repos?.find((r) => r.name === task.repo)
+          if (!repoConfig) {
+            logger.error(`[completion] Repo "${task.repo}" not found in settings for auto-merge`)
+            return
+          }
+
+          const repoPath = repoConfig.localPath
+
+          // Verify clean working tree
+          const { stdout: statusOut } = await execFile('git', ['status', '--porcelain'], {
+            cwd: repoPath,
+            env: buildAgentEnv()
+          })
+          if (statusOut.trim()) {
+            logger.warn(
+              `[completion] Skipping auto-merge for task ${taskId}: main repo has uncommitted changes`
+            )
+            return
+          }
+
+          // Perform squash merge
+          try {
+            await execFile('git', ['merge', '--squash', branch], {
+              cwd: repoPath,
+              env: buildAgentEnv()
+            })
+            await execFile('git', ['commit', '-m', `${sanitizeForGit(title)} (#${taskId})`], {
+              cwd: repoPath,
+              env: buildAgentEnv()
+            })
+
+            // Clean up worktree + branch
+            try {
+              await execFile('git', ['worktree', 'remove', worktreePath, '--force'], {
+                cwd: repoPath,
+                env: buildAgentEnv()
+              })
+            } catch {
+              /* best-effort */
+            }
+            try {
+              await execFile('git', ['branch', '-D', branch], {
+                cwd: repoPath,
+                env: buildAgentEnv()
+              })
+            } catch {
+              /* best-effort */
+            }
+
+            // Mark task done
+            repo.updateTask(taskId, {
+              status: 'done',
+              completed_at: new Date().toISOString(),
+              worktree_path: null
+            })
+
+            logger.info(`[completion] Task ${taskId} auto-merged successfully`)
+            await onTaskTerminal(taskId, 'done')
+          } catch (mergeErr) {
+            logger.error(
+              `[completion] Auto-merge failed for task ${taskId}: ${mergeErr} — task remains in review`
+            )
+            // Abort the failed merge
+            try {
+              await execFile('git', ['merge', '--abort'], {
+                cwd: repoPath,
+                env: buildAgentEnv()
+              })
+            } catch {
+              /* best-effort */
+            }
+          }
+        }
+      }
+    } catch (err) {
+      logger.warn(`[completion] Auto-review check failed for task ${taskId}: ${err}`)
+      // Non-fatal — task stays in review for manual review
+    }
+  }
+
+  // NOTE: If not auto-merged, do NOT call onTaskTerminal — review is not a terminal status.
   // Do NOT clean up worktree — it stays alive for review.
 }
 

@@ -105,10 +105,7 @@ export function EpicList({
         type="button"
       >
         {isSelected && (
-          <div
-            className="planner-epic-item__accent"
-            style={{ background: group.accent_color }}
-          />
+          <div className="planner-epic-item__accent" style={{ background: group.accent_color }} />
         )}
 
         <div
