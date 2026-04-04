@@ -2,6 +2,7 @@ import type { TaskDependency } from '../../shared/types'
 
 const TERMINAL_STATUSES = new Set(['done', 'cancelled', 'failed', 'error'])
 const HARD_SATISFIED_STATUSES = new Set(['done'])
+const FAILURE_STATUSES = new Set(['failed', 'error', 'cancelled'])
 
 export interface DependencyIndex {
   rebuild(tasks: Array<{ id: string; depends_on: TaskDependency[] | null }>): void
@@ -42,10 +43,23 @@ export function createDependencyIndex(): DependencyIndex {
       for (const dep of deps) {
         const status = getTaskStatus(dep.id)
         if (status === undefined) continue // deleted dep = satisfied
-        if (dep.type === 'hard') {
-          if (!HARD_SATISFIED_STATUSES.has(status)) blockedBy.push(dep.id)
+
+        // If condition is specified, use condition-based logic
+        if (dep.condition) {
+          if (dep.condition === 'on_success') {
+            if (!HARD_SATISFIED_STATUSES.has(status)) blockedBy.push(dep.id)
+          } else if (dep.condition === 'on_failure') {
+            if (!FAILURE_STATUSES.has(status)) blockedBy.push(dep.id)
+          } else if (dep.condition === 'always') {
+            if (!TERMINAL_STATUSES.has(status)) blockedBy.push(dep.id)
+          }
         } else {
-          if (!TERMINAL_STATUSES.has(status)) blockedBy.push(dep.id)
+          // No condition = fallback to hard/soft behavior (backward compatibility)
+          if (dep.type === 'hard') {
+            if (!HARD_SATISFIED_STATUSES.has(status)) blockedBy.push(dep.id)
+          } else {
+            if (!TERMINAL_STATUSES.has(status)) blockedBy.push(dep.id)
+          }
         }
       }
       return { satisfied: blockedBy.length === 0, blockedBy }

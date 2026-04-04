@@ -28,6 +28,7 @@ export interface AgentMeta {
 export interface TaskDependency {
   id: string
   type: 'hard' | 'soft'
+  condition?: 'on_success' | 'on_failure' | 'always'
 }
 
 export type FailureReason = 'auth' | 'timeout' | 'test_failure' | 'compilation' | 'spawn' | 'unknown'

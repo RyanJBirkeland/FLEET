@@ -66,6 +66,15 @@ export function DependencyPicker({
     [dependencies, onChange]
   )
 
+  const handleChangeCondition = useCallback(
+    (id: string, condition: 'on_success' | 'on_failure' | 'always' | undefined) => {
+      onChange(
+        dependencies.map((d) => (d.id === id ? { ...d, condition } : d))
+      )
+    },
+    [dependencies, onChange]
+  )
+
   // Close on outside click
   useEffect(() => {
     if (!dropdownOpen) return
@@ -112,6 +121,23 @@ export function DependencyPicker({
               >
                 {dep.type}
               </button>
+              <select
+                className="wb-deps__condition"
+                value={dep.condition ?? ''}
+                onChange={(e) =>
+                  handleChangeCondition(
+                    dep.id,
+                    e.target.value === '' ? undefined : (e.target.value as 'on_success' | 'on_failure' | 'always')
+                  )
+                }
+                aria-label="Dependency condition"
+                title="When should this dependency be satisfied?"
+              >
+                <option value="">Default (type-based)</option>
+                <option value="on_success">On Success</option>
+                <option value="on_failure">On Failure</option>
+                <option value="always">Always (any terminal status)</option>
+              </select>
               <button
                 type="button"
                 className="wb-deps__remove"
