@@ -90,7 +90,7 @@ describe('useDesktopNotifications', () => {
     const notifications = useNotificationsStore.getState().notifications
     expect(notifications).toHaveLength(1)
     expect(notifications[0].type).toBe('agent_completed')
-    expect(notifications[0].title).toContain('Agent completed')
+    expect(notifications[0].title).toContain('BDE: Task Completed')
   })
 
   it('does not fire notification when window is focused', () => {
@@ -223,7 +223,7 @@ describe('useDesktopNotifications', () => {
     const notifications = useNotificationsStore.getState().notifications
     expect(notifications).toHaveLength(1)
     expect(notifications[0].type).toBe('pr_merged')
-    expect(notifications[0].title).toContain('PR merged')
+    expect(notifications[0].title).toContain('BDE: PR Merged')
   })
 
   it('does not fire duplicate notifications for same task', () => {

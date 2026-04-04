@@ -77,23 +77,6 @@ export function ReviewQueue(): React.JSX.Element {
             />
             <span className="cr-queue__item-title">{task.title}</span>
             <span className="cr-queue__item-repo">{task.repo}</span>
-||||||| 5faba97c
-            <span className="cr-queue__item-title">{task.title}</span>
-            <span className="cr-queue__item-repo">{task.repo}</span>
-            <input
-              type="checkbox"
-              className="cr-queue__checkbox"
-              checked={selectedBatchIds.has(task.id)}
-              onChange={(e) => {
-                e.stopPropagation()
-                toggleBatchId(task.id)
-              }}
-              onClick={(e) => e.stopPropagation()}
-            />
-            <div className="cr-queue__item-content">
-              <span className="cr-queue__item-title">{task.title}</span>
-              <span className="cr-queue__item-repo">{task.repo}</span>
-            </div>
           </button>
         ))}
         {reviewTasks.length === 0 && (

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 
-import { WorkbenchCopilot, isResearchQuery, extractSearchTerms } from '../WorkbenchCopilot'
+import { WorkbenchCopilot } from '../WorkbenchCopilot'
+import { isResearchQuery, extractSearchTerms } from '../copilot-utils'
 import { useTaskWorkbenchStore, type CopilotMessage } from '../../../stores/taskWorkbench'
 
 describe('WorkbenchCopilot', () => {

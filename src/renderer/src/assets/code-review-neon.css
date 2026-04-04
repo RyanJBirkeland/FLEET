@@ -608,7 +608,6 @@
   box-shadow: 0 0 16px var(--neon-cyan-glow);
   transform: translateY(-1px);
 }
-||||||| 5faba97c
 
 /* Batch actions bar */
 .cr-batch {

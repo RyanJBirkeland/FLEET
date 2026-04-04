@@ -1,25 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useTaskWorkbenchStore, type CopilotMessage } from '../../stores/taskWorkbench'
+import { isResearchQuery, extractSearchTerms } from './copilot-utils'
 
 interface WorkbenchCopilotProps {
   onClose: () => void
-}
-
-const RESEARCH_PATTERNS = [
-  /research|search|find|look for|grep|where is|which file|show me/i
-]
-
-export function isResearchQuery(text: string): boolean {
-  return RESEARCH_PATTERNS.some((p) => p.test(text))
-}
-
-export function extractSearchTerms(text: string): string {
-  return text
-    .replace(
-      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
-      ''
-    )
-    .trim()
 }
 
 function formatTime(ts: number): string {

@@ -1,0 +1,1290 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>BDE Dashboard UI/UX Explorer</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background: #0a0a0f;
+        color: #e0e0e0;
+        height: 100vh;
+        display: grid;
+        grid-template-columns: 320px 1fr;
+        grid-template-rows: 1fr auto;
+        gap: 0;
+      }
+      .controls {
+        background: #14141a;
+        padding: 20px;
+        overflow-y: auto;
+        border-right: 1px solid #2a2a35;
+        grid-row: 1 / 3;
+      }
+      .controls h1 {
+        font-size: 18px;
+        font-weight: 700;
+        margin-bottom: 6px;
+        color: #00d9ff;
+        text-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+      }
+      .controls .subtitle {
+        font-size: 11px;
+        color: #888;
+        margin-bottom: 20px;
+      }
+      .section {
+        margin-bottom: 24px;
+      }
+      .section-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+        margin-bottom: 12px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+      }
+      .section-title::before {
+        content: '';
+        width: 3px;
+        height: 12px;
+        background: #00d9ff;
+        box-shadow: 0 0 6px rgba(0, 217, 255, 0.5);
+      }
+      .control-group {
+        margin-bottom: 14px;
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        margin-bottom: 6px;
+        color: #ccc;
+      }
+      select,
+      input[type='range'] {
+        width: 100%;
+        background: #1e1e28;
+        border: 1px solid #2a2a35;
+        color: #e0e0e0;
+        padding: 6px 10px;
+        border-radius: 4px;
+        font-size: 12px;
+      }
+      input[type='range'] {
+        padding: 0;
+        height: 6px;
+        -webkit-appearance: none;
+        appearance: none;
+        background: #2a2a35;
+        border-radius: 3px;
+        outline: none;
+      }
+      input[type='range']::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        appearance: none;
+        width: 14px;
+        height: 14px;
+        background: #00d9ff;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 0 6px rgba(0, 217, 255, 0.6);
+      }
+      input[type='range']::-moz-range-thumb {
+        width: 14px;
+        height: 14px;
+        background: #00d9ff;
+        border-radius: 50%;
+        cursor: pointer;
+        border: none;
+        box-shadow: 0 0 6px rgba(0, 217, 255, 0.6);
+      }
+      .range-value {
+        display: inline-block;
+        margin-left: 8px;
+        font-size: 11px;
+        color: #00d9ff;
+        font-weight: 600;
+      }
+      .toggle-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+      }
+      .toggle-btn {
+        background: #1e1e28;
+        border: 1px solid #2a2a35;
+        color: #888;
+        padding: 8px 10px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: center;
+      }
+      .toggle-btn.active {
+        background: rgba(0, 217, 255, 0.15);
+        border-color: #00d9ff;
+        color: #00d9ff;
+        box-shadow: 0 0 8px rgba(0, 217, 255, 0.2);
+      }
+      .preset-buttons {
+        display: grid;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .preset-btn {
+        background: #1e1e28;
+        border: 1px solid #2a2a35;
+        color: #ccc;
+        padding: 10px;
+        border-radius: 4px;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.15s;
+        text-align: left;
+      }
+      .preset-btn:hover {
+        border-color: #00d9ff;
+        background: rgba(0, 217, 255, 0.05);
+      }
+      .preset-btn strong {
+        display: block;
+        color: #00d9ff;
+        margin-bottom: 2px;
+      }
+      .preset-btn small {
+        color: #888;
+        font-size: 10px;
+      }
+      .preview-panel {
+        background: #0f0f14;
+        padding: 40px;
+        overflow: auto;
+        position: relative;
+      }
+      .preview-label {
+        position: absolute;
+        top: 16px;
+        right: 16px;
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #555;
+        background: #1a1a20;
+        padding: 4px 10px;
+        border-radius: 3px;
+        border: 1px solid #2a2a35;
+      }
+      #dashboard-preview {
+        background: #0a0a0f;
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+        min-height: 600px;
+        border: 1px solid #2a2a35;
+      }
+      .dashboard-effects {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+        overflow: hidden;
+      }
+      .scanlines {
+        position: absolute;
+        inset: 0;
+        background: repeating-linear-gradient(
+          0deg,
+          rgba(255, 255, 255, 0.03) 0px,
+          transparent 1px,
+          transparent 2px
+        );
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .ambient-glow {
+        position: absolute;
+        top: -50%;
+        left: -50%;
+        width: 200%;
+        height: 200%;
+        opacity: 0;
+        transition: opacity 0.3s;
+      }
+      .dashboard-content {
+        position: relative;
+        z-index: 1;
+        padding: 16px;
+      }
+      .status-bar {
+        background: rgba(30, 30, 40, 0.6);
+        border: 1px solid rgba(0, 217, 255, 0.2);
+        padding: 8px 14px;
+        border-radius: 4px;
+        margin-bottom: 16px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+      }
+      .status-bar-title {
+        color: #00d9ff;
+        text-shadow: 0 0 6px rgba(0, 217, 255, 0.4);
+        font-weight: 700;
+      }
+      .system-health {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 10px;
+      }
+      .health-dot {
+        width: 6px;
+        height: 6px;
+        border-radius: 50%;
+        background: #00ff88;
+        box-shadow: 0 0 6px rgba(0, 255, 136, 0.6);
+      }
+      .quick-actions {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 16px;
+      }
+      .quick-action-btn {
+        background: rgba(0, 217, 255, 0.1);
+        border: 1px solid rgba(0, 217, 255, 0.3);
+        color: #00d9ff;
+        padding: 8px 14px;
+        border-radius: 4px;
+        font-size: 11px;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      .quick-action-btn:hover {
+        background: rgba(0, 217, 255, 0.2);
+        box-shadow: 0 0 8px rgba(0, 217, 255, 0.3);
+      }
+      .dashboard-grid {
+        display: grid;
+        gap: 12px;
+      }
+      .dashboard-col {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .stat-counter {
+        background: rgba(30, 30, 40, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 6px;
+        padding: 12px 14px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .stat-counter:hover {
+        border-color: rgba(0, 217, 255, 0.4);
+        background: rgba(0, 217, 255, 0.05);
+        transform: translateX(2px);
+      }
+      .stat-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+      }
+      .stat-value {
+        font-size: 20px;
+        font-weight: 800;
+      }
+      .neon-card {
+        background: rgba(30, 30, 40, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 8px;
+        padding: 14px;
+      }
+      .card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 12px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      }
+      .card-title {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        font-weight: 700;
+      }
+      .chart-placeholder {
+        height: 80px;
+        background: rgba(0, 217, 255, 0.05);
+        border: 1px dashed rgba(0, 217, 255, 0.2);
+        border-radius: 4px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        color: #555;
+        margin-bottom: 6px;
+      }
+      .chart-caption {
+        font-size: 9px;
+        color: #666;
+      }
+      .pipeline-stages {
+        display: flex;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .pipeline-stage {
+        flex: 1;
+        text-align: center;
+        padding: 8px 4px;
+        border-radius: 4px;
+        font-size: 10px;
+      }
+      .pipeline-stage-label {
+        text-transform: uppercase;
+        font-weight: 700;
+        margin-bottom: 4px;
+        font-size: 9px;
+      }
+      .pipeline-stage-count {
+        font-size: 16px;
+        font-weight: 800;
+      }
+      .activity-item {
+        padding: 6px 0;
+        font-size: 11px;
+        color: #ccc;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      }
+      .completion-item {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 0;
+        font-size: 11px;
+      }
+      .completion-title {
+        color: #ccc;
+        flex: 1;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .completion-time {
+        color: #666;
+        font-size: 9px;
+        margin-left: 8px;
+      }
+      .cost-value {
+        font-size: 28px;
+        font-weight: 800;
+        text-align: center;
+        padding: 20px 0;
+      }
+      .prompt-panel {
+        background: #14141a;
+        padding: 20px;
+        border-top: 1px solid #2a2a35;
+        grid-column: 2;
+      }
+      .prompt-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .prompt-title {
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        color: #888;
+      }
+      #copy-btn {
+        background: #00d9ff;
+        color: #0a0a0f;
+        border: none;
+        padding: 6px 14px;
+        border-radius: 4px;
+        font-size: 11px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+      #copy-btn:hover {
+        background: #00f0ff;
+        box-shadow: 0 0 12px rgba(0, 217, 255, 0.4);
+      }
+      #copy-btn.copied {
+        background: #00ff88;
+      }
+      #prompt-output {
+        background: #1e1e28;
+        border: 1px solid #2a2a35;
+        border-radius: 4px;
+        padding: 14px;
+        font-size: 13px;
+        line-height: 1.6;
+        color: #e0e0e0;
+        min-height: 80px;
+        max-height: 150px;
+        overflow-y: auto;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="controls">
+      <h1>Dashboard UX Explorer</h1>
+      <p class="subtitle">Configure layout, density, features & visual treatment</p>
+      <div class="section">
+        <div class="section-title">Presets</div>
+        <div class="preset-buttons">
+          <button class="preset-btn" onclick="applyPreset('current')">
+            <strong>Current</strong><small>Matches existing implementation</small>
+          </button>
+          <button class="preset-btn" onclick="applyPreset('minimal')">
+            <strong>Minimal</strong><small>Essential metrics only, clean</small>
+          </button>
+          <button class="preset-btn" onclick="applyPreset('poweruser')">
+            <strong>Power User</strong><small>All features, high density</small>
+          </button>
+          <button class="preset-btn" onclick="applyPreset('analyst')">
+            <strong>Analyst</strong><small>Charts and trends focus</small>
+          </button>
+          <button class="preset-btn" onclick="applyPreset('glance')">
+            <strong>At-a-Glance</strong><small>Big numbers, simplified</small>
+          </button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Layout Structure</div>
+        <div class="control-group">
+          <label>Column Layout</label>
+          <select
+            id="columns"
+            onchange="
+              updateState('columns', this.value)
+              updateAll()
+            "
+          >
+            <option value="2">2 Columns</option>
+            <option value="3" selected>3 Columns (Current)</option>
+            <option value="4">4 Columns</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Grid Gap <span class="range-value" id="gap-value">12px</span></label>
+          <input
+            type="range"
+            id="gap"
+            min="6"
+            max="24"
+            value="12"
+            oninput="
+              updateState('gap', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+        <div class="control-group">
+          <label>Card Padding <span class="range-value" id="padding-value">14px</span></label>
+          <input
+            type="range"
+            id="padding"
+            min="8"
+            max="24"
+            value="14"
+            oninput="
+              updateState('padding', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Information Density</div>
+        <div class="control-group">
+          <label>Density Mode</label>
+          <select
+            id="density"
+            onchange="
+              updateState('density', this.value)
+              updateAll()
+            "
+          >
+            <option value="compact">Compact</option>
+            <option value="standard" selected>Standard</option>
+            <option value="comfortable">Comfortable</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Font Scale <span class="range-value" id="fontscale-value">100%</span></label>
+          <input
+            type="range"
+            id="fontscale"
+            min="80"
+            max="120"
+            value="100"
+            oninput="
+              updateState('fontScale', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Features to Show</div>
+        <div class="toggle-grid">
+          <button class="toggle-btn active" id="toggle-stats" onclick="toggleFeature('showStats')">
+            Stats
+          </button>
+          <button
+            class="toggle-btn active"
+            id="toggle-pipeline"
+            onclick="toggleFeature('showPipeline')"
+          >
+            Pipeline
+          </button>
+          <button class="toggle-btn active" id="toggle-chart" onclick="toggleFeature('showChart')">
+            Chart
+          </button>
+          <button
+            class="toggle-btn active"
+            id="toggle-success"
+            onclick="toggleFeature('showSuccess')"
+          >
+            Success Rate
+          </button>
+          <button
+            class="toggle-btn active"
+            id="toggle-duration"
+            onclick="toggleFeature('showDuration')"
+          >
+            Avg Duration
+          </button>
+          <button
+            class="toggle-btn active"
+            id="toggle-cost"
+            onclick="toggleFeature('showCostTrend')"
+          >
+            Cost Trend
+          </button>
+          <button class="toggle-btn active" id="toggle-feed" onclick="toggleFeature('showFeed')">
+            Activity Feed
+          </button>
+          <button
+            class="toggle-btn active"
+            id="toggle-completions"
+            onclick="toggleFeature('showCompletions')"
+          >
+            Completions
+          </button>
+          <button
+            class="toggle-btn active"
+            id="toggle-totalcost"
+            onclick="toggleFeature('showTotalCost')"
+          >
+            24h Cost
+          </button>
+          <button
+            class="toggle-btn"
+            id="toggle-quickactions"
+            onclick="toggleFeature('showQuickActions')"
+          >
+            Quick Actions
+          </button>
+          <button class="toggle-btn" id="toggle-health" onclick="toggleFeature('showHealth')">
+            Health Indicator
+          </button>
+        </div>
+      </div>
+      <div class="section">
+        <div class="section-title">Visual Treatment</div>
+        <div class="control-group">
+          <label>Accent Color</label>
+          <select
+            id="accent"
+            onchange="
+              updateState('accent', this.value)
+              updateAll()
+            "
+          >
+            <option value="cyan" selected>Cyan (Current)</option>
+            <option value="purple">Purple</option>
+            <option value="orange">Orange</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label>Ambient Glow <span class="range-value" id="glow-value">0%</span></label>
+          <input
+            type="range"
+            id="glow"
+            min="0"
+            max="100"
+            value="0"
+            oninput="
+              updateState('ambientGlow', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+        <div class="control-group">
+          <label>Scanlines <span class="range-value" id="scanlines-value">0%</span></label>
+          <input
+            type="range"
+            id="scanlines"
+            min="0"
+            max="100"
+            value="0"
+            oninput="
+              updateState('scanlines', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+        <div class="control-group">
+          <label>Glass Blur <span class="range-value" id="blur-value">0px</span></label>
+          <input
+            type="range"
+            id="blur"
+            min="0"
+            max="20"
+            value="0"
+            oninput="
+              updateState('glassBlur', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+        <div class="control-group">
+          <label>Shadow Depth <span class="range-value" id="shadow-value">Low</span></label>
+          <input
+            type="range"
+            id="shadow"
+            min="0"
+            max="2"
+            value="0"
+            oninput="
+              updateState('shadowDepth', parseInt(this.value))
+              updateAll()
+            "
+          />
+        </div>
+      </div>
+    </div>
+    <div class="preview-panel">
+      <div class="preview-label">Live Preview</div>
+      <div id="dashboard-preview">
+        <div class="dashboard-effects">
+          <div class="scanlines" id="scanlines-effect"></div>
+          <div class="ambient-glow" id="ambient-effect"></div>
+        </div>
+        <div class="dashboard-content" id="dashboard-content"></div>
+      </div>
+    </div>
+    <div class="prompt-panel">
+      <div class="prompt-header">
+        <span class="prompt-title">Design Specification</span>
+        <button id="copy-btn" onclick="copyPrompt()">Copy Prompt</button>
+      </div>
+      <div id="prompt-output"></div>
+    </div>
+    <script>
+      const COLORS = {
+        cyan: {
+          primary: '#00d9ff',
+          glow: 'rgba(0, 217, 255, 0.3)',
+          shadow: 'rgba(0, 217, 255, 0.6)'
+        },
+        purple: {
+          primary: '#b794f4',
+          glow: 'rgba(183, 148, 244, 0.3)',
+          shadow: 'rgba(183, 148, 244, 0.6)'
+        },
+        orange: {
+          primary: '#ff9500',
+          glow: 'rgba(255, 149, 0, 0.3)',
+          shadow: 'rgba(255, 149, 0, 0.6)'
+        },
+        blue: {
+          primary: '#4a9eff',
+          glow: 'rgba(74, 158, 255, 0.3)',
+          shadow: 'rgba(74, 158, 255, 0.6)'
+        },
+        green: {
+          primary: '#00ff88',
+          glow: 'rgba(0, 255, 136, 0.3)',
+          shadow: 'rgba(0, 255, 136, 0.6)'
+        }
+      }
+      const state = {
+        columns: 3,
+        gap: 12,
+        padding: 14,
+        density: 'standard',
+        fontScale: 100,
+        showStats: true,
+        showPipeline: true,
+        showChart: true,
+        showSuccess: true,
+        showDuration: true,
+        showCostTrend: true,
+        showFeed: true,
+        showCompletions: true,
+        showTotalCost: true,
+        showQuickActions: false,
+        showHealth: false,
+        accent: 'cyan',
+        ambientGlow: 0,
+        scanlines: 0,
+        glassBlur: 0,
+        shadowDepth: 0
+      }
+      const PRESETS = {
+        current: {
+          columns: 3,
+          gap: 12,
+          padding: 14,
+          density: 'standard',
+          fontScale: 100,
+          showStats: true,
+          showPipeline: true,
+          showChart: true,
+          showSuccess: true,
+          showDuration: true,
+          showCostTrend: true,
+          showFeed: true,
+          showCompletions: true,
+          showTotalCost: true,
+          showQuickActions: false,
+          showHealth: false,
+          accent: 'cyan',
+          ambientGlow: 0,
+          scanlines: 0,
+          glassBlur: 0,
+          shadowDepth: 0
+        },
+        minimal: {
+          columns: 2,
+          gap: 16,
+          padding: 16,
+          density: 'comfortable',
+          fontScale: 110,
+          showStats: true,
+          showPipeline: false,
+          showChart: false,
+          showSuccess: true,
+          showDuration: false,
+          showCostTrend: false,
+          showFeed: false,
+          showCompletions: true,
+          showTotalCost: true,
+          showQuickActions: false,
+          showHealth: false,
+          accent: 'cyan',
+          ambientGlow: 20,
+          scanlines: 15,
+          glassBlur: 8,
+          shadowDepth: 1
+        },
+        poweruser: {
+          columns: 4,
+          gap: 8,
+          padding: 10,
+          density: 'compact',
+          fontScale: 90,
+          showStats: true,
+          showPipeline: true,
+          showChart: true,
+          showSuccess: true,
+          showDuration: true,
+          showCostTrend: true,
+          showFeed: true,
+          showCompletions: true,
+          showTotalCost: true,
+          showQuickActions: true,
+          showHealth: true,
+          accent: 'purple',
+          ambientGlow: 40,
+          scanlines: 25,
+          glassBlur: 4,
+          shadowDepth: 1
+        },
+        analyst: {
+          columns: 3,
+          gap: 14,
+          padding: 16,
+          density: 'standard',
+          fontScale: 100,
+          showStats: false,
+          showPipeline: false,
+          showChart: true,
+          showSuccess: true,
+          showDuration: true,
+          showCostTrend: true,
+          showFeed: false,
+          showCompletions: true,
+          showTotalCost: true,
+          showQuickActions: false,
+          showHealth: false,
+          accent: 'blue',
+          ambientGlow: 30,
+          scanlines: 20,
+          glassBlur: 6,
+          shadowDepth: 1
+        },
+        glance: {
+          columns: 2,
+          gap: 20,
+          padding: 20,
+          density: 'comfortable',
+          fontScale: 120,
+          showStats: true,
+          showPipeline: true,
+          showChart: false,
+          showSuccess: true,
+          showDuration: false,
+          showCostTrend: false,
+          showFeed: false,
+          showCompletions: false,
+          showTotalCost: true,
+          showQuickActions: true,
+          showHealth: true,
+          accent: 'green',
+          ambientGlow: 50,
+          scanlines: 10,
+          glassBlur: 12,
+          shadowDepth: 2
+        }
+      }
+      function updateState(k, v) {
+        state[k] = v
+      }
+      function toggleFeature(k) {
+        state[k] = !state[k]
+        const fn = k.replace('show', '').toLowerCase()
+        const btn = document.getElementById('toggle-' + fn)
+        state[k] ? btn.classList.add('active') : btn.classList.remove('active')
+        updateAll()
+      }
+      function applyPreset(n) {
+        const p = PRESETS[n]
+        Object.assign(state, p)
+        document.getElementById('columns').value = state.columns
+        document.getElementById('gap').value = state.gap
+        document.getElementById('padding').value = state.padding
+        document.getElementById('density').value = state.density
+        document.getElementById('fontscale').value = state.fontScale
+        document.getElementById('accent').value = state.accent
+        document.getElementById('glow').value = state.ambientGlow
+        document.getElementById('scanlines').value = state.scanlines
+        document.getElementById('blur').value = state.glassBlur
+        document.getElementById('shadow').value = state.shadowDepth
+        const fs = [
+          'stats',
+          'pipeline',
+          'chart',
+          'success',
+          'duration',
+          'cost',
+          'feed',
+          'completions',
+          'totalcost',
+          'quickactions',
+          'health'
+        ]
+        fs.forEach((f) => {
+          let sk = 'show' + f.charAt(0).toUpperCase() + f.slice(1)
+          if (f === 'cost') sk = 'showCostTrend'
+          if (f === 'totalcost') sk = 'showTotalCost'
+          if (f === 'quickactions') sk = 'showQuickActions'
+          const btn = document.getElementById('toggle-' + f)
+          state[sk] ? btn.classList.add('active') : btn.classList.remove('active')
+        })
+        updateAll()
+      }
+      function renderPreview() {
+        const c = document.getElementById('dashboard-content')
+        const col = COLORS[state.accent]
+        let ds = 1
+        if (state.density === 'compact') ds = 0.85
+        if (state.density === 'comfortable') ds = 1.15
+        const fs = state.fontScale / 100
+        const sc = ds * fs
+        let gt = ''
+        if (state.columns === 2) gt = '1fr 1fr'
+        if (state.columns === 3) gt = '200px 1fr 240px'
+        if (state.columns === 4) gt = 'repeat(4, 1fr)'
+        c.style.fontSize = sc * 100 + '%'
+        c.innerHTML = ''
+        const sb = document.createElement('div')
+        sb.className = 'status-bar'
+        sb.innerHTML =
+          '<div class="status-bar-title">BDE Command Center</div>' +
+          (state.showHealth
+            ? '<div class="system-health"><div class="health-dot"></div> ALL SYSTEMS OK</div>'
+            : '<div>SYS.OK</div>')
+        c.appendChild(sb)
+        if (state.showQuickActions) {
+          const qa = document.createElement('div')
+          qa.className = 'quick-actions'
+          qa.innerHTML =
+            '<button class="quick-action-btn" style="border-color:' +
+            col.primary +
+            ';color:' +
+            col.primary +
+            ';">+ Queue Task</button><button class="quick-action-btn" style="border-color:' +
+            col.primary +
+            ';color:' +
+            col.primary +
+            ';">→ Sprint</button><button class="quick-action-btn" style="border-color:' +
+            col.primary +
+            ';color:' +
+            col.primary +
+            ';">↻ Refresh</button>'
+          c.appendChild(qa)
+        }
+        const grid = document.createElement('div')
+        grid.className = 'dashboard-grid'
+        grid.style.gridTemplateColumns = gt
+        grid.style.gap = state.gap + 'px'
+        if (state.showStats) {
+          const sc = document.createElement('div')
+          sc.className = 'dashboard-col'
+          ;[
+            { label: 'Active', value: 3, color: 'cyan' },
+            { label: 'Queued', value: 7, color: 'orange' },
+            { label: 'Blocked', value: 2, color: 'red' },
+            { label: 'PRs', value: 5, color: 'blue' },
+            { label: 'Done', value: 42, color: 'cyan' }
+          ].forEach((st) => {
+            const stc = COLORS[st.color]
+            const ctr = document.createElement('div')
+            ctr.className = 'stat-counter'
+            ctr.style.padding = state.padding + 'px'
+            ctr.innerHTML =
+              '<div><div class="stat-label">' +
+              st.label +
+              '</div></div><div class="stat-value" style="color:' +
+              stc.primary +
+              ';text-shadow:0 0 8px ' +
+              stc.shadow +
+              ';">' +
+              st.value +
+              '</div>'
+            sc.appendChild(ctr)
+          })
+          grid.appendChild(sc)
+        }
+        const mc = document.createElement('div')
+        mc.className = 'dashboard-col'
+        if (state.showPipeline) {
+          const pc = document.createElement('div')
+          pc.className = 'neon-card'
+          pc.style.padding = state.padding + 'px'
+          let sh = '<div class="pipeline-stages">'
+          ;[
+            { label: 'queued', count: 7, color: 'orange' },
+            { label: 'active', count: 3, color: 'cyan' },
+            { label: 'blocked', count: 2, color: 'red' },
+            { label: 'done', count: 42, color: 'blue' }
+          ].forEach((sg) => {
+            const sgc = COLORS[sg.color]
+            sh +=
+              '<div class="pipeline-stage" style="background:' +
+              sgc.glow +
+              ';border:1px solid ' +
+              sgc.primary +
+              ';"><div class="pipeline-stage-label" style="color:' +
+              sgc.primary +
+              ';">' +
+              sg.label +
+              '</div><div class="pipeline-stage-count" style="color:' +
+              sgc.primary +
+              ';text-shadow:0 0 6px ' +
+              sgc.shadow +
+              ';">' +
+              sg.count +
+              '</div></div>'
+          })
+          sh += '</div>'
+          pc.innerHTML =
+            '<div class="card-header"><div class="card-title" style="color:' +
+            COLORS.purple.primary +
+            ';">Pipeline</div></div>' +
+            sh
+          mc.appendChild(pc)
+        }
+        if (state.showChart) {
+          const cc = document.createElement('div')
+          cc.className = 'neon-card'
+          cc.style.padding = state.padding + 'px'
+          cc.innerHTML =
+            '<div class="card-header"><div class="card-title" style="color:' +
+            col.primary +
+            ';">Completions / Hour</div></div><div class="chart-placeholder">📊 Chart Data</div><div class="chart-caption">last 24 hours</div>'
+          mc.appendChild(cc)
+        }
+        if (state.showSuccess || state.showDuration) {
+          const sr = document.createElement('div')
+          sr.style.display = 'grid'
+          sr.style.gridTemplateColumns = '1fr 1fr'
+          sr.style.gap = state.gap + 'px'
+          if (state.showSuccess) {
+            const suc = document.createElement('div')
+            suc.className = 'neon-card'
+            suc.style.padding = state.padding + 'px'
+            suc.innerHTML =
+              '<div class="card-header"><div class="card-title" style="color:' +
+              col.primary +
+              ';">Success Rate</div></div><div class="cost-value" style="color:' +
+              col.primary +
+              ';text-shadow:0 0 12px ' +
+              col.shadow +
+              ';font-size:' +
+              20 * sc +
+              'px;">89%</div>'
+            sr.appendChild(suc)
+          }
+          if (state.showDuration) {
+            const duc = document.createElement('div')
+            duc.className = 'neon-card'
+            duc.style.padding = state.padding + 'px'
+            duc.innerHTML =
+              '<div class="card-header"><div class="card-title" style="color:' +
+              COLORS.blue.primary +
+              ';">Avg Duration</div></div><div class="cost-value" style="color:' +
+              COLORS.blue.primary +
+              ';text-shadow:0 0 12px ' +
+              COLORS.blue.shadow +
+              ';font-size:' +
+              18 * sc +
+              'px;">12m</div>'
+            sr.appendChild(duc)
+          }
+          mc.appendChild(sr)
+        }
+        if (state.showCostTrend) {
+          const ctc = document.createElement('div')
+          ctc.className = 'neon-card'
+          ctc.style.padding = state.padding + 'px'
+          ctc.innerHTML =
+            '<div class="card-header"><div class="card-title" style="color:' +
+            COLORS.orange.primary +
+            ';">Cost / Run</div></div><div class="chart-placeholder" style="height:60px;">📈 Cost Trend</div><div class="chart-caption">last 20 runs</div>'
+          mc.appendChild(ctc)
+        }
+        grid.appendChild(mc)
+        if (state.columns >= 3 || (state.columns === 2 && !state.showStats)) {
+          const rc = document.createElement('div')
+          rc.className = 'dashboard-col'
+          if (state.showFeed) {
+            const fc = document.createElement('div')
+            fc.className = 'neon-card'
+            fc.style.padding = state.padding + 'px'
+            fc.style.flex = '1'
+            let fi = ''
+            for (let i = 0; i < 3; i++)
+              fi +=
+                '<div class="activity-item" style="color:' +
+                col.primary +
+                ';">Task completed: Fix auth bug</div>'
+            fc.innerHTML =
+              '<div class="card-header"><div class="card-title" style="color:' +
+              COLORS.purple.primary +
+              ';">Feed</div></div>' +
+              fi
+            rc.appendChild(fc)
+          }
+          if (state.showCompletions) {
+            const coc = document.createElement('div')
+            coc.className = 'neon-card'
+            coc.style.padding = state.padding + 'px'
+            let ci = ''
+            for (let i = 0; i < 3; i++)
+              ci +=
+                '<div class="completion-item"><span class="completion-title">Task ' +
+                (i + 1) +
+                '</span><span class="completion-time">' +
+                (i + 1) +
+                'h ago</span></div>'
+            coc.innerHTML =
+              '<div class="card-header"><div class="card-title" style="color:' +
+              col.primary +
+              ';">Recent Completions</div></div>' +
+              ci
+            rc.appendChild(coc)
+          }
+          if (state.showTotalCost) {
+            const tcc = document.createElement('div')
+            tcc.className = 'neon-card'
+            tcc.style.padding = state.padding + 'px'
+            tcc.innerHTML =
+              '<div class="card-header"><div class="card-title" style="color:' +
+              COLORS.orange.primary +
+              ';">Cost 24h</div></div><div class="cost-value" style="color:' +
+              COLORS.orange.primary +
+              ';text-shadow:0 0 12px ' +
+              COLORS.orange.shadow +
+              ';">$2.34</div>'
+            rc.appendChild(tcc)
+          }
+          grid.appendChild(rc)
+        }
+        c.appendChild(grid)
+        document.getElementById('scanlines-effect').style.opacity = state.scanlines / 100
+        const ae = document.getElementById('ambient-effect')
+        ae.style.opacity = state.ambientGlow / 100
+        ae.style.background =
+          'radial-gradient(circle at 30% 20%, ' + col.glow + ', transparent 60%)'
+        const cards = document.querySelectorAll('.neon-card, .stat-counter')
+        cards.forEach((el) => {
+          if (state.glassBlur > 0) {
+            el.style.backdropFilter = 'blur(' + state.glassBlur + 'px)'
+            el.style.background = 'rgba(30, 30, 40, 0.3)'
+          } else {
+            el.style.backdropFilter = 'none'
+            el.style.background = 'rgba(30, 30, 40, 0.4)'
+          }
+          const sh = [
+            'none',
+            '0 2px 8px rgba(0, 0, 0, 0.2)',
+            '0 4px 16px rgba(0, 0, 0, 0.4), 0 0 24px ' + col.glow
+          ]
+          el.style.boxShadow = sh[state.shadowDepth]
+        })
+      }
+      function updatePrompt() {
+        const p = []
+        const d = PRESETS.current
+        if (state.columns !== d.columns)
+          p.push(state.columns + '-column layout instead of 3-column')
+        if (state.gap !== d.gap)
+          p.push(
+            state.gap + 'px grid gap (' + (state.gap > 12 ? 'more' : 'less') + ' breathing room)'
+          )
+        if (state.padding !== d.padding)
+          p.push(
+            state.padding +
+              'px card padding (' +
+              (state.padding > 14 ? 'more generous' : 'more compact') +
+              ')'
+          )
+        if (state.density !== d.density) p.push(state.density + ' density mode')
+        if (state.fontScale !== d.fontScale) p.push(state.fontScale + '% font scaling')
+        const f = []
+        if (!state.showStats && d.showStats) f.push('stats counters')
+        if (!state.showPipeline && d.showPipeline) f.push('pipeline flow')
+        if (!state.showChart && d.showChart) f.push('completions chart')
+        if (!state.showSuccess && d.showSuccess) f.push('success rate ring')
+        if (!state.showDuration && d.showDuration) f.push('average duration')
+        if (!state.showCostTrend && d.showCostTrend) f.push('cost trend chart')
+        if (!state.showFeed && d.showFeed) f.push('activity feed')
+        if (!state.showCompletions && d.showCompletions) f.push('recent completions list')
+        if (!state.showTotalCost && d.showTotalCost) f.push('24h cost total')
+        if (f.length > 0) p.push('remove: ' + f.join(', '))
+        const nf = []
+        if (state.showQuickActions)
+          nf.push('quick action buttons (Queue Task, Go to Sprint, Refresh)')
+        if (state.showHealth) nf.push('system health indicator in status bar')
+        if (nf.length > 0) p.push('add: ' + nf.join(', '))
+        if (state.accent !== d.accent) p.push(state.accent + ' accent color theme')
+        if (state.ambientGlow > 0) {
+          const i =
+            state.ambientGlow > 60 ? 'strong' : state.ambientGlow > 30 ? 'moderate' : 'subtle'
+          p.push(i + ' ambient glow effect (' + state.ambientGlow + '%)')
+        }
+        if (state.scanlines > 0) {
+          const i = state.scanlines > 60 ? 'prominent' : state.scanlines > 30 ? 'visible' : 'subtle'
+          p.push(i + ' CRT scanline overlay (' + state.scanlines + '%)')
+        }
+        if (state.glassBlur > 0) {
+          const s = state.glassBlur > 12 ? 'heavy' : state.glassBlur > 6 ? 'medium' : 'light'
+          p.push(s + ' glass morphism blur (' + state.glassBlur + 'px backdrop-filter)')
+        }
+        if (state.shadowDepth > 0) {
+          const dp =
+            state.shadowDepth === 2
+              ? 'deep elevated shadows with accent glow'
+              : 'subtle elevation shadows'
+          p.push(dp)
+        }
+        let pr = ''
+        if (p.length === 0) {
+          pr = 'Dashboard matches the current implementation. No changes needed.'
+        } else {
+          pr = 'Update the Dashboard view with the following changes:\n\n'
+          p.forEach((pt, i) => {
+            pr += i + 1 + '. ' + pt.charAt(0).toUpperCase() + pt.slice(1) + '\n'
+          })
+          pr += '\n**Design Intent:** '
+          if (state.density === 'compact' && state.fontScale < 100)
+            pr +=
+              'Information-dense power user interface — maximize data visibility in limited screen space.'
+          else if (state.density === 'comfortable' && state.fontScale > 100)
+            pr +=
+              'Spacious, readable at-a-glance dashboard — prioritize clarity and visual comfort.'
+          else if (
+            !state.showFeed &&
+            !state.showCompletions &&
+            state.showChart &&
+            state.showCostTrend
+          )
+            pr += 'Analytics-focused view — emphasize charts, trends, and data visualization.'
+          else if (f.length > 5)
+            pr += 'Minimal, distraction-free dashboard — show only the most essential metrics.'
+          else if (state.ambientGlow > 40 || state.shadowDepth === 2)
+            pr +=
+              'Premium, visually rich command center — heavy visual treatment with depth and atmosphere.'
+          else
+            pr +=
+              'Balanced, professional dashboard — clean information hierarchy with subtle visual polish.'
+        }
+        document.getElementById('prompt-output').textContent = pr
+      }
+      function updateAll() {
+        document.getElementById('gap-value').textContent = state.gap + 'px'
+        document.getElementById('padding-value').textContent = state.padding + 'px'
+        document.getElementById('fontscale-value').textContent = state.fontScale + '%'
+        document.getElementById('glow-value').textContent = state.ambientGlow + '%'
+        document.getElementById('scanlines-value').textContent = state.scanlines + '%'
+        document.getElementById('blur-value').textContent = state.glassBlur + 'px'
+        const sl = ['None', 'Low', 'High']
+        document.getElementById('shadow-value').textContent = sl[state.shadowDepth]
+        renderPreview()
+        updatePrompt()
+      }
+      function copyPrompt() {
+        const t = document.getElementById('prompt-output').textContent
+        navigator.clipboard.writeText(t).then(() => {
+          const b = document.getElementById('copy-btn')
+          b.textContent = 'Copied!'
+          b.classList.add('copied')
+          setTimeout(() => {
+            b.textContent = 'Copy Prompt'
+            b.classList.remove('copied')
+          }, 1500)
+        })
+      }
+      updateAll()
+    </script>
+  </body>
+</html>
