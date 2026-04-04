@@ -1,3 +1,102 @@
+import { useEffect, useState, useMemo } from 'react'
+import { useTaskGroups } from '../stores/taskGroups'
+import { EpicList } from '../components/planner/EpicList'
+import { EpicDetail } from '../components/planner/EpicDetail'
+import { Search } from 'lucide-react'
+
 export default function PlannerView(): React.JSX.Element {
-  return <div className="planner-view">Task Planner (coming soon)</div>
+  const { groups, selectedGroupId, groupTasks, loading, loadGroups, selectGroup, queueAllTasks } =
+    useTaskGroups()
+
+  const [searchQuery, setSearchQuery] = useState('')
+
+  // Load groups on mount
+  useEffect(() => {
+    loadGroups()
+  }, [loadGroups])
+
+  // Filter groups by search query
+  const filteredGroups = useMemo(() => {
+    if (!searchQuery.trim()) return groups
+    const query = searchQuery.toLowerCase()
+    return groups.filter(
+      (g) =>
+        g.name.toLowerCase().includes(query) || (g.goal && g.goal.toLowerCase().includes(query))
+    )
+  }, [groups, searchQuery])
+
+  // Get the selected group object
+  const selectedGroup = useMemo(() => {
+    return groups.find((g) => g.id === selectedGroupId) || null
+  }, [groups, selectedGroupId])
+
+  // Handlers
+  const handleCreateNew = (): void => {
+    // TODO: Open create epic modal/form
+    console.log('Create new epic clicked')
+  }
+
+  const handleAddTask = (): void => {
+    // TODO: Open add task modal/form
+    console.log('Add task clicked')
+  }
+
+  const handleEditTask = (taskId: string): void => {
+    // TODO: Open edit task modal/form
+    console.log('Edit task clicked:', taskId)
+  }
+
+  const handleEditGroup = (): void => {
+    // TODO: Open edit group modal/form
+    console.log('Edit group clicked')
+  }
+
+  const handleQueueAll = async (): Promise<void> => {
+    if (!selectedGroupId) return
+    await queueAllTasks(selectedGroupId)
+  }
+
+  return (
+    <div className="planner-view">
+      {/* Header */}
+      <div className="planner-header">
+        <h1 className="planner-header__title">Task Planner</h1>
+        <div className="planner-header__search">
+          <Search size={16} className="planner-header__search-icon" />
+          <input
+            type="text"
+            placeholder="Search epics..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="planner-header__search-input"
+          />
+        </div>
+      </div>
+
+      {/* Body: Split layout */}
+      <div className="planner-body">
+        <EpicList
+          groups={filteredGroups}
+          selectedId={selectedGroupId}
+          onSelect={selectGroup}
+          onCreateNew={handleCreateNew}
+        />
+        {selectedGroup && (
+          <EpicDetail
+            group={selectedGroup}
+            tasks={groupTasks}
+            onQueueAll={handleQueueAll}
+            onAddTask={handleAddTask}
+            onEditTask={handleEditTask}
+            onEditGroup={handleEditGroup}
+          />
+        )}
+        {!selectedGroup && !loading && (
+          <div className="planner-empty">
+            <p className="planner-empty__text">Select an epic to view details</p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
 }

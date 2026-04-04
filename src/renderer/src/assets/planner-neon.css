@@ -3,6 +3,98 @@
    Neon Task Planner — Epic List, Task Grid, Details
    ═══════════════════════════════════════════════════════ */
 
+/* ── Shell ── */
+.planner-view {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--bde-font-code);
+  background: var(--neon-bg);
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.planner-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--neon-surface-dim);
+  background: rgba(10, 0, 21, 0.6);
+  backdrop-filter: var(--neon-glass-blur);
+}
+
+.planner-header__title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--neon-cyan);
+  margin: 0;
+  text-shadow: var(--neon-cyan-glow);
+}
+
+.planner-header__search {
+  position: relative;
+  flex: 0 0 300px;
+  margin-left: auto;
+}
+
+.planner-header__search-icon {
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--neon-text-muted);
+  pointer-events: none;
+}
+
+.planner-header__search-input {
+  width: 100%;
+  padding: 8px 12px 8px 36px;
+  background: var(--neon-surface);
+  border: 1px solid var(--neon-surface-dim);
+  border-radius: 6px;
+  color: var(--neon-text);
+  font-size: 13px;
+  font-family: var(--bde-font-code);
+  outline: none;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.planner-header__search-input:focus {
+  border-color: var(--neon-cyan);
+  box-shadow: var(--neon-cyan-glow);
+}
+
+.planner-header__search-input::placeholder {
+  color: var(--neon-text-dim);
+}
+
+/* ── Body (Split Layout) ── */
+.planner-body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  overflow: hidden;
+}
+
+/* ── Empty State ── */
+.planner-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 40px;
+  background: var(--neon-bg);
+}
+
+.planner-empty__text {
+  font-size: 14px;
+  color: var(--neon-text-dim);
+  margin: 0;
+}
+
 /* ── Epic List (Left Sidebar) ── */
 .planner-epic-list {
   height: 100%;
