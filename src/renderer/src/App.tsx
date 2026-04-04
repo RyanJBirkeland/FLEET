@@ -9,6 +9,7 @@ import { ToastContainer } from './components/layout/ToastContainer'
 import { UnifiedHeader } from './components/layout/UnifiedHeader'
 import { NeonSidebar } from './components/layout/NeonSidebar'
 import { Onboarding } from './components/Onboarding'
+import { OnboardingWizard } from './components/onboarding/OnboardingWizard'
 import { Button } from './components/ui/Button'
 import { Kbd } from './components/ui/Kbd'
 import { useAgentHistoryStore } from './stores/agentHistory'
@@ -115,6 +116,7 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Eleme
 
 function App(): React.JSX.Element {
   const [ready, setReady] = useState(false)
+  const [showOnboarding, setShowOnboarding] = useState(false)
 
   const activeView = usePanelLayoutStore((s) => s.activeView)
   const setView = usePanelLayoutStore((s) => s.setView)
@@ -136,6 +138,14 @@ function App(): React.JSX.Element {
   useEffect(() => {
     fetchLocalAgents()
   }, [fetchLocalAgents])
+
+  useEffect(() => {
+    window.api.settings.get('onboarding.completed').then((val) => {
+      if (!val) {
+        setShowOnboarding(true)
+      }
+    })
+  }, [])
 
   useEffect(() => {
     loadLayout()
@@ -328,6 +338,17 @@ function App(): React.JSX.Element {
     window.addEventListener('beforeunload', handleBeforeUnload)
     return () => window.removeEventListener('beforeunload', handleBeforeUnload)
   }, [])
+
+  if (showOnboarding) {
+    return (
+      <OnboardingWizard
+        onComplete={() => {
+          window.api.settings.set('onboarding.completed', 'true')
+          setShowOnboarding(false)
+        }}
+      />
+    )
+  }
 
   if (!ready) {
     return <Onboarding onReady={() => setReady(true)} />

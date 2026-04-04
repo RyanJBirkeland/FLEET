@@ -1,143 +1,254 @@
+/* src/renderer/src/assets/onboarding-neon.css */
 /* ═══════════════════════════════════════════════════════
-   Onboarding — Setup Check Screen
+   Onboarding Wizard — Neon theme styles
    ═══════════════════════════════════════════════════════ */
 
-/* ── Backdrop & Card ── */
-.onboarding-backdrop {
+.onboarding-wizard-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(10, 0, 21, 0.95);
+  backdrop-filter: blur(10px);
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 100%;
-  width: 100%;
-  background: var(--bde-bg);
-  font-family: var(--bde-font-ui);
+  z-index: 9999;
+  animation: fadeIn 0.3s ease-out;
 }
 
-.onboarding-card {
-  background: var(--bde-surface);
-  border: 1px solid var(--bde-border);
-  border-radius: var(--bde-radius-lg);
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.onboarding-wizard {
+  width: 90%;
+  max-width: 800px;
+  background: var(--neon-bg);
+  border: 1px solid var(--neon-purple-border);
+  border-radius: 12px;
+  box-shadow: var(--neon-purple-glow);
   padding: 32px;
-  max-width: 460px;
-  width: 100%;
-  box-shadow: var(--bde-shadow-lg);
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
 }
 
-/* ── Header ── */
-.onboarding-header {
+/* Progress indicators */
+.onboarding-wizard__progress {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--neon-purple-border);
+}
+
+.onboarding-wizard__step-indicator {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+.onboarding-wizard__step-indicator.active {
+  opacity: 1;
+}
+
+.onboarding-wizard__step-indicator.completed {
+  opacity: 0.7;
+}
+
+.onboarding-wizard__step-number {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--neon-purple-border);
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 8px;
-}
-
-.onboarding-header__icon {
-  color: var(--bde-accent);
-}
-
-.onboarding-header__title {
-  font-size: var(--bde-size-xxl);
+  justify-content: center;
+  font-size: 14px;
   font-weight: 600;
-  color: var(--bde-text);
+  color: var(--neon-purple);
+}
+
+.onboarding-wizard__step-indicator.active .onboarding-wizard__step-number {
+  background: var(--neon-purple-surface);
+  border-color: var(--neon-purple);
+  box-shadow: var(--neon-purple-glow);
+  color: var(--neon-purple);
+}
+
+.onboarding-wizard__step-indicator.completed .onboarding-wizard__step-number {
+  background: var(--neon-cyan-surface);
+  border-color: var(--neon-cyan);
+  color: var(--neon-cyan);
+}
+
+.onboarding-wizard__step-title {
+  font-size: 12px;
+  color: var(--neon-text-dim);
+  text-align: center;
+}
+
+.onboarding-wizard__step-indicator.active .onboarding-wizard__step-title {
+  color: var(--neon-purple);
+  font-weight: 500;
+}
+
+/* Content area */
+.onboarding-wizard__content {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Individual step styles */
+.onboarding-step {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.onboarding-step__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--neon-cyan);
+  margin: 0 auto;
+}
+
+.onboarding-step__title {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--neon-text);
+  text-align: center;
   margin: 0;
 }
 
-.onboarding-subtitle {
-  font-size: var(--bde-size-md);
-  color: var(--bde-text-muted);
-  margin: 0 0 24px 0;
+.onboarding-step__description {
+  font-size: 16px;
+  color: var(--neon-text-dim);
+  text-align: center;
+  line-height: 1.6;
+  margin: 0;
 }
 
-/* ── Checks Section ── */
-.onboarding-checks {
+.onboarding-step__features {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 16px;
+  padding: 24px;
+  background: var(--neon-purple-surface);
+  border: 1px solid var(--neon-purple-border);
+  border-radius: 8px;
 }
 
-.onboarding-section-label {
-  font-size: var(--bde-size-xs);
-  font-weight: 600;
-  color: var(--bde-text-dim);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  margin-bottom: 4px;
-}
-
-.onboarding-section-label--spaced {
-  margin-top: 12px;
-}
-
-/* ── Check Row ── */
-.onboarding-check {
+.onboarding-step__feature {
   display: flex;
   flex-direction: column;
   gap: 4px;
 }
 
-.onboarding-check__row {
+.onboarding-step__feature strong {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--neon-cyan);
+}
+
+.onboarding-step__feature span {
+  font-size: 13px;
+  color: var(--neon-text-dim);
+}
+
+/* Status checks */
+.onboarding-step__checks {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 24px;
+  background: var(--neon-purple-surface);
+  border: 1px solid var(--neon-purple-border);
+  border-radius: 8px;
+}
+
+.onboarding-step__check {
   display: flex;
   align-items: center;
   gap: 12px;
+  font-size: 14px;
+  color: var(--neon-text);
 }
 
-.onboarding-check__label {
-  font-size: var(--bde-size-md);
-  color: var(--bde-text);
-}
-
-.onboarding-check__optional {
-  font-size: var(--bde-size-xs);
-  color: var(--bde-text-muted);
-  margin-left: 4px;
-}
-
-/* ── Check Help Text ── */
-.onboarding-check__help {
-  margin: 0 0 0 24px;
-  font-size: var(--bde-size-xs);
-}
-
-.onboarding-check__help--fail {
-  color: var(--bde-text-muted);
-}
-
-.onboarding-check__help--warn {
-  color: var(--bde-warning);
-}
-
-/* ── Status Icons ── */
-.onboarding-icon--success {
-  color: var(--bde-success);
-}
-
-.onboarding-icon--danger {
-  color: var(--bde-danger);
-}
-
-.onboarding-icon--warning {
-  color: var(--bde-warning);
-}
-
-/* ── Instruction Box ── */
-.onboarding-instruction {
-  background: var(--bde-surface-high);
-  border: 1px solid var(--bde-border);
-  border-radius: var(--bde-radius-md);
-  padding: 12px 16px;
-  margin-bottom: 24px;
-}
-
-.onboarding-instruction__code {
-  font-size: var(--bde-size-sm);
-  color: var(--bde-warning);
-  font-family: var(--bde-font-code);
-}
-
-/* ── Actions ── */
-.onboarding-actions {
+.onboarding-step__check-icon {
+  width: 20px;
+  height: 20px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
+}
+
+.onboarding-step__check-icon--success {
+  color: var(--neon-cyan);
+}
+
+.onboarding-step__check-icon--error {
+  color: var(--neon-red);
+}
+
+/* Help text */
+.onboarding-step__help {
+  padding: 16px;
+  background: var(--neon-orange-surface);
+  border: 1px solid var(--neon-orange-border);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.onboarding-step__help code {
+  display: inline-block;
+  padding: 8px 12px;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid var(--neon-orange-border);
+  border-radius: 4px;
+  font-family: 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  color: var(--neon-orange);
+}
+
+.onboarding-step__help p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--neon-text-dim);
+}
+
+/* Actions */
+.onboarding-step__actions {
+  display: flex;
+  justify-content: space-between;
   gap: 12px;
+  margin-top: auto;
+  padding-top: 24px;
 }
