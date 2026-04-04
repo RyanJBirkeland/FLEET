@@ -24,6 +24,7 @@ interface CodeReviewState {
   commits: ReviewCommit[]
   loading: Record<string, boolean>
   error: string | null
+  selectedBatchIds: Set<string>
 
   selectTask: (taskId: string | null) => void
   setActiveTab: (tab: ReviewTab) => void
@@ -31,6 +32,9 @@ interface CodeReviewState {
   setCommits: (commits: ReviewCommit[]) => void
   setLoading: (key: string, loading: boolean) => void
   setError: (error: string | null) => void
+  toggleBatchId: (id: string) => void
+  selectAllBatch: (ids: string[]) => void
+  clearBatch: () => void
   reset: () => void
 }
 
@@ -40,7 +44,8 @@ const initialState = {
   diffFiles: [] as DiffFile[],
   commits: [] as ReviewCommit[],
   loading: {} as Record<string, boolean>,
-  error: null as string | null
+  error: null as string | null,
+  selectedBatchIds: new Set<string>()
 }
 
 export const useCodeReviewStore = create<CodeReviewState>((set) => ({
@@ -52,5 +57,14 @@ export const useCodeReviewStore = create<CodeReviewState>((set) => ({
   setCommits: (commits): void => set({ commits }),
   setLoading: (key, loading): void => set((s) => ({ loading: { ...s.loading, [key]: loading } })),
   setError: (error): void => set({ error }),
+  toggleBatchId: (id): void =>
+    set((s) => {
+      const next = new Set(s.selectedBatchIds)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return { selectedBatchIds: next }
+    }),
+  selectAllBatch: (ids): void => set({ selectedBatchIds: new Set(ids) }),
+  clearBatch: (): void => set({ selectedBatchIds: new Set() }),
   reset: (): void => set(initialState)
 }))
