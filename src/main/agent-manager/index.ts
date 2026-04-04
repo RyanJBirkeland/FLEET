@@ -259,7 +259,7 @@ export class AgentManagerImpl implements AgentManager {
     return this.repo.getQueuedTasks(limit) as unknown as Array<Record<string, unknown>>
   }
 
-  private claimTaskViaApi(taskId: string): boolean {
+  private claimTask(taskId: string): boolean {
     return this.repo.claimTask(taskId, EXECUTOR_ID) !== null
   }
 
@@ -333,12 +333,12 @@ export class AgentManagerImpl implements AgentManager {
       prompt: (raw.prompt as string) ?? null,
       spec: (raw.spec as string) ?? null,
       repo: raw.repo,
-      retry_count: Number(raw.retryCount) || 0,
-      fast_fail_count: Number(raw.fastFailCount) || 0,
+      retry_count: Number(raw.retry_count) || 0,
+      fast_fail_count: Number(raw.fast_fail_count) || 0,
       notes: (raw.notes as string) ?? null,
-      playground_enabled: Boolean(raw.playgroundEnabled),
-      max_runtime_ms: Number(raw.maxRuntimeMs) || null,
-      max_cost_usd: Number(raw.maxCostUsd) || null,
+      playground_enabled: Boolean(raw.playground_enabled),
+      max_runtime_ms: Number(raw.max_runtime_ms) || null,
+      max_cost_usd: Number(raw.max_cost_usd) || null,
       model: (raw.model as string) ?? null
     }
   }
@@ -450,7 +450,7 @@ export class AgentManagerImpl implements AgentManager {
         return
       }
 
-      const claimed = this.claimTaskViaApi(task.id)
+      const claimed = this.claimTask(task.id)
       if (!claimed) {
         this.logger.info(`[agent-manager] Task ${task.id} already claimed — skipping`)
         return

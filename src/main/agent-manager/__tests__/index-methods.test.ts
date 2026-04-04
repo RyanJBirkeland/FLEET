@@ -158,10 +158,10 @@ function makeRawTask(overrides: Record<string, unknown> = {}) {
     repo: 'myrepo',
     prompt: 'Do the thing',
     spec: null,
-    retryCount: 0,
-    fastFailCount: 0,
-    playgroundEnabled: false,
-    maxRuntimeMs: null,
+    retry_count: 0,
+    fast_fail_count: 0,
+    playground_enabled: false,
+    max_runtime_ms: null,
     ...overrides
   }
 }
@@ -363,10 +363,10 @@ describe('AgentManagerImpl — class internals', () => {
         prompt: 'Add login page',
         spec: 'Login spec',
         repo: 'myrepo',
-        retryCount: 2,
-        fastFailCount: 1,
-        playgroundEnabled: true,
-        maxRuntimeMs: 30000
+        retry_count: 2,
+        fast_fail_count: 1,
+        playground_enabled: true,
+        max_runtime_ms: 30000
       }
       const result = manager._mapQueuedTask(raw)
       expect(result).toEqual({
@@ -403,8 +403,8 @@ describe('AgentManagerImpl — class internals', () => {
         id: 'task-44',
         title: 'Bad counts',
         repo: 'myrepo',
-        retryCount: 'abc',
-        fastFailCount: undefined
+        retry_count: 'abc',
+        fast_fail_count: undefined
       }
       const result = manager._mapQueuedTask(raw as Record<string, unknown>)
       expect(result.retry_count).toBe(0)
@@ -417,7 +417,7 @@ describe('AgentManagerImpl — class internals', () => {
         id: 'task-45',
         title: 'No runtime',
         repo: 'myrepo',
-        maxRuntimeMs: 'invalid'
+        max_runtime_ms: 'invalid'
       }
       const result = manager._mapQueuedTask(raw as Record<string, unknown>)
       expect(result.max_runtime_ms).toBeNull()
