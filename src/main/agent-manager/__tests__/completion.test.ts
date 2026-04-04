@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { promisify } from 'node:util'
+import { sanitizeForGit } from '../completion'
 
 // Mock node:fs — existsSync must return true for worktree path guard
 vi.mock('node:fs', async () => {
@@ -472,5 +473,31 @@ describe('resolveFailure', () => {
 
     // AM-5 fix: should return true (terminal) even though DB update failed
     expect(result).toBe(true)
+  })
+})
+
+describe('sanitizeForGit', () => {
+  it('strips backticks', () => {
+    expect(sanitizeForGit('hello `world`')).toBe("hello 'world'")
+  })
+
+  it('neutralizes command substitution $()', () => {
+    const input = 'task $(rm -rf /)'
+    const result = sanitizeForGit(input)
+    expect(result).not.toContain('$(')
+  })
+
+  it('neutralizes nested command substitution', () => {
+    const input = 'fix $(echo $(whoami))'
+    const result = sanitizeForGit(input)
+    expect(result).not.toContain('$(')
+  })
+
+  it('strips markdown links keeping text', () => {
+    expect(sanitizeForGit('[click](http://evil.com)')).toBe('click')
+  })
+
+  it('trims whitespace', () => {
+    expect(sanitizeForGit('  hello  ')).toBe('hello')
   })
 })

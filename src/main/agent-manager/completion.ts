@@ -24,7 +24,7 @@ function sleep(ms: number): Promise<void> {
 export function sanitizeForGit(title: string): string {
   return title
     .replace(/`/g, "'") // Replace backticks with single quotes
-    .replace(/\$\(/g, '$(') // Escape command substitution (note: still visible but not executable in git commit -m)
+    .replace(/\$\(/g, '(') // Strip the $ from $( to neutralize command substitution
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1') // Strip markdown links, keep text only
     .trim()
 }
