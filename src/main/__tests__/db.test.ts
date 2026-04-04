@@ -60,7 +60,8 @@ describe('db schema migrations', () => {
       'review_comments',
       'settings',
       'sprint_tasks',
-      'task_changes'
+      'task_changes',
+      'webhooks'
     ])
   })
 

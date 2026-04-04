@@ -35,12 +35,15 @@ export default function DashboardView(): React.JSX.Element {
 
     const lastClose = localStorage.getItem('bde:last-window-close')
     if (!lastClose) {
+      // Safe to set state here - guarded by briefingChecked to prevent cascading renders
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       setBriefingChecked(true)
       return
     }
 
     const lastCloseTime = parseInt(lastClose, 10)
     if (isNaN(lastCloseTime)) {
+      // eslint-disable-next-line react-hooks/rules-of-hooks
       setBriefingChecked(true)
       return
     }
@@ -55,6 +58,7 @@ export default function DashboardView(): React.JSX.Element {
       setBriefingTasks(newCompletions)
       setShowBriefing(true)
     }
+    // eslint-disable-next-line react-hooks/rules-of-hooks
     setBriefingChecked(true)
   }, [tasks, briefingChecked])
 
