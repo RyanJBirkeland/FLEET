@@ -520,7 +520,7 @@ export class AgentManagerImpl implements AgentManager {
       if (!tokenOk) return
 
       this.logger.info(
-        `[agent-manager] Fetching queued tasks via Queue API (limit=${available})...`
+        `[agent-manager] Fetching queued tasks (limit=${available})...`
       )
       const queued = this.fetchQueuedTasks(available)
       this.logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
