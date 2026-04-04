@@ -193,6 +193,11 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
   prompt += '\n\n## Your Role\n' + personality.roleFrame
   prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
 
+  // Inject behavioral patterns if defined
+  if (personality.patterns && personality.patterns.length > 0) {
+    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
+  }
+
   // Inject memory (all agents get this)
   prompt += '\n\n## BDE Conventions\n'
   prompt += getAllMemory()
@@ -256,6 +261,18 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
   // Inject retry context for pipeline agents on retry attempts
   if (agentType === 'pipeline' && retryCount && retryCount > 0) {
     prompt += buildRetryContext(retryCount, previousNotes)
+  }
+
+  // Self-review checklist (pipeline only)
+  if (agentType === 'pipeline') {
+    prompt += `\n\n## Self-Review Checklist
+Before your final push, verify:
+- [ ] Every changed file is required by the spec
+- [ ] No console.log, commented-out code, or TODO left behind
+- [ ] No hardcoded colors, magic numbers, or secrets
+- [ ] Tests cover error states, not just happy paths
+- [ ] Commit messages explain WHY, not just WHAT
+- [ ] Preload .d.ts updated if IPC channels changed`
   }
 
   // Pipeline-only sections: time limit, idle warning, definition of done

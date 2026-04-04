@@ -38,7 +38,7 @@ describe('buildAgentPrompt', () => {
       expect(prompt).toContain('## Your Role')
       expect(prompt).toContain('pipeline agent')
       expect(prompt).toContain('concise and action-oriented')
-      expect(prompt).toContain('NEVER push to main')
+      expect(prompt).toContain('NEVER push to, checkout, or merge into')
     })
 
     it('includes assistant-specific personality for assistant agent', () => {
@@ -425,7 +425,33 @@ describe('buildAgentPrompt', () => {
   describe('scope enforcement', () => {
     it('includes scope boundaries for pipeline agents', () => {
       const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
-      expect(prompt).toContain('Only modify files directly required')
+      expect(prompt).toContain('Stay within spec scope')
+    })
+  })
+
+  describe('prompt optimization', () => {
+    it('injects behavioral patterns for pipeline agents', () => {
+      const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
+      expect(prompt).toContain('## Behavioral Patterns')
+    })
+
+    it('includes self-review checklist for pipeline agents', () => {
+      const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
+      expect(prompt).toContain('## Self-Review Checklist')
+      expect(prompt).toContain('console.log')
+      expect(prompt).toContain('Preload .d.ts')
+    })
+
+    it('does not include self-review checklist for non-pipeline agents', () => {
+      const prompt = buildAgentPrompt({ agentType: 'assistant' })
+      expect(prompt).not.toContain('## Self-Review Checklist')
+    })
+
+    it('does not duplicate preamble rules in pipeline personality constraints', () => {
+      const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
+      // Count occurrences of "NEVER push to" — should appear only ONCE (from preamble)
+      const matches = prompt.match(/NEVER push to/g) || []
+      expect(matches.length).toBe(1)
     })
   })
 
