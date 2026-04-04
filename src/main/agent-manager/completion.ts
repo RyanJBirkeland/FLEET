@@ -6,7 +6,7 @@ import { buildAgentEnv } from '../env-utils'
 import { MAX_RETRIES, AGENT_SUMMARY_MAX_LENGTH } from './types'
 import type { Logger } from './types'
 import { broadcast } from '../broadcast'
-import type { AgentEvent } from '../../shared/types'
+import type { AgentEvent, FailureReason } from '../../shared/types'
 
 const execFile = promisify(execFileCb)
 
@@ -250,6 +250,72 @@ export async function findOrCreatePR(
   return createNewPr(worktreePath, branch, title, ghRepo, logger)
 }
 
+/**
+ * Classify failure reason from error notes for structured filtering and auto-handling.
+ * Pattern matches on common error strings to categorize failure types.
+ */
+export function classifyFailureReason(notes: string | undefined): FailureReason {
+  if (!notes) return 'unknown'
+
+  const lowerNotes = notes.toLowerCase()
+
+  // Auth failures — API key, token, credentials
+  if (
+    lowerNotes.includes('invalid api key') ||
+    lowerNotes.includes('authentication failed') ||
+    lowerNotes.includes('unauthorized') ||
+    lowerNotes.includes('token expired') ||
+    lowerNotes.includes('invalid token')
+  ) {
+    return 'auth'
+  }
+
+  // Timeout failures — watchdog, runtime exceeded
+  if (
+    lowerNotes.includes('exceeded maximum runtime') ||
+    lowerNotes.includes('timeout') ||
+    lowerNotes.includes('timed out') ||
+    lowerNotes.includes('watchdog')
+  ) {
+    return 'timeout'
+  }
+
+  // Test failures — npm test, vitest, jest
+  if (
+    lowerNotes.includes('npm test failed') ||
+    lowerNotes.includes('test failed') ||
+    lowerNotes.includes('vitest failed') ||
+    lowerNotes.includes('jest failed') ||
+    lowerNotes.includes('tests failed')
+  ) {
+    return 'test_failure'
+  }
+
+  // Compilation failures — tsc, typescript, build errors
+  if (
+    lowerNotes.includes('compilation error') ||
+    lowerNotes.includes('compilation failed') ||
+    lowerNotes.includes('tsc failed') ||
+    lowerNotes.includes('typescript error') ||
+    lowerNotes.includes('type error') ||
+    lowerNotes.includes('build failed')
+  ) {
+    return 'compilation'
+  }
+
+  // Spawn failures — process creation, agent spawn
+  if (
+    lowerNotes.includes('spawn failed') ||
+    lowerNotes.includes('failed to spawn') ||
+    lowerNotes.includes('enoent') ||
+    lowerNotes.includes('command not found')
+  ) {
+    return 'spawn'
+  }
+
+  return 'unknown'
+}
+
 export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): Promise<void> {
   const { taskId, worktreePath, title, onTaskTerminal, agentSummary, retryCount, repo } = opts
 
@@ -382,6 +448,9 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
 export function resolveFailure(opts: ResolveFailureOpts, logger?: Logger): boolean {
   const { taskId, retryCount, notes, repo } = opts
 
+  // Classify failure reason for structured filtering
+  const failureReason = classifyFailureReason(notes)
+
   // Determine if this is a terminal state (exhausted retries)
   const isTerminal = retryCount >= MAX_RETRIES
 
@@ -395,6 +464,7 @@ export function resolveFailure(opts: ResolveFailureOpts, logger?: Logger): boole
         retry_count: retryCount + 1,
         claimed_by: null,
         next_eligible_at: nextEligibleAt,
+        failure_reason: failureReason,
         ...(notes ? { notes } : {})
       })
       return false // not terminal
@@ -404,6 +474,7 @@ export function resolveFailure(opts: ResolveFailureOpts, logger?: Logger): boole
         completed_at: new Date().toISOString(),
         claimed_by: null,
         needs_review: true,
+        failure_reason: failureReason,
         ...(notes ? { notes } : {})
       })
       return true // terminal

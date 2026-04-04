@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { promisify } from 'node:util'
-import { sanitizeForGit } from '../completion'
+import { sanitizeForGit, classifyFailureReason } from '../completion'
 
 // Mock node:fs — existsSync must return true for worktree path guard
 vi.mock('node:fs', async () => {
@@ -438,7 +438,8 @@ describe('resolveFailure', () => {
       expect.objectContaining({
         status: 'queued',
         retry_count: 1,
-        notes: 'Agent produced no commits'
+        notes: 'Agent produced no commits',
+        failure_reason: 'unknown'
       })
     )
     expect(result).toBe(false)
@@ -456,7 +457,47 @@ describe('resolveFailure', () => {
       'task-7',
       expect.objectContaining({
         status: 'failed',
-        notes: 'Agent produced no commits'
+        notes: 'Agent produced no commits',
+        failure_reason: 'unknown'
+      })
+    )
+    expect(result).toBe(true)
+  })
+
+  it('classifies failure reason from notes when retrying', async () => {
+    const result = await resolveFailure({
+      taskId: 'task-8',
+      retryCount: 0,
+      notes: 'Invalid API key',
+      repo: mockRepo
+    })
+
+    expect(updateTaskMock).toHaveBeenCalledWith(
+      'task-8',
+      expect.objectContaining({
+        status: 'queued',
+        retry_count: 1,
+        notes: 'Invalid API key',
+        failure_reason: 'auth'
+      })
+    )
+    expect(result).toBe(false)
+  })
+
+  it('classifies failure reason from notes when terminal', async () => {
+    const result = await resolveFailure({
+      taskId: 'task-9',
+      retryCount: MAX_RETRIES,
+      notes: 'npm test failed',
+      repo: mockRepo
+    })
+
+    expect(updateTaskMock).toHaveBeenCalledWith(
+      'task-9',
+      expect.objectContaining({
+        status: 'failed',
+        notes: 'npm test failed',
+        failure_reason: 'test_failure'
       })
     )
     expect(result).toBe(true)
@@ -501,5 +542,157 @@ describe('sanitizeForGit', () => {
 
   it('trims whitespace', () => {
     expect(sanitizeForGit('  hello  ')).toBe('hello')
+  })
+})
+
+describe('classifyFailureReason', () => {
+  it('returns "unknown" when notes are undefined', () => {
+    expect(classifyFailureReason(undefined)).toBe('unknown')
+  })
+
+  it('returns "unknown" when notes are empty string', () => {
+    expect(classifyFailureReason('')).toBe('unknown')
+  })
+
+  it('returns "unknown" when notes do not match any pattern', () => {
+    expect(classifyFailureReason('Some random error message')).toBe('unknown')
+  })
+
+  describe('auth failures', () => {
+    it('classifies "Invalid API key" as auth', () => {
+      expect(classifyFailureReason('Invalid API key')).toBe('auth')
+    })
+
+    it('classifies "authentication failed" as auth', () => {
+      expect(classifyFailureReason('authentication failed')).toBe('auth')
+    })
+
+    it('classifies "unauthorized" as auth', () => {
+      expect(classifyFailureReason('Request unauthorized')).toBe('auth')
+    })
+
+    it('classifies "token expired" as auth', () => {
+      expect(classifyFailureReason('OAuth token expired')).toBe('auth')
+    })
+
+    it('classifies "invalid token" as auth', () => {
+      expect(classifyFailureReason('invalid token provided')).toBe('auth')
+    })
+
+    it('is case insensitive for auth', () => {
+      expect(classifyFailureReason('INVALID API KEY')).toBe('auth')
+    })
+  })
+
+  describe('timeout failures', () => {
+    it('classifies "exceeded maximum runtime" as timeout', () => {
+      expect(classifyFailureReason('Agent exceeded maximum runtime')).toBe('timeout')
+    })
+
+    it('classifies "timeout" as timeout', () => {
+      expect(classifyFailureReason('Operation timeout')).toBe('timeout')
+    })
+
+    it('classifies "timed out" as timeout', () => {
+      expect(classifyFailureReason('Request timed out')).toBe('timeout')
+    })
+
+    it('classifies "watchdog" as timeout', () => {
+      expect(classifyFailureReason('Killed by watchdog')).toBe('timeout')
+    })
+
+    it('is case insensitive for timeout', () => {
+      expect(classifyFailureReason('EXCEEDED MAXIMUM RUNTIME')).toBe('timeout')
+    })
+  })
+
+  describe('test failures', () => {
+    it('classifies "npm test failed" as test_failure', () => {
+      expect(classifyFailureReason('npm test failed')).toBe('test_failure')
+    })
+
+    it('classifies "test failed" as test_failure', () => {
+      expect(classifyFailureReason('Unit test failed')).toBe('test_failure')
+    })
+
+    it('classifies "vitest failed" as test_failure', () => {
+      expect(classifyFailureReason('vitest failed with 3 errors')).toBe('test_failure')
+    })
+
+    it('classifies "jest failed" as test_failure', () => {
+      expect(classifyFailureReason('jest failed')).toBe('test_failure')
+    })
+
+    it('classifies "tests failed" as test_failure', () => {
+      expect(classifyFailureReason('5 tests failed')).toBe('test_failure')
+    })
+
+    it('is case insensitive for test failures', () => {
+      expect(classifyFailureReason('NPM TEST FAILED')).toBe('test_failure')
+    })
+  })
+
+  describe('compilation failures', () => {
+    it('classifies "compilation error" as compilation', () => {
+      expect(classifyFailureReason('compilation error in src/main.ts')).toBe('compilation')
+    })
+
+    it('classifies "compilation failed" as compilation', () => {
+      expect(classifyFailureReason('compilation failed')).toBe('compilation')
+    })
+
+    it('classifies "tsc failed" as compilation', () => {
+      expect(classifyFailureReason('tsc failed with errors')).toBe('compilation')
+    })
+
+    it('classifies "typescript error" as compilation', () => {
+      expect(classifyFailureReason('typescript error: missing type')).toBe('compilation')
+    })
+
+    it('classifies "type error" as compilation', () => {
+      expect(classifyFailureReason('type error at line 42')).toBe('compilation')
+    })
+
+    it('classifies "build failed" as compilation', () => {
+      expect(classifyFailureReason('build failed')).toBe('compilation')
+    })
+
+    it('is case insensitive for compilation', () => {
+      expect(classifyFailureReason('TSC FAILED')).toBe('compilation')
+    })
+  })
+
+  describe('spawn failures', () => {
+    it('classifies "spawn failed" as spawn', () => {
+      expect(classifyFailureReason('spawn failed')).toBe('spawn')
+    })
+
+    it('classifies "failed to spawn" as spawn', () => {
+      expect(classifyFailureReason('failed to spawn agent')).toBe('spawn')
+    })
+
+    it('classifies "ENOENT" as spawn', () => {
+      expect(classifyFailureReason('Error: ENOENT command not found')).toBe('spawn')
+    })
+
+    it('classifies "command not found" as spawn', () => {
+      expect(classifyFailureReason('sh: command not found: gh')).toBe('spawn')
+    })
+
+    it('is case insensitive for spawn', () => {
+      expect(classifyFailureReason('SPAWN FAILED')).toBe('spawn')
+    })
+  })
+
+  describe('priority - first match wins', () => {
+    it('classifies auth before timeout when both patterns present', () => {
+      const notes = 'Invalid API key caused timeout'
+      expect(classifyFailureReason(notes)).toBe('auth')
+    })
+
+    it('classifies timeout before test when both patterns present', () => {
+      const notes = 'Test timed out and tests failed'
+      expect(classifyFailureReason(notes)).toBe('timeout')
+    })
   })
 })
