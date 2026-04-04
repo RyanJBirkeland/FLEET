@@ -11,6 +11,7 @@ const SettingsView = lazy(() => import('../views/SettingsView'))
 const CodeReviewView = lazy(() => import('../views/CodeReviewView'))
 const TaskWorkbenchView = lazy(() => import('../views/TaskWorkbenchView'))
 const GitTreeView = lazy(() => import('../views/GitTreeView'))
+const PlannerView = lazy(() => import('../views/PlannerView'))
 
 export function resolveView(viewKey: View): React.ReactNode {
   switch (viewKey) {
@@ -30,5 +31,7 @@ export function resolveView(viewKey: View): React.ReactNode {
       return <TaskWorkbenchView />
     case 'git':
       return <GitTreeView />
+    case 'planner':
+      return <PlannerView />
   }
 }

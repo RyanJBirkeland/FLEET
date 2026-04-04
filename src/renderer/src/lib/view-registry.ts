@@ -7,6 +7,7 @@ import {
   Settings,
   GitCommitHorizontal,
   Workflow,
+  Hexagon,
   type LucideIcon
 } from 'lucide-react'
 import type { View } from '../stores/panelLayout'
@@ -70,6 +71,12 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     icon: ClipboardList,
     shortcut: '⌘0',
     shortcutKey: '0'
+  },
+  planner: {
+    label: 'Task Planner',
+    icon: Hexagon,
+    shortcut: '⌘8',
+    shortcutKey: '8'
   }
 }
 

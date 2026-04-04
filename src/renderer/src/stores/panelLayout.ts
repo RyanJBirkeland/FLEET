@@ -14,6 +14,7 @@ export type View =
   | 'git'
   | 'settings'
   | 'task-workbench'
+  | 'planner'
 export type DropZone = 'top' | 'bottom' | 'left' | 'right' | 'center'
 
 export interface PanelTab {
