@@ -117,6 +117,31 @@ async function autoCommitIfDirty(
     // Use -A to capture new (untracked) files created by agents, not just modifications.
     // The repo's .gitignore excludes node_modules, .env, etc.
     await execFile('git', ['add', '-A'], { cwd: worktreePath, env: buildAgentEnv() })
+
+    // Unstage test artifacts that may have been previously tracked
+    const artifactPaths = ['test-results/', 'coverage/', '*.log', 'playwright-report/']
+    for (const path of artifactPaths) {
+      try {
+        await execFile('git', ['rm', '-r', '--cached', '--ignore-unmatch', path], {
+          cwd: worktreePath,
+          env: buildAgentEnv()
+        })
+      } catch {
+        // Non-fatal — artifact may not exist or not be tracked
+      }
+    }
+
+    // Re-check if staged changes remain (unstaging may have removed everything)
+    const { stdout: stagedOut } = await execFile('git', ['diff', '--cached', '--name-only'], {
+      cwd: worktreePath,
+      env: buildAgentEnv()
+    })
+
+    if (!stagedOut.trim()) {
+      logger.info(`[completion] no staged changes after unstaging test artifacts — skipping commit`)
+      return
+    }
+
     const sanitizedTitle = sanitizeForGit(title)
     await execFile(
       'git',

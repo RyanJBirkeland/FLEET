@@ -136,6 +136,11 @@ describe('resolveSuccess', () => {
       { stdout: 'agent/add-login-page\n' }, // git rev-parse
       { stdout: ' M src/file.ts\n' }, // git status --porcelain (dirty)
       { stdout: '' }, // git add -A
+      { stdout: '' }, // git rm --cached test-results/
+      { stdout: '' }, // git rm --cached coverage/
+      { stdout: '' }, // git rm --cached *.log
+      { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
@@ -266,6 +271,11 @@ describe('resolveSuccess', () => {
       { stdout: 'agent/add-login-page\n' }, // git rev-parse
       { stdout: ' M src/file.ts\n' }, // git status --porcelain (dirty)
       { stdout: '' }, // git add -A
+      { stdout: '' }, // git rm --cached test-results/
+      { stdout: '' }, // git rm --cached coverage/
+      { stdout: '' }, // git rm --cached *.log
+      { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
@@ -348,6 +358,83 @@ describe('resolveSuccess', () => {
       notes: 'Rebase onto main failed — manual conflict resolution needed.'
     })
   })
+
+  it('unstages test artifacts after git add -A', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: ' M src/file.ts\n' }, // git status --porcelain (dirty)
+      { stdout: '' }, // git add -A
+      { stdout: '' }, // git rm --cached test-results/
+      { stdout: '' }, // git rm --cached coverage/
+      { stdout: '' }, // git rm --cached *.log
+      { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
+      { stdout: '' }, // git commit
+      { stdout: '1\n' } // git rev-list --count
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify git rm --cached was called for each artifact path
+    const rmCalls = calls.filter(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('rm')
+    )
+    expect(rmCalls).toHaveLength(4)
+
+    // Verify each artifact path was unstaged
+    const rmArgs = rmCalls.map((c) => c[1])
+    expect(rmArgs.some((args) => args.includes('test-results/'))).toBe(true)
+    expect(rmArgs.some((args) => args.includes('coverage/'))).toBe(true)
+    expect(rmArgs.some((args) => args.includes('*.log'))).toBe(true)
+    expect(rmArgs.some((args) => args.includes('playwright-report/'))).toBe(true)
+
+    // All rm calls should use --cached and --ignore-unmatch
+    rmCalls.forEach((call) => {
+      expect(call[1]).toContain('--cached')
+      expect(call[1]).toContain('--ignore-unmatch')
+    })
+  })
+
+  it('skips commit when only test artifacts were staged (all changes unstaged)', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: ' M test-results/results.json\n' }, // git status --porcelain (dirty — only test artifact)
+      { stdout: '' }, // git add -A
+      { stdout: '' }, // git rm --cached test-results/
+      { stdout: '' }, // git rm --cached coverage/
+      { stdout: '' }, // git rm --cached *.log
+      { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: '' }, // git diff --cached --name-only (empty — no changes remain after unstaging)
+      { stdout: '0\n' } // git rev-list --count (no commits)
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify git commit was NOT called
+    const commitCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('commit')
+    )
+    expect(commitCall).toBeUndefined()
+
+    // Verify logger reported skipping commit
+    expect(noopLogger.info).toHaveBeenCalledWith(
+      expect.stringContaining('no staged changes after unstaging test artifacts')
+    )
+
+    // Should proceed to no-commits handler (requeue via resolveFailure)
+    expect(updateTaskMock).toHaveBeenCalledWith(
+      opts.taskId,
+      expect.objectContaining({
+        status: 'queued',
+        retry_count: 1
+      })
+    )
+  })
+
   it('sets task to error and calls onTaskTerminal when branch name is empty', async () => {
     mockExecFileSequence([
       { stdout: '' } // git rev-parse returns empty string

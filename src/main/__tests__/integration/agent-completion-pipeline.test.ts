@@ -189,6 +189,11 @@ describe('Agent completion pipeline integration', () => {
         { stdout: 'agent/add-login-page\n' }, // git rev-parse
         { stdout: ' M src/file.ts\n' }, // git status --porcelain (dirty)
         { stdout: '' }, // git add -A
+        { stdout: '' }, // git rm --cached test-results/
+        { stdout: '' }, // git rm --cached coverage/
+        { stdout: '' }, // git rm --cached *.log
+        { stdout: '' }, // git rm --cached playwright-report/
+        { stdout: 'src/file.ts\n' }, // git diff --cached --name-only
         { stdout: '' }, // git commit
         { stdout: '2\n' } // git rev-list --count
       ])

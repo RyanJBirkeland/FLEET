@@ -10,6 +10,7 @@ coverage/
 
 # E2E test results (Playwright)
 test-results/
+playwright-report/
 
 # Backup files from merge conflicts
 *.bak
