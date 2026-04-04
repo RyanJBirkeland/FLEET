@@ -36,6 +36,7 @@ import { createSprintTaskRepository } from './data/sprint-task-repository'
 import { getOAuthToken } from './env-utils'
 import { getSetting, getSettingJson } from './settings'
 import { createTaskTerminalService } from './services/task-terminal-service'
+import { createStatusServer } from './services/status-server'
 import { getTask, updateTask, getTasksWithDependencies } from './data/sprint-queries'
 import { setOnStatusTerminal } from './handlers/sprint-local'
 import { setGitHandlersOnStatusTerminal } from './handlers/git-handlers'
@@ -208,6 +209,13 @@ app.whenReady().then(() => {
     )
     am.start()
     app.on('will-quit', () => am.stop(10_000))
+
+    // Start status server (read-only monitoring endpoint)
+    const statusServer = createStatusServer(am, repo)
+    statusServer.start().catch((err) => {
+      createLogger('startup').error(`Failed to start status server: ${err}`)
+    })
+    app.on('will-quit', () => statusServer.stop())
 
     registerAgentHandlers(am)
     registerAgentManagerHandlers(am)
