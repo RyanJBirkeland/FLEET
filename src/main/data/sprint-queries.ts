@@ -5,6 +5,7 @@
 import type Database from 'better-sqlite3'
 import type { SprintTask, TaskDependency } from '../../shared/types'
 import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
+import { isValidTransition } from '../../shared/task-transitions'
 import { getDb } from '../db'
 import { recordTaskChanges } from './task-changes'
 import type { Logger } from '../agent-manager/types'
@@ -200,6 +201,17 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
       // Fetch current state for change tracking
       const oldTask = getTask(id, db)
       if (!oldTask) return null
+
+      // Enforce status transition state machine
+      if (patch.status && typeof patch.status === 'string') {
+        const currentStatus = oldTask.status as string
+        if (!isValidTransition(currentStatus, patch.status)) {
+          logger.warn(
+            `[sprint-queries] Invalid status transition: ${currentStatus} → ${patch.status} for task ${id}`
+          )
+          return null
+        }
+      }
 
       // Build SET clause with serialized values
       const setClauses: string[] = []
