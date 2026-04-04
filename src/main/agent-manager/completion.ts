@@ -130,6 +130,51 @@ async function autoCommitIfDirty(
 }
 
 /**
+ * Rebase the agent's branch onto origin/main to ensure it's up-to-date.
+ * Returns { success: true } if rebase succeeds, { success: false, notes: string } if it fails.
+ */
+async function rebaseOntoMain(
+  worktreePath: string,
+  logger: Logger
+): Promise<{ success: boolean; notes?: string }> {
+  try {
+    // Fetch origin/main
+    logger.info(`[completion] fetching origin/main for rebase`)
+    await execFile('git', ['fetch', 'origin', 'main'], {
+      cwd: worktreePath,
+      env: buildAgentEnv()
+    })
+
+    // Rebase onto origin/main
+    logger.info(`[completion] rebasing onto origin/main`)
+    await execFile('git', ['rebase', 'origin/main'], {
+      cwd: worktreePath,
+      env: buildAgentEnv()
+    })
+
+    logger.info(`[completion] rebase onto main succeeded`)
+    return { success: true }
+  } catch (err) {
+    // Rebase failed — abort to restore clean state
+    logger.warn(`[completion] rebase onto main failed: ${err}`)
+    try {
+      await execFile('git', ['rebase', '--abort'], {
+        cwd: worktreePath,
+        env: buildAgentEnv()
+      })
+      logger.info(`[completion] rebase aborted successfully`)
+    } catch (abortErr) {
+      logger.error(`[completion] failed to abort rebase: ${abortErr}`)
+    }
+
+    return {
+      success: false,
+      notes: 'Rebase onto main failed — manual conflict resolution needed.'
+    }
+  }
+}
+
+/**
  * Check if a PR already exists for the given branch.
  * Returns `{ prUrl, prNumber }` if found, `null` otherwise.
  */
@@ -399,7 +444,19 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     // Continue — push will fail naturally if there are no commits
   }
 
-  // 3. Check if there are any commits
+  // 3. Rebase onto origin/main to prevent stale branch merge conflicts
+  let rebaseNote: string | undefined
+  try {
+    const rebaseResult = await rebaseOntoMain(worktreePath, logger)
+    if (!rebaseResult.success) {
+      rebaseNote = rebaseResult.notes
+    }
+  } catch (err) {
+    logger.warn(`[completion] Rebase step failed for task ${taskId}: ${err}`)
+    rebaseNote = 'Rebase onto main failed — manual conflict resolution needed.'
+  }
+
+  // 4. Check if there are any commits
   try {
     const { stdout: diffOut } = await execFile(
       'git',
@@ -427,7 +484,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     // If rev-list fails, continue — commits may still exist
   }
 
-  // 4. Transition to review — preserve worktree for code review.
+  // 5. Transition to review — preserve worktree for code review.
   // Push + PR creation deferred to explicit user/UI action.
   logger.info(
     `[completion] Task ${taskId}: agent finished with commits on branch ${branch} — transitioning to review`
@@ -436,7 +493,8 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     repo.updateTask(taskId, {
       status: 'review',
       worktree_path: worktreePath,
-      claimed_by: null
+      claimed_by: null,
+      ...(rebaseNote ? { notes: rebaseNote } : {})
     })
   } catch (err) {
     logger.error(`[completion] Failed to update task ${taskId} to review status: ${err}`)

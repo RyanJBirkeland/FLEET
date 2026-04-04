@@ -93,6 +93,8 @@ describe('resolveSuccess', () => {
     mockExecFileSequence([
       { stdout: 'agent/add-login-page\n' }, // git rev-parse
       { stdout: '' }, // git status --porcelain (no uncommitted changes)
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '1\n' } // git rev-list --count (has commits)
     ])
 
@@ -135,6 +137,8 @@ describe('resolveSuccess', () => {
       { stdout: ' M src/file.ts\n' }, // git status --porcelain (dirty)
       { stdout: '' }, // git add -A
       { stdout: '' }, // git commit
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '1\n' } // git rev-list --count (has commits after auto-commit)
     ])
 
@@ -189,6 +193,8 @@ describe('resolveSuccess', () => {
     mockExecFileSequence([
       { stdout: 'agent/add-login-page\n' }, // git rev-parse
       { stdout: '' }, // git status --porcelain (clean)
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -211,6 +217,8 @@ describe('resolveSuccess', () => {
     mockExecFileSequence([
       { stdout: 'agent/add-login-page\n' }, // git rev-parse
       { stdout: '' }, // git status --porcelain (clean)
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -232,6 +240,8 @@ describe('resolveSuccess', () => {
     mockExecFileSequence([
       { stdout: 'agent/add-login-page\n' }, // git rev-parse
       { stdout: '' }, // git status --porcelain (clean)
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -257,6 +267,8 @@ describe('resolveSuccess', () => {
       { stdout: ' M src/file.ts\n' }, // git status --porcelain (dirty)
       { stdout: '' }, // git add -A
       { stdout: '' }, // git commit
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '1\n' } // git rev-list --count
     ])
 
@@ -267,6 +279,74 @@ describe('resolveSuccess', () => {
     expect(addCall).toBeDefined()
     expect(addCall![1]).toContain('-A')
     expect(addCall![1]).not.toContain('-u')
+  })
+
+  it('rebases onto origin/main after auto-commit', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: '' }, // git status --porcelain (clean)
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
+      { stdout: '1\n' } // git rev-list --count
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify fetch was called
+    const fetchCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('fetch')
+    )
+    expect(fetchCall).toBeDefined()
+    expect(fetchCall![1]).toEqual(['fetch', 'origin', 'main'])
+
+    // Verify rebase was called
+    const rebaseCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('rebase') && c[1].length === 2
+    )
+    expect(rebaseCall).toBeDefined()
+    expect(rebaseCall![1]).toEqual(['rebase', 'origin/main'])
+
+    // Task should transition to review without rebase note
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      status: 'review',
+      worktree_path: opts.worktreePath,
+      claimed_by: null
+    })
+  })
+
+  it('includes rebase conflict note when rebase fails', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: '' }, // git status --porcelain (clean)
+      { stdout: '' }, // git fetch origin main
+      { error: new Error('CONFLICT (content): Merge conflict in src/file.ts') }, // git rebase origin/main fails
+      { stdout: '' }, // git rebase --abort
+      { stdout: '1\n' } // git rev-list --count
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify rebase --abort was called
+    const abortCall = calls.find(
+      (c) =>
+        c[0] === 'git' &&
+        Array.isArray(c[1]) &&
+        c[1].includes('rebase') &&
+        c[1].includes('--abort')
+    )
+    expect(abortCall).toBeDefined()
+
+    // Task should transition to review WITH rebase note
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      status: 'review',
+      worktree_path: opts.worktreePath,
+      claimed_by: null,
+      notes: 'Rebase onto main failed — manual conflict resolution needed.'
+    })
   })
   it('sets task to error and calls onTaskTerminal when branch name is empty', async () => {
     mockExecFileSequence([
@@ -306,7 +386,13 @@ describe('resolveSuccess — catch handler coverage', () => {
   })
 
   it('logs error when updateTask fails during review transition', async () => {
-    mockExecFileSequence([{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }])
+    mockExecFileSequence([
+      { stdout: 'agent/b\n' },
+      { stdout: '' },
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
+      { stdout: '1\n' }
+    ])
     updateTaskMock.mockImplementationOnce(() => {
       throw new Error('DB down')
     })
@@ -319,7 +405,13 @@ describe('resolveSuccess — catch handler coverage', () => {
   })
 
   it('transitions to review with worktree_path preserved', async () => {
-    mockExecFileSequence([{ stdout: 'agent/b\n' }, { stdout: '' }, { stdout: '1\n' }])
+    mockExecFileSequence([
+      { stdout: 'agent/b\n' },
+      { stdout: '' },
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
+      { stdout: '1\n' }
+    ])
     await resolveSuccess(catchOpts, noopLogger)
     expect(updateTaskMock).toHaveBeenCalledWith(catchOpts.taskId, {
       status: 'review',
@@ -365,6 +457,8 @@ describe('resolveSuccess — catch handler coverage', () => {
     mockExecFileSequence([
       { stdout: 'agent/b\n' }, // git rev-parse
       { stdout: '' }, // git status --porcelain
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
       { stdout: '0\n' } // git rev-list --count (0 commits)
     ])
     updateTaskMock.mockImplementationOnce(() => {
