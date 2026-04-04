@@ -18,22 +18,23 @@ _Estimated scope: 3-4 days. Expand from ~19 commands to 50+. Add command registr
 
 ### File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/renderer/src/stores/commandRegistry.ts` | Create | Command registry store — dynamic registration, recent tracking |
-| `src/renderer/src/stores/__tests__/commandRegistry.test.ts` | Create | Unit tests for registry |
-| `src/renderer/src/components/layout/CommandPalette.tsx` | Modify | Consume registry instead of hardcoded commands |
-| `src/renderer/src/components/layout/__tests__/CommandPalette.test.tsx` | Modify | Update tests for new commands |
-| `src/renderer/src/views/DashboardView.tsx` | Modify | Register dashboard-specific commands |
-| `src/renderer/src/components/sprint/SprintPipeline.tsx` | Modify | Register pipeline commands |
-| `src/renderer/src/views/CodeReviewView.tsx` | Modify | Register review commands |
-| `src/renderer/src/assets/neon-shell.css` | Modify | Style recent commands section |
+| File                                                                   | Action | Responsibility                                                 |
+| ---------------------------------------------------------------------- | ------ | -------------------------------------------------------------- |
+| `src/renderer/src/stores/commandRegistry.ts`                           | Create | Command registry store — dynamic registration, recent tracking |
+| `src/renderer/src/stores/__tests__/commandRegistry.test.ts`            | Create | Unit tests for registry                                        |
+| `src/renderer/src/components/layout/CommandPalette.tsx`                | Modify | Consume registry instead of hardcoded commands                 |
+| `src/renderer/src/components/layout/__tests__/CommandPalette.test.tsx` | Modify | Update tests for new commands                                  |
+| `src/renderer/src/views/DashboardView.tsx`                             | Modify | Register dashboard-specific commands                           |
+| `src/renderer/src/components/sprint/SprintPipeline.tsx`                | Modify | Register pipeline commands                                     |
+| `src/renderer/src/views/CodeReviewView.tsx`                            | Modify | Register review commands                                       |
+| `src/renderer/src/assets/neon-shell.css`                               | Modify | Style recent commands section                                  |
 
 ---
 
 ### Task 1.1: Create command registry store
 
 **Files:**
+
 - Create: `src/renderer/src/stores/commandRegistry.ts`
 - Create: `src/renderer/src/stores/__tests__/commandRegistry.test.ts`
 
@@ -55,7 +56,7 @@ describe('commandRegistry', () => {
       id: 'test:hello',
       label: 'Say Hello',
       category: 'action',
-      action: () => {},
+      action: () => {}
     }
     useCommandRegistry.getState().register([cmd])
     expect(useCommandRegistry.getState().commands).toHaveLength(1)
@@ -65,7 +66,7 @@ describe('commandRegistry', () => {
   it('unregisters commands by source', () => {
     useCommandRegistry.getState().register([
       { id: 'a:1', label: 'A1', category: 'action', action: () => {}, source: 'viewA' },
-      { id: 'b:1', label: 'B1', category: 'action', action: () => {}, source: 'viewB' },
+      { id: 'b:1', label: 'B1', category: 'action', action: () => {}, source: 'viewB' }
     ])
     useCommandRegistry.getState().unregisterBySource('viewA')
     expect(useCommandRegistry.getState().commands).toHaveLength(1)
@@ -95,7 +96,7 @@ describe('commandRegistry', () => {
   it('fuzzy filters commands', () => {
     useCommandRegistry.getState().register([
       { id: 'a', label: 'Go to Dashboard', category: 'navigation', action: () => {} },
-      { id: 'b', label: 'Launch Agent', category: 'action', action: () => {} },
+      { id: 'b', label: 'Launch Agent', category: 'action', action: () => {} }
     ])
     const result = useCommandRegistry.getState().search('dash')
     expect(result).toHaveLength(1)
@@ -105,13 +106,13 @@ describe('commandRegistry', () => {
   it('ranks recent commands higher', () => {
     useCommandRegistry.getState().register([
       { id: 'a', label: 'Alpha', category: 'action', action: () => {} },
-      { id: 'b', label: 'Beta', category: 'action', action: () => {} },
+      { id: 'b', label: 'Beta', category: 'action', action: () => {} }
     ])
     useCommandRegistry.getState().recordRecent('b')
     const result = useCommandRegistry.getState().search('')
     // 'b' should come before 'a' since it's recent
-    const bIdx = result.findIndex(c => c.id === 'b')
-    const aIdx = result.findIndex(c => c.id === 'a')
+    const bIdx = result.findIndex((c) => c.id === 'b')
+    const aIdx = result.findIndex((c) => c.id === 'a')
     expect(bIdx).toBeLessThan(aIdx)
   })
 })
@@ -124,7 +125,15 @@ Create `src/renderer/src/stores/commandRegistry.ts`:
 ```typescript
 import { create } from 'zustand'
 
-export type CommandCategory = 'navigation' | 'action' | 'panel' | 'session' | 'task' | 'review' | 'filter' | 'settings'
+export type CommandCategory =
+  | 'navigation'
+  | 'action'
+  | 'panel'
+  | 'session'
+  | 'task'
+  | 'review'
+  | 'filter'
+  | 'settings'
 
 export interface RegisteredCommand {
   id: string
@@ -138,7 +147,14 @@ export interface RegisteredCommand {
 }
 
 const CATEGORY_ORDER: CommandCategory[] = [
-  'task', 'review', 'action', 'navigation', 'filter', 'panel', 'settings', 'session'
+  'task',
+  'review',
+  'action',
+  'navigation',
+  'filter',
+  'panel',
+  'settings',
+  'session'
 ]
 
 const MAX_RECENT = 10
@@ -169,36 +185,36 @@ export const useCommandRegistry = create<CommandRegistryState>((set, get) => ({
 
   register: (cmds) => {
     set((s) => {
-      const existingIds = new Set(s.commands.map(c => c.id))
-      const newCmds = cmds.filter(c => !existingIds.has(c.id))
+      const existingIds = new Set(s.commands.map((c) => c.id))
+      const newCmds = cmds.filter((c) => !existingIds.has(c.id))
       return { commands: [...s.commands, ...newCmds] }
     })
   },
 
   unregisterBySource: (source) => {
-    set((s) => ({ commands: s.commands.filter(c => c.source !== source) }))
+    set((s) => ({ commands: s.commands.filter((c) => c.source !== source) }))
   },
 
   clear: () => set({ commands: [], recentIds: [] }),
 
   recordRecent: (id) => {
     set((s) => {
-      const filtered = s.recentIds.filter(r => r !== id)
+      const filtered = s.recentIds.filter((r) => r !== id)
       return { recentIds: [id, ...filtered].slice(0, MAX_RECENT) }
     })
   },
 
   search: (query) => {
     const { commands, recentIds } = get()
-    const visible = commands.filter(c => !c.contextMatch || c.contextMatch())
+    const visible = commands.filter((c) => !c.contextMatch || c.contextMatch())
 
     let filtered: RegisteredCommand[]
     if (!query) {
       filtered = visible
     } else {
-      filtered = visible.filter(c =>
-        fuzzyMatch(query, c.label) ||
-        (c.keywords?.some(k => fuzzyMatch(query, k)) ?? false)
+      filtered = visible.filter(
+        (c) =>
+          fuzzyMatch(query, c.label) || (c.keywords?.some((k) => fuzzyMatch(query, k)) ?? false)
       )
     }
 
@@ -215,7 +231,7 @@ export const useCommandRegistry = create<CommandRegistryState>((set, get) => ({
       if (aRecent !== bRecent) return aRecent - bRecent
       return catIdx(a.category) - catIdx(b.category)
     })
-  },
+  }
 }))
 ```
 
@@ -230,6 +246,7 @@ npx vitest run src/renderer/src/stores/__tests__/commandRegistry.test.ts
 ### Task 1.2: Register core commands in CommandPalette
 
 **Files:**
+
 - Modify: `src/renderer/src/components/layout/CommandPalette.tsx`
 
 - [ ] **Step 1: Refactor CommandPalette to use the registry**
@@ -237,6 +254,7 @@ npx vitest run src/renderer/src/stores/__tests__/commandRegistry.test.ts
 Replace the hardcoded `commands` useMemo in `CommandPalette.tsx` with registry consumption. On mount, register the core navigation, action, and panel commands. Use `useCommandRegistry.getState().search(query)` for filtering.
 
 Key changes:
+
 1. Import `useCommandRegistry` from `../../stores/commandRegistry`
 2. In the `useEffect` that fires on `open`, call `register()` for core commands (navigation, panel, agent actions) if not already registered
 3. Replace the `filtered` useMemo with `useMemo(() => useCommandRegistry.getState().search(query), [query, open])`
@@ -257,6 +275,7 @@ npx vitest run src/renderer/src/components/layout/__tests__/CommandPalette.test.
 ### Task 1.3: Register view-specific commands
 
 **Files:**
+
 - Modify: `src/renderer/src/components/sprint/SprintPipeline.tsx`
 - Modify: `src/renderer/src/views/CodeReviewView.tsx`
 
@@ -274,7 +293,7 @@ useEffect(() => {
       category: 'task',
       hint: 'Cmd+N',
       source: 'sprint',
-      action: () => setView('task-workbench'),
+      action: () => setView('task-workbench')
     },
     {
       id: 'task:retry-selected',
@@ -285,10 +304,10 @@ useEffect(() => {
       action: () => {
         const id = useSprintUI.getState().selectedTaskId
         if (id) {
-          const task = useSprintTasks.getState().tasks.find(t => t.id === id)
+          const task = useSprintTasks.getState().tasks.find((t) => t.id === id)
           if (task) handleRetry(task)
         }
-      },
+      }
     },
     {
       id: 'task:launch-selected',
@@ -299,10 +318,10 @@ useEffect(() => {
       action: () => {
         const id = useSprintUI.getState().selectedTaskId
         if (id) {
-          const task = useSprintTasks.getState().tasks.find(t => t.id === id)
+          const task = useSprintTasks.getState().tasks.find((t) => t.id === id)
           if (task) launchTask(task)
         }
-      },
+      }
     },
     {
       id: 'task:search',
@@ -312,29 +331,29 @@ useEffect(() => {
       action: () => {
         const input = document.querySelector('.pipeline-filter-bar__input') as HTMLInputElement
         input?.focus()
-      },
+      }
     },
     {
       id: 'filter:status-failed',
       label: 'Show Failed Tasks',
       category: 'filter',
       source: 'sprint',
-      action: () => setStatusFilter('failed'),
+      action: () => setStatusFilter('failed')
     },
     {
       id: 'filter:status-active',
       label: 'Show Active Tasks',
       category: 'filter',
       source: 'sprint',
-      action: () => setStatusFilter('in-progress'),
+      action: () => setStatusFilter('in-progress')
     },
     {
       id: 'filter:status-all',
       label: 'Show All Tasks',
       category: 'filter',
       source: 'sprint',
-      action: () => setStatusFilter('all'),
-    },
+      action: () => setStatusFilter('all')
+    }
   ])
   return () => unregisterBySource('sprint')
 }, [setView, setStatusFilter, handleRetry, launchTask])
@@ -343,6 +362,7 @@ useEffect(() => {
 - [ ] **Step 2: Register code review commands**
 
 In `CodeReviewView.tsx`, register review-specific commands:
+
 - `review:merge` — Merge locally (selected task)
 - `review:create-pr` — Create PR (selected task)
 - `review:revise` — Request revision (selected task)
@@ -355,6 +375,7 @@ Use `source: 'code-review'` and clean up on unmount.
 - [ ] **Step 3: Register settings navigation commands**
 
 In the core CommandPalette registration (Task 1.2), add settings tab commands:
+
 - `settings:connections`, `settings:repos`, `settings:templates`, `settings:agent`, `settings:agent-manager`, `settings:cost`, `settings:memory`, `settings:appearance`, `settings:about`
 
 Each navigates to Settings view and dispatches a custom event `bde:settings-tab` with the tab index.
@@ -374,28 +395,29 @@ _Estimated scope: 2 days. DB migration, IPC, store changes, UI components._
 
 ### File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/main/db.ts` | Modify | Migration v24: add `tags TEXT` column |
-| `src/main/data/sprint-queries.ts` | Modify | Serialize/deserialize tags, add to allowlist |
-| `src/shared/types.ts` | Modify | Add `tags?: string[] \| null` to `SprintTask` |
-| `src/renderer/src/components/sprint/TagBadge.tsx` | Create | Color-coded tag badge component |
-| `src/renderer/src/components/sprint/__tests__/TagBadge.test.tsx` | Create | Tests for TagBadge |
-| `src/renderer/src/components/sprint/TaskPill.tsx` | Modify | Render tag badges |
-| `src/renderer/src/components/sprint/PipelineFilterBar.tsx` | Modify | Add tag filter chips |
-| `src/renderer/src/components/task-workbench/TagInput.tsx` | Create | Tag input component for WorkbenchForm |
-| `src/renderer/src/components/task-workbench/__tests__/TagInput.test.tsx` | Create | Tests for TagInput |
-| `src/renderer/src/components/task-workbench/WorkbenchForm.tsx` | Modify | Add TagInput field |
-| `src/renderer/src/stores/sprintUI.ts` | Modify | Add `tagFilter: string \| null` state |
-| `src/renderer/src/stores/sprintTasks.ts` | Modify | Include tags in CreateTicketInput |
-| `src/renderer/src/assets/sprint-pipeline-neon.css` | Modify | Tag badge and filter chip styles |
-| `src/renderer/src/assets/task-workbench-neon.css` | Modify | Tag input styles |
+| File                                                                     | Action | Responsibility                                |
+| ------------------------------------------------------------------------ | ------ | --------------------------------------------- |
+| `src/main/db.ts`                                                         | Modify | Migration v24: add `tags TEXT` column         |
+| `src/main/data/sprint-queries.ts`                                        | Modify | Serialize/deserialize tags, add to allowlist  |
+| `src/shared/types.ts`                                                    | Modify | Add `tags?: string[] \| null` to `SprintTask` |
+| `src/renderer/src/components/sprint/TagBadge.tsx`                        | Create | Color-coded tag badge component               |
+| `src/renderer/src/components/sprint/__tests__/TagBadge.test.tsx`         | Create | Tests for TagBadge                            |
+| `src/renderer/src/components/sprint/TaskPill.tsx`                        | Modify | Render tag badges                             |
+| `src/renderer/src/components/sprint/PipelineFilterBar.tsx`               | Modify | Add tag filter chips                          |
+| `src/renderer/src/components/task-workbench/TagInput.tsx`                | Create | Tag input component for WorkbenchForm         |
+| `src/renderer/src/components/task-workbench/__tests__/TagInput.test.tsx` | Create | Tests for TagInput                            |
+| `src/renderer/src/components/task-workbench/WorkbenchForm.tsx`           | Modify | Add TagInput field                            |
+| `src/renderer/src/stores/sprintUI.ts`                                    | Modify | Add `tagFilter: string \| null` state         |
+| `src/renderer/src/stores/sprintTasks.ts`                                 | Modify | Include tags in CreateTicketInput             |
+| `src/renderer/src/assets/sprint-pipeline-neon.css`                       | Modify | Tag badge and filter chip styles              |
+| `src/renderer/src/assets/task-workbench-neon.css`                        | Modify | Tag input styles                              |
 
 ---
 
 ### Task 2.1: DB migration and query layer
 
 **Files:**
+
 - Modify: `src/main/db.ts`
 - Modify: `src/main/data/sprint-queries.ts`
 - Modify: `src/shared/types.ts`
@@ -450,6 +472,7 @@ tags: typeof row.tags === 'string' ? JSON.parse(row.tags) : (row.tags as string[
 In `src/main/data/sprint-queries.ts`, add `tags?: string[]` to `CreateTaskInput`.
 
 In the `createTask()` function, include `tags` in the INSERT:
+
 - Add `tags` to the column list
 - Add `JSON.stringify(input.tags ?? null)` to the values
 
@@ -464,6 +487,7 @@ npm run test:main
 ### Task 2.2: TagBadge component
 
 **Files:**
+
 - Create: `src/renderer/src/components/sprint/TagBadge.tsx`
 - Create: `src/renderer/src/components/sprint/__tests__/TagBadge.test.tsx`
 
@@ -576,6 +600,7 @@ npx vitest run src/renderer/src/components/sprint/__tests__/TagBadge.test.tsx
 ### Task 2.3: Add tags to TaskPill
 
 **Files:**
+
 - Modify: `src/renderer/src/components/sprint/TaskPill.tsx`
 
 - [ ] **Step 1: Import and render TagBadge**
@@ -583,19 +608,21 @@ npx vitest run src/renderer/src/components/sprint/__tests__/TagBadge.test.tsx
 After the repo badge in `TaskPill.tsx`, render tags:
 
 ```tsx
-{task.tags && task.tags.length > 0 && (
-  <span className="task-pill__tags">
-    {task.tags.slice(0, 2).map(tag => (
-      <TagBadge key={tag} tag={tag} />
-    ))}
-    {task.tags.length > 2 && (
-      <span className="task-pill__tags-overflow">+{task.tags.length - 2}</span>
-    )}
-  </span>
-)}
+{
+  task.tags && task.tags.length > 0 && (
+    <span className="task-pill__tags">
+      {task.tags.slice(0, 2).map((tag) => (
+        <TagBadge key={tag} tag={tag} />
+      ))}
+      {task.tags.length > 2 && (
+        <span className="task-pill__tags-overflow">+{task.tags.length - 2}</span>
+      )}
+    </span>
+  )
+}
 ```
 
-- [ ] **Step 2: Add CSS for task-pill__tags**
+- [ ] **Step 2: Add CSS for task-pill\_\_tags**
 
 In `sprint-pipeline-neon.css`:
 
@@ -618,6 +645,7 @@ In `sprint-pipeline-neon.css`:
 ### Task 2.4: Tag filter in PipelineFilterBar
 
 **Files:**
+
 - Modify: `src/renderer/src/stores/sprintUI.ts`
 - Modify: `src/renderer/src/components/sprint/PipelineFilterBar.tsx`
 - Modify: `src/renderer/src/components/sprint/SprintPipeline.tsx`
@@ -646,18 +674,20 @@ In `PipelineFilterBar.tsx`:
 4. Render tag chips section after repo chips (only when `allTags.length > 0`):
 
 ```tsx
-{allTags.length > 0 && (
-  <div className="pipeline-filter-bar__chips">
-    {allTags.map(tag => (
-      <TagBadge
-        key={tag}
-        tag={tag}
-        active={tagFilter === tag}
-        onClick={(t) => setTagFilter(tagFilter === t ? null : t)}
-      />
-    ))}
-  </div>
-)}
+{
+  allTags.length > 0 && (
+    <div className="pipeline-filter-bar__chips">
+      {allTags.map((tag) => (
+        <TagBadge
+          key={tag}
+          tag={tag}
+          active={tagFilter === tag}
+          onClick={(t) => setTagFilter(tagFilter === t ? null : t)}
+        />
+      ))}
+    </div>
+  )
+}
 ```
 
 5. Update the `if (repos.length <= 1 && !searchQuery) return null` guard to also show when tags exist:
@@ -671,7 +701,7 @@ In `SprintPipeline.tsx`, in the `filteredTasks` useMemo, add after the search fi
 const tagFilter = useSprintUI((s) => s.tagFilter)
 
 // Inside filteredTasks useMemo:
-if (tagFilter) result = result.filter(t => t.tags?.includes(tagFilter))
+if (tagFilter) result = result.filter((t) => t.tags?.includes(tagFilter))
 ```
 
 ---
@@ -679,6 +709,7 @@ if (tagFilter) result = result.filter(t => t.tags?.includes(tagFilter))
 ### Task 2.5: Tag input in WorkbenchForm
 
 **Files:**
+
 - Create: `src/renderer/src/components/task-workbench/TagInput.tsx`
 - Create: `src/renderer/src/components/task-workbench/__tests__/TagInput.test.tsx`
 - Modify: `src/renderer/src/components/task-workbench/WorkbenchForm.tsx`
@@ -792,6 +823,7 @@ export function TagInput({ tags, onChange }: TagInputProps): React.JSX.Element {
 - [ ] **Step 3: Wire into WorkbenchForm**
 
 In `WorkbenchForm.tsx`:
+
 1. Import `TagInput` from `./TagInput`
 2. Read `tags` from `useTaskWorkbenchStore`
 3. Inside the `advancedOpen` section (after the Playground checkbox), add:
@@ -799,10 +831,7 @@ In `WorkbenchForm.tsx`:
 ```tsx
 <div className="wb-form__field">
   <label className="wb-form__label">Tags</label>
-  <TagInput
-    tags={tags ?? []}
-    onChange={(t) => setField('tags', t)}
-  />
+  <TagInput tags={tags ?? []} onChange={(t) => setField('tags', t)} />
 </div>
 ```
 
@@ -873,18 +902,19 @@ _Estimated scope: 1-2 days. Renderer-only feature using existing task data and a
 
 ### File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/renderer/src/components/dashboard/MorningBriefing.tsx` | Create | Briefing card component |
-| `src/renderer/src/components/dashboard/__tests__/MorningBriefing.test.tsx` | Create | Tests |
-| `src/renderer/src/views/DashboardView.tsx` | Modify | Mount MorningBriefing at top |
-| `src/renderer/src/assets/dashboard-neon.css` | Modify | Briefing card styles |
+| File                                                                       | Action | Responsibility               |
+| -------------------------------------------------------------------------- | ------ | ---------------------------- |
+| `src/renderer/src/components/dashboard/MorningBriefing.tsx`                | Create | Briefing card component      |
+| `src/renderer/src/components/dashboard/__tests__/MorningBriefing.test.tsx` | Create | Tests                        |
+| `src/renderer/src/views/DashboardView.tsx`                                 | Modify | Mount MorningBriefing at top |
+| `src/renderer/src/assets/dashboard-neon.css`                               | Modify | Briefing card styles         |
 
 ---
 
 ### Task 3.1: MorningBriefing component
 
 **Files:**
+
 - Create: `src/renderer/src/components/dashboard/MorningBriefing.tsx`
 - Create: `src/renderer/src/components/dashboard/__tests__/MorningBriefing.test.tsx`
 
@@ -1100,18 +1130,19 @@ _Estimated scope: 2-3 days. Renderer-only component using existing `agentManager
 
 ### File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/renderer/src/components/layout/AgentMonitor.tsx` | Create | Floating monitor widget |
-| `src/renderer/src/components/layout/__tests__/AgentMonitor.test.tsx` | Create | Tests |
-| `src/renderer/src/App.tsx` | Modify | Mount AgentMonitor globally |
-| `src/renderer/src/assets/neon-shell.css` | Modify | Monitor widget styles |
+| File                                                                 | Action | Responsibility              |
+| -------------------------------------------------------------------- | ------ | --------------------------- |
+| `src/renderer/src/components/layout/AgentMonitor.tsx`                | Create | Floating monitor widget     |
+| `src/renderer/src/components/layout/__tests__/AgentMonitor.test.tsx` | Create | Tests                       |
+| `src/renderer/src/App.tsx`                                           | Modify | Mount AgentMonitor globally |
+| `src/renderer/src/assets/neon-shell.css`                             | Modify | Monitor widget styles       |
 
 ---
 
 ### Task 4.1: AgentMonitor component
 
 **Files:**
+
 - Create: `src/renderer/src/components/layout/AgentMonitor.tsx`
 - Create: `src/renderer/src/components/layout/__tests__/AgentMonitor.test.tsx`
 
@@ -1358,18 +1389,19 @@ _Estimated scope: 2-3 days. Pure renderer -- parser + predicate system replaces 
 
 ### File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/renderer/src/lib/task-query.ts` | Create | Query parser + predicate builder |
-| `src/renderer/src/lib/__tests__/task-query.test.ts` | Create | Parser tests (heavily tested) |
+| File                                                       | Action | Responsibility                    |
+| ---------------------------------------------------------- | ------ | --------------------------------- |
+| `src/renderer/src/lib/task-query.ts`                       | Create | Query parser + predicate builder  |
+| `src/renderer/src/lib/__tests__/task-query.test.ts`        | Create | Parser tests (heavily tested)     |
 | `src/renderer/src/components/sprint/PipelineFilterBar.tsx` | Modify | Use query parser for search input |
-| `src/renderer/src/stores/sprintUI.ts` | Modify | Update searchQuery usage |
+| `src/renderer/src/stores/sprintUI.ts`                      | Modify | Update searchQuery usage          |
 
 ---
 
 ### Task 5.1: Query parser
 
 **Files:**
+
 - Create: `src/renderer/src/lib/task-query.ts`
 - Create: `src/renderer/src/lib/__tests__/task-query.test.ts`
 
@@ -1381,12 +1413,28 @@ import { parseTaskQuery, matchesQuery } from '../task-query'
 import type { SprintTask } from '../../../../shared/types'
 
 const baseTask: SprintTask = {
-  id: 'test-1', title: 'Fix auth flow', repo: 'bde', prompt: null,
-  priority: 2, status: 'failed', notes: null, spec: null, retry_count: 0,
-  fast_fail_count: 0, agent_run_id: null, pr_number: null, pr_status: null,
-  pr_url: null, claimed_by: null, started_at: null, completed_at: null,
-  template_name: null, depends_on: null, tags: ['frontend', 'auth'],
-  updated_at: '2026-04-01T00:00:00Z', created_at: '2026-03-30T00:00:00Z',
+  id: 'test-1',
+  title: 'Fix auth flow',
+  repo: 'bde',
+  prompt: null,
+  priority: 2,
+  status: 'failed',
+  notes: null,
+  spec: null,
+  retry_count: 0,
+  fast_fail_count: 0,
+  agent_run_id: null,
+  pr_number: null,
+  pr_status: null,
+  pr_url: null,
+  claimed_by: null,
+  started_at: null,
+  completed_at: null,
+  template_name: null,
+  depends_on: null,
+  tags: ['frontend', 'auth'],
+  updated_at: '2026-04-01T00:00:00Z',
+  created_at: '2026-03-30T00:00:00Z'
 }
 
 describe('parseTaskQuery', () => {
@@ -1516,11 +1564,16 @@ function parseOp(raw: string): { op: Op; value: string } {
   const m = raw.match(OP_PATTERN)!
   const opStr = m[1] ?? ''
   const val = m[2]
-  const op: Op = opStr === '<='
-    ? 'lte' : opStr === '>='
-    ? 'gte' : opStr === '<'
-    ? 'lt' : opStr === '>'
-    ? 'gt' : 'eq'
+  const op: Op =
+    opStr === '<='
+      ? 'lte'
+      : opStr === '>='
+        ? 'gte'
+        : opStr === '<'
+          ? 'lt'
+          : opStr === '>'
+            ? 'gt'
+            : 'eq'
   return { op, value: val }
 }
 
@@ -1616,6 +1669,7 @@ npx vitest run src/renderer/src/lib/__tests__/task-query.test.ts
 ### Task 5.2: Integrate query parser into pipeline filtering
 
 **Files:**
+
 - Modify: `src/renderer/src/components/sprint/SprintPipeline.tsx`
 - Modify: `src/renderer/src/components/sprint/PipelineFilterBar.tsx`
 
@@ -1629,7 +1683,7 @@ import { parseTaskQuery, matchesQuery } from '../../lib/task-query'
 // Inside filteredTasks useMemo, replace the simple searchQuery filter:
 if (searchQuery) {
   const parsed = parseTaskQuery(searchQuery)
-  result = result.filter(t => matchesQuery(t, parsed))
+  result = result.filter((t) => matchesQuery(t, parsed))
 }
 ```
 
@@ -1655,25 +1709,26 @@ _Estimated scope: 2-3 days. New SQLite table, IPC handlers, Settings UI tab, com
 
 ### File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/main/db.ts` | Modify | Migration v25: `settings_profiles` table |
-| `src/main/data/settings-profiles.ts` | Create | CRUD queries for profiles |
-| `src/main/data/__tests__/settings-profiles.test.ts` | Create | Tests for profile queries |
-| `src/main/handlers/settings-profiles.ts` | Create | IPC handlers |
-| `src/main/index.ts` | Modify | Register profile handlers |
-| `src/preload/index.ts` | Modify | Expose profile API |
-| `src/preload/index.d.ts` | Modify | Type declarations |
-| `src/shared/ipc-channels.ts` | Modify | Add profile channels |
-| `src/renderer/src/components/settings/ProfilesSection.tsx` | Create | Profile management UI |
-| `src/renderer/src/components/settings/__tests__/ProfilesSection.test.tsx` | Create | Tests |
-| `src/renderer/src/assets/neon-shell.css` | Modify | Profile card styles |
+| File                                                                      | Action | Responsibility                           |
+| ------------------------------------------------------------------------- | ------ | ---------------------------------------- |
+| `src/main/db.ts`                                                          | Modify | Migration v25: `settings_profiles` table |
+| `src/main/data/settings-profiles.ts`                                      | Create | CRUD queries for profiles                |
+| `src/main/data/__tests__/settings-profiles.test.ts`                       | Create | Tests for profile queries                |
+| `src/main/handlers/settings-profiles.ts`                                  | Create | IPC handlers                             |
+| `src/main/index.ts`                                                       | Modify | Register profile handlers                |
+| `src/preload/index.ts`                                                    | Modify | Expose profile API                       |
+| `src/preload/index.d.ts`                                                  | Modify | Type declarations                        |
+| `src/shared/ipc-channels.ts`                                              | Modify | Add profile channels                     |
+| `src/renderer/src/components/settings/ProfilesSection.tsx`                | Create | Profile management UI                    |
+| `src/renderer/src/components/settings/__tests__/ProfilesSection.test.tsx` | Create | Tests                                    |
+| `src/renderer/src/assets/neon-shell.css`                                  | Modify | Profile card styles                      |
 
 ---
 
 ### Task 6.1: Profile data layer
 
 **Files:**
+
 - Modify: `src/main/db.ts`
 - Create: `src/main/data/settings-profiles.ts`
 - Create: `src/main/data/__tests__/settings-profiles.test.ts`
@@ -1708,7 +1763,11 @@ Create `src/main/data/__tests__/settings-profiles.test.ts`:
 import { describe, it, expect, beforeAll, afterAll } from 'vitest'
 import Database from 'better-sqlite3'
 import {
-  createProfile, listProfiles, getProfile, deleteProfile, applyProfile
+  createProfile,
+  listProfiles,
+  getProfile,
+  deleteProfile,
+  applyProfile
 } from '../settings-profiles'
 
 let db: Database.Database
@@ -1735,7 +1794,7 @@ describe('settings-profiles', () => {
   it('creates a profile', () => {
     const profile = createProfile(db, 'solo-dev', {
       'agentManager.maxConcurrent': '2',
-      'agentManager.defaultModel': 'claude-sonnet-4-5',
+      'agentManager.defaultModel': 'claude-sonnet-4-5'
     })
     expect(profile.name).toBe('solo-dev')
   })
@@ -1754,9 +1813,9 @@ describe('settings-profiles', () => {
   it('applies a profile to settings', () => {
     const profiles = listProfiles(db)
     applyProfile(db, profiles[0].id)
-    const row = db.prepare(
-      'SELECT value FROM settings WHERE key = ?'
-    ).get('agentManager.maxConcurrent') as { value: string } | undefined
+    const row = db
+      .prepare('SELECT value FROM settings WHERE key = ?')
+      .get('agentManager.maxConcurrent') as { value: string } | undefined
     expect(row?.value).toBe('2')
   })
 
@@ -1786,7 +1845,7 @@ export interface SettingsProfile {
 function deserialize(row: Record<string, unknown>): SettingsProfile {
   return {
     ...row,
-    settings: JSON.parse(row.settings as string),
+    settings: JSON.parse(row.settings as string)
   } as SettingsProfile
 }
 
@@ -1795,26 +1854,24 @@ export function createProfile(
   name: string,
   settings: Record<string, string>
 ): SettingsProfile {
-  const row = db.prepare(
-    `INSERT INTO settings_profiles (name, settings) VALUES (?, ?) RETURNING *`
-  ).get(name, JSON.stringify(settings)) as Record<string, unknown>
+  const row = db
+    .prepare(`INSERT INTO settings_profiles (name, settings) VALUES (?, ?) RETURNING *`)
+    .get(name, JSON.stringify(settings)) as Record<string, unknown>
   return deserialize(row)
 }
 
 export function listProfiles(db: Database.Database): SettingsProfile[] {
-  const rows = db.prepare(
-    'SELECT * FROM settings_profiles ORDER BY name ASC'
-  ).all() as Record<string, unknown>[]
+  const rows = db.prepare('SELECT * FROM settings_profiles ORDER BY name ASC').all() as Record<
+    string,
+    unknown
+  >[]
   return rows.map(deserialize)
 }
 
-export function getProfile(
-  db: Database.Database,
-  id: string
-): SettingsProfile | null {
-  const row = db.prepare(
-    'SELECT * FROM settings_profiles WHERE id = ?'
-  ).get(id) as Record<string, unknown> | undefined
+export function getProfile(db: Database.Database, id: string): SettingsProfile | null {
+  const row = db.prepare('SELECT * FROM settings_profiles WHERE id = ?').get(id) as
+    | Record<string, unknown>
+    | undefined
   return row ? deserialize(row) : null
 }
 
@@ -1845,11 +1902,13 @@ export function updateProfile(
   name: string,
   settings: Record<string, string>
 ): SettingsProfile | null {
-  const row = db.prepare(
-    `UPDATE settings_profiles SET name = ?, settings = ?,
+  const row = db
+    .prepare(
+      `UPDATE settings_profiles SET name = ?, settings = ?,
      updated_at = strftime('%Y-%m-%dT%H:%M:%fZ','now')
      WHERE id = ? RETURNING *`
-  ).get(name, JSON.stringify(settings), id) as Record<string, unknown> | undefined
+    )
+    .get(name, JSON.stringify(settings), id) as Record<string, unknown> | undefined
   return row ? deserialize(row) : null
 }
 ```
@@ -1865,6 +1924,7 @@ npm run test:main
 ### Task 6.2: IPC handlers and preload
 
 **Files:**
+
 - Create: `src/main/handlers/settings-profiles.ts`
 - Modify: `src/main/index.ts`
 - Modify: `src/shared/ipc-channels.ts`
@@ -1891,15 +1951,21 @@ Create `src/main/handlers/settings-profiles.ts`:
 import { safeHandle } from '../safe-handle'
 import { getDb } from '../db'
 import {
-  listProfiles, createProfile, deleteProfile, applyProfile, updateProfile
+  listProfiles,
+  createProfile,
+  deleteProfile,
+  applyProfile,
+  updateProfile
 } from '../data/settings-profiles'
 
 export function registerSettingsProfileHandlers(): void {
   safeHandle('settings:profiles:list', () => listProfiles(getDb()))
 
-  safeHandle('settings:profiles:create', (
-    _e, { name, settings }: { name: string; settings: Record<string, string> }
-  ) => createProfile(getDb(), name, settings))
+  safeHandle(
+    'settings:profiles:create',
+    (_e, { name, settings }: { name: string; settings: Record<string, string> }) =>
+      createProfile(getDb(), name, settings)
+  )
 
   safeHandle('settings:profiles:delete', (_e, id: string) => {
     deleteProfile(getDb(), id)
@@ -1911,10 +1977,11 @@ export function registerSettingsProfileHandlers(): void {
     return { ok: true }
   })
 
-  safeHandle('settings:profiles:update', (
-    _e,
-    { id, name, settings }: { id: string; name: string; settings: Record<string, string> }
-  ) => updateProfile(getDb(), id, name, settings))
+  safeHandle(
+    'settings:profiles:update',
+    (_e, { id, name, settings }: { id: string; name: string; settings: Record<string, string> }) =>
+      updateProfile(getDb(), id, name, settings)
+  )
 }
 ```
 
@@ -1951,6 +2018,7 @@ npm run typecheck
 ### Task 6.3: Settings Profiles UI
 
 **Files:**
+
 - Create: `src/renderer/src/components/settings/ProfilesSection.tsx`
 - Create: `src/renderer/src/components/settings/__tests__/ProfilesSection.test.tsx`
 
@@ -2159,6 +2227,7 @@ Add `ProfilesSection` as a new tab in the Settings view (or add it to the existi
 - [ ] **Step 4: Register profile commands in CommandPalette**
 
 In the core command registration (Feature 1), add commands for each profile:
+
 - `profile:apply:<name>` -- "Apply Profile: Solo Dev", etc.
 - These are dynamically registered when profiles are loaded.
 

@@ -15,6 +15,7 @@
 ## File Map
 
 ### New files
+
 - `src/renderer/src/components/settings/SettingsSidebar.tsx` — sidebar nav with category groups
 - `src/renderer/src/components/settings/SettingsCard.tsx` — shared card wrapper
 - `src/renderer/src/components/settings/SettingsPageHeader.tsx` — section title + subtitle
@@ -25,6 +26,7 @@
 - `src/renderer/src/components/settings/__tests__/StatusPill.test.tsx`
 
 ### Modified files
+
 - `src/renderer/src/views/SettingsView.tsx` — sidebar layout replaces tab bar
 - `src/renderer/src/views/__tests__/SettingsView.test.tsx` — update nav assertions
 - `src/renderer/src/components/settings/ConnectionsSection.tsx` — wrap in SettingsCard
@@ -39,6 +41,7 @@
 - `src/renderer/src/assets/main.css` — swap CSS import
 
 ### Deleted files
+
 - `src/renderer/src/components/settings/AgentRuntimeSection.tsx` — deprecated stub
 - `src/renderer/src/assets/settings-neon.css` — replaced by v2
 
@@ -47,6 +50,7 @@
 ### Task 1: Shared Components — SettingsCard, StatusPill, SettingsPageHeader
 
 **Files:**
+
 - Create: `src/renderer/src/components/settings/SettingsCard.tsx`
 - Create: `src/renderer/src/components/settings/StatusPill.tsx`
 - Create: `src/renderer/src/components/settings/SettingsPageHeader.tsx`
@@ -62,33 +66,57 @@ import { SettingsCard } from '../SettingsCard'
 
 describe('SettingsCard', () => {
   it('renders title and children', () => {
-    render(<SettingsCard title="Test Card"><p>Content</p></SettingsCard>)
+    render(
+      <SettingsCard title="Test Card">
+        <p>Content</p>
+      </SettingsCard>
+    )
     expect(screen.getByText('Test Card')).toBeInTheDocument()
     expect(screen.getByText('Content')).toBeInTheDocument()
   })
 
   it('renders subtitle when provided', () => {
-    render(<SettingsCard title="Card" subtitle="Description"><p>Body</p></SettingsCard>)
+    render(
+      <SettingsCard title="Card" subtitle="Description">
+        <p>Body</p>
+      </SettingsCard>
+    )
     expect(screen.getByText('Description')).toBeInTheDocument()
   })
 
   it('renders status pill when provided', () => {
-    render(<SettingsCard title="Card" status={{ label: 'Connected', variant: 'success' }}><p>Body</p></SettingsCard>)
+    render(
+      <SettingsCard title="Card" status={{ label: 'Connected', variant: 'success' }}>
+        <p>Body</p>
+      </SettingsCard>
+    )
     expect(screen.getByText('Connected')).toBeInTheDocument()
   })
 
   it('renders footer when provided', () => {
-    render(<SettingsCard title="Card" footer={<button>Save</button>}><p>Body</p></SettingsCard>)
+    render(
+      <SettingsCard title="Card" footer={<button>Save</button>}>
+        <p>Body</p>
+      </SettingsCard>
+    )
     expect(screen.getByRole('button', { name: 'Save' })).toBeInTheDocument()
   })
 
   it('renders icon when provided', () => {
-    render(<SettingsCard title="Card" icon={<span data-testid="icon">C</span>}><p>Body</p></SettingsCard>)
+    render(
+      <SettingsCard title="Card" icon={<span data-testid="icon">C</span>}>
+        <p>Body</p>
+      </SettingsCard>
+    )
     expect(screen.getByTestId('icon')).toBeInTheDocument()
   })
 
   it('applies fullBleed class when noPadding is true', () => {
-    const { container } = render(<SettingsCard title="Card" noPadding><p>Body</p></SettingsCard>)
+    const { container } = render(
+      <SettingsCard title="Card" noPadding>
+        <p>Body</p>
+      </SettingsCard>
+    )
     expect(container.querySelector('.stg-card--full-bleed')).toBeInTheDocument()
   })
 })
@@ -116,7 +144,15 @@ interface SettingsCardProps {
   noPadding?: boolean
 }
 
-export function SettingsCard({ icon, title, subtitle, status, children, footer, noPadding }: SettingsCardProps): React.JSX.Element {
+export function SettingsCard({
+  icon,
+  title,
+  subtitle,
+  status,
+  children,
+  footer,
+  noPadding
+}: SettingsCardProps): React.JSX.Element {
   return (
     <div className={`stg-card${noPadding ? ' stg-card--full-bleed' : ''}`}>
       <div className="stg-card__header">
@@ -186,7 +222,10 @@ interface SettingsPageHeaderProps {
   subtitle: string
 }
 
-export function SettingsPageHeader({ title, subtitle }: SettingsPageHeaderProps): React.JSX.Element {
+export function SettingsPageHeader({
+  title,
+  subtitle
+}: SettingsPageHeaderProps): React.JSX.Element {
   return (
     <div className="stg-page-header">
       <h2 className="stg-page-header__title">{title}</h2>
@@ -213,11 +252,13 @@ git commit -m "feat(settings): add SettingsCard, StatusPill, SettingsPageHeader 
 ### Task 2: CSS — settings-v2-neon.css
 
 **Files:**
+
 - Create: `src/renderer/src/assets/settings-v2-neon.css`
 
 - [ ] **Step 1: Write the full CSS file**
 
 Write `settings-v2-neon.css` with all `.stg-*` BEM classes:
+
 - `.stg-layout` — flex row, full height
 - `.stg-sidebar` — 200px width, border-right, padding, background `var(--bde-bg-elevated)`
 - `.stg-sidebar__category` — uppercase 9px label, purple at 60% opacity, letter-spacing
@@ -270,6 +311,7 @@ git commit -m "feat(settings): add settings-v2-neon.css with stg-* BEM classes"
 ### Task 3: SettingsSidebar Component
 
 **Files:**
+
 - Create: `src/renderer/src/components/settings/SettingsSidebar.tsx`
 - Create: `src/renderer/src/components/settings/__tests__/SettingsSidebar.test.tsx`
 
@@ -285,7 +327,7 @@ import { Link, Shield, GitFork } from 'lucide-react'
 const SECTIONS: SettingsSection[] = [
   { id: 'connections', label: 'Connections', icon: Link, category: 'Account' },
   { id: 'permissions', label: 'Permissions', icon: Shield, category: 'Account' },
-  { id: 'repositories', label: 'Repositories', icon: GitFork, category: 'Projects' },
+  { id: 'repositories', label: 'Repositories', icon: GitFork, category: 'Projects' }
 ]
 
 describe('SettingsSidebar', () => {
@@ -358,36 +400,43 @@ interface SettingsSidebarProps {
   onSelect: (id: string) => void
 }
 
-export function SettingsSidebar({ sections, activeId, onSelect }: SettingsSidebarProps): React.JSX.Element {
+export function SettingsSidebar({
+  sections,
+  activeId,
+  onSelect
+}: SettingsSidebarProps): React.JSX.Element {
   const navRef = useRef<HTMLElement>(null)
   const activeIndex = sections.findIndex((s) => s.id === activeId)
 
   // Custom keyboard nav that works across category boundaries
   // (useRovingTabIndex relies on parentElement.children which breaks with nested groups)
-  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
-    let nextIndex = activeIndex
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      nextIndex = (activeIndex + 1) % sections.length
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      nextIndex = (activeIndex - 1 + sections.length) % sections.length
-    } else if (e.key === 'Home') {
-      e.preventDefault()
-      nextIndex = 0
-    } else if (e.key === 'End') {
-      e.preventDefault()
-      nextIndex = sections.length - 1
-    } else if (e.key === 'Enter') {
-      return // already handled by click
-    } else {
-      return
-    }
-    onSelect(sections[nextIndex].id)
-    // Focus across category boundaries using querySelectorAll
-    const items = navRef.current?.querySelectorAll<HTMLElement>('[role="link"]')
-    items?.[nextIndex]?.focus()
-  }, [activeIndex, sections, onSelect])
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      let nextIndex = activeIndex
+      if (e.key === 'ArrowDown') {
+        e.preventDefault()
+        nextIndex = (activeIndex + 1) % sections.length
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault()
+        nextIndex = (activeIndex - 1 + sections.length) % sections.length
+      } else if (e.key === 'Home') {
+        e.preventDefault()
+        nextIndex = 0
+      } else if (e.key === 'End') {
+        e.preventDefault()
+        nextIndex = sections.length - 1
+      } else if (e.key === 'Enter') {
+        return // already handled by click
+      } else {
+        return
+      }
+      onSelect(sections[nextIndex].id)
+      // Focus across category boundaries using querySelectorAll
+      const items = navRef.current?.querySelectorAll<HTMLElement>('[role="link"]')
+      items?.[nextIndex]?.focus()
+    },
+    [activeIndex, sections, onSelect]
+  )
 
   // Group sections by category, preserving order
   const categories: { name: string; items: (SettingsSection & { globalIndex: number })[] }[] = []
@@ -447,6 +496,7 @@ git commit -m "feat(settings): add SettingsSidebar with categorized nav + keyboa
 ### Task 4: SettingsView — Replace Tab Bar with Sidebar Layout
 
 **Files:**
+
 - Modify: `src/renderer/src/views/SettingsView.tsx`
 - Modify: `src/renderer/src/assets/main.css` (swap CSS import)
 - Modify: `src/renderer/src/views/__tests__/SettingsView.test.tsx`
@@ -454,6 +504,7 @@ git commit -m "feat(settings): add SettingsSidebar with categorized nav + keyboa
 - [ ] **Step 1: Update SettingsView.tsx**
 
 Replace the entire `SettingsView` with the new sidebar layout:
+
 - Import `SettingsSidebar` and `SettingsPageHeader`
 - Define `SECTIONS` array with id, label, icon, category for all 9 sections (drop 'agent')
 - Define `SECTION_META` with title + subtitle per section, and `wide: boolean` flag for Cost/Memory
@@ -466,15 +517,18 @@ Reference existing file at `src/renderer/src/views/SettingsView.tsx` for current
 - [ ] **Step 2: Add new CSS import in main.css (keep old one until Task 10)**
 
 In `src/renderer/src/assets/main.css`, add the new import AFTER the existing one (both active during migration):
+
 ```css
 @import './settings-neon.css';
 @import './settings-v2-neon.css';
 ```
+
 The old `settings-neon.css` keeps existing section styles working while Tasks 5-9 migrate them one by one. Task 10 removes the old import.
 
 - [ ] **Step 3: Update SettingsView tests**
 
 Read existing tests at `src/renderer/src/views/__tests__/SettingsView.test.tsx`. Update:
+
 - Replace `role="tab"` queries with `role="link"` for sidebar items
 - Replace `role="tablist"` with `role="navigation"`
 - Update keyboard tests: tab bar used ArrowLeft/Right, sidebar uses ArrowUp/Down (both work since hook handles both, but test the primary direction)
@@ -503,12 +557,14 @@ git commit -m "feat(settings): replace tab bar with categorized sidebar layout"
 ### Task 5: Migrate Sections — Connections + About (simplest first)
 
 **Files:**
+
 - Modify: `src/renderer/src/components/settings/ConnectionsSection.tsx`
 - Modify: `src/renderer/src/components/settings/AboutSection.tsx`
 
 - [ ] **Step 1: Migrate ConnectionsSection**
 
 Read existing file. Wrap Claude CLI Auth and GitHub sections in `SettingsCard` components:
+
 - Claude card: `icon={<div className="stg-card__icon stg-card__icon--purple">C</div>}`, `title="Claude CLI Auth"`, `subtitle="OAuth token for agent spawning"`, `status={{ label: authStatus, variant: 'success'|'error' }}`
 - GitHub card: similar pattern with CredentialForm in body
 - Remove old section wrapper CSS classes, use `stg-card` classes
@@ -535,6 +591,7 @@ git commit -m "feat(settings): migrate Connections + About to SettingsCard patte
 ### Task 6: Migrate Sections — Repositories + Templates
 
 **Files:**
+
 - Modify: `src/renderer/src/components/settings/RepositoriesSection.tsx`
 - Modify: `src/renderer/src/components/settings/TaskTemplatesSection.tsx`
 
@@ -563,6 +620,7 @@ git commit -m "feat(settings): migrate Repositories + Templates to SettingsCard 
 ### Task 7: Migrate Sections — AgentManager + Permissions
 
 **Files:**
+
 - Modify: `src/renderer/src/components/settings/AgentManagerSection.tsx`
 - Modify: `src/renderer/src/components/settings/AgentPermissionsSection.tsx`
 
@@ -591,6 +649,7 @@ git commit -m "feat(settings): migrate Agent Manager + Permissions to SettingsCa
 ### Task 8: Migrate Sections — Cost & Usage + Appearance
 
 **Files:**
+
 - Modify: `src/renderer/src/components/settings/CostSection.tsx`
 - Modify: `src/renderer/src/components/settings/AppearanceSection.tsx`
 
@@ -619,6 +678,7 @@ git commit -m "feat(settings): migrate Cost & Appearance to SettingsCard pattern
 ### Task 9: Migrate Section — Memory
 
 **Files:**
+
 - Modify: `src/renderer/src/components/settings/MemorySection.tsx`
 
 - [ ] **Step 1: Migrate MemorySection**
@@ -644,6 +704,7 @@ git commit -m "feat(settings): migrate Memory to SettingsCard with two-pane layo
 ### Task 10: Cleanup — Delete Old Files + Final Verification
 
 **Files:**
+
 - Delete: `src/renderer/src/components/settings/AgentRuntimeSection.tsx`
 - Delete: `src/renderer/src/assets/settings-neon.css`
 - Modify: `src/renderer/src/assets/main.css` (remove old import if not already done)
@@ -656,16 +717,19 @@ rm src/renderer/src/assets/settings-neon.css
 ```
 
 In `src/renderer/src/assets/main.css`, remove the old import line:
+
 ```css
-@import './settings-neon.css';  /* DELETE THIS LINE */
+@import './settings-neon.css'; /* DELETE THIS LINE */
 ```
 
 Also verify `settings.css` base classes (`.settings-view`, `.settings-view__header`) don't conflict with new `.stg-layout` classes. If old classes are still applied in SettingsView.tsx, remove them.
 
 Grep for any remaining imports of deleted files:
+
 ```bash
 grep -rn "AgentRuntimeSection\|settings-neon" src/renderer/src/
 ```
+
 Remove any stale imports found.
 
 - [ ] **Step 2: Run full verification**
@@ -675,6 +739,7 @@ npm run typecheck
 npm test
 npm run lint
 ```
+
 All must pass.
 
 - [ ] **Step 3: Run coverage check**
@@ -682,6 +747,7 @@ All must pass.
 ```bash
 npm run test:coverage
 ```
+
 Verify thresholds still pass. The new shared components have tests from Task 1/3.
 
 - [ ] **Step 4: Commit**
@@ -694,6 +760,7 @@ git commit -m "chore(settings): delete AgentRuntimeSection stub + old settings-n
 - [ ] **Step 5: Final commit — update CLAUDE.md**
 
 Update CLAUDE.md to note:
+
 - Settings view uses grouped sidebar (not horizontal tabs)
 - `settings-v2-neon.css` replaces `settings-neon.css`
 - `.stg-*` BEM prefix for settings CSS

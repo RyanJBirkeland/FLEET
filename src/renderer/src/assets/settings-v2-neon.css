@@ -41,7 +41,9 @@
   cursor: pointer;
   color: var(--bde-text-muted);
   font-size: 12px;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
   user-select: none;
   border: none;
   background: transparent;

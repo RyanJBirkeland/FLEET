@@ -386,9 +386,7 @@ html.theme-warm {
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow:
-    var(--neon-cyan-glow),
-    var(--neon-glass-shadow);
+  box-shadow: var(--neon-cyan-glow), var(--neon-glass-shadow);
 }
 
 .agent-monitor__pill:hover {
@@ -431,9 +429,7 @@ html.theme-warm {
   backdrop-filter: var(--neon-glass-blur);
   border: 1px solid var(--neon-purple-border);
   border-radius: 12px;
-  box-shadow:
-    var(--neon-purple-glow),
-    var(--neon-glass-shadow);
+  box-shadow: var(--neon-purple-glow), var(--neon-glass-shadow);
   overflow: hidden;
 }
 

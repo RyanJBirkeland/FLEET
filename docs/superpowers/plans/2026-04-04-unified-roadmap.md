@@ -338,13 +338,24 @@ safeHandle('workbench:extractPlanTasks', async (_e, markdown: string) => {
 - [ ] **Step 4: Expose in preload**
 
 In `src/preload/index.ts`, add to the workbench section:
+
 ```typescript
 extractPlanTasks: (markdown: string) => ipcRenderer.invoke('workbench:extractPlanTasks', markdown),
 ```
 
 In `src/preload/index.d.ts`, add the type:
+
 ```typescript
-extractPlanTasks: (markdown: string) => Promise<Array<{ taskNumber: number; title: string; spec: string; phase: string | null; dependsOnTaskNumbers: number[] }>>
+extractPlanTasks: (markdown: string) =>
+  Promise<
+    Array<{
+      taskNumber: number
+      title: string
+      spec: string
+      phase: string | null
+      dependsOnTaskNumbers: number[]
+    }>
+  >
 ```
 
 - [ ] **Step 5: Run tests + typecheck**
@@ -441,10 +452,7 @@ export function createStatusServer(
 ): StatusServer {
   let server: http.Server | null = null
 
-  function handleRequest(
-    req: http.IncomingMessage,
-    res: http.ServerResponse
-  ): void {
+  function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
     if (req.method === 'GET' && req.url === '/status') {
       try {
         const status = agentManager.getStatus()
@@ -475,11 +483,8 @@ export function createStatusServer(
         server = http.createServer(handleRequest)
         server.listen(port, '127.0.0.1', () => {
           const addr = server!.address()
-          const boundPort =
-            typeof addr === 'object' && addr ? addr.port : port
-          logger.info(
-            `[status-server] Listening on 127.0.0.1:${boundPort}`
-          )
+          const boundPort = typeof addr === 'object' && addr ? addr.port : port
+          logger.info(`[status-server] Listening on 127.0.0.1:${boundPort}`)
           resolve(boundPort)
         })
         server.on('error', reject)
@@ -502,9 +507,7 @@ import { createStatusServer } from './services/status-server'
 
 // After agentManager and repo are created:
 const statusServer = createStatusServer(agentManager, repo)
-statusServer.start().catch((err) =>
-  mainLogger.warn(`Status server failed to start: ${err}`)
-)
+statusServer.start().catch((err) => mainLogger.warn(`Status server failed to start: ${err}`))
 
 // In app.on('before-quit'):
 statusServer.stop()
@@ -571,10 +574,7 @@ Create `src/main/services/workflow-engine.ts`:
 
 ```typescript
 import type { WorkflowTemplate } from '../../shared/workflow-types'
-import type {
-  ISprintTaskRepository,
-  CreateTaskInput
-} from '../data/sprint-task-repository'
+import type { ISprintTaskRepository, CreateTaskInput } from '../data/sprint-task-repository'
 import type { SprintTask, TaskDependency } from '../../shared/types'
 
 export interface WorkflowResult {
@@ -620,9 +620,7 @@ export function instantiateWorkflow(
 
     const task = repo.createTask(input)
     if (!task) {
-      errors.push(
-        `Step ${i}: createTask failed for "${step.title}"`
-      )
+      errors.push(`Step ${i}: createTask failed for "${step.title}"`)
       break // Stop — later steps may depend on this one
     }
     created.push(task)
@@ -672,9 +670,7 @@ describe('instantiateWorkflow', () => {
     expect(result.errors).toHaveLength(0)
     expect(repo.createTask).toHaveBeenCalledTimes(2)
     const secondCall = (repo.createTask as any).mock.calls[1][0]
-    expect(secondCall.depends_on).toEqual([
-      { id: 'task-1', type: 'hard' }
-    ])
+    expect(secondCall.depends_on).toEqual([{ id: 'task-1', type: 'hard' }])
     expect(secondCall.status).toBe('blocked')
   })
 })
@@ -683,15 +679,13 @@ describe('instantiateWorkflow', () => {
 - [ ] **Step 4: Add IPC handler + preload**
 
 In `src/main/handlers/sprint-local.ts`:
+
 ```typescript
 import { instantiateWorkflow } from '../services/workflow-engine'
 // ... inside registerSprintLocalHandlers:
-safeHandle(
-  'sprint:createWorkflow',
-  async (_e, template: WorkflowTemplate) => {
-    return instantiateWorkflow(template, repo)
-  }
-)
+safeHandle('sprint:createWorkflow', async (_e, template: WorkflowTemplate) => {
+  return instantiateWorkflow(template, repo)
+})
 ```
 
 Update `src/preload/index.ts` and `src/preload/index.d.ts` accordingly.
@@ -761,10 +755,7 @@ describe('batchImportTasks', () => {
 
   it('validates required fields', () => {
     const repo = { createTask: vi.fn() } as any
-    const result = batchImportTasks(
-      [{ title: '' } as any],
-      repo
-    )
+    const result = batchImportTasks([{ title: '' } as any], repo)
     expect(result.errors.length).toBeGreaterThan(0)
     expect(repo.createTask).not.toHaveBeenCalled()
   })
@@ -776,10 +767,7 @@ describe('batchImportTasks', () => {
 Create `src/main/services/batch-import.ts`:
 
 ```typescript
-import type {
-  ISprintTaskRepository,
-  CreateTaskInput
-} from '../data/sprint-task-repository'
+import type { ISprintTaskRepository, CreateTaskInput } from '../data/sprint-task-repository'
 import type { SprintTask, TaskDependency } from '../../shared/types'
 
 export interface BatchTaskInput {
@@ -818,9 +806,7 @@ export function batchImportTasks(
     if (t.dependsOnIndices) {
       for (const idx of t.dependsOnIndices) {
         if (idx < 0 || idx >= created.length) {
-          errors.push(
-            `Task[${i}]: dependsOnIndices[${idx}] out of range`
-          )
+          errors.push(`Task[${i}]: dependsOnIndices[${idx}] out of range`)
           continue
         }
         dependsOn.push({
@@ -835,12 +821,8 @@ export function batchImportTasks(
       repo: t.repo,
       prompt: t.prompt,
       spec: t.spec,
-      status:
-        dependsOn.length > 0
-          ? 'blocked'
-          : (t.status ?? 'backlog'),
-      depends_on:
-        dependsOn.length > 0 ? dependsOn : undefined,
+      status: dependsOn.length > 0 ? 'blocked' : (t.status ?? 'backlog'),
+      depends_on: dependsOn.length > 0 ? dependsOn : undefined,
       playground_enabled: t.playgroundEnabled,
       model: t.model,
       tags: t.tags
@@ -848,9 +830,7 @@ export function batchImportTasks(
 
     const task = repo.createTask(input)
     if (!task) {
-      errors.push(
-        `Task[${i}]: createTask failed for "${t.title}"`
-      )
+      errors.push(`Task[${i}]: createTask failed for "${t.title}"`)
       continue
     }
     created.push(task)
@@ -896,12 +876,7 @@ Save and restore named snapshots of BDE settings. Stored in the SQLite `settings
 
 ```typescript
 import { describe, it, expect, vi } from 'vitest'
-import {
-  saveProfile,
-  loadProfile,
-  listProfiles,
-  deleteProfile
-} from '../settings-profiles'
+import { saveProfile, loadProfile, listProfiles, deleteProfile } from '../settings-profiles'
 
 // Mock settings module
 vi.mock('../../settings')
@@ -927,13 +902,7 @@ describe('settings-profiles', () => {
 Create `src/main/services/settings-profiles.ts`:
 
 ```typescript
-import {
-  getSetting,
-  setSetting,
-  deleteSetting,
-  getSettingJson,
-  setSettingJson
-} from '../settings'
+import { getSetting, setSetting, deleteSetting, getSettingJson, setSettingJson } from '../settings'
 
 const PROFILE_PREFIX = 'profiles.'
 const PROFILE_KEYS_TO_SAVE = [
@@ -952,19 +921,14 @@ export function saveProfile(name: string): void {
   }
   setSettingJson(`${PROFILE_PREFIX}${name}`, snapshot)
   // Update manifest
-  const manifest =
-    getSettingJson<string[]>('profiles._manifest') ?? []
+  const manifest = getSettingJson<string[]>('profiles._manifest') ?? []
   if (!manifest.includes(name)) {
     setSettingJson('profiles._manifest', [...manifest, name])
   }
 }
 
-export function loadProfile(
-  name: string
-): Record<string, string | null> | null {
-  return getSettingJson<Record<string, string | null>>(
-    `${PROFILE_PREFIX}${name}`
-  )
+export function loadProfile(name: string): Record<string, string | null> | null {
+  return getSettingJson<Record<string, string | null>>(`${PROFILE_PREFIX}${name}`)
 }
 
 export function applyProfile(name: string): boolean {
@@ -986,8 +950,7 @@ export function listProfiles(): string[] {
 
 export function deleteProfile(name: string): void {
   deleteSetting(`${PROFILE_PREFIX}${name}`)
-  const manifest =
-    getSettingJson<string[]>('profiles._manifest') ?? []
+  const manifest = getSettingJson<string[]>('profiles._manifest') ?? []
   setSettingJson(
     'profiles._manifest',
     manifest.filter((n) => n !== name)
@@ -1106,43 +1069,29 @@ export function createSprint(input: {
       `INSERT INTO sprints (name, goal, start_date, end_date)
        VALUES (?, ?, ?, ?) RETURNING *`
     )
-    .get(
-      input.name,
-      input.goal ?? null,
-      input.start_date,
-      input.end_date
-    ) as Record<string, unknown> | undefined
+    .get(input.name, input.goal ?? null, input.start_date, input.end_date) as
+    | Record<string, unknown>
+    | undefined
   return (row as Sprint) ?? null
 }
 
 export function getSprint(id: string): Sprint | null {
-  const row = getDb()
-    .prepare('SELECT * FROM sprints WHERE id = ?')
-    .get(id)
+  const row = getDb().prepare('SELECT * FROM sprints WHERE id = ?').get(id)
   return (row as Sprint) ?? null
 }
 
 export function listSprints(): Sprint[] {
-  return getDb()
-    .prepare('SELECT * FROM sprints ORDER BY start_date DESC')
-    .all() as Sprint[]
+  return getDb().prepare('SELECT * FROM sprints ORDER BY start_date DESC').all() as Sprint[]
 }
 
-export function assignTaskToSprint(
-  taskId: string,
-  sprintId: string
-): boolean {
+export function assignTaskToSprint(taskId: string, sprintId: string): boolean {
   const result = getDb()
-    .prepare(
-      'UPDATE sprint_tasks SET sprint_id = ? WHERE id = ?'
-    )
+    .prepare('UPDATE sprint_tasks SET sprint_id = ? WHERE id = ?')
     .run(sprintId, taskId)
   return result.changes > 0
 }
 
-export function getSprintBurndown(
-  sprintId: string
-): Array<{
+export function getSprintBurndown(sprintId: string): Array<{
   date: string
   remaining: number
   completed: number
@@ -1150,9 +1099,7 @@ export function getSprintBurndown(
   const db = getDb()
   // Get all tasks in this sprint
   const tasks = db
-    .prepare(
-      'SELECT status, completed_at FROM sprint_tasks WHERE sprint_id = ?'
-    )
+    .prepare('SELECT status, completed_at FROM sprint_tasks WHERE sprint_id = ?')
     .all(sprintId) as Array<{
     status: string
     completed_at: string | null
@@ -1162,15 +1109,9 @@ export function getSprintBurndown(
   const completedByDate = new Map<string, number>()
 
   for (const t of tasks) {
-    if (
-      t.completed_at &&
-      (t.status === 'done' || t.status === 'cancelled')
-    ) {
+    if (t.completed_at && (t.status === 'done' || t.status === 'cancelled')) {
       const date = t.completed_at.slice(0, 10) // YYYY-MM-DD
-      completedByDate.set(
-        date,
-        (completedByDate.get(date) ?? 0) + 1
-      )
+      completedByDate.set(date, (completedByDate.get(date) ?? 0) + 1)
     }
   }
 
@@ -1232,20 +1173,9 @@ Create `src/shared/plugin-types.ts`:
 export interface BdePlugin {
   name: string
   version?: string
-  onTaskCreated?: (task: {
-    id: string
-    title: string
-    repo: string
-  }) => void | Promise<void>
-  onTaskCompleted?: (task: {
-    id: string
-    title: string
-    status: string
-  }) => void | Promise<void>
-  onAgentSpawned?: (info: {
-    taskId: string
-    branch: string
-  }) => void | Promise<void>
+  onTaskCreated?: (task: { id: string; title: string; repo: string }) => void | Promise<void>
+  onTaskCompleted?: (task: { id: string; title: string; status: string }) => void | Promise<void>
+  onAgentSpawned?: (info: { taskId: string; branch: string }) => void | Promise<void>
 }
 ```
 
@@ -1267,15 +1197,11 @@ let loadedPlugins: BdePlugin[] = []
 
 export function loadPlugins(): BdePlugin[] {
   if (!existsSync(PLUGINS_DIR)) {
-    logger.info(
-      `[plugin-loader] No plugins directory at ${PLUGINS_DIR}`
-    )
+    logger.info(`[plugin-loader] No plugins directory at ${PLUGINS_DIR}`)
     return []
   }
 
-  const files = readdirSync(PLUGINS_DIR).filter(
-    (f) => f.endsWith('.js') || f.endsWith('.cjs')
-  )
+  const files = readdirSync(PLUGINS_DIR).filter((f) => f.endsWith('.js') || f.endsWith('.cjs'))
   loadedPlugins = []
 
   for (const file of files) {
@@ -1284,19 +1210,13 @@ export function loadPlugins(): BdePlugin[] {
       const mod = require(join(PLUGINS_DIR, file))
       const plugin: BdePlugin = mod.default ?? mod
       if (!plugin.name) {
-        logger.warn(
-          `[plugin-loader] Skipping ${file} — missing 'name' export`
-        )
+        logger.warn(`[plugin-loader] Skipping ${file} — missing 'name' export`)
         continue
       }
       loadedPlugins.push(plugin)
-      logger.info(
-        `[plugin-loader] Loaded plugin: ${plugin.name}`
-      )
+      logger.info(`[plugin-loader] Loaded plugin: ${plugin.name}`)
     } catch (err) {
-      logger.error(
-        `[plugin-loader] Failed to load ${file}: ${err}`
-      )
+      logger.error(`[plugin-loader] Failed to load ${file}: ${err}`)
     }
   }
 
@@ -1307,13 +1227,9 @@ export function getPlugins(): BdePlugin[] {
   return loadedPlugins
 }
 
-export async function emitPluginEvent<
-  K extends keyof BdePlugin
->(
+export async function emitPluginEvent<K extends keyof BdePlugin>(
   event: K,
-  data: BdePlugin[K] extends (arg: infer A) => unknown
-    ? A
-    : never
+  data: BdePlugin[K] extends (arg: infer A) => unknown ? A : never
 ): Promise<void> {
   for (const plugin of loadedPlugins) {
     const handler = plugin[event]
@@ -1321,9 +1237,7 @@ export async function emitPluginEvent<
       try {
         await (handler as (arg: unknown) => unknown)(data)
       } catch (err) {
-        logger.error(
-          `[plugin-loader] Plugin ${plugin.name}.${String(event)} error: ${err}`
-        )
+        logger.error(`[plugin-loader] Plugin ${plugin.name}.${String(event)} error: ${err}`)
       }
     }
   }
@@ -1472,6 +1386,7 @@ Memoize `TaskPill`, `PipelineStage`, and `PipelineBacklog` to prevent unnecessar
 - [ ] **Step 1: Wrap `TaskPill` export in `React.memo`**
 
 In `TaskPill.tsx`, change the export pattern:
+
 ```typescript
 // Before:
 export function TaskPill(props: TaskPillProps) { ... }
@@ -1538,10 +1453,7 @@ describe('withRetry', () => {
   })
 
   it('retries on SQLITE_BUSY and succeeds', () => {
-    const busyError = Object.assign(
-      new Error('database is locked'),
-      { code: 'SQLITE_BUSY' }
-    )
+    const busyError = Object.assign(new Error('database is locked'), { code: 'SQLITE_BUSY' })
     const fn = vi
       .fn()
       .mockImplementationOnce(() => {
@@ -1553,16 +1465,11 @@ describe('withRetry', () => {
   })
 
   it('throws after max retries', () => {
-    const busyError = Object.assign(
-      new Error('database is locked'),
-      { code: 'SQLITE_BUSY' }
-    )
+    const busyError = Object.assign(new Error('database is locked'), { code: 'SQLITE_BUSY' })
     const fn = vi.fn().mockImplementation(() => {
       throw busyError
     })
-    expect(() => withRetry(fn, { maxRetries: 3 })).toThrow(
-      'database is locked'
-    )
+    expect(() => withRetry(fn, { maxRetries: 3 })).toThrow('database is locked')
     expect(fn).toHaveBeenCalledTimes(4) // initial + 3 retries
   })
 
@@ -1590,29 +1497,16 @@ interface RetryOptions {
 function isBusyError(err: unknown): boolean {
   return (
     err instanceof Error &&
-    ((err as any).code === 'SQLITE_BUSY' ||
-      err.message.includes('database is locked'))
+    ((err as any).code === 'SQLITE_BUSY' || err.message.includes('database is locked'))
   )
 }
 
 function sleepSync(ms: number): void {
-  Atomics.wait(
-    new Int32Array(new SharedArrayBuffer(4)),
-    0,
-    0,
-    ms
-  )
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms)
 }
 
-export function withRetry<T>(
-  fn: () => T,
-  opts: RetryOptions = {}
-): T {
-  const {
-    maxRetries = 5,
-    baseDelayMs = 10,
-    maxDelayMs = 1000
-  } = opts
+export function withRetry<T>(fn: () => T, opts: RetryOptions = {}): T {
+  const { maxRetries = 5, baseDelayMs = 10, maxDelayMs = 1000 } = opts
   let lastError: unknown
 
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -1620,12 +1514,8 @@ export function withRetry<T>(
       return fn()
     } catch (err) {
       lastError = err
-      if (!isBusyError(err) || attempt === maxRetries)
-        throw err
-      const delay = Math.min(
-        baseDelayMs * Math.pow(2, attempt),
-        maxDelayMs
-      )
+      if (!isBusyError(err) || attempt === maxRetries) throw err
+      const delay = Math.min(baseDelayMs * Math.pow(2, attempt), maxDelayMs)
       sleepSync(delay)
     }
   }
@@ -1700,6 +1590,7 @@ npm run lint
 - [ ] **Step 2: Check for duplicate imports in conflict-prone files**
 
 Manually scan `App.tsx`, `index.ts`, and `preload/index.ts` for:
+
 - Duplicate `import` lines
 - Duplicate handler registrations
 - Duplicate property definitions in objects
@@ -1733,6 +1624,7 @@ Document-only task. No code changes. Produce a structured comparison matrix.
 - [ ] **Step 1: Research each tool's capabilities**
 
 Cover these dimensions for each competitor:
+
 - Agent autonomy level (fully autonomous vs copilot)
 - Task management (queue, deps, retry)
 - Code review workflow
@@ -1743,6 +1635,7 @@ Cover these dimensions for each competitor:
 - Unique differentiators
 
 Tools to compare:
+
 - **Cursor** — AI-first code editor (fork of VS Code)
 - **Windsurf** — Codeium's AI IDE
 - **Devin** — Cognition's fully autonomous agent
@@ -1756,6 +1649,7 @@ Format as markdown table + detailed per-tool sections.
 - [ ] **Step 3: Identify BDE's unique advantages and gaps**
 
 Focus on:
+
 - BDE's unique task pipeline (queue, deps, auto-retry, review) — no competitor has this
 - BDE's local-first SQLite architecture vs cloud-dependent competitors
 - BDE's plugin/workflow extensibility (after Tasks 5, 9)
@@ -1775,14 +1669,14 @@ git commit -m "chore: competitive teardown — BDE vs Cursor/Windsurf/Devin/Copi
 
 These files are touched by multiple tasks — coordinate carefully:
 
-| File | Tasks |
-|------|-------|
-| `src/main/handlers/sprint-local.ts` | 5, 6 |
+| File                                  | Tasks      |
+| ------------------------------------- | ---------- |
+| `src/main/handlers/sprint-local.ts`   | 5, 6       |
 | `src/preload/index.ts` + `index.d.ts` | 3, 5, 6, 7 |
-| `src/main/index.ts` | 4, 9 |
-| `src/main/data/sprint-queries.ts` | 12 |
-| `src/shared/types.ts` | 8 |
-| `src/main/db.ts` | 8 |
+| `src/main/index.ts`                   | 4, 9       |
+| `src/main/data/sprint-queries.ts`     | 12         |
+| `src/shared/types.ts`                 | 8          |
+| `src/main/db.ts`                      | 8          |
 
 ### Parallelization guide
 

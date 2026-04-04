@@ -21,6 +21,7 @@ import type {
   ClaimedTask,
   PrListPayload,
   TaskTemplate,
+  TaskGroup,
   AgentManagerStatus,
   SynthesizeRequest,
   ReviseRequest
@@ -731,6 +732,55 @@ export interface SynthesizerChannels {
   }
 }
 
+/** Task group operations */
+export interface GroupChannels {
+  'groups:create': {
+    args: [input: { name: string; icon?: string; accent_color?: string; goal?: string }]
+    result: TaskGroup
+  }
+  'groups:list': {
+    args: []
+    result: TaskGroup[]
+  }
+  'groups:get': {
+    args: [id: string]
+    result: TaskGroup | null
+  }
+  'groups:update': {
+    args: [
+      id: string,
+      patch: {
+        name?: string
+        icon?: string
+        accent_color?: string
+        goal?: string
+        status?: 'draft' | 'ready' | 'in-pipeline' | 'completed'
+      }
+    ]
+    result: TaskGroup
+  }
+  'groups:delete': {
+    args: [id: string]
+    result: void
+  }
+  'groups:addTask': {
+    args: [taskId: string, groupId: string]
+    result: boolean
+  }
+  'groups:removeTask': {
+    args: [taskId: string]
+    result: boolean
+  }
+  'groups:getGroupTasks': {
+    args: [groupId: string]
+    result: SprintTask[]
+  }
+  'groups:queueAll': {
+    args: [groupId: string]
+    result: number
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Composite channel map — intersection of all domain maps
 // ---------------------------------------------------------------------------
@@ -757,4 +807,5 @@ export type IpcChannelMap = SettingsChannels &
   ReviewChannels &
   TearoffChannels &
   ClaudeConfigChannels &
-  WebhookChannels
+  WebhookChannels &
+  GroupChannels

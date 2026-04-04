@@ -127,13 +127,13 @@ describe('Config handlers', () => {
     })
 
     it('settings:loadProfile calls loadProfile with name', () => {
-      vi.mocked(loadProfile).mockReturnValue({ 'theme': 'dark' })
+      vi.mocked(loadProfile).mockReturnValue({ theme: 'dark' })
       const handlers = captureHandlers()
 
       const result = handlers['settings:loadProfile'](mockEvent, 'dev-mode')
 
       expect(loadProfile).toHaveBeenCalledWith('dev-mode')
-      expect(result).toEqual({ 'theme': 'dark' })
+      expect(result).toEqual({ theme: 'dark' })
     })
 
     it('settings:applyProfile calls applyProfile with name', () => {

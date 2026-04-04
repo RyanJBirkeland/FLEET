@@ -14,39 +14,40 @@
 
 ## File Structure
 
-| File | Action | Responsibility |
-|------|--------|----------------|
-| `src/shared/types.ts` | Modify | Add `condition` field to `TaskDependency`, add `WorkflowTemplate` type, add `BatchImportTask` type |
-| `src/shared/task-transitions.ts` | Modify | Add `CASCADE_CANCEL_STATUSES` constant |
-| `src/main/agent-manager/dependency-index.ts` | Modify | Update `areDependenciesSatisfied()` to check `condition` field |
-| `src/main/agent-manager/resolve-dependents.ts` | Modify | Add cascade cancel logic, check conditional deps |
-| `src/main/services/task-terminal-service.ts` | Modify | Wire cascade cancel behavior, add `cascade_behavior` config |
-| `src/main/handlers/sprint-local.ts` | Modify | Add `sprint:batchImport` and `sprint:createChain` IPC handlers |
-| `src/main/handlers/sprint-batch-import.ts` | Create | Batch import parsing + validation logic |
-| `src/shared/workflow-templates.ts` | Create | Built-in workflow template definitions |
-| `src/shared/batch-import-schema.ts` | Create | JSON/YAML schema validation for batch import |
-| `src/preload/index.ts` | Modify | Add `batchImport`, `createChain` to preload bridge |
-| `src/preload/index.d.ts` | Modify | Type declarations for new preload methods |
-| `src/renderer/src/components/sprint/DagOverlay.tsx` | Create | SVG DAG visualization overlay |
-| `src/renderer/src/components/sprint/DagNode.tsx` | Create | Individual task node in DAG |
-| `src/renderer/src/components/sprint/dag-layout.ts` | Create | DAG layout algorithm (topological sort + layer assignment) |
-| `src/renderer/src/components/sprint/SprintPipeline.tsx` | Modify | Add DAG toggle button |
-| `src/renderer/src/components/task-workbench/WorkflowTemplatePicker.tsx` | Create | Template selection + chain creation UI |
-| `src/renderer/src/components/task-workbench/BatchImportModal.tsx` | Create | YAML/JSON paste + file upload modal |
-| `src/renderer/src/components/task-workbench/DependencyPicker.tsx` | Modify | Add `condition` selector to dependency items |
-| `src/renderer/src/assets/dag-neon.css` | Create | DAG overlay neon styles |
-| `src/renderer/src/components/sprint/__tests__/DagOverlay.test.tsx` | Create | DAG rendering tests |
-| `src/renderer/src/components/sprint/__tests__/dag-layout.test.ts` | Create | Layout algorithm tests |
-| `src/main/agent-manager/__tests__/resolve-dependents-cascade.test.ts` | Create | Cascade cancel tests |
-| `src/main/agent-manager/__tests__/conditional-deps.test.ts` | Create | Conditional dependency resolution tests |
-| `src/main/handlers/__tests__/batch-import.test.ts` | Create | Batch import validation + creation tests |
-| `src/shared/__tests__/workflow-templates.test.ts` | Create | Template validation tests |
+| File                                                                    | Action | Responsibility                                                                                     |
+| ----------------------------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| `src/shared/types.ts`                                                   | Modify | Add `condition` field to `TaskDependency`, add `WorkflowTemplate` type, add `BatchImportTask` type |
+| `src/shared/task-transitions.ts`                                        | Modify | Add `CASCADE_CANCEL_STATUSES` constant                                                             |
+| `src/main/agent-manager/dependency-index.ts`                            | Modify | Update `areDependenciesSatisfied()` to check `condition` field                                     |
+| `src/main/agent-manager/resolve-dependents.ts`                          | Modify | Add cascade cancel logic, check conditional deps                                                   |
+| `src/main/services/task-terminal-service.ts`                            | Modify | Wire cascade cancel behavior, add `cascade_behavior` config                                        |
+| `src/main/handlers/sprint-local.ts`                                     | Modify | Add `sprint:batchImport` and `sprint:createChain` IPC handlers                                     |
+| `src/main/handlers/sprint-batch-import.ts`                              | Create | Batch import parsing + validation logic                                                            |
+| `src/shared/workflow-templates.ts`                                      | Create | Built-in workflow template definitions                                                             |
+| `src/shared/batch-import-schema.ts`                                     | Create | JSON/YAML schema validation for batch import                                                       |
+| `src/preload/index.ts`                                                  | Modify | Add `batchImport`, `createChain` to preload bridge                                                 |
+| `src/preload/index.d.ts`                                                | Modify | Type declarations for new preload methods                                                          |
+| `src/renderer/src/components/sprint/DagOverlay.tsx`                     | Create | SVG DAG visualization overlay                                                                      |
+| `src/renderer/src/components/sprint/DagNode.tsx`                        | Create | Individual task node in DAG                                                                        |
+| `src/renderer/src/components/sprint/dag-layout.ts`                      | Create | DAG layout algorithm (topological sort + layer assignment)                                         |
+| `src/renderer/src/components/sprint/SprintPipeline.tsx`                 | Modify | Add DAG toggle button                                                                              |
+| `src/renderer/src/components/task-workbench/WorkflowTemplatePicker.tsx` | Create | Template selection + chain creation UI                                                             |
+| `src/renderer/src/components/task-workbench/BatchImportModal.tsx`       | Create | YAML/JSON paste + file upload modal                                                                |
+| `src/renderer/src/components/task-workbench/DependencyPicker.tsx`       | Modify | Add `condition` selector to dependency items                                                       |
+| `src/renderer/src/assets/dag-neon.css`                                  | Create | DAG overlay neon styles                                                                            |
+| `src/renderer/src/components/sprint/__tests__/DagOverlay.test.tsx`      | Create | DAG rendering tests                                                                                |
+| `src/renderer/src/components/sprint/__tests__/dag-layout.test.ts`       | Create | Layout algorithm tests                                                                             |
+| `src/main/agent-manager/__tests__/resolve-dependents-cascade.test.ts`   | Create | Cascade cancel tests                                                                               |
+| `src/main/agent-manager/__tests__/conditional-deps.test.ts`             | Create | Conditional dependency resolution tests                                                            |
+| `src/main/handlers/__tests__/batch-import.test.ts`                      | Create | Batch import validation + creation tests                                                           |
+| `src/shared/__tests__/workflow-templates.test.ts`                       | Create | Template validation tests                                                                          |
 
 ---
 
 ### Task 1: Conditional Dependencies — Shared Types
 
 **Files:**
+
 - Modify: `src/shared/types.ts`
 - Test: `src/shared/__tests__/workflow-templates.test.ts` (type validation only)
 
@@ -106,6 +107,7 @@ cd ~/projects/BDE && npx vitest run src/main/agent-manager/__tests__/conditional
 ### Task 2: Conditional Dependency Resolution
 
 **Files:**
+
 - Modify: `src/main/agent-manager/dependency-index.ts`
 - Test: `src/main/agent-manager/__tests__/conditional-deps.test.ts`
 
@@ -162,17 +164,11 @@ describe('areDependenciesSatisfied with conditions', () => {
     const softDep: TaskDependency[] = [{ id: 'a', type: 'soft' }]
 
     // Hard with no condition: only done satisfies
-    expect(
-      index.areDependenciesSatisfied('b', hardDep, () => 'done').satisfied
-    ).toBe(true)
-    expect(
-      index.areDependenciesSatisfied('b', hardDep, () => 'failed').satisfied
-    ).toBe(false)
+    expect(index.areDependenciesSatisfied('b', hardDep, () => 'done').satisfied).toBe(true)
+    expect(index.areDependenciesSatisfied('b', hardDep, () => 'failed').satisfied).toBe(false)
 
     // Soft with no condition: any terminal satisfies
-    expect(
-      index.areDependenciesSatisfied('b', softDep, () => 'failed').satisfied
-    ).toBe(true)
+    expect(index.areDependenciesSatisfied('b', softDep, () => 'failed').satisfied).toBe(true)
   })
 })
 ```
@@ -229,6 +225,7 @@ cd ~/projects/BDE && npx vitest run src/main/agent-manager/__tests__/conditional
 ### Task 3: Cascade Cancel on Hard-Dep Failure
 
 **Files:**
+
 - Modify: `src/main/agent-manager/resolve-dependents.ts`
 - Modify: `src/main/services/task-terminal-service.ts`
 - Create: `src/main/agent-manager/__tests__/resolve-dependents-cascade.test.ts`
@@ -262,10 +259,13 @@ describe('cascade cancel on hard-dep failure', () => {
 
     resolveDependents('a', 'failed', index, getTask, updateTask, logger, 'cancel')
 
-    expect(updateTask).toHaveBeenCalledWith('b', expect.objectContaining({
-      status: 'cancelled',
-      notes: expect.stringContaining('cascade')
-    }))
+    expect(updateTask).toHaveBeenCalledWith(
+      'b',
+      expect.objectContaining({
+        status: 'cancelled',
+        notes: expect.stringContaining('cascade')
+      })
+    )
   })
 
   it('does NOT cascade cancel for soft deps', () => {
@@ -313,10 +313,16 @@ describe('cascade cancel on hard-dep failure', () => {
     resolveDependents('a', 'failed', index, getTask, updateTask, logger, 'pause')
 
     // In pause mode, blocked tasks should get updated notes but stay blocked
-    expect(updateTask).toHaveBeenCalledWith('b', expect.objectContaining({
-      notes: expect.stringContaining('Blocked by')
-    }))
-    expect(updateTask).not.toHaveBeenCalledWith('b', expect.objectContaining({ status: 'cancelled' }))
+    expect(updateTask).toHaveBeenCalledWith(
+      'b',
+      expect.objectContaining({
+        notes: expect.stringContaining('Blocked by')
+      })
+    )
+    expect(updateTask).not.toHaveBeenCalledWith(
+      'b',
+      expect.objectContaining({ status: 'cancelled' })
+    )
   })
 
   it('continue mode: uses existing behavior (no cascade)', () => {
@@ -331,7 +337,10 @@ describe('cascade cancel on hard-dep failure', () => {
     // 'continue' = existing behavior — update notes but don't cancel
     resolveDependents('a', 'failed', index, getTask, updateTask, logger, 'continue')
 
-    expect(updateTask).not.toHaveBeenCalledWith('b', expect.objectContaining({ status: 'cancelled' }))
+    expect(updateTask).not.toHaveBeenCalledWith(
+      'b',
+      expect.objectContaining({ status: 'cancelled' })
+    )
   })
 })
 ```
@@ -349,7 +358,9 @@ export function resolveDependents(
   completedTaskId: string,
   completedStatus: string,
   index: DependencyIndex,
-  getTask: (id: string) =>
+  getTask: (
+    id: string
+  ) =>
     | (Pick<SprintTask, 'id' | 'status' | 'notes'> & { depends_on: TaskDependency[] | null })
     | null,
   updateTask: (id: string, patch: Record<string, unknown>) => unknown,
@@ -367,8 +378,7 @@ export function resolveDependents(
 
       // Check if this specific dep is a hard dep on the failed task
       const depEdge = task.depends_on.find((d) => d.id === completedTaskId)
-      const isHardDepOnFailed =
-        depEdge?.type === 'hard' && FAILURE_STATUSES.has(completedStatus)
+      const isHardDepOnFailed = depEdge?.type === 'hard' && FAILURE_STATUSES.has(completedStatus)
 
       if (isHardDepOnFailed && cascadeBehavior === 'cancel') {
         // Cascade cancel: mark dependent as cancelled
@@ -454,6 +464,7 @@ cd ~/projects/BDE && npx vitest run src/main/agent-manager/__tests__/resolve-dep
 ### Task 4: DAG Layout Algorithm
 
 **Files:**
+
 - Create: `src/renderer/src/components/sprint/dag-layout.ts`
 - Create: `src/renderer/src/components/sprint/__tests__/dag-layout.test.ts`
 
@@ -519,9 +530,7 @@ describe('computeDagLayout', () => {
   })
 
   it('handles isolated nodes (no deps, no dependents)', () => {
-    const nodes: DagNode[] = [
-      { id: 'a', label: 'A', status: 'backlog', dependsOn: [] }
-    ]
+    const nodes: DagNode[] = [{ id: 'a', label: 'A', status: 'backlog', dependsOn: [] }]
     const layout = computeDagLayout(nodes)
     expect(layout.nodes).toHaveLength(1)
     expect(layout.edges).toHaveLength(0)
@@ -677,6 +686,7 @@ cd ~/projects/BDE && npx vitest run src/renderer/src/components/sprint/__tests__
 ### Task 5: DAG Visualization Component
 
 **Files:**
+
 - Create: `src/renderer/src/components/sprint/DagNode.tsx`
 - Create: `src/renderer/src/components/sprint/DagOverlay.tsx`
 - Create: `src/renderer/src/assets/dag-neon.css`
@@ -1094,6 +1104,7 @@ cd ~/projects/BDE && npx vitest run src/renderer/src/components/sprint/__tests__
 ### Task 6: Workflow Templates (Task Chain Templates)
 
 **Files:**
+
 - Create: `src/shared/workflow-templates.ts`
 - Modify: `src/main/handlers/sprint-local.ts`
 - Create: `src/renderer/src/components/task-workbench/WorkflowTemplatePicker.tsx`
@@ -1276,38 +1287,44 @@ export const BUILT_IN_WORKFLOWS: WorkflowTemplate[] = [
 In `src/main/handlers/sprint-local.ts`, add:
 
 ```typescript
-safeHandle('sprint:createChain', async (_e, chain: Array<{
-  title: string
-  repo: string
-  priority?: number
-  spec?: string
-  depends_on_indices?: number[] // indices into this array
-  dep_type?: 'hard' | 'soft'
-}>) => {
-  // Create tasks in order, mapping temp indices to real IDs
-  const createdIds: string[] = []
+safeHandle(
+  'sprint:createChain',
+  async (
+    _e,
+    chain: Array<{
+      title: string
+      repo: string
+      priority?: number
+      spec?: string
+      depends_on_indices?: number[] // indices into this array
+      dep_type?: 'hard' | 'soft'
+    }>
+  ) => {
+    // Create tasks in order, mapping temp indices to real IDs
+    const createdIds: string[] = []
 
-  for (let i = 0; i < chain.length; i++) {
-    const step = chain[i]
-    const deps: TaskDependency[] = (step.depends_on_indices ?? []).map((idx) => ({
-      id: createdIds[idx],
-      type: step.dep_type ?? 'hard'
-    }))
+    for (let i = 0; i < chain.length; i++) {
+      const step = chain[i]
+      const deps: TaskDependency[] = (step.depends_on_indices ?? []).map((idx) => ({
+        id: createdIds[idx],
+        type: step.dep_type ?? 'hard'
+      }))
 
-    const task = createTask({
-      title: step.title,
-      repo: step.repo,
-      priority: step.priority ?? 3,
-      spec: step.spec,
-      depends_on: deps.length > 0 ? deps : undefined
-    })
+      const task = createTask({
+        title: step.title,
+        repo: step.repo,
+        priority: step.priority ?? 3,
+        spec: step.spec,
+        depends_on: deps.length > 0 ? deps : undefined
+      })
 
-    if (!task) throw new Error(`Failed to create task "${step.title}" at index ${i}`)
-    createdIds.push(task.id)
+      if (!task) throw new Error(`Failed to create task "${step.title}" at index ${i}`)
+      createdIds.push(task.id)
+    }
+
+    return { ids: createdIds, count: createdIds.length }
   }
-
-  return { ids: createdIds, count: createdIds.length }
-})
+)
 ```
 
 - [ ] **Step 4: Update preload bridge**
@@ -1338,6 +1355,7 @@ cd ~/projects/BDE && npx vitest run src/shared/__tests__/workflow-templates.test
 ### Task 7: Batch Task Import from YAML/JSON
 
 **Files:**
+
 - Create: `src/shared/batch-import-schema.ts`
 - Create: `src/main/handlers/sprint-batch-import.ts`
 - Modify: `src/main/handlers/sprint-local.ts`
@@ -1349,7 +1367,11 @@ cd ~/projects/BDE && npx vitest run src/shared/__tests__/workflow-templates.test
 ```typescript
 // src/main/handlers/__tests__/batch-import.test.ts
 import { describe, it, expect } from 'vitest'
-import { parseBatchImport, validateBatchImport, type BatchImportInput } from '../../shared/batch-import-schema'
+import {
+  parseBatchImport,
+  validateBatchImport,
+  type BatchImportInput
+} from '../../shared/batch-import-schema'
 
 describe('batch-import-schema', () => {
   describe('parseBatchImport', () => {
@@ -1412,9 +1434,7 @@ tasks:
 
     it('detects dangling dependency references', () => {
       const input: BatchImportInput = {
-        tasks: [
-          { title: 'A', repo: 'bde', depends_on: ['NonExistent'] }
-        ]
+        tasks: [{ title: 'A', repo: 'bde', depends_on: ['NonExistent'] }]
       }
       const result = validateBatchImport(input)
       expect(result.valid).toBe(false)
@@ -1491,10 +1511,13 @@ function validateShape(data: unknown): Result<BatchImportInput> {
 
   for (let i = 0; i < obj.tasks.length; i++) {
     const t = obj.tasks[i]
-    if (!t || typeof t !== 'object') return { ok: false, error: `Task at index ${i} is not an object` }
+    if (!t || typeof t !== 'object')
+      return { ok: false, error: `Task at index ${i} is not an object` }
     const task = t as Record<string, unknown>
-    if (!task.title || typeof task.title !== 'string') return { ok: false, error: `Task at index ${i} missing "title"` }
-    if (!task.repo || typeof task.repo !== 'string') return { ok: false, error: `Task at index ${i} missing "repo"` }
+    if (!task.title || typeof task.title !== 'string')
+      return { ok: false, error: `Task at index ${i} missing "title"` }
+    if (!task.repo || typeof task.repo !== 'string')
+      return { ok: false, error: `Task at index ${i} missing "repo"` }
   }
 
   return { ok: true, data: obj as unknown as BatchImportInput }
@@ -1648,6 +1671,7 @@ cd ~/projects/BDE && npx vitest run src/main/handlers/__tests__/batch-import.tes
 ### Task 8: DependencyPicker Condition Support
 
 **Files:**
+
 - Modify: `src/renderer/src/components/task-workbench/DependencyPicker.tsx`
 
 - [ ] **Step 1: Add condition selector to dependency items**
@@ -1710,6 +1734,7 @@ cd ~/projects/BDE && npx vitest run --testPathPattern DependencyPicker
 ### Task 9: Integration — Wiring & Handler Count Updates
 
 **Files:**
+
 - Modify: `src/main/index.ts` (register new handlers)
 - Modify: `src/preload/index.ts` (bridge methods)
 - Modify: `src/preload/index.d.ts` (type declarations)
@@ -1772,6 +1797,7 @@ Tasks should be implemented in this order due to dependencies:
 9. **Task 9** (Integration wiring) — depends on all above
 
 Parallelizable groups:
+
 - Group A: Tasks 1 -> 2 -> 3 (dependency resolution)
 - Group B: Tasks 4 -> 5 (DAG visualization)
 - Group C: Tasks 6, 7 (templates + import)

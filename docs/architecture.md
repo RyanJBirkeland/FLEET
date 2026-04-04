@@ -77,12 +77,12 @@ All handlers use the `safeHandle()` wrapper (`src/main/ipc-utils.ts`) for centra
 
 ### Push Events (Main → Renderer)
 
-| Event                   | Trigger                                                | Purpose                                           |
-| ----------------------- | ------------------------------------------------------ | ------------------------------------------------- |
-| `sprint:externalChange` | `fs.watch()` on `~/.bde/bde.db` + WAL (500ms debounce) | Notify renderer of external DB writes             |
-| `terminal:data:{id}`    | PTY stdout                                             | Stream terminal output to renderer                |
-| `terminal:exit:{id}`    | PTY process exit                                       | Notify terminal tab of process end                |
-| `pr:listUpdated`        | PR poller (60s interval)                               | Push updated PR list to renderer                  |
+| Event                   | Trigger                                                | Purpose                               |
+| ----------------------- | ------------------------------------------------------ | ------------------------------------- |
+| `sprint:externalChange` | `fs.watch()` on `~/.bde/bde.db` + WAL (500ms debounce) | Notify renderer of external DB writes |
+| `terminal:data:{id}`    | PTY stdout                                             | Stream terminal output to renderer    |
+| `terminal:exit:{id}`    | PTY process exit                                       | Notify terminal tab of process end    |
+| `pr:listUpdated`        | PR poller (60s interval)                               | Push updated PR list to renderer      |
 
 ---
 
@@ -261,14 +261,14 @@ backlog ──→ queued ──→ active ──→ done
                            └──→ failed
 ```
 
-| State       | Meaning                      | Entered By                                                               |
-| ----------- | ---------------------------- | ------------------------------------------------------------------------ |
-| `backlog`   | Draft idea, spec in progress | User creates ticket via New Ticket modal                                 |
-| `queued`    | Ready for agent pickup       | User drags to Sprint column or clicks "Push to Sprint"                   |
-| `active`    | Agent working on task        | Agent Manager claims queued task and spawns Claude agent                  |
-| `done`      | PR merged                    | `pollPrStatuses` detects merge via GitHub API                            |
-| `cancelled` | PR closed without merge      | `pollPrStatuses` detects close via GitHub API                            |
-| `failed`    | Agent exited with error      | Agent process exits non-zero                                            |
+| State       | Meaning                      | Entered By                                               |
+| ----------- | ---------------------------- | -------------------------------------------------------- |
+| `backlog`   | Draft idea, spec in progress | User creates ticket via New Ticket modal                 |
+| `queued`    | Ready for agent pickup       | User drags to Sprint column or clicks "Push to Sprint"   |
+| `active`    | Agent working on task        | Agent Manager claims queued task and spawns Claude agent |
+| `done`      | PR merged                    | `pollPrStatuses` detects merge via GitHub API            |
+| `cancelled` | PR closed without merge      | `pollPrStatuses` detects close via GitHub API            |
+| `failed`    | Agent exited with error      | Agent process exits non-zero                             |
 
 ---
 

@@ -29,7 +29,7 @@ export function setSprintQueriesLogger(l: Logger): void {
  * - Deserializes depends_on from JSON string
  * - Deserializes tags from JSON string
  */
-function sanitizeTask(row: Record<string, unknown>): SprintTask {
+export function sanitizeTask(row: Record<string, unknown>): SprintTask {
   return {
     ...row,
     depends_on: sanitizeDependsOn(row.depends_on),
@@ -42,7 +42,7 @@ function sanitizeTask(row: Record<string, unknown>): SprintTask {
 /**
  * Sanitize an array of task rows.
  */
-function sanitizeTasks(rows: Record<string, unknown>[]): SprintTask[] {
+export function sanitizeTasks(rows: Record<string, unknown>[]): SprintTask[] {
   return rows.map(sanitizeTask)
 }
 
@@ -80,7 +80,8 @@ export const UPDATE_ALLOWLIST = new Set([
   'retry_context',
   'failure_reason',
   'max_cost_usd',
-  'partial_diff'
+  'partial_diff',
+  'group_id'
 ])
 
 export interface QueueStats {

@@ -185,6 +185,23 @@ declare global {
         ) => Promise<IpcResult<'sprint:batchImport'>>
       }
 
+      // Task groups
+      groups: {
+        create: (...args: IpcArgs<'groups:create'>) => Promise<IpcResult<'groups:create'>>
+        list: () => Promise<IpcResult<'groups:list'>>
+        get: (...args: IpcArgs<'groups:get'>) => Promise<IpcResult<'groups:get'>>
+        update: (...args: IpcArgs<'groups:update'>) => Promise<IpcResult<'groups:update'>>
+        delete: (...args: IpcArgs<'groups:delete'>) => Promise<IpcResult<'groups:delete'>>
+        addTask: (...args: IpcArgs<'groups:addTask'>) => Promise<IpcResult<'groups:addTask'>>
+        removeTask: (
+          ...args: IpcArgs<'groups:removeTask'>
+        ) => Promise<IpcResult<'groups:removeTask'>>
+        getGroupTasks: (
+          ...args: IpcArgs<'groups:getGroupTasks'>
+        ) => Promise<IpcResult<'groups:getGroupTasks'>>
+        queueAll: (...args: IpcArgs<'groups:queueAll'>) => Promise<IpcResult<'groups:queueAll'>>
+      }
+
       // File attachments
       openFileDialog: (
         ...args: IpcArgs<'fs:openFileDialog'>

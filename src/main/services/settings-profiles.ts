@@ -1,10 +1,4 @@
-import {
-  getSetting,
-  setSetting,
-  deleteSetting,
-  getSettingJson,
-  setSettingJson
-} from '../settings'
+import { getSetting, setSetting, deleteSetting, getSettingJson, setSettingJson } from '../settings'
 
 const PROFILE_PREFIX = 'profiles.'
 const PROFILE_KEYS_TO_SAVE = [

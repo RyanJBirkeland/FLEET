@@ -543,7 +543,10 @@
   width: min(560px, 80vw);
   font-family: var(--bde-font-code);
 }
-.quick-create-bar__icon { color: var(--neon-cyan); flex-shrink: 0; }
+.quick-create-bar__icon {
+  color: var(--neon-cyan);
+  flex-shrink: 0;
+}
 .quick-create-bar__input {
   flex: 1;
   background: transparent;
@@ -553,7 +556,9 @@
   font-size: 13px;
   font-family: var(--bde-font-code);
 }
-.quick-create-bar__input::placeholder { color: var(--neon-text-dim); }
+.quick-create-bar__input::placeholder {
+  color: var(--neon-text-dim);
+}
 .quick-create-bar__hints {
   display: flex;
   gap: 8px;
@@ -573,7 +578,9 @@
   border: 1px solid var(--neon-border);
   font-size: 9px;
 }
-.quick-create-bar__hint--queue { color: var(--neon-orange); }
+.quick-create-bar__hint--queue {
+  color: var(--neon-orange);
+}
 
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {

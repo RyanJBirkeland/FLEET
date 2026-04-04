@@ -163,6 +163,29 @@ const api = {
     ) => typedInvoke('sprint:batchImport', tasks)
   },
 
+  // Task groups
+  groups: {
+    create: (input: { name: string; icon?: string; accent_color?: string; goal?: string }) =>
+      typedInvoke('groups:create', input),
+    list: () => typedInvoke('groups:list'),
+    get: (id: string) => typedInvoke('groups:get', id),
+    update: (
+      id: string,
+      patch: {
+        name?: string
+        icon?: string
+        accent_color?: string
+        goal?: string
+        status?: 'draft' | 'ready' | 'in-pipeline' | 'completed'
+      }
+    ) => typedInvoke('groups:update', id, patch),
+    delete: (id: string) => typedInvoke('groups:delete', id),
+    addTask: (taskId: string, groupId: string) => typedInvoke('groups:addTask', taskId, groupId),
+    removeTask: (taskId: string) => typedInvoke('groups:removeTask', taskId),
+    getGroupTasks: (groupId: string) => typedInvoke('groups:getGroupTasks', groupId),
+    queueAll: (groupId: string) => typedInvoke('groups:queueAll', groupId)
+  },
+
   // File attachments
   openFileDialog: (opts?: { filters?: { name: string; extensions: string[] }[] }) =>
     typedInvoke('fs:openFileDialog', opts),

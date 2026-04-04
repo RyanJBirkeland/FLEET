@@ -139,7 +139,6 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Task Workbench**: `src/renderer/src/components/task-workbench/` — form + AI copilot + readiness checks. Neon CSS in `task-workbench-neon.css` (`.wb-*` BEM classes). Copilot uses Agent SDK streaming via `workbench:chatStream` IPC.
 - **Full architecture**: See `docs/architecture.md`
 
-
 ## Packaging
 
 ```bash
@@ -174,6 +173,7 @@ npm run package      # Alias for build:mac
 ## Pipeline Agent Spec Guidelines
 
 When creating sprint tasks for pipeline agents:
+
 - **Keep specs under 500 words.** Full plan files (1000+ lines) cause 100% timeout. Per-task specs (200-400 words) complete in 15-30 min.
 - **Include exact file paths.** Agents waste 15-20% of tokens on file exploration without them.
 - **Include `## How to Test` section.** Agents skip tests or write wrong patterns without guidance.

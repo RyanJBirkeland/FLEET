@@ -14,30 +14,30 @@ BDE has **zero network surface**. No HTTP servers, no open ports, no outbound HT
 
 ### Equivalent
 
-| Concern | Claude Code CLI | BDE |
-|---------|----------------|-----|
-| Network surface | None | None |
-| Agent capabilities | Full file/shell access | Same — uses the same SDK |
-| Token storage | `~/.claude/` (plaintext) | `~/.bde/oauth-token` (0600 perms) |
-| Push-to-main prevention | Permission prompts | Prompt conventions + branch naming |
+| Concern                 | Claude Code CLI          | BDE                                |
+| ----------------------- | ------------------------ | ---------------------------------- |
+| Network surface         | None                     | None                               |
+| Agent capabilities      | Full file/shell access   | Same — uses the same SDK           |
+| Token storage           | `~/.claude/` (plaintext) | `~/.bde/oauth-token` (0600 perms)  |
+| Push-to-main prevention | Permission prompts       | Prompt conventions + branch naming |
 
 ### Where BDE adds protection
 
-| Concern | Claude Code CLI | BDE |
-|---------|----------------|-----|
-| Agent isolation | Runs in your repo directly | Pipeline agents run in disposable git worktrees |
-| Code review | You review diffs in terminal | Code Review Station UI — structured diff view, commit history, conversation log |
-| Task audit trail | None | Field-level change tracking in SQLite (`task_changes` table) |
+| Concern          | Claude Code CLI              | BDE                                                                             |
+| ---------------- | ---------------------------- | ------------------------------------------------------------------------------- |
+| Agent isolation  | Runs in your repo directly   | Pipeline agents run in disposable git worktrees                                 |
+| Code review      | You review diffs in terminal | Code Review Station UI — structured diff view, commit history, conversation log |
+| Task audit trail | None                         | Field-level change tracking in SQLite (`task_changes` table)                    |
 
 ### Where BDE has more surface area
 
-| Concern | Claude Code CLI | BDE |
-|---------|----------------|-----|
-| Electron process | N/A — Node CLI only | Chromium renderer + main process |
-| Dependencies | ~50 | ~200+ (Electron, Monaco, React, etc.) |
-| Local data store | None | `~/.bde/bde.db` — task specs, agent history (readable by local processes) |
-| IPC channels | None | 86 typed channels between renderer and main |
-| Binary signing | Installed via npm | Unsigned DMG (Gatekeeper warning) |
+| Concern          | Claude Code CLI     | BDE                                                                       |
+| ---------------- | ------------------- | ------------------------------------------------------------------------- |
+| Electron process | N/A — Node CLI only | Chromium renderer + main process                                          |
+| Dependencies     | ~50                 | ~200+ (Electron, Monaco, React, etc.)                                     |
+| Local data store | None                | `~/.bde/bde.db` — task specs, agent history (readable by local processes) |
+| IPC channels     | None                | 86 typed channels between renderer and main                               |
+| Binary signing   | Installed via npm   | Unsigned DMG (Gatekeeper warning)                                         |
 
 ### Threat model summary
 

@@ -16,21 +16,21 @@
 
 ### Modified Files
 
-| File | Change |
-| --- | --- |
-| `src/main/db.ts` | Migration v24: add `model`, `retry_context`, `failure_reason`, `max_cost_usd`, `partial_diff` columns |
-| `src/shared/types.ts` | Add new fields to `SprintTask`, add `FailureReason` type, add `model` to `GENERAL_PATCH_FIELDS` |
-| `src/main/data/sprint-queries.ts` | Add new fields to `UPDATE_ALLOWLIST`, `CreateTaskInput`, `createTask()` INSERT |
-| `src/main/agent-manager/prompt-composer.ts` | Add `upstreamContext` and `retryContext` to `BuildPromptInput`, inject into prompt |
-| `src/main/agent-manager/run-agent.ts` | Pass `task.model` to `spawnAgent()`, capture retry context on failure, capture partial diff |
-| `src/main/agent-manager/types.ts` | Add `model` to `RunAgentTask` interface |
-| `src/main/agent-manager/index.ts` | Pass `model` through `_mapQueuedTask()`, propagate upstream context |
-| `src/main/agent-manager/watchdog.ts` | Add `cost-budget-exceeded` verdict |
-| `src/main/agent-manager/completion.ts` | Capture `partial_diff` before worktree cleanup on failure, classify `failure_reason` |
-| `src/main/handlers/sprint-local.ts` | Pass new fields through in `sprint:create` and `sprint:retry` |
-| `src/renderer/src/stores/taskWorkbench.ts` | Add `model` field to state |
-| `src/renderer/src/components/task-workbench/WorkbenchForm.tsx` | Add model dropdown in advanced section |
-| `src/renderer/src/components/sprint/TaskDetailDrawer.tsx` | Add failure diagnostic panel for failed/error tasks |
+| File                                                           | Change                                                                                                |
+| -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `src/main/db.ts`                                               | Migration v24: add `model`, `retry_context`, `failure_reason`, `max_cost_usd`, `partial_diff` columns |
+| `src/shared/types.ts`                                          | Add new fields to `SprintTask`, add `FailureReason` type, add `model` to `GENERAL_PATCH_FIELDS`       |
+| `src/main/data/sprint-queries.ts`                              | Add new fields to `UPDATE_ALLOWLIST`, `CreateTaskInput`, `createTask()` INSERT                        |
+| `src/main/agent-manager/prompt-composer.ts`                    | Add `upstreamContext` and `retryContext` to `BuildPromptInput`, inject into prompt                    |
+| `src/main/agent-manager/run-agent.ts`                          | Pass `task.model` to `spawnAgent()`, capture retry context on failure, capture partial diff           |
+| `src/main/agent-manager/types.ts`                              | Add `model` to `RunAgentTask` interface                                                               |
+| `src/main/agent-manager/index.ts`                              | Pass `model` through `_mapQueuedTask()`, propagate upstream context                                   |
+| `src/main/agent-manager/watchdog.ts`                           | Add `cost-budget-exceeded` verdict                                                                    |
+| `src/main/agent-manager/completion.ts`                         | Capture `partial_diff` before worktree cleanup on failure, classify `failure_reason`                  |
+| `src/main/handlers/sprint-local.ts`                            | Pass new fields through in `sprint:create` and `sprint:retry`                                         |
+| `src/renderer/src/stores/taskWorkbench.ts`                     | Add `model` field to state                                                                            |
+| `src/renderer/src/components/task-workbench/WorkbenchForm.tsx` | Add model dropdown in advanced section                                                                |
+| `src/renderer/src/components/sprint/TaskDetailDrawer.tsx`      | Add failure diagnostic panel for failed/error tasks                                                   |
 
 ---
 
@@ -41,12 +41,15 @@
 ### Step 1.1 — Schema + Types
 
 - [ ] **Test first** — `src/main/__tests__/integration/sprint-crud.test.ts`:
+
   ```bash
   npm run test:main -- --grep "model"
   ```
+
   Add test: create a task with `model: 'claude-haiku-3-5'`, retrieve it, assert the field persists.
 
 - [ ] **Migration v24** in `src/main/db.ts` — add after migration v23:
+
   ```ts
   {
     version: 24,
@@ -73,6 +76,7 @@
   ```
 
 - [ ] **SprintTask type** in `src/shared/types.ts` — add fields:
+
   ```ts
   model?: string | null
   retry_context?: string | null
@@ -82,8 +86,15 @@
   ```
 
 - [ ] **FailureReason type** in `src/shared/types.ts` — add standalone type:
+
   ```ts
-  export type FailureReason = 'auth' | 'timeout' | 'test_failure' | 'compilation' | 'spawn' | 'unknown'
+  export type FailureReason =
+    | 'auth'
+    | 'timeout'
+    | 'test_failure'
+    | 'compilation'
+    | 'spawn'
+    | 'unknown'
   ```
 
 - [ ] **GENERAL_PATCH_FIELDS** in `src/shared/types.ts` — add `'model'` and `'maxCostUsd'`.
@@ -91,9 +102,10 @@
 - [ ] **UPDATE_ALLOWLIST** in `src/main/data/sprint-queries.ts` — add `'model'`, `'retry_context'`, `'failure_reason'`, `'max_cost_usd'`, `'partial_diff'`.
 
 - [ ] **CreateTaskInput** in `src/main/data/sprint-queries.ts` — add `model?: string` field. Update `createTask()` INSERT to include `model`:
+
   ```ts
   // In the INSERT statement, add model column + value
-  `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model)
+  ;`INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model)
    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
    RETURNING *`
   // Add input.model ?? null as the 11th parameter
@@ -104,9 +116,10 @@
 ### Step 1.2 — Agent Manager Passthrough
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/run-agent.test.ts`:
-  Add test: when `task.model` is `'claude-haiku-3-5'`, assert `spawnAgent()` receives `model: 'claude-haiku-3-5'` instead of `defaultModel`.
+      Add test: when `task.model` is `'claude-haiku-3-5'`, assert `spawnAgent()` receives `model: 'claude-haiku-3-5'` instead of `defaultModel`.
 
 - [ ] **RunAgentTask** in `src/main/agent-manager/run-agent.ts` — add `model?: string | null` to the interface:
+
   ```ts
   export interface RunAgentTask {
     id: string
@@ -123,10 +136,12 @@
   ```
 
 - [ ] **run-agent.ts** — in `runAgent()`, compute effective model and use it everywhere:
+
   ```ts
   // Line ~153: after destructuring deps
   const effectiveModel = task.model || defaultModel
   ```
+
   Replace ALL occurrences of `defaultModel` in the function body with `effectiveModel`. There are ~6 references:
   - `spawnAgent({ ..., model: effectiveModel, ... })` (line ~199)
   - `agent.model = effectiveModel` (line ~255)
@@ -134,13 +149,15 @@
   - `emitAgentEvent(agentRunId, { type: 'agent:started', model: effectiveModel, ... })` (line ~295)
   - `updateAgentMeta` uses `agent.model` which is already set correctly
 
-- [ ] **_mapQueuedTask** in `src/main/agent-manager/index.ts` — add `model` to the returned object:
+- [ ] **\_mapQueuedTask** in `src/main/agent-manager/index.ts` — add `model` to the returned object:
+
   ```ts
   return {
     // ... existing fields ...
     model: (raw.model as string) ?? null
   }
   ```
+
   Also update the return type annotation to include `model: string | null`.
 
 - [ ] **Verify:** `npm run typecheck && npm test && npm run test:main`
@@ -148,7 +165,7 @@
 ### Step 1.3 — WorkbenchForm UI
 
 - [ ] **Test first** — `src/renderer/src/components/task-workbench/__tests__/WorkbenchForm.test.tsx`:
-  Add test: render WorkbenchForm, open advanced section, assert model dropdown exists with 4 options (Default, Opus, Sonnet, Haiku). Select Opus, assert store state updates to `'claude-opus-4'`.
+      Add test: render WorkbenchForm, open advanced section, assert model dropdown exists with 4 options (Default, Opus, Sonnet, Haiku). Select Opus, assert store state updates to `'claude-opus-4'`.
 
 - [ ] **taskWorkbench store** — add `model: string` to state in `src/renderer/src/stores/taskWorkbench.ts`:
   - In `TaskWorkbenchState` interface: `model: string`
@@ -157,6 +174,7 @@
   - In `resetForm()` via `defaults()`: already reset
 
 - [ ] **WorkbenchForm.tsx** — read `model` from store and add dropdown in the `advancedOpen` section. Add after the priority select field, inside the `wb-form__field--row` div:
+
   ```tsx
   const model = useTaskWorkbenchStore((s) => s.model)
 
@@ -198,9 +216,10 @@
 ### Step 2.1 — Upstream Context Builder
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/prompt-composer.test.ts`:
-  Add test: call `buildAgentPrompt()` with `upstreamContext` containing 2 upstream tasks. Assert prompt includes `## Upstream Task Context` section with both task titles and specs. Assert total upstream section is capped at 4000 chars.
+      Add test: call `buildAgentPrompt()` with `upstreamContext` containing 2 upstream tasks. Assert prompt includes `## Upstream Task Context` section with both task titles and specs. Assert total upstream section is capped at 4000 chars.
 
 - [ ] **Types** in `src/main/agent-manager/prompt-composer.ts` — add:
+
   ```ts
   export interface UpstreamTaskContext {
     title: string
@@ -210,6 +229,7 @@
   ```
 
 - [ ] **BuildPromptInput** — add field:
+
   ```ts
   export interface BuildPromptInput {
     // ... existing fields ...
@@ -218,6 +238,7 @@
   ```
 
 - [ ] **buildAgentPrompt()** — after the task content section (just before the `return prompt` line), add upstream context injection:
+
   ```ts
   if (input.upstreamContext && input.upstreamContext.length > 0) {
     const MAX_UPSTREAM_CHARS = 4000
@@ -225,7 +246,8 @@
     section += 'These upstream tasks have already completed. Their changes are in the codebase:\n\n'
     let totalChars = 0
     for (const upstream of input.upstreamContext) {
-      const entry = `### ${upstream.title}\n` +
+      const entry =
+        `### ${upstream.title}\n` +
         (upstream.spec ? `**Spec:** ${upstream.spec.slice(0, 1000)}\n` : '') +
         (upstream.diffStat ? `**Changes:**\n\`\`\`\n${upstream.diffStat}\n\`\`\`\n` : '') +
         '\n'
@@ -242,9 +264,10 @@
 ### Step 2.2 — Gather Upstream Context at Spawn Time
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/index.test.ts` (or a new focused test file):
-  Mock `repo.getTask()` to return a completed task for a dependency ID. Assert that the spawned task receives `upstreamContext` with the upstream task's title and spec.
+      Mock `repo.getTask()` to return a completed task for a dependency ID. Assert that the spawned task receives `upstreamContext` with the upstream task's title and spec.
 
 - [ ] **RunAgentTask** in `src/main/agent-manager/run-agent.ts` — add:
+
   ```ts
   import type { UpstreamTaskContext } from './prompt-composer'
 
@@ -255,6 +278,7 @@
   ```
 
 - [ ] **run-agent.ts** — pass upstream context to `buildAgentPrompt()`. Update the call at line ~181:
+
   ```ts
   const prompt = buildAgentPrompt({
     agentType: 'pipeline',
@@ -266,6 +290,7 @@
   ```
 
 - [ ] **index.ts** `_processQueuedTask` — gather upstream context between the claim and spawn steps. After the worktree setup succeeds, before `this._spawnAgent(task, wt, repoPath)`:
+
   ```ts
   // Gather upstream context from completed dependencies
   let upstreamContext: UpstreamTaskContext[] | undefined
@@ -282,17 +307,21 @@
           upstreamContext.push({
             title: upTask.title,
             spec: upTask.spec,
-            diffStat: null  // Diff stat retrieval is expensive; specs alone provide good context
+            diffStat: null // Diff stat retrieval is expensive; specs alone provide good context
           })
           if (upstreamContext.length >= 5) break
         }
       }
-    } catch { /* deps already validated above */ }
+    } catch {
+      /* deps already validated above */
+    }
   }
 
   this._spawnAgent({ ...task, upstreamContext }, wt, repoPath)
   ```
+
   **Important:** Import `UpstreamTaskContext` at the top of `index.ts`:
+
   ```ts
   import type { UpstreamTaskContext } from './prompt-composer'
   ```
@@ -308,9 +337,10 @@
 ### Step 3.1 — Capture Retry Context on Failure
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/run-agent.test.ts`:
-  Add test: mock an agent that exits with failure while `retry_count < MAX_RETRIES`. Assert `repo.updateTask` is called with `retry_context` containing a JSON string with `diff` and `lastOutput` fields.
+      Add test: mock an agent that exits with failure while `retry_count < MAX_RETRIES`. Assert `repo.updateTask` is called with `retry_context` containing a JSON string with `diff` and `lastOutput` fields.
 
 - [ ] **New helper** in `src/main/agent-manager/run-agent.ts`:
+
   ```ts
   import { execFile as execFileCb } from 'node:child_process'
   import { promisify } from 'node:util'
@@ -324,10 +354,11 @@
     logger: Logger
   ): Promise<string | null> {
     try {
-      const { stdout: diff } = await execFileAsync(
-        'git', ['diff', '--stat', 'HEAD'],
-        { cwd: worktreePath, env: buildAgentEnv(), maxBuffer: 50 * 1024 }
-      )
+      const { stdout: diff } = await execFileAsync('git', ['diff', '--stat', 'HEAD'], {
+        cwd: worktreePath,
+        env: buildAgentEnv(),
+        maxBuffer: 50 * 1024
+      })
       const context = JSON.stringify({
         diff: diff.trim().slice(0, 2000),
         lastOutput: lastOutput.slice(0, 1000),
@@ -340,9 +371,11 @@
     }
   }
   ```
+
   Note: `execFileAsync` and `buildAgentEnv` are already imported in `completion.ts` but not in `run-agent.ts`. Add the imports at the top of `run-agent.ts`. Since `run-agent.ts` already imports from `node:fs/promises`, adding `child_process` is consistent.
 
 - [ ] **run-agent.ts** — in the `resolveFailure` catch block (after `resolveSuccess` fails, around line ~474), capture retry context before `resolveFailure`:
+
   ```ts
   } catch (err) {
     logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
@@ -364,6 +397,7 @@
   ```
 
 - [ ] **Also capture in fast-fail-requeue path** (around line ~444): Before the requeue `updateTask`, capture retry context:
+
   ```ts
   } else if (ffResult === 'fast-fail-requeue') {
     const retryCtx = await captureRetryContext(worktree.worktreePath, lastAgentOutput, logger)
@@ -385,15 +419,17 @@
 ### Step 3.2 — Inject Retry Context into Prompt
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/prompt-composer.test.ts`:
-  Add test: call `buildAgentPrompt()` with `retryContext: '{"diff":"2 files changed","lastOutput":"Error: test failed"}'` and `retryCount: 1`. Assert prompt includes `## Previous Attempt` section with the parsed diff and last output.
+      Add test: call `buildAgentPrompt()` with `retryContext: '{"diff":"2 files changed","lastOutput":"Error: test failed"}'` and `retryCount: 1`. Assert prompt includes `## Previous Attempt` section with the parsed diff and last output.
 
 - [ ] **BuildPromptInput** in `prompt-composer.ts` — add:
+
   ```ts
   retryContext?: string | null
   retryCount?: number
   ```
 
 - [ ] **buildAgentPrompt()** — after upstream context injection (and before `return prompt`), add retry context:
+
   ```ts
   if (input.retryCount && input.retryCount > 0 && input.retryContext) {
     prompt += '\n\n## Previous Attempt\n\n'
@@ -409,11 +445,13 @@
     } catch {
       prompt += input.retryContext + '\n'
     }
-    prompt += 'Learn from this failure. Take a different approach or fix the issue that caused the failure.\n'
+    prompt +=
+      'Learn from this failure. Take a different approach or fix the issue that caused the failure.\n'
   }
   ```
 
 - [ ] **run-agent.ts** — pass retry context to `buildAgentPrompt()`. Update the call at line ~181:
+
   ```ts
   // Fetch full task to get retry_context (RunAgentTask doesn't carry it)
   const fullTask = repo.getTask(task.id)
@@ -442,7 +480,7 @@
 ### Step 4.1 — Classify Failure Reason
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/completion.test.ts`:
-  Add tests for `classifyFailureReason()`:
+      Add tests for `classifyFailureReason()`:
   - Notes containing "Invalid API key" returns `'auth'`
   - Notes containing "exceeded the maximum runtime" returns `'timeout'`
   - Notes containing "npm test" + "failed" returns `'test_failure'`
@@ -452,18 +490,36 @@
   - Watchdog verdict `'max-runtime'` returns `'timeout'` regardless of notes
 
 - [ ] **New exported function** in `src/main/agent-manager/completion.ts`:
-  ```ts
-  export type FailureReason = 'auth' | 'timeout' | 'test_failure' | 'compilation' | 'spawn' | 'unknown'
 
-  export function classifyFailureReason(notes: string | null, watchdogVerdict?: string): FailureReason {
+  ```ts
+  export type FailureReason =
+    | 'auth'
+    | 'timeout'
+    | 'test_failure'
+    | 'compilation'
+    | 'spawn'
+    | 'unknown'
+
+  export function classifyFailureReason(
+    notes: string | null,
+    watchdogVerdict?: string
+  ): FailureReason {
     if (watchdogVerdict === 'max-runtime' || watchdogVerdict === 'idle') return 'timeout'
     if (!notes) return 'unknown'
     const lower = notes.toLowerCase()
     if (lower.includes('spawn failed') || lower.includes('spawn timed out')) return 'spawn'
-    if (lower.includes('invalid api key') || lower.includes('oauth') || lower.includes('authentication')) return 'auth'
-    if (lower.includes('typecheck') || lower.includes('type error') || lower.includes('ts2')) return 'compilation'
-    if (lower.includes('test') && (lower.includes('fail') || lower.includes('error'))) return 'test_failure'
-    if (lower.includes('timeout') || lower.includes('exceeded the maximum runtime')) return 'timeout'
+    if (
+      lower.includes('invalid api key') ||
+      lower.includes('oauth') ||
+      lower.includes('authentication')
+    )
+      return 'auth'
+    if (lower.includes('typecheck') || lower.includes('type error') || lower.includes('ts2'))
+      return 'compilation'
+    if (lower.includes('test') && (lower.includes('fail') || lower.includes('error')))
+      return 'test_failure'
+    if (lower.includes('timeout') || lower.includes('exceeded the maximum runtime'))
+      return 'timeout'
     return 'unknown'
   }
   ```
@@ -493,13 +549,14 @@
 ### Step 4.2 — Diagnostic Panel in TaskDetailDrawer
 
 - [ ] **Test first** — `src/renderer/src/components/sprint/__tests__/TaskDetailDrawer.test.tsx`:
-  Add test: render drawer with a task `{ status: 'failed', failure_reason: 'timeout', notes: 'Agent exceeded...' }`. Assert:
+      Add test: render drawer with a task `{ status: 'failed', failure_reason: 'timeout', notes: 'Agent exceeded...' }`. Assert:
   - Element with test ID `failure-diagnostics` is rendered
   - Text "Agent Timed Out" appears
   - Text about breaking into subtasks appears
   - Notes are shown in a details/summary block
 
 - [ ] **FAILURE_DIAGNOSTICS constant** — add at the top of `TaskDetailDrawer.tsx`:
+
   ```ts
   const FAILURE_DIAGNOSTICS: Record<string, { heading: string; suggestion: string }> = {
     auth: {
@@ -508,19 +565,23 @@
     },
     timeout: {
       heading: 'Agent Timed Out',
-      suggestion: 'The task may be too large for a single agent session. Consider breaking it into subtasks or increasing max_runtime_ms in the task settings.'
+      suggestion:
+        'The task may be too large for a single agent session. Consider breaking it into subtasks or increasing max_runtime_ms in the task settings.'
     },
     test_failure: {
       heading: 'Tests Failed',
-      suggestion: 'The agent\'s changes broke existing tests. Review the partial diff below (if available) and retry with a more specific spec that addresses the failing tests.'
+      suggestion:
+        "The agent's changes broke existing tests. Review the partial diff below (if available) and retry with a more specific spec that addresses the failing tests."
     },
     compilation: {
       heading: 'TypeScript Compilation Failed',
-      suggestion: 'The agent introduced type errors. Check the partial diff for the problematic code and add type hints to the spec.'
+      suggestion:
+        'The agent introduced type errors. Check the partial diff for the problematic code and add type hints to the spec.'
     },
     spawn: {
       heading: 'Agent Failed to Start',
-      suggestion: 'Check that Claude Code CLI is installed and authenticated. Run "claude login" and verify the repo path in Settings.'
+      suggestion:
+        'Check that Claude Code CLI is installed and authenticated. Run "claude login" and verify the repo path in Settings.'
     },
     unknown: {
       heading: 'Agent Failed',
@@ -530,38 +591,43 @@
   ```
 
 - [ ] **Diagnostic panel JSX** — in the drawer body section, after the existing notes/prompt block and before the agent section, add:
+
   ```tsx
-  {(task.status === 'failed' || task.status === 'error') && (
-    <div className="task-drawer__diagnostics" data-testid="failure-diagnostics">
-      {(() => {
-        const reason = (task as SprintTask & { failure_reason?: string }).failure_reason ?? 'unknown'
-        const diag = FAILURE_DIAGNOSTICS[reason] ?? FAILURE_DIAGNOSTICS.unknown
-        return (
-          <>
-            <div className="task-drawer__diag-heading">{diag.heading}</div>
-            <div className="task-drawer__diag-suggestion">{diag.suggestion}</div>
-            {task.notes && (
-              <details className="task-drawer__diag-details">
-                <summary>Error details</summary>
-                <pre className="task-drawer__diag-notes">{task.notes}</pre>
-              </details>
-            )}
-            {(task as SprintTask & { partial_diff?: string }).partial_diff && (
-              <details className="task-drawer__diag-details">
-                <summary>Partial work (diff)</summary>
-                <pre className="task-drawer__diag-notes">
-                  {(task as SprintTask & { partial_diff?: string }).partial_diff}
-                </pre>
-              </details>
-            )}
-          </>
-        )
-      })()}
-    </div>
-  )}
+  {
+    ;(task.status === 'failed' || task.status === 'error') && (
+      <div className="task-drawer__diagnostics" data-testid="failure-diagnostics">
+        {(() => {
+          const reason =
+            (task as SprintTask & { failure_reason?: string }).failure_reason ?? 'unknown'
+          const diag = FAILURE_DIAGNOSTICS[reason] ?? FAILURE_DIAGNOSTICS.unknown
+          return (
+            <>
+              <div className="task-drawer__diag-heading">{diag.heading}</div>
+              <div className="task-drawer__diag-suggestion">{diag.suggestion}</div>
+              {task.notes && (
+                <details className="task-drawer__diag-details">
+                  <summary>Error details</summary>
+                  <pre className="task-drawer__diag-notes">{task.notes}</pre>
+                </details>
+              )}
+              {(task as SprintTask & { partial_diff?: string }).partial_diff && (
+                <details className="task-drawer__diag-details">
+                  <summary>Partial work (diff)</summary>
+                  <pre className="task-drawer__diag-notes">
+                    {(task as SprintTask & { partial_diff?: string }).partial_diff}
+                  </pre>
+                </details>
+              )}
+            </>
+          )
+        })()}
+      </div>
+    )
+  }
   ```
 
 - [ ] **CSS** — add diagnostic styles to `src/renderer/src/styles/sprint-pipeline-neon.css`:
+
   ```css
   .task-drawer__diagnostics {
     margin: 8px 0;
@@ -613,18 +679,25 @@
 ### Step 5.1 — Watchdog Cost Check
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/watchdog.test.ts`:
-  Add tests for the new verdict:
+      Add tests for the new verdict:
   - Agent with `costUsd: 5.00`, `maxCostUsd: 3.00` => verdict `'cost-budget-exceeded'`
   - Agent with `costUsd: 1.00`, `maxCostUsd: 3.00` => verdict `'ok'`
   - Agent with `maxCostUsd: null` => cost check is skipped, verdict based on other checks
   - Agent with `maxCostUsd: 0` => immediately exceeded (edge case)
 
 - [ ] **WatchdogVerdict type** in `src/main/agent-manager/watchdog.ts` — update:
+
   ```ts
-  export type WatchdogVerdict = 'ok' | 'idle' | 'max-runtime' | 'rate-limit-loop' | 'cost-budget-exceeded'
+  export type WatchdogVerdict =
+    | 'ok'
+    | 'idle'
+    | 'max-runtime'
+    | 'rate-limit-loop'
+    | 'cost-budget-exceeded'
   ```
 
 - [ ] **checkAgent()** in `watchdog.ts` — add cost check before the return:
+
   ```ts
   export function checkAgent(
     agent: ActiveAgent,
@@ -641,6 +714,7 @@
   ```
 
 - [ ] **ActiveAgent** in `src/main/agent-manager/types.ts` — add:
+
   ```ts
   export interface ActiveAgent {
     // ... existing fields ...
@@ -651,6 +725,7 @@
 - [ ] **RunAgentTask** in `run-agent.ts` — add `max_cost_usd?: number | null`.
 
 - [ ] **run-agent.ts** — set `maxCostUsd` when creating the ActiveAgent record (~line 250):
+
   ```ts
   const agent: ActiveAgent = {
     // ... existing fields ...
@@ -658,7 +733,8 @@
   }
   ```
 
-- [ ] **_mapQueuedTask** in `index.ts` — add to the returned object:
+- [ ] **\_mapQueuedTask** in `index.ts` — add to the returned object:
+
   ```ts
   max_cost_usd: Number(raw.maxCostUsd) || null
   ```
@@ -668,14 +744,16 @@
 ### Step 5.2 — Handle Cost Budget Verdict
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/index.test.ts`:
-  Add test: call `handleWatchdogVerdict('cost-budget-exceeded', taskId, ...)`. Assert `updateTaskFn` is called with `status: 'error'` and notes mentioning cost budget.
+      Add test: call `handleWatchdogVerdict('cost-budget-exceeded', taskId, ...)`. Assert `updateTaskFn` is called with `status: 'error'` and notes mentioning cost budget.
 
 - [ ] **WatchdogVerdict type** in `src/main/agent-manager/index.ts` — update to include `'cost-budget-exceeded'`:
+
   ```ts
   export type WatchdogVerdict = 'max-runtime' | 'idle' | 'rate-limit-loop' | 'cost-budget-exceeded'
   ```
 
 - [ ] **handleWatchdogVerdict** in `index.ts` — add a new `else if` branch after `rate-limit-loop`:
+
   ```ts
   } else if (verdict === 'cost-budget-exceeded') {
     try {
@@ -701,7 +779,7 @@
 ### Step 5.3 — UI for Cost Budget
 
 - [ ] **Test first** — `src/renderer/src/components/task-workbench/__tests__/WorkbenchForm.test.tsx`:
-  Add test: render WorkbenchForm, open advanced section, assert cost budget input with placeholder "No limit" exists. Enter "5", assert store updates `maxCostUsd` to `5`.
+      Add test: render WorkbenchForm, open advanced section, assert cost budget input with placeholder "No limit" exists. Enter "5", assert store updates `maxCostUsd` to `5`.
 
 - [ ] **taskWorkbench store** — add `maxCostUsd: number | null` to `TaskWorkbenchState`:
   - In interface: `maxCostUsd: number | null`
@@ -710,6 +788,7 @@
   - (resetForm via defaults already handles it)
 
 - [ ] **WorkbenchForm.tsx** — read `maxCostUsd` from store and add input in advanced section, after the model dropdown:
+
   ```tsx
   const maxCostUsd = useTaskWorkbenchStore((s) => s.maxCostUsd)
 
@@ -746,27 +825,27 @@
 ### Step 6.1 — Capture Partial Diff
 
 - [ ] **Test first** — `src/main/agent-manager/__tests__/run-agent.test.ts`:
-  Add test: mock an agent that exits with failure, with `existsSync` returning true for the worktree. Assert `capturePartialDiff` is called and `repo.updateTask` receives `partial_diff` with diff content.
+      Add test: mock an agent that exits with failure, with `existsSync` returning true for the worktree. Assert `capturePartialDiff` is called and `repo.updateTask` receives `partial_diff` with diff content.
 
 - [ ] **New helper** in `src/main/agent-manager/run-agent.ts`:
+
   ```ts
   const MAX_PARTIAL_DIFF_SIZE = 50_000 // 50KB cap
 
-  async function capturePartialDiff(
-    worktreePath: string,
-    logger: Logger
-  ): Promise<string | null> {
+  async function capturePartialDiff(worktreePath: string, logger: Logger): Promise<string | null> {
     try {
-      const { stdout: diff } = await execFileAsync(
-        'git', ['diff', 'HEAD'],
-        { cwd: worktreePath, env: buildAgentEnv(), maxBuffer: 200 * 1024 }
-      )
+      const { stdout: diff } = await execFileAsync('git', ['diff', 'HEAD'], {
+        cwd: worktreePath,
+        env: buildAgentEnv(),
+        maxBuffer: 200 * 1024
+      })
       if (!diff.trim()) {
         // Also check for staged but uncommitted changes
-        const { stdout: stagedDiff } = await execFileAsync(
-          'git', ['diff', '--cached'],
-          { cwd: worktreePath, env: buildAgentEnv(), maxBuffer: 200 * 1024 }
-        )
+        const { stdout: stagedDiff } = await execFileAsync('git', ['diff', '--cached'], {
+          cwd: worktreePath,
+          env: buildAgentEnv(),
+          maxBuffer: 200 * 1024
+        })
         if (!stagedDiff.trim()) return null
         return stagedDiff.length > MAX_PARTIAL_DIFF_SIZE
           ? stagedDiff.slice(0, MAX_PARTIAL_DIFF_SIZE) + '\n... (truncated)'
@@ -783,6 +862,7 @@
   ```
 
   Note: `execFileAsync` and `buildAgentEnv` need to be imported at the top of `run-agent.ts` if not already available. The file already imports `readFile` and `stat` from `node:fs/promises`, so add:
+
   ```ts
   import { execFile as execFileCb } from 'node:child_process'
   import { promisify } from 'node:util'
@@ -791,8 +871,8 @@
   ```
 
 - [ ] **Integrate** — before every `cleanupWorktree()` call in failure paths, capture the diff. The key locations in `run-agent.ts`:
-
   1. **After fast-fail-exhausted** (~line 430-442): Before the worktree cleanup at the bottom of `runAgent`:
+
      ```ts
      // Before cleanupWorktree for non-review tasks
      if (currentTask?.status !== 'review') {
@@ -811,6 +891,7 @@
      Same pattern as above — the cleanup happens at the end of `runAgent`, so the single capture point before cleanup covers all failure paths.
 
   The cleanest approach: move the partial diff capture to the single `cleanupWorktree` block at the end of `runAgent()`, right before the `cleanupWorktree` call for non-review tasks:
+
   ```ts
   if (currentTask?.status !== 'review') {
     // Capture partial diff for failed/error tasks before cleanup

@@ -47,7 +47,7 @@ it('migration v24 adds assigned_reviewer column', () => {
   // Create DB at v23, run migrations, verify column exists
   const db = createTestDb(23)
   runMigrations(db)
-  const cols = db.pragma('table_info(sprint_tasks)').map(c => c.name)
+  const cols = db.pragma('table_info(sprint_tasks)').map((c) => c.name)
   expect(cols).toContain('assigned_reviewer')
 })
 
@@ -112,9 +112,8 @@ const [filter, setFilter] = useState<'all' | 'mine'>('all')
 const reviewerName = useSettingsStore((s) => s.reviewerName) ?? 'me'
 
 // Filter logic (after existing .filter)
-const filtered = filter === 'mine'
-  ? reviewTasks.filter(t => t.assigned_reviewer === reviewerName)
-  : reviewTasks
+const filtered =
+  filter === 'mine' ? reviewTasks.filter((t) => t.assigned_reviewer === reviewerName) : reviewTasks
 ```
 
 Add two tab buttons at the top:
@@ -131,7 +130,7 @@ Add two tab buttons at the top:
     className={`cr-queue__filter-btn${filter === 'mine' ? ' cr-queue__filter-btn--active' : ''}`}
     onClick={() => setFilter('mine')}
   >
-    Mine ({reviewTasks.filter(t => t.assigned_reviewer === reviewerName).length})
+    Mine ({reviewTasks.filter((t) => t.assigned_reviewer === reviewerName).length})
   </button>
 </div>
 ```
@@ -139,9 +138,15 @@ Add two tab buttons at the top:
 **Tests** (`src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx`):
 
 ```ts
-it('shows all review tasks by default', () => { /* ... */ })
-it('filters to "mine" when My Reviews clicked', () => { /* ... */ })
-it('shows correct counts in filter tabs', () => { /* ... */ })
+it('shows all review tasks by default', () => {
+  /* ... */
+})
+it('filters to "mine" when My Reviews clicked', () => {
+  /* ... */
+})
+it('shows correct counts in filter tabs', () => {
+  /* ... */
+})
 ```
 
 ### 1.6 Renderer — TaskDetailDrawer Reviewer Dropdown
@@ -156,9 +161,11 @@ Add a reviewer assignment dropdown in the drawer body, after the Priority field:
   <select
     className="task-drawer__select"
     value={task.assigned_reviewer ?? ''}
-    onChange={(e) => updateTask(task.id, {
-      assigned_reviewer: e.target.value || null
-    })}
+    onChange={(e) =>
+      updateTask(task.id, {
+        assigned_reviewer: e.target.value || null
+      })
+    }
   >
     <option value="">Unassigned</option>
     <option value="me">Assign to me</option>
@@ -175,17 +182,19 @@ For solo devs, "Assign to me" is the primary action. The dropdown can be extende
 Add a "Claim for Review" button that appears when `assigned_reviewer` is null and sets it to the local reviewer name:
 
 ```tsx
-{!task.assigned_reviewer && (
-  <button
-    className="cr-actions__btn cr-actions__btn--ghost"
-    onClick={async () => {
-      await window.api.sprint.update(task.id, { assigned_reviewer: reviewerName })
-      loadData()
-    }}
-  >
-    <UserCheck size={14} /> Claim for Review
-  </button>
-)}
+{
+  !task.assigned_reviewer && (
+    <button
+      className="cr-actions__btn cr-actions__btn--ghost"
+      onClick={async () => {
+        await window.api.sprint.update(task.id, { assigned_reviewer: reviewerName })
+        loadData()
+      }}
+    >
+      <UserCheck size={14} /> Claim for Review
+    </button>
+  )
+}
 ```
 
 ### 1.8 WorkbenchForm Reviewer Field
@@ -196,7 +205,9 @@ Add reviewer dropdown inside the `advancedOpen` section, after the playground ch
 
 ```tsx
 <div className="wb-form__field wb-form__field--flex">
-  <label htmlFor="wb-form-reviewer" className="wb-form__label">Reviewer</label>
+  <label htmlFor="wb-form-reviewer" className="wb-form__label">
+    Reviewer
+  </label>
   <select
     id="wb-form-reviewer"
     value={assignedReviewer ?? ''}
@@ -266,13 +277,13 @@ it('migration v25 creates sprints table', () => {
   const db = createTestDb(24)
   runMigrations(db)
   const tables = db.prepare("SELECT name FROM sqlite_master WHERE type='table'").all()
-  expect(tables.map(t => t.name)).toContain('sprints')
+  expect(tables.map((t) => t.name)).toContain('sprints')
 })
 
 it('migration v25 adds sprint_id to sprint_tasks', () => {
   const db = createTestDb(24)
   runMigrations(db)
-  const cols = db.pragma('table_info(sprint_tasks)').map(c => c.name)
+  const cols = db.pragma('table_info(sprint_tasks)').map((c) => c.name)
   expect(cols).toContain('sprint_id')
 })
 ```
@@ -319,10 +330,12 @@ export interface CreateSprintInput {
 
 export function createSprint(input: CreateSprintInput): Sprint | null {
   const db = getDb()
-  return db.prepare(
-    `INSERT INTO sprints (name, goal, start_date, end_date)
+  return db
+    .prepare(
+      `INSERT INTO sprints (name, goal, start_date, end_date)
      VALUES (?, ?, ?, ?) RETURNING *`
-  ).get(input.name, input.goal ?? null, input.start_date, input.end_date) as Sprint | null
+    )
+    .get(input.name, input.goal ?? null, input.start_date, input.end_date) as Sprint | null
 }
 
 export function listSprints(): Sprint[] {
@@ -346,9 +359,9 @@ export function updateSprint(id: string, patch: Partial<Sprint>): Sprint | null 
   const setClauses = entries.map(([k]) => `${k} = ?`).join(', ')
   const values = [...entries.map(([, v]) => v), id]
 
-  return getDb().prepare(
-    `UPDATE sprints SET ${setClauses} WHERE id = ? RETURNING *`
-  ).get(...values) as Sprint | null
+  return getDb()
+    .prepare(`UPDATE sprints SET ${setClauses} WHERE id = ? RETURNING *`)
+    .get(...values) as Sprint | null
 }
 
 export function deleteSprint(id: string): void {
@@ -368,9 +381,9 @@ export function getSprintBurndown(
   if (!sprint) return []
 
   // Get all tasks in this sprint
-  const tasks = db.prepare(
-    'SELECT status, completed_at, created_at FROM sprint_tasks WHERE sprint_id = ?'
-  ).all(sprintId) as Array<{ status: string; completed_at: string | null; created_at: string }>
+  const tasks = db
+    .prepare('SELECT status, completed_at, created_at FROM sprint_tasks WHERE sprint_id = ?')
+    .all(sprintId) as Array<{ status: string; completed_at: string | null; created_at: string }>
 
   // Build daily burn-down from start_date to end_date (or today, whichever is earlier)
   const start = new Date(sprint.start_date)
@@ -380,9 +393,9 @@ export function getSprintBurndown(
   for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
     const dateStr = d.toISOString().slice(0, 10)
     const completedByDate = tasks.filter(
-      t => t.completed_at && t.completed_at.slice(0, 10) <= dateStr && t.status === 'done'
+      (t) => t.completed_at && t.completed_at.slice(0, 10) <= dateStr && t.status === 'done'
     ).length
-    const totalByDate = tasks.filter(t => t.created_at.slice(0, 10) <= dateStr).length
+    const totalByDate = tasks.filter((t) => t.created_at.slice(0, 10) <= dateStr).length
     points.push({
       date: dateStr,
       remaining: totalByDate - completedByDate,
@@ -398,11 +411,21 @@ export function getSprintBurndown(
 
 ```ts
 describe('sprint-plan-queries', () => {
-  it('createSprint returns sprint with id', () => { /* ... */ })
-  it('listSprints returns sorted by start_date desc', () => { /* ... */ })
-  it('updateSprint changes name', () => { /* ... */ })
-  it('deleteSprint unlinks tasks', () => { /* ... */ })
-  it('getSprintBurndown returns daily points', () => { /* ... */ })
+  it('createSprint returns sprint with id', () => {
+    /* ... */
+  })
+  it('listSprints returns sorted by start_date desc', () => {
+    /* ... */
+  })
+  it('updateSprint changes name', () => {
+    /* ... */
+  })
+  it('deleteSprint unlinks tasks', () => {
+    /* ... */
+  })
+  it('getSprintBurndown returns daily points', () => {
+    /* ... */
+  })
 })
 ```
 
@@ -413,7 +436,12 @@ describe('sprint-plan-queries', () => {
 ```ts
 import { safeHandle } from '../ipc-utils'
 import {
-  createSprint, listSprints, getSprint, updateSprint, deleteSprint, getSprintBurndown
+  createSprint,
+  listSprints,
+  getSprint,
+  updateSprint,
+  deleteSprint,
+  getSprintBurndown
 } from '../data/sprint-plan-queries'
 
 export function registerSprintPlanHandlers(): void {
@@ -465,14 +493,16 @@ interface PipelineHeaderProps {
 }
 
 // In JSX, before stats:
-<select
+;<select
   className="sprint-pipeline__sprint-selector"
   value={activeSprintId ?? ''}
   onChange={(e) => onSprintChange(e.target.value || null)}
 >
   <option value="">All Tasks</option>
-  {sprints.map(s => (
-    <option key={s.id} value={s.id}>{s.name}</option>
+  {sprints.map((s) => (
+    <option key={s.id} value={s.id}>
+      {s.name}
+    </option>
   ))}
 </select>
 ```
@@ -494,7 +524,10 @@ interface SprintPlanState {
   loadSprints: () => Promise<void>
   setActiveSprintId: (id: string | null) => void
   createSprint: (input: {
-    name: string; goal?: string; start_date: string; end_date: string
+    name: string
+    goal?: string
+    start_date: string
+    end_date: string
   }) => Promise<void>
 }
 
@@ -531,14 +564,16 @@ Add a burn-down card when an active sprint exists. Uses existing `MiniChart` com
 
 ```tsx
 // In ActivitySection or CenterColumn:
-{activeSprintId && (
-  <NeonCard accent="cyan" title={`Sprint: ${activeSprint?.name}`}>
-    <MiniChart data={burndownData} />
-    <div className="dashboard-sprint__dates">
-      {activeSprint?.start_date} — {activeSprint?.end_date}
-    </div>
-  </NeonCard>
-)}
+{
+  activeSprintId && (
+    <NeonCard accent="cyan" title={`Sprint: ${activeSprint?.name}`}>
+      <MiniChart data={burndownData} />
+      <div className="dashboard-sprint__dates">
+        {activeSprint?.start_date} — {activeSprint?.end_date}
+      </div>
+    </NeonCard>
+  )
+}
 ```
 
 **Effort:** ~2-3 days
@@ -622,10 +657,10 @@ interface WebhookPayload {
 }
 
 function getEnabledWebhooks(): Webhook[] {
-  const rows = getDb()
-    .prepare('SELECT * FROM webhooks WHERE enabled = 1')
-    .all() as Array<Record<string, unknown>>
-  return rows.map(r => ({
+  const rows = getDb().prepare('SELECT * FROM webhooks WHERE enabled = 1').all() as Array<
+    Record<string, unknown>
+  >
+  return rows.map((r) => ({
     ...r,
     events: JSON.parse(r.events as string) as WebhookEventType[],
     enabled: !!r.enabled
@@ -641,7 +676,7 @@ export async function fireWebhook(
   data: Record<string, unknown>
 ): Promise<void> {
   const webhooks = getEnabledWebhooks()
-  const matching = webhooks.filter(w => w.events.includes(event))
+  const matching = webhooks.filter((w) => w.events.includes(event))
   if (matching.length === 0) return
 
   const payload: WebhookPayload = {
@@ -667,10 +702,10 @@ export async function fireWebhook(
       body,
       signal: AbortSignal.timeout(10_000)
     })
-      .then(res => {
+      .then((res) => {
         if (!res.ok) logger.warn(`[webhook] ${webhook.url} returned ${res.status}`)
       })
-      .catch(err => {
+      .catch((err) => {
         logger.warn(`[webhook] Failed to deliver to ${webhook.url}: ${err}`)
       })
   }
@@ -678,10 +713,10 @@ export async function fireWebhook(
 
 // CRUD for webhook configuration
 export function listWebhooks(): Webhook[] {
-  const rows = getDb()
-    .prepare('SELECT * FROM webhooks ORDER BY created_at DESC')
-    .all() as Array<Record<string, unknown>>
-  return rows.map(r => ({
+  const rows = getDb().prepare('SELECT * FROM webhooks ORDER BY created_at DESC').all() as Array<
+    Record<string, unknown>
+  >
+  return rows.map((r) => ({
     ...r,
     events: JSON.parse(r.events as string),
     enabled: !!r.enabled
@@ -693,11 +728,9 @@ export function createWebhook(input: {
   events: WebhookEventType[]
   secret?: string
 }): Webhook {
-  const row = getDb().prepare(
-    'INSERT INTO webhooks (url, events, secret) VALUES (?, ?, ?) RETURNING *'
-  ).get(
-    input.url, JSON.stringify(input.events), input.secret ?? null
-  ) as Record<string, unknown>
+  const row = getDb()
+    .prepare('INSERT INTO webhooks (url, events, secret) VALUES (?, ?, ?) RETURNING *')
+    .get(input.url, JSON.stringify(input.events), input.secret ?? null) as Record<string, unknown>
   return { ...row, events: input.events, enabled: true } as Webhook
 }
 
@@ -714,9 +747,9 @@ export function updateWebhook(id: string, patch: Partial<Webhook>): Webhook | nu
   })
   values.push(id)
 
-  const row = getDb().prepare(
-    `UPDATE webhooks SET ${setClauses} WHERE id = ? RETURNING *`
-  ).get(...values) as Record<string, unknown> | undefined
+  const row = getDb()
+    .prepare(`UPDATE webhooks SET ${setClauses} WHERE id = ? RETURNING *`)
+    .get(...values) as Record<string, unknown> | undefined
   if (!row) return null
   return {
     ...row,
@@ -734,11 +767,21 @@ export function deleteWebhook(id: string): void {
 
 ```ts
 describe('webhook-service', () => {
-  it('fireWebhook sends POST to matching webhooks', async () => { /* mock fetch */ })
-  it('fireWebhook skips non-matching event types', async () => { /* ... */ })
-  it('fireWebhook includes HMAC signature when secret set', async () => { /* ... */ })
-  it('fireWebhook does not throw on network error', async () => { /* ... */ })
-  it('CRUD: create, list, update, delete webhooks', () => { /* ... */ })
+  it('fireWebhook sends POST to matching webhooks', async () => {
+    /* mock fetch */
+  })
+  it('fireWebhook skips non-matching event types', async () => {
+    /* ... */
+  })
+  it('fireWebhook includes HMAC signature when secret set', async () => {
+    /* ... */
+  })
+  it('fireWebhook does not throw on network error', async () => {
+    /* ... */
+  })
+  it('CRUD: create, list, update, delete webhooks', () => {
+    /* ... */
+  })
 })
 ```
 
@@ -751,10 +794,7 @@ Import and call `fireWebhook` inside `notifySprintMutation()`:
 ```ts
 import { fireWebhook } from '../services/webhook-service'
 
-export function notifySprintMutation(
-  type: SprintMutationEvent['type'],
-  task: SprintTask
-): void {
+export function notifySprintMutation(type: SprintMutationEvent['type'], task: SprintTask): void {
   // ...existing listener + BrowserWindow code...
 
   // Fire webhooks (async, non-blocking)
@@ -770,7 +810,9 @@ export function notifySprintMutation(
       title: task.title,
       status: task.status,
       repo: task.repo
-    }).catch(() => { /* already logged inside fireWebhook */ })
+    }).catch(() => {
+      /* already logged inside fireWebhook */
+    })
   }
 }
 ```
@@ -786,7 +828,11 @@ Wire `fireWebhook('review:merged', ...)` and `fireWebhook('review:discarded', ..
 ```ts
 import { safeHandle } from '../ipc-utils'
 import {
-  listWebhooks, createWebhook, updateWebhook, deleteWebhook, fireWebhook
+  listWebhooks,
+  createWebhook,
+  updateWebhook,
+  deleteWebhook,
+  fireWebhook
 } from '../services/webhook-service'
 
 export function registerWebhookHandlers(): void {
@@ -917,8 +963,7 @@ export async function loadPlugins(repo: ISprintTaskRepository): Promise<void> {
     try {
       // Dynamic require for CJS plugins
       const mod = require(pluginPath) as { default?: BDEPlugin } | BDEPlugin
-      const plugin: BDEPlugin =
-        'default' in mod && mod.default ? mod.default : (mod as BDEPlugin)
+      const plugin: BDEPlugin = 'default' in mod && mod.default ? mod.default : (mod as BDEPlugin)
 
       if (!plugin.name || !plugin.version) {
         logger.warn(`[plugins] Skipping ${entry.name}: missing name or version`)
@@ -949,9 +994,7 @@ export async function unloadPlugins(): Promise<void> {
 }
 
 /** Run onBeforeTaskCreate hooks. Returns false if any plugin blocks creation. */
-export async function runBeforeTaskCreate(
-  task: Partial<unknown>
-): Promise<boolean> {
+export async function runBeforeTaskCreate(task: Partial<unknown>): Promise<boolean> {
   for (const [, { plugin }] of loadedPlugins) {
     if (plugin.onBeforeTaskCreate) {
       const result = await plugin.onBeforeTaskCreate(task as never)
@@ -976,10 +1019,7 @@ export async function runAgentComplete(
 }
 
 /** Run onBeforeMerge hooks. Returns false if any plugin blocks. */
-export async function runBeforeMerge(
-  taskId: string,
-  strategy: string
-): Promise<boolean> {
+export async function runBeforeMerge(taskId: string, strategy: string): Promise<boolean> {
   for (const [, { plugin }] of loadedPlugins) {
     if (plugin.onBeforeMerge) {
       const result = await plugin.onBeforeMerge(taskId, strategy)
@@ -1018,7 +1058,7 @@ import { getLoadedPluginInfo, getPluginCommands } from '../plugin-loader'
 export function registerPluginHandlers(): void {
   safeHandle('plugin:list', () => getLoadedPluginInfo())
   safeHandle('plugin:commands', () =>
-    getPluginCommands().map(c => ({
+    getPluginCommands().map((c) => ({
       id: c.id,
       label: c.label,
       description: c.description
@@ -1026,7 +1066,7 @@ export function registerPluginHandlers(): void {
   )
   safeHandle('plugin:executeCommand', async (_e, commandId: string) => {
     const commands = getPluginCommands()
-    const cmd = commands.find(c => c.id === commandId)
+    const cmd = commands.find((c) => c.id === commandId)
     if (!cmd) throw new Error(`Plugin command not found: ${commandId}`)
     await cmd.execute()
     return { ok: true }
@@ -1099,15 +1139,33 @@ const pluginCommands = await window.api.plugin.commands()
 
 ```ts
 describe('plugin-loader', () => {
-  it('loadPlugins loads valid plugin from directory', async () => { /* ... */ })
-  it('loadPlugins skips directory without index.js', async () => { /* ... */ })
-  it('loadPlugins skips plugin without name/version', async () => { /* ... */ })
-  it('runBeforeTaskCreate returns true when no plugins loaded', async () => { /* ... */ })
-  it('runBeforeTaskCreate returns false when plugin blocks', async () => { /* ... */ })
-  it('runAgentComplete calls all plugins without throwing', async () => { /* ... */ })
-  it('runBeforeMerge returns false when plugin blocks', async () => { /* ... */ })
-  it('getPluginCommands aggregates from all plugins', () => { /* ... */ })
-  it('unloadPlugins calls deactivate on all', async () => { /* ... */ })
+  it('loadPlugins loads valid plugin from directory', async () => {
+    /* ... */
+  })
+  it('loadPlugins skips directory without index.js', async () => {
+    /* ... */
+  })
+  it('loadPlugins skips plugin without name/version', async () => {
+    /* ... */
+  })
+  it('runBeforeTaskCreate returns true when no plugins loaded', async () => {
+    /* ... */
+  })
+  it('runBeforeTaskCreate returns false when plugin blocks', async () => {
+    /* ... */
+  })
+  it('runAgentComplete calls all plugins without throwing', async () => {
+    /* ... */
+  })
+  it('runBeforeMerge returns false when plugin blocks', async () => {
+    /* ... */
+  })
+  it('getPluginCommands aggregates from all plugins', () => {
+    /* ... */
+  })
+  it('unloadPlugins calls deactivate on all', async () => {
+    /* ... */
+  })
 })
 ```
 
@@ -1117,12 +1175,12 @@ describe('plugin-loader', () => {
 
 ## Implementation Order
 
-| Phase | Feature | Days | Deps |
-|-------|---------|------|------|
-| 1 | Reviewer Assignment | 1 | None |
-| 2 | Webhook/Event Push | 2 | None (but benefits from reviewer) |
-| 3 | Sprint Planning Module | 2-3 | None |
-| 4 | Plugin System Foundation | 2-3 | Completion handler knowledge |
+| Phase | Feature                  | Days | Deps                              |
+| ----- | ------------------------ | ---- | --------------------------------- |
+| 1     | Reviewer Assignment      | 1    | None                              |
+| 2     | Webhook/Event Push       | 2    | None (but benefits from reviewer) |
+| 3     | Sprint Planning Module   | 2-3  | None                              |
+| 4     | Plugin System Foundation | 2-3  | Completion handler knowledge      |
 
 Phases 1 and 2 can run in parallel. Phase 3 and 4 can run in parallel.
 
@@ -1140,28 +1198,28 @@ npm run lint        # Zero errors
 
 ## Files Modified (Summary)
 
-| File | Change |
-|------|--------|
-| `src/main/db.ts` | Migrations v24, v25, v26 |
-| `src/shared/types.ts` | `Sprint`, `Webhook`, `WebhookEventType`, fields on `SprintTask` |
-| `src/shared/ipc-channels.ts` | ~14 new channels |
-| `src/main/data/sprint-queries.ts` | `assigned_reviewer`, `sprint_id` in allowlist |
-| `src/main/handlers/sprint-listeners.ts` | Wire webhook firing |
-| `src/main/index.ts` | Register 3 new handler modules, plugin init |
-| `src/preload/index.ts` + `.d.ts` | New preload bridge namespaces |
-| `src/renderer/src/components/code-review/ReviewQueue.tsx` | Filter tabs |
-| `src/renderer/src/components/code-review/ReviewActions.tsx` | Claim button |
-| `src/renderer/src/components/sprint/TaskDetailDrawer.tsx` | Reviewer dropdown |
-| `src/renderer/src/components/sprint/PipelineHeader.tsx` | Sprint selector |
-| `src/renderer/src/components/task-workbench/WorkbenchForm.tsx` | Reviewer field |
-| `src/renderer/src/views/DashboardView.tsx` | Burn-down card |
-| **New files** | |
-| `src/main/data/sprint-plan-queries.ts` | Sprint CRUD + burndown |
-| `src/main/handlers/sprint-plan-handlers.ts` | Sprint IPC |
-| `src/main/handlers/webhook-handlers.ts` | Webhook IPC |
-| `src/main/services/webhook-service.ts` | Webhook delivery + CRUD |
-| `src/main/plugin-loader.ts` | Plugin lifecycle |
-| `src/main/handlers/plugin-handlers.ts` | Plugin IPC |
-| `src/shared/plugin-types.ts` | Plugin interface |
-| `src/renderer/src/stores/sprintPlan.ts` | Sprint Zustand store |
-| `src/renderer/src/components/settings/WebhookSettings.tsx` | Webhook config UI |
+| File                                                           | Change                                                          |
+| -------------------------------------------------------------- | --------------------------------------------------------------- |
+| `src/main/db.ts`                                               | Migrations v24, v25, v26                                        |
+| `src/shared/types.ts`                                          | `Sprint`, `Webhook`, `WebhookEventType`, fields on `SprintTask` |
+| `src/shared/ipc-channels.ts`                                   | ~14 new channels                                                |
+| `src/main/data/sprint-queries.ts`                              | `assigned_reviewer`, `sprint_id` in allowlist                   |
+| `src/main/handlers/sprint-listeners.ts`                        | Wire webhook firing                                             |
+| `src/main/index.ts`                                            | Register 3 new handler modules, plugin init                     |
+| `src/preload/index.ts` + `.d.ts`                               | New preload bridge namespaces                                   |
+| `src/renderer/src/components/code-review/ReviewQueue.tsx`      | Filter tabs                                                     |
+| `src/renderer/src/components/code-review/ReviewActions.tsx`    | Claim button                                                    |
+| `src/renderer/src/components/sprint/TaskDetailDrawer.tsx`      | Reviewer dropdown                                               |
+| `src/renderer/src/components/sprint/PipelineHeader.tsx`        | Sprint selector                                                 |
+| `src/renderer/src/components/task-workbench/WorkbenchForm.tsx` | Reviewer field                                                  |
+| `src/renderer/src/views/DashboardView.tsx`                     | Burn-down card                                                  |
+| **New files**                                                  |                                                                 |
+| `src/main/data/sprint-plan-queries.ts`                         | Sprint CRUD + burndown                                          |
+| `src/main/handlers/sprint-plan-handlers.ts`                    | Sprint IPC                                                      |
+| `src/main/handlers/webhook-handlers.ts`                        | Webhook IPC                                                     |
+| `src/main/services/webhook-service.ts`                         | Webhook delivery + CRUD                                         |
+| `src/main/plugin-loader.ts`                                    | Plugin lifecycle                                                |
+| `src/main/handlers/plugin-handlers.ts`                         | Plugin IPC                                                      |
+| `src/shared/plugin-types.ts`                                   | Plugin interface                                                |
+| `src/renderer/src/stores/sprintPlan.ts`                        | Sprint Zustand store                                            |
+| `src/renderer/src/components/settings/WebhookSettings.tsx`     | Webhook config UI                                               |

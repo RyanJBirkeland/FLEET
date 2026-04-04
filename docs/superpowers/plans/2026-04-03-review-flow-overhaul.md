@@ -15,6 +15,7 @@
 ### Task 1: Fix ConversationTab — Show Agent Conversation
 
 **Files:**
+
 - Modify: `src/renderer/src/components/code-review/ConversationTab.tsx`
 - Modify: `src/renderer/src/components/code-review/__tests__/ConversationTab.test.tsx`
 - Modify: `src/renderer/src/assets/code-review-neon.css`
@@ -49,7 +50,9 @@ const { agentEventsState } = vi.hoisted(() => ({
 }))
 
 vi.mock('../../../stores/agentEvents', () => ({
-  useAgentEventsStore: vi.fn((sel: (s: Record<string, unknown>) => unknown) => sel(agentEventsState))
+  useAgentEventsStore: vi.fn((sel: (s: Record<string, unknown>) => unknown) =>
+    sel(agentEventsState)
+  )
 }))
 
 vi.mock('../../../stores/codeReview', () => {
@@ -102,9 +105,7 @@ describe('ConversationTab', () => {
       { id: 't1', title: 'Task', spec: null, notes: null, agent_run_id: 'run-1' }
     ]
     agentEventsState.events = {
-      'run-1': [
-        { type: 'agent:text', text: 'I will fix the bug now.', timestamp: 1000 }
-      ]
+      'run-1': [{ type: 'agent:text', text: 'I will fix the bug now.', timestamp: 1000 }]
     }
     useCodeReviewStore.setState({ selectedTaskId: 't1' })
     render(<ConversationTab />)
@@ -131,9 +132,7 @@ describe('ConversationTab', () => {
       { id: 't1', title: 'Task', spec: null, notes: null, agent_run_id: 'run-1' }
     ]
     agentEventsState.events = {
-      'run-1': [
-        { type: 'agent:error', message: 'Build failed with exit code 1', timestamp: 3000 }
-      ]
+      'run-1': [{ type: 'agent:error', message: 'Build failed with exit code 1', timestamp: 3000 }]
     }
     useCodeReviewStore.setState({ selectedTaskId: 't1' })
     render(<ConversationTab />)
@@ -146,7 +145,15 @@ describe('ConversationTab', () => {
     ]
     agentEventsState.events = {
       'run-1': [
-        { type: 'agent:completed', exitCode: 0, costUsd: 0.42, tokensIn: 1000, tokensOut: 500, durationMs: 60000, timestamp: 4000 }
+        {
+          type: 'agent:completed',
+          exitCode: 0,
+          costUsd: 0.42,
+          tokensIn: 1000,
+          tokensOut: 500,
+          durationMs: 60000,
+          timestamp: 4000
+        }
       ]
     }
     useCodeReviewStore.setState({ selectedTaskId: 't1' })
@@ -167,7 +174,7 @@ describe('ConversationTab', () => {
 ```
 
 - [ ] **Step 2: Run tests — expect failures**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ConversationTab.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ConversationTab.test.tsx`
 
 - [ ] **Step 3: Implement ConversationTab**
 
@@ -209,7 +216,9 @@ function EventItem({ event }: { event: AgentEvent }): React.JSX.Element {
       )
     case 'agent:tool_result':
       return (
-        <div className={`cr-event cr-event--result ${event.success ? '' : 'cr-event--result-fail'}`}>
+        <div
+          className={`cr-event cr-event--result ${event.success ? '' : 'cr-event--result-fail'}`}
+        >
           <Terminal size={12} className="cr-event__icon" />
           <div className="cr-event__body">
             <span className="cr-event__time">{time}</span>
@@ -245,7 +254,8 @@ function EventItem({ event }: { event: AgentEvent }): React.JSX.Element {
           <div className="cr-event__body">
             <span className="cr-event__time">{time}</span>
             <span className="cr-event__summary">
-              Completed (exit {event.exitCode}) — ${event.costUsd.toFixed(2)} · {Math.round(event.durationMs / 1000)}s
+              Completed (exit {event.exitCode}) — ${event.costUsd.toFixed(2)} ·{' '}
+              {Math.round(event.durationMs / 1000)}s
             </span>
           </div>
         </div>
@@ -263,7 +273,7 @@ export function ConversationTab(): React.JSX.Element {
   const task = tasks.find((t) => t.id === selectedTaskId)
 
   const agentRunId = task?.agent_run_id ?? null
-  const agentEvents = agentRunId ? events[agentRunId] ?? null : null
+  const agentEvents = agentRunId ? (events[agentRunId] ?? null) : null
 
   useEffect(() => {
     if (agentRunId) {
@@ -342,13 +352,27 @@ Append to `src/renderer/src/assets/code-review-neon.css`:
   color: var(--neon-text-dim);
 }
 
-.cr-event--text .cr-event__icon { color: var(--neon-blue); }
-.cr-event--tool .cr-event__icon { color: var(--neon-purple); }
-.cr-event--result .cr-event__icon { color: var(--neon-cyan); }
-.cr-event--result-fail .cr-event__icon { color: var(--neon-red); }
-.cr-event--thinking .cr-event__icon { color: var(--neon-text-dim); }
-.cr-event--error .cr-event__icon { color: var(--neon-red); }
-.cr-event--completed .cr-event__icon { color: var(--neon-cyan); }
+.cr-event--text .cr-event__icon {
+  color: var(--neon-blue);
+}
+.cr-event--tool .cr-event__icon {
+  color: var(--neon-purple);
+}
+.cr-event--result .cr-event__icon {
+  color: var(--neon-cyan);
+}
+.cr-event--result-fail .cr-event__icon {
+  color: var(--neon-red);
+}
+.cr-event--thinking .cr-event__icon {
+  color: var(--neon-text-dim);
+}
+.cr-event--error .cr-event__icon {
+  color: var(--neon-red);
+}
+.cr-event--completed .cr-event__icon {
+  color: var(--neon-cyan);
+}
 
 .cr-event__body {
   display: flex;
@@ -391,12 +415,13 @@ Append to `src/renderer/src/assets/code-review-neon.css`:
 ```
 
 - [ ] **Step 5: Run tests — expect pass**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ConversationTab.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ConversationTab.test.tsx`
 
 - [ ] **Step 6: Run full suite + typecheck**
-Run: `cd ~/projects/BDE && npm run typecheck && npm test`
+      Run: `cd ~/projects/BDE && npm run typecheck && npm test`
 
 - [ ] **Step 7: Commit**
+
 ```
 fix(code-review): show agent conversation events instead of spec in ConversationTab
 ```
@@ -406,6 +431,7 @@ fix(code-review): show agent conversation events instead of spec in Conversation
 ### Task 2: Merge & Push in One Click — "Ship It" Button
 
 **Files:**
+
 - Modify: `src/renderer/src/components/code-review/ReviewActions.tsx`
 - Modify: `src/renderer/src/components/code-review/__tests__/ReviewActions.test.tsx`
 - Modify: `src/main/handlers/review.ts`
@@ -439,11 +465,10 @@ safeHandle('review:shipIt', async (_e, payload) => {
   if (!task.worktree_path) throw new Error(`Task ${taskId} has no worktree path`)
 
   // Get branch name from the worktree
-  const { stdout: branchName } = await execFileAsync(
-    'git',
-    ['rev-parse', '--abbrev-ref', 'HEAD'],
-    { cwd: task.worktree_path, env }
-  )
+  const { stdout: branchName } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: task.worktree_path,
+    env
+  })
   const branch = branchName.trim()
 
   // Resolve repo local path
@@ -453,7 +478,8 @@ safeHandle('review:shipIt', async (_e, payload) => {
 
   // Verify clean working tree
   const { stdout: statusOut } = await execFileAsync('git', ['status', '--porcelain'], {
-    cwd: repoPath, env
+    cwd: repoPath,
+    env
   })
   if (statusOut.trim()) {
     return { success: false, error: 'Working tree has uncommitted changes. Commit or stash first.' }
@@ -464,16 +490,27 @@ safeHandle('review:shipIt', async (_e, payload) => {
     if (strategy === 'squash') {
       await execFileAsync('git', ['merge', '--squash', branch], { cwd: repoPath, env })
       try {
-        await execFileAsync('git', ['commit', '-m', `${task.title} (#${taskId})`], { cwd: repoPath, env })
+        await execFileAsync('git', ['commit', '-m', `${task.title} (#${taskId})`], {
+          cwd: repoPath,
+          env
+        })
       } catch (commitErr) {
-        try { await execFileAsync('git', ['reset', 'HEAD'], { cwd: repoPath, env }) } catch { /* */ }
+        try {
+          await execFileAsync('git', ['reset', 'HEAD'], { cwd: repoPath, env })
+        } catch {
+          /* */
+        }
         throw commitErr
       }
     } else if (strategy === 'rebase') {
       await execFileAsync('git', ['rebase', 'HEAD', branch], { cwd: repoPath, env })
       await execFileAsync('git', ['merge', '--ff-only', branch], { cwd: repoPath, env })
     } else {
-      await execFileAsync('git', ['merge', '--no-ff', branch, '-m', `Merge: ${task.title} (#${taskId})`], { cwd: repoPath, env })
+      await execFileAsync(
+        'git',
+        ['merge', '--no-ff', branch, '-m', `Merge: ${task.title} (#${taskId})`],
+        { cwd: repoPath, env }
+      )
     }
   } catch (err) {
     // Abort failed merge/rebase
@@ -483,7 +520,9 @@ safeHandle('review:shipIt', async (_e, payload) => {
       } else {
         await execFileAsync('git', ['merge', '--abort'], { cwd: repoPath, env })
       }
-    } catch { /* best-effort */ }
+    } catch {
+      /* best-effort */
+    }
     return { success: false, error: err instanceof Error ? err.message : String(err) }
   }
 
@@ -499,11 +538,18 @@ safeHandle('review:shipIt', async (_e, payload) => {
 
   // Clean up worktree + branch
   try {
-    await execFileAsync('git', ['worktree', 'remove', task.worktree_path, '--force'], { cwd: repoPath, env })
-  } catch { /* best-effort */ }
+    await execFileAsync('git', ['worktree', 'remove', task.worktree_path, '--force'], {
+      cwd: repoPath,
+      env
+    })
+  } catch {
+    /* best-effort */
+  }
   try {
     await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env })
-  } catch { /* best-effort */ }
+  } catch {
+    /* best-effort */
+  }
 
   // Mark task done
   const updated = _updateTask(taskId, {
@@ -538,7 +584,13 @@ Add to `src/renderer/src/components/code-review/__tests__/ReviewActions.test.tsx
 ```tsx
 it('shows Ship It button when review task selected', () => {
   sprintState.tasks = [
-    { id: 't1', title: 'Review task', repo: 'bde', status: 'review', updated_at: '2026-04-01T00:00:00Z' }
+    {
+      id: 't1',
+      title: 'Review task',
+      repo: 'bde',
+      status: 'review',
+      updated_at: '2026-04-01T00:00:00Z'
+    }
   ]
   useCodeReviewStore.setState({ selectedTaskId: 't1' })
   render(<ReviewActions />)
@@ -547,7 +599,13 @@ it('shows Ship It button when review task selected', () => {
 
 it('Ship It triggers confirm dialog with merge+push description', async () => {
   sprintState.tasks = [
-    { id: 't1', title: 'Review task', repo: 'bde', status: 'review', updated_at: '2026-04-01T00:00:00Z' }
+    {
+      id: 't1',
+      title: 'Review task',
+      repo: 'bde',
+      status: 'review',
+      updated_at: '2026-04-01T00:00:00Z'
+    }
   ]
   useCodeReviewStore.setState({ selectedTaskId: 't1' })
   render(<ReviewActions />)
@@ -559,7 +617,7 @@ it('Ship It triggers confirm dialog with merge+push description', async () => {
 ```
 
 - [ ] **Step 5: Run tests — expect failures**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewActions.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewActions.test.tsx`
 
 - [ ] **Step 6: Add Ship It button to ReviewActions.tsx**
 
@@ -581,7 +639,9 @@ const handleShipIt = async (): Promise<void> => {
       strategy: mergeStrategy
     })
     if (result.success) {
-      toast.success(result.pushed ? 'Merged & pushed!' : 'Merged locally (push failed — push manually)')
+      toast.success(
+        result.pushed ? 'Merged & pushed!' : 'Merged locally (push failed — push manually)'
+      )
       selectTask(null)
       loadData()
     } else {
@@ -603,12 +663,8 @@ Add the button before "Merge Locally" in the primary actions area, using a `Rock
   onClick={handleShipIt}
   disabled={!!actionInFlight}
 >
-  {actionInFlight === 'shipIt' ? (
-    <Loader2 size={14} className="spin" />
-  ) : (
-    <Rocket size={14} />
-  )}{' '}
-  Ship It
+  {actionInFlight === 'shipIt' ? <Loader2 size={14} className="spin" /> : <Rocket size={14} />} Ship
+  It
 </button>
 ```
 
@@ -634,12 +690,13 @@ In `src/renderer/src/assets/code-review-neon.css`:
 In `src/main/handlers/__tests__/review.test.ts`, update the `safeHandle()` call count assertion to include the new `review:shipIt` handler (increment by 1).
 
 - [ ] **Step 9: Run tests — expect pass**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewActions.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewActions.test.tsx`
 
 - [ ] **Step 10: Run full suite + typecheck**
-Run: `cd ~/projects/BDE && npm run typecheck && npm test && npm run test:main`
+      Run: `cd ~/projects/BDE && npm run typecheck && npm test && npm run test:main`
 
 - [ ] **Step 11: Commit**
+
 ```
 feat(code-review): add Ship It button for one-click merge + push + done
 ```
@@ -649,6 +706,7 @@ feat(code-review): add Ship It button for one-click merge + push + done
 ### Task 3: Batch Review Actions — Multi-Select and Merge All
 
 **Files:**
+
 - Modify: `src/renderer/src/components/code-review/ReviewQueue.tsx`
 - Modify: `src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx`
 - Modify: `src/renderer/src/stores/codeReview.ts`
@@ -692,7 +750,13 @@ Add to `src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx`:
 ```tsx
 it('renders checkboxes for each review task', () => {
   sprintState.tasks = [
-    { id: 't1', title: 'Fix bug', repo: 'bde', status: 'review', updated_at: '2026-04-01T00:00:00Z' }
+    {
+      id: 't1',
+      title: 'Fix bug',
+      repo: 'bde',
+      status: 'review',
+      updated_at: '2026-04-01T00:00:00Z'
+    }
   ]
   render(<ReviewQueue />)
   expect(screen.getByRole('checkbox')).toBeInTheDocument()
@@ -700,7 +764,13 @@ it('renders checkboxes for each review task', () => {
 
 it('clicking checkbox toggles batch selection', () => {
   sprintState.tasks = [
-    { id: 't1', title: 'Fix bug', repo: 'bde', status: 'review', updated_at: '2026-04-01T00:00:00Z' }
+    {
+      id: 't1',
+      title: 'Fix bug',
+      repo: 'bde',
+      status: 'review',
+      updated_at: '2026-04-01T00:00:00Z'
+    }
   ]
   render(<ReviewQueue />)
   const checkbox = screen.getByRole('checkbox')
@@ -710,8 +780,20 @@ it('clicking checkbox toggles batch selection', () => {
 
 it('select all checkbox selects all review tasks', () => {
   sprintState.tasks = [
-    { id: 't1', title: 'Fix bug', repo: 'bde', status: 'review', updated_at: '2026-04-01T00:00:00Z' },
-    { id: 't2', title: 'Add feature', repo: 'bde', status: 'review', updated_at: '2026-04-02T00:00:00Z' }
+    {
+      id: 't1',
+      title: 'Fix bug',
+      repo: 'bde',
+      status: 'review',
+      updated_at: '2026-04-01T00:00:00Z'
+    },
+    {
+      id: 't2',
+      title: 'Add feature',
+      repo: 'bde',
+      status: 'review',
+      updated_at: '2026-04-02T00:00:00Z'
+    }
   ]
   render(<ReviewQueue />)
   const checkboxes = screen.getAllByRole('checkbox')
@@ -721,7 +803,7 @@ it('select all checkbox selects all review tasks', () => {
 ```
 
 - [ ] **Step 3: Run tests — expect failures**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx`
 
 - [ ] **Step 4: Add checkboxes to ReviewQueue**
 
@@ -815,8 +897,22 @@ describe('BatchActions', () => {
 
   it('shows batch bar with count when tasks are selected', () => {
     sprintState.tasks = [
-      { id: 't1', title: 'Fix', repo: 'bde', status: 'review', worktree_path: '/tmp/wt1', updated_at: '2026-04-01T00:00:00Z' },
-      { id: 't2', title: 'Add', repo: 'bde', status: 'review', worktree_path: '/tmp/wt2', updated_at: '2026-04-02T00:00:00Z' }
+      {
+        id: 't1',
+        title: 'Fix',
+        repo: 'bde',
+        status: 'review',
+        worktree_path: '/tmp/wt1',
+        updated_at: '2026-04-01T00:00:00Z'
+      },
+      {
+        id: 't2',
+        title: 'Add',
+        repo: 'bde',
+        status: 'review',
+        worktree_path: '/tmp/wt2',
+        updated_at: '2026-04-02T00:00:00Z'
+      }
     ]
     useCodeReviewStore.setState({ selectedBatchIds: new Set(['t1', 't2']) })
     render(<BatchActions />)
@@ -826,7 +922,14 @@ describe('BatchActions', () => {
 
   it('merge all shows confirmation dialog', async () => {
     sprintState.tasks = [
-      { id: 't1', title: 'Fix', repo: 'bde', status: 'review', worktree_path: '/tmp/wt1', updated_at: '2026-04-01T00:00:00Z' }
+      {
+        id: 't1',
+        title: 'Fix',
+        repo: 'bde',
+        status: 'review',
+        worktree_path: '/tmp/wt1',
+        updated_at: '2026-04-01T00:00:00Z'
+      }
     ]
     useCodeReviewStore.setState({ selectedBatchIds: new Set(['t1']) })
     render(<BatchActions />)
@@ -839,7 +942,7 @@ describe('BatchActions', () => {
 ```
 
 - [ ] **Step 6: Run tests — expect failures**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/BatchActions.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/BatchActions.test.tsx`
 
 - [ ] **Step 7: Implement BatchActions component**
 
@@ -910,8 +1013,7 @@ export function BatchActions(): React.JSX.Element | null {
         onClick={handleMergeAll}
         disabled={merging}
       >
-        {merging ? <Loader2 size={14} className="spin" /> : <GitMerge size={14} />}
-        {' '}Merge All
+        {merging ? <Loader2 size={14} className="spin" /> : <GitMerge size={14} />} Merge All
       </button>
       <button
         className="cr-actions__btn cr-actions__btn--ghost"
@@ -934,7 +1036,7 @@ In `src/renderer/src/views/CodeReviewView.tsx`:
 import { BatchActions } from '../components/code-review/BatchActions'
 
 // Add above the cr-main div:
-<BatchActions />
+;<BatchActions />
 ```
 
 - [ ] **Step 9: Add CSS for batch actions bar**
@@ -975,12 +1077,13 @@ In `src/renderer/src/assets/code-review-neon.css`:
 ```
 
 - [ ] **Step 10: Run tests — expect pass**
-Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx src/renderer/src/components/code-review/__tests__/BatchActions.test.tsx`
+      Run: `cd ~/projects/BDE && npx vitest run src/renderer/src/components/code-review/__tests__/ReviewQueue.test.tsx src/renderer/src/components/code-review/__tests__/BatchActions.test.tsx`
 
 - [ ] **Step 11: Run full suite + typecheck**
-Run: `cd ~/projects/BDE && npm run typecheck && npm test`
+      Run: `cd ~/projects/BDE && npm run typecheck && npm test`
 
 - [ ] **Step 12: Commit**
+
 ```
 feat(code-review): add batch review actions with multi-select and merge all
 ```
@@ -990,6 +1093,7 @@ feat(code-review): add batch review actions with multi-select and merge all
 ### Task 4: Auto-Review Rules Engine
 
 **Files:**
+
 - Create: `src/main/services/auto-review.ts`
 - Create: `src/main/services/__tests__/auto-review.test.ts`
 - Modify: `src/main/handlers/review.ts`
@@ -1009,8 +1113,8 @@ export interface AutoReviewRule {
   enabled: boolean
   conditions: {
     maxLinesChanged?: number
-    filePatterns?: string[]     // glob patterns — all changed files must match at least one
-    excludePatterns?: string[]  // glob patterns — no changed files may match any
+    filePatterns?: string[] // glob patterns — all changed files must match at least one
+    excludePatterns?: string[] // glob patterns — no changed files may match any
   }
   action: 'auto-merge' | 'auto-approve'
 }
@@ -1071,7 +1175,9 @@ describe('evaluateAutoReviewRules', () => {
 
   it('respects excludePatterns', () => {
     const rule: AutoReviewRule = {
-      id: 'r2', name: 'Safe changes', enabled: true,
+      id: 'r2',
+      name: 'Safe changes',
+      enabled: true,
       conditions: { maxLinesChanged: 50, excludePatterns: ['*.ts'] },
       action: 'auto-merge'
     }
@@ -1083,7 +1189,7 @@ describe('evaluateAutoReviewRules', () => {
 ```
 
 - [ ] **Step 3: Run tests — expect failures**
-Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/auto-review.test.ts --config src/main/vitest.main.config.ts`
+      Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/auto-review.test.ts --config src/main/vitest.main.config.ts`
 
 - [ ] **Step 4: Implement auto-review service**
 
@@ -1124,7 +1230,10 @@ export function evaluateAutoReviewRules(
     const totalLines = files.reduce((sum, f) => sum + f.additions + f.deletions, 0)
 
     // Check max lines
-    if (rule.conditions.maxLinesChanged !== undefined && totalLines > rule.conditions.maxLinesChanged) {
+    if (
+      rule.conditions.maxLinesChanged !== undefined &&
+      totalLines > rule.conditions.maxLinesChanged
+    ) {
       continue
     }
 
@@ -1152,7 +1261,7 @@ export function evaluateAutoReviewRules(
 ```
 
 - [ ] **Step 5: Run tests — expect pass**
-Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/auto-review.test.ts --config src/main/vitest.main.config.ts`
+      Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/auto-review.test.ts --config src/main/vitest.main.config.ts`
 
 - [ ] **Step 6: Integrate auto-review into the review flow**
 
@@ -1170,17 +1279,22 @@ safeHandle('review:checkAutoReview', async (_e, payload: { taskId: string }) => 
 
   // Get diff stats
   const { stdout: numstat } = await execFileAsync(
-    'git', ['diff', '--numstat', 'origin/main...HEAD'],
+    'git',
+    ['diff', '--numstat', 'origin/main...HEAD'],
     { cwd: task.worktree_path, env }
   )
-  const files = numstat.trim().split('\n').filter(Boolean).map((line) => {
-    const parts = line.split('\t')
-    return {
-      path: parts.slice(2).join('\t'),
-      additions: parts[0] === '-' ? 0 : parseInt(parts[0], 10),
-      deletions: parts[1] === '-' ? 0 : parseInt(parts[1], 10)
-    }
-  })
+  const files = numstat
+    .trim()
+    .split('\n')
+    .filter(Boolean)
+    .map((line) => {
+      const parts = line.split('\t')
+      return {
+        path: parts.slice(2).join('\t'),
+        additions: parts[0] === '-' ? 0 : parseInt(parts[0], 10),
+        deletions: parts[1] === '-' ? 0 : parseInt(parts[1], 10)
+      }
+    })
 
   const { evaluateAutoReviewRules } = await import('../services/auto-review')
   const result = evaluateAutoReviewRules(rules, files)
@@ -1191,12 +1305,13 @@ safeHandle('review:checkAutoReview', async (_e, payload: { taskId: string }) => 
 ```
 
 - [ ] **Step 7: Update handler count test**
-In `src/main/handlers/__tests__/review.test.ts`, increment the handler count by 1.
+      In `src/main/handlers/__tests__/review.test.ts`, increment the handler count by 1.
 
 - [ ] **Step 8: Run full suite + typecheck**
-Run: `cd ~/projects/BDE && npm run typecheck && npm test && npm run test:main`
+      Run: `cd ~/projects/BDE && npm run typecheck && npm test && npm run test:main`
 
 - [ ] **Step 9: Commit**
+
 ```
 feat(code-review): add auto-review rules engine for low-risk changes
 ```
@@ -1206,6 +1321,7 @@ feat(code-review): add auto-review rules engine for low-risk changes
 ### Task 5: AI Review Summary
 
 **Files:**
+
 - Create: `src/main/services/review-summary.ts`
 - Create: `src/main/services/__tests__/review-summary.test.ts`
 - Modify: `src/main/handlers/review.ts`
@@ -1267,7 +1383,7 @@ describe('buildReviewSummaryPrompt', () => {
 ```
 
 - [ ] **Step 3: Run tests — expect failures**
-Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/review-summary.test.ts --config src/main/vitest.main.config.ts`
+      Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/review-summary.test.ts --config src/main/vitest.main.config.ts`
 
 - [ ] **Step 4: Implement review summary service**
 
@@ -1277,9 +1393,10 @@ Create `src/main/services/review-summary.ts`:
 const MAX_DIFF_CHARS = 12000
 
 export function buildReviewSummaryPrompt(diffStat: string, taskTitle: string): string {
-  const truncated = diffStat.length > MAX_DIFF_CHARS
-    ? diffStat.slice(0, MAX_DIFF_CHARS) + '\n... (truncated)'
-    : diffStat
+  const truncated =
+    diffStat.length > MAX_DIFF_CHARS
+      ? diffStat.slice(0, MAX_DIFF_CHARS) + '\n... (truncated)'
+      : diffStat
 
   return `You are reviewing code changes for a task titled "${taskTitle}".
 
@@ -1299,7 +1416,7 @@ Keep the summary under 200 words. Be direct and factual.`
 ```
 
 - [ ] **Step 5: Run tests — expect pass**
-Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/review-summary.test.ts --config src/main/vitest.main.config.ts`
+      Run: `cd ~/projects/BDE && npx vitest run src/main/services/__tests__/review-summary.test.ts --config src/main/vitest.main.config.ts`
 
 - [ ] **Step 6: Add IPC channel and handler**
 
@@ -1322,7 +1439,8 @@ safeHandle('review:generateSummary', async (_e, payload: { taskId: string }) => 
 
   // Get diff stat
   const { stdout: diffStat } = await execFileAsync(
-    'git', ['diff', '--stat', 'origin/main...HEAD'],
+    'git',
+    ['diff', '--stat', 'origin/main...HEAD'],
     { cwd: task.worktree_path, env, maxBuffer: 10 * 1024 * 1024 }
   )
 
@@ -1370,18 +1488,20 @@ const reviewSummary = useCodeReviewStore((s) => s.reviewSummary)
 const summaryLoading = useCodeReviewStore((s) => s.summaryLoading)
 
 // Render before the tabs:
-{(reviewSummary || summaryLoading) && (
-  <div className="cr-summary">
-    <Sparkles size={12} className="cr-summary__icon" />
-    {summaryLoading ? (
-      <span className="cr-summary__loading">
-        <Loader2 size={12} className="spin" /> Generating AI summary...
-      </span>
-    ) : (
-      <div className="cr-summary__text">{reviewSummary}</div>
-    )}
-  </div>
-)}
+{
+  ;(reviewSummary || summaryLoading) && (
+    <div className="cr-summary">
+      <Sparkles size={12} className="cr-summary__icon" />
+      {summaryLoading ? (
+        <span className="cr-summary__loading">
+          <Loader2 size={12} className="spin" /> Generating AI summary...
+        </span>
+      ) : (
+        <div className="cr-summary__text">{reviewSummary}</div>
+      )}
+    </div>
+  )
+}
 ```
 
 - [ ] **Step 10: Trigger summary generation on task select**
@@ -1398,7 +1518,8 @@ useEffect(() => {
   const setReviewSummary = useCodeReviewStore.getState().setReviewSummary
 
   setSummaryLoading(true)
-  window.api.review.generateSummary({ taskId: selectedTaskId })
+  window.api.review
+    .generateSummary({ taskId: selectedTaskId })
     .then((result) => setReviewSummary(result.summary))
     .catch(() => setReviewSummary(null))
     .finally(() => setSummaryLoading(false))
@@ -1445,12 +1566,13 @@ In `src/renderer/src/assets/code-review-neon.css`:
 ```
 
 - [ ] **Step 12: Update handler count test**
-In `src/main/handlers/__tests__/review.test.ts`, increment handler count by 1.
+      In `src/main/handlers/__tests__/review.test.ts`, increment handler count by 1.
 
 - [ ] **Step 13: Run full suite + typecheck**
-Run: `cd ~/projects/BDE && npm run typecheck && npm test && npm run test:main`
+      Run: `cd ~/projects/BDE && npm run typecheck && npm test && npm run test:main`
 
 - [ ] **Step 14: Commit**
+
 ```
 feat(code-review): add AI review summary generation via haiku model
 ```

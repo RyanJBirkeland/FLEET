@@ -17,14 +17,14 @@ Inject critical runtime context (retry info, time limits, idle warnings, definit
 
 ### Files Modified
 
-| File | Change |
-|------|--------|
-| `src/main/agent-manager/prompt-composer.ts` | Add 6 conditional sections to `buildAgentPrompt()`, update `BuildPromptInput` interface |
-| `src/main/agent-manager/run-agent.ts` | Pass `retryCount`, `previousNotes`, `maxRuntimeMs` to `buildAgentPrompt()` |
-| `src/main/agent-manager/types.ts` | No changes needed (constants already exported) |
-| `src/main/agent-system/personality/pipeline-personality.ts` | De-duplicate constraints, inject `patterns`, add scope enforcement |
-| `src/main/agent-system/personality/types.ts` | No changes needed (`patterns` already in interface) |
-| `src/main/agent-manager/__tests__/prompt-composer.test.ts` | Add tests for all 11 features |
+| File                                                        | Change                                                                                  |
+| ----------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `src/main/agent-manager/prompt-composer.ts`                 | Add 6 conditional sections to `buildAgentPrompt()`, update `BuildPromptInput` interface |
+| `src/main/agent-manager/run-agent.ts`                       | Pass `retryCount`, `previousNotes`, `maxRuntimeMs` to `buildAgentPrompt()`              |
+| `src/main/agent-manager/types.ts`                           | No changes needed (constants already exported)                                          |
+| `src/main/agent-system/personality/pipeline-personality.ts` | De-duplicate constraints, inject `patterns`, add scope enforcement                      |
+| `src/main/agent-system/personality/types.ts`                | No changes needed (`patterns` already in interface)                                     |
+| `src/main/agent-manager/__tests__/prompt-composer.test.ts`  | Add tests for all 11 features                                                           |
 
 ### Data Flow
 
@@ -123,8 +123,8 @@ export interface BuildPromptInput {
   messages?: Array<{ role: string; content: string }>
   formContext?: { title: string; repo: string; spec: string }
   codebaseContext?: string
-  retryCount?: number          // NEW: 0-based retry count
-  previousNotes?: string       // NEW: failure notes from previous attempt
+  retryCount?: number // NEW: 0-based retry count
+  previousNotes?: string // NEW: failure notes from previous attempt
   maxRuntimeMs?: number | null // NEW: max runtime in milliseconds
 }
 ```
@@ -188,7 +188,7 @@ export interface RunAgentTask {
   fast_fail_count: number
   playground_enabled?: boolean
   max_runtime_ms?: number | null
-  notes?: string | null          // NEW: failure notes from previous attempt
+  notes?: string | null // NEW: failure notes from previous attempt
 }
 ```
 
@@ -289,8 +289,17 @@ if (agentType === 'pipeline' && maxRuntimeMs != null && maxRuntimeMs > 0) {
 Extract `maxRuntimeMs` from input destructuring:
 
 ```typescript
-const { agentType, taskContent, branch, playgroundEnabled, messages, codebaseContext,
-        retryCount, previousNotes, maxRuntimeMs } = input
+const {
+  agentType,
+  taskContent,
+  branch,
+  playgroundEnabled,
+  messages,
+  codebaseContext,
+  retryCount,
+  previousNotes,
+  maxRuntimeMs
+} = input
 ```
 
 ---
@@ -325,11 +334,13 @@ New: - Run `npm install` as your FIRST action — worktrees have NO node_modules
 ```
 
 **Note:** This also requires updating the existing test on line 25 of `prompt-composer.test.ts` which currently asserts:
+
 ```typescript
 expect(prompt).toContain('Run `npm install` if node_modules/ is missing')
 ```
 
 Change to:
+
 ```typescript
 expect(prompt).toContain('Run `npm install` as your FIRST action')
 ```
@@ -472,6 +483,7 @@ constraints: [
 ```
 
 Remove the duplicated constraints that are already in the universal preamble:
+
 - Remove: `'Run npm install if node_modules/ is missing'` (covered by preamble)
 - Remove: `'Run tests after changes: npm test && npm run typecheck'` (covered by preamble's MANDATORY Pre-Commit Verification)
 - Remove: `'Use TypeScript strict mode conventions'` (covered by preamble)
@@ -495,12 +507,12 @@ This also covers **Task 7: De-duplicate Personality vs Preamble**.
 
 Covered by Task 6 above. The pipeline personality's `constraints` had 3 entries that are word-for-word duplicates of the universal preamble:
 
-| Constraint (personality) | Already in preamble? |
-|---|---|
-| `NEVER push to main` | Yes — "NEVER push to, checkout, or merge into `main`" |
-| `Run npm install if node_modules/ is missing` | Yes — Hard Rules bullet |
-| `Run tests after changes` | Yes — MANDATORY Pre-Commit Verification |
-| `Use TypeScript strict mode conventions` | Yes — Hard Rules bullet |
+| Constraint (personality)                      | Already in preamble?                                  |
+| --------------------------------------------- | ----------------------------------------------------- |
+| `NEVER push to main`                          | Yes — "NEVER push to, checkout, or merge into `main`" |
+| `Run npm install if node_modules/ is missing` | Yes — Hard Rules bullet                               |
+| `Run tests after changes`                     | Yes — MANDATORY Pre-Commit Verification               |
+| `Use TypeScript strict mode conventions`      | Yes — Hard Rules bullet                               |
 
 **Keep** `NEVER push to main` (it's phrased differently and reinforcement is valuable).
 **Remove** the other 3.

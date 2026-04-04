@@ -31,6 +31,17 @@ export interface TaskDependency {
   condition?: 'on_success' | 'on_failure' | 'always'
 }
 
+export interface TaskGroup {
+  id: string
+  name: string
+  icon: string
+  accent_color: string
+  goal: string | null
+  status: 'draft' | 'ready' | 'in-pipeline' | 'completed'
+  created_at: string
+  updated_at: string
+}
+
 export type FailureReason =
   | 'auth'
   | 'timeout'
@@ -82,6 +93,7 @@ export interface SprintTask {
   max_cost_usd?: number | null
   partial_diff?: string | null
   tags?: string[] | null
+  group_id?: string | null
   updated_at: string
   created_at: string
 }

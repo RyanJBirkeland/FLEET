@@ -263,7 +263,9 @@
   padding: 4px 8px;
   border-radius: 4px;
   color: var(--neon-text-muted, #888);
-  transition: color 0.15s, background 0.15s;
+  transition:
+    color 0.15s,
+    background 0.15s;
 }
 .memory-editor__agent-toggle:hover {
   background: var(--bde-overlay);

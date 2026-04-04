@@ -24,6 +24,7 @@ import { registerSynthesizerHandlers } from './handlers/synthesizer-handlers'
 import { registerClaudeConfigHandlers } from './handlers/claude-config-handlers'
 import { registerReviewHandlers, setReviewOnStatusTerminal } from './handlers/review'
 import { registerWebhookHandlers } from './handlers/webhook-handlers'
+import { registerGroupHandlers } from './handlers/group-handlers'
 import { getDb, closeDb, backupDatabase } from './db'
 import { importSprintTasksFromSupabase } from './data/supabase-import'
 import { startPrPoller, stopPrPoller } from './pr-poller'
@@ -253,6 +254,7 @@ app.whenReady().then(() => {
   registerClaudeConfigHandlers()
   registerReviewHandlers()
   registerWebhookHandlers()
+  registerGroupHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const connectSrc = buildConnectSrc()

@@ -306,7 +306,10 @@ In `src/renderer/src/assets/neon-shell.css`, add at the end:
   width: min(560px, 80vw);
   font-family: var(--bde-font-code);
 }
-.quick-create-bar__icon { color: var(--neon-cyan); flex-shrink: 0; }
+.quick-create-bar__icon {
+  color: var(--neon-cyan);
+  flex-shrink: 0;
+}
 .quick-create-bar__input {
   flex: 1;
   background: transparent;
@@ -316,7 +319,9 @@ In `src/renderer/src/assets/neon-shell.css`, add at the end:
   font-size: 13px;
   font-family: var(--bde-font-code);
 }
-.quick-create-bar__input::placeholder { color: var(--neon-text-dim); }
+.quick-create-bar__input::placeholder {
+  color: var(--neon-text-dim);
+}
 .quick-create-bar__hints {
   display: flex;
   gap: 8px;
@@ -336,7 +341,9 @@ In `src/renderer/src/assets/neon-shell.css`, add at the end:
   border: 1px solid var(--neon-border);
   font-size: 9px;
 }
-.quick-create-bar__hint--queue { color: var(--neon-orange); }
+.quick-create-bar__hint--queue {
+  color: var(--neon-orange);
+}
 ```
 
 - [ ] **2d: Verify test passes**
@@ -420,11 +427,16 @@ import { useNotificationsStore } from '../../stores/notifications'
 
 // Mock Notification API
 const mockNotification = vi.fn()
-vi.stubGlobal('Notification', class {
-  static permission = 'granted'
-  static requestPermission = vi.fn().mockResolvedValue('granted')
-  constructor(title: string, opts: unknown) { mockNotification(title, opts) }
-})
+vi.stubGlobal(
+  'Notification',
+  class {
+    static permission = 'granted'
+    static requestPermission = vi.fn().mockResolvedValue('granted')
+    constructor(title: string, opts: unknown) {
+      mockNotification(title, opts)
+    }
+  }
+)
 
 // Mock document.hasFocus to return false (background)
 vi.spyOn(document, 'hasFocus').mockReturnValue(false)
@@ -566,9 +578,7 @@ For each notification call, pass a navigate callback. For task transitions:
 
 ```typescript
 fireDesktopNotification(title, message, () => {
-  window.dispatchEvent(
-    new CustomEvent('bde:navigate', { detail: { view: 'sprint' } })
-  )
+  window.dispatchEvent(new CustomEvent('bde:navigate', { detail: { view: 'sprint' } }))
 })
 ```
 
@@ -1061,19 +1071,20 @@ In `src/renderer/src/components/sprint/TaskPill.tsx`:
 
 ```typescript
 const costData = useTaskCost(task.agent_run_id)
-const costLabel = costData?.costUsd != null && costData.costUsd > 0
-  ? `$${costData.costUsd.toFixed(2)}`
-  : null
+const costLabel =
+  costData?.costUsd != null && costData.costUsd > 0 ? `$${costData.costUsd.toFixed(2)}` : null
 ```
 
 3. In the JSX, after the duration span, add:
 
 ```tsx
-{task.status === 'done' && costLabel && (
-  <span className="task-pill__cost" title={`Agent cost: ${costLabel}`}>
-    {costLabel}
-  </span>
-)}
+{
+  task.status === 'done' && costLabel && (
+    <span className="task-pill__cost" title={`Agent cost: ${costLabel}`}>
+      {costLabel}
+    </span>
+  )
+}
 ```
 
 - [ ] **2c: Add CSS for cost badge**
@@ -1112,31 +1123,37 @@ const costData = useTaskCost(task.agent_run_id)
 3. In the JSX, after the PR section and before the actions bar, add:
 
 ```tsx
-{costData && costData.costUsd != null && (
-  <div className="task-drawer__cost-section">
-    <span className="task-drawer__label">Cost</span>
-    <div className="task-drawer__cost-grid">
-      <div className="task-drawer__cost-item">
-        <span className="task-drawer__cost-value">${costData.costUsd.toFixed(3)}</span>
-        <span className="task-drawer__cost-key">Total</span>
-      </div>
-      <div className="task-drawer__cost-item">
-        <span className="task-drawer__cost-value">{costData.tokensIn?.toLocaleString() ?? '—'}</span>
-        <span className="task-drawer__cost-key">Tokens In</span>
-      </div>
-      <div className="task-drawer__cost-item">
-        <span className="task-drawer__cost-value">{costData.tokensOut?.toLocaleString() ?? '—'}</span>
-        <span className="task-drawer__cost-key">Tokens Out</span>
-      </div>
-      {costData.numTurns != null && (
+{
+  costData && costData.costUsd != null && (
+    <div className="task-drawer__cost-section">
+      <span className="task-drawer__label">Cost</span>
+      <div className="task-drawer__cost-grid">
         <div className="task-drawer__cost-item">
-          <span className="task-drawer__cost-value">{costData.numTurns}</span>
-          <span className="task-drawer__cost-key">Turns</span>
+          <span className="task-drawer__cost-value">${costData.costUsd.toFixed(3)}</span>
+          <span className="task-drawer__cost-key">Total</span>
         </div>
-      )}
+        <div className="task-drawer__cost-item">
+          <span className="task-drawer__cost-value">
+            {costData.tokensIn?.toLocaleString() ?? '—'}
+          </span>
+          <span className="task-drawer__cost-key">Tokens In</span>
+        </div>
+        <div className="task-drawer__cost-item">
+          <span className="task-drawer__cost-value">
+            {costData.tokensOut?.toLocaleString() ?? '—'}
+          </span>
+          <span className="task-drawer__cost-key">Tokens Out</span>
+        </div>
+        {costData.numTurns != null && (
+          <div className="task-drawer__cost-item">
+            <span className="task-drawer__cost-value">{costData.numTurns}</span>
+            <span className="task-drawer__cost-key">Turns</span>
+          </div>
+        )}
+      </div>
     </div>
-  </div>
-)}
+  )
+}
 ```
 
 - [ ] **3b: Add CSS for cost section**
@@ -1311,7 +1328,9 @@ interface FilterPresetsState {
   activePresetId: string | null
   savePreset: (input: Omit<FilterPreset, 'id'>) => void
   deletePreset: (id: string) => void
-  applyPreset: (id: string) => { statusFilter: StatusFilter; repoFilter: string | null; searchQuery: string } | null
+  applyPreset: (
+    id: string
+  ) => { statusFilter: StatusFilter; repoFilter: string | null; searchQuery: string } | null
   loadPresets: () => void
   clearActivePreset: () => void
 }
@@ -1416,7 +1435,7 @@ const loadPresets = useFilterPresetsStore((s) => s.loadPresets)
 6. Add a preset section in the JSX after the repo chips:
 
 ```tsx
-<div className="pipeline-filter-bar__presets">
+;<div className="pipeline-filter-bar__presets">
   {presets.map((p) => (
     <button
       key={p.id}
@@ -1435,7 +1454,10 @@ const loadPresets = useFilterPresetsStore((s) => s.loadPresets)
       {p.name}
       <span
         className="pipeline-filter-bar__preset-delete"
-        onClick={(e) => { e.stopPropagation(); deletePreset(p.id) }}
+        onClick={(e) => {
+          e.stopPropagation()
+          deletePreset(p.id)
+        }}
         role="button"
         tabIndex={0}
         aria-label={`Delete preset ${p.name}`}
@@ -1452,31 +1474,33 @@ const loadPresets = useFilterPresetsStore((s) => s.loadPresets)
     <Plus size={10} /> Save View
   </button>
 </div>
-{showSavePreset && (
-  <div className="pipeline-filter-bar__save-form">
-    <input
-      type="text"
-      placeholder="Preset name"
-      value={presetName}
-      onChange={(e) => setPresetName(e.target.value)}
-      className="pipeline-filter-bar__input"
-      autoFocus
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && presetName.trim()) {
-          savePreset({
-            name: presetName.trim(),
-            statusFilter: useSprintUI.getState().statusFilter,
-            repoFilter,
-            searchQuery
-          })
-          setPresetName('')
-          setShowSavePreset(false)
-        }
-        if (e.key === 'Escape') setShowSavePreset(false)
-      }}
-    />
-  </div>
-)}
+{
+  showSavePreset && (
+    <div className="pipeline-filter-bar__save-form">
+      <input
+        type="text"
+        placeholder="Preset name"
+        value={presetName}
+        onChange={(e) => setPresetName(e.target.value)}
+        className="pipeline-filter-bar__input"
+        autoFocus
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && presetName.trim()) {
+            savePreset({
+              name: presetName.trim(),
+              statusFilter: useSprintUI.getState().statusFilter,
+              repoFilter,
+              searchQuery
+            })
+            setPresetName('')
+            setShowSavePreset(false)
+          }
+          if (e.key === 'Escape') setShowSavePreset(false)
+        }}
+      />
+    </div>
+  )
+}
 ```
 
 7. Update the null-return guard to also show when presets exist:
@@ -1793,27 +1817,29 @@ const density = useSprintUI((s) => s.pipelineDensity)
 4. In the cards rendering block, conditionally render:
 
 ```tsx
-{density === 'compact' ? (
-  tasks.map((task) => (
-    <TaskRow
-      key={task.id}
-      task={task}
-      selected={task.id === selectedTaskId}
-      onClick={onTaskClick}
-    />
-  ))
-) : (
-  <AnimatePresence mode="popLayout">
-    {tasks.map((task) => (
-      <TaskPill
+{
+  density === 'compact' ? (
+    tasks.map((task) => (
+      <TaskRow
         key={task.id}
         task={task}
         selected={task.id === selectedTaskId}
         onClick={onTaskClick}
       />
-    ))}
-  </AnimatePresence>
-)}
+    ))
+  ) : (
+    <AnimatePresence mode="popLayout">
+      {tasks.map((task) => (
+        <TaskPill
+          key={task.id}
+          task={task}
+          selected={task.id === selectedTaskId}
+          onClick={onTaskClick}
+        />
+      ))}
+    </AnimatePresence>
+  )
+}
 ```
 
 - [ ] **3c: Add CSS for compact rows and density toggle**

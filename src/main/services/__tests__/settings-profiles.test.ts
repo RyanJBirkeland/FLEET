@@ -60,10 +60,7 @@ describe('settings-profiles', () => {
       )
 
       // Should update manifest
-      expect(mockSetSettingJson).toHaveBeenCalledWith(
-        'profiles._manifest',
-        ['dev-mode']
-      )
+      expect(mockSetSettingJson).toHaveBeenCalledWith('profiles._manifest', ['dev-mode'])
     })
 
     it('does not duplicate profile names in manifest', () => {
@@ -78,10 +75,10 @@ describe('settings-profiles', () => {
       saveProfile('dev-mode')
 
       // Should not add duplicate
-      expect(mockSetSettingJson).toHaveBeenCalledWith(
-        'profiles._manifest',
-        ['dev-mode', 'prod-mode']
-      )
+      expect(mockSetSettingJson).toHaveBeenCalledWith('profiles._manifest', [
+        'dev-mode',
+        'prod-mode'
+      ])
     })
   })
 
@@ -188,10 +185,10 @@ describe('settings-profiles', () => {
       deleteProfile('prod-mode')
 
       expect(mockDeleteSetting).toHaveBeenCalledWith('profiles.prod-mode')
-      expect(mockSetSettingJson).toHaveBeenCalledWith(
-        'profiles._manifest',
-        ['dev-mode', 'test-mode']
-      )
+      expect(mockSetSettingJson).toHaveBeenCalledWith('profiles._manifest', [
+        'dev-mode',
+        'test-mode'
+      ])
     })
 
     it('handles deleting nonexistent profile gracefully', () => {
@@ -204,10 +201,7 @@ describe('settings-profiles', () => {
       deleteProfile('nonexistent')
 
       expect(mockDeleteSetting).toHaveBeenCalledWith('profiles.nonexistent')
-      expect(mockSetSettingJson).toHaveBeenCalledWith(
-        'profiles._manifest',
-        ['dev-mode']
-      )
+      expect(mockSetSettingJson).toHaveBeenCalledWith('profiles._manifest', ['dev-mode'])
     })
   })
 })
