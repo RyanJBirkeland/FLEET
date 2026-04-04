@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { motion } from 'framer-motion'
 import { AlertTriangle, Clock, Zap, GitBranch, Slash, XCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -40,7 +40,7 @@ function getFailureInfo(
   return { icon: XCircle, label: 'Agent failed', className: 'task-pill__fail--agent' }
 }
 
-export function TaskPill({
+function TaskPillInner({
   task,
   selected,
   multiSelected,
@@ -166,3 +166,6 @@ export function TaskPill({
     </motion.div>
   )
 }
+
+export const TaskPill = React.memo(TaskPillInner)
+TaskPill.displayName = 'TaskPill'

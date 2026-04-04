@@ -1,4 +1,4 @@
-import { useRef } from 'react'
+import React, { useRef } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TaskPill } from './TaskPill'
 import { TaskRow } from './TaskRow'
@@ -15,7 +15,7 @@ interface PipelineStageProps {
   doneFooter?: React.ReactNode
 }
 
-export function PipelineStage({
+function PipelineStageInner({
   name,
   label,
   tasks,
@@ -103,3 +103,6 @@ export function PipelineStage({
     </div>
   )
 }
+
+export const PipelineStage = React.memo(PipelineStageInner)
+PipelineStage.displayName = 'PipelineStage'

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import React, { useState } from 'react'
 import type { SprintTask } from '../../../../shared/types'
 
 interface PipelineBacklogProps {
@@ -11,7 +11,7 @@ interface PipelineBacklogProps {
 
 const FAILED_VISIBLE_LIMIT = 3
 
-export function PipelineBacklog({
+function PipelineBacklogInner({
   backlog,
   failed,
   onTaskClick,
@@ -90,3 +90,6 @@ export function PipelineBacklog({
     </div>
   )
 }
+
+export const PipelineBacklog = React.memo(PipelineBacklogInner)
+PipelineBacklog.displayName = 'PipelineBacklog'
