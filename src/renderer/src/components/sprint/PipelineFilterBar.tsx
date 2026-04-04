@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
-import { Search } from 'lucide-react'
+import { Search, X } from 'lucide-react'
 import { useSprintUI } from '../../stores/sprintUI'
+import { useFilterPresets } from '../../stores/filterPresets'
 import type { SprintTask } from '../../../../shared/types'
 
 interface PipelineFilterBarProps {
@@ -12,13 +13,28 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
   const setSearchQuery = useSprintUI((s) => s.setSearchQuery)
   const repoFilter = useSprintUI((s) => s.repoFilter)
   const setRepoFilter = useSprintUI((s) => s.setRepoFilter)
+  const statusFilter = useSprintUI((s) => s.statusFilter)
+
+  const presets = useFilterPresets((s) => s.presets)
+  const savePreset = useFilterPresets((s) => s.savePreset)
+  const loadPreset = useFilterPresets((s) => s.loadPreset)
+  const deletePreset = useFilterPresets((s) => s.deletePreset)
 
   const repos = useMemo(() => {
     const set = new Set(tasks.map((t) => t.repo))
     return Array.from(set).sort()
   }, [tasks])
 
-  if (repos.length <= 1 && !searchQuery) return null
+  const hasActiveFilters = !!(searchQuery || repoFilter || statusFilter !== 'all')
+  const presetNames = Object.keys(presets)
+
+  // Always show if there are presets, multiple repos, or active search
+  if (repos.length <= 1 && !searchQuery && presetNames.length === 0) return null
+
+  const handleSaveView = (): void => {
+    const name = window.prompt('Enter a name for this filter preset:')
+    if (name) savePreset(name)
+  }
 
   return (
     <div className="pipeline-filter-bar">
@@ -53,6 +69,32 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
             </button>
           ))}
         </div>
+      )}
+      {presetNames.length > 0 && (
+        <div className="pipeline-filter-bar__presets">
+          {presetNames.map((name) => (
+            <span key={name} className="pipeline-filter-bar__preset">
+              <button
+                className="pipeline-filter-bar__preset-name"
+                onClick={() => loadPreset(name)}
+              >
+                {name}
+              </button>
+              <button
+                className="pipeline-filter-bar__preset-delete"
+                onClick={() => deletePreset(name)}
+                aria-label={`Delete preset "${name}"`}
+              >
+                <X size={10} />
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+      {hasActiveFilters && (
+        <button className="pipeline-filter-bar__save" onClick={handleSaveView}>
+          Save View
+        </button>
       )}
     </div>
   )
