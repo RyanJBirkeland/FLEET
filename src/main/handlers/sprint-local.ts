@@ -7,6 +7,7 @@ import { createLogger } from '../logger'
 
 const execFileAsync = promisify(execFile)
 import type { TaskTemplate, ClaimedTask } from '../../shared/types'
+import type { WorkflowTemplate } from '../../shared/workflow-types'
 import { validateStructural } from '../../shared/spec-validation'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
@@ -39,6 +40,8 @@ import {
 import type { CreateTaskInput, QueueStats } from '../services/sprint-service'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
+import { createSprintTaskRepository } from '../data/sprint-task-repository'
+import { instantiateWorkflow } from '../services/workflow-engine'
 
 const logger = createLogger('sprint-local')
 
@@ -91,6 +94,23 @@ export function registerSprintLocalHandlers(): void {
     const row = createTask(validation.task)
     if (!row) throw new Error('Failed to create task')
     return row
+  })
+
+  safeHandle('sprint:createWorkflow', async (_e, template: WorkflowTemplate) => {
+    const repo = createSprintTaskRepository()
+    const result = instantiateWorkflow(template, repo)
+
+    if (result.errors.length > 0) {
+      logger.warn(
+        `[sprint:createWorkflow] Workflow "${template.name}" had errors: ${result.errors.join('; ')}`
+      )
+    }
+
+    return {
+      tasks: result.tasks,
+      errors: result.errors,
+      success: result.errors.length === 0
+    }
   })
 
   safeHandle('sprint:update', async (_e, id: string, patch: Record<string, unknown>) => {

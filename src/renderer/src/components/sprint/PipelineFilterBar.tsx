@@ -74,10 +74,7 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
         <div className="pipeline-filter-bar__presets">
           {presetNames.map((name) => (
             <span key={name} className="pipeline-filter-bar__preset">
-              <button
-                className="pipeline-filter-bar__preset-name"
-                onClick={() => loadPreset(name)}
-              >
+              <button className="pipeline-filter-bar__preset-name" onClick={() => loadPreset(name)}>
                 {name}
               </button>
               <button

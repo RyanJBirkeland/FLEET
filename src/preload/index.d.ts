@@ -146,6 +146,9 @@ declare global {
       sprint: {
         list: () => Promise<IpcResult<'sprint:list'>>
         create: (...args: IpcArgs<'sprint:create'>) => Promise<IpcResult<'sprint:create'>>
+        createWorkflow: (
+          ...args: IpcArgs<'sprint:createWorkflow'>
+        ) => Promise<IpcResult<'sprint:createWorkflow'>>
         update: (...args: IpcArgs<'sprint:update'>) => Promise<IpcResult<'sprint:update'>>
         readLog: (...args: IpcArgs<'sprint:readLog'>) => Promise<IpcResult<'sprint:readLog'>>
         readSpecFile: (

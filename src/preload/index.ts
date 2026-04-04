@@ -3,6 +3,7 @@ import { electronAPI } from '@electron-toolkit/preload'
 import type { AgentMeta, PrListPayload, SpawnLocalAgentArgs } from '../shared/types'
 import type { IpcChannelMap, GitHubFetchInit } from '../shared/ipc-channels'
 import type { AgentEvent } from '../shared/types'
+import type { WorkflowTemplate } from '../shared/workflow-types'
 
 // Prevent MaxListenersExceededWarning during HMR dev cycles
 ipcRenderer.setMaxListeners(25)
@@ -125,6 +126,7 @@ const api = {
       template_name?: string
       playground_enabled?: boolean
     }) => typedInvoke('sprint:create', task),
+    createWorkflow: (template: WorkflowTemplate) => typedInvoke('sprint:createWorkflow', template),
     claimTask: (taskId: string) => typedInvoke('sprint:claimTask', taskId),
     update: (id: string, patch: Record<string, unknown>) => typedInvoke('sprint:update', id, patch),
     readLog: (agentId: string, fromByte?: number) =>

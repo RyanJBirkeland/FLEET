@@ -42,7 +42,9 @@ export function ReviewActions(): React.JSX.Element {
         strategy: mergeStrategy
       })
       if (result.success) {
-        toast.success(result.pushed ? 'Merged & pushed!' : 'Merged locally (push failed — push manually)')
+        toast.success(
+          result.pushed ? 'Merged & pushed!' : 'Merged locally (push failed — push manually)'
+        )
         selectTask(null)
         loadData()
       } else {

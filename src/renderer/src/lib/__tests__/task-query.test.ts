@@ -262,10 +262,7 @@ describe('applyPredicates', () => {
   })
 
   it('should handle tasks with null tags', () => {
-    const tasks = [
-      createTask({ id: '1', tags: null }),
-      createTask({ id: '2', tags: ['frontend'] })
-    ]
+    const tasks = [createTask({ id: '1', tags: null }), createTask({ id: '2', tags: ['frontend'] })]
     const predicates = parseTaskQuery('tag:frontend')
     const result = applyPredicates(tasks, predicates)
     expect(result).toHaveLength(1)

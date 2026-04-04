@@ -519,9 +519,7 @@ export class AgentManagerImpl implements AgentManager {
       const tokenOk = await checkOAuthToken(this.logger)
       if (!tokenOk) return
 
-      this.logger.info(
-        `[agent-manager] Fetching queued tasks (limit=${available})...`
-      )
+      this.logger.info(`[agent-manager] Fetching queued tasks (limit=${available})...`)
       const queued = this.fetchQueuedTasks(available)
       this.logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
       for (const raw of queued) {

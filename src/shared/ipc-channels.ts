@@ -27,6 +27,7 @@ import type {
 } from './types'
 import type { AgentEvent } from './types'
 import type { BatchOperation, BatchResult } from './types'
+import type { WorkflowTemplate } from './workflow-types'
 
 /** Serialisable subset of RequestInit for the github:fetch IPC proxy. */
 export interface GitHubFetchInit {
@@ -227,6 +228,14 @@ export interface SprintChannels {
       }
     ]
     result: SprintTask
+  }
+  'sprint:createWorkflow': {
+    args: [template: WorkflowTemplate]
+    result: {
+      tasks: SprintTask[]
+      errors: string[]
+      success: boolean
+    }
   }
   'sprint:update': {
     args: [id: string, patch: Record<string, unknown>]
