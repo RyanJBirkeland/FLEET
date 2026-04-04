@@ -292,6 +292,17 @@ export interface AgentManagerStatus {
   activeAgents: AgentManagerActiveAgent[]
 }
 
+export interface MetricsSnapshot {
+  drainLoopCount: number
+  agentsSpawned: number
+  agentsCompleted: number
+  agentsFailed: number
+  retriesQueued: number
+  watchdogVerdicts: Record<string, number>
+  lastDrainDurationMs: number
+  uptimeMs: number
+}
+
 // --- Agent Events (unified event stream for local + remote agents) ---
 
 export type AgentEventType =

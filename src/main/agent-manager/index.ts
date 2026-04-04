@@ -27,68 +27,16 @@ import { getRepoPaths } from '../paths'
 import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../env-utils'
 
 // ---------------------------------------------------------------------------
-// Logger helper — callers can supply their own or fall back to console
+// Logger helper — callers can supply their own or fall back to createLogger
 // ---------------------------------------------------------------------------
 
-import { appendFileSync, statSync, renameSync, rmSync } from 'node:fs'
 import { readFile, stat } from 'node:fs/promises'
 import { join as joinPath } from 'node:path'
 import { homedir as home } from 'node:os'
-import { BDE_AGENT_LOG_PATH } from '../paths'
-const LOG_PATH = BDE_AGENT_LOG_PATH
-const AM_MAX_LOG_SIZE = 10 * 1024 * 1024 // 10MB
-let amWriteCount = 0
-let fileLogFailureCount = 0
+import { createLogger } from '../logger'
 
-function rotateAmLogIfNeeded(): void {
-  try {
-    const stats = statSync(LOG_PATH)
-    if (stats.size > AM_MAX_LOG_SIZE) {
-      const oldPath = LOG_PATH + '.old'
-      try {
-        rmSync(oldPath)
-      } catch {
-        /* may not exist */
-      }
-      renameSync(LOG_PATH, oldPath)
-    }
-  } catch {
-    /* file doesn't exist yet */
-  }
-}
+const defaultLogger: Logger = createLogger('agent-manager')
 
-function fileLog(level: string, m: string): void {
-  try {
-    appendFileSync(LOG_PATH, `[${new Date().toISOString()}] [${level}] ${m}\n`)
-    fileLogFailureCount = 0 // Reset on successful write
-    if (++amWriteCount >= 500) {
-      amWriteCount = 0
-      rotateAmLogIfNeeded()
-    }
-  } catch (err) {
-    // Count consecutive failures and log to stderr after threshold
-    fileLogFailureCount++
-    if (fileLogFailureCount === 5) {
-      console.error(`[agent-manager] File logging failed 5 times consecutively: ${err}`)
-      console.error(`[agent-manager] Log path: ${LOG_PATH} — check disk space and permissions`)
-    }
-  }
-}
-
-const defaultLogger: Logger = {
-  info: (m) => {
-    console.log(m)
-    fileLog('INFO', m)
-  },
-  warn: (m) => {
-    console.warn(m)
-    fileLog('WARN', m)
-  },
-  error: (m) => {
-    console.error(m)
-    fileLog('ERROR', m)
-  }
-}
 
 // ---------------------------------------------------------------------------
 // Extracted pure functions (testable independently)
@@ -266,8 +214,6 @@ export class AgentManagerImpl implements AgentManager {
     readonly repo: ISprintTaskRepository,
     readonly logger: Logger = defaultLogger
   ) {
-    rotateAmLogIfNeeded()
-
     this._concurrency = makeConcurrencyState(config.maxConcurrent)
     this._depIndex = createDependencyIndex()
 
