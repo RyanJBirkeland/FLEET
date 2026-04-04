@@ -77,9 +77,15 @@ describe('Review handlers', () => {
   })
 
   it('registers all 8 review channels', () => {
+||||||| 5faba97c
+  it('registers all 7 review channels', () => {
+  it('registers all 9 review channels', () => {
     registerReviewHandlers()
 
     expect(safeHandle).toHaveBeenCalledTimes(8)
+||||||| 5faba97c
+    expect(safeHandle).toHaveBeenCalledTimes(7)
+    expect(safeHandle).toHaveBeenCalledTimes(9)
     expect(safeHandle).toHaveBeenCalledWith('review:getDiff', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:getCommits', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:getFileDiff', expect.any(Function))
@@ -88,6 +94,9 @@ describe('Review handlers', () => {
     expect(safeHandle).toHaveBeenCalledWith('review:requestRevision', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:discard', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:shipIt', expect.any(Function))
+||||||| 5faba97c
+    expect(safeHandle).toHaveBeenCalledWith('review:shipIt', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('review:generateSummary', expect.any(Function))
   })
 
   it('setReviewOnStatusTerminal sets the callback', () => {

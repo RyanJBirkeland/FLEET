@@ -450,3 +450,17 @@ export interface TaskOutputEvent {
   timestamp: string
   type: TaskOutputEventType | string
 }
+
+// --- Auto-Review Rules ---
+
+export interface AutoReviewRule {
+  id: string
+  name: string
+  enabled: boolean
+  conditions: {
+    maxLinesChanged?: number
+    filePatterns?: string[]     // glob patterns — all changed files must match at least one
+    excludePatterns?: string[]  // glob patterns — no changed files may match any
+  }
+  action: 'auto-merge' | 'auto-approve'
+}
