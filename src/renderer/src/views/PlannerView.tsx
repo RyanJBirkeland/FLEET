@@ -2,6 +2,7 @@ import { useEffect, useState, useMemo } from 'react'
 import { useTaskGroups } from '../stores/taskGroups'
 import { EpicList } from '../components/planner/EpicList'
 import { EpicDetail } from '../components/planner/EpicDetail'
+import { CreateEpicModal } from '../components/planner/CreateEpicModal'
 import { Search } from 'lucide-react'
 
 export default function PlannerView(): React.JSX.Element {
@@ -9,6 +10,7 @@ export default function PlannerView(): React.JSX.Element {
     useTaskGroups()
 
   const [searchQuery, setSearchQuery] = useState('')
+  const [showCreateModal, setShowCreateModal] = useState(false)
 
   // Load groups on mount
   useEffect(() => {
@@ -32,8 +34,7 @@ export default function PlannerView(): React.JSX.Element {
 
   // Handlers
   const handleCreateNew = (): void => {
-    // TODO: Open create epic modal/form
-    console.log('Create new epic clicked')
+    setShowCreateModal(true)
   }
 
   const handleAddTask = (): void => {
@@ -97,6 +98,8 @@ export default function PlannerView(): React.JSX.Element {
           </div>
         )}
       </div>
+
+      <CreateEpicModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
     </div>
   )
 }

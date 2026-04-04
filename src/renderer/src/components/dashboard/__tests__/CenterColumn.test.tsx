@@ -48,6 +48,7 @@ describe('CenterColumn', () => {
       queued: 0,
       blocked: 0,
       failed: 0,
+      actualFailed: 0,
       review: 0,
       done: 0
     },

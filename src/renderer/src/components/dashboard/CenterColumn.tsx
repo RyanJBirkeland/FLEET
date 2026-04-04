@@ -13,6 +13,7 @@ interface CenterColumnProps {
     queued: number
     blocked: number
     failed: number
+    actualFailed: number
     review: number
     done: number
   }
