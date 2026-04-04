@@ -2,7 +2,7 @@
  * Unit tests for playground IPC handlers
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { writeFile, mkdir, rm } from 'fs/promises'
+import { writeFile, mkdir, rm, symlink } from 'fs/promises'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { randomUUID } from 'crypto'
@@ -47,7 +47,7 @@ describe('playground-handlers', () => {
     const filePath = join(testDir, 'test.txt')
     await writeFile(filePath, 'content')
 
-    await expect(capturedHandler!(null, { filePath })).rejects.toThrow(
+    await expect(capturedHandler!(null, { filePath, rootPath: testDir })).rejects.toThrow(
       'Invalid file type: only .html files are supported'
     )
   })
@@ -58,7 +58,9 @@ describe('playground-handlers', () => {
     const largeContent = 'x'.repeat(6 * 1024 * 1024)
     await writeFile(filePath, largeContent)
 
-    await expect(capturedHandler!(null, { filePath })).rejects.toThrow('File too large')
+    await expect(capturedHandler!(null, { filePath, rootPath: testDir })).rejects.toThrow(
+      'File too large'
+    )
   })
 
   it('reads HTML file and broadcasts agent:playground event', async () => {
@@ -66,7 +68,7 @@ describe('playground-handlers', () => {
     const htmlContent = '<html><body><h1>Test</h1></body></html>'
     await writeFile(filePath, htmlContent)
 
-    await capturedHandler!(null, { filePath })
+    await capturedHandler!(null, { filePath, rootPath: testDir })
 
     expect(mockBroadcast).toHaveBeenCalledTimes(1)
     expect(mockBroadcast).toHaveBeenCalledWith('agent:event', {
@@ -86,7 +88,7 @@ describe('playground-handlers', () => {
     const htmlContent = '<html><body>Test</body></html>'
     await writeFile(filePath, htmlContent)
 
-    await capturedHandler!(null, { filePath })
+    await capturedHandler!(null, { filePath, rootPath: testDir })
 
     expect(mockBroadcast).toHaveBeenCalledTimes(1)
   })
@@ -94,7 +96,7 @@ describe('playground-handlers', () => {
   it('rejects non-existent files', async () => {
     const filePath = join(testDir, 'nonexistent.html')
 
-    await expect(capturedHandler!(null, { filePath })).rejects.toThrow()
+    await expect(capturedHandler!(null, { filePath, rootPath: testDir })).rejects.toThrow()
   })
 
   it('includes correct file size in event', async () => {
@@ -102,7 +104,7 @@ describe('playground-handlers', () => {
     const htmlContent = '<html><body>x</body></html>'
     await writeFile(filePath, htmlContent)
 
-    await capturedHandler!(null, { filePath })
+    await capturedHandler!(null, { filePath, rootPath: testDir })
 
     const call = mockBroadcast.mock.calls[0]
     expect(call[1].event.sizeBytes).toBe(htmlContent.length)
@@ -113,9 +115,82 @@ describe('playground-handlers', () => {
     const htmlContent = '<html>\n  <body>\n    <h1>Test & "quotes"</h1>\n  </body>\n</html>'
     await writeFile(filePath, htmlContent)
 
-    await capturedHandler!(null, { filePath })
+    await capturedHandler!(null, { filePath, rootPath: testDir })
 
     const call = mockBroadcast.mock.calls[0]
     expect(call[1].event.html).toBe(htmlContent)
+  })
+
+  // Path traversal prevention tests
+  it('blocks path traversal outside allowed root', async () => {
+    const outsideDir = join(tmpdir(), `playground-outside-${randomUUID()}`)
+    await mkdir(outsideDir, { recursive: true })
+    const outsideFile = join(outsideDir, 'evil.html')
+    await writeFile(outsideFile, '<html></html>')
+
+    try {
+      // Attempt traversal using ../
+      await expect(
+        capturedHandler!(null, {
+          filePath: join(testDir, '..', 'playground-outside-' + outsideDir.split('-').pop(), 'evil.html'),
+          rootPath: testDir
+        })
+      ).rejects.toThrow(/path traversal blocked/i)
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true })
+    }
+  })
+
+  it('blocks absolute path outside root', async () => {
+    await expect(
+      capturedHandler!(null, {
+        filePath: '/etc/passwd.html',
+        rootPath: testDir
+      })
+    ).rejects.toThrow(/path traversal blocked/i)
+  })
+
+  it('rejects when rootPath is missing', async () => {
+    await expect(
+      capturedHandler!(null, { filePath: join(testDir, 'test.html'), rootPath: '' })
+    ).rejects.toThrow(/rootPath is required/i)
+  })
+
+  it('blocks symlink escape from root', async () => {
+    const outsideDir = join(tmpdir(), `playground-symlink-${randomUUID()}`)
+    await mkdir(outsideDir, { recursive: true })
+    const outsideFile = join(outsideDir, 'secret.html')
+    await writeFile(outsideFile, '<html>secret</html>')
+
+    const symlinkPath = join(testDir, 'escape.html')
+    await symlink(outsideFile, symlinkPath)
+
+    try {
+      await expect(
+        capturedHandler!(null, { filePath: symlinkPath, rootPath: testDir })
+      ).rejects.toThrow(/path traversal blocked/i)
+    } finally {
+      await rm(outsideDir, { recursive: true, force: true })
+    }
+  })
+
+  it('allows valid path within root', async () => {
+    const filePath = join(testDir, 'output.html')
+    await writeFile(filePath, '<html><body>OK</body></html>')
+
+    await expect(
+      capturedHandler!(null, { filePath, rootPath: testDir })
+    ).resolves.not.toThrow()
+  })
+
+  it('allows nested path within root', async () => {
+    const nestedDir = join(testDir, 'sub', 'dir')
+    await mkdir(nestedDir, { recursive: true })
+    const filePath = join(nestedDir, 'nested.html')
+    await writeFile(filePath, '<html><body>Nested</body></html>')
+
+    await expect(
+      capturedHandler!(null, { filePath, rootPath: testDir })
+    ).resolves.not.toThrow()
   })
 })

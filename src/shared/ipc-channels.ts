@@ -516,7 +516,7 @@ export interface WorkbenchChannels {
 /** Dev Playground operations */
 export interface PlaygroundChannels {
   'playground:show': {
-    args: [input: { filePath: string }]
+    args: [input: { filePath: string; rootPath: string }]
     result: void
   }
 }
