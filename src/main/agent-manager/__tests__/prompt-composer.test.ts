@@ -319,6 +319,55 @@ describe('buildAgentPrompt', () => {
     })
   })
 
+  describe('retry context injection', () => {
+    it('does not include retry section when retryCount is 0', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Do something',
+        retryCount: 0
+      })
+      expect(prompt).not.toContain('## Retry Context')
+    })
+
+    it('does not include retry section when retryCount is undefined', () => {
+      const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
+      expect(prompt).not.toContain('## Retry Context')
+    })
+
+    it('includes retry section when retryCount > 0', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Do something',
+        retryCount: 2,
+        previousNotes: 'npm test failed'
+      })
+      expect(prompt).toContain('## Retry Context')
+      expect(prompt).toContain('attempt 3 of 4')
+      expect(prompt).toContain('npm test failed')
+      expect(prompt).toContain('Do NOT repeat the same approach')
+    })
+
+    it('handles retryCount > 0 with no previousNotes', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Do something',
+        retryCount: 1
+      })
+      expect(prompt).toContain('## Retry Context')
+      expect(prompt).toContain('attempt 2 of 4')
+      expect(prompt).toContain('No failure notes from previous attempt')
+    })
+
+    it('does not include retry section for non-pipeline agents', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'assistant',
+        retryCount: 2,
+        previousNotes: 'some failure'
+      })
+      expect(prompt).not.toContain('## Retry Context')
+    })
+  })
+
   describe('complete integration scenarios', () => {
     it('builds complete prompt for pipeline agent with all options', () => {
       const prompt = buildAgentPrompt({

@@ -25,6 +25,9 @@ export interface BuildPromptInput {
   messages?: Array<{ role: string; content: string }> // for copilot chat
   formContext?: { title: string; repo: string; spec: string } // for copilot
   codebaseContext?: string // for synthesizer (file tree, relevant files)
+  retryCount?: number // 0-based retry count
+  previousNotes?: string // failure notes from previous attempt
+  maxRuntimeMs?: number | null // max runtime in ms
 }
 
 // ---------------------------------------------------------------------------
@@ -70,6 +73,21 @@ function buildBranchAppendix(branch: string): string {
 You are working on branch \`${branch}\`. Commit and push ONLY to this branch.
 Do NOT checkout, merge to, or push to \`main\`. The CI/PR system handles integration.
 If you need to push, use: \`git push origin ${branch}\``
+}
+
+// ---------------------------------------------------------------------------
+// Retry Context
+// ---------------------------------------------------------------------------
+
+const MAX_RETRIES_FOR_DISPLAY = 3
+
+function buildRetryContext(retryCount: number, previousNotes?: string): string {
+  const attemptNum = retryCount + 1
+  const maxAttempts = MAX_RETRIES_FOR_DISPLAY + 1
+  const notesText = previousNotes
+    ? `Previous attempt failed: ${previousNotes}`
+    : 'No failure notes from previous attempt.'
+  return `\n\n## Retry Context\nThis is attempt ${attemptNum} of ${maxAttempts}. ${notesText}\nDo NOT repeat the same approach. Analyze what went wrong and try a different strategy.\nIf the previous failure was a test/typecheck error, fix that specific error first.`
 }
 
 const PLAYGROUND_INSTRUCTIONS = `
@@ -141,7 +159,16 @@ function getPersonality(agentType: AgentType): AgentPersonality {
  * @returns Complete prompt string ready for agent spawning
  */
 export function buildAgentPrompt(input: BuildPromptInput): string {
-  const { agentType, taskContent, branch, playgroundEnabled, messages, codebaseContext } = input
+  const {
+    agentType,
+    taskContent,
+    branch,
+    playgroundEnabled,
+    messages,
+    codebaseContext,
+    retryCount,
+    previousNotes
+  } = input
 
   // Start with universal preamble
   let prompt = UNIVERSAL_PREAMBLE
@@ -210,6 +237,11 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
   } else if (taskContent) {
     // For pipeline, assistant, adhoc: append task content
     prompt += '\n\n' + taskContent
+  }
+
+  // Inject retry context for pipeline agents on retry attempts
+  if (agentType === 'pipeline' && retryCount && retryCount > 0) {
+    prompt += buildRetryContext(retryCount, previousNotes)
   }
 
   return prompt
