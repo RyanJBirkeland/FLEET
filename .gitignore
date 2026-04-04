@@ -8,6 +8,12 @@ out
 # Test coverage output
 coverage/
 
+# E2E test results (Playwright)
+test-results/
+
+# Backup files from merge conflicts
+*.bak
+
 # Build artifacts
 release/
 

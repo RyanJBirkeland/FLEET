@@ -167,3 +167,17 @@ npm run package      # Alias for build:mac
 - Task dependency validation runs before creation — no create-then-rollback patterns
 - Audit trail is automatic — `updateTask()` records field-level diffs to `task_changes` table
 - Optimistic updates track fields, not just task IDs — only pending fields preserved on poll merge
+- Status transitions enforced by `isValidTransition()` in `src/shared/task-transitions.ts` — `updateTask()` rejects invalid transitions at the data layer
+- Pipeline agent prompts include retry context, time limits, idle warnings, and scope enforcement — see `prompt-composer.ts`
+- Spec templates with required sections in `src/shared/constants.ts` — Bug Fix, Feature (Renderer), Feature (Main), Refactor, Test Coverage
+
+## Pipeline Agent Spec Guidelines
+
+When creating sprint tasks for pipeline agents:
+- **Keep specs under 500 words.** Full plan files (1000+ lines) cause 100% timeout. Per-task specs (200-400 words) complete in 15-30 min.
+- **Include exact file paths.** Agents waste 15-20% of tokens on file exploration without them.
+- **Include `## How to Test` section.** Agents skip tests or write wrong patterns without guidance.
+- **Include `## Files to Change` section.** List every file the agent should modify.
+- **Avoid exploration language.** "Explore," "investigate," "find issues" cause agents to thrash. Use explicit instructions.
+- **One feature per task.** Agents given multi-feature specs attempt everything and timeout.
+- **Agents create test task artifacts.** Running `npm test` in worktrees creates "Test task" records in `~/.bde/bde.db`. These are cleaned on app startup.

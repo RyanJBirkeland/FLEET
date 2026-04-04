@@ -159,6 +159,19 @@ app.whenReady().then(() => {
     createLogger('startup').warn(`Failed to prune task changes: ${err}`)
   }
 
+  // Clean up test task artifacts (agents running tests create "Test task" records)
+  try {
+    const db = getDb()
+    const result = db
+      .prepare("DELETE FROM sprint_tasks WHERE title LIKE 'Test task%' AND status = 'backlog'")
+      .run()
+    if (result.changes > 0) {
+      createLogger('startup').info(`Cleaned ${result.changes} test task artifacts`)
+    }
+  } catch {
+    /* non-fatal */
+  }
+
   // Prune task_changes periodically (every 24 hours)
   const pruneTakeChangesInterval = setInterval(
     () => {
