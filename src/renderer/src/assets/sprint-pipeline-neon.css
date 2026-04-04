@@ -1875,3 +1875,35 @@
 .ticket-editor__btn-accent {
   color: var(--bde-accent);
 }
+
+/* ── Agent Activity Preview ── */
+.agent-preview {
+  margin: 8px 0;
+  padding: 8px;
+  background: var(--neon-surface);
+  border: 1px solid var(--bde-border);
+  border-radius: 4px;
+  font-family: var(--font-mono, monospace);
+  font-size: var(--font-2xs, 10px);
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.agent-preview--empty {
+  opacity: 0.5;
+}
+
+.agent-preview__waiting {
+  font-style: italic;
+}
+
+.agent-preview__line {
+  padding: 1px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.agent-preview__text {
+  color: var(--neon-text-dim, #888);
+}
