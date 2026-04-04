@@ -23,6 +23,7 @@ interface SprintUIState {
   doneViewOpen: boolean
   conflictDrawerOpen: boolean
   healthCheckDrawerOpen: boolean
+  quickCreateOpen: boolean
 
   // --- Actions ---
   setSelectedTaskId: (id: string | null) => void
@@ -32,6 +33,8 @@ interface SprintUIState {
   setDoneViewOpen: (open: boolean) => void
   setConflictDrawerOpen: (open: boolean) => void
   setHealthCheckDrawerOpen: (open: boolean) => void
+  setQuickCreateOpen: (open: boolean) => void
+  toggleQuickCreate: () => void
   setRepoFilter: (filter: string | null) => void
   setSearchQuery: (query: string) => void
   setStatusFilter: (filter: StatusFilter) => void
@@ -54,6 +57,7 @@ export const useSprintUI = create<SprintUIState>((set, get) => ({
   doneViewOpen: false,
   conflictDrawerOpen: false,
   healthCheckDrawerOpen: false,
+  quickCreateOpen: false,
 
   setSelectedTaskId: (id): void => {
     const current = get().selectedTaskId
@@ -69,6 +73,8 @@ export const useSprintUI = create<SprintUIState>((set, get) => ({
   setDoneViewOpen: (open): void => set({ doneViewOpen: open }),
   setConflictDrawerOpen: (open): void => set({ conflictDrawerOpen: open }),
   setHealthCheckDrawerOpen: (open): void => set({ healthCheckDrawerOpen: open }),
+  setQuickCreateOpen: (open): void => set({ quickCreateOpen: open }),
+  toggleQuickCreate: (): void => set((s) => ({ quickCreateOpen: !s.quickCreateOpen })),
   setRepoFilter: (filter): void => set({ repoFilter: filter }),
   setSearchQuery: (query): void => set({ searchQuery: query }),
   setStatusFilter: (filter): void => set({ statusFilter: filter }),

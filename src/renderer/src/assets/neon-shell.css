@@ -525,6 +525,56 @@
   display: flex;
 }
 
+/* ── Quick Create Bar ── */
+.quick-create-bar {
+  position: fixed;
+  top: 68px; /* below header + traffic light zone */
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--neon-surface);
+  border: 1px solid var(--neon-cyan-border);
+  border-radius: 8px;
+  box-shadow: var(--bde-shadow-lg);
+  width: min(560px, 80vw);
+  font-family: var(--bde-font-code);
+}
+.quick-create-bar__icon { color: var(--neon-cyan); flex-shrink: 0; }
+.quick-create-bar__input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  color: var(--neon-text);
+  font-size: 13px;
+  font-family: var(--bde-font-code);
+}
+.quick-create-bar__input::placeholder { color: var(--neon-text-dim); }
+.quick-create-bar__hints {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.quick-create-bar__hint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: var(--neon-text-dim);
+}
+.quick-create-bar__hint kbd {
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: var(--neon-surface-deep);
+  border: 1px solid var(--neon-border);
+  font-size: 9px;
+}
+.quick-create-bar__hint--queue { color: var(--neon-orange); }
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .neon-tooltip {

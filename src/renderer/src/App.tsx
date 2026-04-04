@@ -2,7 +2,9 @@ import { useCallback, useEffect, useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useCommandPaletteStore } from './stores/commandPalette'
 import { useCostDataStore } from './stores/costData'
+import { useSprintUI } from './stores/sprintUI'
 import { CommandPalette } from './components/layout/CommandPalette'
+import { QuickCreateBar } from './components/ui/QuickCreateBar'
 import { ToastContainer } from './components/layout/ToastContainer'
 import { UnifiedHeader } from './components/layout/UnifiedHeader'
 import { NeonSidebar } from './components/layout/NeonSidebar'
@@ -120,6 +122,9 @@ function App(): React.JSX.Element {
   const paletteOpen = useCommandPaletteStore((s) => s.isOpen)
   const togglePalette = useCommandPaletteStore((s) => s.toggle)
   const closePalette = useCommandPaletteStore((s) => s.close)
+  const quickCreateOpen = useSprintUI((s) => s.quickCreateOpen)
+  const setQuickCreateOpen = useSprintUI((s) => s.setQuickCreateOpen)
+  const toggleQuickCreate = useSprintUI((s) => s.toggleQuickCreate)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
 
   const loadLayout = usePanelLayoutStore((s) => s.loadSavedLayout)
@@ -289,12 +294,18 @@ function App(): React.JSX.Element {
         return
       }
 
+      if (e.metaKey && e.key === 'n') {
+        e.preventDefault()
+        toggleQuickCreate()
+        return
+      }
+
       if (e.key === '?' && !e.metaKey && !e.ctrlKey) {
         e.preventDefault()
         setShortcutsOpen((prev) => !prev)
       }
     },
-    [setView, paletteOpen, shortcutsOpen, closePalette, togglePalette]
+    [setView, paletteOpen, shortcutsOpen, closePalette, togglePalette, toggleQuickCreate]
   )
 
   useEffect(() => {
@@ -338,6 +349,11 @@ function App(): React.JSX.Element {
             <PanelRenderer node={root} />
           </main>
         </div>
+        <QuickCreateBar
+          open={quickCreateOpen}
+          onClose={() => setQuickCreateOpen(false)}
+          defaultRepo="bde"
+        />
         <CommandPalette open={paletteOpen} onClose={closePalette} />
         <AnimatePresence>
           {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}

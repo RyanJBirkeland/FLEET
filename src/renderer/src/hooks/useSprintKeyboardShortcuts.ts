@@ -1,7 +1,7 @@
 /**
  * useSprintKeyboardShortcuts — keyboard shortcuts for the Sprint Center view.
- * N -> open task workbench, Escape -> close drawers,
- * R -> retry selected task, D -> delete selected task, ? -> shortcuts help.
+ * Escape -> close drawers, R -> retry selected task, D -> delete selected task, ? -> shortcuts help.
+ * Note: Cmd+N global shortcut (in App.tsx) opens quick-create bar.
  */
 import { useEffect, type Dispatch, type SetStateAction } from 'react'
 import { useSprintUI } from '../stores/sprintUI'
@@ -57,12 +57,6 @@ export function useSprintKeyboardShortcuts({
 
       // Skip action keys when typing in inputs
       if (e.metaKey || e.ctrlKey || e.altKey || isTextInput()) return
-
-      if (e.key === 'n') {
-        e.preventDefault()
-        openWorkbench()
-        return
-      }
 
       // Action keys that operate on the selected task
       const selectedId = useSprintUI.getState().selectedTaskId
