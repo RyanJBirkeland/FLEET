@@ -34,6 +34,7 @@ interface TaskWorkbenchState {
   advancedOpen: boolean
   dependsOn: TaskDependency[]
   playgroundEnabled: boolean
+  maxCostUsd: number | null
   model: string
   specType: SpecType | null
 
@@ -117,6 +118,7 @@ function defaults(): Pick<
   | 'advancedOpen'
   | 'dependsOn'
   | 'playgroundEnabled'
+  | 'maxCostUsd'
   | 'model'
   | 'specType'
   | 'copilotVisible'
@@ -142,6 +144,7 @@ function defaults(): Pick<
     advancedOpen: false,
     dependsOn: [],
     playgroundEnabled: false,
+    maxCostUsd: null,
     model: '',
     specType: null,
     copilotVisible: true,
@@ -185,6 +188,7 @@ export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
       taskTemplateName: task.template_name ?? '',
       dependsOn: task.depends_on ?? [],
       playgroundEnabled: task.playground_enabled ?? false,
+      maxCostUsd: task.max_cost_usd ?? null,
       model: task.model ?? '',
       specType: (task.spec_type as SpecType) ?? null,
       copilotMessages: [{ ...WELCOME_MESSAGE, timestamp: Date.now() }],

@@ -87,7 +87,7 @@ export async function checkOAuthToken(logger: Logger): Promise<boolean> {
   }
 }
 
-export type WatchdogVerdict = 'max-runtime' | 'idle' | 'rate-limit-loop'
+export type WatchdogVerdict = 'max-runtime' | 'idle' | 'rate-limit-loop' | 'cost-budget-exceeded'
 
 /**
  * Handle a watchdog verdict by updating the task and optionally applying backpressure.
@@ -148,6 +148,23 @@ export function handleWatchdogVerdict(
       })
     } catch (err) {
       logger.warn(`[agent-manager] Failed to requeue rate-limited task ${taskId}: ${err}`)
+    }
+  } else if (verdict === 'cost-budget-exceeded') {
+    try {
+      updateTaskFn(taskId, {
+        status: 'error',
+        completed_at: now,
+        claimed_by: null,
+        notes: 'Agent exceeded the cost budget (max_cost_usd). The task consumed more API credits than allowed. Review the task complexity or increase the budget.',
+        needs_review: true
+      })
+      onTerminal(taskId, 'error').catch((err) =>
+        logger.warn(
+          `[agent-manager] Failed onTerminal for task ${taskId} after cost budget exceeded: ${err}`
+        )
+      )
+    } catch (err) {
+      logger.warn(`[agent-manager] Failed to update task ${taskId} after cost budget exceeded: ${err}`)
     }
   }
   return concurrency
@@ -290,6 +307,7 @@ export class AgentManagerImpl implements AgentManager {
     notes: string | null
     playground_enabled: boolean
     max_runtime_ms: number | null
+    max_cost_usd: number | null
     model: string | null
   } | null {
     // Validate required fields
@@ -317,6 +335,7 @@ export class AgentManagerImpl implements AgentManager {
       notes: (raw.notes as string) ?? null,
       playground_enabled: Boolean(raw.playgroundEnabled),
       max_runtime_ms: Number(raw.maxRuntimeMs) || null,
+      max_cost_usd: Number(raw.maxCostUsd) || null,
       model: (raw.model as string) ?? null
     }
   }

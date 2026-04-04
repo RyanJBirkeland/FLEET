@@ -36,6 +36,7 @@ export interface RunAgentTask {
   notes?: string | null
   playground_enabled?: boolean
   max_runtime_ms?: number | null
+  max_cost_usd?: number | null
   model?: string | null
   depends_on?: Array<{ id: string; type: 'hard' | 'soft' }> | null
 ||||||| 4bec9e91
@@ -332,7 +333,8 @@ export async function runAgent(
     costUsd: 0,
     tokensIn: 0,
     tokensOut: 0,
-    maxRuntimeMs: task.max_runtime_ms ?? null
+    maxRuntimeMs: task.max_runtime_ms ?? null,
+    maxCostUsd: task.max_cost_usd ?? null
   }
   activeAgents.set(task.id, agent)
   let lastAgentOutput = ''

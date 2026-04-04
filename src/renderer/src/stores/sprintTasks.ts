@@ -17,6 +17,7 @@ export interface CreateTicketInput {
   template_name?: string
   depends_on?: TaskDependency[]
   playground_enabled?: boolean
+  max_cost_usd?: number | null
   model?: string
   spec_type?: string | null
 }

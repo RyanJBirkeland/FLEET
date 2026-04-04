@@ -30,6 +30,7 @@ function makeAgent(overrides: Partial<ActiveAgent> = {}): ActiveAgent {
     tokensIn: 0,
     tokensOut: 0,
     maxRuntimeMs: null,
+    maxCostUsd: null,
     ...overrides
   }
 }
@@ -105,5 +106,49 @@ describe('checkAgent', () => {
     const agent = makeAgent({ startedAt: 0, lastOutputAt: 0 })
     const now = baseConfig.maxRuntimeMs + baseConfig.idleTimeoutMs
     expect(checkAgent(agent, now, baseConfig)).toBe('max-runtime')
+  })
+
+  it('returns cost-budget-exceeded when costUsd meets maxCostUsd', () => {
+    const agent = makeAgent({
+      startedAt: 0,
+      lastOutputAt: 0,
+      costUsd: 5.0,
+      maxCostUsd: 5.0
+    })
+    const now = 1_000
+    expect(checkAgent(agent, now, baseConfig)).toBe('cost-budget-exceeded')
+  })
+
+  it('returns cost-budget-exceeded when costUsd exceeds maxCostUsd', () => {
+    const agent = makeAgent({
+      startedAt: 0,
+      lastOutputAt: 0,
+      costUsd: 5.5,
+      maxCostUsd: 5.0
+    })
+    const now = 1_000
+    expect(checkAgent(agent, now, baseConfig)).toBe('cost-budget-exceeded')
+  })
+
+  it('returns ok when costUsd is below maxCostUsd', () => {
+    const agent = makeAgent({
+      startedAt: 0,
+      lastOutputAt: 0,
+      costUsd: 4.5,
+      maxCostUsd: 5.0
+    })
+    const now = 1_000
+    expect(checkAgent(agent, now, baseConfig)).toBe('ok')
+  })
+
+  it('returns ok when maxCostUsd is null', () => {
+    const agent = makeAgent({
+      startedAt: 0,
+      lastOutputAt: 0,
+      costUsd: 100.0,
+      maxCostUsd: null
+    })
+    const now = 1_000
+    expect(checkAgent(agent, now, baseConfig)).toBe('ok')
   })
 })

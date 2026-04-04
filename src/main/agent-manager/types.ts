@@ -63,6 +63,7 @@ export interface ActiveAgent {
   tokensIn: number
   tokensOut: number
   maxRuntimeMs: number | null
+  maxCostUsd: number | null
 }
 
 export type { Logger } from '../logger'

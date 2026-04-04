@@ -33,6 +33,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
   const specType = useTaskWorkbenchStore((s) => s.specType)
   const dependsOn = useTaskWorkbenchStore((s) => s.dependsOn)
   const playgroundEnabled = useTaskWorkbenchStore((s) => s.playgroundEnabled)
+  const maxCostUsd = useTaskWorkbenchStore((s) => s.maxCostUsd)
   const model = useTaskWorkbenchStore((s) => s.model)
   const setField = useTaskWorkbenchStore((s) => s.setField)
   const resetForm = useTaskWorkbenchStore((s) => s.resetForm)
@@ -64,6 +65,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
           spec,
           depends_on: dependsOn.length > 0 ? dependsOn : null,
           playground_enabled: playgroundEnabled || undefined,
+          max_cost_usd: maxCostUsd ?? undefined,
           model: model || undefined,
           status: targetStatus,
           spec_type: specType ?? undefined
@@ -77,6 +79,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
           priority,
           depends_on: dependsOn.length > 0 ? dependsOn : undefined,
           playground_enabled: playgroundEnabled || undefined,
+          max_cost_usd: maxCostUsd ?? undefined,
           model: model || undefined,
           spec_type: specType ?? undefined
         }
@@ -96,6 +99,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
       spec,
       dependsOn,
       playgroundEnabled,
+      maxCostUsd,
       model,
       createTask,
       updateTask
@@ -377,6 +381,23 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                   <option value="claude-haiku-3-5">Claude Haiku 3.5</option>
                 </select>
               </div>
+            </div>
+            <div className="wb-form__field">
+              <label htmlFor="wb-form-max-cost" className="wb-form__label">
+                Max Cost (USD)
+              </label>
+              <input
+                id="wb-form-max-cost"
+                type="number"
+                step="0.01"
+                min="0"
+                value={maxCostUsd ?? ''}
+                onChange={(e) =>
+                  setField('maxCostUsd', e.target.value ? Number(e.target.value) : null)
+                }
+                placeholder="No limit"
+                className="wb-form__input"
+              />
             </div>
             <div className="wb-form__checkbox-row">
               <input

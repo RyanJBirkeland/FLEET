@@ -146,7 +146,8 @@ function makeActiveAgent(taskId: string): ActiveAgent {
     costUsd: 0,
     tokensIn: 0,
     tokensOut: 0,
-    maxRuntimeMs: null
+    maxRuntimeMs: null,
+    maxCostUsd: null
   }
 }
 
@@ -379,6 +380,7 @@ describe('AgentManagerImpl — class internals', () => {
         notes: null,
         playground_enabled: true,
         max_runtime_ms: 30000,
+        max_cost_usd: null,
         model: null
       })
     })
