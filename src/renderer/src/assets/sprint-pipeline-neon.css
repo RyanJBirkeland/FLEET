@@ -243,10 +243,17 @@
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 4px;
-  cursor: pointer;
   transition:
     border-color 150ms ease,
     background 150ms ease;
+}
+
+.backlog-card__select {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
 }
 
 .backlog-card:hover {
@@ -303,8 +310,15 @@
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 4px;
-  cursor: pointer;
   transition: background 150ms ease;
+}
+
+.failed-card__select {
+  all: unset;
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  text-align: left;
 }
 
 .failed-card:hover {
@@ -1654,8 +1668,8 @@
 
 /* ── Focus-Visible Indicators (H5) ── */
 .task-pill:focus-visible,
-.backlog-card:focus-visible,
-.failed-card:focus-visible,
+.backlog-card__select:focus-visible,
+.failed-card__select:focus-visible,
 .task-drawer__btn:focus-visible,
 .backlog-card__action:focus-visible,
 .pipeline-filter-bar__chip:focus-visible,
