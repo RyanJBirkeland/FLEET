@@ -23,6 +23,46 @@ export default function DashboardView(): React.JSX.Element {
   const setSearchQuery = useSprintUI((s) => s.setSearchQuery)
   const setView = usePanelLayoutStore((s) => s.setView)
 
+  // Morning briefing state
+  const [showBriefing, setShowBriefing] = useState(false)
+  const [briefingTasks, setBriefingTasks] = useState<typeof tasks>([])
+  const [briefingChecked, setBriefingChecked] = useState(false)
+
+  // Check for new completions when tasks load
+  useEffect(() => {
+    // Only check once, when tasks are available
+    if (briefingChecked || tasks.length === 0) return
+
+    const lastClose = localStorage.getItem('bde:last-window-close')
+    if (!lastClose) {
+      setBriefingChecked(true)
+      return
+    }
+
+    const lastCloseTime = parseInt(lastClose, 10)
+    if (isNaN(lastCloseTime)) {
+      setBriefingChecked(true)
+      return
+    }
+
+    const newCompletions = tasks.filter((task) => {
+      if (!task.completed_at) return false
+      const completedTime = new Date(task.completed_at).getTime()
+      return completedTime > lastCloseTime
+    })
+
+    if (newCompletions.length > 0) {
+      setBriefingTasks(newCompletions)
+      setShowBriefing(true)
+    }
+    setBriefingChecked(true)
+  }, [tasks, briefingChecked])
+
+  const handleDismissBriefing = useCallback(() => {
+    localStorage.setItem('bde:last-window-close', Date.now().toString())
+    setShowBriefing(false)
+  }, [])
+
   // Dashboard data from centralized polling
   const { chartData, feedEvents, loading, cardErrors, lastFetchedAt } = useDashboardDataStore(
     useShallow((s) => ({
@@ -119,6 +159,44 @@ export default function DashboardView(): React.JSX.Element {
             </span>
           )}
         </StatusBar>
+
+        {/* Morning briefing card */}
+        {showBriefing && briefingTasks.length > 0 && (
+          <motion.div
+            className="dashboard-briefing"
+            variants={reduced ? undefined : VARIANTS.fadeIn}
+            initial={reduced ? undefined : 'initial'}
+            animate={reduced ? undefined : 'animate'}
+            exit={reduced ? undefined : 'exit'}
+            transition={transition}
+          >
+            <NeonCard accent="cyan" title="Morning Briefing">
+              <div className="dashboard-briefing__content">
+                <p className="dashboard-briefing__text">
+                  {briefingTasks.length} task{briefingTasks.length !== 1 ? 's' : ''} completed
+                  since last session
+                </p>
+                <div className="dashboard-briefing__actions">
+                  <button
+                    className="dashboard-briefing__button dashboard-briefing__button--primary"
+                    onClick={() => {
+                      setView('code-review')
+                      handleDismissBriefing()
+                    }}
+                  >
+                    Review All
+                  </button>
+                  <button
+                    className="dashboard-briefing__button dashboard-briefing__button--secondary"
+                    onClick={handleDismissBriefing}
+                  >
+                    Dismiss
+                  </button>
+                </div>
+              </div>
+            </NeonCard>
+          </motion.div>
+        )}
 
         {/* 3-column Ops Deck grid or onboarding */}
         {tasks.length === 0 ? (

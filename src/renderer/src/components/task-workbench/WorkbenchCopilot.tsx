@@ -288,61 +288,7 @@ export function extractSearchTerms(text: string): string {
 
 ||||||| 61d03689
 ||||||| 6807c806
-const RESEARCH_PATTERNS = [
-  /research|search|find|look for|grep|where is|which file|show me/i
-]
-
-export function isResearchQuery(text: string): boolean {
-  return RESEARCH_PATTERNS.some((p) => p.test(text))
-}
-
-export function extractSearchTerms(text: string): string {
-  return text
-    .replace(
-      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
-      ''
-    )
-    .trim()
-}
-
-const RESEARCH_PATTERNS = [
-  /research|search|find|look for|grep|where is|which file|show me/i
-]
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function isResearchQuery(text: string): boolean {
-  return RESEARCH_PATTERNS.some((p) => p.test(text))
-}
-
-// eslint-disable-next-line react-refresh/only-export-components
-export function extractSearchTerms(text: string): string {
-  return text
-    .replace(
-      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
-      ''
-    )
-    .trim()
-}
-
-||||||| 6807c806
-const RESEARCH_PATTERNS = [
-  /research|search|find|look for|grep|where is|which file|show me/i
-]
-
-export function isResearchQuery(text: string): boolean {
-  return RESEARCH_PATTERNS.some((p) => p.test(text))
-}
-
-export function extractSearchTerms(text: string): string {
-  return text
-    .replace(
-      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
-      ''
-    )
-    .trim()
-}
-
-||||||| cca9d91a
+||||||| 61d03689
 ||||||| 6807c806
 const RESEARCH_PATTERNS = [
   /research|search|find|look for|grep|where is|which file|show me/i
@@ -380,8 +326,23 @@ export function extractSearchTerms(text: string): string {
     .trim()
 }
 
-||||||| cca9d91a
-||||||| 6807c806
+const RESEARCH_PATTERNS = [
+  /research|search|find|look for|grep|where is|which file|show me/i
+]
+
+export function isResearchQuery(text: string): boolean {
+  return RESEARCH_PATTERNS.some((p) => p.test(text))
+}
+
+export function extractSearchTerms(text: string): string {
+  return text
+    .replace(
+      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
+      ''
+    )
+    .trim()
+}
+
 const RESEARCH_PATTERNS = [
   /research|search|find|look for|grep|where is|which file|show me/i
 ]
@@ -418,8 +379,6 @@ export function extractSearchTerms(text: string): string {
     .trim()
 }
 
-||||||| d7650eef
-||||||| 6807c806
 const RESEARCH_PATTERNS = [
   /research|search|find|look for|grep|where is|which file|show me/i
 ]
@@ -456,26 +415,6 @@ export function extractSearchTerms(text: string): string {
     .trim()
 }
 
-||||||| 6807c806
-const RESEARCH_PATTERNS = [
-  /research|search|find|look for|grep|where is|which file|show me/i
-]
-
-export function isResearchQuery(text: string): boolean {
-  return RESEARCH_PATTERNS.some((p) => p.test(text))
-}
-
-export function extractSearchTerms(text: string): string {
-  return text
-    .replace(
-      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
-      ''
-    )
-    .trim()
-}
-
-||||||| cca9d91a
-||||||| 6807c806
 const RESEARCH_PATTERNS = [
   /research|search|find|look for|grep|where is|which file|show me/i
 ]
@@ -512,8 +451,23 @@ export function extractSearchTerms(text: string): string {
     .trim()
 }
 
-||||||| 6ddba36b
-||||||| 6807c806
+const RESEARCH_PATTERNS = [
+  /research|search|find|look for|grep|where is|which file|show me/i
+]
+
+export function isResearchQuery(text: string): boolean {
+  return RESEARCH_PATTERNS.some((p) => p.test(text))
+}
+
+export function extractSearchTerms(text: string): string {
+  return text
+    .replace(
+      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
+      ''
+    )
+    .trim()
+}
+
 const RESEARCH_PATTERNS = [
   /research|search|find|look for|grep|where is|which file|show me/i
 ]
@@ -550,7 +504,42 @@ export function extractSearchTerms(text: string): string {
     .trim()
 }
 
-||||||| 6807c806
+const RESEARCH_PATTERNS = [
+  /research|search|find|look for|grep|where is|which file|show me/i
+]
+
+export function isResearchQuery(text: string): boolean {
+  return RESEARCH_PATTERNS.some((p) => p.test(text))
+}
+
+export function extractSearchTerms(text: string): string {
+  return text
+    .replace(
+      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
+      ''
+    )
+    .trim()
+}
+
+const RESEARCH_PATTERNS = [
+  /research|search|find|look for|grep|where is|which file|show me/i
+]
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function isResearchQuery(text: string): boolean {
+  return RESEARCH_PATTERNS.some((p) => p.test(text))
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function extractSearchTerms(text: string): string {
+  return text
+    .replace(
+      /^(research|search|find|look for|grep|where is|which file|show me)\s*(the\s+)?(codebase\s+)?(for\s+)?/i,
+      ''
+    )
+    .trim()
+}
+
 const RESEARCH_PATTERNS = [
   /research|search|find|look for|grep|where is|which file|show me/i
 ]

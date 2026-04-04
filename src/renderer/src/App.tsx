@@ -319,6 +319,15 @@ function App(): React.JSX.Element {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [handleKeyDown])
 
+  // Save timestamp on window close for morning briefing detection
+  useEffect(() => {
+    const handleBeforeUnload = (): void => {
+      localStorage.setItem('bde:last-window-close', Date.now().toString())
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+  }, [])
+
   if (!ready) {
     return <Onboarding onReady={() => setReady(true)} />
   }
