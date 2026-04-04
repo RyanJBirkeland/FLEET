@@ -28,7 +28,7 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Search (e.g. status:failed priority:<=2)\u2026"
+          placeholder="Search tasks\u2026"
           className="pipeline-filter-bar__input"
           aria-label="Search tasks"
         />
