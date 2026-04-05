@@ -31,6 +31,7 @@ vi.mock('../../stores/dashboardData', () => {
   const { create } = require('zustand')
   const store = create(() => ({
     chartData: [],
+    burndownData: [],
     feedEvents: [],
     prCount: 0,
     cardErrors: {},
@@ -72,6 +73,7 @@ describe('DashboardView', () => {
     useSprintUI.setState({ searchQuery: '', statusFilter: 'all' })
     useDashboardDataStore.setState({
       chartData: [],
+      burndownData: [],
       feedEvents: [],
       prCount: 0,
       successTrendData: [],

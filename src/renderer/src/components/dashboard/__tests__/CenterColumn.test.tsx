@@ -42,6 +42,7 @@ vi.mock('../../stores/dashboardData', () => ({
 
 describe('CenterColumn', () => {
   const mockChartData: ChartBar[] = []
+  const mockBurndownData: ChartBar[] = []
   const defaultProps = {
     stats: {
       active: 0,
@@ -61,6 +62,7 @@ describe('CenterColumn', () => {
       failed: []
     },
     chartData: mockChartData,
+    burndownData: mockBurndownData,
     cardErrors: {},
     successRate: 85,
     avgDuration: 120000,

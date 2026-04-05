@@ -46,8 +46,15 @@ describe('ChartsSection', () => {
     { label: '01:00', value: 3, accent: 'cyan' }
   ]
 
+  const mockBurndownData: ChartBar[] = [
+    { label: '2026-03-28', value: 2, accent: 'cyan' },
+    { label: '2026-03-29', value: 4, accent: 'cyan' },
+    { label: '2026-03-30', value: 1, accent: 'cyan' }
+  ]
+
   const defaultProps = {
     chartData: mockChartData,
+    burndownData: mockBurndownData,
     cardErrors: {},
     successRate: 85,
     stats: { done: 17, failed: 3, actualFailed: 3 },
@@ -67,12 +74,34 @@ describe('ChartsSection', () => {
 
   it('renders MiniChart with correct data', () => {
     render(<ChartsSection {...defaultProps} />)
-    expect(screen.getByTestId('mini-chart')).toHaveTextContent('2 bars')
+    const charts = screen.getAllByTestId('mini-chart')
+    expect(charts).toHaveLength(2) // Completions + Burndown
+    expect(charts[0]).toHaveTextContent('2 bars') // Completions chart
+    expect(charts[1]).toHaveTextContent('3 bars') // Burndown chart
   })
 
   it('renders chart caption', () => {
     render(<ChartsSection {...defaultProps} />)
     expect(screen.getByText('completions per hour, last 24h')).toBeInTheDocument()
+  })
+
+  it('renders Sprint Burn-Down card', () => {
+    render(<ChartsSection {...defaultProps} />)
+    expect(screen.getByTestId('neon-card-sprint-burn-down')).toBeInTheDocument()
+  })
+
+  it('renders burndown chart caption', () => {
+    render(<ChartsSection {...defaultProps} />)
+    expect(screen.getByText('tasks completed, last 7 days')).toBeInTheDocument()
+  })
+
+  it('renders error state when burndown error exists', () => {
+    const props = {
+      ...defaultProps,
+      cardErrors: { burndown: 'Failed to load burndown data' }
+    }
+    render(<ChartsSection {...props} />)
+    expect(screen.getByText('Failed to load burndown data')).toBeInTheDocument()
   })
 
   it('renders Success Rate card with SuccessRing', () => {
@@ -133,7 +162,8 @@ describe('ChartsSection', () => {
     }
     render(<ChartsSection {...props} />)
     expect(screen.getByText('Failed to load chart data')).toBeInTheDocument()
-    expect(screen.queryByTestId('mini-chart')).not.toBeInTheDocument()
+    // Burndown chart still renders, so there's still one MiniChart
+    expect(screen.getAllByTestId('mini-chart')).toHaveLength(1)
   })
 
   it('renders Retry button in error state', () => {

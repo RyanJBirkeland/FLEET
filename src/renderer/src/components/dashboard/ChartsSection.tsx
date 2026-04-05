@@ -17,6 +17,7 @@ interface DailySuccessRate {
 
 interface ChartsSectionProps {
   chartData: ChartBar[]
+  burndownData: ChartBar[]
   cardErrors: Record<string, string | undefined>
   successRate: number | null
   stats: { done: number; failed: number; actualFailed: number }
@@ -41,6 +42,7 @@ function formatDurationMs(ms: number): string {
 /** Center column with pipeline visualization and charts. */
 export function ChartsSection({
   chartData,
+  burndownData,
   cardErrors,
   successRate,
   stats,
@@ -93,6 +95,25 @@ export function ChartsSection({
           </div>
         ) : (
           <SuccessTrendChart data={successTrendData} />
+        )}
+      </NeonCard>
+
+      <NeonCard accent="cyan" title="Sprint Burn-Down" icon={<Target size={12} />}>
+        {cardErrors.burndown ? (
+          <div className="dashboard-card-error">
+            <div className="dashboard-card-error__message">{cardErrors.burndown}</div>
+            <button
+              className="dashboard-card-error__retry"
+              onClick={() => useDashboardDataStore.getState().fetchAll()}
+            >
+              Retry
+            </button>
+          </div>
+        ) : (
+          <>
+            <MiniChart data={burndownData} height={120} />
+            <div className="dashboard-chart-caption">tasks completed, last 7 days</div>
+          </>
         )}
       </NeonCard>
 

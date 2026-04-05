@@ -11,6 +11,7 @@ interface DailySuccessRate {
 
 interface DashboardDataState {
   chartData: ChartBar[]
+  burndownData: ChartBar[]
   feedEvents: FeedEvent[]
   prCount: number
   successTrendData: DailySuccessRate[]
@@ -55,6 +56,7 @@ function formatEventAction(eventType: string): string | null {
 
 export const useDashboardDataStore = create<DashboardDataState>((set) => ({
   chartData: [],
+  burndownData: [],
   feedEvents: [],
   prCount: 0,
   successTrendData: [],
@@ -77,6 +79,20 @@ export const useDashboardDataStore = create<DashboardDataState>((set) => ({
       }
     } catch {
       errors.chart = 'Failed to load completions'
+    }
+
+    let burndownData: ChartBar[] = []
+    try {
+      const data = await window.api.dashboard?.burndown()
+      if (data) {
+        burndownData = data.map((d) => ({
+          value: d.count,
+          accent: 'cyan' as const,
+          label: d.date
+        }))
+      }
+    } catch {
+      errors.burndown = 'Failed to load burndown'
     }
 
     let feedEvents: FeedEvent[] = []
@@ -124,6 +140,7 @@ export const useDashboardDataStore = create<DashboardDataState>((set) => ({
 
     set({
       chartData,
+      burndownData,
       feedEvents,
       prCount,
       successTrendData,

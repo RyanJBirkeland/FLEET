@@ -317,6 +317,9 @@ const api = {
     completionsPerHour: () => typedInvoke('agent:completionsPerHour'),
     recentEvents: (limit?: number) => typedInvoke('agent:recentEvents', limit),
     dailySuccessRate: (days?: number) => typedInvoke('dashboard:dailySuccessRate', days)
+    recentEvents: (limit?: number) => typedInvoke('agent:recentEvents', limit)
+    recentEvents: (limit?: number) => typedInvoke('agent:recentEvents', limit),
+    burndown: () => typedInvoke('sprint:burndown')
   },
 
   // Task Workbench

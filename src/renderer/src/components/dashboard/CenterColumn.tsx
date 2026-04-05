@@ -33,6 +33,7 @@ interface CenterColumnProps {
     failed: unknown[]
   }
   chartData: ChartBar[]
+  burndownData: ChartBar[]
   cardErrors: Record<string, string | undefined>
   successRate: number | null
   avgDuration: number | null
@@ -48,6 +49,7 @@ export function CenterColumn({
   stats,
   partitions,
   chartData,
+  burndownData,
   cardErrors,
   successRate,
   avgDuration,
@@ -120,6 +122,7 @@ export function CenterColumn({
 
       <ChartsSection
         chartData={chartData}
+        burndownData={burndownData}
         cardErrors={cardErrors}
         successRate={successRate}
         stats={{ done: stats.done, failed: stats.failed, actualFailed: stats.actualFailed }}

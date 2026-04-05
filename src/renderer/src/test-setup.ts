@@ -173,6 +173,9 @@ vi.stubGlobal('api', {
     completionsPerHour: vi.fn().mockResolvedValue([]),
     recentEvents: vi.fn().mockResolvedValue([]),
     dailySuccessRate: vi.fn().mockResolvedValue([])
+    recentEvents: vi.fn().mockResolvedValue([])
+    recentEvents: vi.fn().mockResolvedValue([]),
+    burndown: vi.fn().mockResolvedValue([])
   },
   claudeConfig: {
     get: vi.fn().mockResolvedValue({}),

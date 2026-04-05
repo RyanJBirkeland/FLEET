@@ -74,6 +74,26 @@ export default function DashboardView(): React.JSX.Element {
         lastFetchedAt: s.lastFetchedAt
       }))
     )
+  const { chartData, feedEvents, loading, cardErrors, lastFetchedAt } = useDashboardDataStore(
+    useShallow((s) => ({
+      chartData: s.chartData,
+      feedEvents: s.feedEvents,
+      loading: s.loading,
+      cardErrors: s.cardErrors,
+      lastFetchedAt: s.lastFetchedAt
+    }))
+  )
+  const { chartData, burndownData, feedEvents, loading, cardErrors, lastFetchedAt } =
+    useDashboardDataStore(
+      useShallow((s) => ({
+        chartData: s.chartData,
+        burndownData: s.burndownData,
+        feedEvents: s.feedEvents,
+        loading: s.loading,
+        cardErrors: s.cardErrors,
+        lastFetchedAt: s.lastFetchedAt
+      }))
+    )
 
   // Timestamp counter to re-evaluate freshness every 10s
   const [now, setNow] = useState(() => Date.now())
@@ -264,6 +284,7 @@ export default function DashboardView(): React.JSX.Element {
               stats={stats}
               partitions={partitions}
               chartData={chartData}
+              burndownData={burndownData}
               cardErrors={cardErrors}
               successRate={successRate}
               avgDuration={avgDuration}

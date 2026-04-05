@@ -682,10 +682,16 @@ export interface DailySuccessRate {
   failedCount: number
 }
 
+export interface BurndownBucket {
+  date: string
+  count: number
+}
+
 export interface DashboardChannels {
   'agent:completionsPerHour': { args: []; result: CompletionBucket[] }
   'agent:recentEvents': { args: [limit?: number]; result: DashboardEvent[] }
   'dashboard:dailySuccessRate': { args: [days?: number]; result: DailySuccessRate[] }
+  'sprint:burndown': { args: []; result: BurndownBucket[] }
 }
 
 /** Code review operations */

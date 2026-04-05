@@ -265,6 +265,7 @@ declare global {
         completionsPerHour: () => Promise<IpcResult<'agent:completionsPerHour'>>
         recentEvents: (limit?: number) => Promise<IpcResult<'agent:recentEvents'>>
         dailySuccessRate: (days?: number) => Promise<IpcResult<'dashboard:dailySuccessRate'>>
+        burndown: () => Promise<IpcResult<'sprint:burndown'>>
       }
 
       // Task Workbench

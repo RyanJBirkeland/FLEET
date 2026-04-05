@@ -6,6 +6,7 @@ describe('dashboardDataStore', () => {
     vi.clearAllMocks()
     // Reset mocks to default values
     ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([])
+    ;(window.api.dashboard.burndown as any).mockResolvedValue([])
     ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
     ;(window.api.dashboard.dailySuccessRate as any).mockResolvedValue([])
     ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
@@ -13,6 +14,7 @@ describe('dashboardDataStore', () => {
     // Reset store to initial state
     useDashboardDataStore.setState({
       chartData: [],
+      burndownData: [],
       feedEvents: [],
       prCount: 0,
       successTrendData: [],
@@ -24,6 +26,7 @@ describe('dashboardDataStore', () => {
   it('has correct default state', () => {
     const state = useDashboardDataStore.getState()
     expect(state.chartData).toEqual([])
+    expect(state.burndownData).toEqual([])
     expect(state.feedEvents).toEqual([])
     expect(state.prCount).toBe(0)
     expect(state.cardErrors).toEqual({})
@@ -34,6 +37,10 @@ describe('dashboardDataStore', () => {
     ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([
       { hour: '10:00', count: 5 },
       { hour: '11:00', count: 3 }
+    ])
+    ;(window.api.dashboard.burndown as any).mockResolvedValue([
+      { date: '2026-03-28', count: 2 },
+      { date: '2026-03-29', count: 4 }
     ])
     ;(window.api.dashboard.recentEvents as any).mockResolvedValue([
       {
@@ -64,6 +71,9 @@ describe('dashboardDataStore', () => {
     expect(state.chartData).toHaveLength(2)
     expect(state.chartData[0]).toEqual({ value: 5, accent: 'cyan', label: '10:00' })
     expect(state.chartData[1]).toEqual({ value: 3, accent: 'pink', label: '11:00' })
+    expect(state.burndownData).toHaveLength(2)
+    expect(state.burndownData[0]).toEqual({ value: 2, accent: 'cyan', label: '2026-03-28' })
+    expect(state.burndownData[1]).toEqual({ value: 4, accent: 'cyan', label: '2026-03-29' })
     expect(state.feedEvents).toHaveLength(2)
     expect(state.feedEvents[0]).toEqual({
       id: '1',
@@ -99,6 +109,7 @@ describe('dashboardDataStore', () => {
   it('fetchAll clears previous errors on success', async () => {
     // First call: set errors
     ;(window.api.dashboard.completionsPerHour as any).mockRejectedValue(new Error('fail'))
+    ;(window.api.dashboard.burndown as any).mockRejectedValue(new Error('fail'))
     ;(window.api.dashboard.recentEvents as any).mockRejectedValue(new Error('fail'))
     ;(window.api.getPrList as any).mockRejectedValue(new Error('fail'))
 
@@ -107,6 +118,7 @@ describe('dashboardDataStore', () => {
 
     // Second call: all succeed
     ;(window.api.dashboard.completionsPerHour as any).mockResolvedValue([])
+    ;(window.api.dashboard.burndown as any).mockResolvedValue([])
     ;(window.api.dashboard.recentEvents as any).mockResolvedValue([])
     ;(window.api.getPrList as any).mockResolvedValue({ prs: [] })
 
