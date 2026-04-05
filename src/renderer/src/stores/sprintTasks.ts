@@ -64,6 +64,28 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         depends_on: sanitizeDependsOn(t.depends_on)
       }))
 
+      const currentState = get()
+
+      // Build fingerprints to detect if tasks have changed
+      const currentFingerprint = currentState.tasks
+        .map((t) => `${t.id}:${t.updated_at}`)
+        .sort()
+        .join('|')
+      const incomingFingerprint = incoming
+        .map((t) => `${t.id}:${t.updated_at}`)
+        .sort()
+        .join('|')
+
+      // Skip set() if tasks haven't changed and there are no pending operations
+      const hasPendingOps =
+        Object.keys(currentState.pendingUpdates).length > 0 ||
+        currentState.pendingCreates.length > 0
+
+      if (currentFingerprint === incomingFingerprint && !hasPendingOps) {
+        set({ loading: false })
+        return
+      }
+
       set((s) => {
         const now = Date.now()
 
