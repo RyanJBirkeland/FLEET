@@ -29,6 +29,7 @@ export function FeatureGuideModal({ open, onClose }: FeatureGuideModalProps): Re
       const timer = setTimeout(() => setSelectedView('dashboard'), 0)
       return () => clearTimeout(timer)
     }
+    return undefined
   }, [open, selectedView])
 
   const handleKeyDown = useCallback(
