@@ -32,7 +32,8 @@ vi.mock('../../data/sprint-queries', () => ({
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn(),
   getOrphanedTasks: vi.fn(),
-  getActiveTaskCount: vi.fn()
+  getActiveTaskCount: vi.fn(),
+  getSuccessRateBySpecType: vi.fn()
 }))
 
 // Mock sprint-listeners
@@ -143,9 +144,9 @@ describe('registerSprintLocalHandlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers 16 handlers', () => {
+  it('registers 17 handlers', () => {
     registerSprintLocalHandlers()
-    expect(safeHandle).toHaveBeenCalledTimes(16)
+    expect(safeHandle).toHaveBeenCalledTimes(17)
   })
 
   it('registers the expected channel names', () => {

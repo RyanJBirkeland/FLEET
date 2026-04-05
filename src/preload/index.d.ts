@@ -186,6 +186,7 @@ declare global {
         batchImport: (
           ...args: IpcArgs<'sprint:batchImport'>
         ) => Promise<IpcResult<'sprint:batchImport'>>
+        getSuccessRateBySpecType: () => Promise<IpcResult<'sprint:getSuccessRateBySpecType'>>
       }
 
       // Task groups

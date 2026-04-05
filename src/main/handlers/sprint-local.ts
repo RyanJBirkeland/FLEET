@@ -36,7 +36,8 @@ import {
   markTaskCancelledByPrNumber,
   listTasksWithOpenPrs,
   updateTaskMergeableState,
-  UPDATE_ALLOWLIST
+  UPDATE_ALLOWLIST,
+  getSuccessRateBySpecType
 } from '../services/sprint-service'
 import type { CreateTaskInput, QueueStats } from '../services/sprint-service'
 import { getAgentLogInfo } from '../data/agent-queries'
@@ -533,4 +534,8 @@ export function registerSprintLocalHandlers(): void {
       return batchImportTasks(tasks, repo)
     }
   )
+
+  safeHandle('sprint:getSuccessRateBySpecType', () => {
+    return getSuccessRateBySpecType()
+  })
 }
