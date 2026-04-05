@@ -204,6 +204,11 @@ const api = {
       typedInvoke('groups:reorderTasks', groupId, orderedTaskIds)
   },
 
+  // Plan import
+  planner: {
+    import: (repo: string) => typedInvoke('planner:import', repo)
+  },
+
   // File attachments
   openFileDialog: (opts?: { filters?: { name: string; extensions: string[] }[] }) =>
     typedInvoke('fs:openFileDialog', opts),

@@ -817,6 +817,18 @@ export interface GroupChannels {
   }
 }
 
+/** Plan import operations */
+export interface PlannerChannels {
+  'planner:import': {
+    args: [repo: string]
+    result: {
+      epicId: string
+      epicName: string
+      taskCount: number
+    }
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Composite channel map — intersection of all domain maps
 // ---------------------------------------------------------------------------
@@ -844,4 +856,5 @@ export type IpcChannelMap = SettingsChannels &
   TearoffChannels &
   ClaudeConfigChannels &
   WebhookChannels &
-  GroupChannels
+  GroupChannels &
+  PlannerChannels

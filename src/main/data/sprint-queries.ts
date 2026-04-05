@@ -111,6 +111,7 @@ export interface CreateTaskInput {
   playground_enabled?: boolean
   model?: string
   tags?: string[] | null
+  group_id?: string | null
 }
 
 /**
@@ -228,6 +229,12 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
          spec_type, created_at, updated_at, worktree_path, session_id,
          next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
          partial_diff, assigned_reviewer, tags, sprint_id, group_id`
+        `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         RETURNING *`
+        `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags, group_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         RETURNING *`
       )
       .get(
         input.title,
@@ -241,7 +248,8 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
         dependsOn ? JSON.stringify(dependsOn) : null,
         input.playground_enabled ? 1 : 0,
         input.model ?? null,
-        tags ? JSON.stringify(tags) : null
+        tags ? JSON.stringify(tags) : null,
+        input.group_id ?? null
       ) as Record<string, unknown> | undefined
 
     return result ? sanitizeTask(result) : null

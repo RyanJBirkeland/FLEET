@@ -5,7 +5,8 @@ import { usePanelLayoutStore } from '../stores/panelLayout'
 import { EpicList } from '../components/planner/EpicList'
 import { EpicDetail } from '../components/planner/EpicDetail'
 import { CreateEpicModal } from '../components/planner/CreateEpicModal'
-import { Search } from 'lucide-react'
+import { Search, FileUp } from 'lucide-react'
+import { toast } from '../stores/toasts'
 
 export default function PlannerView(): React.JSX.Element {
   const {
@@ -95,6 +96,21 @@ export default function PlannerView(): React.JSX.Element {
     await reorderTasks(selectedGroupId, orderedTaskIds)
   }
 
+  const handleImportPlan = async (): Promise<void> => {
+    try {
+      const result = await window.api.planner.import('bde')
+      toast.success(`Imported "${result.epicName}" with ${result.taskCount} tasks`)
+      await loadGroups()
+      selectGroup(result.epicId)
+    } catch (err) {
+      if (err instanceof Error && err.message === 'No file selected') {
+        // User cancelled, don't show error
+        return
+      }
+      toast.error('Failed to import plan — ' + (err instanceof Error ? err.message : String(err)))
+    }
+  }
+
   return (
     <div className="planner-view">
       {/* Header */}
@@ -110,6 +126,14 @@ export default function PlannerView(): React.JSX.Element {
             className="planner-header__search-input"
           />
         </div>
+        <button
+          onClick={handleImportPlan}
+          className="planner-header__import-btn"
+          title="Import plan document"
+        >
+          <FileUp size={16} />
+          Import doc
+        </button>
       </div>
 
       {/* Body: Split layout */}

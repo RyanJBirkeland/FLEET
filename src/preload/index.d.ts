@@ -214,6 +214,11 @@ declare global {
         ) => Promise<IpcResult<'groups:reorderTasks'>>
       }
 
+      // Plan import
+      planner: {
+        import: (...args: IpcArgs<'planner:import'>) => Promise<IpcResult<'planner:import'>>
+      }
+
       // File attachments
       openFileDialog: (
         ...args: IpcArgs<'fs:openFileDialog'>
