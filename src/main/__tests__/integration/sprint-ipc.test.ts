@@ -12,6 +12,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // ---------------------------------------------------------------------------
 
 const mockListTasks = vi.fn()
+const mockListTasksRecent = vi.fn()
 const mockGetTask = vi.fn()
 const mockCreateTask = vi.fn()
 const mockUpdateTask = vi.fn()
@@ -28,6 +29,7 @@ const mockGetHealthCheckTasks = vi.fn()
 
 vi.mock('../../data/sprint-queries', () => ({
   listTasks: (...args: unknown[]) => mockListTasks(...args),
+  listTasksRecent: (...args: unknown[]) => mockListTasksRecent(...args),
   getTask: (...args: unknown[]) => mockGetTask(...args),
   createTask: (...args: unknown[]) => mockCreateTask(...args),
   updateTask: (...args: unknown[]) => mockUpdateTask(...args),
