@@ -16,6 +16,8 @@ vi.mock('../../data/sprint-queries', () => ({
   claimTask: vi.fn(),
   updateTask: vi.fn(),
   getTask: vi.fn(),
+  listTasks: vi.fn().mockReturnValue([]),
+  listTasksRecent: vi.fn().mockReturnValue([]),
   getOrphanedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
   listTasksRecent: vi.fn(),
