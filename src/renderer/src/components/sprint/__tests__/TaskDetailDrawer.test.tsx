@@ -310,9 +310,10 @@ describe('TaskDetailDrawer - additional status combos', () => {
     }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
     expect(screen.getByText('Dependencies')).toBeInTheDocument()
-    expect(screen.getByText('Setup auth module')).toBeInTheDocument()
-    expect(screen.getByText('Create user model')).toBeInTheDocument()
-    expect(screen.getByText('done')).toBeInTheDocument()
+    // Task titles and statuses appear in both dependencies and upstream outcomes sections
+    expect(screen.getAllByText('Setup auth module').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('Create user model').length).toBeGreaterThan(0)
+    expect(screen.getAllByText('done').length).toBeGreaterThan(0)
   })
 
   it('shows "Blocked by" label for blocked task dependencies', () => {
@@ -324,7 +325,8 @@ describe('TaskDetailDrawer - additional status combos', () => {
     }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
     expect(screen.getByText('Blocked by')).toBeInTheDocument()
-    expect(screen.getByText('Create user model')).toBeInTheDocument()
+    // Task title appears in both dependencies and upstream outcomes sections
+    expect(screen.getAllByText('Create user model').length).toBeGreaterThan(0)
   })
 
   it('navigates to dependency task when clicked', () => {
@@ -334,7 +336,8 @@ describe('TaskDetailDrawer - additional status combos', () => {
       depends_on: [{ id: 'dep-1', type: 'hard' }]
     }
     render(<TaskDetailDrawer {...makeProps({ task })} />)
-    fireEvent.click(screen.getByText('Setup auth module'))
+    // Click the first instance (from dependencies section, also appears in upstream outcomes)
+    fireEvent.click(screen.getAllByText('Setup auth module')[0])
     expect(useSprintUI.getState().selectedTaskId).toBe('dep-1')
   })
 

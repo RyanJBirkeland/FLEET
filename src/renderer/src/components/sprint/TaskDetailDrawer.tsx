@@ -6,6 +6,7 @@ import { useAgentEventsStore } from '../../stores/agentEvents'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
 import { TaskDetailActionButtons } from './TaskDetailActionButtons'
 import { AgentActivityPreview } from './AgentActivityPreview'
+import { UpstreamOutcomes } from './UpstreamOutcomes'
 
 const MIN_DRAWER_WIDTH = 280
 const MAX_DRAWER_WIDTH = 700
@@ -226,6 +227,8 @@ export function TaskDetailDrawer({
             ))}
           </div>
         )}
+
+        <UpstreamOutcomes upstreamTasks={depTasks} onNavigate={setSelectedTaskId} />
 
         <div className="task-drawer__field">
           <span className="task-drawer__label">Created</span>
