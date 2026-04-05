@@ -527,20 +527,19 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
 
   // 5. Check auto-review rules — if qualified, auto-merge
   const { getSettingJson } = await import('../settings')
-  const rules =
-    getSettingJson<
-      Array<{
-        id: string
-        name: string
-        enabled: boolean
-        conditions: {
-          maxLinesChanged?: number
-          filePatterns?: string[]
-          excludePatterns?: string[]
-        }
-        action: 'auto-merge' | 'auto-approve'
-      }>
-    >('autoReview.rules')
+  const rules = getSettingJson<
+    Array<{
+      id: string
+      name: string
+      enabled: boolean
+      conditions: {
+        maxLinesChanged?: number
+        filePatterns?: string[]
+        excludePatterns?: string[]
+      }
+      action: 'auto-merge' | 'auto-approve'
+    }>
+  >('autoReview.rules')
 
   if (rules && rules.length > 0) {
     try {

@@ -343,10 +343,7 @@ describe('resolveSuccess', () => {
     // Verify rebase --abort was called
     const abortCall = calls.find(
       (c) =>
-        c[0] === 'git' &&
-        Array.isArray(c[1]) &&
-        c[1].includes('rebase') &&
-        c[1].includes('--abort')
+        c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('rebase') && c[1].includes('--abort')
     )
     expect(abortCall).toBeDefined()
 

@@ -30,6 +30,7 @@ import { VIEW_LABELS } from './lib/view-registry'
 import { PollingProvider } from './components/PollingProvider'
 import { AgentMonitor } from './components/ui/AgentMonitor'
 import { SHORTCUT_CATEGORIES } from './lib/shortcuts-data'
+import { FeatureGuideModal } from './components/help/FeatureGuideModal'
 import './assets/neon.css'
 import './assets/neon-shell.css'
 import './assets/agents-neon.css'
@@ -125,6 +126,7 @@ function App(): React.JSX.Element {
   const setQuickCreateOpen = useSprintUI((s) => s.setQuickCreateOpen)
   const toggleQuickCreate = useSprintUI((s) => s.toggleQuickCreate)
   const [shortcutsOpen, setShortcutsOpen] = useState(false)
+  const [featureGuideOpen, setFeatureGuideOpen] = useState(false)
 
   const loadLayout = usePanelLayoutStore((s) => s.loadSavedLayout)
   const restorePendingReview = usePendingReviewStore((s) => s.restoreFromStorage)
@@ -235,6 +237,14 @@ function App(): React.JSX.Element {
     }
     window.addEventListener('bde:show-shortcuts', handler)
     return () => window.removeEventListener('bde:show-shortcuts', handler)
+  }, [])
+
+  useEffect(() => {
+    const handler = (): void => {
+      setFeatureGuideOpen(true)
+    }
+    window.addEventListener('bde:open-feature-guide', handler)
+    return () => window.removeEventListener('bde:open-feature-guide', handler)
   }, [])
 
   const handleKeyDown = useCallback(
@@ -454,6 +464,7 @@ function App(): React.JSX.Element {
         <AnimatePresence>
           {shortcutsOpen && <ShortcutsOverlay onClose={() => setShortcutsOpen(false)} />}
         </AnimatePresence>
+        <FeatureGuideModal open={featureGuideOpen} onClose={() => setFeatureGuideOpen(false)} />
         <ToastContainer />
         <CrossWindowDropOverlay
           active={crossDrop.active}
