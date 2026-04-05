@@ -83,6 +83,7 @@ describe('ActivitySection', () => {
     costTrendData: mockCostTrendData,
     costAvg: '0.60',
     cost24h: 12.45,
+    taskCostMap: new Map<string, number>(),
     onFeedEventClick: vi.fn(),
     onCompletionClick: vi.fn()
   }

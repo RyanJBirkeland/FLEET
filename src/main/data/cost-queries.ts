@@ -55,6 +55,7 @@ interface AgentCostRow {
   title: string | null
   pr_url: string | null
   repo: string | null
+  sprint_task_id: string | null
 }
 
 function rowToRecord(row: AgentCostRow): AgentCostRecord {
@@ -72,7 +73,8 @@ function rowToRecord(row: AgentCostRow): AgentCostRecord {
     numTurns: row.num_turns,
     taskTitle: row.title,
     prUrl: row.pr_url,
-    repo: row.repo
+    repo: row.repo,
+    sprintTaskId: row.sprint_task_id
   }
 }
 
@@ -82,7 +84,7 @@ const GET_AGENT_HISTORY_SQL = `
   SELECT ar.id, ar.model, ar.started_at, ar.finished_at,
          ar.cost_usd, ar.tokens_in, ar.tokens_out,
          ar.cache_read, ar.cache_create, ar.duration_ms, ar.num_turns,
-         ar.task AS title, NULL AS pr_url, ar.repo
+         ar.task AS title, NULL AS pr_url, ar.repo, ar.sprint_task_id
   FROM agent_runs ar
   WHERE ar.finished_at IS NOT NULL
   ORDER BY ar.started_at DESC
