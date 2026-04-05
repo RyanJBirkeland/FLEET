@@ -39,7 +39,11 @@ export function EpicDetail({
   const [showOverflowMenu, setShowOverflowMenu] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
+  const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
+  const [editingSpec, setEditingSpec] = useState('')
+  const [saving, setSaving] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Close menu on click outside
   useEffect(() => {
@@ -167,6 +171,47 @@ export function EpicDetail({
     if (!onToggleReady) return
     onToggleReady()
   }
+
+  // Inline spec editing handlers
+  const handleTaskClick = (task: SprintTask): void => {
+    if (task.status !== 'backlog') return
+    setEditingTaskId(task.id)
+    setEditingSpec(task.spec || '')
+  }
+
+  const handleCancelEdit = (): void => {
+    setEditingTaskId(null)
+    setEditingSpec('')
+  }
+
+  const handleSaveEdit = async (): Promise<void> => {
+    if (!editingTaskId) return
+    setSaving(true)
+    try {
+      await window.api.sprint.update(editingTaskId, { spec: editingSpec })
+      setEditingTaskId(null)
+      setEditingSpec('')
+    } catch (err) {
+      console.error('Failed to update task spec:', err)
+      alert('Failed to save spec. Please try again.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleSpecKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>): void => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      e.preventDefault()
+      void handleSaveEdit()
+    }
+  }
+
+  // Focus textarea when editing starts
+  useEffect(() => {
+    if (editingTaskId && textareaRef.current) {
+      textareaRef.current.focus()
+    }
+  }, [editingTaskId])
 
   const isReady = group.status === 'ready'
 
@@ -375,6 +420,7 @@ export function EpicDetail({
               const hasDeps = task.depends_on && task.depends_on.length > 0
               const isDragging = draggedTaskId === task.id
               const isDragOver = dragOverTaskId === task.id
+              const isEditing = editingTaskId === task.id
 
               return (
                 <div
@@ -401,26 +447,124 @@ export function EpicDetail({
                     <span className="epic-detail__task-flag epic-detail__task-flag--warning">
                       no spec
                     </span>
-                  )}
-                  {hasDeps && task.depends_on && (
-                    <span className="epic-detail__task-dep-ref">
-                      {task.depends_on.length} dep{task.depends_on.length === 1 ? '' : 's'}
+                <div key={task.id} className="epic-detail__task-row">
+                  <div
+                    className="epic-detail__task-status-dot"
+                    style={{ background: getStatusColor(task.status) }}
+                  />
+                  <span className="epic-detail__task-title">{task.title}</span>
+                  {!hasSpec && task.status === 'backlog' && (
+                    <span className="epic-detail__task-flag epic-detail__task-flag--warning">
+                      no spec
                     </span>
+                <div key={task.id} className="epic-detail__task-row">
+                  {!isEditing ? (
+                    <>
+                      <div
+                        className="epic-detail__task-status-dot"
+                        style={{ background: getStatusColor(task.status) }}
+                      />
+                      <span
+                        className="epic-detail__task-title"
+                        onClick={() => handleTaskClick(task)}
+                        style={{
+                          cursor: task.status === 'backlog' ? 'pointer' : 'default'
+                        }}
+                      >
+                        {task.title}
+                      </span>
+                      {!hasSpec && task.status === 'backlog' && (
+                        <span className="epic-detail__task-flag epic-detail__task-flag--warning">
+                          no spec
+                        </span>
+                      )}
+                      {hasDeps && task.depends_on && (
+                        <span className="epic-detail__task-dep-ref">
+                          {task.depends_on.length} dep{task.depends_on.length === 1 ? '' : 's'}
+                        </span>
+                      )}
+                      <span
+                        className="epic-detail__task-status-badge"
+                        style={{ color: getStatusColor(task.status) }}
+                      >
+                        {getStatusLabel(task.status)}
+                      </span>
+                      <button
+                        type="button"
+                        className="epic-detail__task-edit-btn"
+                        onClick={() => onEditTask(task.id)}
+                        aria-label={`Edit ${task.title}`}
+                      >
+                        <Edit2 size={14} />
+                      </button>
+                    </>
+                  ) : (
+                    <div
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '8px'
+                      }}
+                    >
+                      <textarea
+                        ref={textareaRef}
+                        value={editingSpec}
+                        onChange={(e) => setEditingSpec(e.target.value)}
+                        onKeyDown={handleSpecKeyDown}
+                        placeholder="Enter task spec..."
+                        disabled={saving}
+                        style={{
+                          width: '100%',
+                          minHeight: '120px',
+                          padding: '8px',
+                          background: tokens.neon.surfaceDeep,
+                          border: `1px solid ${tokens.neon.cyan}40`,
+                          borderRadius: '4px',
+                          color: tokens.neon.text,
+                          fontFamily: 'monospace',
+                          fontSize: '13px',
+                          resize: 'vertical'
+                        }}
+                      />
+                      <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
+                        <button
+                          type="button"
+                          onClick={handleCancelEdit}
+                          disabled={saving}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'transparent',
+                            border: `1px solid ${tokens.neon.textDim}`,
+                            borderRadius: '4px',
+                            color: tokens.neon.text,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            fontSize: '13px'
+                          }}
+                        >
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleSaveEdit}
+                          disabled={saving}
+                          style={{
+                            padding: '6px 12px',
+                            background: tokens.neon.cyan,
+                            border: 'none',
+                            borderRadius: '4px',
+                            color: tokens.neon.surfaceDeep,
+                            cursor: saving ? 'not-allowed' : 'pointer',
+                            fontSize: '13px',
+                            fontWeight: 500
+                          }}
+                        >
+                          {saving ? 'Saving...' : 'Save (⌘↵)'}
+                        </button>
+                      </div>
+                    </div>
                   )}
-                  <span
-                    className="epic-detail__task-status-badge"
-                    style={{ color: getStatusColor(task.status) }}
-                  >
-                    {getStatusLabel(task.status)}
-                  </span>
-                  <button
-                    type="button"
-                    className="epic-detail__task-edit-btn"
-                    onClick={() => onEditTask(task.id)}
-                    aria-label={`Edit ${task.title}`}
-                  >
-                    <Edit2 size={14} />
-                  </button>
                 </div>
               )
             })}

@@ -256,6 +256,14 @@ describe('EpicList', () => {
     expect(screen.getByText('3')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument() // Only active groups (not completed)
+    expect(screen.getByText('2')).toBeInTheDocument() // Only active groups (not completed)
+    expect(screen.getByText('3')).toBeInTheDocument()
+    // Count shows only active groups (not completed)
+    expect(screen.getByText('2')).toBeInTheDocument()
+    expect(screen.getByText('3')).toBeInTheDocument()
+    expect(screen.getByText('2')).toBeInTheDocument()
+    // Count shows only active groups (not completed)
+    expect(screen.getByText('2')).toBeInTheDocument()
   })
 
   it('renders all groups', async () => {
@@ -638,6 +646,26 @@ describe('EpicList', () => {
     // Completed groups are in a collapsed section - expand it to see them
     const completedToggle = screen.getByText('Completed')
     fireEvent.click(completedToggle)
+    const completedToggle = screen.getByText('Completed')
+    fireEvent.click(completedToggle)
+
+    await waitFor(() => {
+    // Completed groups are in a collapsed section - expand it to see them
+    const completedToggle = screen.getByText('Completed')
+    fireEvent.click(completedToggle)
+
+    await waitFor(() => {
+    })
+
+    // Completed epic is in collapsed section - expand it first
+    fireEvent.click(screen.getByText('Completed'))
+
+    await waitFor(() => {
+    // Completed groups are in a collapsed section - expand it to see them
+    const completedToggle = screen.getByText('Completed')
+    fireEvent.click(completedToggle)
+    const completedButtons = screen.getAllByText('Completed')
+    fireEvent.click(completedButtons[0])
 
     await waitFor(() => {
       expect(screen.getByText('Completed Epic')).toBeInTheDocument()
@@ -765,6 +793,10 @@ describe('EpicList', () => {
       expect(taskCounts.length).toBe(mockGroups.length)
       // Only active groups are visible by default (completed groups are collapsed)
       // Only active groups are visible (2), completed group is in collapsed section
+      expect(taskCounts.length).toBe(2) // Only active groups shown (not completed)
+      expect(taskCounts.length).toBe(mockGroups.length)
+      // Only active groups are visible by default (completed groups are collapsed)
+      // Only active groups are visible (2), completed group is in collapsed section
       const activeGroups = mockGroups.filter((g) => g.status !== 'completed')
       expect(taskCounts.length).toBe(activeGroups.length) // Should be 2
       expect(taskCounts.length).toBe(activeGroups.length)
@@ -840,6 +872,11 @@ describe('EpicList', () => {
       // Only active groups are visible (2), completed group is in collapsed section
       expect(taskCounts.length).toBe(2)
       expect(taskCounts.length).toBe(activeGroups.length)
+      expect(taskCounts.length).toBe(activeGroups.length)
+      expect(taskCounts.length).toBe(activeGroups.length)
+      expect(taskCounts.length).toBe(mockGroups.length)
+      // Only active groups are visible (2), completed group is in collapsed section
+      expect(taskCounts.length).toBe(2)
       expect(taskCounts.length).toBe(activeGroups.length)
     })
   })
@@ -971,6 +1008,9 @@ describe('EpicList', () => {
       expect(screen.getByText('Completed')).toBeInTheDocument()
       const completedHeaders = screen.getAllByText('Completed')
       expect(completedHeaders.length).toBeGreaterThan(0)
+      expect(screen.getByText('Completed')).toBeInTheDocument()
+      const completedButtons = screen.getAllByText('Completed')
+      expect(completedButtons.length).toBeGreaterThan(0)
     })
     fireEvent.click(screen.getByText('Completed'))
 
@@ -1054,6 +1094,26 @@ describe('EpicList', () => {
     fireEvent.click(completedToggle)
     const completedToggle = screen.getByText('Completed')
     fireEvent.click(completedToggle)
+    const completedToggle = screen.getByText('Completed')
+    fireEvent.click(completedToggle)
+
+    fireEvent.click(screen.getByText('Completed'))
+
+    // Expand completed section to see the completed epic
+    await waitFor(() => {
+      expect(screen.getByText('Completed')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Completed'))
+
+    // Expand completed section first
+    await waitFor(() => {
+      expect(screen.getByText('Completed')).toBeInTheDocument()
+    })
+    fireEvent.click(screen.getByText('Completed'))
+
+    fireEvent.click(screen.getByText('Completed'))
+    const completedButtons = screen.getAllByText('Completed')
+    fireEvent.click(completedButtons[0])
 
     fireEvent.click(screen.getByText('Completed'))
 
