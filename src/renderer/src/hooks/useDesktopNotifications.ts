@@ -101,8 +101,6 @@ export function useDesktopNotifications(): void {
 
       // Agent completed: active → review
       if (prev.status === TASK_STATUS.ACTIVE && task.status === TASK_STATUS.REVIEW) {
-        if (!shouldNotify()) continue
-
         const title = 'BDE: Task Ready for Review'
         const message = `${task.title}`
 
@@ -113,14 +111,14 @@ export function useDesktopNotifications(): void {
           viewLink: `/sprint/${task.id}`
         })
 
-        fireDesktopNotification(title, message, handleNotificationClick)
+        if (shouldNotify()) {
+          fireDesktopNotification(title, message, handleNotificationClick)
+        }
         notifiedTasksRef.current.add(task.id)
       }
 
       // Agent completed: active → done
       if (prev.status === TASK_STATUS.ACTIVE && task.status === TASK_STATUS.DONE) {
-        if (!shouldNotify()) continue
-
         const title = 'BDE: Task Completed'
         const message = task.pr_url ? `${task.title} — PR ready` : `${task.title}`
 
@@ -131,43 +129,45 @@ export function useDesktopNotifications(): void {
           viewLink: `/sprint/${task.id}`
         })
 
-        fireDesktopNotification(title, message, handleNotificationClick)
+        if (shouldNotify()) {
+          fireDesktopNotification(title, message, handleNotificationClick)
+        }
         notifiedTasksRef.current.add(task.id)
       }
 
       // Agent failed: active → failed
       if (prev.status === TASK_STATUS.ACTIVE && task.status === TASK_STATUS.FAILED) {
-        if (!shouldNotify()) continue
-
         const title = 'BDE: Task Failed'
         const message = `${task.title}`
 
         addNotification({
-          type: 'agent_completed',
+          type: 'agent_failed',
           title,
           message,
           viewLink: `/sprint/${task.id}`
         })
 
-        fireDesktopNotification(title, message, handleNotificationClick)
+        if (shouldNotify()) {
+          fireDesktopNotification(title, message, handleNotificationClick)
+        }
         notifiedTasksRef.current.add(task.id)
       }
 
       // Agent error: active → error
       if (prev.status === TASK_STATUS.ACTIVE && task.status === TASK_STATUS.ERROR) {
-        if (!shouldNotify()) continue
-
         const title = 'BDE: Task Error'
         const message = `${task.title}`
 
         addNotification({
-          type: 'agent_completed',
+          type: 'agent_failed',
           title,
           message,
           viewLink: `/sprint/${task.id}`
         })
 
-        fireDesktopNotification(title, message, handleNotificationClick)
+        if (shouldNotify()) {
+          fireDesktopNotification(title, message, handleNotificationClick)
+        }
         notifiedTasksRef.current.add(task.id)
       }
     }
@@ -194,8 +194,6 @@ export function useDesktopNotifications(): void {
       // Skip if we already notified
       if (notifiedTasksRef.current.has(`${taskId}-merged`)) continue
 
-      if (!shouldNotify()) continue
-
       const task = tasks.find((t) => t.id === taskId)
       if (!task) continue
 
@@ -209,7 +207,9 @@ export function useDesktopNotifications(): void {
         viewLink: task.pr_url || undefined
       })
 
-      fireDesktopNotification(title, message, handleNotificationClick)
+      if (shouldNotify()) {
+        fireDesktopNotification(title, message, handleNotificationClick)
+      }
       notifiedTasksRef.current.add(`${taskId}-merged`)
     }
 

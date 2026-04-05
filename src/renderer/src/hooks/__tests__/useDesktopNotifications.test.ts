@@ -93,7 +93,7 @@ describe('useDesktopNotifications', () => {
     expect(notifications[0].title).toContain('BDE: Task Completed')
   })
 
-  it('does not fire notification when window is focused', () => {
+  it('adds in-app notification even when window is focused', () => {
     mockHasFocus.mockReturnValue(true) // Window IS focused
     const { rerender } = renderHook(() => useDesktopNotifications())
 
@@ -131,9 +131,11 @@ describe('useDesktopNotifications', () => {
     })
     rerender()
 
-    // Should NOT add notification
+    // SHOULD add in-app notification even when focused
     const notifications = useNotificationsStore.getState().notifications
-    expect(notifications).toHaveLength(0)
+    expect(notifications).toHaveLength(1)
+    expect(notifications[0].type).toBe('agent_completed')
+    expect(notifications[0].title).toContain('BDE: Task Completed')
   })
 
   it('fires desktop notification when task transitions to failed', () => {

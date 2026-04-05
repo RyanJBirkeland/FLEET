@@ -11,6 +11,7 @@ export type NotificationType =
   | 'pr_merged'
   | 'pr_closed'
   | 'merge_conflict'
+  | 'app_error'
 
 export interface Notification {
   id: string
@@ -30,6 +31,7 @@ interface AddNotificationInput {
 }
 
 const MAX_NOTIFICATIONS = 50
+const STORAGE_KEY = 'bde:notifications'
 
 interface NotificationsStore {
   notifications: Notification[]
@@ -42,8 +44,29 @@ interface NotificationsStore {
 
 let nextId = 0
 
+// Load notifications from localStorage
+function loadFromStorage(): Notification[] {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (!stored) return []
+    const parsed = JSON.parse(stored)
+    return Array.isArray(parsed) ? parsed : []
+  } catch {
+    return []
+  }
+}
+
+// Save notifications to localStorage
+function saveToStorage(notifications: Notification[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications))
+  } catch {
+    // Silently fail if storage quota exceeded
+  }
+}
+
 export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
-  notifications: [],
+  notifications: loadFromStorage(),
 
   addNotification: (input): void => {
     const notification: Notification = {
@@ -56,21 +79,29 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
       viewLink: input.viewLink
     }
 
-    set((state) => ({
-      notifications: [notification, ...state.notifications].slice(0, MAX_NOTIFICATIONS)
-    }))
+    set((state) => {
+      const newNotifications = [notification, ...state.notifications].slice(0, MAX_NOTIFICATIONS)
+      saveToStorage(newNotifications)
+      return { notifications: newNotifications }
+    })
   },
 
   markAsRead: (id): void => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => (n.id === id ? { ...n, read: true } : n))
-    }))
+    set((state) => {
+      const newNotifications = state.notifications.map((n) =>
+        n.id === id ? { ...n, read: true } : n
+      )
+      saveToStorage(newNotifications)
+      return { notifications: newNotifications }
+    })
   },
 
   markAllAsRead: (): void => {
-    set((state) => ({
-      notifications: state.notifications.map((n) => ({ ...n, read: true }))
-    }))
+    set((state) => {
+      const newNotifications = state.notifications.map((n) => ({ ...n, read: true }))
+      saveToStorage(newNotifications)
+      return { notifications: newNotifications }
+    })
   },
 
   getUnreadCount: (): number => {
@@ -79,5 +110,6 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
 
   clearAll: (): void => {
     set({ notifications: [] })
+    saveToStorage([])
   }
 }))

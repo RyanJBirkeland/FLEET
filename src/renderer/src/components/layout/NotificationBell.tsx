@@ -20,7 +20,8 @@ const NOTIFICATION_ICONS: Record<
   agent_failed: XCircle,
   pr_merged: GitMerge,
   pr_closed: GitPullRequestClosed,
-  merge_conflict: AlertTriangle
+  merge_conflict: AlertTriangle,
+  app_error: XCircle
 }
 
 const NOTIFICATION_COLORS: Record<NotificationType, string> = {
@@ -28,7 +29,8 @@ const NOTIFICATION_COLORS: Record<NotificationType, string> = {
   agent_failed: 'notification-item--error',
   pr_merged: 'notification-item--success',
   pr_closed: 'notification-item--muted',
-  merge_conflict: 'notification-item--warning'
+  merge_conflict: 'notification-item--warning',
+  app_error: 'notification-item--error'
 }
 
 export function NotificationBell(): React.JSX.Element {
