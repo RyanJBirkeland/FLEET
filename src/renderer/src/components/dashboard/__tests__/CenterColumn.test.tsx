@@ -72,9 +72,6 @@ describe('CenterColumn', () => {
     successTrendData: [],
     onFilterClick: vi.fn(),
     onKeyDownFor: vi.fn(() => vi.fn())
-    onFilterClick: vi.fn(),
-    onKeyDownFor: vi.fn(() => vi.fn())
-    onFilterClick: vi.fn()
   }
 
   it('renders Pipeline card', () => {
