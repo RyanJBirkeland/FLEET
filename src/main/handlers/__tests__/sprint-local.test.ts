@@ -14,6 +14,7 @@ vi.mock('../../data/sprint-queries', () => ({
   UPDATE_ALLOWLIST: new Set(['title', 'status', 'prompt', 'spec', 'notes']),
   getTask: vi.fn(),
   listTasks: vi.fn(),
+  listTasksRecent: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -108,6 +109,7 @@ import { registerSprintLocalHandlers } from '../sprint-local'
 import { safeHandle } from '../../ipc-utils'
 import {
   listTasks as _listTasks,
+  listTasksRecent as _listTasksRecent,
   createTask as _createTask,
   updateTask as _updateTask,
   deleteTask as _deleteTask,
@@ -169,19 +171,19 @@ describe('sprint:list handler', () => {
     vi.clearAllMocks()
   })
 
-  it('returns tasks from listTasks', async () => {
+  it('returns tasks from listTasksRecent', async () => {
     const tasks = [{ id: '1', title: 'Task A', status: 'queued' }]
-    vi.mocked(_listTasks).mockReturnValue(tasks as any)
+    vi.mocked(_listTasksRecent).mockReturnValue(tasks as any)
 
     const handler = captureHandler('sprint:list')
     const result = await handler(mockEvent)
 
-    expect(_listTasks).toHaveBeenCalled()
+    expect(_listTasksRecent).toHaveBeenCalled()
     expect(result).toEqual(tasks)
   })
 
   it('returns empty array when no tasks', async () => {
-    vi.mocked(_listTasks).mockReturnValue([])
+    vi.mocked(_listTasksRecent).mockReturnValue([])
 
     const handler = captureHandler('sprint:list')
     const result = await handler(mockEvent)

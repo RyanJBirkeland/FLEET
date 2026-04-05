@@ -24,6 +24,7 @@ vi.mock('../task-changes', () => ({
 import {
   getTask,
   listTasks,
+  listTasksRecent,
   createTask,
   updateTask,
   deleteTask,
@@ -188,6 +189,71 @@ describe('listTasks', () => {
 
   it('returns empty array when no tasks match', () => {
     const result = listTasks('active')
+    expect(result).toEqual([])
+  })
+})
+
+describe('listTasksRecent', () => {
+  it('includes all non-terminal tasks', () => {
+    insertTask({ id: 'a', status: 'backlog' })
+    insertTask({ id: 'b', status: 'queued' })
+    insertTask({ id: 'c', status: 'active' })
+    insertTask({ id: 'd', status: 'review' })
+    insertTask({ id: 'e', status: 'blocked' })
+
+    const tasks = listTasksRecent()
+    expect(tasks.length).toBe(5)
+    expect(tasks.map((t) => t.id).sort()).toEqual(['a', 'b', 'c', 'd', 'e'])
+  })
+
+  it('includes terminal tasks completed within 7 days', () => {
+    const now = new Date().toISOString()
+    insertTask({ id: 'recent-done', status: 'done', completed_at: now })
+    insertTask({ id: 'recent-failed', status: 'failed', completed_at: now })
+    insertTask({ id: 'recent-cancelled', status: 'cancelled', completed_at: now })
+    insertTask({ id: 'recent-error', status: 'error', completed_at: now })
+    insertTask({ id: 'active', status: 'active' })
+
+    const tasks = listTasksRecent()
+    expect(tasks.length).toBe(5)
+    expect(tasks.map((t) => t.id).sort()).toEqual([
+      'active',
+      'recent-cancelled',
+      'recent-done',
+      'recent-error',
+      'recent-failed'
+    ])
+  })
+
+  it('excludes terminal tasks completed more than 7 days ago', () => {
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString()
+    insertTask({ id: 'old-done', status: 'done', completed_at: eightDaysAgo })
+    insertTask({ id: 'old-failed', status: 'failed', completed_at: eightDaysAgo })
+    insertTask({ id: 'old-cancelled', status: 'cancelled', completed_at: eightDaysAgo })
+    insertTask({ id: 'old-error', status: 'error', completed_at: eightDaysAgo })
+    insertTask({ id: 'active', status: 'active' })
+
+    const tasks = listTasksRecent()
+    expect(tasks.length).toBe(1)
+    expect(tasks[0].id).toBe('active')
+  })
+
+  it('sorts by priority then created_at', () => {
+    insertTask({ id: 'a', title: 'Low priority', priority: 5, status: 'queued' })
+    insertTask({ id: 'b', title: 'High priority', priority: 1, status: 'queued' })
+    insertTask({ id: 'c', title: 'Also high priority', priority: 1, status: 'queued' })
+
+    const tasks = listTasksRecent()
+    expect(tasks.length).toBe(3)
+    expect(tasks[0].priority).toBe(1)
+    expect(tasks[1].priority).toBe(1)
+    expect(tasks[2].priority).toBe(5)
+    expect(tasks[0].id).toBe('b')
+    expect(tasks[1].id).toBe('c')
+  })
+
+  it('returns empty array when no tasks exist', () => {
+    const result = listTasksRecent()
     expect(result).toEqual([])
   })
 })

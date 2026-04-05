@@ -174,6 +174,26 @@ export function listTasks(status?: string): SprintTask[] {
   }
 }
 
+export function listTasksRecent(): SprintTask[] {
+  try {
+    const db = getDb()
+    const rows = db
+      .prepare(
+        `SELECT * FROM sprint_tasks
+         WHERE status NOT IN ('done','cancelled','failed','error')
+            OR completed_at >= datetime('now', '-7 days')
+         ORDER BY priority ASC, created_at ASC`
+      )
+      .all() as Record<string, unknown>[]
+    return sanitizeTasks(rows)
+  } catch (err) {
+    // DL-17: Standardize error message format
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] listTasksRecent failed: ${msg}`)
+    return []
+  }
+}
+
 export function createTask(input: CreateTaskInput): SprintTask | null {
   try {
     const db = getDb()

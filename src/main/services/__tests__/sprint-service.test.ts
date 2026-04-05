@@ -10,6 +10,7 @@ vi.mock('../../data/sprint-queries', () => ({
   UPDATE_ALLOWLIST: new Set(['title', 'status', 'prompt', 'spec', 'notes']),
   getTask: vi.fn(),
   listTasks: vi.fn(),
+  listTasksRecent: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),

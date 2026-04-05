@@ -27,6 +27,7 @@ export interface ISprintTaskRepository {
   getActiveTaskCount(): number
   claimTask(id: string, claimedBy: string): SprintTask | null
   listTasks(status?: string): SprintTask[]
+  listTasksRecent(): SprintTask[]
   createTask(input: CreateTaskInput): SprintTask | null
   deleteTask(id: string, deletedBy?: string): void
   releaseTask(id: string, claimedBy: string): SprintTask | null
@@ -53,6 +54,7 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     getActiveTaskCount: queries.getActiveTaskCount,
     claimTask: queries.claimTask,
     listTasks: queries.listTasks,
+    listTasksRecent: queries.listTasksRecent,
     createTask: queries.createTask,
     deleteTask: queries.deleteTask,
     releaseTask: queries.releaseTask,

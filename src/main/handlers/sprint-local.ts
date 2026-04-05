@@ -27,6 +27,7 @@ import {
   deleteTask,
   getHealthCheckTasks,
   listTasks,
+  listTasksRecent,
   claimTask,
   releaseTask,
   getQueueStats,
@@ -79,7 +80,7 @@ export function setOnStatusTerminal(fn: (taskId: string, status: string) => void
 
 export function registerSprintLocalHandlers(): void {
   safeHandle('sprint:list', () => {
-    return listTasks()
+    return listTasksRecent()
   })
 
   safeHandle('sprint:create', async (_e, task: CreateTaskInput) => {

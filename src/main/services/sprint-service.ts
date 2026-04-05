@@ -32,6 +32,10 @@ export function listTasks(status?: string): SprintTask[] {
   return repo.listTasks(status)
 }
 
+export function listTasksRecent(): SprintTask[] {
+  return repo.listTasksRecent()
+}
+
 export function createTask(input: CreateTaskInput): SprintTask | null {
   const row = repo.createTask(input)
   if (row) notifySprintMutation('created', row)
