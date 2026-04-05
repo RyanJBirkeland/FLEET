@@ -181,6 +181,7 @@ export interface AgentCostRecord {
   taskTitle: string | null
   prUrl: string | null
   repo: string | null
+  sprintTaskId: string | null
 }
 
 /** Open PR returned by the main-process PR poller. */

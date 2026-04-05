@@ -24,6 +24,7 @@ interface DashboardMetrics {
   costAvg: string | null
   recentCompletions: SprintTask[]
   cost24h: number
+  taskCostMap: Map<string, number>
 }
 
 /** Truncate a string to maxLen characters, adding ellipsis if needed. */
@@ -133,6 +134,17 @@ export function useDashboardMetrics(): DashboardMetrics {
       .reduce((sum, a) => sum + (a.costUsd ?? 0), 0)
   }, [localAgents, now])
 
+  // Task cost lookup map — sprintTaskId -> costUsd
+  const taskCostMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const agent of localAgents) {
+      if (agent.sprintTaskId && agent.costUsd != null) {
+        map.set(agent.sprintTaskId, agent.costUsd)
+      }
+    }
+    return map
+  }, [localAgents])
+
   return {
     stats,
     successRate,
@@ -142,6 +154,7 @@ export function useDashboardMetrics(): DashboardMetrics {
     costTrendData,
     costAvg,
     recentCompletions,
-    cost24h
+    cost24h,
+    taskCostMap
   }
 }

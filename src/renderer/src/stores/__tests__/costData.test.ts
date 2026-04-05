@@ -16,7 +16,8 @@ const makeRecord = (id: string, costUsd: number | null): AgentCostRecord => ({
   numTurns: 3,
   taskTitle: `Task ${id}`,
   prUrl: null,
-  repo: 'bde'
+  repo: 'bde',
+  sprintTaskId: null
 })
 
 const initialState = {

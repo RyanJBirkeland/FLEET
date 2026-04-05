@@ -14,6 +14,7 @@ interface ActivitySectionProps {
   costTrendData: ChartBar[]
   costAvg: string | null
   cost24h: number
+  taskCostMap: Map<string, number>
   onFeedEventClick: () => void
   onCompletionClick: () => void
 }
@@ -26,6 +27,7 @@ export function ActivitySection({
   costTrendData,
   costAvg,
   cost24h,
+  taskCostMap,
   onFeedEventClick,
   onCompletionClick
 }: ActivitySectionProps): React.JSX.Element {
@@ -54,24 +56,32 @@ export function ActivitySection({
           {recentCompletions.length === 0 ? (
             <div className="dashboard-completions-empty">No completions yet</div>
           ) : (
-            recentCompletions.map((t) => (
-              <div
-                key={t.id}
-                className="dashboard-completion-row"
-                role="button"
-                tabIndex={0}
-                onClick={onCompletionClick}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault()
-                    onCompletionClick()
-                  }
-                }}
-              >
-                <span className="dashboard-completion-title">{t.title}</span>
-                <span className="dashboard-completion-time">{timeAgo(t.completed_at!)}</span>
-              </div>
-            ))
+            recentCompletions.map((t) => {
+              const cost = taskCostMap.get(t.id)
+              return (
+                <div
+                  key={t.id}
+                  className="dashboard-completion-row"
+                  role="button"
+                  tabIndex={0}
+                  onClick={onCompletionClick}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onCompletionClick()
+                    }
+                  }}
+                >
+                  <span className="dashboard-completion-title">{t.title}</span>
+                  <div className="dashboard-completion-meta">
+                    {cost != null && (
+                      <span className="dashboard-completion-cost">${cost.toFixed(2)}</span>
+                    )}
+                    <span className="dashboard-completion-time">{timeAgo(t.completed_at!)}</span>
+                  </div>
+                </div>
+              )
+            })
           )}
         </div>
       </NeonCard>

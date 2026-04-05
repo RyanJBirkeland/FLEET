@@ -152,6 +152,18 @@ export default function DashboardView(): React.JSX.Element {
     recentCompletions,
     cost24h
   } = useDashboardMetrics()
+  const { stats, successRate, avgDuration, costTrendData, costAvg, recentCompletions, cost24h } =
+    useDashboardMetrics()
+  const {
+    stats,
+    successRate,
+    avgDuration,
+    costTrendData,
+    costAvg,
+    recentCompletions,
+    cost24h,
+    taskCostMap
+  } = useDashboardMetrics()
 
   const errorCount = useMemo(() => Object.values(cardErrors).filter(Boolean).length, [cardErrors])
 
@@ -280,6 +292,7 @@ export default function DashboardView(): React.JSX.Element {
               costTrendData={costTrendData}
               costAvg={costAvg}
               cost24h={cost24h}
+              taskCostMap={taskCostMap}
               onFeedEventClick={() => setView('agents')}
               onCompletionClick={handleCompletionClick}
             />
