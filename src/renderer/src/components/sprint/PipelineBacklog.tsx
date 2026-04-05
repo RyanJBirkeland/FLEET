@@ -7,6 +7,8 @@ interface PipelineBacklogProps {
   onTaskClick: (id: string) => void
   onAddToQueue: (task: SprintTask) => void
   onRerun: (task: SprintTask) => void
+  onClearFailures: () => void
+  onRequeueAllFailed: () => void
 }
 
 const FAILED_VISIBLE_LIMIT = 3
@@ -17,7 +19,9 @@ function PipelineBacklogInner({
   failed,
   onTaskClick,
   onAddToQueue,
-  onRerun
+  onRerun,
+  onClearFailures,
+  onRequeueAllFailed
 }: PipelineBacklogProps): React.JSX.Element {
   const [failedExpanded, setFailedExpanded] = useState(false)
   const [backlogExpanded, setBacklogExpanded] = useState(false)
@@ -65,6 +69,22 @@ function PipelineBacklogInner({
         <div className="pipeline-sidebar__section">
           <div className="pipeline-sidebar__label pipeline-sidebar__label--failed">
             FAILED <span className="pipeline-sidebar__count">{failed.length}</span>
+          </div>
+          <div className="pipeline-sidebar__actions">
+            <button
+              className="pipeline-sidebar__action-btn"
+              onClick={onRequeueAllFailed}
+              title="Move all failed tasks back to queue"
+            >
+              ↻ Requeue all
+            </button>
+            <button
+              className="pipeline-sidebar__action-btn pipeline-sidebar__action-btn--danger"
+              onClick={onClearFailures}
+              title="Delete all failed tasks"
+            >
+              ✕ Clear failures
+            </button>
           </div>
           {visibleFailed.map((task) => (
             <div key={task.id} className="failed-card" data-testid={`failed-card-${task.id}`}>

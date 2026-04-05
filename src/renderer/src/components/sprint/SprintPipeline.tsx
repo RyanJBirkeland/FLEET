@@ -47,6 +47,8 @@ export function SprintPipeline(): React.JSX.Element {
   )
   const updateTask = useSprintTasks((s) => s.updateTask)
   const loadData = useSprintTasks((s) => s.loadData)
+  const batchDeleteTasks = useSprintTasks((s) => s.batchDeleteTasks)
+  const batchRequeueTasks = useSprintTasks((s) => s.batchRequeueTasks)
 
   const {
     selectedTaskId,
@@ -438,6 +440,16 @@ export function SprintPipeline(): React.JSX.Element {
     [setView]
   )
 
+  const handleClearFailures = useCallback(() => {
+    const failedIds = filteredPartition.failed.map((t) => t.id)
+    void batchDeleteTasks(failedIds)
+  }, [filteredPartition.failed, batchDeleteTasks])
+
+  const handleRequeueAllFailed = useCallback(() => {
+    const failedIds = filteredPartition.failed.map((t) => t.id)
+    void batchRequeueTasks(failedIds)
+  }, [filteredPartition.failed, batchRequeueTasks])
+
   // Stats
   const headerStats = useMemo(
     () => [
@@ -531,6 +543,8 @@ export function SprintPipeline(): React.JSX.Element {
             onTaskClick={handleTaskClick}
             onAddToQueue={handleAddToQueue}
             onRerun={handleRerun}
+            onClearFailures={handleClearFailures}
+            onRequeueAllFailed={handleRequeueAllFailed}
           />
 
           <div className="pipeline-center">

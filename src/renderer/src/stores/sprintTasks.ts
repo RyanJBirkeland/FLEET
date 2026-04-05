@@ -45,6 +45,8 @@ interface SprintTasksState {
   mergeSseUpdate: (update: { taskId: string; [key: string]: unknown }) => void
   setPrMergedMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void
   setTasks: (tasks: SprintTask[]) => void
+  batchDeleteTasks: (taskIds: string[]) => Promise<void>
+  batchRequeueTasks: (taskIds: string[]) => Promise<void>
 }
 
 export const useSprintTasks = create<SprintTasksState>((set, get) => ({
@@ -388,5 +390,64 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   },
 
   setTasks: (tasks): void =>
-    set({ tasks: tasks.map((t) => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) })) })
+    set({ tasks: tasks.map((t) => ({ ...t, depends_on: sanitizeDependsOn(t.depends_on) })) }),
+
+  batchDeleteTasks: async (taskIds): Promise<void> => {
+    if (taskIds.length === 0) return
+
+    try {
+      const operations = taskIds.map((id) => ({ op: 'delete' as const, id }))
+      const result = await window.api.sprint.batchUpdate(operations)
+
+      // Check for any errors
+      const errors = result.results.filter((r) => !r.ok)
+      if (errors.length > 0) {
+        toast.error(`Failed to delete ${errors.length} task(s)`)
+      } else {
+        toast.success(`Deleted ${taskIds.length} task(s)`)
+      }
+
+      // Remove successfully deleted tasks from state
+      const deletedIds = new Set(result.results.filter((r) => r.ok).map((r) => r.id))
+      set((s) => ({
+        tasks: s.tasks.filter((t) => !deletedIds.has(t.id))
+      }))
+
+      // Clear selection if deleted
+      deletedIds.forEach((id) => {
+        useSprintUI.getState().clearTaskIfSelected(id)
+      })
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to delete tasks')
+    }
+  },
+
+  batchRequeueTasks: async (taskIds): Promise<void> => {
+    if (taskIds.length === 0) return
+
+    try {
+      const operations = taskIds.map((id) => ({
+        op: 'update' as const,
+        id,
+        patch: { status: TASK_STATUS.QUEUED }
+      }))
+      const result = await window.api.sprint.batchUpdate(operations)
+
+      // Check for any errors
+      const errors = result.results.filter((r) => !r.ok)
+      if (errors.length > 0) {
+        const errorMessages = errors.map((e) => e.error).filter(Boolean)
+        toast.error(
+          `Failed to requeue ${errors.length} task(s)${errorMessages.length > 0 ? `: ${errorMessages[0]}` : ''}`
+        )
+      } else {
+        toast.success(`Requeued ${taskIds.length} task(s)`)
+      }
+
+      // Reload data to get updated task states (including dependency blocking)
+      await get().loadData()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to requeue tasks')
+    }
+  }
 }))

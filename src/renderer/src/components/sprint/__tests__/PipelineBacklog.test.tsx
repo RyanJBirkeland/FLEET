@@ -40,6 +40,8 @@ describe('PipelineBacklog', () => {
   const onTaskClick = vi.fn()
   const onAddToQueue = vi.fn()
   const onRerun = vi.fn()
+  const onClearFailures = vi.fn()
+  const onRequeueAllFailed = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -55,6 +57,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const card = screen.getByTestId('backlog-card-b-1')
@@ -70,6 +74,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const card = screen.getByTestId('backlog-card-b-1')
@@ -86,6 +92,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const selectBtn = screen.getByRole('button', { name: /select task: backlog task/i })
@@ -102,6 +110,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const addBtn = screen.getByRole('button', { name: /add to queue/i })
@@ -119,6 +129,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const selectBtn = screen.getByRole('button', { name: /select task: backlog task/i })
@@ -137,6 +149,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const card = screen.getByTestId('failed-card-f-1')
@@ -152,6 +166,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const card = screen.getByTestId('failed-card-f-1')
@@ -168,6 +184,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const selectBtn = screen.getByRole('button', { name: /select task: failed task/i })
@@ -184,6 +202,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       const rerunBtn = screen.getByRole('button', { name: /re-run/i })
@@ -205,6 +225,8 @@ describe('PipelineBacklog', () => {
           onTaskClick={onTaskClick}
           onAddToQueue={onAddToQueue}
           onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
         />
       )
       expect(screen.getByText('+1 more...')).toBeInTheDocument()

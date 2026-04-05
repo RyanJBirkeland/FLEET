@@ -236,6 +236,43 @@
   font-weight: 600;
 }
 
+/* Sidebar actions (bulk actions) */
+.pipeline-sidebar__actions {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.pipeline-sidebar__action-btn {
+  font-size: var(--font-2xs, 10px);
+  font-weight: 600;
+  background: var(--neon-surface-dim);
+  border: 1px solid var(--bde-border);
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition:
+    background 150ms ease,
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+  color: var(--neon-text-muted);
+  white-space: nowrap;
+}
+
+.pipeline-sidebar__action-btn:hover {
+  background: var(--neon-cyan-surface);
+  border-color: var(--neon-cyan-border);
+  color: var(--neon-cyan);
+  box-shadow: 0 0 8px var(--neon-cyan-glow);
+}
+
+.pipeline-sidebar__action-btn--danger:hover {
+  background: var(--neon-red-surface);
+  border-color: var(--neon-red-border);
+  color: var(--neon-red);
+  box-shadow: 0 0 8px var(--neon-red-glow);
+}
+
 /* Backlog card */
 .backlog-card {
   background: var(--neon-surface-dim);
