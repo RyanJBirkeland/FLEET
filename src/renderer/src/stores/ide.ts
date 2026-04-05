@@ -91,6 +91,9 @@ interface IDEState {
   recentFolders: string[]
   fileContents: Record<string, string> // IDE-5: Move from component state to store
   fileLoadingStates: Record<string, boolean> // IDE-9: Track loading state per file
+  minimapEnabled: boolean
+  wordWrapEnabled: boolean
+  fontSize: number
 
   // Actions
   setRootPath: (path: string) => void
@@ -105,6 +108,10 @@ interface IDEState {
   setFileContent: (filePath: string, content: string) => void // IDE-5
   setFileLoading: (filePath: string, loading: boolean) => void // IDE-9
   clearFileContent: (filePath: string) => void // IDE-5
+  toggleMinimap: () => void
+  toggleWordWrap: () => void
+  increaseFontSize: () => void
+  decreaseFontSize: () => void
 }
 
 // ---------------------------------------------------------------------------
@@ -122,6 +129,9 @@ export const useIDEStore = create<IDEState>((set) => ({
   recentFolders: [],
   fileContents: {}, // IDE-5
   fileLoadingStates: {}, // IDE-9
+  minimapEnabled: true,
+  wordWrapEnabled: false,
+  fontSize: 13,
 
   setRootPath: (path: string): void => {
     set((s) => {
@@ -272,6 +282,22 @@ export const useIDEStore = create<IDEState>((set) => ({
       const { [filePath]: _loading, ...restLoading } = s.fileLoadingStates
       return { fileContents: rest, fileLoadingStates: restLoading }
     })
+  },
+
+  toggleMinimap: (): void => {
+    set((s) => ({ minimapEnabled: !s.minimapEnabled }))
+  },
+
+  toggleWordWrap: (): void => {
+    set((s) => ({ wordWrapEnabled: !s.wordWrapEnabled }))
+  },
+
+  increaseFontSize: (): void => {
+    set((s) => ({ fontSize: Math.min(24, s.fontSize + 1) }))
+  },
+
+  decreaseFontSize: (): void => {
+    set((s) => ({ fontSize: Math.max(10, s.fontSize - 1) }))
   }
 }))
 
@@ -303,7 +329,10 @@ useIDEStore.subscribe((state) => {
     sidebarCollapsed: state.sidebarCollapsed,
     terminalCollapsed: state.terminalCollapsed,
     recentFolders: state.recentFolders,
-    expandedDirs: state.expandedDirs // IDE-11: Persist expanded directories
+    expandedDirs: state.expandedDirs, // IDE-11: Persist expanded directories
+    minimapEnabled: state.minimapEnabled,
+    wordWrapEnabled: state.wordWrapEnabled,
+    fontSize: state.fontSize
   }
   const serialized = JSON.stringify(toSave)
   if (serialized === lastSerialized) return // Skip — nothing changed

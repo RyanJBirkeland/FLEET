@@ -17,6 +17,9 @@ export interface EditorPaneProps {
   language: string
   onContentChange?: (content: string) => void
   onSave?: () => void
+  minimapEnabled?: boolean
+  wordWrapEnabled?: boolean
+  fontSize?: number
 }
 
 export function EditorPane({
@@ -24,7 +27,10 @@ export function EditorPane({
   content,
   language,
   onContentChange,
-  onSave
+  onSave,
+  minimapEnabled = true,
+  wordWrapEnabled = false,
+  fontSize = 13
 }: EditorPaneProps): React.JSX.Element {
   const theme = useThemeStore((s) => s.theme)
   const monacoRef = useRef<typeof Monaco | null>(null)
@@ -74,14 +80,14 @@ export function EditorPane({
       onMount={handleMount}
       onChange={handleChange}
       options={{
-        fontSize: 13,
+        fontSize,
         fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
-        minimap: { enabled: true },
+        minimap: { enabled: minimapEnabled },
         automaticLayout: true,
         tabSize: 2,
         bracketPairColorization: { enabled: true },
         scrollBeyondLastLine: false,
-        wordWrap: 'off'
+        wordWrap: wordWrapEnabled ? 'on' : 'off'
       }}
     />
   )

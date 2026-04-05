@@ -7,6 +7,7 @@ import { useIDEStore } from '../stores/ide'
 import { usePanelLayoutStore } from '../stores/panelLayout'
 import { EditorPane } from '../components/ide/EditorPane'
 import { EditorTabBar } from '../components/ide/EditorTabBar'
+import { EditorToolbar } from '../components/ide/EditorToolbar'
 import { FileSidebar } from '../components/ide/FileSidebar'
 import { TerminalPanel } from '../components/ide/TerminalPanel'
 import { IDEEmptyState } from '../components/ide/IDEEmptyState'
@@ -51,6 +52,9 @@ export function IDEView(): React.JSX.Element {
           terminalCollapsed?: boolean
           recentFolders?: string[]
           expandedDirs?: Record<string, boolean> // IDE-11
+          minimapEnabled?: boolean
+          wordWrapEnabled?: boolean
+          fontSize?: number
         }
         // Set watchDir FIRST so ideRootPath is ready before any readFile calls
         if (state.rootPath) await window.api.watchDir(state.rootPath)
@@ -59,7 +63,10 @@ export function IDEView(): React.JSX.Element {
           sidebarCollapsed: state.sidebarCollapsed ?? false,
           terminalCollapsed: state.terminalCollapsed ?? false,
           recentFolders: state.recentFolders ?? [],
-          expandedDirs: state.expandedDirs ?? {} // IDE-11: Restore expanded directories
+          expandedDirs: state.expandedDirs ?? {}, // IDE-11: Restore expanded directories
+          minimapEnabled: state.minimapEnabled ?? true,
+          wordWrapEnabled: state.wordWrapEnabled ?? false,
+          fontSize: state.fontSize ?? 13
         })
         if (state.openTabs) {
           for (const tab of state.openTabs) {
@@ -88,6 +95,9 @@ export function IDEView(): React.JSX.Element {
     focusedPanel,
     fileContents,
     fileLoadingStates,
+    minimapEnabled,
+    wordWrapEnabled,
+    fontSize,
     setRootPath,
     openTab,
     closeTab,
@@ -107,6 +117,9 @@ export function IDEView(): React.JSX.Element {
       focusedPanel: s.focusedPanel,
       fileContents: s.fileContents, // IDE-5
       fileLoadingStates: s.fileLoadingStates, // IDE-9
+      minimapEnabled: s.minimapEnabled,
+      wordWrapEnabled: s.wordWrapEnabled,
+      fontSize: s.fontSize,
       setRootPath: s.setRootPath,
       openTab: s.openTab,
       closeTab: s.closeTab,
@@ -331,6 +344,7 @@ export function IDEView(): React.JSX.Element {
                   </button>
                 )}
                 <EditorTabBar onCloseTab={(id, dirty) => void handleCloseTab(id, dirty)} />
+                <EditorToolbar />
                 <div className="ide-editor-content">
                   {/* IDE-9: Show loading indicator while file is being fetched */}
                   {activeTab && fileLoadingStates[activeTab.filePath] ? (
@@ -342,6 +356,9 @@ export function IDEView(): React.JSX.Element {
                       language={activeTab?.language ?? 'plaintext'}
                       onContentChange={handleContentChange}
                       onSave={() => void handleSave()}
+                      minimapEnabled={minimapEnabled}
+                      wordWrapEnabled={wordWrapEnabled}
+                      fontSize={fontSize}
                     />
                   )}
                 </div>
