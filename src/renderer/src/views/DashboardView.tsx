@@ -68,26 +68,6 @@ export default function DashboardView(): React.JSX.Element {
   }, [])
 
   // Dashboard data from centralized polling
-  const { chartData, feedEvents, successTrendData, loading, cardErrors, lastFetchedAt } =
-    useDashboardDataStore(
-      useShallow((s) => ({
-        chartData: s.chartData,
-        feedEvents: s.feedEvents,
-        successTrendData: s.successTrendData,
-        loading: s.loading,
-        cardErrors: s.cardErrors,
-        lastFetchedAt: s.lastFetchedAt
-      }))
-    )
-  const { chartData, feedEvents, loading, cardErrors, lastFetchedAt } = useDashboardDataStore(
-    useShallow((s) => ({
-      chartData: s.chartData,
-      feedEvents: s.feedEvents,
-      loading: s.loading,
-      cardErrors: s.cardErrors,
-      lastFetchedAt: s.lastFetchedAt
-    }))
-  )
   const { chartData, burndownData, feedEvents, loading, cardErrors, lastFetchedAt } =
     useDashboardDataStore(
       useShallow((s) => ({

@@ -167,15 +167,9 @@ const api = {
         templateName?: string
       }>
     ) => typedInvoke('sprint:batchImport', tasks),
-    exportTasks: (format: 'json' | 'csv') => typedInvoke('sprint:exportTasks', format)
-    ) => typedInvoke('sprint:batchImport', tasks)
-    ) => typedInvoke('sprint:batchImport', tasks),
-    exportTaskHistory: (taskId: string) => typedInvoke('sprint:exportTaskHistory', taskId)
-    ) => typedInvoke('sprint:batchImport', tasks)
-    ) => typedInvoke('sprint:batchImport', tasks),
-    failureBreakdown: () => typedInvoke('sprint:failureBreakdown')
-    ) => typedInvoke('sprint:batchImport', tasks)
-    ) => typedInvoke('sprint:batchImport', tasks),
+    exportTasks: (format: 'json' | 'csv') => typedInvoke('sprint:exportTasks', format),
+    exportTaskHistory: (taskId: string) => typedInvoke('sprint:exportTaskHistory', taskId),
+    failureBreakdown: () => typedInvoke('sprint:failureBreakdown'),
     getSuccessRateBySpecType: () => typedInvoke('sprint:getSuccessRateBySpecType')
   },
 
@@ -324,9 +318,7 @@ const api = {
   dashboard: {
     completionsPerHour: () => typedInvoke('agent:completionsPerHour'),
     recentEvents: (limit?: number) => typedInvoke('agent:recentEvents', limit),
-    dailySuccessRate: (days?: number) => typedInvoke('dashboard:dailySuccessRate', days)
-    recentEvents: (limit?: number) => typedInvoke('agent:recentEvents', limit)
-    recentEvents: (limit?: number) => typedInvoke('agent:recentEvents', limit),
+    dailySuccessRate: (days?: number) => typedInvoke('dashboard:dailySuccessRate', days),
     burndown: () => typedInvoke('sprint:burndown')
   },
 
