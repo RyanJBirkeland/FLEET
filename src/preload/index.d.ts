@@ -203,6 +203,9 @@ declare global {
           ...args: IpcArgs<'groups:getGroupTasks'>
         ) => Promise<IpcResult<'groups:getGroupTasks'>>
         queueAll: (...args: IpcArgs<'groups:queueAll'>) => Promise<IpcResult<'groups:queueAll'>>
+        reorderTasks: (
+          ...args: IpcArgs<'groups:reorderTasks'>
+        ) => Promise<IpcResult<'groups:reorderTasks'>>
       }
 
       // File attachments
