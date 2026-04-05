@@ -665,4 +665,9 @@ export function registerSprintLocalHandlers(): void {
       return { filePath: result.filePath, canceled: false }
     }
   )
+
+  safeHandle('sprint:failureBreakdown', async () => {
+    const { getFailureReasonBreakdown } = await import('../data/sprint-queries')
+    return getFailureReasonBreakdown()
+  })
 }

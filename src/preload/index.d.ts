@@ -190,6 +190,7 @@ declare global {
           ...args: IpcArgs<'sprint:exportTasks'>
         ) => Promise<IpcResult<'sprint:exportTasks'>>
         exportTaskHistory: (taskId: string) => Promise<IpcResult<'sprint:exportTaskHistory'>>
+        failureBreakdown: () => Promise<IpcResult<'sprint:failureBreakdown'>>
       }
 
       // Task groups

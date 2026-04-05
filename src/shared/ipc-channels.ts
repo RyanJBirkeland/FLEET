@@ -344,6 +344,10 @@ export interface SprintChannels {
     args: [taskId: string]
     result: { success: boolean; path?: string }
   }
+  'sprint:failureBreakdown': {
+    args: []
+    result: Array<{ reason: string; count: number }>
+  }
 }
 
 /** Window shell integration */

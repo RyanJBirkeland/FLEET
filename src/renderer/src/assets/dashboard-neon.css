@@ -219,6 +219,61 @@
   opacity: 0.85;
 }
 
+/* ── Failure Breakdown ── */
+.dashboard-failure-breakdown-empty {
+  color: var(--neon-text-dim);
+  font-size: 11px;
+  opacity: 0.6;
+  text-align: center;
+  padding: 8px;
+}
+
+.dashboard-failure-breakdown-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.dashboard-failure-breakdown-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: 4px;
+  transition: background 0.15s ease;
+}
+
+.dashboard-failure-breakdown-row:hover {
+  background: var(--neon-surface-dim);
+}
+
+.dashboard-failure-breakdown-reason {
+  color: var(--neon-text);
+  font-size: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.dashboard-failure-breakdown-count {
+  color: var(--neon-red);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  flex-shrink: 0;
+  text-shadow: var(--neon-red-glow);
+}
+
+.dashboard-card-loading {
+  color: var(--neon-text-dim);
+  font-size: 11px;
+  opacity: 0.6;
+  text-align: center;
+  padding: 8px;
+}
+
 /* ── Cost Card Value ── */
 .dashboard-cost-value {
   color: var(--neon-text);

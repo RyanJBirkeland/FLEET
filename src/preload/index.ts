@@ -171,6 +171,9 @@ const api = {
     ) => typedInvoke('sprint:batchImport', tasks)
     ) => typedInvoke('sprint:batchImport', tasks),
     exportTaskHistory: (taskId: string) => typedInvoke('sprint:exportTaskHistory', taskId)
+    ) => typedInvoke('sprint:batchImport', tasks)
+    ) => typedInvoke('sprint:batchImport', tasks),
+    failureBreakdown: () => typedInvoke('sprint:failureBreakdown')
   },
 
   // Task groups

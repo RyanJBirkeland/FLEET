@@ -883,3 +883,30 @@ export function getTasksWithDependencies(): Array<{
     depends_on: row.depends_on ? sanitizeDependsOn(row.depends_on) : null
   }))
 }
+
+export interface FailureReasonBreakdown {
+  reason: string
+  count: number
+}
+
+export function getFailureReasonBreakdown(): FailureReasonBreakdown[] {
+  try {
+    const rows = getDb()
+      .prepare(
+        `SELECT
+          COALESCE(failure_reason, 'Unknown') as reason,
+          COUNT(*) as count
+         FROM sprint_tasks
+         WHERE status IN ('failed', 'error', 'cancelled')
+         GROUP BY failure_reason
+         ORDER BY count DESC`
+      )
+      .all() as Array<{ reason: string; count: number }>
+
+    return rows
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err)
+    logger.warn(`[sprint-queries] getFailureReasonBreakdown failed: ${msg}`)
+    return []
+  }
+}
