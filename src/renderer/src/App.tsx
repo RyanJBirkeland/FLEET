@@ -29,6 +29,7 @@ import { DEFAULT_MODEL } from '../../shared/models'
 import { VIEW_LABELS } from './lib/view-registry'
 import { PollingProvider } from './components/PollingProvider'
 import { AgentMonitor } from './components/ui/AgentMonitor'
+import { SHORTCUT_CATEGORIES } from './lib/shortcuts-data'
 import './assets/neon.css'
 import './assets/neon-shell.css'
 import './assets/agents-neon.css'
@@ -39,24 +40,9 @@ const _params = new URLSearchParams(window.location.search)
 const _tearoffView = _params.get('view') as View | null
 const _tearoffWindowId = _params.get('windowId')
 
-const SHORTCUTS_LEFT: { keys: string; description: string }[] = [
-  { keys: '\u23181\u20137', description: 'Switch views' },
-  { keys: '\u2318P', description: 'Command palette' },
-  { keys: '\u2318R', description: 'Refresh current view' },
-  { keys: 'Escape', description: 'Close panel / blur input' },
-  { keys: '?', description: 'Show shortcuts' }
-]
-
-const SHORTCUTS_RIGHT: { keys: string; description: string }[] = [
-  { keys: '\u2191 / \u2193', description: 'Navigate list items' },
-  { keys: 'Enter', description: 'Select / open item' },
-  { keys: 'PageUp / Down', description: 'Scroll chat thread' },
-  { keys: 'End', description: 'Jump to latest message' },
-  { keys: '[ / ]', description: 'Prev / next diff file' }
-]
-
 function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Element {
   const reduced = useReducedMotion()
+  const [activeTab, setActiveTab] = useState(0)
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -68,6 +54,8 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Eleme
     window.addEventListener('keydown', handler)
     return () => window.removeEventListener('keydown', handler)
   }, [onClose])
+
+  const currentCategory = SHORTCUT_CATEGORIES[activeTab]
 
   return (
     <div
@@ -87,25 +75,31 @@ function ShortcutsOverlay({ onClose }: { onClose: () => void }): React.JSX.Eleme
         transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
       >
         <h2 className="shortcuts-overlay__title">Keyboard Shortcuts</h2>
-        <div className="shortcuts-overlay__columns">
-          <div className="shortcuts-overlay__col">
-            <div className="shortcuts-overlay__col-title">Global</div>
-            {SHORTCUTS_LEFT.map((s) => (
-              <div key={s.keys} className="shortcuts-overlay__row">
-                <Kbd>{s.keys}</Kbd>
-                <span>{s.description}</span>
-              </div>
-            ))}
-          </div>
-          <div className="shortcuts-overlay__col">
-            <div className="shortcuts-overlay__col-title">Navigation</div>
-            {SHORTCUTS_RIGHT.map((s) => (
-              <div key={s.keys} className="shortcuts-overlay__row">
-                <Kbd>{s.keys}</Kbd>
-                <span>{s.description}</span>
-              </div>
-            ))}
-          </div>
+        <div className="shortcuts-overlay__tabs" role="tablist">
+          {SHORTCUT_CATEGORIES.map((category, index) => (
+            <button
+              key={category.name}
+              role="tab"
+              aria-selected={activeTab === index}
+              aria-controls={`shortcuts-panel-${index}`}
+              className={`shortcuts-overlay__tab${activeTab === index ? ' shortcuts-overlay__tab--active' : ''}`}
+              onClick={() => setActiveTab(index)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+        <div
+          id={`shortcuts-panel-${activeTab}`}
+          role="tabpanel"
+          className="shortcuts-overlay__content"
+        >
+          {currentCategory.shortcuts.map((shortcut) => (
+            <div key={shortcut.keys} className="shortcuts-overlay__row">
+              <Kbd>{shortcut.keys}</Kbd>
+              <span>{shortcut.description}</span>
+            </div>
+          ))}
         </div>
         <Button variant="ghost" className="shortcuts-overlay__close" onClick={onClose}>
           Close <Kbd>Esc</Kbd>
