@@ -1032,6 +1032,117 @@
   color: var(--neon-text-dim);
 }
 
+/* Upstream outcomes */
+.task-drawer__upstream {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px 0;
+}
+
+.task-drawer__upstream-label {
+  font-size: var(--font-2xs, 10px);
+  color: var(--neon-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.task-drawer__upstream-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.task-drawer__upstream-card {
+  all: unset;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--neon-purple-border);
+  background: var(--neon-surface-dim);
+  cursor: pointer;
+  font-family: var(--bde-font-code);
+  transition: background 150ms ease, border-color 150ms ease;
+}
+
+.task-drawer__upstream-card:hover {
+  background: var(--neon-purple-surface);
+  border-color: var(--neon-purple);
+}
+
+.task-drawer__upstream-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.task-drawer__upstream-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.task-drawer__upstream-card--done .task-drawer__upstream-dot {
+  background: var(--neon-cyan);
+}
+.task-drawer__upstream-card--active .task-drawer__upstream-dot {
+  background: var(--neon-purple);
+}
+.task-drawer__upstream-card--blocked .task-drawer__upstream-dot {
+  background: var(--neon-orange);
+}
+.task-drawer__upstream-card--queued .task-drawer__upstream-dot {
+  background: var(--neon-cyan);
+  opacity: 0.5;
+}
+.task-drawer__upstream-card--failed .task-drawer__upstream-dot,
+.task-drawer__upstream-card--error .task-drawer__upstream-dot {
+  background: var(--neon-red);
+}
+.task-drawer__upstream-card--review .task-drawer__upstream-dot {
+  background: var(--neon-blue);
+}
+
+.task-drawer__upstream-title {
+  flex: 1;
+  font-size: var(--font-xs, 11px);
+  color: var(--neon-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.task-drawer__upstream-status {
+  font-size: var(--font-2xs, 10px);
+  color: var(--neon-text-dim);
+  flex-shrink: 0;
+}
+
+.task-drawer__upstream-pr {
+  font-size: var(--font-2xs, 10px);
+  color: var(--neon-cyan);
+  text-decoration: none;
+  padding-left: 12px;
+  transition: color 150ms ease;
+}
+
+.task-drawer__upstream-pr:hover {
+  color: var(--neon-cyan-bright);
+  text-decoration: underline;
+}
+
+.task-drawer__upstream-notes {
+  font-size: var(--font-2xs, 10px);
+  color: var(--neon-text-dim);
+  line-height: 1.4;
+  padding-left: 12px;
+  font-style: italic;
+}
+
 /* Agent link */
 .task-drawer__agent-link {
   color: var(--neon-cyan);
