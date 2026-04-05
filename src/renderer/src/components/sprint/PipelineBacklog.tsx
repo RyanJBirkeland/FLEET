@@ -10,6 +10,7 @@ interface PipelineBacklogProps {
 }
 
 const FAILED_VISIBLE_LIMIT = 3
+const BACKLOG_VISIBLE_LIMIT = 40
 
 function PipelineBacklogInner({
   backlog,
@@ -19,15 +20,18 @@ function PipelineBacklogInner({
   onRerun
 }: PipelineBacklogProps): React.JSX.Element {
   const [failedExpanded, setFailedExpanded] = useState(false)
+  const [backlogExpanded, setBacklogExpanded] = useState(false)
   const visibleFailed = failedExpanded ? failed : failed.slice(0, FAILED_VISIBLE_LIMIT)
   const hiddenCount = failed.length - FAILED_VISIBLE_LIMIT
+  const visibleBacklog = backlogExpanded ? backlog : backlog.slice(0, BACKLOG_VISIBLE_LIMIT)
+  const hiddenBacklogCount = backlog.length - BACKLOG_VISIBLE_LIMIT
   return (
     <div className="pipeline-sidebar" data-testid="pipeline-backlog">
       <div className="pipeline-sidebar__section pipeline-sidebar__section--grow">
         <div className="pipeline-sidebar__label pipeline-sidebar__label--backlog">
           BACKLOG <span className="pipeline-sidebar__count">{backlog.length}</span>
         </div>
-        {backlog.map((task) => (
+        {visibleBacklog.map((task) => (
           <div key={task.id} className="backlog-card" data-testid={`backlog-card-${task.id}`}>
             <button
               className="backlog-card__select"
@@ -45,6 +49,16 @@ function PipelineBacklogInner({
             </button>
           </div>
         ))}
+        {!backlogExpanded && hiddenBacklogCount > 0 && (
+          <button className="pipeline-sidebar__expand" onClick={() => setBacklogExpanded(true)}>
+            Show {hiddenBacklogCount} more
+          </button>
+        )}
+        {backlogExpanded && backlog.length > BACKLOG_VISIBLE_LIMIT && (
+          <button className="pipeline-sidebar__expand" onClick={() => setBacklogExpanded(false)}>
+            Show less
+          </button>
+        )}
         {backlog.length === 0 && <div className="pipeline-sidebar__empty">No backlog tasks</div>}
       </div>
       {failed.length > 0 && (

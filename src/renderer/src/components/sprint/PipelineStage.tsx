@@ -1,4 +1,4 @@
-import React, { useRef } from 'react'
+import React, { useRef, useState } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TaskPill } from './TaskPill'
 import { TaskRow } from './TaskRow'
@@ -16,6 +16,8 @@ interface PipelineStageProps {
   doneFooter?: React.ReactNode
 }
 
+const STAGE_VISIBLE_LIMIT = 20
+
 function PipelineStageInner({
   name,
   label,
@@ -29,6 +31,9 @@ function PipelineStageInner({
   const empty = tasks.length === 0 && !doneFooter
   const cardsRef = useRef<HTMLDivElement>(null)
   const pipelineDensity = useSprintUI((s) => s.pipelineDensity)
+  const [expanded, setExpanded] = useState(false)
+  const visibleTasks = expanded ? tasks : tasks.slice(0, STAGE_VISIBLE_LIMIT)
+  const hiddenCount = tasks.length - STAGE_VISIBLE_LIMIT
 
   const handleStageKeyDown = (e: React.KeyboardEvent): void => {
     const cards = cardsRef.current?.querySelectorAll(
@@ -81,7 +86,7 @@ function PipelineStageInner({
       {!empty && (
         <div className="pipeline-stage__cards" ref={cardsRef} onKeyDown={handleStageKeyDown}>
           <AnimatePresence mode="popLayout">
-            {tasks.map((task) =>
+            {visibleTasks.map((task) =>
               pipelineDensity === 'compact' ? (
                 <TaskRow
                   key={task.id}
@@ -100,6 +105,24 @@ function PipelineStageInner({
               )
             )}
           </AnimatePresence>
+          {!expanded && hiddenCount > 0 && (
+            <button
+              className="pipeline-stage__show-more"
+              onClick={() => setExpanded(true)}
+              style={{ marginTop: '8px' }}
+            >
+              Show {hiddenCount} more
+            </button>
+          )}
+          {expanded && tasks.length > STAGE_VISIBLE_LIMIT && (
+            <button
+              className="pipeline-stage__show-more"
+              onClick={() => setExpanded(false)}
+              style={{ marginTop: '8px' }}
+            >
+              Show less
+            </button>
+          )}
           {doneFooter}
         </div>
       )}
