@@ -8,6 +8,8 @@ import { Button } from '../ui/Button'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useTaskGroups } from '../../stores/taskGroups'
+import { EPIC_TEMPLATES, type EpicTemplate } from './epicTemplates'
+import type { TaskGroup } from '../../../../shared/types'
 
 interface CreateEpicModalProps {
   open: boolean
@@ -16,12 +18,13 @@ interface CreateEpicModalProps {
 
 export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.JSX.Element {
   const reduced = useReducedMotion()
-  const { createGroup, selectGroup } = useTaskGroups()
+  const { createGroup, createGroupFromTemplate, selectGroup } = useTaskGroups()
 
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('E')
   const [goal, setGoal] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [selectedTemplate, setSelectedTemplate] = useState<EpicTemplate | null>(null)
 
   const nameRef = useRef<HTMLInputElement>(null)
   const iconRef = useRef<HTMLInputElement>(null)
@@ -37,6 +40,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
       setIcon('E')
       setGoal('')
       setSubmitting(false)
+      setSelectedTemplate(null)
       // Focus name input
       requestAnimationFrame(() => {
         nameRef.current?.focus()
@@ -44,17 +48,41 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
     }
   }, [open])
 
+  const handleTemplateSelect = useCallback((template: EpicTemplate) => {
+    setSelectedTemplate(template)
+    setName(template.name)
+    setIcon(template.icon)
+    setGoal(template.goal)
+  }, [])
+
   const handleSubmit = useCallback(async () => {
     if (!name.trim()) return
     if (submitting) return
 
     setSubmitting(true)
     try {
-      const newGroup = await createGroup({
-        name: name.trim(),
-        icon: icon.trim() || 'E',
-        goal: goal.trim() || undefined
-      })
+      let newGroup: TaskGroup | null = null
+
+      if (selectedTemplate) {
+        // Create group from template (includes tasks)
+        newGroup = await createGroupFromTemplate(
+          {
+            name: name.trim(),
+            icon: icon.trim() || selectedTemplate.icon,
+            goal: goal.trim() || selectedTemplate.goal,
+            tasks: selectedTemplate.tasks
+          },
+          'BDE' // Default to BDE repo
+        )
+      } else {
+        // Create empty group
+        newGroup = await createGroup({
+          name: name.trim(),
+          icon: icon.trim() || 'E',
+          goal: goal.trim() || undefined
+        })
+      }
+
       if (newGroup) {
         // Select the newly created group
         selectGroup(newGroup.id)
@@ -63,7 +91,17 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
     } finally {
       setSubmitting(false)
     }
-  }, [name, icon, goal, submitting, createGroup, selectGroup, onClose])
+  }, [
+    name,
+    icon,
+    goal,
+    submitting,
+    selectedTemplate,
+    createGroup,
+    createGroupFromTemplate,
+    selectGroup,
+    onClose
+  ])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
@@ -116,6 +154,95 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
             <div className="prompt-modal__message">
               Create a new task group to organize related work.
             </div>
+
+            {/* Template selection */}
+            {!selectedTemplate && (
+              <>
+                <div className="prompt-modal__label" style={{ marginTop: '16px' }}>
+                  Start from Template (optional)
+                </div>
+                <div
+                  style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(2, 1fr)',
+                    gap: '12px',
+                    marginBottom: '20px'
+                  }}
+                >
+                  {EPIC_TEMPLATES.map((template) => (
+                    <button
+                      key={template.id}
+                      type="button"
+                      onClick={() => handleTemplateSelect(template)}
+                      style={{
+                        padding: '12px',
+                        border: '1px solid var(--color-border)',
+                        borderRadius: '6px',
+                        background: 'var(--color-surface)',
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'all 0.15s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-primary)'
+                        e.currentTarget.style.background = 'var(--color-surface-hover)'
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.borderColor = 'var(--color-border)'
+                        e.currentTarget.style.background = 'var(--color-surface)'
+                      }}
+                    >
+                      <div style={{ fontSize: '24px', marginBottom: '6px' }}>{template.icon}</div>
+                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>{template.name}</div>
+                      <div style={{ fontSize: '12px', opacity: 0.7, lineHeight: '1.4' }}>
+                        {template.description}
+                      </div>
+                      <div style={{ fontSize: '11px', opacity: 0.5, marginTop: '6px' }}>
+                        {template.tasks.length} task{template.tasks.length !== 1 ? 's' : ''}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+
+            {selectedTemplate && (
+              <div
+                style={{
+                  padding: '12px',
+                  background: 'var(--color-surface)',
+                  border: '1px solid var(--color-primary)',
+                  borderRadius: '6px',
+                  marginBottom: '16px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between'
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                  <div style={{ fontSize: '24px' }}>{selectedTemplate.icon}</div>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{selectedTemplate.name}</div>
+                    <div style={{ fontSize: '12px', opacity: 0.7 }}>
+                      {selectedTemplate.tasks.length} task
+                      {selectedTemplate.tasks.length !== 1 ? 's' : ''}
+                    </div>
+                  </div>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedTemplate(null)
+                    setName('')
+                    setIcon('E')
+                    setGoal('')
+                  }}
+                >
+                  Clear
+                </Button>
+              </div>
+            )}
 
             {/* Name field */}
             <label className="prompt-modal__label" htmlFor="epic-name">
