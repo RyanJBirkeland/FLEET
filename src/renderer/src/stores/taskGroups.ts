@@ -32,6 +32,20 @@ interface TaskGroupsState {
   removeTaskFromGroup: (taskId: string) => Promise<void>
   queueAllTasks: (groupId: string) => Promise<number>
   reorderTasks: (groupId: string, orderedTaskIds: string[]) => Promise<void>
+  createGroupFromTemplate: (
+    template: {
+      name: string
+      icon: string
+      goal: string
+      tasks: Array<{
+        title: string
+        spec: string
+        spec_type: string
+        priority?: number
+      }>
+    },
+    repo: string
+  ) => Promise<TaskGroup | null>
 }
 
 export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
@@ -189,6 +203,49 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
       toast.error('Failed to reorder tasks — ' + (e instanceof Error ? e.message : String(e)))
       // Revert by reloading
       await get().loadGroupTasks(groupId)
+    }
+  },
+
+  createGroupFromTemplate: async (template, repo): Promise<TaskGroup | null> => {
+    try {
+      // Create the group
+      const newGroup = await window.api.groups.create({
+        name: template.name,
+        icon: template.icon,
+        goal: template.goal
+      })
+      set((s) => ({ groups: [...s.groups, newGroup] }))
+
+      // Create tasks for the group
+      for (const taskStub of template.tasks) {
+        try {
+          const task = await window.api.sprint.create({
+            title: taskStub.title,
+            repo,
+            spec: taskStub.spec,
+            priority: taskStub.priority ?? 0,
+            status: 'backlog'
+          })
+          if (task) {
+            // Set spec_type via update since create doesn't support it
+            await window.api.sprint.update(task.id, { spec_type: taskStub.spec_type })
+            await window.api.groups.addTask(task.id, newGroup.id)
+          }
+        } catch (taskError) {
+          // Log error but continue creating other tasks
+          console.error('Failed to create task:', taskError)
+        }
+      }
+
+      toast.success(
+        `Group "${newGroup.name}" created with ${template.tasks.length} task${template.tasks.length !== 1 ? 's' : ''}`
+      )
+      return newGroup
+    } catch (e) {
+      toast.error(
+        'Failed to create group from template — ' + (e instanceof Error ? e.message : String(e))
+      )
+      return null
     }
   }
 }))
