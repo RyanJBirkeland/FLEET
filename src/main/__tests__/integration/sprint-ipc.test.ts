@@ -254,17 +254,17 @@ describe('Sprint IPC handlers — integration', () => {
   describe('sprint:list', () => {
     it('returns an array of tasks', async () => {
       const tasks = [makeTask({ id: 'task-1' }), makeTask({ id: 'task-2' })]
-      mockListTasks.mockReturnValue(tasks)
+      mockListTasksRecent.mockReturnValue(tasks)
 
       const result = await invoke('sprint:list')
 
       expect(result).toEqual(tasks)
       expect(result).toHaveLength(2)
-      expect(mockListTasks).toHaveBeenCalledOnce()
+      expect(mockListTasksRecent).toHaveBeenCalledOnce()
     })
 
     it('returns empty array when no tasks exist', async () => {
-      mockListTasks.mockReturnValue([])
+      mockListTasksRecent.mockReturnValue([])
       const result = await invoke('sprint:list')
       expect(result).toEqual([])
     })
@@ -420,7 +420,7 @@ describe('Sprint IPC handlers — integration', () => {
   // 7. Error handling → handler returns structured error on failure
   describe('error handling', () => {
     it('propagates errors from the data layer through safeHandle', async () => {
-      mockListTasks.mockImplementation(() => {
+      mockListTasksRecent.mockImplementation(() => {
         throw new Error('DB connection failed')
       })
 
