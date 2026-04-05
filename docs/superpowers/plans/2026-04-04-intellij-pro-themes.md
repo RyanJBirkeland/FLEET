@@ -15,6 +15,7 @@
 ### Task 1: Theme Store — Expand to 5 Themes
 
 **Files:**
+
 - Modify: `src/renderer/src/stores/theme.ts`
 - Modify: `src/renderer/src/stores/__tests__/theme.test.ts`
 
@@ -82,9 +83,15 @@ In `theme.ts`:
 1. Expand type: `type Theme = 'dark' | 'light' | 'warm' | 'pro-dark' | 'pro-light'`
 
 2. Update `applyTheme()`:
+
 ```ts
 function applyTheme(t: Theme): void {
-  document.documentElement.classList.remove('theme-light', 'theme-warm', 'theme-pro-dark', 'theme-pro-light')
+  document.documentElement.classList.remove(
+    'theme-light',
+    'theme-warm',
+    'theme-pro-dark',
+    'theme-pro-light'
+  )
   if (t === 'light') document.documentElement.classList.add('theme-light')
   else if (t === 'warm') document.documentElement.classList.add('theme-warm')
   else if (t === 'pro-dark') document.documentElement.classList.add('theme-pro-dark')
@@ -93,6 +100,7 @@ function applyTheme(t: Theme): void {
 ```
 
 3. Update `toggleTheme()` cycle:
+
 ```ts
 const order: Theme[] = ['dark', 'light', 'warm', 'pro-dark', 'pro-light']
 const idx = order.indexOf(s.theme)
@@ -121,6 +129,7 @@ git commit -m "feat: expand theme store to support 5 themes (pro-dark, pro-light
 ### Task 2: CSS — Pro Dark Theme Variables
 
 **Files:**
+
 - Modify: `src/renderer/src/assets/base.css` (add `html.theme-pro-dark` block after `html.theme-warm`)
 - Modify: `src/renderer/src/assets/neon.css` (add `html.theme-pro-dark` block after existing theme blocks)
 - Modify: `src/renderer/src/assets/design-system.css` (add `html.theme-pro-dark` glass/elevation overrides)
@@ -295,6 +304,7 @@ git commit -m "feat: add Pro Dark theme CSS variables (IntelliJ-inspired)"
 ### Task 3: CSS — Pro Light Theme Variables
 
 **Files:**
+
 - Modify: `src/renderer/src/assets/base.css` (add `html.theme-pro-light` block after `html.theme-pro-dark`)
 - Modify: `src/renderer/src/assets/neon.css` (add `html.theme-pro-light` block)
 - Modify: `src/renderer/src/assets/design-system.css` (add `html.theme-pro-light` glass/elevation overrides)
@@ -458,6 +468,7 @@ git commit -m "feat: add Pro Light theme CSS variables (IntelliJ-inspired)"
 ### Task 4: Settings UI — 5-Theme Selector
 
 **Files:**
+
 - Modify: `src/renderer/src/components/settings/AppearanceSection.tsx`
 - Modify: `src/renderer/src/components/settings/__tests__/AppearanceSection.test.tsx`
 
@@ -496,16 +507,72 @@ Add Pro Dark and Pro Light buttons to the theme selector. Group them with labels
 
 ```tsx
 <SettingsCard title="Theme" subtitle="Choose your visual theme">
-  <div style={{ fontSize: 11, color: 'var(--bde-text-dim)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Fun</div>
-  <div className="settings-theme-buttons">
-    <button className={`bde-btn bde-btn--sm ${theme === 'dark' ? 'bde-btn--primary' : 'bde-btn--ghost'}`} onClick={() => setTheme('dark')} type="button" aria-pressed={theme === 'dark'}>Dark</button>
-    <button className={`bde-btn bde-btn--sm ${theme === 'light' ? 'bde-btn--primary' : 'bde-btn--ghost'}`} onClick={() => setTheme('light')} type="button" aria-pressed={theme === 'light'}>Light</button>
-    <button className={`bde-btn bde-btn--sm ${theme === 'warm' ? 'bde-btn--primary' : 'bde-btn--ghost'}`} onClick={() => setTheme('warm')} type="button" aria-pressed={theme === 'warm'}>Warm</button>
+  <div
+    style={{
+      fontSize: 11,
+      color: 'var(--bde-text-dim)',
+      marginBottom: 6,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    }}
+  >
+    Fun
   </div>
-  <div style={{ fontSize: 11, color: 'var(--bde-text-dim)', marginBottom: 6, marginTop: 12, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Professional</div>
   <div className="settings-theme-buttons">
-    <button className={`bde-btn bde-btn--sm ${theme === 'pro-dark' ? 'bde-btn--primary' : 'bde-btn--ghost'}`} onClick={() => setTheme('pro-dark')} type="button" aria-pressed={theme === 'pro-dark'}>Pro Dark</button>
-    <button className={`bde-btn bde-btn--sm ${theme === 'pro-light' ? 'bde-btn--primary' : 'bde-btn--ghost'}`} onClick={() => setTheme('pro-light')} type="button" aria-pressed={theme === 'pro-light'}>Pro Light</button>
+    <button
+      className={`bde-btn bde-btn--sm ${theme === 'dark' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
+      onClick={() => setTheme('dark')}
+      type="button"
+      aria-pressed={theme === 'dark'}
+    >
+      Dark
+    </button>
+    <button
+      className={`bde-btn bde-btn--sm ${theme === 'light' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
+      onClick={() => setTheme('light')}
+      type="button"
+      aria-pressed={theme === 'light'}
+    >
+      Light
+    </button>
+    <button
+      className={`bde-btn bde-btn--sm ${theme === 'warm' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
+      onClick={() => setTheme('warm')}
+      type="button"
+      aria-pressed={theme === 'warm'}
+    >
+      Warm
+    </button>
+  </div>
+  <div
+    style={{
+      fontSize: 11,
+      color: 'var(--bde-text-dim)',
+      marginBottom: 6,
+      marginTop: 12,
+      textTransform: 'uppercase',
+      letterSpacing: '0.05em'
+    }}
+  >
+    Professional
+  </div>
+  <div className="settings-theme-buttons">
+    <button
+      className={`bde-btn bde-btn--sm ${theme === 'pro-dark' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
+      onClick={() => setTheme('pro-dark')}
+      type="button"
+      aria-pressed={theme === 'pro-dark'}
+    >
+      Pro Dark
+    </button>
+    <button
+      className={`bde-btn bde-btn--sm ${theme === 'pro-light' ? 'bde-btn--primary' : 'bde-btn--ghost'}`}
+      onClick={() => setTheme('pro-light')}
+      type="button"
+      aria-pressed={theme === 'pro-light'}
+    >
+      Pro Light
+    </button>
   </div>
 </SettingsCard>
 ```

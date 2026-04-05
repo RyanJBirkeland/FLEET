@@ -23,7 +23,8 @@ const CATEGORY_LABELS: Record<CommandCategory, string> = {
   settings: 'Settings',
   action: 'Agent Actions',
   panel: 'Panels',
-  session: 'Recent Agents'
+  session: 'Recent Agents',
+  help: 'Help'
 }
 
 interface CommandPaletteProps {
@@ -176,7 +177,23 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       }
     ]
 
-    const coreCommands = [...nav, ...actions, ...panelCommands]
+    const helpCommands: Command[] = [
+      {
+        id: 'help-feature-guide',
+        label: 'Feature Guide',
+        category: 'help',
+        hint: 'View guide',
+        keywords: ['help', 'guide', 'features', 'views', 'learn'],
+        action: () => {
+          onClose()
+          requestAnimationFrame(() => {
+            window.dispatchEvent(new CustomEvent('bde:open-feature-guide'))
+          })
+        }
+      }
+    ]
+
+    const coreCommands = [...nav, ...actions, ...panelCommands, ...helpCommands]
     registerCommands(coreCommands)
 
     return () => {
@@ -246,6 +263,7 @@ export function CommandPalette({ open, onClose }: CommandPaletteProps): React.JS
       'settings',
       'action',
       'panel',
+      'help',
       'session'
     ]
     return order

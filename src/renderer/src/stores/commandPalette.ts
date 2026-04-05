@@ -8,6 +8,7 @@ export type CommandCategory =
   | 'settings'
   | 'action'
   | 'panel'
+  | 'help'
   | 'session'
 
 export interface Command {

@@ -624,20 +624,19 @@ export function registerReviewHandlers(): void {
     }
 
     // Load auto-review rules from settings
-    const rules =
-      getSettingJson<
-        Array<{
-          id: string
-          name: string
-          enabled: boolean
-          conditions: {
-            maxLinesChanged?: number
-            filePatterns?: string[]
-            excludePatterns?: string[]
-          }
-          action: 'auto-merge' | 'auto-approve'
-        }>
-      >('autoReview.rules')
+    const rules = getSettingJson<
+      Array<{
+        id: string
+        name: string
+        enabled: boolean
+        conditions: {
+          maxLinesChanged?: number
+          filePatterns?: string[]
+          excludePatterns?: string[]
+        }
+        action: 'auto-merge' | 'auto-approve'
+      }>
+    >('autoReview.rules')
     if (!rules || rules.length === 0) {
       return {
         shouldAutoMerge: false,
