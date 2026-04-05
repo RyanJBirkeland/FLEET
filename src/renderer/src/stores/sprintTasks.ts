@@ -21,6 +21,7 @@ export interface CreateTicketInput {
   model?: string
   spec_type?: string | null
   group_id?: string | null
+  cross_repo_contract?: string | null
 }
 
 /** How long (ms) to protect an optimistic update from being overwritten by poll data. */

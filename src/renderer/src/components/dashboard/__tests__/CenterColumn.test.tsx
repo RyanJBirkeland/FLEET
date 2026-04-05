@@ -71,16 +71,6 @@ describe('CenterColumn', () => {
     localAgents: [],
     successTrendData: [],
     onFilterClick: vi.fn()
-    onFilterClick: vi.fn(),
-    onKeyDownFor: vi.fn(() => vi.fn())
-    onFilterClick: vi.fn(),
-    onKeyDownFor: vi.fn(() => vi.fn())
-    onFilterClick: vi.fn()
-    onFilterClick: vi.fn(),
-    onKeyDownFor: vi.fn(() => vi.fn())
-    onFilterClick: vi.fn(),
-    onKeyDownFor: vi.fn(() => vi.fn())
-    onFilterClick: vi.fn()
   }
 
   it('renders Pipeline card', () => {

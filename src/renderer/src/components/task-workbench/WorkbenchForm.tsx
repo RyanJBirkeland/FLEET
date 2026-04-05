@@ -86,9 +86,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
           max_cost_usd: maxCostUsd ?? undefined,
           model: model || undefined,
           spec_type: specType ?? undefined,
-          group_id: pendingGroupId ?? undefined
-          spec_type: specType ?? undefined
-          spec_type: specType ?? undefined,
+          group_id: pendingGroupId ?? undefined,
           cross_repo_contract: crossRepoContract || undefined
         }
         const createdId = await createTask(input)

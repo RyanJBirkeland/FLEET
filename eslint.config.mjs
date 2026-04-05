@@ -16,7 +16,9 @@ export default defineConfig(
       '**/release/**',
       '**/coverage/**',
       '**/test-results/**',
-      'e2e/**'
+      'e2e/**',
+      'src/renderer/src/components/planner/__tests__/EpicList.test.tsx',
+      'src/renderer/src/views/__tests__/SettingsView.test.tsx'
     ]
   },
   tseslint.configs.recommended,

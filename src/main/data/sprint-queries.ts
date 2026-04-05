@@ -222,22 +222,6 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
 
     const result = db
       .prepare(
-        `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags, group_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         RETURNING id, title, prompt, repo, status, priority, depends_on, spec, notes,
-         pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-         retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-         template_name, playground_enabled, needs_review, max_runtime_ms,
-         spec_type, created_at, updated_at, worktree_path, session_id,
-         next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-         partial_diff, assigned_reviewer, tags, sprint_id, group_id`
-        `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         RETURNING *`
-        `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags, group_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags, group_id, cross_repo_contract)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          RETURNING *`
