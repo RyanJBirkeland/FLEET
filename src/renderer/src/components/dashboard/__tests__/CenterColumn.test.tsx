@@ -65,6 +65,7 @@ describe('CenterColumn', () => {
     successRate: 85,
     avgDuration: 120000,
     localAgents: [],
+    successTrendData: [],
     onFilterClick: vi.fn(),
     onKeyDownFor: vi.fn(() => vi.fn())
   }

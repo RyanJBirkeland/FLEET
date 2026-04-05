@@ -7,6 +7,13 @@ interface LocalAgent {
   durationMs?: number | null
 }
 
+interface DailySuccessRate {
+  date: string
+  successRate: number | null
+  doneCount: number
+  failedCount: number
+}
+
 interface CenterColumnProps {
   stats: {
     active: number
@@ -30,6 +37,7 @@ interface CenterColumnProps {
   successRate: number | null
   avgDuration: number | null
   localAgents: LocalAgent[]
+  successTrendData: DailySuccessRate[]
   onFilterClick: (filter: StatusFilter) => void
   onKeyDownFor: (filter: StatusFilter) => (e: React.KeyboardEvent) => void
 }
@@ -43,6 +51,7 @@ export function CenterColumn({
   successRate,
   avgDuration,
   localAgents,
+  successTrendData,
   onFilterClick,
   onKeyDownFor
 }: CenterColumnProps): React.JSX.Element {
@@ -117,6 +126,7 @@ export function CenterColumn({
         stats={{ done: stats.done, failed: stats.failed, actualFailed: stats.actualFailed }}
         avgDuration={avgDuration}
         localAgents={localAgents}
+        successTrendData={successTrendData}
       />
     </div>
   )

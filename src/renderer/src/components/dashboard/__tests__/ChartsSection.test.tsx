@@ -23,6 +23,10 @@ vi.mock('../SuccessRing', () => ({
   )
 }))
 
+vi.mock('../SuccessTrendChart', () => ({
+  SuccessTrendChart: () => <div data-testid="success-trend-chart">SuccessTrendChart</div>
+}))
+
 const mockFetchAll = vi.fn()
 const mockGetState = vi.fn(() => ({ fetchAll: mockFetchAll }))
 
@@ -48,7 +52,8 @@ describe('ChartsSection', () => {
     successRate: 85,
     stats: { done: 17, failed: 3, actualFailed: 3 },
     avgDuration: 120000,
-    localAgents: [{ durationMs: 100000 }, { durationMs: 140000 }]
+    localAgents: [{ durationMs: 100000 }, { durationMs: 140000 }],
+    successTrendData: []
   }
 
   it('renders Completions by Hour card', () => {
