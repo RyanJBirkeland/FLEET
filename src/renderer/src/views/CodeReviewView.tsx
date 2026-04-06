@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { ReviewQueue } from '../components/code-review/ReviewQueue'
 import { ReviewDetail } from '../components/code-review/ReviewDetail'
 import { ReviewActions } from '../components/code-review/ReviewActions'
@@ -7,8 +8,10 @@ import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 import { useCodeReviewStore } from '../stores/codeReview'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { toast } from '../stores/toasts'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
 export default function CodeReviewView(): React.JSX.Element {
+  const reduced = useReducedMotion()
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands)
   const unregisterCommands = useCommandPaletteStore((s) => s.unregisterCommands)
   const selectTask = useCodeReviewStore((s) => s.selectTask)
@@ -100,13 +103,19 @@ export default function CodeReviewView(): React.JSX.Element {
   ])
 
   return (
-    <div className="cr-view">
+    <motion.div
+      className="cr-view"
+      variants={VARIANTS.fadeIn}
+      initial="initial"
+      animate="animate"
+      transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
+    >
       <ReviewQueue />
       <BatchActions />
       <div className="cr-main">
         <ReviewDetail />
         <ReviewActions />
       </div>
-    </div>
+    </motion.div>
   )
 }

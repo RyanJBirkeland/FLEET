@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react'
+import { motion } from 'framer-motion'
 import type { TaskGroup } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
 import { EmptyState } from '../ui/EmptyState'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
 interface EpicListProps {
   groups: TaskGroup[]
@@ -21,6 +23,7 @@ export function EpicList({
   onSelect,
   onCreateNew
 }: EpicListProps): React.JSX.Element {
+  const reduced = useReducedMotion()
   const [counts, setCounts] = useState<Map<string, GroupCounts>>(new Map())
 
   // Load task counts for each group
@@ -99,11 +102,13 @@ export function EpicList({
     const progressColor = getProgressColor(progressPercent)
 
     return (
-      <button
+      <motion.button
         key={group.id}
         className={`planner-epic-item ${isSelected ? 'planner-epic-item--selected' : ''}`}
         onClick={() => onSelect(group.id)}
         type="button"
+        variants={VARIANTS.staggerChild}
+        transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
       >
         {isSelected && (
           <div className="planner-epic-item__accent" style={{ background: group.accent_color }} />
@@ -154,7 +159,7 @@ export function EpicList({
             />
           </div>
         </div>
-      </button>
+      </motion.button>
     )
   }
 
@@ -165,7 +170,12 @@ export function EpicList({
         <span className="planner-epic-list__count">{activeGroups.length}</span>
       </div>
 
-      <div className="planner-epic-list__scroll">
+      <motion.div
+        className="planner-epic-list__scroll"
+        variants={VARIANTS.staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
         {activeGroups.length === 0 && <EmptyState message="No active epics" />}
         {activeGroups.map(renderEpicItem)}
 
@@ -185,7 +195,7 @@ export function EpicList({
             {completedExpanded && completedGroups.map(renderEpicItem)}
           </>
         )}
-      </div>
+      </motion.div>
 
       <div className="planner-epic-list__footer">
         <button className="planner-epic-list__new-button" onClick={onCreateNew} type="button">
