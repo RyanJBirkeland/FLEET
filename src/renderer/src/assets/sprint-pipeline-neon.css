@@ -1991,7 +1991,7 @@
 }
 
 .conflict-row__spinner {
-  animation: spin 1.2s linear infinite;
+  animation: bde-spin 1.2s linear infinite;
 }
 
 /* ── Health Check Drawer ── */
@@ -2154,14 +2154,8 @@
 
 /* ── Spinner Animation ── */
 .spinner {
-  animation: spin 1s linear infinite;
+  animation: bde-spin 1s linear infinite;
   margin-right: 4px;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* ═══════════════════════════════════════════════════════

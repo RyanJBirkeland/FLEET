@@ -368,15 +368,6 @@
   animation: bde-spin 1.5s linear infinite;
 }
 
-@keyframes bde-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ── Actions ── */
 .wb-actions {
   display: flex;

@@ -133,16 +133,7 @@
 
 /* Agent Card Status Spinner */
 .agent-card__status-spinner {
-  animation: spin 1.5s linear infinite;
-}
-
-@keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  animation: bde-spin 1.5s linear infinite;
 }
 
 /* ── Agent Console ── */
@@ -314,13 +305,7 @@
 }
 
 .console-empty-state__spinner {
-  animation: spin 1.5s linear infinite;
-}
-
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+  animation: bde-spin 1.5s linear infinite;
 }
 
 /* ── Console Line ── */

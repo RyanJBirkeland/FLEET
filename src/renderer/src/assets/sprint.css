@@ -857,12 +857,6 @@
   font-size: 12px;
 }
 
-@keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 .log-drawer__footer {
   height: 40px;
   display: flex;

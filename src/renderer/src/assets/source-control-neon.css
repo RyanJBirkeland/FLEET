@@ -577,15 +577,6 @@
   animation: bde-spin 1s linear infinite;
 }
 
-@keyframes bde-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
-}
-
 /* ── Git Client ────────────────────────────────────────── */
 
 .git-branch-select {
