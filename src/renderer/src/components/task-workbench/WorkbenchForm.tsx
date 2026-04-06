@@ -295,11 +295,14 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (e.key === 'Enter' && e.metaKey) {
         e.preventDefault()
-        const structural = useTaskWorkbenchStore.getState().structuralChecks
-        const operational = useTaskWorkbenchStore.getState().operationalChecks
+        const state = useTaskWorkbenchStore.getState()
+        const structural = state.structuralChecks
+        const operational = state.operationalChecks
         const noTier1Fails = structural.every((c) => c.status !== 'fail')
         const tier3HasFails = operational.some((c) => c.status === 'fail')
-        const canQueue = noTier1Fails && !tier3HasFails
+        const hasRepo = !!state.repo
+        const specLongEnough = state.spec.trim().length >= 50
+        const canQueue = noTier1Fails && !tier3HasFails && hasRepo && specLongEnough
         if (canQueue && !submitting) {
           handleSubmit('queue')
         }

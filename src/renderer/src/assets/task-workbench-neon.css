@@ -456,6 +456,19 @@
   outline-offset: 2px;
 }
 
+.wb-actions__queue-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+.wb-actions__hint {
+  font-size: 11px;
+  color: var(--neon-text-dim);
+  white-space: nowrap;
+}
+
 /* ── Copilot ── */
 .wb-copilot {
   display: flex;

@@ -897,7 +897,7 @@ export function getFailureReasonBreakdown(): FailureReasonBreakdown[] {
           COALESCE(failure_reason, 'Unknown') as reason,
           COUNT(*) as count
          FROM sprint_tasks
-         WHERE status IN ('failed', 'error', 'cancelled')
+         WHERE status IN ('failed', 'error')
          GROUP BY failure_reason
          ORDER BY count DESC`
       )

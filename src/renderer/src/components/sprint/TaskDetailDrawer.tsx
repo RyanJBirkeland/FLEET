@@ -197,7 +197,7 @@ export function TaskDetailDrawer({
           <span>{task.status}</span>
           {elapsed && <span> — {elapsed}</span>}
         </div>
-        <button className="task-drawer__close" onClick={onClose} aria-label="Close drawer">
+        <button className="task-drawer__close" onClick={onClose} aria-label="Close drawer" title="Close drawer">
           ✕
         </button>
       </div>

@@ -4,6 +4,9 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { WorkbenchActions } from '../WorkbenchActions'
 import { useTaskWorkbenchStore } from '../../../stores/taskWorkbench'
 
+// 50+ character spec to satisfy minimum length validation
+const VALID_SPEC = 'This is a valid spec with enough content to pass the fifty character minimum.'
+
 describe('WorkbenchActions', () => {
   const defaultProps = {
     onSaveBacklog: vi.fn(),
@@ -28,10 +31,16 @@ describe('WorkbenchActions', () => {
     expect(screen.getByText('Save to Backlog')).toBeDisabled()
   })
 
-  it('Queue Now enabled when structuralChecks is empty (every on empty = true)', () => {
-    // noTier1Fails = [].every(...) = true, so canQueue is true
+  it('Queue Now disabled when spec is too short (default empty state)', () => {
+    // Default spec is empty string — must be at least 50 chars to queue
     render(<WorkbenchActions {...defaultProps} />)
-    expect(screen.getByText('Queue Now')).not.toBeDisabled()
+    expect(screen.getByText('Queue Now')).toBeDisabled()
+  })
+
+  it('Queue Now disabled when repo is empty', () => {
+    useTaskWorkbenchStore.setState({ repo: '', spec: VALID_SPEC })
+    render(<WorkbenchActions {...defaultProps} />)
+    expect(screen.getByText('Queue Now')).toBeDisabled()
   })
 
   it('all buttons disabled when structural checks have failures', () => {
@@ -68,8 +77,10 @@ describe('WorkbenchActions', () => {
     expect(screen.getByText('Queue Now')).toBeDisabled()
   })
 
-  it('Queue Now enabled when all tier 1 pass and no tier 3 fails', () => {
+  it('Queue Now enabled when all tier 1 pass, no tier 3 fails, repo set, and spec long enough', () => {
     useTaskWorkbenchStore.setState({
+      repo: 'BDE',
+      spec: VALID_SPEC,
       structuralChecks: [
         { id: 'title-present', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
         { id: 'repo-selected', label: 'Repo', tier: 1, status: 'pass', message: 'OK' }
@@ -106,6 +117,8 @@ describe('WorkbenchActions', () => {
 
   it('calls onQueueNow when Queue Now clicked', () => {
     useTaskWorkbenchStore.setState({
+      repo: 'BDE',
+      spec: VALID_SPEC,
       structuralChecks: [
         { id: 'title-present', label: 'Title', tier: 1, status: 'pass', message: 'OK' }
       ]
@@ -134,6 +147,8 @@ describe('WorkbenchActions', () => {
 
   it('Queue Now enabled when advisory checks are warn status (test profile)', () => {
     useTaskWorkbenchStore.setState({
+      repo: 'BDE',
+      spec: VALID_SPEC,
       specType: 'test',
       structuralChecks: [
         { id: 'title-present', label: 'Title', tier: 1, status: 'pass', message: 'OK' },
@@ -169,5 +184,30 @@ describe('WorkbenchActions', () => {
     })
     render(<WorkbenchActions {...defaultProps} />)
     expect(screen.getByText('Queue Now')).toBeDisabled()
+  })
+
+  it('shows hint when spec is too short', () => {
+    useTaskWorkbenchStore.setState({ repo: 'BDE', spec: 'too short' })
+    render(<WorkbenchActions {...defaultProps} />)
+    expect(screen.getByText('Spec must be at least 50 characters')).toBeInTheDocument()
+  })
+
+  it('shows hint when repo is empty', () => {
+    useTaskWorkbenchStore.setState({ repo: '', spec: VALID_SPEC })
+    render(<WorkbenchActions {...defaultProps} />)
+    expect(screen.getByText('Select a repository')).toBeInTheDocument()
+  })
+
+  it('shows no hint when all validations pass', () => {
+    useTaskWorkbenchStore.setState({
+      repo: 'BDE',
+      spec: VALID_SPEC,
+      structuralChecks: [
+        { id: 'title-present', label: 'Title', tier: 1, status: 'pass', message: 'OK' }
+      ]
+    })
+    render(<WorkbenchActions {...defaultProps} />)
+    expect(screen.queryByText('Spec must be at least 50 characters')).not.toBeInTheDocument()
+    expect(screen.queryByText('Select a repository')).not.toBeInTheDocument()
   })
 })

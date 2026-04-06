@@ -69,12 +69,13 @@ export default function DashboardView(): React.JSX.Element {
   }, [])
 
   // Dashboard data from centralized polling
-  const { chartData, burndownData, feedEvents, loading, cardErrors, lastFetchedAt } =
+  const { chartData, burndownData, feedEvents, successTrendData, loading, cardErrors, lastFetchedAt } =
     useDashboardDataStore(
       useShallow((s) => ({
         chartData: s.chartData,
         burndownData: s.burndownData,
         feedEvents: s.feedEvents,
+        successTrendData: s.successTrendData,
         loading: s.loading,
         cardErrors: s.cardErrors,
         lastFetchedAt: s.lastFetchedAt
@@ -149,8 +150,7 @@ export default function DashboardView(): React.JSX.Element {
 
   const errorCount = useMemo(() => Object.values(cardErrors).filter(Boolean).length, [cardErrors])
 
-  // TODO: Compute actual success trend data
-  const successTrendData = useMemo(() => [], [])
+  // successTrendData now comes from useDashboardDataStore above
 
   const transition = reduced ? REDUCED_TRANSITION : SPRINGS.snappy
 

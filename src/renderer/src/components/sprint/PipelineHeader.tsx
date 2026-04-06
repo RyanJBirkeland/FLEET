@@ -125,6 +125,7 @@ export function PipelineHeader({
           >
             <button
               onClick={() => handleExport('json')}
+              disabled={exporting}
               style={{
                 display: 'block',
                 width: '100%',
@@ -132,16 +133,20 @@ export function PipelineHeader({
                 border: 'none',
                 background: 'transparent',
                 textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '12px'
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                fontSize: '12px',
+                opacity: exporting ? 0.5 : 1
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+              onMouseEnter={(e) => {
+                if (!exporting) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'
+              }}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              JSON
+              {exporting ? 'Exporting…' : 'JSON'}
             </button>
             <button
               onClick={() => handleExport('csv')}
+              disabled={exporting}
               style={{
                 display: 'block',
                 width: '100%',
@@ -149,13 +154,16 @@ export function PipelineHeader({
                 border: 'none',
                 background: 'transparent',
                 textAlign: 'left',
-                cursor: 'pointer',
-                fontSize: '12px'
+                cursor: exporting ? 'not-allowed' : 'pointer',
+                fontSize: '12px',
+                opacity: exporting ? 0.5 : 1
               }}
-              onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--bg-hover)')}
+              onMouseEnter={(e) => {
+                if (!exporting) e.currentTarget.style.backgroundColor = 'var(--bg-hover)'
+              }}
               onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
             >
-              CSV
+              {exporting ? 'Exporting…' : 'CSV'}
             </button>
           </div>
         )}
