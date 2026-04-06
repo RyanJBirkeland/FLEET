@@ -296,5 +296,218 @@ describe('Terminal handlers', () => {
 
       expect(mockHandle.resize).not.toHaveBeenCalled()
     })
+
+    it('double-kill does not throw', () => {
+      const mockHandle = makeMockPtyHandle()
+      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      const handlers = captureHandlers()
+
+      const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      handlers['terminal:kill']({} as IpcMainInvokeEvent, id)
+      expect(() => handlers['terminal:kill']({} as IpcMainInvokeEvent, id)).not.toThrow()
+      // kill should only be called once (on the first kill; second is no-op because terminal was removed)
+      expect(mockHandle.kill).toHaveBeenCalledTimes(1)
+    })
+
+    it('write to a killed terminal is silently ignored', () => {
+      const mockHandle = makeMockPtyHandle()
+      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      const handlers = captureHandlers()
+
+      const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      handlers['terminal:kill']({} as IpcMainInvokeEvent, id)
+
+      const writeListener = vi
+        .mocked(ipcMain.on)
+        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
+        | ((_e: any, args: any) => void)
+        | undefined
+
+      expect(() => writeListener!({} as any, { id, data: 'echo dead' })).not.toThrow()
+      expect(mockHandle.write).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('terminal:create with custom cwd', () => {
+    it('passes cwd through to createPty', () => {
+      const mockHandle = makeMockPtyHandle()
+      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      const handlers = captureHandlers()
+
+      handlers['terminal:create'](mockEvent, { cols: 80, rows: 24, cwd: '/tmp/project' })
+
+      expect(createPty).toHaveBeenCalledWith(expect.objectContaining({ cwd: '/tmp/project' }))
+    })
+  })
+
+  describe('multiple concurrent PTY sessions', () => {
+    it('creates independent terminals with unique ids', () => {
+      const handle1 = makeMockPtyHandle()
+      const handle2 = makeMockPtyHandle()
+      const handle3 = makeMockPtyHandle()
+      vi.mocked(createPty)
+        .mockReturnValueOnce(handle1 as any)
+        .mockReturnValueOnce(handle2 as any)
+        .mockReturnValueOnce(handle3 as any)
+      const handlers = captureHandlers()
+
+      const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const id2 = handlers['terminal:create'](mockEvent, { cols: 120, rows: 40 })
+      const id3 = handlers['terminal:create'](mockEvent, { cols: 60, rows: 20 })
+
+      const ids = new Set([id1, id2, id3])
+      expect(ids.size).toBe(3)
+    })
+
+    it('write targets the correct terminal', () => {
+      const handle1 = makeMockPtyHandle()
+      const handle2 = makeMockPtyHandle()
+      vi.mocked(createPty)
+        .mockReturnValueOnce(handle1 as any)
+        .mockReturnValueOnce(handle2 as any)
+      const handlers = captureHandlers()
+
+      const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const id2 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+
+      const writeListener = vi
+        .mocked(ipcMain.on)
+        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
+        | ((_e: any, args: any) => void)
+        | undefined
+
+      writeListener!({} as any, { id: id1, data: 'for terminal 1' })
+      writeListener!({} as any, { id: id2, data: 'for terminal 2' })
+
+      expect(handle1.write).toHaveBeenCalledWith('for terminal 1')
+      expect(handle1.write).not.toHaveBeenCalledWith('for terminal 2')
+      expect(handle2.write).toHaveBeenCalledWith('for terminal 2')
+      expect(handle2.write).not.toHaveBeenCalledWith('for terminal 1')
+    })
+
+    it('resize targets the correct terminal', () => {
+      const handle1 = makeMockPtyHandle()
+      const handle2 = makeMockPtyHandle()
+      vi.mocked(createPty)
+        .mockReturnValueOnce(handle1 as any)
+        .mockReturnValueOnce(handle2 as any)
+      const handlers = captureHandlers()
+
+      const _id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const id2 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+
+      handlers['terminal:resize']({} as IpcMainInvokeEvent, { id: id2, cols: 200, rows: 50 })
+
+      expect(handle1.resize).not.toHaveBeenCalled()
+      expect(handle2.resize).toHaveBeenCalledWith(200, 50)
+    })
+
+    it('killing one terminal does not affect others', () => {
+      const handle1 = makeMockPtyHandle()
+      const handle2 = makeMockPtyHandle()
+      vi.mocked(createPty)
+        .mockReturnValueOnce(handle1 as any)
+        .mockReturnValueOnce(handle2 as any)
+      const handlers = captureHandlers()
+
+      const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const id2 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+
+      handlers['terminal:kill']({} as IpcMainInvokeEvent, id1)
+
+      // Terminal 1 killed
+      expect(handle1.kill).toHaveBeenCalled()
+
+      // Terminal 2 still usable
+      handlers['terminal:resize']({} as IpcMainInvokeEvent, { id: id2, cols: 100, rows: 30 })
+      expect(handle2.resize).toHaveBeenCalledWith(100, 30)
+      expect(handle2.kill).not.toHaveBeenCalled()
+    })
+
+    it('data events route to the correct terminal channel', () => {
+      const handle1 = makeMockPtyHandle()
+      const handle2 = makeMockPtyHandle()
+      vi.mocked(createPty)
+        .mockReturnValueOnce(handle1 as any)
+        .mockReturnValueOnce(handle2 as any)
+      const handlers = captureHandlers()
+
+      const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const id2 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+
+      handle1._triggerData('output from 1')
+      handle2._triggerData('output from 2')
+
+      expect(mockWebContents.send).toHaveBeenCalledWith(`terminal:data:${id1}`, 'output from 1')
+      expect(mockWebContents.send).toHaveBeenCalledWith(`terminal:data:${id2}`, 'output from 2')
+    })
+
+    it('exit events are independent per terminal', () => {
+      const handle1 = makeMockPtyHandle()
+      const handle2 = makeMockPtyHandle()
+      vi.mocked(createPty)
+        .mockReturnValueOnce(handle1 as any)
+        .mockReturnValueOnce(handle2 as any)
+      const handlers = captureHandlers()
+
+      const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const id2 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+
+      // Exit terminal 1 — terminal 2 should still work
+      handle1._triggerExit()
+
+      expect(mockWebContents.send).toHaveBeenCalledWith(`terminal:exit:${id1}`)
+      expect(mockWebContents.send).not.toHaveBeenCalledWith(`terminal:exit:${id2}`)
+
+      // Terminal 2 can still receive data
+      handle2._triggerData('still alive')
+      expect(mockWebContents.send).toHaveBeenCalledWith(`terminal:data:${id2}`, 'still alive')
+    })
+  })
+
+  describe('cleanup after pty exit', () => {
+    it('resize is a no-op after pty exits naturally', () => {
+      const mockHandle = makeMockPtyHandle()
+      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      const handlers = captureHandlers()
+
+      const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      mockHandle._triggerExit()
+
+      // Terminal was cleaned up by the exit handler
+      handlers['terminal:resize']({} as IpcMainInvokeEvent, { id, cols: 200, rows: 50 })
+      expect(mockHandle.resize).not.toHaveBeenCalled()
+    })
+
+    it('write is a no-op after pty exits naturally', () => {
+      const mockHandle = makeMockPtyHandle()
+      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      const handlers = captureHandlers()
+
+      const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      mockHandle._triggerExit()
+
+      const writeListener = vi
+        .mocked(ipcMain.on)
+        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
+        | ((_e: any, args: any) => void)
+        | undefined
+
+      writeListener!({} as any, { id, data: 'after exit' })
+      expect(mockHandle.write).not.toHaveBeenCalled()
+    })
+
+    it('kill after natural exit does not throw', () => {
+      const mockHandle = makeMockPtyHandle()
+      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      const handlers = captureHandlers()
+
+      const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      mockHandle._triggerExit()
+
+      expect(() => handlers['terminal:kill']({} as IpcMainInvokeEvent, id)).not.toThrow()
+      // kill not called because the terminal was already removed by exit cleanup
+      expect(mockHandle.kill).not.toHaveBeenCalled()
+    })
   })
 })

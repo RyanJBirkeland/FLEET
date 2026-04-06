@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest'
-import { isPtyAvailable, validateShell } from '../pty'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { isPtyAvailable, validateShell, createPty, _setPty } from '../pty'
 
 describe('pty', () => {
   it('reports availability', () => {
@@ -10,7 +10,164 @@ describe('pty', () => {
     expect(validateShell('/bin/zsh')).toBe(true)
     expect(validateShell('/bin/bash')).toBe(true)
     expect(validateShell('/bin/sh')).toBe(true)
+    expect(validateShell('/bin/dash')).toBe(true)
+    expect(validateShell('/bin/fish')).toBe(true)
     expect(validateShell('/usr/bin/evil')).toBe(false)
     expect(validateShell('')).toBe(false)
+  })
+
+  it('validates all allowed shell paths', () => {
+    const allowed = [
+      '/usr/bin/bash',
+      '/usr/bin/zsh',
+      '/usr/bin/sh',
+      '/usr/bin/dash',
+      '/usr/bin/fish',
+      '/usr/local/bin/bash',
+      '/usr/local/bin/zsh',
+      '/usr/local/bin/fish',
+      '/opt/homebrew/bin/bash',
+      '/opt/homebrew/bin/zsh',
+      '/opt/homebrew/bin/fish'
+    ]
+    for (const shell of allowed) {
+      expect(validateShell(shell)).toBe(true)
+    }
+  })
+
+  it('rejects disallowed shell paths', () => {
+    expect(validateShell('/usr/bin/evil')).toBe(false)
+    expect(validateShell('/tmp/shell')).toBe(false)
+    expect(validateShell('bash')).toBe(false)
+    expect(validateShell('/bin/zsh; rm -rf /')).toBe(false)
+  })
+
+  describe('_setPty / createPty with mock', () => {
+    let mockSpawn: ReturnType<typeof vi.fn>
+    let mockProc: {
+      onData: ReturnType<typeof vi.fn>
+      onExit: ReturnType<typeof vi.fn>
+      write: ReturnType<typeof vi.fn>
+      resize: ReturnType<typeof vi.fn>
+      kill: ReturnType<typeof vi.fn>
+    }
+
+    beforeEach(() => {
+      mockProc = {
+        onData: vi.fn(),
+        onExit: vi.fn(),
+        write: vi.fn(),
+        resize: vi.fn(),
+        kill: vi.fn()
+      }
+      mockSpawn = vi.fn().mockReturnValue(mockProc)
+      _setPty({ spawn: mockSpawn } as any)
+    })
+
+    afterEach(() => {
+      // Restore to null so other tests see the real state
+      _setPty(null)
+    })
+
+    it('isPtyAvailable returns true after _setPty with mock', () => {
+      expect(isPtyAvailable()).toBe(true)
+    })
+
+    it('isPtyAvailable returns false after _setPty(null)', () => {
+      _setPty(null)
+      expect(isPtyAvailable()).toBe(false)
+    })
+
+    it('createPty throws when pty is null', () => {
+      _setPty(null)
+      expect(() => createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })).toThrow(
+        'Terminal unavailable'
+      )
+    })
+
+    it('createPty throws for disallowed shell', () => {
+      expect(() => createPty({ shell: '/usr/bin/evil', cols: 80, rows: 24 })).toThrow(
+        'Shell not allowed'
+      )
+    })
+
+    it('createPty spawns with correct options', () => {
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      expect(mockSpawn).toHaveBeenCalledWith('/bin/zsh', [], {
+        name: 'xterm-256color',
+        cols: 80,
+        rows: 24,
+        cwd: expect.any(String),
+        env: expect.objectContaining({ TERM: 'xterm-256color' })
+      })
+      expect(handle).toBeDefined()
+    })
+
+    it('createPty uses provided cwd', () => {
+      createPty({ shell: '/bin/zsh', cols: 80, rows: 24, cwd: '/tmp/test' })
+      expect(mockSpawn).toHaveBeenCalledWith(
+        '/bin/zsh',
+        [],
+        expect.objectContaining({ cwd: '/tmp/test' })
+      )
+    })
+
+    it('createPty defaults cwd to HOME', () => {
+      const originalHome = process.env.HOME
+      process.env.HOME = '/Users/testuser'
+      createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      expect(mockSpawn).toHaveBeenCalledWith(
+        '/bin/zsh',
+        [],
+        expect.objectContaining({ cwd: '/Users/testuser' })
+      )
+      process.env.HOME = originalHome
+    })
+
+    it('PtyHandle.write delegates to proc.write', () => {
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      handle.write('ls -la\n')
+      expect(mockProc.write).toHaveBeenCalledWith('ls -la\n')
+    })
+
+    it('PtyHandle.resize delegates to proc.resize', () => {
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      handle.resize(120, 40)
+      expect(mockProc.resize).toHaveBeenCalledWith(120, 40)
+    })
+
+    it('PtyHandle.kill delegates to proc.kill', () => {
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      handle.kill()
+      expect(mockProc.kill).toHaveBeenCalled()
+    })
+
+    it('PtyHandle.onData registers callback on proc', () => {
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      const cb = vi.fn()
+      handle.onData(cb)
+      expect(mockProc.onData).toHaveBeenCalledWith(cb)
+    })
+
+    it('PtyHandle.onExit registers callback that fires on proc exit', () => {
+      // onExit wraps the callback: proc.onExit(() => cb())
+      let procExitCb: (() => void) | undefined
+      mockProc.onExit.mockImplementation((cb: () => void) => {
+        procExitCb = cb
+      })
+
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      const exitCb = vi.fn()
+      handle.onExit(exitCb)
+
+      expect(procExitCb).toBeDefined()
+      procExitCb!()
+      expect(exitCb).toHaveBeenCalled()
+    })
+
+    it('PtyHandle exposes the underlying process', () => {
+      const handle = createPty({ shell: '/bin/zsh', cols: 80, rows: 24 })
+      expect(handle.process).toBe(mockProc)
+    })
   })
 })
