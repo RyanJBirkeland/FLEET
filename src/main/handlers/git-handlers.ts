@@ -1,3 +1,4 @@
+import path from 'node:path'
 import { safeHandle } from '../ipc-utils'
 import { parsePrUrl } from '../../shared/github'
 import { validateRepoPath } from '../validation'
@@ -237,6 +238,14 @@ export function registerGitHandlers(): void {
   // allowlist. We still require an absolute path and sanity-check it.
   safeHandle('git:detectRemote', async (_e, cwd: string) => {
     if (typeof cwd !== 'string' || !cwd.startsWith('/')) {
+      return { isGitRepo: false, remoteUrl: null, owner: null, repo: null }
+    }
+    // Defense in depth: reject anything that doesn't normalize to itself or
+    // contains parent-traversal segments. The operation is read-only via
+    // execFile (no shell, no writes), so blast radius is small — this just
+    // closes traversal tricks.
+    const resolved = path.resolve(cwd)
+    if (resolved !== cwd || cwd.includes('..')) {
       return { isGitRepo: false, remoteUrl: null, owner: null, repo: null }
     }
     return detectGitRemote(cwd)
