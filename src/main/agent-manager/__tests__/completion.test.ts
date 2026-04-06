@@ -95,6 +95,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git status --porcelain (no uncommitted changes)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' } // git rev-list --count (has commits)
     ])
 
@@ -104,7 +105,7 @@ describe('resolveSuccess', () => {
 
     // Verify git rev-parse was called with correct cwd
     const revParseCall = calls.find(
-      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('rev-parse')
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1][0] === 'rev-parse' && c[1][1] === '--abbrev-ref'
     )
     expect(revParseCall).toBeDefined()
     expect((revParseCall![2] as { cwd: string }).cwd).toBe(opts.worktreePath)
@@ -120,11 +121,13 @@ describe('resolveSuccess', () => {
     )
     expect(prCall).toBeUndefined()
 
-    // Verify updateTask sets review status with worktree_path preserved
+    // Verify updateTask sets review status with worktree_path and rebase fields
     expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
       status: 'review',
       worktree_path: opts.worktreePath,
-      claimed_by: null
+      claimed_by: null,
+      rebase_base_sha: 'abc123',
+      rebased_at: expect.any(String)
     })
 
     // onTaskTerminal should NOT be called — review is not terminal
@@ -144,16 +147,19 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' } // git rev-list --count (has commits after auto-commit)
     ])
 
     await resolveSuccess(opts, noopLogger)
 
-    // Verify updateTask sets review status
+    // Verify updateTask sets review status with rebase fields
     expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
       status: 'review',
       worktree_path: opts.worktreePath,
-      claimed_by: null
+      claimed_by: null,
+      rebase_base_sha: 'abc123',
+      rebased_at: expect.any(String)
     })
 
     // onTaskTerminal should NOT be called
@@ -200,6 +206,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git status --porcelain (clean)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -224,6 +231,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git status --porcelain (clean)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -247,6 +255,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git status --porcelain (clean)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -279,6 +288,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' } // git rev-list --count
     ])
 
@@ -297,6 +307,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git status --porcelain (clean)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' } // git rev-list --count
     ])
 
@@ -318,11 +329,13 @@ describe('resolveSuccess', () => {
     expect(rebaseCall).toBeDefined()
     expect(rebaseCall![1]).toEqual(['rebase', 'origin/main'])
 
-    // Task should transition to review without rebase note
+    // Task should transition to review with rebase fields
     expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
       status: 'review',
       worktree_path: opts.worktreePath,
-      claimed_by: null
+      claimed_by: null,
+      rebase_base_sha: 'abc123',
+      rebased_at: expect.any(String)
     })
   })
 
@@ -347,12 +360,14 @@ describe('resolveSuccess', () => {
     )
     expect(abortCall).toBeDefined()
 
-    // Task should transition to review WITH rebase note
+    // Task should transition to review WITH rebase note and null rebase fields
     expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
       status: 'review',
       worktree_path: opts.worktreePath,
       claimed_by: null,
-      notes: 'Rebase onto main failed — manual conflict resolution needed.'
+      notes: 'Rebase onto main failed — manual conflict resolution needed.',
+      rebase_base_sha: null,
+      rebased_at: null
     })
   })
 
@@ -367,6 +382,9 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git rm --cached playwright-report/
       { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
       { stdout: '' }, // git commit
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' } // git rev-list --count
     ])
 
@@ -406,6 +424,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git diff --cached --name-only (empty — no changes remain after unstaging)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '0\n' } // git rev-list --count (no commits)
     ])
 
@@ -477,6 +496,7 @@ describe('resolveSuccess — catch handler coverage', () => {
       { stdout: '' },
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' }
     ])
     updateTaskMock.mockImplementationOnce(() => {
@@ -496,13 +516,16 @@ describe('resolveSuccess — catch handler coverage', () => {
       { stdout: '' },
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '1\n' }
     ])
     await resolveSuccess(catchOpts, noopLogger)
     expect(updateTaskMock).toHaveBeenCalledWith(catchOpts.taskId, {
       status: 'review',
       worktree_path: catchOpts.worktreePath,
-      claimed_by: null
+      claimed_by: null,
+      rebase_base_sha: 'abc123',
+      rebased_at: expect.any(String)
     })
   })
 
@@ -545,6 +568,7 @@ describe('resolveSuccess — catch handler coverage', () => {
       { stdout: '' }, // git status --porcelain
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
       { stdout: '0\n' } // git rev-list --count (0 commits)
     ])
     updateTaskMock.mockImplementationOnce(() => {

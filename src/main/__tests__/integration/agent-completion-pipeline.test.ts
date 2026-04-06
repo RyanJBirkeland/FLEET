@@ -146,6 +146,9 @@ describe('Agent completion pipeline integration', () => {
       mockExecFileSequence([
         { stdout: 'agent/add-login-page\n' }, // git rev-parse --abbrev-ref HEAD
         { stdout: '' }, // git status --porcelain (clean)
+        { stdout: '' }, // git fetch origin main
+        { stdout: '' }, // git rebase origin/main
+        { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
         { stdout: '3\n' } // git rev-list --count
       ])
 
@@ -175,11 +178,13 @@ describe('Agent completion pipeline integration', () => {
       )
       expect(prCreateCall).toBeUndefined()
 
-      // Verify task updated to review status with worktree_path
+      // Verify task updated to review status with worktree_path and rebase fields
       expect(updateTaskMock).toHaveBeenCalledWith('task-1', {
         status: 'review',
         worktree_path: '/tmp/wt/task-1',
-        claimed_by: null
+        claimed_by: null,
+        rebase_base_sha: 'abc123',
+        rebased_at: expect.any(String)
       })
 
       // onTaskTerminal should NOT be called (review is not terminal)
@@ -197,6 +202,9 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git rm --cached playwright-report/
         { stdout: 'src/file.ts\n' }, // git diff --cached --name-only
         { stdout: '' }, // git commit
+        { stdout: '' }, // git fetch origin main
+        { stdout: '' }, // git rebase origin/main
+        { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
         { stdout: '2\n' } // git rev-list --count
       ])
 
@@ -225,11 +233,13 @@ describe('Agent completion pipeline integration', () => {
       )
       expect(commitCall).toBeDefined()
 
-      // Should update task to review status (not PR info)
+      // Should update task to review status with rebase fields
       expect(updateTaskMock).toHaveBeenCalledWith('task-1', {
         status: 'review',
         worktree_path: '/tmp/wt/task-1',
-        claimed_by: null
+        claimed_by: null,
+        rebase_base_sha: 'abc123',
+        rebased_at: expect.any(String)
       })
     })
   })
@@ -244,6 +254,7 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git status --porcelain (clean)
         { stdout: '' }, // git fetch origin main
         { stdout: '' }, // git rebase origin/main
+        { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
         { stdout: '0\n' } // git rev-list (no commits)
       ])
 
@@ -292,6 +303,7 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git status --porcelain (clean)
         { stdout: '' }, // git fetch origin main
         { stdout: '' }, // git rebase origin/main
+        { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
         { stdout: '0\n' } // git rev-list (no commits)
       ])
 
@@ -327,6 +339,7 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git status --porcelain (clean)
         { stdout: '' }, // git fetch origin main
         { stdout: '' }, // git rebase origin/main
+        { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
         { stdout: '0\n' } // git rev-list (no commits)
       ])
 
@@ -600,6 +613,7 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git status --porcelain
         { stdout: '' }, // git fetch origin main
         { stdout: '' }, // git rebase origin/main
+        { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
         { stdout: '0\n' } // git rev-list (no commits)
       ])
 
