@@ -29,16 +29,16 @@ describe('StatusBar', () => {
     expect(dot).toHaveClass('status-bar__dot--error')
   })
 
-  it('accepts accent prop for title color', () => {
+  it('applies aurora gradient class to title', () => {
     render(<StatusBar title="Test" status="ok" accent="cyan" />)
     const titleSpan = screen.getByText('Test')
-    expect(titleSpan.style.color).toBe('var(--neon-cyan)')
+    expect(titleSpan).toHaveClass('text-gradient-aurora')
   })
 
-  it('defaults accent to purple', () => {
+  it('title has aurora gradient class by default', () => {
     render(<StatusBar title="Test" status="ok" />)
     const titleSpan = screen.getByText('Test')
-    expect(titleSpan.style.color).toBe('var(--neon-purple)')
+    expect(titleSpan).toHaveClass('text-gradient-aurora')
   })
 
   it('uses neon border token for bottom border', () => {

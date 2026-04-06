@@ -63,7 +63,7 @@ export function PipelineHeader({
 
   return (
     <header className="sprint-pipeline__header">
-      <h1 className="sprint-pipeline__title">Task Pipeline</h1>
+      <h1 className="sprint-pipeline__title text-gradient-aurora">Task Pipeline</h1>
       <div className="sprint-pipeline__stats">
         {stats.map((stat) => (
           <span

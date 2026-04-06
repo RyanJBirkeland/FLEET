@@ -137,7 +137,7 @@ export default function PlannerView(): React.JSX.Element {
     <div className="planner-view">
       {/* Header */}
       <div className="planner-header">
-        <h1 className="planner-header__title">Task Planner</h1>
+        <h1 className="planner-header__title text-gradient-aurora">Task Planner</h1>
         <div className="planner-header__search">
           <Search size={16} className="planner-header__search-icon" />
           <input

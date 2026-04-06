@@ -22,7 +22,7 @@ export function StatusBar({
       }}
     >
       <div data-role="status-dot" className={`status-bar__dot status-bar__dot--${status}`} />
-      <span className="status-bar__title" style={{ color: neonVar(accent, 'color') }}>
+      <span className="status-bar__title text-gradient-aurora">
         {title}
       </span>
       {children && <span className="status-bar__children">{children}</span>}

@@ -56,7 +56,7 @@ export function ReviewQueue(): React.JSX.Element {
             }}
           />
         </label>
-        <span className="cr-queue__title">Review Queue</span>
+        <span className="cr-queue__title text-gradient-aurora">Review Queue</span>
         <span className="cr-queue__count">{reviewTasks.length}</span>
       </div>
       <div className="cr-queue__list">
