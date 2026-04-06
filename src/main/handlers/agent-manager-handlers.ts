@@ -70,11 +70,10 @@ export function registerAgentManagerHandlers(am: AgentManager | undefined): void
         await execFileAsync('git', ['add', '-A'], { cwd, encoding: 'utf-8' })
 
         // Check for anything to commit
-        const { stdout: diff } = await execFileAsync(
-          'git',
-          ['diff', '--cached', '--name-only'],
-          { cwd, encoding: 'utf-8' }
-        )
+        const { stdout: diff } = await execFileAsync('git', ['diff', '--cached', '--name-only'], {
+          cwd,
+          encoding: 'utf-8'
+        })
         if (!diff.trim()) {
           return { ok: true, committed: false, error: 'Nothing to commit' }
         }
@@ -83,7 +82,13 @@ export function registerAgentManagerHandlers(am: AgentManager | undefined): void
         await execFileAsync('git', ['commit', '-m', msg], { cwd, encoding: 'utf-8' })
         return { ok: true, committed: true }
       } catch (err) {
-        return { ok: false, committed: false, error: err instanceof Error ? err.message : String(err) }
+        const raw = err instanceof Error ? err.message : String(err)
+        // Friendly message when the agent is mid-write and git is holding
+        // the index lock. The user can just retry.
+        const friendly = /index\.lock/i.test(raw)
+          ? 'Agent is currently writing — try again in a moment'
+          : raw
+        return { ok: false, committed: false, error: friendly }
       }
     }
   )
