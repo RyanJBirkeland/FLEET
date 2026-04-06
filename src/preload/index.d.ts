@@ -130,6 +130,9 @@ declare global {
       gitPush: (...args: IpcArgs<'git:push'>) => Promise<IpcResult<'git:push'>>
       gitBranches: (...args: IpcArgs<'git:branches'>) => Promise<IpcResult<'git:branches'>>
       gitCheckout: (...args: IpcArgs<'git:checkout'>) => Promise<IpcResult<'git:checkout'>>
+      gitDetectRemote: (
+        ...args: IpcArgs<'git:detectRemote'>
+      ) => Promise<IpcResult<'git:detectRemote'>>
 
       // Agent history — persistent audit trail
       agents: {

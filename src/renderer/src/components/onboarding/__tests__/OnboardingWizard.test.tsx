@@ -28,8 +28,9 @@ describe('OnboardingWizard', () => {
     await user.click(screen.getByRole('button', { name: /next/i }))
     expect(screen.getByRole('heading', { name: /repository configuration/i })).toBeInTheDocument()
 
-    // Navigate to step 5
-    await user.click(screen.getByRole('button', { name: /next/i }))
+    // Step 4 has inline repo-add; "Next" is disabled until a repo is added.
+    // Use "Skip for now" to advance to step 5.
+    await user.click(screen.getByRole('button', { name: /skip for now/i }))
     expect(screen.getByRole('heading', { name: /you're ready/i })).toBeInTheDocument()
   })
 
@@ -38,10 +39,13 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup()
     render(<OnboardingWizard onComplete={onComplete} />)
 
-    // Click through all 5 steps
-    for (let i = 0; i < 4; i++) {
+    // Click Next for steps 1-3 (Welcome → Auth → Git → Repo)
+    for (let i = 0; i < 3; i++) {
       await user.click(screen.getByRole('button', { name: /next/i }))
     }
+
+    // Step 4 (Repositories): inline add form means Next is disabled; use Skip for now.
+    await user.click(screen.getByRole('button', { name: /skip for now/i }))
 
     // Final step - click "Get Started"
     await user.click(screen.getByRole('button', { name: /get started/i }))

@@ -133,6 +133,15 @@ export interface GitChannels {
     args: [cwd: string, branch: string]
     result: void
   }
+  'git:detectRemote': {
+    args: [cwd: string]
+    result: {
+      isGitRepo: boolean
+      remoteUrl: string | null
+      owner: string | null
+      repo: string | null
+    }
+  }
 }
 
 /** Pull request operations */
