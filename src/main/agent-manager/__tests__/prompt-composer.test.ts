@@ -47,7 +47,7 @@ describe('buildAgentPrompt', () => {
       expect(prompt).toContain('## Your Role')
       expect(prompt).toContain('interactive BDE assistant')
       expect(prompt).toContain('conversational but concise')
-      expect(prompt).toContain('Full tool access')
+      expect(prompt).toContain('full tool access')
     })
 
     it('includes adhoc-specific personality for adhoc agent', () => {
@@ -63,7 +63,7 @@ describe('buildAgentPrompt', () => {
 
       expect(prompt).toContain('## Your Role')
       expect(prompt).toContain('spec drafting')
-      expect(prompt).toContain('No tool access')
+      expect(prompt).toContain('directly executable by a pipeline')
       expect(prompt).toContain('under 500 words')
     })
 
@@ -423,6 +423,85 @@ describe('buildAgentPrompt', () => {
       const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
       expect(prompt).toContain('FIRST action')
       expect(prompt).toContain('npm install')
+    })
+
+    it('tells agent to abort if npm install fails', () => {
+      const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
+      expect(prompt).toContain('If `npm install` fails')
+      expect(prompt).toContain('exit immediately')
+      expect(prompt).toContain('Do not proceed without dependencies')
+    })
+  })
+
+  describe('task specification wrapper', () => {
+    it('wraps pipeline task content in a Task Specification section', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Implement new login flow.',
+        repoName: 'bde'
+      })
+      expect(prompt).toContain('## Task Specification')
+      expect(prompt).toContain('Read this entire specification before writing any code')
+      expect(prompt).toContain('Address every section')
+      // Original spec content must still be present after the header
+      const headerIdx = prompt.indexOf('## Task Specification')
+      const contentIdx = prompt.indexOf('Implement new login flow.')
+      expect(headerIdx).toBeGreaterThan(-1)
+      expect(contentIdx).toBeGreaterThan(headerIdx)
+    })
+
+    it('wraps adhoc task content as plain content (no Task Specification header)', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'adhoc',
+        taskContent: 'Fix the bug'
+      })
+      expect(prompt).not.toContain('## Task Specification')
+      expect(prompt).toContain('Fix the bug')
+    })
+
+    it('does not add Task Specification header for copilot or synthesizer', () => {
+      const copilotPrompt = buildAgentPrompt({
+        agentType: 'copilot',
+        messages: [{ role: 'user', content: 'help' }]
+      })
+      expect(copilotPrompt).not.toContain('## Task Specification')
+
+      const synthPrompt = buildAgentPrompt({
+        agentType: 'synthesizer',
+        codebaseContext: 'files',
+        taskContent: 'generate spec'
+      })
+      expect(synthPrompt).not.toContain('## Task Specification')
+    })
+  })
+
+  describe('repo-aware memory injection', () => {
+    it('injects BDE Conventions when repoName is bde', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Do something',
+        repoName: 'bde'
+      })
+      expect(prompt).toContain('## BDE Conventions')
+    })
+
+    it('injects BDE Conventions when repoName is undefined (legacy)', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Do something'
+      })
+      expect(prompt).toContain('## BDE Conventions')
+    })
+
+    it('omits BDE Conventions for non-BDE repos', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'pipeline',
+        taskContent: 'Do something',
+        repoName: 'life-os'
+      })
+      expect(prompt).not.toContain('## BDE Conventions')
+      // The universal preamble should still be present
+      expect(prompt).toContain('You are a BDE')
     })
   })
 
