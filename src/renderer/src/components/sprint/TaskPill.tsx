@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import { useSprintUI } from '../../stores/sprintUI'
 import { formatDuration } from '../../lib/format'
 import { useTaskCost } from '../../hooks/useTaskCost'
@@ -61,12 +62,15 @@ function TaskPillInner({
     return undefined
   }, [task.status])
 
+  const isActive = task.status === 'active' && !!task.started_at
+  useVisibilityAwareInterval(
+    () => setElapsed(formatElapsed(task.started_at!)),
+    isActive ? 10_000 : null
+  )
+  // Set initial elapsed value when task becomes active
   useEffect(() => {
-    if (task.status !== 'active' || !task.started_at) return
-    setElapsed(formatElapsed(task.started_at))
-    const interval = setInterval(() => setElapsed(formatElapsed(task.started_at!)), 10000)
-    return () => clearInterval(interval)
-  }, [task.status, task.started_at])
+    if (isActive) setElapsed(formatElapsed(task.started_at!))
+  }, [isActive, task.started_at])
 
   const isZombie = task.status === 'active' && (!!task.pr_url || !!task.pr_status)
   const isStale =

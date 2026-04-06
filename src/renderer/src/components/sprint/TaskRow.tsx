@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { motion } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import { useSprintUI } from '../../stores/sprintUI'
 
 interface TaskRowProps {
@@ -15,11 +16,8 @@ export function TaskRow({ task, selected, onClick }: TaskRowProps): React.JSX.El
   const [, setTick] = useState(0)
 
   // Trigger re-render every 10s for active tasks to update elapsed time
-  useEffect(() => {
-    if (task.status !== 'active' || !task.started_at) return
-    const interval = setInterval(() => setTick((t) => t + 1), 10000)
-    return () => clearInterval(interval)
-  }, [task.status, task.started_at])
+  const isActive = task.status === 'active' && !!task.started_at
+  useVisibilityAwareInterval(() => setTick((t) => t + 1), isActive ? 10_000 : null)
 
   const elapsed = task.status === 'active' && task.started_at ? formatElapsed(task.started_at) : ''
 

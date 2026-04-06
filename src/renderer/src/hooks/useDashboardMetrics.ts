@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { useCostDataStore } from '../stores/costData'
+import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
 import type { ChartBar } from '../components/neon'
 import type { SprintTask } from '../../../shared/types'
 
@@ -54,10 +55,7 @@ export function useDashboardMetrics(): DashboardMetrics {
 
   // Track current time for 24h cost calculation (updates every 60s)
   const [now, setNow] = useState(() => Date.now())
-  useEffect(() => {
-    const interval = setInterval(() => setNow(Date.now()), 60_000)
-    return () => clearInterval(interval)
-  }, [])
+  useVisibilityAwareInterval(() => setNow(Date.now()), 60_000)
 
   // Derived stats (single-pass)
   const stats = useMemo((): DashboardStats => {

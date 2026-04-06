@@ -170,7 +170,8 @@ const api = {
     exportTasks: (format: 'json' | 'csv') => typedInvoke('sprint:exportTasks', format),
     exportTaskHistory: (taskId: string) => typedInvoke('sprint:exportTaskHistory', taskId),
     failureBreakdown: () => typedInvoke('sprint:failureBreakdown'),
-    getSuccessRateBySpecType: () => typedInvoke('sprint:getSuccessRateBySpecType')
+    getSuccessRateBySpecType: () => typedInvoke('sprint:getSuccessRateBySpecType'),
+    getChanges: (taskId: string) => typedInvoke('sprint:getChanges', taskId)
   },
 
   // Task groups
@@ -477,7 +478,11 @@ const api = {
       typedInvoke('review:requestRevision', payload),
     discard: (payload: { taskId: string }) => typedInvoke('review:discard', payload),
     shipIt: (payload: { taskId: string; strategy: 'squash' | 'merge' | 'rebase' }) =>
-      typedInvoke('review:shipIt', payload)
+      typedInvoke('review:shipIt', payload),
+    generateSummary: (payload: { taskId: string }) =>
+      typedInvoke('review:generateSummary', payload),
+    checkAutoReview: (payload: { taskId: string }) =>
+      typedInvoke('review:checkAutoReview', payload)
   },
 
   // Spec Synthesizer

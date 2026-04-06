@@ -1,9 +1,10 @@
-import React, { useMemo, useState, useRef, useEffect } from 'react'
+import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { Edit2, MoreVertical, AlertTriangle } from 'lucide-react'
 import type { TaskGroup, SprintTask } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { usePrompt, PromptModal } from '../ui/PromptModal'
+import { LoadingState } from '../ui/LoadingState'
 import { toast } from '../../stores/toasts'
 
 export interface EpicDetailProps {
@@ -46,6 +47,7 @@ export function EpicDetail({
   const [editingSpec, setEditingSpec] = useState('')
   const [saving, setSaving] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
+  const menuItemsRef = useRef<HTMLButtonElement[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { confirm, confirmProps } = useConfirm()
   const { prompt, promptProps } = usePrompt()
@@ -59,10 +61,45 @@ export function EpicDetail({
     }
     if (showOverflowMenu) {
       document.addEventListener('mousedown', handleClickOutside)
+      // Focus the first menu item when the menu opens
+      requestAnimationFrame(() => {
+        menuItemsRef.current[0]?.focus()
+      })
       return () => document.removeEventListener('mousedown', handleClickOutside)
     }
     return undefined
   }, [showOverflowMenu])
+
+  // Keyboard navigation for overflow menu
+  const handleMenuKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLDivElement>): void => {
+      const items = menuItemsRef.current.filter(Boolean)
+      const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement)
+
+      switch (e.key) {
+        case 'ArrowDown': {
+          e.preventDefault()
+          const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
+          items[next]?.focus()
+          break
+        }
+        case 'ArrowUp': {
+          e.preventDefault()
+          const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
+          items[prev]?.focus()
+          break
+        }
+        case 'Escape':
+          e.preventDefault()
+          setShowOverflowMenu(false)
+          break
+        case 'Tab':
+          setShowOverflowMenu(false)
+          break
+      }
+    },
+    []
+  )
 
   // Calculate status breakdown
   const counts: StatusCounts = useMemo(() => {
@@ -303,12 +340,16 @@ export function EpicDetail({
             className="epic-detail__header-btn"
             onClick={() => setShowOverflowMenu(!showOverflowMenu)}
             aria-label="More options"
+            aria-expanded={showOverflowMenu}
+            aria-haspopup="menu"
           >
             <MoreVertical size={16} />
           </button>
           {showOverflowMenu && (
             <div
               className="epic-detail__overflow-menu"
+              role="menu"
+              onKeyDown={handleMenuKeyDown}
               style={{
                 position: 'absolute',
                 top: '100%',
@@ -323,7 +364,12 @@ export function EpicDetail({
               }}
             >
               <button
+                ref={(el): void => {
+                  if (el) menuItemsRef.current[0] = el
+                }}
                 type="button"
+                role="menuitem"
+                tabIndex={-1}
                 className="epic-detail__overflow-item"
                 onClick={handleEdit}
                 style={{
@@ -344,7 +390,12 @@ export function EpicDetail({
                 Edit
               </button>
               <button
+                ref={(el): void => {
+                  if (el) menuItemsRef.current[1] = el
+                }}
                 type="button"
+                role="menuitem"
+                tabIndex={-1}
                 className="epic-detail__overflow-item"
                 onClick={handleToggleReady}
                 style={{
@@ -364,7 +415,12 @@ export function EpicDetail({
                 {isReady ? 'Mark as Draft' : 'Mark as Ready'}
               </button>
               <button
+                ref={(el): void => {
+                  if (el) menuItemsRef.current[2] = el
+                }}
                 type="button"
+                role="menuitem"
+                tabIndex={-1}
                 className="epic-detail__overflow-item"
                 onClick={handleDelete}
                 style={{
@@ -430,9 +486,7 @@ export function EpicDetail({
       {/* Task List */}
       <div className="epic-detail__tasks">
         {loading ? (
-          <div className="planner-empty">
-            <p className="planner-empty__text">Loading tasks...</p>
-          </div>
+          <LoadingState message="Loading tasks..." />
         ) : (
           <>
             {tasks.map((task) => {

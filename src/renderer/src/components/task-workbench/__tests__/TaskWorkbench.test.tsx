@@ -30,9 +30,9 @@ describe('TaskWorkbench', () => {
     vi.clearAllMocks()
     useTaskWorkbenchStore.getState().resetForm()
 
-    // Mock workbench API
+    // Mock workbench API — now uses chatStream instead of chat
     ;(window.api as any).workbench = {
-      chat: vi.fn().mockResolvedValue({ content: 'AI response' })
+      chatStream: vi.fn().mockResolvedValue({ streamId: 'test-stream-1' })
     }
   })
 
@@ -85,7 +85,7 @@ describe('TaskWorkbench', () => {
     expect(useTaskWorkbenchStore.getState().copilotVisible).toBe(false)
   })
 
-  it('sends message to copilot API when handleSendFromForm is called', async () => {
+  it('sends message via chatStream when handleSendFromForm is called', async () => {
     useTaskWorkbenchStore.setState({
       copilotVisible: true,
       title: 'Test Task',
@@ -99,7 +99,7 @@ describe('TaskWorkbench', () => {
     fireEvent.click(sendButton)
 
     await waitFor(() => {
-      expect((window.api as any).workbench.chat).toHaveBeenCalledWith({
+      expect((window.api as any).workbench.chatStream).toHaveBeenCalledWith({
         messages: [{ role: 'user', content: 'test message' }],
         formContext: { title: 'Test Task', repo: 'BDE', spec: 'Test spec' }
       })
@@ -134,7 +134,7 @@ describe('TaskWorkbench', () => {
     })
   })
 
-  it('adds assistant response message after API call', async () => {
+  it('creates empty assistant message and starts streaming state', async () => {
     useTaskWorkbenchStore.setState({ copilotVisible: true })
     render(<TaskWorkbench />)
 
@@ -143,16 +143,18 @@ describe('TaskWorkbench', () => {
 
     await waitFor(() => {
       const messages = useTaskWorkbenchStore.getState().copilotMessages
-      expect(messages.some((m) => m.role === 'assistant' && m.content === 'AI response')).toBe(true)
+      const assistantMsg = messages.find((m) => m.role === 'assistant')
+      expect(assistantMsg).toBeDefined()
+      expect(assistantMsg?.insertable).toBe(true)
     })
   })
 
-  it('sets loading state during API call', async () => {
-    let resolveChat: (value: any) => void = () => {}
-    const chatPromise = new Promise((resolve) => {
-      resolveChat = resolve
+  it('sets streaming state during chatStream call', async () => {
+    let resolveChatStream: (value: any) => void = () => {}
+    const chatStreamPromise = new Promise((resolve) => {
+      resolveChatStream = resolve
     })
-    ;(window.api as any).workbench.chat = vi.fn().mockReturnValue(chatPromise)
+    ;(window.api as any).workbench.chatStream = vi.fn().mockReturnValue(chatStreamPromise)
 
     useTaskWorkbenchStore.setState({ copilotVisible: true })
     render(<TaskWorkbench />)
@@ -160,16 +162,15 @@ describe('TaskWorkbench', () => {
     const sendButton = screen.getByTestId('send-copilot')
     fireEvent.click(sendButton)
 
-    // Should be loading
+    // Should be in streaming/loading state
     await waitFor(() => {
-      expect(useTaskWorkbenchStore.getState().copilotLoading).toBe(true)
+      const state = useTaskWorkbenchStore.getState()
+      expect(state.streamingMessageId).toBeTruthy()
+      expect(state.copilotLoading).toBe(true)
     })
 
-    // Resolve and check loading is false
-    resolveChat({ content: 'Done' })
-    await waitFor(() => {
-      expect(useTaskWorkbenchStore.getState().copilotLoading).toBe(false)
-    })
+    // Resolve the stream initiation
+    resolveChatStream({ streamId: 'test-stream-1' })
   })
 
   it('marks assistant message as insertable', async () => {
@@ -181,15 +182,15 @@ describe('TaskWorkbench', () => {
 
     await waitFor(() => {
       const messages = useTaskWorkbenchStore.getState().copilotMessages
-      const assistantMsg = messages.find(
-        (m) => m.role === 'assistant' && m.content === 'AI response'
-      )
+      const assistantMsg = messages.find((m) => m.role === 'assistant')
       expect(assistantMsg?.insertable).toBe(true)
     })
   })
 
-  it('adds error message when API call fails', async () => {
-    ;(window.api as any).workbench.chat = vi.fn().mockRejectedValue(new Error('Network error'))
+  it('sets error message when chatStream call fails', async () => {
+    ;(window.api as any).workbench.chatStream = vi
+      .fn()
+      .mockRejectedValue(new Error('Network error'))
 
     useTaskWorkbenchStore.setState({ copilotVisible: true })
     render(<TaskWorkbench />)
@@ -204,7 +205,9 @@ describe('TaskWorkbench', () => {
   })
 
   it('clears loading state after error', async () => {
-    ;(window.api as any).workbench.chat = vi.fn().mockRejectedValue(new Error('Network error'))
+    ;(window.api as any).workbench.chatStream = vi
+      .fn()
+      .mockRejectedValue(new Error('Network error'))
 
     useTaskWorkbenchStore.setState({ copilotVisible: true })
     render(<TaskWorkbench />)
@@ -238,7 +241,7 @@ describe('TaskWorkbench', () => {
     global.ResizeObserver = OriginalResizeObserver
   })
 
-  it('includes form context in chat API call', async () => {
+  it('includes form context in chatStream call', async () => {
     useTaskWorkbenchStore.setState({
       copilotVisible: true,
       title: 'Build feature X',
@@ -252,7 +255,7 @@ describe('TaskWorkbench', () => {
     fireEvent.click(sendButton)
 
     await waitFor(() => {
-      expect((window.api as any).workbench.chat).toHaveBeenCalledWith({
+      expect((window.api as any).workbench.chatStream).toHaveBeenCalledWith({
         messages: [{ role: 'user', content: 'test message' }],
         formContext: {
           title: 'Build feature X',

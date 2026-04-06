@@ -2,12 +2,24 @@ import { create } from 'zustand'
 import type { AgentEvent } from '../../../shared/types'
 
 const MAX_EVENTS_PER_AGENT = 2000
+const EMPTY_EVENTS: AgentEvent[] = []
+
 interface AgentEventsState {
   events: Record<string, AgentEvent[]>
   evictedAgents: Record<string, boolean>
   init: () => () => void
   loadHistory: (agentId: string) => Promise<void>
   clear: (agentId: string) => void
+}
+
+/**
+ * Scoped selector — subscribe to a single agent's events without
+ * re-rendering when other agents receive events.
+ *
+ * Usage: `const events = useAgentEvents(agentId)`
+ */
+export function useAgentEvents(agentId: string | null): AgentEvent[] {
+  return useAgentEventsStore((s) => (agentId ? (s.events[agentId] ?? EMPTY_EVENTS) : EMPTY_EVENTS))
 }
 
 export const useAgentEventsStore = create<AgentEventsState>((set) => ({

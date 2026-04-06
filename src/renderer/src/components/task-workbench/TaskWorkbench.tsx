@@ -26,14 +26,13 @@ export function TaskWorkbench(): React.JSX.Element {
     return () => observer.disconnect()
   }, [])
   const addMessage = useTaskWorkbenchStore((s) => s.addCopilotMessage)
-  const setCopilotLoading = useTaskWorkbenchStore((s) => s.setCopilotLoading)
   const title = useTaskWorkbenchStore((s) => s.title)
   const repo = useTaskWorkbenchStore((s) => s.repo)
   const spec = useTaskWorkbenchStore((s) => s.spec)
 
   const handleSendFromForm = useCallback(
     async (text: string) => {
-      // If copilot is hidden, show it
+      // If copilot is hidden, show it so the streaming listener is mounted
       if (!useTaskWorkbenchStore.getState().copilotVisible) {
         toggleCopilot()
       }
@@ -46,32 +45,38 @@ export function TaskWorkbench(): React.JSX.Element {
         timestamp: Date.now()
       }
       addMessage(userMsg)
-      setCopilotLoading(true)
+
+      // Create empty assistant message and start streaming state
+      const msgId = `assistant-${Date.now()}`
+      addMessage({
+        id: msgId,
+        role: 'assistant',
+        content: '',
+        timestamp: Date.now(),
+        insertable: true
+      })
+      useTaskWorkbenchStore.getState().startStreaming(msgId, '') // placeholder streamId
 
       try {
-        const result = await window.api.workbench.chat({
+        await window.api.workbench.chatStream({
           messages: [{ role: 'user', content: text }],
           formContext: { title, repo, spec }
         })
-        addMessage({
-          id: `assistant-${Date.now()}`,
-          role: 'assistant',
-          content: result.content,
-          timestamp: Date.now(),
-          insertable: true
-        })
+        // Real streamId is set by the WorkbenchCopilot chunk listener
       } catch {
-        addMessage({
-          id: `error-${Date.now()}`,
-          role: 'assistant',
-          content: 'Failed to reach Claude. Check your connection and try again.',
-          timestamp: Date.now()
-        })
-      } finally {
-        setCopilotLoading(false)
+        useTaskWorkbenchStore.setState((s) => ({
+          copilotMessages: s.copilotMessages.map((m) =>
+            m.id === msgId
+              ? { ...m, content: 'Failed to reach Claude. Check your connection and try again.' }
+              : m
+          ),
+          copilotLoading: false,
+          streamingMessageId: null,
+          activeStreamId: null
+        }))
       }
     },
-    [title, repo, spec, toggleCopilot, addMessage, setCopilotLoading]
+    [title, repo, spec, toggleCopilot, addMessage]
   )
 
   return (

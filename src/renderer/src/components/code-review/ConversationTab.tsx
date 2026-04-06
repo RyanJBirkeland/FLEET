@@ -85,12 +85,13 @@ function EventItem({ event }: { event: AgentEvent }): React.JSX.Element {
 export function ConversationTab(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
   const tasks = useSprintTasks((s) => s.tasks)
-  const events = useAgentEventsStore((s) => s.events)
   const loadHistory = useAgentEventsStore((s) => s.loadHistory)
   const task = tasks.find((t) => t.id === selectedTaskId)
 
   const agentRunId = task?.agent_run_id ?? null
-  const agentEvents = agentRunId ? (events[agentRunId] ?? null) : null
+  const agentEvents = useAgentEventsStore((s) =>
+    agentRunId ? (s.events[agentRunId] ?? null) : null
+  )
 
   useEffect(() => {
     if (agentRunId) {

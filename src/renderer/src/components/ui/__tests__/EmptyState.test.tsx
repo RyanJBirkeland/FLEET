@@ -38,4 +38,22 @@ describe('EmptyState', () => {
     await user.click(btn)
     expect(onClick).toHaveBeenCalledOnce()
   })
+
+  it('renders simple message variant', () => {
+    const { container } = render(<EmptyState message="No items found" />)
+    expect(screen.getByText('No items found')).toBeInTheDocument()
+    expect(container.firstChild).toHaveClass('bde-empty-state')
+  })
+
+  it('applies custom className in message variant', () => {
+    const { container } = render(<EmptyState message="Empty" className="custom" />)
+    expect(container.firstChild).toHaveClass('bde-empty-state')
+    expect(container.firstChild).toHaveClass('custom')
+  })
+
+  it('applies custom className in rich variant', () => {
+    const { container } = render(<EmptyState title="Empty" className="custom" />)
+    expect(container.firstChild).toHaveClass('bde-empty')
+    expect(container.firstChild).toHaveClass('custom')
+  })
 })

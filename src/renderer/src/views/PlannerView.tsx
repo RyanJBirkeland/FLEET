@@ -8,6 +8,7 @@ import { CreateEpicModal } from '../components/planner/CreateEpicModal'
 import { Search, FileUp } from 'lucide-react'
 import { toast } from '../stores/toasts'
 import { useConfirm, ConfirmModal } from '../components/ui/ConfirmModal'
+import { EmptyState } from '../components/ui/EmptyState'
 
 export default function PlannerView(): React.JSX.Element {
   const {
@@ -180,11 +181,7 @@ export default function PlannerView(): React.JSX.Element {
             onReorderTasks={handleReorderTasks}
           />
         )}
-        {!selectedGroup && !loading && (
-          <div className="planner-empty">
-            <p className="planner-empty__text">Select an epic to view details</p>
-          </div>
-        )}
+        {!selectedGroup && !loading && <EmptyState message="Select an epic to view details" />}
       </div>
 
       <CreateEpicModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />

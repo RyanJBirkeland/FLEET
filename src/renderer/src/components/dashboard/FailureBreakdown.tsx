@@ -1,6 +1,7 @@
 import { NeonCard } from '../neon'
 import { AlertTriangle } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { LoadingState } from '../ui/LoadingState'
 
 interface FailureReasonRow {
   reason: string
@@ -35,7 +36,7 @@ export function FailureBreakdown(): React.JSX.Element {
   return (
     <NeonCard accent="red" title="Failure Breakdown" icon={<AlertTriangle size={12} />}>
       {loading ? (
-        <div className="dashboard-card-loading">Loading...</div>
+        <LoadingState />
       ) : error ? (
         <div className="dashboard-card-error">
           <div className="dashboard-card-error__message">{error}</div>

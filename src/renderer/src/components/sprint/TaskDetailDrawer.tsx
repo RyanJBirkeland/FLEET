@@ -4,6 +4,7 @@ import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintUI } from '../../stores/sprintUI'
 import { useAgentEventsStore } from '../../stores/agentEvents'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import { TaskDetailActionButtons } from './TaskDetailActionButtons'
 import { AgentActivityPreview } from './AgentActivityPreview'
 import { UpstreamOutcomes } from './UpstreamOutcomes'
@@ -66,13 +67,15 @@ export function TaskDetailDrawer({
     titleRef.current?.focus()
   }, [task.id])
 
-  useEffect(() => {
-    if (task.status !== 'active' || !task.started_at) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setElapsed(formatElapsed(task.started_at))
-    const interval = setInterval(() => setElapsed(formatElapsed(task.started_at!)), 10000)
-    return () => clearInterval(interval)
-  }, [task.status, task.started_at])
+  const isActive = task.status === 'active' && !!task.started_at
+  useVisibilityAwareInterval(
+    () => setElapsed(formatElapsed(task.started_at!)),
+    isActive ? 10_000 : null
+  )
+  // Compute initial elapsed value synchronously
+  if (isActive && !elapsed) {
+    setElapsed(formatElapsed(task.started_at!))
+  }
 
   const cleanupRef = useRef<(() => void) | null>(null)
 

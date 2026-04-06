@@ -1,27 +1,30 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { NeonCard } from '../neon/NeonCard'
+import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import type { SpecTypeSuccessRate as SpecTypeSuccessRateData } from '../../../../shared/types'
 
 export function SpecTypeSuccessRate(): React.JSX.Element {
   const [data, setData] = useState<SpecTypeSuccessRateData[]>([])
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    const fetchData = async (): Promise<void> => {
-      try {
-        const result = await window.api.sprint.getSuccessRateBySpecType()
-        setData(result)
-      } catch (err) {
-        console.error('Failed to fetch success rate by spec type:', err)
-      } finally {
-        setLoading(false)
-      }
+  const fetchData = useCallback(async (): Promise<void> => {
+    try {
+      const result = await window.api.sprint.getSuccessRateBySpecType()
+      setData(result)
+    } catch (err) {
+      console.error('Failed to fetch success rate by spec type:', err)
+    } finally {
+      setLoading(false)
     }
-
-    void fetchData()
-    const interval = setInterval(() => void fetchData(), 60000)
-    return () => clearInterval(interval)
   }, [])
+
+  // Initial fetch on mount
+  useEffect(() => {
+    void fetchData()
+  }, [fetchData])
+
+  // Refresh every 60s, pausing when document is hidden
+  useVisibilityAwareInterval(() => void fetchData(), 60_000)
 
   if (loading) {
     return (

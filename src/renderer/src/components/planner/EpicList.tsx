@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import type { TaskGroup } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
+import { EmptyState } from '../ui/EmptyState'
 
 interface EpicListProps {
   groups: TaskGroup[]
@@ -165,9 +166,7 @@ export function EpicList({
       </div>
 
       <div className="planner-epic-list__scroll">
-        {activeGroups.length === 0 && (
-          <div className="planner-epic-list__empty">No active epics</div>
-        )}
+        {activeGroups.length === 0 && <EmptyState message="No active epics" />}
         {activeGroups.map(renderEpicItem)}
 
         {completedGroups.length > 0 && (
