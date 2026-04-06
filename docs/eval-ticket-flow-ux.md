@@ -33,7 +33,7 @@ User clicks **"+ New Ticket"** button in the SprintCenter header bar (top-right,
 |  [Feature] [Bug Fix] [Refactor] [Audit]           |
 |  [UX Polish] [Infra]                              |
 |                                                    |
-|  Spec                            [Ask Paul]       |
+|  Spec                            [Ask Copilot]       |
 |  +----------------------------------------------+ |
 |  | Write your spec in markdown or pick a         | |
 |  | template above...                             | |
@@ -57,7 +57,7 @@ User clicks **"+ New Ticket"** button in the SprintCenter header bar (top-right,
 3. **Priority** — dropdown: Low / Medium / High (defaults to Medium)
 4. **Template** (optional) — 6 chips that populate the spec textarea with a structured markdown skeleton
 5. **Spec** (optional) — raw markdown textarea, 10 rows
-6. **Ask Paul** (optional) — AI-generates a spec from the title + repo + current notes
+6. **Ask Copilot** (optional) — AI-generates a spec from the title + repo + current notes
 
 ### Step 4 — Submit
 
@@ -85,7 +85,7 @@ User clicks "Save to Backlog" (disabled if title is empty). Enter key in the tit
 
 - **Optimistic UI**: Card appears instantly, no perceived latency
 - **Template system**: 6 categories with structured markdown — good starting point
-- **Ask Paul integration**: AI spec generation from title + context, 30s timeout
+- **Ask Copilot integration**: AI spec generation from title + context, 30s timeout
 - **Keyboard shortcuts**: Enter to submit, Escape to close
 - **Glass morphism styling**: Consistent with the app's dark-mode identity
 - **Full lifecycle**: Create -> queue -> launch -> monitor -> done is wired end-to-end
@@ -130,7 +130,7 @@ The `NewTicketModal` uses class names `.new-ticket-overlay`, `.new-ticket-modal_
 - Priority always defaults to Medium
 - No suggestion based on title keywords (e.g., "fix" -> Bug Fix template, "perf" -> priority High)
 
-### 3.6 Ask Paul Has No Error Feedback
+### 3.6 Ask Copilot Has No Error Feedback
 
 - On failure: `catch {}` — completely silent (line 121 of NewTicketModal)
 - User sees "Generating..." then nothing happens
@@ -170,7 +170,7 @@ The `NewTicketModal` uses class names `.new-ticket-overlay`, `.new-ticket-modal_
 | Issue                                                                                | Risk                                                              | Severity |
 | ------------------------------------------------------------------------------------ | ----------------------------------------------------------------- | -------- |
 | **No CSS for modal** — layout depends on browser defaults and inherited glass styles | Modal may look broken or misaligned on different screen sizes     | Critical |
-| **Ask Paul fails silently** — user waits 30s, gets nothing                           | User loses trust in AI feature, stops using it                    | High     |
+| **Ask Copilot fails silently** — user waits 30s, gets nothing                           | User loses trust in AI feature, stops using it                    | High     |
 | **Template click destroys user content**                                             | User loses work, frustrated, may abandon ticket creation          | High     |
 | **No validation feedback**                                                           | User doesn't know why button is disabled, may think app is broken | Medium   |
 
@@ -214,13 +214,13 @@ Expand the 6 existing templates to 8, with richer structure and inline hints:
 
 ### 5.2 AI-Assisted Spec Writing
 
-**Current state:** "Ask Paul" generates a full spec from title + repo in one shot.
+**Current state:** "Ask Copilot" generates a full spec from title + repo in one shot.
 
 **Improved flow:**
 
-1. **Contextual generation**: Include recent git log, open PRs, and codebase file tree in the prompt so Paul can reference actual files
+1. **Contextual generation**: Include recent git log, open PRs, and codebase file tree in the prompt so Copilot can reference actual files
 2. **Streaming response**: Show spec text streaming in real-time instead of waiting 30s for the full response
-3. **Section-by-section**: Let user approve/edit each section before Paul generates the next one
+3. **Section-by-section**: Let user approve/edit each section before Copilot generates the next one
 4. **Refinement**: After initial generation, user can highlight a section and say "expand this" or "make this more specific"
 5. **Error handling**: On failure, show a toast with retry button. On timeout, offer "Try again with a simpler prompt"
 
@@ -233,12 +233,12 @@ A conversational flow for complex features that aren't ready for a spec yet:
 |  DESIGN A FEATURE                             [x] |
 |--------------------------------------------------|
 |                                                    |
-|  Paul: What feature are you thinking about?       |
+|  Copilot: What feature are you thinking about?       |
 |                                                    |
 |  User: I want to add a cost tracking dashboard    |
 |        that shows API spend per agent per day     |
 |                                                    |
-|  Paul: Good start. Let me ask a few questions:    |
+|  Copilot: Good start. Let me ask a few questions:    |
 |        1. Should this show historical data or     |
 |           just the current session?               |
 |        2. What API providers are we tracking?     |
@@ -247,7 +247,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 |  User: Historical, last 30 days. Anthropic only   |
 |        for now. Yes to budget alerts.             |
 |                                                    |
-|  Paul: Here's my proposed spec:                   |
+|  Copilot: Here's my proposed spec:                   |
 |        [rendered markdown spec preview]           |
 |                                                    |
 |  [Edit Spec]  [Looks Good -> Create Ticket]       |
@@ -298,7 +298,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 |  [Perf] [Design] [Audit] [Infra]                         |
 |                   ^highlighted = auto-suggested           |
 |                                                           |
-|  Spec                     [Preview]  [Ask Paul]           |
+|  Spec                     [Preview]  [Ask Copilot]           |
 |  +------------------------------------------------------+|
 |  | ## Problem                                            ||
 |  | <!-- What's broken or missing and why it matters -->  ||
@@ -317,7 +317,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 |  |  "Unsaved draft — will be lost if you close"         ||
 |  +------------------------------------------------------+|
 |                                                           |
-|           [Cancel]  [Design with Paul]  [Save to Backlog] |
+|           [Cancel]  [Design with Copilot]  [Save to Backlog] |
 +----------------------------------------------------------+
 ```
 
@@ -327,7 +327,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 - "Suggested: [Template]" hint below title
 - "Preview" toggle for markdown spec
 - "Unsaved draft" warning when content exists
-- "Design with Paul" button (launches conversational flow)
+- "Design with Copilot" button (launches conversational flow)
 - Template chip styling with auto-suggestion highlight
 - 2 additional template categories (Test, Perf)
 
@@ -340,13 +340,13 @@ A conversational flow for complex features that aren't ready for a spec yet:
 |                                                           |
 |  +------------------------------------------------------+|
 |  |                                                       ||
-|  |  Paul: What are you building? Give me a sentence     ||
+|  |  Copilot: What are you building? Give me a sentence     ||
 |  |  or two and I'll help shape the spec.                ||
 |  |                                                       ||
 |  |  You: Cost tracking — show daily API spend per       ||
 |  |  agent, with a chart and budget alerts               ||
 |  |                                                       ||
-|  |  Paul: That's a solid feature. A few questions:      ||
+|  |  Copilot: That's a solid feature. A few questions:      ||
 |  |                                                       ||
 |  |  1. Data source — are costs already logged, or do    ||
 |  |     we need to add cost tracking to agent spawning?  ||
@@ -357,7 +357,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 |  |  You: Costs are in the agent_runs table already.     ||
 |  |  Use recharts. Per-day budget with a toast warning.  ||
 |  |                                                       ||
-|  |  Paul: Got it. Here's the spec I'd suggest:          ||
+|  |  Copilot: Got it. Here's the spec I'd suggest:          ||
 |  |  [## Problem ... ## Solution ... ## Files ...]       ||
 |  |                                                       ||
 |  +------------------------------------------------------+|
@@ -378,7 +378,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 | Item                                                  | Effort  | Why                                                |
 | ----------------------------------------------------- | ------- | -------------------------------------------------- |
 | **Add CSS rules for `.new-ticket-modal__*` classes**  | 1-2 hrs | Modal layout is unstyled — may render incorrectly  |
-| **Add error feedback for Ask Paul**                   | 30 min  | Silent failure erodes trust in the AI feature      |
+| **Add error feedback for Ask Copilot**                   | 30 min  | Silent failure erodes trust in the AI feature      |
 | **Confirm-before-template-overwrite**                 | 30 min  | Prevents data loss when user has typed custom spec |
 | **Disable submit button with tooltip explaining why** | 30 min  | "Title is required" tooltip on hover               |
 
@@ -388,7 +388,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 | ------------------------------------------------- | ------- | --------------------------------------- |
 | **Smart template suggestion** from title keywords | 2-3 hrs | Reduces clicks, guides novice users     |
 | **Markdown preview toggle** in spec editor        | 3-4 hrs | Users need to see what they're writing  |
-| **Streaming Ask Paul response**                   | 4-6 hrs | Eliminates the 30s black-box wait       |
+| **Streaming Ask Copilot response**                   | 4-6 hrs | Eliminates the 30s black-box wait       |
 | **Add Test and Perf template categories**         | 1 hr    | Common task types currently uncovered   |
 | **Draft persistence** (localStorage)              | 2 hrs   | Prevents accidental loss on modal close |
 
@@ -398,7 +398,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 | ------------------------------------------------------- | -------- | --------------------------------------------------------------------- |
 | **"Design a Feature" conversational mode**              | 2-3 days | High-value for complex features, but needs chat UI infrastructure     |
 | **Smart repo default** from active context              | 3-4 hrs  | Nice but requires cross-view state (needs Zustand sprint store first) |
-| **Contextual Ask Paul** (git log + file tree in prompt) | 4-6 hrs  | Better AI output, but depends on main process data availability       |
+| **Contextual Ask Copilot** (git log + file tree in prompt) | 4-6 hrs  | Better AI output, but depends on main process data availability       |
 | **Section-by-section spec refinement**                  | 1-2 days | Powerful but complex interaction model                                |
 | **Duplicate title detection**                           | 2-3 hrs  | Low urgency — small team, few tickets                                 |
 
@@ -417,7 +417,7 @@ A conversational flow for complex features that aren't ready for a spec yet:
 The ticket creation flow is **functional but unfinished**. The happy path works: create a ticket, add a spec (manually or via AI), queue it, launch an agent. But the edges are rough:
 
 1. **No dedicated CSS** for the modal — it renders on inherited styles alone
-2. **Silent AI failures** undermine trust in the "Ask Paul" feature
+2. **Silent AI failures** undermine trust in the "Ask Copilot" feature
 3. **Template selection is destructive** — overwrites user content without warning
 4. **No validation feedback** — disabled buttons with no explanation
 5. **No markdown preview** in the creation flow (only in SpecDrawer after save)

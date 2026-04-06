@@ -19,8 +19,8 @@
 | **KanbanColumn**    | `…/sprint/KanbanColumn.tsx`                           | ~80  | Single droppable column, sortable context, motion animations               | Props + `useReducedMotion`    |
 | **TaskCard**        | `…/sprint/TaskCard.tsx`                               | ~130 | Draggable card, action buttons by status, repo badge, spec dot             | Props only                    |
 | **AgentStatusChip** | `…/sprint/AgentStatusChip.tsx`                        | ~50  | Live elapsed-time ticker for running agents                                | Props + `setInterval`         |
-| **NewTicketModal**  | `…/sprint/NewTicketModal.tsx`                         | 255  | Modal form: title, repo, priority, template chips, spec textarea, Ask Paul | Local `useState`              |
-| **SpecDrawer**      | `…/sprint/SpecDrawer.tsx`                             | ~300 | Slide-in spec viewer/editor, markdown renderer, Ask Paul, push-to-sprint   | Local `useState`              |
+| **NewTicketModal**  | `…/sprint/NewTicketModal.tsx`                         | 255  | Modal form: title, repo, priority, template chips, spec textarea, Ask Copilot | Local `useState`              |
+| **SpecDrawer**      | `…/sprint/SpecDrawer.tsx`                             | ~300 | Slide-in spec viewer/editor, markdown renderer, Ask Copilot, push-to-sprint   | Local `useState`              |
 | **LogDrawer**       | `…/sprint/LogDrawer.tsx`                              | ~200 | Slide-in agent output viewer, steer input, stream-json parsing             | Local `useState` + polling    |
 | **PRSection**       | `…/sprint/PRSection.tsx`                              | ~40  | Collapsible container for PRList                                           | `localStorage` toggle         |
 | **PRList**          | `…/sprint/PRList.tsx`                                 | ~200 | Fetches open PRs via GitHub REST, merge button with confirmation           | Local `useState` + polling    |
@@ -36,14 +36,14 @@
 | `sprint:read-spec-file`  | invoke               | `sprint.ts`                         | `window.api.sprint.readSpecFile(path)`  | Yes                                                                           |
 | `sprint:readLog`         | invoke               | `sprint.ts`                         | `window.api.sprint.readLog(agentId)`    | Yes (return type mismatch: handler returns `nextByte`, preload type omits it) |
 | `sprint:external-change` | push (main→renderer) | File watcher in `src/main/index.ts` | `window.api.onExternalSprintChange(cb)` | Yes                                                                           |
-| `gateway:invoke`         | invoke               | `gateway-handlers.ts`               | `window.api.invokeTool(tool, args)`     | Yes — used by Ask Paul                                                        |
+| `gateway:invoke`         | invoke               | `gateway-handlers.ts`               | `window.api.invokeTool(tool, args)`     | Yes — used by Ask Copilot                                                        |
 
-### 1.3 AI Integration — How "Ask Paul" Works Today
+### 1.3 AI Integration — How "Ask Copilot" Works Today
 
 **NewTicketModal** (line 96-126):
 
 ```
-User clicks "Ask Paul" →
+User clicks "Ask Copilot" →
   builds system prompt with title + repo + current notes →
   window.api.invokeTool('sessions_send', { sessionKey: 'main', message, timeoutSeconds: 30 }) →
   IPC to main process 'gateway:invoke' handler →
@@ -56,12 +56,12 @@ User clicks "Ask Paul" →
 Key characteristics:
 
 - **One-shot**: Single request/response. No conversation state.
-- **Blocking**: UI shows "Generating..." / "Paul is writing your spec..." in textarea. No streaming.
+- **Blocking**: UI shows "Generating..." / "Copilot is writing your spec..." in textarea. No streaming.
 - **Silent failure**: `catch {}` swallows all errors (line 121). User sees nothing on failure.
 - **Session reuse**: Sends to `sessionKey: 'main'` — the main agent session. This pollutes the main session's conversation history.
 - **Template-unaware**: The system prompt (line 100-106) does not include the selected template structure. Template selection and AI generation are independent paths.
 
-**SpecDrawer** has an identical "Ask Paul" implementation with the same characteristics.
+**SpecDrawer** has an identical "Ask Copilot" implementation with the same characteristics.
 
 ### 1.4 Template System
 
@@ -147,16 +147,16 @@ The modal is functional only because the glass-modal base and browser defaults h
 | Issue                           | Location                                                         | Impact                                                                   |
 | ------------------------------- | ---------------------------------------------------------------- | ------------------------------------------------------------------------ |
 | **No CSS for modal**            | Missing `.new-ticket-modal__*` rules in any stylesheet           | Layout depends on browser defaults; template chip active state invisible |
-| **Ask Paul fails silently**     | `NewTicketModal.tsx:121` — empty `catch {}`                      | User waits up to 30s, sees nothing on failure                            |
+| **Ask Copilot fails silently**     | `NewTicketModal.tsx:121` — empty `catch {}`                      | User waits up to 30s, sees nothing on failure                            |
 | **Template + AI don't compose** | `NewTicketModal.tsx:100-106` — prompt ignores `selectedTemplate` | Template selection has no effect on AI-generated spec                    |
-| **Main session pollution**      | `sessionKey: 'main'` in Ask Paul call                            | Spec generation messages appear in the main agent conversation history   |
+| **Main session pollution**      | `sessionKey: 'main'` in Ask Copilot call                            | Spec generation messages appear in the main agent conversation history   |
 
 ### 2.2 Functional Gaps
 
 | Gap                                   | Detail                                                       |
 | ------------------------------------- | ------------------------------------------------------------ |
 | **No quick-capture mode**             | Every ticket requires the full modal with all fields visible |
-| **No conversational refinement**      | One-shot generation only; no way to iterate with Paul        |
+| **No conversational refinement**      | One-shot generation only; no way to iterate with Copilot        |
 | **No streaming**                      | Entire spec appears at once after up to 30s wait             |
 | **No spec quality signal**            | No feedback on whether a spec is agent-ready                 |
 | **No draft persistence**              | Closing the modal discards all work with no confirmation     |
@@ -271,10 +271,10 @@ Template Mode is the current NewTicketModal behavior with three fixes:
 
 **Fix 1: Template-aware AI generation**
 
-When a template is selected and the user clicks "Ask Paul", the system prompt includes the template scaffold:
+When a template is selected and the user clicks "Ask Copilot", the system prompt includes the template scaffold:
 
 ```typescript
-// In handleAskPaul():
+// In handleAskCopilot():
 const templateStructure = selectedTemplate ? TEMPLATES[selectedTemplate].spec : null
 
 const systemPrompt = templateStructure
@@ -314,7 +314,7 @@ const handleSelectTemplate = (key: string) => {
 
 This uses the native `confirm()` dialog for simplicity. A custom inline confirmation can be added later.
 
-**Fix 3: Error feedback for Ask Paul**
+**Fix 3: Error feedback for Ask Copilot**
 
 Replace the silent `catch {}` with a toast:
 
@@ -344,12 +344,12 @@ performance: {
 No new components. Changes are confined to `NewTicketModal.tsx`:
 
 - Add mode tabs at the top of the modal body
-- Gate the full form (repo, priority, templates, spec, Ask Paul) behind `mode === 'template'`
+- Gate the full form (repo, priority, templates, spec, Ask Copilot) behind `mode === 'template'`
 - Fix the three issues above
 
 ---
 
-### 3.4 DESIGN MODE — "Conversational Spec Design with Paul"
+### 3.4 DESIGN MODE — "Conversational Spec Design with Copilot"
 
 #### Architecture
 
@@ -403,7 +403,7 @@ const sendDesignMessage = async (userText: string) => {
 
   const systemPrompt = buildDesignSystemPrompt(repo)
   const conversationText = updated
-    .map((m) => `${m.role === 'user' ? 'User' : 'Paul'}: ${m.content}`)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Copilot'}: ${m.content}`)
     .join('\n\n')
 
   const fullMessage = `${systemPrompt}\n\n---\n\nConversation so far:\n${conversationText}\n\nPaul:`
@@ -420,7 +420,7 @@ const sendDesignMessage = async (userText: string) => {
       extractSpec(text) // parse spec from response
     }
   } catch {
-    toast.error('Paul is unavailable — try again')
+    toast.error('Copilot is unavailable — try again')
   } finally {
     setSending(false)
   }
@@ -435,11 +435,11 @@ const sendDesignMessage = async (userText: string) => {
 
 #### Spec Extraction
 
-Paul's responses may contain spec markdown. The right panel needs to extract and display the latest spec. Two approaches:
+Copilot's responses may contain spec markdown. The right panel needs to extract and display the latest spec. Two approaches:
 
 **Approach A — Fenced block convention (recommended for v1):**
 
-The system prompt instructs Paul to wrap specs in a `~~~spec` fence:
+The system prompt instructs Copilot to wrap specs in a `~~~spec` fence:
 
 ```
 When you propose a spec, wrap it in a ~~~spec fence block. Example:
@@ -472,7 +472,7 @@ Not recommended for v1. Adds complexity without clear benefit. The fenced block 
 
 ```typescript
 function buildDesignSystemPrompt(repo: string): string {
-  return `You are Paul, a senior product engineer helping design a coding task for BDE (Birkeland Development Environment).
+  return `You are Copilot, a senior product engineer helping design a coding task for BDE (Birkeland Development Environment).
 
 Your job: understand what the user wants to build, ask 2-3 clarifying questions, then propose a spec. Be concise.
 
@@ -493,7 +493,7 @@ Do not ask for confirmation to proceed — just do it.`
 
 #### Auto-Title Extraction
 
-When Paul proposes a spec, the response should include a suggested title. Extract it:
+When Copilot proposes a spec, the response should include a suggested title. Extract it:
 
 ```typescript
 // Look for "Title: ..." or "## Title\n..." in the response
@@ -523,7 +523,7 @@ const handleDesignSave = () => {
 }
 ```
 
-The button is disabled when `specDraft` is empty (Paul hasn't proposed a spec yet).
+The button is disabled when `specDraft` is empty (Copilot hasn't proposed a spec yet).
 
 #### Discard Confirmation
 
@@ -596,7 +596,7 @@ This is architectural improvement and should be its own PR after the three modes
 
 | Component              | Changes                                                                                                                                                                                                                                                                                          |
 | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **NewTicketModal.tsx** | Add mode tabs (`quick` / `template` / `design`), gate form sections by mode, fix template-aware Ask Paul prompt, add error toast on Ask Paul failure, add template overwrite confirmation, add Test Coverage and Performance templates, render `QuickModeContent` or `DesignModeContent` by mode |
+| **NewTicketModal.tsx** | Add mode tabs (`quick` / `template` / `design`), gate form sections by mode, fix template-aware Ask Copilot prompt, add error toast on Ask Copilot failure, add template overwrite confirmation, add Test Coverage and Performance templates, render `QuickModeContent` or `DesignModeContent` by mode |
 | **SprintCenter.tsx**   | Add `generatingIds` state, wire `sprint:generatePrompt` call after Quick Mode create, pass `generatingIds` to KanbanBoard                                                                                                                                                                        |
 | **TaskCard.tsx**       | Add shimmer/badge when `generatingIds.has(task.id)`                                                                                                                                                                                                                                              |
 
@@ -616,7 +616,7 @@ This is architectural improvement and should be its own PR after the three modes
 | ----------------------------------- | ---------------------------------------------------- | ------------ |
 | `src/shared/template-heuristics.ts` | `detectTemplate(title)` — keyword → template mapping | ~30          |
 
-The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and in the system prompt for Ask Paul. Moving it to a shared file is premature until a second consumer exists.
+The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and in the system prompt for Ask Copilot. Moving it to a shared file is premature until a second consumer exists.
 
 ---
 
@@ -633,7 +633,7 @@ The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and
 
 | File                                                    | What Changes                                                                                                                             |
 | ------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `src/renderer/src/components/sprint/NewTicketModal.tsx` | Mode tabs, Quick/Template/Design content switching, template-aware Ask Paul prompt, error toast, overwrite confirmation, 2 new templates |
+| `src/renderer/src/components/sprint/NewTicketModal.tsx` | Mode tabs, Quick/Template/Design content switching, template-aware Ask Copilot prompt, error toast, overwrite confirmation, 2 new templates |
 | `src/renderer/src/components/sprint/SprintCenter.tsx`   | `generatingIds` state, `handleQuickCreate` with background `sprint:generatePrompt` call, pass `generatingIds` to children                |
 | `src/renderer/src/components/sprint/TaskCard.tsx`       | Accept `isGenerating?: boolean` prop, render shimmer/badge                                                                               |
 | `src/renderer/src/components/sprint/KanbanBoard.tsx`    | Pass-through `generatingIds` prop to KanbanColumn                                                                                        |
@@ -652,7 +652,7 @@ The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and
 
 | File                                                                            | What                                                                                                           |
 | ------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `src/renderer/src/components/sprint/__tests__/NewTicketModal.test.tsx`          | Add tests for: mode switching, Quick Mode submit, template-aware Ask Paul, error toast, overwrite confirmation |
+| `src/renderer/src/components/sprint/__tests__/NewTicketModal.test.tsx`          | Add tests for: mode switching, Quick Mode submit, template-aware Ask Copilot, error toast, overwrite confirmation |
 | `src/renderer/src/components/sprint/__tests__/DesignModeContent.test.tsx` (new) | Conversation flow, spec extraction, save, discard confirmation                                                 |
 | `src/shared/__tests__/template-heuristics.test.ts` (new)                        | `detectTemplate` keyword matching                                                                              |
 
@@ -662,8 +662,8 @@ The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and
 
 ### Phase 1: Template Mode Fixes (1 PR)
 
-1. Fix Ask Paul prompt to include selected template structure
-2. Add error toast on Ask Paul failure
+1. Fix Ask Copilot prompt to include selected template structure
+2. Add error toast on Ask Copilot failure
 3. Add template overwrite confirmation
 4. Add Test Coverage and Performance templates
 5. Add CSS for `.new-ticket-modal__*` classes (all modal styling)
@@ -696,7 +696,7 @@ The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and
 6. CSS for split-panel layout
 7. Write tests
 
-**Risk:** Medium-high. Conversation UX is novel for this codebase. Prompt engineering for Paul's conversational flow needs iteration. Gateway latency may make the experience feel slow without streaming.
+**Risk:** Medium-high. Conversation UX is novel for this codebase. Prompt engineering for Copilot's conversational flow needs iteration. Gateway latency may make the experience feel slow without streaming.
 
 **Dependency:** Phase 2 (for mode tabs infrastructure).
 
@@ -705,7 +705,7 @@ The `TEMPLATES` const stays in `NewTicketModal.tsx` — it's only used there and
 ## 9. Out of Scope for First PR
 
 - **Streaming responses** — `sessions_send` is request/response. Streaming requires switching to `chat.send` via WebSocket and managing partial message state. Valuable but adds complexity.
-- **Repo context injection** — Fetching file tree to include in Paul's system prompt. Adds latency and token cost. Save for v2.
+- **Repo context injection** — Fetching file tree to include in Copilot's system prompt. Adds latency and token cost. Save for v2.
 - **Sprint Zustand store extraction** — Architectural improvement, not a prerequisite.
 - **Markdown preview toggle in Template Mode** — The SpecDrawer already has a rendered view. Adding a preview toggle to the modal is a nice-to-have.
 - **Draft persistence (localStorage)** — Prevents accidental loss on modal close. Low effort but separate concern.

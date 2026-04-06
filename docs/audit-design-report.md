@@ -2,7 +2,7 @@
 
 **Date:** 2026-03-16
 **Auditor:** Senior Product Designer & UX Architect
-**Scope:** Full UI/UX review of BDE (Birkeland Development Environment) — an Electron-based AI coding IDE for developers who build with Claude Code agents.
+**Scope:** Full UI/UX review of BDE — an Electron-based AI coding IDE for developers who build with Claude Code agents.
 
 ---
 
@@ -10,7 +10,7 @@
 
 ### Who is the user?
 
-Ryan is a solo developer / technical founder managing multiple codebases (BDE, Feast, Life-OS) with AI coding agents. He is both the user and the builder. The user persona is: **a power user who orchestrates AI agents like a flight director — creating specs, dispatching agents to repos, monitoring progress, reviewing output, and merging PRs.** This is not a general-purpose IDE. It's a command center for someone who treats AI agents as junior engineers on a sprint team.
+The target user is a solo developer or technical founder managing multiple codebases with AI coding agents — both the user and the builder. The user persona is: **a power user who orchestrates AI agents like a flight director — creating specs, dispatching agents to repos, monitoring progress, reviewing output, and merging PRs.** This is not a general-purpose IDE. It's a command center for someone who treats AI agents as junior engineers on a sprint team.
 
 ### Does the current UI help them accomplish it?
 
@@ -97,14 +97,14 @@ Sessions  Terminal  Sprint  Diff  Memory  Cost  Settings
 - 4-column Kanban (Backlog → Sprint → In Progress → Done) is a clean, correct model.
 - "Push to Sprint" as an explicit action separating drafting from queuing — this is the key insight of v2 and it's well-executed.
 - Repo filter chips in the header let you focus on one project.
-- Spec drawer with inline editing and "Ask Paul" AI generation — genuinely differentiating.
+- Spec drawer with inline editing and "Ask Copilot" AI generation — genuinely differentiating.
 - Optimistic updates on task mutations with rollback.
 - Drag-and-drop between columns via @dnd-kit.
 
 **What's confusing:**
 
 - The "Launch" button on queued tasks manually dispatches an agent, but the spec says a task runner auto-picks up `queued` tasks. So does "Launch" bypass the queue? Or is it redundant? The user doesn't know whether to click Launch or wait.
-- SpecDrawer footer has buttons in a confusing order: "→ Push to Sprint", "Ask Paul", "Launch Agent" — three CTAs in one footer, none obviously primary. The hierarchy is: `primary, ghost, primary`. Two primary buttons in one toolbar is a violation of the design system's own principles.
+- SpecDrawer footer has buttons in a confusing order: "→ Push to Sprint", "Ask Copilot", "Launch Agent" — three CTAs in one footer, none obviously primary. The hierarchy is: `primary, ghost, primary`. Two primary buttons in one toolbar is a violation of the design system's own principles.
 - Task priority is exposed as a number (0/1/2) in the data model but as labels (High/Medium/Low) in the modal. There's no priority indicator on the task card itself.
 
 **What's broken:**
@@ -198,7 +198,7 @@ Sessions  Terminal  Sprint  Diff  Memory  Cost  Settings
 
 1. **Title is the only required field.** You can create a ticket with just a title and no spec, which means the agent gets dispatched with no instructions. This should either be blocked (require spec for sprint) or warned.
 2. **Template selection resets the spec textarea.** If you type some notes, then click a template, your notes are replaced. This should either merge or confirm before overwriting.
-3. **"Ask Paul" has no loading indicator in the button itself** — the spec textarea switches to "Paul is writing your spec..." but if the user isn't looking at the textarea, there's no feedback on the button. The button text does change to "Generating..." which helps, but the lack of a spinner feels incomplete.
+3. **"Ask Copilot" has no loading indicator in the button itself** — the spec textarea switches to "Copilot is writing your spec..." but if the user isn't looking at the textarea, there's no feedback on the button. The button text does change to "Generating..." which helps, but the lack of a spinner feels incomplete.
 4. **Enter submits the form from the title field** (line 156-159 in NewTicketModal). This means a user who presses Enter thinking they're adding a newline will accidentally create a half-finished ticket. This should only submit on Cmd+Enter or via the Save button.
 5. **Priority defaults to Medium (1) with no way to set it from keyboard.** Tab order goes: title → repo select → priority select → template buttons (not focusable via Tab) → spec textarea. The template buttons are `<button>` elements that participate in tab order, which is correct, but the flow is dense.
 

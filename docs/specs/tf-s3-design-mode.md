@@ -1,4 +1,4 @@
-# TF-S3: Design Mode — Conversational Spec Design with Paul
+# TF-S3: Design Mode — Conversational Spec Design with Copilot
 
 **Epic:** Ticket Flow  
 **Phase:** 3 of 3  
@@ -7,11 +7,11 @@
 
 ## Problem
 
-Designing a non-trivial feature requires thinking through tradeoffs, edge cases, file impacts, and scope before writing a spec. Today, Ryan does this alone — in his head or in a text file — then pastes the result into the modal. Design Mode makes Paul a product thinking partner, turning ticket creation into a collaborative design conversation that produces an agent-ready spec.
+Designing a non-trivial feature requires thinking through tradeoffs, edge cases, file impacts, and scope before writing a spec. Today, the user does this alone — in their head or in a text file — then pastes the result into the modal. Design Mode makes Copilot a product thinking partner, turning ticket creation into a collaborative design conversation that produces an agent-ready spec.
 
 ## Solution
 
-Replace the Design Mode placeholder tab with a split-panel conversational UI. Left panel: chat thread with Paul. Right panel: live spec preview that updates as Paul proposes and refines the spec. Conversation is ephemeral. Output is a `{ title, spec, prompt }` that creates a Backlog task.
+Replace the Design Mode placeholder tab with a split-panel conversational UI. Left panel: chat thread with Copilot. Right panel: live spec preview that updates as Copilot proposes and refines the spec. Conversation is ephemeral. Output is a `{ title, spec, prompt }` that creates a Backlog task.
 
 ## Component Architecture
 
@@ -34,7 +34,7 @@ All conversation state lives in `DesignModeContent`. No new Zustand store. No ne
 
 ### AI transport (existing IPC, new usage)
 
-Uses `window.api.invokeTool('sessions_send', ...)` — same as current "Ask Paul" in NewTicketModal.
+Uses `window.api.invokeTool('sessions_send', ...)` — same as current "Ask Copilot" in NewTicketModal.
 
 ```typescript
 // Call shape (matches existing invokeTool usage):
@@ -52,7 +52,7 @@ const responseText: string = result?.result?.content?.[0]?.text ?? ''
 
 ### Spec extraction from responses
 
-Paul is instructed to wrap the spec in a `~~~spec` fence. Extraction:
+Copilot is instructed to wrap the spec in a `~~~spec` fence. Extraction:
 
 ```typescript
 function extractSpecFromResponse(text: string): string | null {
@@ -63,7 +63,7 @@ function extractSpecFromResponse(text: string): string | null {
 
 ### Title extraction from responses
 
-Paul is instructed to include a title suggestion in his spec proposal. Extraction:
+Copilot is instructed to include a title suggestion in his spec proposal. Extraction:
 
 ```typescript
 function extractTitleFromResponse(text: string): string | null {
@@ -104,7 +104,7 @@ const OPENING_MESSAGE: DesignMessage = {
 
 ```typescript
 function buildDesignSystemPrompt(repo: string): string {
-  return `You are Paul, a senior product engineer at BDE (an AI agent IDE for solo developers).
+  return `You are Copilot, a senior product engineer at BDE (an AI agent IDE for solo developers).
 
 Your job: help the user design a coding task, then produce an agent-executable spec.
 
@@ -156,7 +156,7 @@ function buildFullPrompt(
   newUserMessage: string
 ): string {
   const history = messages
-    .map((m) => `${m.role === 'user' ? 'User' : 'Paul'}: ${m.content}`)
+    .map((m) => `${m.role === 'user' ? 'User' : 'Copilot'}: ${m.content}`)
     .join('\n\n')
 
   return `${systemPrompt}
@@ -168,7 +168,7 @@ ${history}
 
 User: ${newUserMessage}
 
-Paul:`
+Copilot:`
 }
 ```
 
@@ -296,14 +296,14 @@ export function DesignModeContent({ repo, priority, onSave, onClose }: DesignMod
               className={`design-mode__message design-mode__message--${msg.role}`}
             >
               {msg.role === 'assistant' && (
-                <span className="design-mode__message-label">Paul</span>
+                <span className="design-mode__message-label">Copilot</span>
               )}
               <p className="design-mode__message-content">{msg.content}</p>
             </div>
           ))}
           {sending && (
             <div className="design-mode__message design-mode__message--assistant">
-              <span className="design-mode__message-label">Paul</span>
+              <span className="design-mode__message-label">Copilot</span>
               <p className="design-mode__message-content design-mode__typing">
                 <span>●</span><span>●</span><span>●</span>
               </p>
@@ -354,7 +354,7 @@ export function DesignModeContent({ repo, priority, onSave, onClose }: DesignMod
             />
           ) : (
             <p className="design-mode__spec-empty">
-              Spec will appear here as Paul drafts it.
+              Spec will appear here as Copilot drafts it.
             </p>
           )}
         </div>
@@ -400,7 +400,7 @@ Also update the footer: when `mode === 'design'`, **hide** the Cancel/Save butto
         Cancel
       </button>
       <button className="btn btn--primary" onClick={handleSubmit} disabled={!title.trim()}>
-        {mode === 'quick' ? '⚡ Save — Paul writes the spec' : 'Save to Backlog'}
+        {mode === 'quick' ? '⚡ Save — Copilot writes the spec' : 'Save to Backlog'}
       </button>
     </div>
   )
@@ -647,8 +647,8 @@ Append to `sprint.css`:
 
 ## Out of Scope
 
-- Streaming Paul's response text (v2 — requires WebSocket chat path)
-- Repo context injection (file tree in Paul's system prompt) — v2
+- Streaming Copilot's response text (v2 — requires WebSocket chat path)
+- Repo context injection (file tree in Copilot's system prompt) — v2
 - Persisting design conversations — ephemeral by design in v1
 - "Resume last conversation" — v2
 - Section-by-section refinement (granular highlighting) — v2
@@ -656,11 +656,11 @@ Append to `sprint.css`:
 
 ## Test Plan
 
-1. Open modal → click "Design with Paul" tab
-2. Verify Paul's opening message appears without any AI call (static)
+1. Open modal → click "Design with Copilot" tab
+2. Verify Copilot's opening message appears without any AI call (static)
 3. Type "I want to add a cost tracking dashboard" → send
-4. Verify Paul asks 2-3 clarifying questions (not a spec yet)
-5. Answer questions → verify Paul produces a spec inside ~~~spec fence
+4. Verify Copilot asks 2-3 clarifying questions (not a spec yet)
+5. Answer questions → verify Copilot produces a spec inside ~~~spec fence
 6. Verify spec appears in right panel (rendered markdown)
 7. Request a change: "Add a note about debouncing the refresh" → verify spec updates in right panel
 8. Click "Save Spec to Backlog" → verify task appears in Backlog with correct spec
@@ -670,5 +670,5 @@ Append to `sprint.css`:
 ## PR Command
 
 ```bash
-git add -A && git commit -m "feat: Design Mode — conversational spec design with Paul (split-panel chat + live spec preview)" && git push origin HEAD && gh api repos/RyanJBirkeland/BDE/pulls --method POST -f title="feat: Design Mode — co-design features with Paul in a conversational split-panel UI" -f body="Implements the Design Mode tab in NewTicketModal. Split-panel layout: chat with Paul on the left, live spec preview on the right. Paul asks clarifying questions then proposes a spec. User can refine conversationally. Save creates a Backlog task with the finalized spec. Uses dedicated ephemeral session (bde-design-mode) to avoid polluting main agent history." -f head="\$(git branch --show-current)" -f base=main --jq ".html_url"
+git add -A && git commit -m "feat: Design Mode — conversational spec design with Copilot (split-panel chat + live spec preview)" && git push origin HEAD && gh api repos/{owner}/BDE/pulls --method POST -f title="feat: Design Mode — co-design features with Copilot in a conversational split-panel UI" -f body="Implements the Design Mode tab in NewTicketModal. Split-panel layout: chat with Copilot on the left, live spec preview on the right. Copilot asks clarifying questions then proposes a spec. User can refine conversationally. Save creates a Backlog task with the finalized spec. Uses dedicated ephemeral session (bde-design-mode) to avoid polluting main agent history." -f head="\$(git branch --show-current)" -f base=main --jq ".html_url"
 ```

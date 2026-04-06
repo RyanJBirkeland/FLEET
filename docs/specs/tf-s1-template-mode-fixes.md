@@ -9,8 +9,8 @@
 The NewTicketModal has 5 compounding issues that make the current ticket creation experience feel unfinished:
 
 1. No CSS rules exist for any `.new-ticket-modal__*` class — layout is browser defaults + inherited glass styles
-2. "Ask Paul" ignores which template is selected — generates freeform even when Bug Fix is active
-3. "Ask Paul" fails silently — empty `catch {}` at line 121 of NewTicketModal.tsx, user waits 30s and sees nothing
+2. "Ask Copilot" ignores which template is selected — generates freeform even when Bug Fix is active
+3. "Ask Copilot" fails silently — empty `catch {}` at line 121 of NewTicketModal.tsx, user waits 30s and sees nothing
 4. Selecting a template chip destructively overwrites user-written spec content with no confirmation
 5. Two common task types (Test Coverage, Performance) have no template
 
@@ -147,11 +147,11 @@ Add these CSS rules exactly:
 
 **Note:** Check which CSS custom properties (`--bde-accent`, `--bde-border`, `--bde-text`, `--bde-text-dim`, `--bde-font-mono`) are defined in `design-system.css` or `main.css`. Use exact variable names from those files. If any variable doesn't exist, use the closest existing one.
 
-### 2. NewTicketModal.tsx — Template-aware Ask Paul
+### 2. NewTicketModal.tsx — Template-aware Ask Copilot
 
 **File:** `src/renderer/src/components/sprint/NewTicketModal.tsx`
 
-Find the `handleAskPaul` function (currently around line 96-126). Replace the system prompt construction:
+Find the `handleAskCopilot` function (currently around line 96-126). Replace the system prompt construction:
 
 **Before (find this code):**
 
@@ -192,11 +192,11 @@ Be specific: name exact file paths and describe exact changes.
 Output ONLY the spec markdown — no preamble.`
 ```
 
-### 3. NewTicketModal.tsx — Error feedback for Ask Paul
+### 3. NewTicketModal.tsx — Error feedback for Ask Copilot
 
 **File:** `src/renderer/src/components/sprint/NewTicketModal.tsx`
 
-Find the catch block in `handleAskPaul` (currently `catch { /* silent */ }` or empty `catch {}`).
+Find the catch block in `handleAskCopilot` (currently `catch { /* silent */ }` or empty `catch {}`).
 
 **Before:**
 
@@ -214,7 +214,7 @@ Find the catch block in `handleAskPaul` (currently `catch { /* silent */ }` or e
     // Show toast — find the existing toast utility used elsewhere in the file
     // If using react-hot-toast: toast.error('Spec generation failed — try again')
     // If there's a different toast pattern, use the same one
-    console.error('Ask Paul failed in NewTicketModal')
+    console.error('Ask Copilot failed in NewTicketModal')
   } finally {
     setGenerating(false)
   }
@@ -316,7 +316,7 @@ Find the `TEMPLATES` const (top of file, around line 25-50). Add two new entries
 | File                                                    | What Changes                                                                         |
 | ------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | `src/renderer/src/assets/sprint.css`                    | Append all `.new-ticket-modal__*` CSS rules                                          |
-| `src/renderer/src/components/sprint/NewTicketModal.tsx` | Template-aware Ask Paul prompt, error toast, overwrite confirmation, 2 new templates |
+| `src/renderer/src/components/sprint/NewTicketModal.tsx` | Template-aware Ask Copilot prompt, error toast, overwrite confirmation, 2 new templates |
 
 ## Out of Scope
 
@@ -332,14 +332,14 @@ Find the `TEMPLATES` const (top of file, around line 25-50). Add two new entries
 After implementing:
 
 1. Open NewTicketModal, click "Bug Fix" template — spec textarea fills with Bug Fix scaffold
-2. Type "Fix the thing" as title, click "Ask Paul" — verify generated spec follows Bug Fix structure (has "Bug Description", "Root Cause" etc headings)
+2. Type "Fix the thing" as title, click "Ask Copilot" — verify generated spec follows Bug Fix structure (has "Bug Description", "Root Cause" etc headings)
 3. Click "Feature" template while spec textarea has user-typed content — verify confirm dialog appears
-4. Disconnect from gateway, click "Ask Paul" — verify a toast/error message appears (not silent failure)
+4. Disconnect from gateway, click "Ask Copilot" — verify a toast/error message appears (not silent failure)
 5. Verify template chips have visible active state (colored border/background) when selected
 6. Verify modal body has correct layout (not browser defaults)
 
 ## PR Command
 
 ```bash
-git add -A && git commit -m "fix: template-aware Ask Paul, error feedback, overwrite confirmation, CSS, new templates" && git push origin HEAD && gh api repos/RyanJBirkeland/BDE/pulls --method POST -f title="fix: NewTicketModal — template-aware AI, error handling, CSS, Test+Perf templates" -f body="5 fixes in NewTicketModal:\n- Ask Paul now generates within selected template structure\n- Error toast on Ask Paul failure (was silent catch)\n- Confirm dialog before template chip overwrites user content\n- Full CSS rules for all .new-ticket-modal__* classes\n- Added Test Coverage and Performance template options" -f head="\$(git branch --show-current)" -f base=main --jq ".html_url"
+git add -A && git commit -m "fix: template-aware Ask Copilot, error feedback, overwrite confirmation, CSS, new templates" && git push origin HEAD && gh api repos/{owner}/BDE/pulls --method POST -f title="fix: NewTicketModal — template-aware AI, error handling, CSS, Test+Perf templates" -f body="5 fixes in NewTicketModal:\n- Ask Copilot now generates within selected template structure\n- Error toast on Ask Copilot failure (was silent catch)\n- Confirm dialog before template chip overwrites user content\n- Full CSS rules for all .new-ticket-modal__* classes\n- Added Test Coverage and Performance template options" -f head="\$(git branch --show-current)" -f base=main --jq ".html_url"
 ```

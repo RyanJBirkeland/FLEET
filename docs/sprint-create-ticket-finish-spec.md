@@ -8,7 +8,7 @@
 
 **Date:** 2026-03-16
 **Branch:** feat/sprint-ticket-finish
-**Goal:** Finish the create ticket flow end-to-end. Fix the repo enum mismatch, wire Ask Paul properly, add validation feedback, and make the full backlog→sprint→launch flow feel complete.
+**Goal:** Finish the create ticket flow end-to-end. Fix the repo enum mismatch, wire Ask Copilot properly, add validation feedback, and make the full backlog→sprint→launch flow feel complete.
 
 ---
 
@@ -32,7 +32,7 @@ const REPO_LABEL_TO_ENUM: Record<string, string> = {
 
 Currently `handleCreate` in SprintCenter should call `window.api.sprint.create()`. Verify the full create→backlog flow works end-to-end and tasks appear in the Backlog column immediately (optimistic update or refetch).
 
-### 3. Ask Paul response shape
+### 3. Ask Copilot response shape
 
 `window.api.invokeTool('sessions_send', {...})` — the response from `sessions_send` returns `{ sessionKey, response }` or similar. Need to verify the response shape and extract the message text correctly. Current code does `result?.response` — validate this works or fix.
 
@@ -84,7 +84,7 @@ The spec says SpecDrawer should have a "→ Push to Sprint" button for backlog t
 
 | File                                                    | Action     | What                                                                                                                          |
 | ------------------------------------------------------- | ---------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| `src/renderer/src/components/sprint/NewTicketModal.tsx` | **MODIFY** | Fix Ask Paul response extraction; fix repo label→enum mapping in handleSubmit                                                 |
+| `src/renderer/src/components/sprint/NewTicketModal.tsx` | **MODIFY** | Fix Ask Copilot response extraction; fix repo label→enum mapping in handleSubmit                                                 |
 | `src/renderer/src/components/sprint/SprintCenter.tsx`   | **MODIFY** | handleCreate: add `prompt` field, map repo to enum, optimistic insert, toast on success; handle Supabase errors gracefully    |
 | `src/renderer/src/components/sprint/SpecDrawer.tsx`     | **MODIFY** | Add "→ Push to Sprint" button if missing; wire to onPushToSprint prop                                                         |
 | `src/main/handlers/sprint.ts`                           | **MODIFY** | Log raw invokeTool response in a debug comment; ensure createTask returns the created row (use Prefer: return=representation) |
@@ -102,7 +102,7 @@ Run this to confirm: `SELECT enum_range(NULL::task_repo);`
 
 - [ ] Creating a ticket via "New Ticket" modal → appears in Backlog immediately
 - [ ] Repo selected as "BDE" → stores as `bde` in Supabase (no enum error)
-- [ ] Ask Paul button with a title → replaces spec textarea with generated spec
+- [ ] Ask Copilot button with a title → replaces spec textarea with generated spec
 - [ ] "Save to Backlog" shows a toast confirmation
 - [ ] SpecDrawer "Push to Sprint" button works for backlog tasks
 - [ ] No console errors during full create→push→spec flow

@@ -7,7 +7,7 @@
 
 ## Problem
 
-There's no fast path for capturing a task idea. Every ticket requires the full modal with all fields. Ryan should be able to fire "Fix the toast z-index" in 3 seconds and move on — Paul writes the spec in the background. Currently that's impossible; the only path is the full form.
+There's no fast path for capturing a task idea. Every ticket requires the full modal with all fields. The user should be able to fire "Fix the toast z-index" in 3 seconds and move on — Copilot writes the spec in the background. Currently that's impossible; the only path is the full form.
 
 ## Solution
 
@@ -275,7 +275,7 @@ In the modal body, BEFORE the existing form fields, add a tab switcher. Insert a
     onClick={() => setMode('design')}
     type="button"
   >
-    🎨 Design with Paul
+    🎨 Design with Copilot
   </button>
 </div>
 ```
@@ -312,12 +312,12 @@ Add a new Quick Mode body that shows when `mode === 'quick'`:
           onChange={(e) => setRepo(e.target.value)}
         >
           <option value="bde">BDE</option>
-          <option value="life-os">life-os</option>
+          <option value="example-repo">example-repo</option>
           <option value="feast">feast</option>
         </select>
       </div>
       <p className="new-ticket-modal__quick-hint">
-        Paul will write the spec in the background. Review it in SpecDrawer before launching.
+        Copilot will write the spec in the background. Review it in SpecDrawer before launching.
       </p>
     </div>
   )
@@ -330,7 +330,7 @@ Add a new Quick Mode body that shows when `mode === 'quick'`:
 {
   mode === 'design' && (
     <div className="new-ticket-modal__design-placeholder">
-      <p>🎨 Design with Paul is coming soon.</p>
+      <p>🎨 Design with Copilot is coming soon.</p>
       <p>Use Template mode for now — switch tabs above.</p>
     </div>
   )
@@ -342,7 +342,7 @@ Add a new Quick Mode body that shows when `mode === 'quick'`:
 ```tsx
 // In the footer submit button:
 <button className="btn btn--primary" onClick={handleSubmit} disabled={!title.trim()}>
-  {mode === 'quick' ? '⚡ Save — Paul writes the spec' : 'Save to Backlog'}
+  {mode === 'quick' ? '⚡ Save — Copilot writes the spec' : 'Save to Backlog'}
 </button>
 ```
 
@@ -575,5 +575,5 @@ Append to `sprint.css`:
 ## PR Command
 
 ```bash
-git add -A && git commit -m "feat: Quick Mode ticket creation — mode tabs, background spec gen, generating badge" && git push origin HEAD && gh api repos/RyanJBirkeland/BDE/pulls --method POST -f title="feat: Quick Mode — capture tickets in seconds, Paul writes spec in background" -f body="Adds 3-tab mode switcher to NewTicketModal. Quick Mode (default): title + repo only, task saved instantly, Paul auto-generates spec in background using title keyword detection. Template Mode: existing form. Design Mode: placeholder (coming next). Also: sprint.delete() preload gap fixed." -f head="\$(git branch --show-current)" -f base=main --jq ".html_url"
+git add -A && git commit -m "feat: Quick Mode ticket creation — mode tabs, background spec gen, generating badge" && git push origin HEAD && gh api repos/{owner}/BDE/pulls --method POST -f title="feat: Quick Mode — capture tickets in seconds, Copilot writes spec in background" -f body="Adds 3-tab mode switcher to NewTicketModal. Quick Mode (default): title + repo only, task saved instantly, Copilot auto-generates spec in background using title keyword detection. Template Mode: existing form. Design Mode: placeholder (coming next). Also: sprint.delete() preload gap fixed." -f head="\$(git branch --show-current)" -f base=main --jq ".html_url"
 ```

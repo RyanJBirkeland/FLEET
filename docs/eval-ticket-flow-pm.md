@@ -11,23 +11,23 @@
 
 ### Who
 
-Ryan — a solo technical founder managing three codebases (BDE, life-os, feast). He treats AI coding agents like junior engineers on a sprint team. He's the PM, the architect, and the reviewer. He doesn't have a team to bounce ideas off of — the AI is his team.
+A solo technical founder managing multiple codebases. They treat AI coding agents like junior engineers on a sprint team. They're the PM, the architect, and the reviewer. They don't have a team to bounce ideas off of — the AI is their team.
 
 ### Why
 
-Ryan needs to translate raw product ideas into agent-executable specs fast enough that the bottleneck is _thinking_, not _typing_. Every minute spent formatting a spec template or wrestling with a form is a minute not spent on the next idea. The ticket creation flow is the **front door** of BDE — if it's slow or clunky, the entire agentic workflow stalls.
+The user needs to translate raw product ideas into agent-executable specs fast enough that the bottleneck is _thinking_, not _typing_. Every minute spent formatting a spec template or wrestling with a form is a minute not spent on the next idea. The ticket creation flow is the **front door** of BDE — if it's slow or clunky, the entire agentic workflow stalls.
 
 ### What Outcome
 
-A ticket that lands in Backlog with a prompt good enough that an agent can pick it up, open a PR, and get it right on the first try — without Ryan having to babysit. The quality bar: **"Would I accept this spec from a senior engineer on my team?"**
+A ticket that lands in Backlog with a prompt good enough that an agent can pick it up, open a PR, and get it right on the first try — without the user having to babysit. The quality bar: **"Would I accept this spec from a senior engineer on my team?"**
 
 ### Current Pain Points (Observed)
 
-1. **Template selection is disconnected from AI generation.** Picking "Bug Fix" pre-fills a markdown scaffold, but "Ask Paul" ignores the template and writes from scratch. The two features don't compose.
-2. **No conversational refinement.** "Ask Paul" is a one-shot generation. If the spec is 80% right but needs adjustment, Ryan has to manually edit or re-generate from scratch.
+1. **Template selection is disconnected from AI generation.** Picking "Bug Fix" pre-fills a markdown scaffold, but "Ask Copilot" ignores the template and writes from scratch. The two features don't compose.
+2. **No conversational refinement.** "Ask Copilot" is a one-shot generation. If the spec is 80% right but needs adjustment, the user has to manually edit or re-generate from scratch.
 3. **Title is the only creative input before spec.** There's no guided thinking — no "what's the root cause?", no "which files are involved?", no "what's out of scope?" The user goes from a one-line title to a wall of markdown.
-4. **No quick-fire mode.** Sometimes Ryan just wants to capture "fix the toast z-index in SprintCenter" and move on. The current modal is optimized for the mid-complexity case.
-5. **Spec quality is invisible.** There's no feedback on whether a spec is "agent-ready" or underspecified. Ryan has to eyeball it.
+4. **No quick-fire mode.** Sometimes the user just wants to capture "fix the toast z-index in SprintCenter" and move on. The current modal is optimized for the mid-complexity case.
+5. **Spec quality is invisible.** There's no feedback on whether a spec is "agent-ready" or underspecified. The user has to eyeball it.
 
 ---
 
@@ -40,9 +40,9 @@ A ticket that lands in Backlog with a prompt good enough that an agent can pick 
 | 4-column Kanban (backlog → queued → active → done)                     | **Shipped** | Solid. D&D works, status transitions are correct.                                       |
 | New Ticket modal with title, repo, priority                            | **Shipped** | Clean, focused. Enter-to-submit is nice.                                                |
 | 6 template chips (Feature, Bug Fix, Refactor, Audit, UX Polish, Infra) | **Shipped** | Pre-fill spec textarea with markdown scaffolds. Toggle behavior works.                  |
-| "Ask Paul" AI spec generation                                          | **Shipped** | Calls OpenClaw gateway, generates markdown spec from title + repo + notes. 30s timeout. |
+| "Ask Copilot" AI spec generation                                          | **Shipped** | Calls OpenClaw gateway, generates markdown spec from title + repo + notes. 30s timeout. |
 | SpecDrawer view/edit/save                                              | **Shipped** | Markdown rendering, edit mode, Cmd+S save, dirty-state tracking.                        |
-| SpecDrawer "Ask Paul" for existing tasks                               | **Shipped** | Can regenerate/improve spec for backlog tasks.                                          |
+| SpecDrawer "Ask Copilot" for existing tasks                               | **Shipped** | Can regenerate/improve spec for backlog tasks.                                          |
 | Optimistic create with toast                                           | **Shipped** | Card appears instantly in Backlog.                                                      |
 | Agent launch from queued tasks                                         | **Shipped** | Spawns Claude CLI with stream-json I/O.                                                 |
 
@@ -50,9 +50,9 @@ A ticket that lands in Backlog with a prompt good enough that an agent can pick 
 
 | Gap                                                                                                                                                      | Impact                                                                            | Severity |
 | -------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------- | -------- |
-| **Template + AI don't compose.** Selecting "Bug Fix" then hitting "Ask Paul" doesn't use the template structure — Paul generates freeform.               | Spec quality variance. Templates exist but don't influence AI output.             | Medium   |
-| **One-shot generation only.** No back-and-forth with Paul. If the spec needs refinement, user manually edits.                                            | Friction on complex tasks. Ryan becomes a spec editor instead of a spec director. | High     |
-| **No quick-capture mode.** Even a trivial fix requires opening the full modal, picking a repo, and hitting save.                                         | Slows down idea capture. Ryan might context-switch to a text file instead.        | Medium   |
+| **Template + AI don't compose.** Selecting "Bug Fix" then hitting "Ask Copilot" doesn't use the template structure — Copilot generates freeform.               | Spec quality variance. Templates exist but don't influence AI output.             | Medium   |
+| **One-shot generation only.** No back-and-forth with Copilot. If the spec needs refinement, user manually edits.                                            | Friction on complex tasks. The user becomes a spec editor instead of a spec director. | High     |
+| **No quick-capture mode.** Even a trivial fix requires opening the full modal, picking a repo, and hitting save.                                         | Slows down idea capture. The user might context-switch to a text file instead.        | Medium   |
 | **No spec quality signal.** No "this spec is missing files to change" or "this is ready to launch."                                                      | Under-specified tasks get launched and fail, wasting agent time + API cost.       | High     |
 | **Description field is a no-op.** `description` is accepted in the type but never persisted to SQLite (no column). Dead code path.                       | Confusing for anyone reading the code. No user impact since it's not in the UI.   | Low      |
 | **`column_order` not persisted.** TypeScript type has it, DB doesn't. Within-column reorder is wired but nonfunctional.                                  | No user impact yet — priority + created_at provides adequate ordering.            | Low      |
@@ -72,7 +72,7 @@ When the user opens "+ New Ticket", the modal presents three mode tabs at the to
 ┌──────────────────────────────────────────────────────────────┐
 │  ✦ NEW TICKET                                        [×]     │
 │                                                              │
-│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Paul ]     │
+│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Copilot ]     │
 │  ─────────────────────────────────────────────────────────── │
 │                                                              │
 │  (mode-specific content below)                               │
@@ -92,7 +92,7 @@ Default mode: **Quick** (fastest path to a backlog card).
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Paul ]     │
+│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Copilot ]     │
 │  ─────────────────────────────────────────────────────────── │
 │                                                              │
 │  What needs to happen?                                       │
@@ -102,7 +102,7 @@ Default mode: **Quick** (fastest path to a backlog card).
 │                                                              │
 │  Repo: [BDE ▼]                                               │
 │                                                              │
-│           [Cancel]  [⚡ Save to Backlog — Paul writes spec]  │
+│           [Cancel]  [⚡ Save to Backlog — Copilot writes spec]  │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -110,7 +110,7 @@ Default mode: **Quick** (fastest path to a backlog card).
 
 1. **Two fields only:** Title (required) + Repo (required, defaults to BDE).
 2. **Priority auto-set to Medium** (can be changed later in SpecDrawer or card context menu).
-3. **On save:** Task is created in Backlog with `prompt = title`. A background job fires "Ask Paul" to auto-generate a spec from the title alone. The card appears with a subtle shimmer/loading indicator while the spec generates.
+3. **On save:** Task is created in Backlog with `prompt = title`. A background job fires "Ask Copilot" to auto-generate a spec from the title alone. The card appears with a subtle shimmer/loading indicator while the spec generates.
 4. **Auto-generated spec uses heuristics from the title:**
    - Title contains "fix", "bug", "broken", "crash" → Bug Fix template structure
    - Title contains "add", "new", "create", "implement" → Feature template structure
@@ -138,13 +138,13 @@ Default mode: **Quick** (fastest path to a backlog card).
 
 ### Mode 2: TEMPLATE MODE — "Structured Spec Builder"
 
-**Philosophy:** Choose your adventure. Pick a template that matches your task type, fill in the sections, optionally let Paul polish it. This is today's flow, refined.
+**Philosophy:** Choose your adventure. Pick a template that matches your task type, fill in the sections, optionally let Copilot polish it. This is today's flow, refined.
 
 #### Layout
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Paul ]     │
+│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Copilot ]     │
 │  ─────────────────────────────────────────────────────────── │
 │                                                              │
 │  Title                                                       │
@@ -158,7 +158,7 @@ Default mode: **Quick** (fastest path to a backlog card).
 │  Template                                                    │
 │  [Feature✓] [Bug Fix] [Refactor] [Test] [Perf] [Design]     │
 │                                                              │
-│  Spec                                          [✨ Ask Paul] │
+│  Spec                                          [✨ Ask Copilot] │
 │  ┌──────────────────────────────────────────────────────┐   │
 │  │ ## Problem                                            │   │
 │  │ Feast onboarding has no way to search for recipes...  │   │
@@ -188,9 +188,9 @@ Default mode: **Quick** (fastest path to a backlog card).
 | **Performance**   | Bottleneck Description, Current Metrics, Target Metrics, Approach, Files to Change          | Speed/memory optimization |
 | **Design Polish** | UX Problem, Target Design (ASCII wireframe), Files to Change (CSS + TSX), Visual References | UI/CSS improvements       |
 
-#### "Ask Paul" Improvement: Template-Aware Generation
+#### "Ask Copilot" Improvement: Template-Aware Generation
 
-**Key change from current behavior:** When a template is selected, "Ask Paul" generates within that template's structure rather than freeform. The system prompt includes:
+**Key change from current behavior:** When a template is selected, "Ask Copilot" generates within that template's structure rather than freeform. The system prompt includes:
 
 ```
 You are writing a spec for a {template_type} task.
@@ -205,27 +205,27 @@ Fill in each section based on:
 Be specific. Name exact files. Describe exact changes.
 ```
 
-This means templates and AI compose naturally — the template provides structure, Paul provides content.
+This means templates and AI compose naturally — the template provides structure, Copilot provides content.
 
 #### Acceptance Criteria
 
 - [ ] Switching to Template mode shows title, repo, priority, template chips, and spec textarea
 - [ ] 6 templates available: Feature, Bug Fix, Refactor, Test Coverage, Performance, Design Polish
 - [ ] Selecting a template pre-fills the spec textarea with that template's markdown scaffold
-- [ ] "Ask Paul" generates content within the selected template's structure (not freeform)
-- [ ] If no template is selected, "Ask Paul" generates freeform (current behavior)
+- [ ] "Ask Copilot" generates content within the selected template's structure (not freeform)
+- [ ] If no template is selected, "Ask Copilot" generates freeform (current behavior)
 - [ ] User can edit the spec after AI generation
 - [ ] Template selection is toggle-able (click again to deselect)
 - [ ] Switching templates replaces spec content (with confirmation if dirty)
 - [ ] All current modal functionality preserved (Enter submit, ESC close, Shift+Enter for newline)
 - [ ] Spec textarea supports Cmd+A select-all, standard text editing
-- [ ] "Ask Paul" shows inline loading state ("Generating..." in textarea)
+- [ ] "Ask Copilot" shows inline loading state ("Generating..." in textarea)
 
 ---
 
-### Mode 3: DESIGN MODE — "Work with Paul"
+### Mode 3: DESIGN MODE — "Work with Copilot"
 
-**Philosophy:** Conversational product design. Instead of filling out a form, the user describes what they want in plain language. Paul asks clarifying questions, proposes approaches, and generates the spec collaboratively. Like pair programming, but for product design.
+**Philosophy:** Conversational product design. Instead of filling out a form, the user describes what they want in plain language. Copilot asks clarifying questions, proposes approaches, and generates the spec collaboratively. Like pair programming, but for product design.
 
 This is the **signature feature** of BDE's ticket creation flow. It's what makes BDE more than a task board — it's an AI pair-programmer for solo devs.
 
@@ -233,21 +233,21 @@ This is the **signature feature** of BDE's ticket creation flow. It's what makes
 
 ```
 ┌──────────────────────────────────────────────────────────────┐
-│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Paul ]     │
+│  [ ⚡ Quick ]  [ 📋 Template ]  [ 🎨 Design with Copilot ]     │
 │  ─────────────────────────────────────────────────────────── │
 │                                                              │
 │  ┌──── Conversation ─────────────────── Spec Preview ────┐  │
 │  │                                      │                 │  │
-│  │  Paul: What are you thinking about   │  (empty)        │  │
+│  │  Copilot: What are you thinking about   │  (empty)        │  │
 │  │  building? Describe the feature or   │                 │  │
 │  │  problem in your own words.          │  Spec will      │  │
 │  │                                      │  appear here    │  │
-│  │  You: The Feast app needs a way to   │  as Paul        │  │
+│  │  You: The Feast app needs a way to   │  as Copilot        │  │
 │  │  search recipes during onboarding.   │  drafts it.     │  │
 │  │  Right now users just see a fixed    │                 │  │
 │  │  list and can't find what they want. │                 │  │
 │  │                                      │                 │  │
-│  │  Paul: Good. A few questions:        │                 │  │
+│  │  Copilot: Good. A few questions:        │                 │  │
 │  │  1. Is this search client-side       │                 │  │
 │  │     filtering or server-side?        │                 │  │
 │  │  2. What does the recipe data model  │                 │  │
@@ -260,7 +260,7 @@ This is the **signature feature** of BDE's ticket creation flow. It's what makes
 │  │  name, tags, and cuisine. Search     │                 │  │
 │  │  should reset each step.            │                 │  │
 │  │                                      │                 │  │
-│  │  Paul: Got it. Here's what I'm       │  ## Problem     │  │
+│  │  Copilot: Got it. Here's what I'm       │  ## Problem     │  │
 │  │  thinking for the spec...            │  Feast onboard  │  │
 │  │  [see spec panel →]                  │  shows a fixed  │  │
 │  │                                      │  recipe list... │  │
@@ -270,7 +270,7 @@ This is the **signature feature** of BDE's ticket creation flow. It's what makes
 │  │  You: Add a note that we should      │  input that...  │  │
 │  │  debounce the search input.          │                 │  │
 │  │                                      │  ## Files...    │  │
-│  │  Paul: Updated. Spec is ready.       │  ## Out of...   │  │
+│  │  Copilot: Updated. Spec is ready.       │  ## Out of...   │  │
 │  │                                      │                 │  │
 │  ├──────────────────────────────────────┤                 │  │
 │  │  [Type your response...]     [Send]  │                 │  │
@@ -286,10 +286,10 @@ This is the **signature feature** of BDE's ticket creation flow. It's what makes
 
 **Phase 1 — Discovery (1-3 exchanges)**
 
-Paul's system prompt:
+Copilot's system prompt:
 
 ```
-You are Paul, a senior product engineer helping design a coding task for BDE.
+You are Copilot, a senior product engineer helping design a coding task for BDE.
 Your job is to understand what the user wants to build, ask 2-3 clarifying
 questions, then propose a spec. Be concise. Don't over-engineer. Ask about:
 - Scope (what's in, what's out)
@@ -299,13 +299,13 @@ questions, then propose a spec. Be concise. Don't over-engineer. Ask about:
 Don't ask more than 3 questions at once. Be conversational, not formal.
 ```
 
-Paul opens with: _"What are you thinking about building? Describe the feature or problem in your own words."_
+Copilot opens with: _"What are you thinking about building? Describe the feature or problem in your own words."_
 
-After the user responds, Paul asks 2-3 targeted clarifying questions based on the response. These questions should be specific to the task domain — not generic.
+After the user responds, Copilot asks 2-3 targeted clarifying questions based on the response. These questions should be specific to the task domain — not generic.
 
 **Phase 2 — Spec Proposal (1 exchange)**
 
-After enough context (usually 2-3 user messages), Paul generates a full spec in the right panel. The spec follows the most appropriate template structure (auto-detected from conversation content). Paul says something like:
+After enough context (usually 2-3 user messages), Copilot generates a full spec in the right panel. The spec follows the most appropriate template structure (auto-detected from conversation content). Copilot says something like:
 
 _"Here's the spec I'd propose. Take a look at the panel on the right — does this capture what you're thinking? Anything to add or change?"_
 
@@ -313,7 +313,7 @@ _"Here's the spec I'd propose. Take a look at the panel on the right — does th
 
 The user can request changes: _"Add a note about debouncing"_, _"The file path should be src/components not src/pages"_, _"Actually, make this a refactor instead."_
 
-Paul updates the spec in the right panel in real-time after each refinement.
+Copilot updates the spec in the right panel in real-time after each refinement.
 
 **Phase 4 — Finalization**
 
@@ -323,22 +323,22 @@ When the user is satisfied, they click "Save Spec to Backlog." The conversation 
 
 - **Conversation state:** Local React state in the modal. Array of `{ role: 'user' | 'assistant', content: string }` messages.
 - **AI calls:** Each user message sends the full conversation history to OpenClaw gateway via `window.api.invokeTool('sessions_send', ...)`. System prompt includes repo context and spec template instructions.
-- **Spec extraction:** Paul's responses include the spec in a fenced block (` ```spec ... ``` `) or as a structured section. The right panel extracts and renders the latest spec from the conversation.
-- **Repo context injection:** When a repo is selected, Paul's system prompt can optionally include high-level repo structure (file tree summary) to make file path suggestions more accurate. This can be fetched via `window.api` on mode entry.
+- **Spec extraction:** Copilot's responses include the spec in a fenced block (` ```spec ... ``` `) or as a structured section. The right panel extracts and renders the latest spec from the conversation.
+- **Repo context injection:** When a repo is selected, Copilot's system prompt can optionally include high-level repo structure (file tree summary) to make file path suggestions more accurate. This can be fetched via `window.api` on mode entry.
 - **Session management:** Design mode uses a dedicated ephemeral session (not the main agent session). Conversation is discarded on close or save — it's scratchpad, not history.
 
 #### Acceptance Criteria
 
 - [ ] Design mode opens with a split-panel layout: chat on left, spec preview on right
-- [ ] Paul's opening message appears immediately (no AI call needed — it's static)
+- [ ] Copilot's opening message appears immediately (no AI call needed — it's static)
 - [ ] User can type messages and receive AI responses within 5 seconds
-- [ ] Paul asks 2-3 clarifying questions after the initial user message
-- [ ] After sufficient context, Paul generates a full spec visible in the right panel
+- [ ] Copilot asks 2-3 clarifying questions after the initial user message
+- [ ] After sufficient context, Copilot generates a full spec visible in the right panel
 - [ ] User can request spec refinements via conversation
-- [ ] Spec panel updates in real-time as Paul revises
+- [ ] Spec panel updates in real-time as Copilot revises
 - [ ] Repo selector and priority selector are accessible during conversation
 - [ ] "Save Spec to Backlog" creates a task with the finalized spec
-- [ ] Task title is auto-generated from the conversation (Paul proposes one)
+- [ ] Task title is auto-generated from the conversation (Copilot proposes one)
 - [ ] Conversation is not persisted after save — it's ephemeral
 - [ ] If the user closes the modal mid-conversation, they get a "Discard draft?" confirmation
 - [ ] Chat input supports Enter to send, Shift+Enter for newline
@@ -362,17 +362,17 @@ When the user is satisfied, they click "Save Spec to Backlog." The conversation 
 
 **Phase 1 — Template Mode improvements (quick wins)**
 
-The current Template Mode is 90% there. The main fix is making "Ask Paul" template-aware — when a user selects "Bug Fix" and hits "Ask Paul", the AI should generate within the Bug Fix scaffold, not freeform. This is a prompt engineering change + minor UI wiring. Also: add "Test Coverage" and "Performance" templates. Low risk, immediate quality improvement.
+The current Template Mode is 90% there. The main fix is making "Ask Copilot" template-aware — when a user selects "Bug Fix" and hits "Ask Copilot", the AI should generate within the Bug Fix scaffold, not freeform. This is a prompt engineering change + minor UI wiring. Also: add "Test Coverage" and "Performance" templates. Low risk, immediate quality improvement.
 
 Tickets:
 
-1. Make "Ask Paul" template-aware (pass selected template structure in system prompt)
+1. Make "Ask Copilot" template-aware (pass selected template structure in system prompt)
 2. Add "Test Coverage" and "Performance" templates
 3. Confirmation dialog when switching templates with dirty spec
 
 **Phase 2 — Quick Mode (high impact, moderate effort)**
 
-Quick Mode unlocks the "idea capture" use case. Ryan should be able to fire off 5 task ideas in 60 seconds without stopping to write specs. Background spec generation means the specs are ready by the time he circles back to review them. This changes BDE from "a tool you sit down to use" to "a tool you capture ideas into throughout the day."
+Quick Mode unlocks the "idea capture" use case. The user should be able to fire off 5 task ideas in 60 seconds without stopping to write specs. Background spec generation means the specs are ready by the time they circle back to review them. This changes BDE from "a tool you sit down to use" to "a tool you capture ideas into throughout the day."
 
 Tickets:
 
@@ -383,13 +383,13 @@ Tickets:
 
 **Phase 3 — Design Mode (big bet, high reward)**
 
-Design Mode is the differentiator. It turns ticket creation from a _form-filling exercise_ into a _thinking exercise_. Paul becomes a product thinking partner, not just a spec writer. This is what makes BDE an AI pair-programmer rather than a fancy task board.
+Design Mode is the differentiator. It turns ticket creation from a _form-filling exercise_ into a _thinking exercise_. Copilot becomes a product thinking partner, not just a spec writer. This is what makes BDE an AI pair-programmer rather than a fancy task board.
 
 Tickets:
 
 1. Design Mode split-panel layout (chat + spec preview)
 2. Conversation state management + message rendering
-3. Paul system prompt engineering (discovery → proposal → refinement flow)
+3. Copilot system prompt engineering (discovery → proposal → refinement flow)
 4. Spec extraction from conversation (fenced block parsing)
 5. Auto-title generation from conversation
 6. Repo context injection (optional file tree in system prompt)
@@ -418,7 +418,7 @@ But "think about feature" is doing a lot of heavy lifting. **The quality of the 
 
 ### The Bottleneck Is Spec Quality
 
-Today, spec writing is Ryan's job. He's both the PM and the engineer. Design Mode addresses this by making spec writing a **collaborative** activity instead of a solo one. Paul handles the structure, the boilerplate, the "did you think about edge cases?" prompts. Ryan handles the vision, the constraints, the "actually, not that — this."
+Today, spec writing is the user's job. They're both the PM and the engineer. Design Mode addresses this by making spec writing a **collaborative** activity instead of a solo one. Copilot handles the structure, the boilerplate, the "did you think about edge cases?" prompts. The user handles the vision, the constraints, the "actually, not that — this."
 
 ### Design Mode as a Flywheel
 
@@ -431,8 +431,8 @@ Better specs → Better agent PRs → Less review time → More time for design 
 When specs are higher quality:
 
 1. Agents produce cleaner PRs (fewer rounds of "fix this")
-2. Ryan spends less time reviewing/correcting agent output
-3. Ryan has more time and energy for the _next_ design conversation
+2. The user spends less time reviewing/correcting agent output
+3. The user has more time and energy for the _next_ design conversation
 4. More tasks get done per day
 5. BDE becomes genuinely multiplicative — one person doing the work of a team
 
@@ -440,7 +440,7 @@ When specs are higher quality:
 
 "Why not just open Claude.ai and have this conversation there?"
 
-Because Design Mode is **contextual**. Paul knows:
+Because Design Mode is **contextual**. Copilot knows:
 
 - Which repo the task targets
 - What the file structure looks like
@@ -461,7 +461,7 @@ Design Mode isn't a generic chatbot — it's a purpose-built product design tool
 | **Time to create a ticket** | ~45 seconds (modal → save) | < 10s (Quick), < 60s (Template), < 3 min (Design) | Timestamp delta: modal open → task created_at       |
 | **Spec fill rate**          | ~60% of tasks have specs   | > 90% of tasks have specs                         | `SELECT COUNT(*) WHERE spec IS NOT NULL / COUNT(*)` |
 | **Mode usage distribution** | N/A (one mode)             | 50% Quick, 30% Template, 20% Design               | Track which mode tab was active at save             |
-| **"Ask Paul" usage**        | Unknown                    | > 40% of template-mode tickets use "Ask Paul"     | Count invokeTool calls per ticket creation          |
+| **"Ask Copilot" usage**        | Unknown                    | > 40% of template-mode tickets use "Ask Copilot"     | Count invokeTool calls per ticket creation          |
 
 ### Lagging Indicators (measure over weeks)
 
@@ -475,10 +475,10 @@ Design Mode isn't a generic chatbot — it's a purpose-built product design tool
 
 ### Qualitative Signals
 
-- Ryan uses Quick Mode for idea capture during the day (not just during dedicated sprint planning)
-- Design Mode conversations produce specs Ryan wouldn't have written on his own (discovers edge cases, suggests better approaches)
-- Ryan stops manually editing specs after Paul generates them (spec quality is high enough out of the box)
-- Ryan creates more tasks per week (lower friction → more throughput)
+- Users use Quick Mode for idea capture during the day (not just during dedicated sprint planning)
+- Design Mode conversations produce specs users wouldn't have written on their own (discovers edge cases, suggests better approaches)
+- Users stop manually editing specs after Copilot generates them (spec quality is high enough out of the box)
+- Users create more tasks per week (lower friction → more throughput)
 
 ---
 
@@ -486,9 +486,9 @@ Design Mode isn't a generic chatbot — it's a purpose-built product design tool
 
 | Risk                                                                                                        | Likelihood | Impact | Mitigation                                                                                                                                                          |
 | ----------------------------------------------------------------------------------------------------------- | ---------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Design Mode conversations take too long** — Paul asks too many questions, user gets impatient             | Medium     | High   | Cap at 3 clarifying questions. Paul should propose a spec after 2 user messages, even if uncertain. "Good enough now, refine later" > "perfect but slow."           |
+| **Design Mode conversations take too long** — Copilot asks too many questions, user gets impatient             | Medium     | High   | Cap at 3 clarifying questions. Copilot should propose a spec after 2 user messages, even if uncertain. "Good enough now, refine later" > "perfect but slow."           |
 | **Quick Mode auto-specs are low quality** — title heuristics pick wrong template, generated spec is generic | Medium     | Medium | Always show a "Review spec" prompt on the card after generation. Make it easy to jump into SpecDrawer. Quick Mode is capture, not finalization.                     |
-| **Gateway latency makes AI features feel slow** — 5-10s waits for Paul responses                            | Medium     | High   | Streaming responses. Show Paul typing indicator. For Quick Mode, background generation means the user never waits.                                                  |
+| **Gateway latency makes AI features feel slow** — 5-10s waits for Copilot responses                            | Medium     | High   | Streaming responses. Show Copilot typing indicator. For Quick Mode, background generation means the user never waits.                                                  |
 | **Mode switching is confusing** — users don't understand when to use which mode                             | Low        | Medium | Default to Quick Mode (most common). Tooltip on each mode tab explaining when to use it. Mode choice doesn't lock you in — you can always edit in SpecDrawer later. |
 | **Scope creep on Design Mode** — temptation to add memory, persistent sessions, etc.                        | High       | Medium | Design Mode conversations are ephemeral. The output is the spec. V1 has no conversation history, no "resume last design session." Keep it simple.                   |
 
@@ -496,13 +496,13 @@ Design Mode isn't a generic chatbot — it's a purpose-built product design tool
 
 ## 8. Open Questions
 
-1. **Should Design Mode have repo context?** Injecting a file tree into Paul's system prompt would make file path suggestions more accurate, but adds latency (need to read file tree) and token cost. Recommendation: skip for v1, add as a toggle in v2.
+1. **Should Design Mode have repo context?** Injecting a file tree into Copilot's system prompt would make file path suggestions more accurate, but adds latency (need to read file tree) and token cost. Recommendation: skip for v1, add as a toggle in v2.
 
 2. **Should Quick Mode auto-push to Sprint?** If the auto-generated spec is good enough, the user might want Quick Mode to create tasks directly in Queued (skipping Backlog). Recommendation: no — always Backlog. The backlog is a safety net. Let the user review before launching.
 
 3. **Should we persist Design Mode conversations?** For learning / post-mortems, it might be useful to save the design conversation alongside the spec. Recommendation: not in v1. Ephemeral keeps it simple. If users ask for it, add a "Save conversation" button in v2.
 
-4. **How does this interact with SpecDrawer?** After a task is created via any mode, the SpecDrawer should be the canonical place to edit specs. Design Mode is for initial creation only. Should SpecDrawer also have a "chat with Paul" mode? Recommendation: yes, eventually — but not in this phase. SpecDrawer gets the existing "Ask Paul" one-shot for now.
+4. **How does this interact with SpecDrawer?** After a task is created via any mode, the SpecDrawer should be the canonical place to edit specs. Design Mode is for initial creation only. Should SpecDrawer also have a "chat with Copilot" mode? Recommendation: yes, eventually — but not in this phase. SpecDrawer gets the existing "Ask Copilot" one-shot for now.
 
 5. **Token cost management.** Design Mode conversations could use 10-20k tokens per ticket. At ~$0.003/1k tokens for Sonnet, that's ~$0.03-0.06 per ticket. Acceptable for a solo dev tool, but worth tracking. Surface cost per Design Mode session in the Cost view.
 

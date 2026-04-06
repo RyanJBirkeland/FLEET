@@ -2,7 +2,7 @@
 
 > **Status: IMPLEMENTED (2026-03-16)**
 > Core features shipped: 4-column Kanban (backlog/queued/active/done), New Ticket modal,
-> glass column styling, "Push to Sprint" action, SpecDrawer with Ask Paul.
+> glass column styling, "Push to Sprint" action, SpecDrawer with Ask Copilot.
 > **Data layer note:** This spec originally referenced Supabase — the data layer is now local SQLite (`~/.bde/bde.db`).
 > All `supabaseFetch()` references below should be read as SQLite queries via `getDb()`.
 
@@ -32,7 +32,7 @@
 | **In Progress** | Agent actively working              | `active`        | — (claimed)           |
 | **Done**        | Completed, PR opened                | `done`          | —                     |
 
-**Key change:** Tasks created via "New Ticket" land in **Backlog** with `status: 'backlog'` in Supabase. The task runner ignores `status: 'backlog'`. Only when Ryan explicitly drags to Sprint OR clicks "Push to Sprint" does it become `status: 'queued'` and get picked up.
+**Key change:** Tasks created via "New Ticket" land in **Backlog** with `status: 'backlog'` in Supabase. The task runner ignores `status: 'backlog'`. Only when users drag to Sprint OR click "Push to Sprint" does it become `status: 'queued'` and get picked up.
 
 ### Data Layer
 
@@ -105,7 +105,7 @@ Replace `AddCardForm` (the tiny "+ Add Card" at bottom of Backlog column) with a
 │  │ UX Polish│ │  Infra   │                                       │
 │  └──────────┘ └──────────┘                                       │
 │                                                                   │
-│  Spec  ·  [✨ Ask Paul to generate]                              │
+│  Spec  ·  [✨ Ask Copilot to generate]                              │
 │  ┌─────────────────────────────────────────────────────────┐     │
 │  │                                                         │     │
 │  │  (template pre-fills this, user edits)                  │     │
@@ -136,12 +136,12 @@ const TEMPLATES: Record<string, string> = {
 }
 ```
 
-### "✨ Ask Paul" — AI Spec Generation
+### "✨ Ask Copilot" — AI Spec Generation
 
-The "Ask Paul to generate" button calls the OpenClaw gateway to generate a spec from the title + current draft:
+The "Ask Copilot to generate" button calls the OpenClaw gateway to generate a spec from the title + current draft:
 
 ```typescript
-async function askPaulToGenerateSpec(title: string, repo: string, draft: string): Promise<string> {
+async function askCopilotToGenerateSpec(title: string, repo: string, draft: string): Promise<string> {
   const prompt = `You are a senior engineer writing a coding agent spec for BDE (Birkeland Development Environment).
 
 Task title: "${title}"
@@ -159,7 +159,7 @@ Write a complete, spec-ready prompt for a Claude Code agent to implement this ta
 }
 ```
 
-While generating, show a loading state in the spec textarea ("✨ Paul is writing your spec...").
+While generating, show a loading state in the spec textarea ("✨ Copilot is writing your spec...").
 
 ---
 
@@ -332,8 +332,8 @@ Add to the drawer footer:
 <Button variant="primary" size="sm" onClick={() => onPushToSprint(task)} disabled={task.status !== 'backlog'}>
   {task.status === 'backlog' ? '→ Push to Sprint' : task.status === 'queued' ? '✓ In Sprint' : task.status}
 </Button>
-<Button variant="ghost" size="sm" onClick={handleAskPaul} disabled={generating}>
-  {generating ? '✨ Generating...' : '✨ Ask Paul'}
+<Button variant="ghost" size="sm" onClick={handleAskCopilot} disabled={generating}>
+  {generating ? '✨ Generating...' : '✨ Ask Copilot'}
 </Button>
 ```
 
@@ -350,8 +350,8 @@ Add to the drawer footer:
 | `src/renderer/src/components/sprint/KanbanBoard.tsx`    | **MODIFY**        | 4 columns (add Sprint column); column color classes                                              |
 | `src/renderer/src/components/sprint/KanbanColumn.tsx`   | **MODIFY**        | Column color variant prop; remove AddCardForm from backlog                                       |
 | `src/renderer/src/components/sprint/TaskCard.tsx`       | **MODIFY**        | "→ Sprint" button in backlog; glass hover; sprint cards get accent left border                   |
-| `src/renderer/src/components/sprint/NewTicketModal.tsx` | **CREATE**        | Title, repo, priority, template picker, spec textarea, Ask Paul button, glass-modal              |
-| `src/renderer/src/components/sprint/SpecDrawer.tsx`     | **MODIFY**        | Add "→ Sprint" + "✨ Ask Paul" buttons                                                           |
+| `src/renderer/src/components/sprint/NewTicketModal.tsx` | **CREATE**        | Title, repo, priority, template picker, spec textarea, Ask Copilot button, glass-modal              |
+| `src/renderer/src/components/sprint/SpecDrawer.tsx`     | **MODIFY**        | Add "→ Sprint" + "✨ Ask Copilot" buttons                                                           |
 | `src/renderer/src/assets/sprint.css`                    | **CREATE/MODIFY** | All sprint-specific styles: columns, cards, header, modal, glass treatments                      |
 | `src/renderer/src/components/sprint/AddCardForm.tsx`    | **DELETE**        | Replaced by NewTicketModal                                                                       |
 
@@ -385,19 +385,14 @@ ALTER TABLE sprint_tasks ADD CONSTRAINT sprint_tasks_status_check
 
 The sprint IPC handlers need the Supabase URL + service role key. These should be read from:
 
-1. `process.env.SUPABASE_SERVICE_ROLE_KEY` (already set in launchd plist via life-os .env)
+1. `process.env.SUPABASE_SERVICE_ROLE_KEY`
 2. `process.env.VITE_SUPABASE_URL`
-
-Both are already in `~/Documents/Repositories/life-os/.env` and loaded by the task runner. The BDE main process launchd plist (`com.rbtechbot.bde-dev`) may not have these env vars. Agent should:
-
-1. Check if they're available via `process.env`
-2. If not, read `~/Documents/Repositories/life-os/.env` at startup and inject
 
 ---
 
 ## Success Criteria
 
-- [ ] New Ticket modal opens from header button, has template picker + spec editor + Ask Paul
+- [ ] New Ticket modal opens from header button, has template picker + spec editor + Ask Copilot
 - [ ] Creating a ticket lands in Backlog (status: 'backlog'), NOT immediately queued
 - [ ] "→ Sprint" button / drag to Sprint column sets status: 'queued'
 - [ ] Task runner still picks up queued tasks correctly (no regression)
@@ -406,5 +401,5 @@ Both are already in `~/Documents/Repositories/life-os/.env` and loaded by the ta
 - [ ] Task cards have glass hover + lift effect
 - [ ] Sprint cards have green left-edge accent
 - [ ] Sprint Center header has aurora gradient title + gradient line
-- [ ] SpecDrawer has "→ Sprint" + "✨ Ask Paul" buttons
+- [ ] SpecDrawer has "→ Sprint" + "✨ Ask Copilot" buttons
 - [ ] npm test passes
