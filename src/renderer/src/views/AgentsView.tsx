@@ -234,8 +234,8 @@ export function AgentsView(): React.JSX.Element {
             }}
           >
             <span
+              className="text-gradient-aurora"
               style={{
-                color: 'var(--neon-purple)',
                 fontSize: '10px',
                 textTransform: 'uppercase',
                 letterSpacing: '1.5px',
