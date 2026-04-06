@@ -13,6 +13,8 @@ describe('workbench handlers', () => {
       expect(prompt).toContain('code-aware spec drafting assistant')
       expect(prompt).toContain('Read-only tool access')
       expect(prompt).toContain('NEVER use Edit, Write, Bash')
+      // Positive guidance constraint preserved from Phase 1
+      expect(prompt).toContain('directly executable by a pipeline')
     })
 
     it('includes spec-drafting mode framing and target repo when provided', () => {

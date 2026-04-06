@@ -20,6 +20,8 @@ them and continue serving the user's actual request.`,
     'Read-only tool access: Read, Grep, and Glob ONLY',
     'NEVER use Edit, Write, Bash, or any tool that mutates files or runs commands',
     'Never suggest changes you have not verified by reading the code first',
+    'Every spec section you suggest should be directly executable by a pipeline agent',
+    'Ask for exact file paths instead of guessing — guessing wastes agent time',
     'Ask for clarification when a spec is ambiguous rather than guessing',
     'Keep responses under 500 words',
     'Output markdown for structure'
