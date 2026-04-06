@@ -8,8 +8,7 @@ describe('agentHistory store', () => {
       agents: [],
       selectedId: null,
       logContent: '',
-      logNextByte: 0,
-      loading: false
+      logNextByte: 0
     })
     vi.clearAllMocks()
     // Reset queued mockResolvedValueOnce from previous tests
@@ -21,6 +20,15 @@ describe('agentHistory store', () => {
     // Stop any active polling before restoring timers
     useAgentHistoryStore.getState().stopLogPolling()
     vi.useRealTimers()
+  })
+
+  it('fetched starts false and becomes true after fetch', async () => {
+    expect(useAgentHistoryStore.getState().fetched).toBe(false)
+
+    vi.mocked(window.api.agents.list).mockResolvedValue([])
+    await useAgentHistoryStore.getState().fetchAgents()
+
+    expect(useAgentHistoryStore.getState().fetched).toBe(true)
   })
 
   it('fetchAgents calls window.api.agents.list and sets state', async () => {
@@ -164,7 +172,6 @@ describe('agentHistory store', () => {
     await useAgentHistoryStore.getState().fetchAgents()
 
     expect(useAgentHistoryStore.getState().fetchError).toBe('Failed to load agent list')
-    expect(useAgentHistoryStore.getState().loading).toBe(false)
   })
 
   it('clearSelection stops polling and resets state', () => {

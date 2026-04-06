@@ -1,18 +1,19 @@
 import { SplitSquareVertical } from 'lucide-react'
 
 interface TerminalToolbarProps {
-  isAgentTab: boolean
+  activeTabKind: 'shell' | 'agent'
   splitEnabled: boolean
   onClear: () => void
   onToggleSplit: () => void
 }
 
 export function TerminalToolbar({
-  isAgentTab,
+  activeTabKind,
   splitEnabled,
   onClear,
   onToggleSplit
 }: TerminalToolbarProps): React.JSX.Element {
+  const isAgentTab = activeTabKind === 'agent'
   return (
     <div className="terminal-toolbar">
       {!isAgentTab && (

@@ -19,9 +19,13 @@ vi.mock('../../lib/motion', () => ({
 // Mock stores
 const mockAgentHistoryState = {
   agents: [] as any[],
-  loading: false,
+  fetched: false,
+  fetchError: null as string | null,
   fetchAgents: vi.fn().mockResolvedValue(undefined),
-  selectAgent: vi.fn()
+  selectAgent: vi.fn(),
+  displayedCount: 30,
+  hasMore: false,
+  loadMore: vi.fn()
 }
 
 vi.mock('../../stores/agentHistory', () => ({
@@ -106,7 +110,8 @@ describe('AgentsView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAgentHistoryState.agents = []
-    mockAgentHistoryState.loading = false
+    mockAgentHistoryState.fetched = false
+    mockAgentHistoryState.fetchError = null
   })
 
   it('renders LiveActivityStrip', () => {
@@ -131,6 +136,21 @@ describe('AgentsView', () => {
   })
 
   // ---------- Branch coverage: main content area states ----------
+
+  it('does not show loading skeleton when fetch returned empty array', () => {
+    mockAgentHistoryState.fetched = true
+    mockAgentHistoryState.agents = []
+    render(<AgentsView />)
+    // loading prop should be false since fetched is true, so no "Loading..." text
+    expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
+  })
+
+  it('shows loading skeleton before fetch completes', () => {
+    mockAgentHistoryState.fetched = false
+    mockAgentHistoryState.agents = []
+    render(<AgentsView />)
+    expect(screen.getByText('Loading...')).toBeInTheDocument()
+  })
 
   it('shows Launchpad when no agents and none selected', () => {
     render(<AgentsView />)

@@ -57,7 +57,7 @@ export function TerminalPanel(): React.JSX.Element {
           onCloseAll={handleCloseAll}
         />
         <TerminalToolbar
-          isAgentTab={!!isAgentTab}
+          activeTabKind={isAgentTab ? 'agent' : 'shell'}
           splitEnabled={splitEnabled}
           onClear={handleClear}
           onToggleSplit={toggleSplit}
@@ -68,7 +68,6 @@ export function TerminalPanel(): React.JSX.Element {
         activeTabId={activeTabId}
         splitEnabled={splitEnabled}
         showFind={showFind}
-        isAgentTab={!!isAgentTab}
         activeView={activeView}
       />
     </div>
