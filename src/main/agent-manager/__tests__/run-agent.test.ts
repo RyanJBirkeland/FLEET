@@ -561,7 +561,11 @@ describe('runAgent — prompt composer integration', () => {
       branch: 'agent/test',
       playgroundEnabled: true,
       retryCount: 0,
-      previousNotes: undefined
+      previousNotes: undefined,
+      maxRuntimeMs: undefined,
+      upstreamContext: undefined,
+      crossRepoContract: undefined,
+      repoName: 'BDE'
     })
   })
 

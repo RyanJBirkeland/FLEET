@@ -255,8 +255,10 @@ export async function runAgent(
     playgroundEnabled: task.playground_enabled,
     retryCount: task.retry_count ?? 0,
     previousNotes: task.notes ?? undefined,
+    maxRuntimeMs: task.max_runtime_ms ?? undefined,
     upstreamContext: upstreamContext.length > 0 ? upstreamContext : undefined,
-    crossRepoContract: task.cross_repo_contract ?? undefined
+    crossRepoContract: task.cross_repo_contract ?? undefined,
+    repoName: task.repo
   })
 
   let handle: AgentHandle
