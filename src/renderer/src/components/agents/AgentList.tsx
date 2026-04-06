@@ -7,6 +7,7 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { Search, ChevronRight } from 'lucide-react'
 import type { AgentMeta } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
+import { EmptyState } from '../ui/EmptyState'
 import { AgentCard } from './AgentCard'
 import { neonVar } from '../neon/types'
 
@@ -470,16 +471,7 @@ export function AgentList({
         )}
 
         {filtered.length === 0 && (
-          <div
-            className="agent-list__empty-state"
-            style={{
-              padding: tokens.space[4],
-              textAlign: 'center',
-              fontSize: tokens.size.sm
-            }}
-          >
-            No agents found
-          </div>
+          <EmptyState message="No agents match your filter. Try adjusting the search or clearing filters." />
         )}
 
         {hasMore && onLoadMore && (

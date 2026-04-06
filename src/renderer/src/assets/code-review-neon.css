@@ -10,7 +10,8 @@
 /* Queue sidebar */
 .cr-queue {
   width: 260px;
-  min-width: 200px;
+  min-width: 160px;
+  flex-shrink: 1;
   border-right: 1px solid var(--bde-border);
   display: flex;
   flex-direction: column;
@@ -385,10 +386,10 @@
 
 .cr-changes__files {
   width: 260px;
-  min-width: 200px;
+  min-width: 160px;
   border-right: 1px solid var(--bde-border);
   overflow-y: auto;
-  flex-shrink: 0;
+  flex-shrink: 1;
 }
 
 .cr-changes__file {
@@ -467,12 +468,12 @@
 /* Collapse queue sidebar to narrower width for constrained panels */
 @media (max-width: 800px) {
   .cr-queue {
-    width: 200px;
+    width: 160px;
     min-width: 160px;
   }
 
   .cr-changes__files {
-    width: 200px;
+    width: 160px;
     min-width: 160px;
   }
 }

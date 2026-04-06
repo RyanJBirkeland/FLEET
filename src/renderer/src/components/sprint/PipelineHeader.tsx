@@ -42,7 +42,7 @@ export function PipelineHeader({
     try {
       const result = await window.api.sprint.exportTasks(format)
       if (!result.canceled && result.filePath) {
-        console.log(`Exported tasks to ${result.filePath}`)
+        toast.success('Tasks exported')
       }
     } catch (err) {
       console.error('Export failed:', err)

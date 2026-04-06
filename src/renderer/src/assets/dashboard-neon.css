@@ -565,6 +565,13 @@
   }
 }
 
+/* Drop fixed left column at mid-narrow widths */
+@media (max-width: 800px) {
+  .dashboard-grid {
+    grid-template-columns: 1fr 240px;
+  }
+}
+
 /* Single column for very narrow */
 @media (max-width: 600px) {
   .dashboard-grid {

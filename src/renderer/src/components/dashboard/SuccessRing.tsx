@@ -1,4 +1,5 @@
 import { neonVar } from '../neon/types'
+import { EmptyState } from '../ui/EmptyState'
 
 interface SuccessRingProps {
   rate: number | null
@@ -9,7 +10,7 @@ interface SuccessRingProps {
 /** SVG donut ring showing success rate. */
 export function SuccessRing({ rate, done, failed }: SuccessRingProps): React.JSX.Element {
   if (rate === null) {
-    return <div className="dashboard-ring-empty">No terminal tasks</div>
+    return <EmptyState message="No terminal tasks yet. Queue and run tasks to see success metrics." />
   }
 
   const size = 64

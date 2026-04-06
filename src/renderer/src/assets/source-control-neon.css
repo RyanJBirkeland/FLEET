@@ -357,7 +357,7 @@
 }
 
 .git-branch-selector__current {
-  max-width: 160px;
+  max-width: 240px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -31,6 +31,8 @@ export function RepositoriesSection(): React.JSX.Element {
   const { confirm, confirmProps } = useConfirm()
   const [repos, setRepos] = useState<RepoConfig[]>([])
   const [adding, setAdding] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [deletingName, setDeletingName] = useState<string | null>(null)
   const [newName, setNewName] = useState('')
   const [newPath, setNewPath] = useState('')
   const [newOwner, setNewOwner] = useState('')
@@ -56,33 +58,43 @@ export function RepositoriesSection(): React.JSX.Element {
         variant: 'danger'
       })
       if (!ok) return
-      const updated = repos.filter((r) => r.name !== name)
-      saveRepos(updated)
-      toast.success(`Removed "${name}"`)
+      setDeletingName(name)
+      try {
+        const updated = repos.filter((r) => r.name !== name)
+        await saveRepos(updated)
+        toast.success(`Removed "${name}"`)
+      } finally {
+        setDeletingName(null)
+      }
     },
     [repos, saveRepos, confirm]
   )
 
   const handleAdd = useCallback(async () => {
     if (!newName.trim() || !newPath.trim()) return
-    const updated = [
-      ...repos,
-      {
-        name: newName.trim(),
-        localPath: newPath.trim(),
-        githubOwner: newOwner.trim() || undefined,
-        githubRepo: newRepo.trim() || undefined,
-        color: newColor
-      }
-    ]
-    await saveRepos(updated)
-    setAdding(false)
-    setNewName('')
-    setNewPath('')
-    setNewOwner('')
-    setNewRepo('')
-    setNewColor(REPO_COLOR_PALETTE[0])
-    toast.success(`Added "${newName.trim()}"`)
+    setSaving(true)
+    try {
+      const updated = [
+        ...repos,
+        {
+          name: newName.trim(),
+          localPath: newPath.trim(),
+          githubOwner: newOwner.trim() || undefined,
+          githubRepo: newRepo.trim() || undefined,
+          color: newColor
+        }
+      ]
+      await saveRepos(updated)
+      setAdding(false)
+      setNewName('')
+      setNewPath('')
+      setNewOwner('')
+      setNewRepo('')
+      setNewColor(REPO_COLOR_PALETTE[0])
+      toast.success(`Added "${newName.trim()}"`)
+    } finally {
+      setSaving(false)
+    }
   }, [repos, newName, newPath, newOwner, newRepo, newColor, saveRepos])
 
   const handleBrowse = useCallback(async () => {
@@ -122,11 +134,13 @@ export function RepositoriesSection(): React.JSX.Element {
                   variant="ghost"
                   size="sm"
                   onClick={() => handleRemove(r.name)}
+                  disabled={deletingName === r.name}
+                  loading={deletingName === r.name}
                   title="Remove repository"
                   aria-label="Remove repository"
                   type="button"
                 >
-                  <Trash2 size={14} /> Delete
+                  <Trash2 size={14} /> {deletingName === r.name ? 'Deleting...' : 'Delete'}
                 </Button>
               </div>
             }
@@ -202,10 +216,11 @@ export function RepositoriesSection(): React.JSX.Element {
                     variant="primary"
                     size="sm"
                     onClick={handleAdd}
-                    disabled={!newName.trim() || !newPath.trim()}
+                    disabled={!newName.trim() || !newPath.trim() || saving}
+                    loading={saving}
                     type="button"
                   >
-                    Save
+                    {saving ? 'Saving...' : 'Save'}
                   </Button>
                 </div>
               </div>

@@ -128,7 +128,7 @@ describe('AgentList', () => {
 
   it('shows no agents message when list is empty', () => {
     render(<AgentList {...defaultProps} />)
-    expect(screen.getByText('No agents found')).toBeInTheDocument()
+    expect(screen.getByText('No agents match your filter. Try adjusting the search or clearing filters.')).toBeInTheDocument()
   })
 
   it('renders running group header when running agents exist', () => {
@@ -206,7 +206,7 @@ describe('AgentList', () => {
     ]
     render(<AgentList {...defaultProps} agents={agents} />)
     await user.type(screen.getByPlaceholderText('Filter agents...'), 'xyzzy')
-    expect(screen.getByText('No agents found')).toBeInTheDocument()
+    expect(screen.getByText('No agents match your filter. Try adjusting the search or clearing filters.')).toBeInTheDocument()
   })
 
   it('calls onSelect when an agent card is clicked', async () => {

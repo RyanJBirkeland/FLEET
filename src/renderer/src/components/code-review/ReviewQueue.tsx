@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useCodeReviewStore } from '../../stores/codeReview'
+import { EmptyState } from '../ui/EmptyState'
 
 export function ReviewQueue(): React.JSX.Element {
   const tasks = useSprintTasks((s) => s.tasks)
@@ -80,7 +81,7 @@ export function ReviewQueue(): React.JSX.Element {
           </button>
         ))}
         {reviewTasks.length === 0 && (
-          <div className="cr-queue__empty">No tasks awaiting review</div>
+          <EmptyState message="No tasks awaiting review. Complete agent runs will appear here for inspection." />
         )}
       </div>
     </aside>
