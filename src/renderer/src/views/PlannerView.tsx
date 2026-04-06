@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { useTaskGroups } from '../stores/taskGroups'
 import { useTaskWorkbenchStore } from '../stores/taskWorkbench'
 import { usePanelLayoutStore } from '../stores/panelLayout'
@@ -9,8 +10,10 @@ import { Search, FileUp } from 'lucide-react'
 import { toast } from '../stores/toasts'
 import { useConfirm, ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
 export default function PlannerView(): React.JSX.Element {
+  const reduced = useReducedMotion()
   const {
     groups,
     selectedGroupId,
@@ -134,7 +137,13 @@ export default function PlannerView(): React.JSX.Element {
   }
 
   return (
-    <div className="planner-view">
+    <motion.div
+      className="planner-view"
+      variants={VARIANTS.fadeIn}
+      initial="initial"
+      animate="animate"
+      transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
+    >
       {/* Header */}
       <div className="planner-header">
         <h1 className="planner-header__title">Task Planner</h1>
@@ -186,6 +195,6 @@ export default function PlannerView(): React.JSX.Element {
 
       <CreateEpicModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
       <ConfirmModal {...confirmProps} />
-    </div>
+    </motion.div>
   )
 }

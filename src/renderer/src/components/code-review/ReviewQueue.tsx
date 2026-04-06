@@ -1,9 +1,12 @@
 import { useEffect } from 'react'
+import { motion } from 'framer-motion'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { EmptyState } from '../ui/EmptyState'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
 export function ReviewQueue(): React.JSX.Element {
+  const reduced = useReducedMotion()
   const tasks = useSprintTasks((s) => s.tasks)
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
   const selectTask = useCodeReviewStore((s) => s.selectTask)
@@ -59,12 +62,19 @@ export function ReviewQueue(): React.JSX.Element {
         <span className="cr-queue__title">Review Queue</span>
         <span className="cr-queue__count">{reviewTasks.length}</span>
       </div>
-      <div className="cr-queue__list">
+      <motion.div
+        className="cr-queue__list"
+        variants={VARIANTS.staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
         {reviewTasks.map((task) => (
-          <button
+          <motion.button
             key={task.id}
             className={`cr-queue__item${task.id === selectedTaskId ? ' cr-queue__item--selected' : ''}`}
             onClick={() => selectTask(task.id)}
+            variants={VARIANTS.staggerChild}
+            transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
           >
             <input
               type="checkbox"
@@ -78,12 +88,12 @@ export function ReviewQueue(): React.JSX.Element {
             />
             <span className="cr-queue__item-title">{task.title}</span>
             <span className="cr-queue__item-repo">{task.repo}</span>
-          </button>
+          </motion.button>
         ))}
         {reviewTasks.length === 0 && (
           <EmptyState message="No tasks awaiting review. Complete agent runs will appear here for inspection." />
         )}
-      </div>
+      </motion.div>
     </aside>
   )
 }

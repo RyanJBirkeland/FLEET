@@ -1,4 +1,5 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import { motion } from 'framer-motion'
 import { Edit2, MoreVertical, AlertTriangle } from 'lucide-react'
 import type { TaskGroup, SprintTask } from '../../../../shared/types'
 import { tokens } from '../../design-system/tokens'
@@ -6,6 +7,7 @@ import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { usePrompt, PromptModal } from '../ui/PromptModal'
 import { LoadingState } from '../ui/LoadingState'
 import { toast } from '../../stores/toasts'
+import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 
 export interface EpicDetailProps {
   group: TaskGroup
@@ -40,6 +42,7 @@ export function EpicDetail({
   onToggleReady,
   onReorderTasks
 }: EpicDetailProps): React.JSX.Element {
+  const reduced = useReducedMotion()
   const [showOverflowMenu, setShowOverflowMenu] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
@@ -484,7 +487,12 @@ export function EpicDetail({
       </div>
 
       {/* Task List */}
-      <div className="epic-detail__tasks">
+      <motion.div
+        className="epic-detail__tasks"
+        variants={VARIANTS.staggerContainer}
+        initial="initial"
+        animate="animate"
+      >
         {loading ? (
           <LoadingState message="Loading tasks..." />
         ) : (
@@ -497,21 +505,25 @@ export function EpicDetail({
               const isEditing = editingTaskId === task.id
 
               return (
-                <div
+                <motion.div
                   key={task.id}
-                  className="epic-detail__task-row"
-                  draggable
-                  onDragStart={(e) => handleDragStart(e, task.id)}
-                  onDragOver={(e) => handleDragOver(e, task.id)}
-                  onDragLeave={handleDragLeave}
-                  onDrop={(e) => handleDrop(e, task.id)}
-                  onDragEnd={handleDragEnd}
-                  style={{
-                    opacity: isDragging ? 0.5 : 1,
-                    borderTop: isDragOver ? `2px solid ${tokens.neon.cyan}` : undefined,
-                    cursor: 'grab'
-                  }}
+                  variants={VARIANTS.staggerChild}
+                  transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
                 >
+                  <div
+                    className="epic-detail__task-row"
+                    draggable
+                    onDragStart={(e) => handleDragStart(e, task.id)}
+                    onDragOver={(e) => handleDragOver(e, task.id)}
+                    onDragLeave={handleDragLeave}
+                    onDrop={(e) => handleDrop(e, task.id)}
+                    onDragEnd={handleDragEnd}
+                    style={{
+                      opacity: isDragging ? 0.5 : 1,
+                      borderTop: isDragOver ? `2px solid ${tokens.neon.cyan}` : undefined,
+                      cursor: 'grab'
+                    }}
+                  >
                   {!isEditing ? (
                     <>
                       <div
@@ -619,7 +631,8 @@ export function EpicDetail({
                       </div>
                     </div>
                   )}
-                </div>
+                  </div>
+                </motion.div>
               )
             })}
 
@@ -628,7 +641,7 @@ export function EpicDetail({
             </button>
           </>
         )}
-      </div>
+      </motion.div>
 
       {/* Queue Bar (sticky bottom) */}
       <div className="epic-detail__queue-bar">
