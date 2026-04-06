@@ -836,6 +836,19 @@ export const migrations: Migration[] = [
         db.exec('ALTER TABLE sprint_tasks ADD COLUMN cross_repo_contract TEXT DEFAULT NULL')
       }
     }
+  },
+  {
+    version: 32,
+    description: 'Add rebase tracking fields to sprint_tasks',
+    up: (db) => {
+      const cols = (db.pragma('table_info(sprint_tasks)') as { name: string }[]).map((c) => c.name)
+      if (!cols.includes('rebase_base_sha')) {
+        db.exec('ALTER TABLE sprint_tasks ADD COLUMN rebase_base_sha TEXT DEFAULT NULL')
+      }
+      if (!cols.includes('rebased_at')) {
+        db.exec('ALTER TABLE sprint_tasks ADD COLUMN rebased_at TEXT DEFAULT NULL')
+      }
+    }
   }
 ]
 

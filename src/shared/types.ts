@@ -97,6 +97,8 @@ export interface SprintTask {
   group_id?: string | null
   sprint_id?: string | null
   cross_repo_contract?: string | null
+  rebase_base_sha?: string | null
+  rebased_at?: string | null
   updated_at: string
   created_at: string
 }
