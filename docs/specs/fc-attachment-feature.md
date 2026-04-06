@@ -1,14 +1,13 @@
 # Feature Spec: File & Image Attachments in Chat
 
 **Date:** 2026-03-16
-**Requested by:** Ryan
 **Area:** SessionsView → ChatPane / MessageInput
 
 ---
 
 ## Problem
 
-Currently there's no way to share images, screenshots, or files with an agent in the Sessions chat view. Ryan wants to drop a screenshot of a bug or a file into the chat and have it sent as context to the agent — the same way you'd attach something in any modern chat app.
+Currently there's no way to share images, screenshots, or files with an agent in the Sessions chat view. Users want to drop a screenshot of a bug or a file into the chat and have it sent as context to the agent — the same way you'd attach something in any modern chat app.
 
 ---
 

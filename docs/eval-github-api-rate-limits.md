@@ -11,8 +11,8 @@ REST 5000 req/hr bucket was NOT exhausted.
 ### A. Agent prompt templates — `gh pr create` (per-agent)
 
 Every spawned Claude Code agent is instructed to run `gh pr create` at the end of its work.
-This appears in all 8 BDE prompt files (`scripts/prompts/bde-*.md`) and all ~25 life-os
-prompt files (`life-os/scripts/prompts/*.md`).
+This appears in all 8 BDE prompt files (`scripts/prompts/bde-*.md`) and external task
+runner prompt templates.
 
 **Pattern in every prompt:**
 
@@ -24,7 +24,7 @@ Claude Code agents may also call `gh pr create` based on CLAUDE.md `## PR Rules`
 without explicit prompt instructions — Claude Code's built-in `/commit` skill uses
 `gh pr create` by default.
 
-### B. Sprint runner (`run-life-os-sprint.sh`) — `gh pr view` + `gh pr create`
+### B. External task runner — `gh pr view` + `gh pr create`
 
 - **`gh pr view $branch`** — called once per task to check if a PR already exists (line 30)
 - **`gh pr create`** — called if the branch has work but no PR yet (line 48)
@@ -50,8 +50,8 @@ do NOT consume GraphQL points. The `PRList` component polls at
 | Agent prompt                  | `gh pr create`                 | ~3-5 pts | 1x per agent run |
 | Agent (Claude Code internals) | `gh pr view` during creation   | ~1-2 pts | 1x (implicit)    |
 | Task runner reconciliation    | `gh pr view`                   | ~1 pt    | On restart only  |
-| Sprint runner (life-os)       | `gh pr view` (existence check) | ~1 pt    | 1x per task      |
-| Sprint runner (life-os)       | `gh pr create`                 | ~3-5 pts | 1x per task      |
+| External task runner          | `gh pr view` (existence check) | ~1 pt    | 1x per task      |
+| External task runner          | `gh pr create`                 | ~3-5 pts | 1x per task      |
 
 **Estimated per-agent GraphQL cost: ~5-7 points** for a clean run.
 
@@ -203,7 +203,7 @@ Better yet: only poll PRs in `OPEN` state. Once merged, stop polling.
 
 #### 4c. Update agent prompt templates to use `gh api` (REST)
 
-**All 8 BDE prompts + all life-os prompts:**
+**All 8 BDE prompts + external task runner prompts:**
 
 Replace:
 
@@ -214,7 +214,7 @@ gh pr create --base main --title "..." --body "..."
 With:
 
 ```
-gh api repos/RyanJBirkeland/{REPO}/pulls \
+gh api repos/{owner}/{REPO}/pulls \
   --method POST \
   -f title="..." \
   -f body="..." \
@@ -252,7 +252,7 @@ Instead of N individual `gh pr view` calls, use a single GraphQL query:
 
 ```graphql
 query {
-  repository(owner: "RyanJBirkeland", name: "BDE") {
+  repository(owner: "{owner}", name: "BDE") {
     pr1: pullRequest(number: 101) { state mergedAt }
     pr2: pullRequest(number: 102) { state mergedAt }
     ...
@@ -284,7 +284,7 @@ staying on GraphQL. The REST switch (4a) is simpler and sufficient.
 | Convert `pollPrStatuses` to REST fetch          | 30 min | **~4,800 pts/hr**           |
 | Increase `POLL_PR_STATUS_MS` to 60s             | 1 min  | 75% reduction in REST calls |
 | Update 8 BDE prompt templates to `gh api`       | 15 min | ~40 pts/day                 |
-| Update ~25 life-os prompt templates to `gh api` | 30 min | ~125 pts/day                |
+| Update external task runner prompt templates to `gh api` | 30 min | ~125 pts/day                |
 | Move PR creation into task-runner.js            | 2 hr   | Centralizes all API calls   |
 | Add rate limit pre-flight check                 | 15 min | Early warning system        |
 

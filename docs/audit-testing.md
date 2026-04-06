@@ -545,11 +545,11 @@ jobs:
 
 ## Quick Wins
 
-**3 tests you could write in under 30 min that would catch bugs Ryan hit:**
+**3 tests you could write in under 30 min that would catch bugs users hit:**
 
 ### Quick Win #1: `stores/localAgents.test.ts` — Spawn agent tracking
 
-**Why:** Ryan likely hit bugs with spawned agents not appearing in the list or log viewer not loading.
+**Why:** Users likely hit bugs with spawned agents not appearing in the list or log viewer not loading.
 
 ```ts
 it('spawnAgent adds to spawnedAgents and persists', async () => {
@@ -569,7 +569,7 @@ it('spawnAgent adds to spawnedAgents and persists', async () => {
 
 ### Quick Win #2: `main/local-agents.test.ts` — PTY spawn errors
 
-**Why:** Ryan likely hit errors when spawning agents (missing claude binary, permission errors).
+**Why:** Users likely hit errors when spawning agents (missing claude binary, permission errors).
 
 ```ts
 it('spawnClaudeAgent throws on missing binary', async () => {
@@ -587,7 +587,7 @@ it('spawnClaudeAgent throws on missing binary', async () => {
 
 ### Quick Win #3: `components/sessions/MessageInput.test.tsx` — Send button disabled state
 
-**Why:** Ryan likely tried to send empty messages or messages while agent is running.
+**Why:** Users likely tried to send empty messages or messages while agent is running.
 
 ```ts
 it('Send button is disabled when input is empty', async () => {
@@ -636,7 +636,7 @@ it('Send button is disabled when disabled prop is true', async () => {
 
 1. **Add main process tests** — highest risk area
 2. **Test untested stores** — agentHistory, localAgents, unifiedAgents, commandPalette
-3. **Add Quick Wins** — catch bugs Ryan hit
+3. **Add Quick Wins** — catch bugs users hit
 
 ### Short-term (this sprint)
 

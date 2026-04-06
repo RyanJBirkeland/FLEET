@@ -135,7 +135,7 @@ The AI coding tool landscape has evolved from simple code completion (GitHub Cop
 
 ---
 
-### BDE (Birkeland Development Environment)
+### BDE
 
 **What it is:** Local-first task orchestration platform for autonomous AI agents with human-in-the-loop review.
 
@@ -204,7 +204,7 @@ BDE is the **only tool** that stores all state locally (SQLite at `~/.bde/bde.db
 **BDE's approach:**
 
 - Task metadata in local SQLite (queued, active, done statuses)
-- Agent execution in local git worktrees (`~/worktrees/bde/agent/`)
+- Agent execution in local git worktrees (`<worktree-base>/agent/`)
 - Audit trail persisted locally (field-level change tracking)
 - Works offline after initial Claude API token fetch
 
@@ -253,7 +253,6 @@ BDE natively supports **multiple repositories** with shared task context. Compet
 
 - Configure repos in Settings → Repositories (`name`, `localPath`, `githubOwner`, `githubRepo`)
 - Agents can spawn tasks across repos (e.g., "update API client in repo A, then update UI in repo B")
-- Shared context via `@../../ARCHITECTURE.md` and cross-project CLAUDE.md files
 
 **Why it matters:**
 

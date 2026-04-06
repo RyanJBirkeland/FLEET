@@ -1,6 +1,6 @@
 # BDE Feature Reference
 
-BDE (Birkeland Development Environment) is an Electron desktop app for autonomous software development. It orchestrates AI agents that execute sprint tasks — from spec creation through code, PR, and merge.
+BDE is a desktop app for autonomous software development. It orchestrates AI agents that execute sprint tasks — from spec creation through code, PR, and merge.
 
 This document is auto-loaded by all BDE agents via the `@` directive in CLAUDE.md. It serves as both agent context and user documentation.
 
@@ -80,7 +80,7 @@ Orchestrates pipeline agent lifecycle. Core module: `src/main/agent-manager/`.
 - **Watchdog**: Monitors agent health with configurable timeout. Default 1 hour, overridable per-task via `max_runtime_ms` field
 - **Completion flow**: Agent exits normally → classify exit → mark task `review` → preserve worktree for human review. On failure: retry up to 3x, then mark `failed`. Human actions in Code Review Station (merge locally, create PR, revise, discard) determine final task status
 - **Fast-fail detection**: 3 failures within 30s of starting = exhausted. Task marked `error` with diagnostic notes pointing to `~/.bde/agent-manager.log`
-- **Worktree isolation**: Each pipeline agent gets `~/worktrees/bde/agent/<task-slug>`. Worktree cleaned up after completion (success or failure). Stale worktrees from previous runs should be cleaned with `git worktree prune`
+- **Worktree isolation**: Each pipeline agent gets `<worktree-base>/agent/<task-slug>`. Worktree cleaned up after completion (success or failure). Stale worktrees from previous runs should be cleaned with `git worktree prune`
 - **Config**: Max concurrent agents, worktree base path, and max runtime are read once at startup. Changes via Settings UI take effect on next app restart
 - Related: Sprint Pipeline, Task Dependencies
 

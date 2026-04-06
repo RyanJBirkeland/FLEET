@@ -1,9 +1,8 @@
 # CLAUDE.md — BDE
 
-@../../ARCHITECTURE.md
 @docs/BDE_FEATURES.md
 
-Electron desktop app (electron-vite + React + TypeScript) — the Birkeland Development Environment.
+Electron desktop app (electron-vite + React + TypeScript) — the BDE desktop app.
 
 ## Build & Test
 

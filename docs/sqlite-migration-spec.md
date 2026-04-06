@@ -146,7 +146,7 @@ safeHandle('sprint:list', () => {
 
 ### Task Runner — Shared SQLite File
 
-The task runner (`life-os/scripts/task-runner.js`) runs on the same machine. It opens the same `~/.bde/bde.db` file using `better-sqlite3`. SQLite WAL mode handles concurrent reads/writes safely.
+The external task runner runs on the same machine. It opens the same `~/.bde/bde.db` file using `better-sqlite3`. SQLite WAL mode handles concurrent reads/writes safely.
 
 ```javascript
 // task-runner.js
@@ -274,13 +274,13 @@ Data migration (run once at startup if Supabase data exists):
 
 Files:
 
-- `~/Documents/Repositories/life-os/scripts/task-runner.js` — replace all Supabase REST calls with better-sqlite3
+- External task runner script — replace all Supabase REST calls with better-sqlite3
   - `getQueuedTasks()`, `claimTask()`, `updateTask()`, `registerBdeAgent()`, `finishBdeAgent()` all use SQLite
   - Remove `SUPABASE_URL`, `SUPABASE_SERVICE_KEY`, `supabaseFetch()` entirely
   - Remove loadEnv() (no longer needed for Supabase)
   - `agent_session_id` in sprint_tasks becomes a foreign key to `agent_runs.id`
 
-Note: task runner must install `better-sqlite3`: check `life-os/package.json` and add if missing.
+Note: external task runner must install `better-sqlite3`: check its `package.json` and add if missing.
 
 ---
 
@@ -296,7 +296,7 @@ Files:
   - `registerAgent()`, `appendLog()`, `readLog()`, `finishAgent()`, `listAgents()`, `pruneOldAgents()`
   - Log files stay on disk at `~/.bde/agent-logs/` — only metadata moves to SQLite
 - `src/main/handlers/agent-handlers.ts` — update `agents:list` and `agents:readLog` to use new agent-history API
-- `~/Documents/Repositories/life-os/scripts/task-runner.js` — update `registerBdeAgent()` / `finishBdeAgent()` to write to `agent_runs` table (coordinate with S3)
+- External task runner script — update `registerBdeAgent()` / `finishBdeAgent()` to write to `agent_runs` table (coordinate with S3)
 
 Data migration: on first startup, read `agents.json` if it exists and import into `agent_runs`, then rename to `agents.json.bak`.
 

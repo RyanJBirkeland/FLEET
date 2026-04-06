@@ -14,7 +14,7 @@ The Sessions sidebar has two issues:
 1. **AgentRow is fixed at `height: 36px`** but renders 3 lines of content (label + meta badges + task preview) → text overflows and overlaps
 2. **Sidebar header is cramped** — "AGENTS" title + spawn button squeezed together, no breathing room
 
-Ryan's direction: fix the cramping, AND double down on the glass + gradient aesthetic.
+Feedback received: fix the cramping, AND double down on the glass + gradient aesthetic.
 
 ---
 

@@ -108,7 +108,7 @@ import { getAllMemory } from './agent-system/memory'
 const bdeConventions = getAllMemory({ repoName: 'bde' })
 // "IPC Conventions\n...\n\n---\n\nTesting Patterns\n...\n\n---\n\nArchitecture Rules\n..."
 
-const nonBdeConventions = getAllMemory({ repoName: 'life-os' })
+const nonBdeConventions = getAllMemory({ repoName: 'my-repo' })
 // ""
 ```
 
