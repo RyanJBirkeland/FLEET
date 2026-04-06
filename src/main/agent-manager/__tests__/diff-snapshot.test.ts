@@ -89,7 +89,7 @@ describe('captureDiffSnapshot', () => {
     expect(logger.warn).toHaveBeenCalled()
   })
 
-  it('marks snapshot truncated and drops patches when over size budget', async () => {
+  it('marks snapshot truncated and drops single oversized patch (file stats preserved)', async () => {
     const hugePatch = 'x'.repeat(600_000) // > 500_000 cap
     await setupMockExec({
       '--numstat': '1000\t1000\tbig.txt',
@@ -103,5 +103,31 @@ describe('captureDiffSnapshot', () => {
     expect(snapshot!.files[0].patch).toBeUndefined()
     // Stats still preserved
     expect(snapshot!.files[0].additions).toBe(1000)
+  })
+
+  it('skips oversized files but keeps patches for smaller files later in the list', async () => {
+    // First file is huge (over budget), second file is small — second should
+    // still have its patch attached after the first is skipped.
+    const hugePatch = 'x'.repeat(600_000)
+    const smallPatch = 'diff --git a/small.ts b/small.ts\n+ok'
+    await setupMockExec({
+      '--numstat': '5000\t5000\tbig.txt\n2\t1\tsmall.ts',
+      '--name-status': 'M\tbig.txt\nM\tsmall.ts',
+      '-- big.txt': hugePatch,
+      '-- small.ts': smallPatch
+    })
+    const { captureDiffSnapshot } = await import('../diff-snapshot')
+    const snapshot = await captureDiffSnapshot('/fake/worktree', 'origin/main', logger)
+    expect(snapshot).not.toBeNull()
+    expect(snapshot!.truncated).toBe(true)
+    expect(snapshot!.files).toHaveLength(2)
+    // Big file's patch was skipped
+    const big = snapshot!.files.find((f) => f.path === 'big.txt')!
+    expect(big.patch).toBeUndefined()
+    expect(big.additions).toBe(5000)
+    // Small file's patch is still attached
+    const small = snapshot!.files.find((f) => f.path === 'small.ts')!
+    expect(small.patch).toBe(smallPatch)
+    expect(small.additions).toBe(2)
   })
 })

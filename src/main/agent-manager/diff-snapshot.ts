@@ -67,14 +67,13 @@ export async function captureDiffSnapshot(
       files: files.length
     }
 
-    // Try to attach per-file patches, aborting if we exceed the size cap.
+    // Try to attach per-file patches. If a single file's patch would push us
+    // over the budget, we *skip that file's patch* but keep going so smaller
+    // files later in the list still get their patches attached. Previously
+    // a single oversized file would drop every patch in the snapshot.
     let budget = MAX_SNAPSHOT_CHARS
     let truncated = false
     for (const file of files) {
-      if (budget <= 0) {
-        truncated = true
-        break
-      }
       try {
         const { stdout: patch } = await execFile(
           'git',
@@ -82,8 +81,9 @@ export async function captureDiffSnapshot(
           { cwd: worktreePath, env, maxBuffer: 10 * 1024 * 1024 }
         )
         if (patch.length > budget) {
+          // Skip this file's patch — file-level stats remain available.
           truncated = true
-          break
+          continue
         }
         file.patch = patch
         budget -= patch.length
@@ -94,11 +94,6 @@ export async function captureDiffSnapshot(
           }`
         )
       }
-    }
-
-    if (truncated) {
-      // Drop any partially-attached patches to keep the snapshot consistent.
-      for (const f of files) delete f.patch
     }
 
     return {
