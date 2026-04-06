@@ -529,6 +529,14 @@ export interface AgentManagerChannels {
     args: []
     result: import('./types').MetricsSnapshot | null
   }
+  'agent-manager:reloadConfig': {
+    args: []
+    result: { updated: string[]; requiresRestart: string[] }
+  }
+  'agent-manager:checkpoint': {
+    args: [taskId: string, message?: string]
+    result: { ok: boolean; committed: boolean; error?: string }
+  }
 }
 
 /** Terminal PTY management */

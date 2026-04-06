@@ -271,6 +271,11 @@ declare global {
         status: () => Promise<IpcResult<'agent-manager:status'>>
         kill: (taskId: string) => Promise<IpcResult<'agent-manager:kill'>>
         getMetrics: () => Promise<MetricsSnapshot | null>
+        reloadConfig: () => Promise<IpcResult<'agent-manager:reloadConfig'>>
+        checkpoint: (
+          taskId: string,
+          message?: string
+        ) => Promise<IpcResult<'agent-manager:checkpoint'>>
       }
 
       // Dashboard analytics

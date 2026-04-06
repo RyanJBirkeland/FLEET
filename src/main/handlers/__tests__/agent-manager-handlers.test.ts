@@ -18,13 +18,15 @@ describe('Agent manager handlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers all 3 agent-manager channels', () => {
+  it('registers all 5 agent-manager channels', () => {
     registerAgentManagerHandlers(undefined)
 
-    expect(safeHandle).toHaveBeenCalledTimes(3)
+    expect(safeHandle).toHaveBeenCalledTimes(5)
     expect(safeHandle).toHaveBeenCalledWith('agent-manager:status', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('agent-manager:kill', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('agent-manager:metrics', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('agent-manager:reloadConfig', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('agent-manager:checkpoint', expect.any(Function))
   })
 
   describe('handler functions', () => {

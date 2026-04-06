@@ -287,7 +287,10 @@ const api = {
   agentManager: {
     status: () => typedInvoke('agent-manager:status'),
     kill: (taskId: string) => typedInvoke('agent-manager:kill', taskId),
-    getMetrics: () => typedInvoke('agent-manager:metrics')
+    getMetrics: () => typedInvoke('agent-manager:metrics'),
+    reloadConfig: () => typedInvoke('agent-manager:reloadConfig'),
+    checkpoint: (taskId: string, message?: string) =>
+      typedInvoke('agent-manager:checkpoint', taskId, message)
   },
 
   // Template CRUD (Phase 2)

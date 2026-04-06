@@ -27,6 +27,7 @@ import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { getRepoPaths } from '../paths'
 import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../env-utils'
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
+import { getSetting, getSettingJson } from '../settings'
 
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
@@ -203,6 +204,20 @@ export interface AgentManager {
   steerAgent(taskId: string, message: string): Promise<SteerResult>
   killAgent(taskId: string): { killed: boolean; error?: string }
   onTaskTerminal(taskId: string, status: string): Promise<void>
+  /**
+   * Re-read settings from the settings store and hot-update the in-memory
+   * config for fields that are safe to change at runtime.
+   *
+   * Hot-reloadable: maxConcurrent, maxRuntimeMs, idleTimeoutMs, defaultModel.
+   * NOT hot-reloadable: worktreeBase (requires restart — existing worktrees
+   * would be orphaned). pollIntervalMs also requires restart.
+   *
+   * Returns which fields changed and which require restart.
+   */
+  reloadConfig(): {
+    updated: string[]
+    requiresRestart: string[]
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -233,11 +248,16 @@ export class AgentManagerImpl implements AgentManager {
   // Injected deps
   private readonly runAgentDeps: RunAgentDeps
 
+  // `config` is mutable so `reloadConfig()` can hot-update fields that are
+  // safe to change at runtime. `worktreeBase` is not mutated after construction.
+  config: AgentManagerConfig
+
   constructor(
-    readonly config: AgentManagerConfig,
+    config: AgentManagerConfig,
     readonly repo: ISprintTaskRepository,
     readonly logger: Logger = defaultLogger
   ) {
+    this.config = config
     this._concurrency = makeConcurrencyState(config.maxConcurrent)
     this._depIndex = createDependencyIndex()
     this._metrics = createMetricsCollector()
@@ -845,6 +865,48 @@ export class AgentManagerImpl implements AgentManager {
     const agent = this._activeAgents.get(taskId)
     if (!agent) return { delivered: false, error: 'Agent not found' }
     return agent.handle.steer(message)
+  }
+
+  reloadConfig(): { updated: string[]; requiresRestart: string[] } {
+    const updated: string[] = []
+    const requiresRestart: string[] = []
+
+    const newMaxConcurrent = getSettingJson<number>('agentManager.maxConcurrent')
+    if (typeof newMaxConcurrent === 'number' && newMaxConcurrent !== this.config.maxConcurrent) {
+      this.config.maxConcurrent = newMaxConcurrent
+      // Resize the concurrency state so new slots become available immediately.
+      this._concurrency = makeConcurrencyState(newMaxConcurrent)
+      updated.push('maxConcurrent')
+    }
+
+    const newMaxRuntimeMs = getSettingJson<number>('agentManager.maxRuntimeMs')
+    if (typeof newMaxRuntimeMs === 'number' && newMaxRuntimeMs !== this.config.maxRuntimeMs) {
+      this.config.maxRuntimeMs = newMaxRuntimeMs
+      updated.push('maxRuntimeMs')
+    }
+
+    const newDefaultModel = getSetting('agentManager.defaultModel')
+    if (newDefaultModel && newDefaultModel !== this.config.defaultModel) {
+      this.config.defaultModel = newDefaultModel
+      // Also update runAgentDeps.defaultModel so newly spawned agents see it.
+      this.runAgentDeps.defaultModel = newDefaultModel
+      updated.push('defaultModel')
+    }
+
+    const newWorktreeBase = getSetting('agentManager.worktreeBase')
+    if (newWorktreeBase && newWorktreeBase !== this.config.worktreeBase) {
+      requiresRestart.push('worktreeBase')
+    }
+
+    if (updated.length > 0) {
+      this.logger.info(`[agent-manager] Hot-reloaded config fields: ${updated.join(', ')}`)
+    }
+    if (requiresRestart.length > 0) {
+      this.logger.info(
+        `[agent-manager] Config fields changed that require restart: ${requiresRestart.join(', ')}`
+      )
+    }
+    return { updated, requiresRestart }
   }
 
   killAgent(taskId: string): { killed: boolean; error?: string } {
