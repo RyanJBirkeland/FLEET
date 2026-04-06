@@ -141,7 +141,9 @@
   flex-shrink: 0;
   display: flex;
   flex-direction: column;
-  background: var(--bde-surface);
+  background: var(--glass-tint-dark);
+  backdrop-filter: var(--glass-blur-md);
+  -webkit-backdrop-filter: var(--glass-blur-md);
   border-right: 1px solid var(--bde-border);
   overflow: hidden;
 }

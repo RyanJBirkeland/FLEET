@@ -277,6 +277,9 @@
   align-items: center;
   gap: var(--bde-space-2);
   padding: var(--bde-space-2) var(--bde-space-4);
+  background: var(--glass-tint-dark);
+  backdrop-filter: var(--glass-blur-sm);
+  -webkit-backdrop-filter: var(--glass-blur-sm);
 }
 
 .status-bar__dot {
