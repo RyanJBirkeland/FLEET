@@ -9,7 +9,6 @@ interface TerminalContentProps {
   activeTabId: string
   splitEnabled: boolean
   showFind: boolean
-  isAgentTab: boolean
   activeView: string
 }
 
@@ -18,9 +17,10 @@ export function TerminalContent({
   activeTabId,
   splitEnabled,
   showFind,
-  isAgentTab,
   activeView
 }: TerminalContentProps): React.JSX.Element {
+  const activeTab = tabs.find((t) => t.id === activeTabId)
+  const isAgentTab = activeTab?.kind === 'agent'
   return (
     <div className="terminal-content">
       {!isAgentTab && showFind && <FindBar />}

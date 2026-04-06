@@ -21,9 +21,9 @@ vi.mock('../../terminal/TerminalTabBar', () => ({
   )
 }))
 vi.mock('../../terminal/TerminalToolbar', () => ({
-  TerminalToolbar: ({ isAgentTab, onClear }: any) => (
+  TerminalToolbar: ({ activeTabKind, onClear }: any) => (
     <div data-testid="terminal-toolbar">
-      {!isAgentTab && <button onClick={onClear}>Clear</button>}
+      {activeTabKind !== 'agent' && <button onClick={onClear}>Clear</button>}
     </div>
   )
 }))

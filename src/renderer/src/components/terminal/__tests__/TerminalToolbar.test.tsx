@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { TerminalToolbar } from '../TerminalToolbar'
 
 const defaultProps = {
-  isAgentTab: false,
+  activeTabKind: 'shell' as const,
   splitEnabled: false,
   onClear: vi.fn(),
   onToggleSplit: vi.fn()
@@ -23,12 +23,12 @@ describe('TerminalToolbar', () => {
   })
 
   it('hides the clear button for agent tabs', () => {
-    render(<TerminalToolbar {...defaultProps} isAgentTab={true} />)
+    render(<TerminalToolbar {...defaultProps} activeTabKind="agent" />)
     expect(screen.queryByTitle('Clear terminal')).not.toBeInTheDocument()
   })
 
   it('still renders split button for agent tabs', () => {
-    render(<TerminalToolbar {...defaultProps} isAgentTab={true} />)
+    render(<TerminalToolbar {...defaultProps} activeTabKind="agent" />)
     expect(screen.getByTitle('Split pane (⌘⇧D)')).toBeInTheDocument()
   })
 

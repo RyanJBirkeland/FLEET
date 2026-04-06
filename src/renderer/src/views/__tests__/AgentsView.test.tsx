@@ -19,9 +19,12 @@ vi.mock('../../lib/motion', () => ({
 // Mock stores
 const mockAgentHistoryState = {
   agents: [] as any[],
-  loading: false,
+  fetchError: null as string | null,
   fetchAgents: vi.fn().mockResolvedValue(undefined),
-  selectAgent: vi.fn()
+  selectAgent: vi.fn(),
+  displayedCount: 30,
+  hasMore: false,
+  loadMore: vi.fn()
 }
 
 vi.mock('../../stores/agentHistory', () => ({
@@ -106,7 +109,7 @@ describe('AgentsView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockAgentHistoryState.agents = []
-    mockAgentHistoryState.loading = false
+    mockAgentHistoryState.fetchError = null
   })
 
   it('renders LiveActivityStrip', () => {

@@ -25,7 +25,6 @@ export function AgentsView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const activeView = usePanelLayoutStore((s) => s.activeView)
   const agents = useAgentHistoryStore((s) => s.agents)
-  const agentsLoading = useAgentHistoryStore((s) => s.loading)
   const fetchError = useAgentHistoryStore((s) => s.fetchError)
   const fetchAgents = useAgentHistoryStore((s) => s.fetchAgents)
   const displayedCount = useAgentHistoryStore((s) => s.displayedCount)
@@ -273,7 +272,7 @@ export function AgentsView(): React.JSX.Element {
             selectedId={selectedId}
             onSelect={handleSelectAgent}
             onKill={fetchAgents}
-            loading={agentsLoading}
+            loading={agents.length === 0 && !fetchError}
             fetchError={fetchError}
             onRetry={fetchAgents}
             displayedCount={displayedCount}

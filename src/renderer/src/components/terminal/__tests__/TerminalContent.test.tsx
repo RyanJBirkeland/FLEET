@@ -44,7 +44,6 @@ const defaultProps = {
   activeTabId: 'tab-1',
   splitEnabled: false,
   showFind: false,
-  isAgentTab: false,
   activeView: 'ide'
 }
 
@@ -76,7 +75,7 @@ describe('TerminalContent', () => {
         {...defaultProps}
         tabs={[agentTab]}
         activeTabId="agent-1"
-        isAgentTab={true}
+
       />
     )
     expect(screen.getByTestId('agent-output-agent-abc')).toBeInTheDocument()
@@ -94,7 +93,7 @@ describe('TerminalContent', () => {
         {...defaultProps}
         tabs={[agentTab]}
         activeTabId="agent-1"
-        isAgentTab={true}
+
       />
     )
     expect(screen.getByText(/Agent Output/)).toBeInTheDocument()
@@ -112,7 +111,7 @@ describe('TerminalContent', () => {
         {...defaultProps}
         tabs={[agentTab]}
         activeTabId="agent-1"
-        isAgentTab={true}
+
         showFind={true}
       />
     )
