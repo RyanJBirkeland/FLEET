@@ -25,11 +25,6 @@ function getModelAccent(model: string): NeonAccent {
   return 'blue'
 }
 
-function estimateCost(events: AgentEvent[], model: string): number {
-  const perEventCost = model.toLowerCase().includes('opus') ? 0.003 : 0.001
-  return events.length * perEventCost
-}
-
 export function ConsoleHeader({ agent, events }: ConsoleHeaderProps): React.JSX.Element {
   const isRunning = agent.status === 'running'
   const getDuration = (): string => {
@@ -58,10 +53,6 @@ export function ConsoleHeader({ agent, events }: ConsoleHeaderProps): React.JSX.
     (e): e is Extract<AgentEvent, { type: 'agent:completed' }> => e.type === 'agent:completed'
   )
   const costUsd = completedEvent?.costUsd ?? agent.costUsd
-
-  // Estimate cost for running agents with no final cost yet (only if there are events)
-  const estimatedCost =
-    isRunning && costUsd == null && events.length > 0 ? estimateCost(events, agent.model) : null
 
   const handleOpenShell = (): void => {
     useTerminalStore.getState().addTab(undefined, agent.repoPath)
@@ -152,14 +143,6 @@ export function ConsoleHeader({ agent, events }: ConsoleHeaderProps): React.JSX.
           </span>
         )}
         {costUsd != null && <span>${costUsd.toFixed(4)}</span>}
-        {estimatedCost != null && (
-          <span
-            style={{ color: 'var(--neon-orange)', fontStyle: 'italic' }}
-            title="Estimated based on event count"
-          >
-            ~${estimatedCost.toFixed(2)}
-          </span>
-        )}
       </div>
 
       {/* Action buttons */}
