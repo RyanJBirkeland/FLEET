@@ -130,6 +130,8 @@ export function SpecEditor({
 
 function SpecQualityHints({ spec }: { spec: string }): React.JSX.Element {
   const indicators = useMemo(() => analyzeSpec(spec), [spec])
+  const MIN_SPEC_LENGTH = 50
+  const meetsMinLength = indicators.charCount >= MIN_SPEC_LENGTH
   const dotStyle = (on: boolean): React.CSSProperties => ({
     display: 'inline-block',
     width: 6,
@@ -184,6 +186,23 @@ function SpecQualityHints({ spec }: { spec: string }): React.JSX.Element {
         color: 'var(--neon-text-muted, #999)'
       }}
     >
+      <span
+        className="wb-spec__quality-char-count"
+        title={
+          meetsMinLength
+            ? `${indicators.charCount} characters — meets minimum length for queuing.`
+            : `${indicators.charCount} characters — need ${MIN_SPEC_LENGTH}+ to queue.`
+        }
+        data-testid="spec-quality-chars"
+        style={{
+          color: meetsMinLength
+            ? 'var(--neon-cyan, #2fc3b5)'
+            : 'var(--neon-orange, #ff9500)',
+          fontWeight: meetsMinLength ? 'normal' : 600
+        }}
+      >
+        {indicators.charCount} chars
+      </span>
       <span
         className="wb-spec__quality-word-count"
         title={getLengthTooltip()}

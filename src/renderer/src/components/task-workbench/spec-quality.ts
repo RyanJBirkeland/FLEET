@@ -7,6 +7,7 @@ export type SpecLengthStatus = 'too-short' | 'good' | 'warning' | 'danger'
 
 export interface SpecQualityIndicators {
   wordCount: number
+  charCount: number
   hasFilePaths: boolean
   hasTestSection: boolean
   lengthStatus: SpecLengthStatus
@@ -55,6 +56,13 @@ export function countWords(spec: string): number {
 }
 
 /**
+ * Count characters in a spec (trimmed length).
+ */
+export function countChars(spec: string): number {
+  return spec.trim().length
+}
+
+/**
  * Assess spec length based on BDE agent guidelines:
  * - Ideal: 200-400 words (fast completion, 15-30 min)
  * - Warning: 400-500 words (getting long)
@@ -74,6 +82,7 @@ export function analyzeSpec(spec: string): SpecQualityIndicators {
   const wordCount = countWords(spec)
   return {
     wordCount,
+    charCount: countChars(spec),
     hasFilePaths: hasFilePaths(spec),
     hasTestSection: hasTestSection(spec),
     lengthStatus: assessSpecLength(wordCount)
