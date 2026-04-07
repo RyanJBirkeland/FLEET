@@ -8,6 +8,7 @@ import { ReadinessChecks } from './ReadinessChecks'
 import { WorkbenchActions } from './WorkbenchActions'
 import { DependencyPicker } from './DependencyPicker'
 import { ConfirmModal } from '../ui/ConfirmModal'
+import { GlassPanel } from '../neon/GlassPanel'
 import { REPO_OPTIONS } from '../../lib/constants'
 import { toast } from '../../stores/toasts'
 
@@ -428,7 +429,8 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
           playground)
         </button>
         {advancedOpen && (
-          <div className="wb-form__advanced" id="wb-form-advanced">
+          <div id="wb-form-advanced">
+            <GlassPanel accent="purple" blur="sm" className="wb-form__advanced">
             <div className="wb-form__field--row">
               <div className="wb-form__field wb-form__field--flex">
                 <label htmlFor="wb-form-priority" className="wb-form__label">
@@ -535,6 +537,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
               onChange={(deps) => setField('dependsOn', deps)}
               currentTaskId={taskId ?? undefined}
             />
+            </GlassPanel>
           </div>
         )}
       </div>
