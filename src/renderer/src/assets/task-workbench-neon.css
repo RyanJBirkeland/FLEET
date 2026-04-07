@@ -802,6 +802,39 @@ button.wb-checks__item--actionable:focus-visible {
   gap: 6px;
 }
 
+.wb-deps__help {
+  margin: 0;
+  font-size: 11px;
+  color: var(--neon-text-muted, rgba(255, 255, 255, 0.55));
+  line-height: 1.4;
+}
+
+.wb-deps__more {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.wb-deps__show-all {
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--neon-cyan, #22d3ee);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.wb-deps__show-all:hover {
+  background: rgba(34, 211, 238, 0.08);
+}
+
+.wb-deps__show-all:focus-visible {
+  outline: 2px solid var(--neon-cyan, #22d3ee);
+  outline-offset: -2px;
+}
+
 .wb-deps__list {
   list-style: none;
   margin: 0;

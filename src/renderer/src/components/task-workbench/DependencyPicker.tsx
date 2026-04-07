@@ -9,7 +9,7 @@ interface DependencyPickerProps {
   currentTaskId: string | undefined
 }
 
-const MAX_RESULTS = 10
+const MAX_RESULTS = 30
 
 export function DependencyPicker({
   dependencies,
@@ -19,40 +19,44 @@ export function DependencyPicker({
 }: DependencyPickerProps): React.JSX.Element {
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const [search, setSearch] = useState('')
+  const [showAll, setShowAll] = useState(false)
   const searchRef = useRef<HTMLInputElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   const selectedIds = useMemo(() => new Set(dependencies.map((d) => d.id)), [dependencies])
 
-  const filteredTasks = useMemo(() => {
+  // Compute the complete match list once; slicing for the visible window happens below.
+  const allMatches = useMemo(() => {
     const searchLower = search.toLowerCase()
     const results: SprintTask[] = []
 
     for (const task of availableTasks) {
-      // Skip current task and already-selected tasks
       if (task.id === currentTaskId || selectedIds.has(task.id)) {
         continue
       }
-
-      // Skip tasks that don't match search
       if (searchLower && !task.title.toLowerCase().includes(searchLower)) {
         continue
       }
-
       results.push(task)
-
-      // Early exit once we have enough results
-      if (results.length >= MAX_RESULTS) {
-        break
-      }
     }
 
     return results
   }, [availableTasks, currentTaskId, selectedIds, search])
 
+  const totalMatches = allMatches.length
+  const visibleTasks = showAll ? allMatches : allMatches.slice(0, MAX_RESULTS)
+  const hasMore = totalMatches > MAX_RESULTS && !showAll
+
+  // Reset show-all whenever the search text changes so each query starts windowed.
+  const handleSearchChange = useCallback((value: string) => {
+    setSearch(value)
+    setShowAll(false)
+  }, [])
+
   const openDropdown = useCallback(() => {
     setDropdownOpen(true)
     setSearch('')
+    setShowAll(false)
     // Focus search input on next tick
     setTimeout(() => searchRef.current?.focus(), 0)
   }, [])
@@ -60,6 +64,7 @@ export function DependencyPicker({
   const closeDropdown = useCallback(() => {
     setDropdownOpen(false)
     setSearch('')
+    setShowAll(false)
   }, [])
 
   const handleAddTask = useCallback(
@@ -126,6 +131,9 @@ export function DependencyPicker({
       <div id="wb-deps-label" className="wb-form__label">
         Dependencies
       </div>
+      <p className="wb-deps__help" id="wb-deps-help">
+        Hard = blocks on upstream failure · Soft = unblocks regardless.
+      </p>
 
       {dependencies.length > 0 && (
         <ul className="wb-deps__list" aria-label="Selected dependencies">
@@ -197,27 +205,40 @@ export function DependencyPicker({
               className="wb-deps__search"
               placeholder="Search tasks…"
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => handleSearchChange(e.target.value)}
               aria-label="Search tasks"
             />
             <ul className="wb-deps__results" role="listbox" aria-label="Task results">
-              {filteredTasks.length === 0 ? (
+              {visibleTasks.length === 0 ? (
                 <li className="wb-deps__empty">No matching tasks</li>
               ) : (
-                filteredTasks.map((task) => (
-                  <li key={task.id}>
-                    <button
-                      type="button"
-                      className="wb-deps__result"
-                      role="option"
-                      aria-selected={false}
-                      onClick={() => handleAddTask(task)}
-                    >
-                      <span className="wb-deps__result-title">{task.title}</span>
-                      <span className="wb-deps__result-status">{task.status}</span>
-                    </button>
-                  </li>
-                ))
+                <>
+                  {visibleTasks.map((task) => (
+                    <li key={task.id}>
+                      <button
+                        type="button"
+                        className="wb-deps__result"
+                        role="option"
+                        aria-selected={false}
+                        onClick={() => handleAddTask(task)}
+                      >
+                        <span className="wb-deps__result-title">{task.title}</span>
+                        <span className="wb-deps__result-status">{task.status}</span>
+                      </button>
+                    </li>
+                  ))}
+                  {hasMore && (
+                    <li className="wb-deps__more">
+                      <button
+                        type="button"
+                        className="wb-deps__show-all"
+                        onClick={() => setShowAll(true)}
+                      >
+                        Showing {MAX_RESULTS} of {totalMatches} — Show all
+                      </button>
+                    </li>
+                  )}
+                </>
               )}
             </ul>
           </div>

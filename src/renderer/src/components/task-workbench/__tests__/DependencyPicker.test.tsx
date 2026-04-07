@@ -181,4 +181,87 @@ describe('DependencyPicker', () => {
     expect(screen.getByText('done')).toBeInTheDocument()
     expect(screen.getByText('queued')).toBeInTheDocument()
   })
+
+  it('renders inline hard/soft help text under the label', () => {
+    render(
+      <DependencyPicker
+        dependencies={[]}
+        availableTasks={mockTasks}
+        onChange={vi.fn()}
+        currentTaskId={undefined}
+      />
+    )
+    expect(screen.getByText(/Hard = blocks on upstream failure/i)).toBeInTheDocument()
+    expect(screen.getByText(/Soft = unblocks regardless/i)).toBeInTheDocument()
+  })
+
+  describe('show-all results', () => {
+    const makeTasks = (count: number): SprintTask[] =>
+      Array.from(
+        { length: count },
+        (_, i) => ({ id: `t${i}`, title: `Task ${i}`, status: 'queued', repo: 'bde' }) as SprintTask
+      )
+
+    it('shows footer when matches exceed window of 30', async () => {
+      render(
+        <DependencyPicker
+          dependencies={[]}
+          availableTasks={makeTasks(31)}
+          onChange={vi.fn()}
+          currentTaskId={undefined}
+        />
+      )
+      await userEvent.click(screen.getByRole('button', { name: /add dependency/i }))
+      expect(screen.getByRole('button', { name: /Showing 30 of 31 — Show all/i })).toBeInTheDocument()
+      // 31st item is hidden until "Show all"
+      expect(screen.queryByText('Task 30')).not.toBeInTheDocument()
+    })
+
+    it('reveals all matches after clicking "Show all"', async () => {
+      render(
+        <DependencyPicker
+          dependencies={[]}
+          availableTasks={makeTasks(31)}
+          onChange={vi.fn()}
+          currentTaskId={undefined}
+        />
+      )
+      await userEvent.click(screen.getByRole('button', { name: /add dependency/i }))
+      await userEvent.click(screen.getByRole('button', { name: /Show all/i }))
+      expect(screen.getByText('Task 30')).toBeInTheDocument()
+      // Footer is gone once expanded
+      expect(screen.queryByRole('button', { name: /Show all/i })).not.toBeInTheDocument()
+    })
+
+    it('does not show footer when matches fit the window', async () => {
+      render(
+        <DependencyPicker
+          dependencies={[]}
+          availableTasks={makeTasks(30)}
+          onChange={vi.fn()}
+          currentTaskId={undefined}
+        />
+      )
+      await userEvent.click(screen.getByRole('button', { name: /add dependency/i }))
+      expect(screen.queryByRole('button', { name: /Show all/i })).not.toBeInTheDocument()
+      expect(screen.getByText('Task 29')).toBeInTheDocument()
+    })
+
+    it('changing search resets the show-all expansion', async () => {
+      render(
+        <DependencyPicker
+          dependencies={[]}
+          availableTasks={makeTasks(31)}
+          onChange={vi.fn()}
+          currentTaskId={undefined}
+        />
+      )
+      await userEvent.click(screen.getByRole('button', { name: /add dependency/i }))
+      await userEvent.click(screen.getByRole('button', { name: /Show all/i }))
+      // Type something that still matches >30 to verify the footer reappears
+      await userEvent.type(screen.getByRole('textbox'), 'Task')
+      expect(screen.getByRole('button', { name: /Show all/i })).toBeInTheDocument()
+      expect(screen.queryByText('Task 30')).not.toBeInTheDocument()
+    })
+  })
 })
