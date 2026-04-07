@@ -1,7 +1,7 @@
 import type { AgentHandle, SteerResult, Logger } from './types'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
-import { buildAgentEnv, getOAuthToken } from '../env-utils'
+import { buildAgentEnv, getOAuthToken, getClaudeCliPath } from '../env-utils'
 
 /**
  * Per-agent V8 old-space heap cap (MB) applied to spawned Claude CLI
@@ -67,6 +67,7 @@ function spawnViaSdk(
       model: opts.model,
       cwd: opts.cwd,
       env: env as Record<string, string | undefined>,
+      pathToClaudeCodeExecutable: getClaudeCliPath(),
       ...(token ? { apiKey: token } : {}),
       abortController,
       settingSources: ['user', 'project', 'local'],

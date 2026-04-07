@@ -13,7 +13,7 @@
 import { randomUUID } from 'node:crypto'
 import { basename } from 'node:path'
 import { importAgent, updateAgentMeta } from './agent-history'
-import { buildAgentEnvWithAuth } from './env-utils'
+import { buildAgentEnvWithAuth, getClaudeCliPath } from './env-utils'
 import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
 import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
@@ -58,6 +58,7 @@ export async function spawnAdhocAgent(args: {
     model,
     cwd: args.repoPath,
     env: env as Record<string, string>,
+    pathToClaudeCodeExecutable: getClaudeCliPath(),
     settingSources: ['user' as const, 'project' as const, 'local' as const]
   }
 

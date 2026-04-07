@@ -314,9 +314,15 @@
   border-radius: 6px;
   padding: 8px 10px;
   margin-bottom: 4px;
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  /* Grid: row 1 = checkbox + title block, row 2 = action button (full width).
+     A flex-row layout squeezed the title to ~30px in the 200px sidebar. */
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas:
+    'checkbox select'
+    'action   action';
+  gap: 6px 8px;
+  align-items: start;
   transition:
     border-color 150ms ease,
     background 150ms ease;
@@ -328,7 +334,7 @@
 }
 
 .backlog-card__checkbox-wrapper {
-  flex-shrink: 0;
+  grid-area: checkbox;
   display: flex;
   align-items: center;
   padding-top: 2px;
@@ -344,7 +350,7 @@
 .backlog-card__select {
   all: unset;
   display: block;
-  flex: 1;
+  grid-area: select;
   cursor: pointer;
   text-align: left;
   min-width: 0;
@@ -377,6 +383,7 @@
 }
 
 .backlog-card__action {
+  grid-area: action;
   font-size: var(--font-xs, 11px);
   font-weight: 600;
   color: var(--neon-cyan);
@@ -384,7 +391,6 @@
   border: 1px solid var(--neon-cyan-border);
   border-radius: 4px;
   padding: 3px 8px;
-  margin-top: 6px;
   cursor: pointer;
   opacity: 0.5;
   transition:

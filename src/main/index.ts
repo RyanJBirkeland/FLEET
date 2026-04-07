@@ -35,7 +35,12 @@ import { pruneOldChanges } from './data/task-changes'
 import { getEventRetentionDays } from './config'
 import { createAgentManager } from './agent-manager'
 import { createSprintTaskRepository } from './data/sprint-task-repository'
-import { getOAuthToken } from './env-utils'
+import { getOAuthToken, ensureExtraPathsOnProcessEnv } from './env-utils'
+
+// Augment process.env.PATH so child_process.spawn() can find user-installed
+// CLIs (claude, gh, git, node) when launched from Finder/Spotlight. Must run
+// before any whenReady-time spawn (agent-manager, status-server, adhoc agents).
+ensureExtraPathsOnProcessEnv()
 import { getSetting, getSettingJson } from './settings'
 import { createTaskTerminalService } from './services/task-terminal-service'
 import { createStatusServer } from './services/status-server'

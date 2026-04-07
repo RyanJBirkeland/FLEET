@@ -2,7 +2,7 @@
  * Tier 2 semantic spec validation — AI-powered quality check.
  * Uses the Agent SDK for reliable Claude API access.
  */
-import { buildAgentEnv } from './env-utils'
+import { buildAgentEnv, getClaudeCliPath } from './env-utils'
 import { getValidationProfile, type SpecType } from '../shared/spec-validation'
 
 export interface SemanticCheckResult {
@@ -30,6 +30,7 @@ async function runSdkQuery(prompt: string): Promise<string> {
       model: 'claude-haiku-4-5-20251001',
       maxTurns: 1,
       env: env as Record<string, string>,
+      pathToClaudeCodeExecutable: getClaudeCliPath(),
       permissionMode: 'bypassPermissions' as const,
       allowDangerouslySkipPermissions: true,
       settingSources: ['user', 'project', 'local']

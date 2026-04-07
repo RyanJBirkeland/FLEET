@@ -6,7 +6,8 @@
 import { readFileSync, existsSync, writeFileSync, statSync } from 'node:fs'
 import { execFile as execFileCb } from 'node:child_process'
 import { promisify } from 'node:util'
-import { join } from 'node:path'
+import { createRequire } from 'node:module'
+import { dirname, join } from 'node:path'
 import { homedir } from 'node:os'
 
 const EXTRA_PATHS = ['/usr/local/bin', '/opt/homebrew/bin', `${homedir()}/.local/bin`]
@@ -31,6 +32,24 @@ const ENV_ALLOWLIST = [
   'GIT_COMMITTER_EMAIL',
   'NODE_PATH'
 ]
+
+/**
+ * Prepends EXTRA_PATHS to process.env.PATH (idempotent — safe to call multiple times).
+ *
+ * Why this exists: Node's child_process.spawn(file, args, { env }) resolves the
+ * binary name against the *caller's* process.env.PATH, NOT the env you pass to
+ * the child. Packaged Electron apps on macOS launched from Finder/Spotlight get
+ * a minimal /usr/bin:/bin PATH and can't find tools installed via npm/brew/etc.
+ * Mutating process.env.PATH at startup makes ALL subsequent spawn() calls work
+ * (including the @anthropic-ai/claude-agent-sdk's internal claude lookup).
+ */
+export function ensureExtraPathsOnProcessEnv(): void {
+  const current = process.env.PATH ?? ''
+  const parts = current.split(':').filter(Boolean)
+  const missing = EXTRA_PATHS.filter((p) => !parts.includes(p))
+  if (missing.length === 0) return
+  process.env.PATH = [...missing, ...parts].join(':')
+}
 
 /** Returns allowlisted env vars with common tool paths prepended to PATH. Cached after first call. */
 export function buildAgentEnv(): Record<string, string | undefined> {
@@ -139,4 +158,37 @@ export function _resetEnvCache(): void {
   _cachedEnv = null
   _cachedOAuthToken = null
   _tokenLoadedAt = 0
+  _cachedClaudeCliPath = null
+}
+
+let _cachedClaudeCliPath: string | null = null
+
+/**
+ * Returns the on-disk path to the bundled @anthropic-ai/claude-agent-sdk cli.js.
+ *
+ * Why this exists: the SDK resolves its cli.js via `dirname(import.meta.url) + 'cli.js'`.
+ * In a packaged Electron app the SDK is loaded from inside `app.asar` (a virtual
+ * filesystem), so the resolved path lives inside the asar archive — and
+ * child_process.spawn() can't execute scripts inside an asar. Translating the
+ * path to its app.asar.unpacked twin (electron-builder unpacks the SDK because
+ * it ships native binaries / wasm) gives spawn() a real on-disk path to fork.
+ *
+ * In dev / tests this returns the regular node_modules path unchanged.
+ *
+ * Pass the result to the SDK's `pathToClaudeCodeExecutable` option.
+ */
+export function getClaudeCliPath(): string {
+  if (_cachedClaudeCliPath) return _cachedClaudeCliPath
+  // Prefer require.resolve so this works whether main is bundled as ESM or CJS.
+  // Anchored at this file's URL so the lookup is always local to env-utils.ts.
+  const req = createRequire(import.meta.url)
+  // The SDK exposes sdk.mjs as its main entry — resolve it then walk to cli.js,
+  // because cli.js itself is not in the package's `exports` map.
+  const sdkMain = req.resolve('@anthropic-ai/claude-agent-sdk')
+  const cliPath = join(dirname(sdkMain), 'cli.js').replace(
+    `${join('app.asar', '')}`,
+    `${join('app.asar.unpacked', '')}`
+  )
+  _cachedClaudeCliPath = cliPath
+  return cliPath
 }

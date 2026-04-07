@@ -13,11 +13,7 @@ import {
   type CreateGroupInput,
   type UpdateGroupInput
 } from '../data/task-group-queries'
-import { registerPlannerImportHandlers } from './planner-import'
-
 export function registerGroupHandlers(): void {
-  // Register plan import handlers
-  registerPlannerImportHandlers()
   safeHandle('groups:create', (_e, input: CreateGroupInput) => {
     const group = createGroup(input)
     if (!group) throw new Error('Failed to create task group')

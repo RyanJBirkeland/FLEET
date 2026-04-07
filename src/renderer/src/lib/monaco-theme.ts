@@ -14,7 +14,9 @@ export function getMonacoTheme(): editor.IStandaloneThemeData {
   const orange = '#ffb432'
   const pink = '#ff64c8'
   const purple = '#bf5af2'
-  const dimText = 'rgba(255, 255, 255, 0.3)'
+  // Monaco's rules[].foreground only accepts #RRGGBB hex — no rgba/alpha.
+  // This is the dark-theme equivalent of white-30%-over-near-black.
+  const dimText = '#7a7a7a'
 
   return {
     base: 'vs-dark',
@@ -124,7 +126,9 @@ export function getLightMonacoTheme(): editor.IStandaloneThemeData {
   const orange = '#e17055'
   const pink = '#e84393'
   const purple = '#a855f7'
-  const dimText = 'rgba(26, 26, 46, 0.3)'
+  // Monaco's rules[].foreground only accepts #RRGGBB hex — no rgba/alpha.
+  // Light-theme equivalent of dark-blue-30%-over-white.
+  const dimText = '#9aa5b1'
 
   return {
     base: 'vs',
