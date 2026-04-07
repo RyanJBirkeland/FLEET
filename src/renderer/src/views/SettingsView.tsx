@@ -12,6 +12,7 @@ import {
   DollarSign,
   Brain,
   Shield,
+  Info,
   Keyboard,
   Bell
 } from 'lucide-react'
@@ -42,7 +43,8 @@ const SECTIONS: SettingsSection[] = [
   { id: 'appearance', label: 'Appearance', icon: Palette, category: 'App' },
   { id: 'notifications', label: 'Notifications', icon: Bell, category: 'App' },
   { id: 'keybindings', label: 'Keybindings', icon: Keyboard, category: 'App' },
-  { id: 'memory', label: 'Memory', icon: Brain, category: 'App' }
+  { id: 'memory', label: 'Memory', icon: Brain, category: 'App' },
+  { id: 'about', label: 'About', icon: Info, category: 'App' }
 ]
 
 const SECTION_MAP: Record<string, () => React.JSX.Element> = {
