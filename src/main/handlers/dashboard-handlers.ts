@@ -64,26 +64,6 @@ export function getRecentEvents(limit: number = 20): {
   return rows
 }
 
-export function getTaskBurndown(): { date: string; count: number }[] {
-  const db = getDb()
-  const rows = db
-    .prepare(
-      `
-    SELECT
-      DATE(completed_at) AS date,
-      COUNT(*) AS count
-    FROM sprint_tasks
-    WHERE completed_at IS NOT NULL
-      AND completed_at >= DATE('now', '-7 days')
-      AND status = 'done'
-    GROUP BY date
-    ORDER BY date ASC
-  `
-    )
-    .all() as { date: string; count: number }[]
-  return rows
-}
-
 export function registerDashboardHandlers(): void {
   safeHandle('agent:completionsPerHour', async () => {
     return getCompletionsPerHour()
@@ -95,10 +75,6 @@ export function registerDashboardHandlers(): void {
 
   safeHandle('dashboard:dailySuccessRate', async (_e: unknown, days?: number) => {
     return getDailySuccessRate(days)
-  })
-
-  safeHandle('sprint:burndown', async () => {
-    return getTaskBurndown()
   })
 
   safeHandle('system:loadAverage', async () => {
