@@ -65,9 +65,19 @@ export function ReviewActions(): React.JSX.Element {
         strategy: mergeStrategy
       })
       if (result.success) {
-        toast.success(
-          result.pushed ? 'Merged & pushed!' : 'Merged locally (push failed — push manually)'
-        )
+        if (result.pushed) {
+          toast.success('Merged & pushed!')
+        } else {
+          // Partial success: merged into local main but push failed. This is
+          // NOT a normal success — usually means local main diverged from
+          // origin or the network/remote hiccupped. Surface as an error with
+          // a long duration so the user doesn't assume origin has their
+          // commit (the 'it seemed to ship' footgun).
+          toast.error(
+            'Merged locally, but push to origin FAILED. Open Source Control to retry the push, or run `git push` manually.',
+            10000
+          )
+        }
         selectTask(null)
         loadData()
       } else {

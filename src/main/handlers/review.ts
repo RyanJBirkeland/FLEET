@@ -512,14 +512,54 @@ export function registerReviewHandlers(): void {
       }
     }
 
-    // Rebase agent branch onto origin/main before merge
+    // Verify main checkout is on `main` branch — we're about to merge into
+    // whatever's checked out here. If someone's on a feature branch in their
+    // main repo clone, bail loudly instead of silently merging into it.
+    const { stdout: currentBranchOut } = await execFileAsync(
+      'git',
+      ['rev-parse', '--abbrev-ref', 'HEAD'],
+      { cwd: repoPath, env }
+    )
+    const currentBranch = currentBranchOut.trim()
+    if (currentBranch !== 'main') {
+      return {
+        success: false,
+        error: `Main repo checkout is on branch "${currentBranch}", not "main". Switch to main before shipping.`
+      }
+    }
+
+    // Fetch origin/main ONCE from the main checkout and fast-forward local main
+    // to match. This also updates the shared refs visible from the worktree, so
+    // the rebase below sees the latest origin/main. Previously, fetch ran only
+    // in the worktree — leaving local main in the main checkout stale — and the
+    // subsequent merge created a divergent commit that `git push` silently
+    // rejected as non-fast-forward (leaving the user with a divergent history
+    // and a misleading green success toast).
     try {
       logger.info(`[review:shipIt] Fetching origin/main for task ${taskId}`)
-      await execFileAsync('git', ['fetch', 'origin', 'main'], {
-        cwd: task.worktree_path,
-        env
-      })
+      await execFileAsync('git', ['fetch', 'origin', 'main'], { cwd: repoPath, env })
+    } catch (fetchErr: unknown) {
+      const errMsg = fetchErr instanceof Error ? fetchErr.message : String(fetchErr)
+      logger.error(`[review:shipIt] Fetch failed for task ${taskId}: ${errMsg}`)
+      return { success: false, error: `Fetch origin/main failed: ${errMsg}` }
+    }
 
+    try {
+      logger.info(`[review:shipIt] Fast-forwarding local main to origin/main`)
+      await execFileAsync('git', ['merge', '--ff-only', 'origin/main'], { cwd: repoPath, env })
+    } catch (ffErr: unknown) {
+      const errMsg = ffErr instanceof Error ? ffErr.message : String(ffErr)
+      logger.error(`[review:shipIt] Fast-forward failed for task ${taskId}: ${errMsg}`)
+      return {
+        success: false,
+        error: `Local main has diverged from origin/main and cannot be fast-forwarded. Resolve manually (e.g. git pull --rebase), then retry Ship It.`
+      }
+    }
+
+    // Rebase agent branch onto origin/main before merge. Fetch already happened
+    // above in the main checkout; refs are shared with the worktree via the
+    // same .git directory, so the worktree sees the updated origin/main ref.
+    try {
       logger.info(`[review:shipIt] Rebasing ${branch} onto origin/main`)
       await execFileAsync('git', ['rebase', 'origin/main'], { cwd: task.worktree_path, env })
     } catch (err: unknown) {

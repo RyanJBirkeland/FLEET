@@ -4,15 +4,26 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IpcMainInvokeEvent } from 'electron'
 
-// Track git command calls for ordering tests (hoisted for vi.mock)
-const { gitCommandCalls, mockExecFileAsync } = vi.hoisted(() => {
+// Track git command calls for ordering tests (hoisted for vi.mock).
+// The default impl is exposed so `beforeEach` can re-apply it — otherwise
+// tests that override via mockImplementation leak their impl into later tests
+// (vi.clearAllMocks does NOT reset implementations).
+const { gitCommandCalls, mockExecFileAsync, defaultGitImpl } = vi.hoisted(() => {
   const gitCommandCalls: string[] = []
 
-  const mockExecFileAsync = vi.fn(async (cmd: string, args: string[]) => {
+  const defaultGitImpl = async (
+    cmd: string,
+    args: string[],
+    opts?: { cwd?: string }
+  ): Promise<{ stdout: string; stderr: string }> => {
     if (cmd === 'git') {
       if (args[0] === 'rev-parse') {
         gitCommandCalls.push('rev-parse')
-        return { stdout: 'feature-branch\n', stderr: '' }
+        // Worktree rev-parse returns the feature branch; main-repo checkout
+        // rev-parse returns 'main'. Tests that need different values can
+        // override via mockImplementation.
+        const isMainRepo = opts?.cwd === '/repos/test'
+        return { stdout: isMainRepo ? 'main\n' : 'feature-branch\n', stderr: '' }
       }
       if (args[0] === 'fetch') {
         gitCommandCalls.push('fetch')
@@ -44,9 +55,11 @@ const { gitCommandCalls, mockExecFileAsync } = vi.hoisted(() => {
       }
     }
     return { stdout: '', stderr: '' }
-  })
+  }
 
-  return { gitCommandCalls, mockExecFileAsync }
+  const mockExecFileAsync = vi.fn(defaultGitImpl)
+
+  return { gitCommandCalls, mockExecFileAsync, defaultGitImpl }
 })
 
 // Mock dependencies before imports
@@ -94,6 +107,10 @@ describe('Review handlers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     gitCommandCalls.length = 0 // Clear command tracking
+    // vi.clearAllMocks does NOT reset implementations — re-apply the default
+    // git impl so tests that override via mockImplementation don't leak into
+    // the next test.
+    mockExecFileAsync.mockImplementation(defaultGitImpl)
   })
 
   it('registers all 12 review channels', () => {
@@ -606,31 +623,39 @@ describe('Review handlers', () => {
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
 
       // Mock rebase to fail
-      mockExecFileAsync.mockImplementation(async (cmd: string, args: string[]) => {
-        if (cmd === 'git') {
-          if (args[0] === 'rev-parse') {
-            gitCommandCalls.push('rev-parse')
-            return { stdout: 'feature-branch\n', stderr: '' }
+      mockExecFileAsync.mockImplementation(
+        async (cmd: string, args: string[], opts?: { cwd?: string }) => {
+          if (cmd === 'git') {
+            if (args[0] === 'rev-parse') {
+              gitCommandCalls.push('rev-parse')
+              // Worktree returns feature branch; main repo returns 'main'
+              const isMainRepo = opts?.cwd === '/repos/test'
+              return { stdout: isMainRepo ? 'main\n' : 'feature-branch\n', stderr: '' }
+            }
+            if (args[0] === 'status') {
+              gitCommandCalls.push('status')
+              return { stdout: '', stderr: '' }
+            }
+            if (args[0] === 'fetch') {
+              gitCommandCalls.push('fetch')
+              return { stdout: '', stderr: '' }
+            }
+            if (args[0] === 'merge' && args[1] === '--ff-only') {
+              // Fast-forward of local main succeeds
+              return { stdout: '', stderr: '' }
+            }
+            if (args[0] === 'rebase' && args[1] === 'origin/main') {
+              gitCommandCalls.push('rebase')
+              throw new Error('Rebase conflict')
+            }
+            if (args[0] === 'rebase' && args[1] === '--abort') {
+              gitCommandCalls.push('rebase-abort')
+              return { stdout: '', stderr: '' }
+            }
           }
-          if (args[0] === 'status') {
-            gitCommandCalls.push('status')
-            return { stdout: '', stderr: '' }
-          }
-          if (args[0] === 'fetch') {
-            gitCommandCalls.push('fetch')
-            return { stdout: '', stderr: '' }
-          }
-          if (args[0] === 'rebase' && args[1] === 'origin/main') {
-            gitCommandCalls.push('rebase')
-            throw new Error('Rebase conflict')
-          }
-          if (args[0] === 'rebase' && args[1] === '--abort') {
-            gitCommandCalls.push('rebase-abort')
-            return { stdout: '', stderr: '' }
-          }
+          return { stdout: '', stderr: '' }
         }
-        return { stdout: '', stderr: '' }
-      })
+      )
 
       const handlers = captureHandlers()
       const result = await handlers['review:shipIt'](_mockEvent, {
@@ -646,6 +671,199 @@ describe('Review handlers', () => {
 
       // Verify rebase was aborted
       expect(gitCommandCalls).toContain('rebase-abort')
+    })
+
+    it('review:shipIt fast-forwards local main before merging feature branch', async () => {
+      // Pins the fix for the "local main stayed stale → push rejected → user
+      // saw a green toast and got divergent history" bug: shipIt must fetch
+      // and fast-forward the main checkout's local main before merging.
+      const { getTask, updateTask } = await import('../../data/sprint-queries')
+      const { getSettingJson } = await import('../../settings')
+
+      vi.mocked(getTask).mockReturnValue({
+        id: 'task-1',
+        repo: 'test-repo',
+        worktree_path: '/tmp/worktrees/test',
+        status: 'active',
+        title: 'Test Task',
+        prompt: 'Test prompt',
+        priority: 1,
+        depends_on: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
+      vi.mocked(updateTask).mockReturnValue({
+        id: 'task-1',
+        repo: 'test-repo',
+        status: 'done',
+        title: 'Test Task',
+        prompt: 'Test prompt',
+        priority: 1,
+        depends_on: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+        completed_at: new Date().toISOString()
+      })
+
+      // Track full merge args so we can distinguish `merge --ff-only origin/main`
+      // (fast-forward of local main) from the later feature-branch merge.
+      // Also capture the cwd of each git invocation by verb for ordering checks.
+      const mergeCalls: string[][] = []
+      const fetchCalls: Array<{ cwd: string }> = []
+      mockExecFileAsync.mockImplementation(
+        async (cmd: string, args: string[], opts?: { cwd?: string }) => {
+          if (cmd === 'git') {
+            if (args[0] === 'rev-parse') {
+              gitCommandCalls.push('rev-parse')
+              // First call from worktree returns feature branch;
+              // second call from main repo returns 'main'.
+              const isMainRepo = opts?.cwd === '/repos/test'
+              return { stdout: isMainRepo ? 'main\n' : 'feature-branch\n', stderr: '' }
+            }
+            if (args[0] === 'status') {
+              gitCommandCalls.push('status')
+              return { stdout: '', stderr: '' }
+            }
+            if (args[0] === 'fetch') {
+              fetchCalls.push({ cwd: opts?.cwd ?? '' })
+              gitCommandCalls.push('fetch')
+              return { stdout: '', stderr: '' }
+            }
+            if (args[0] === 'merge') {
+              mergeCalls.push([...args])
+              gitCommandCalls.push('merge')
+              return { stdout: '', stderr: '' }
+            }
+            if (args[0] === 'rebase') {
+              gitCommandCalls.push('rebase')
+              return { stdout: '', stderr: '' }
+            }
+          }
+          return { stdout: '', stderr: '' }
+        }
+      )
+
+      const handlers = captureHandlers()
+      const result = await handlers['review:shipIt'](
+        _mockEvent,
+        { taskId: 'task-1', strategy: 'merge' }
+      )
+
+      expect(result.success).toBe(true)
+
+      // Fetch must happen in the main repo checkout (so refs are updated there)
+      expect(fetchCalls.length).toBeGreaterThanOrEqual(1)
+      expect(fetchCalls[0].cwd).toBe('/repos/test')
+
+      // There must be at least 2 merge calls: (1) ff-only of local main, (2) feature branch merge
+      expect(mergeCalls.length).toBeGreaterThanOrEqual(2)
+
+      // First merge must be the fast-forward of local main to origin/main
+      const firstMerge = mergeCalls[0]
+      expect(firstMerge).toContain('--ff-only')
+      expect(firstMerge).toContain('origin/main')
+
+      // Fast-forward must happen BEFORE the feature branch rebase
+      const ffMergeIdx = gitCommandCalls.indexOf('merge')
+      const rebaseIdx = gitCommandCalls.indexOf('rebase')
+      expect(ffMergeIdx).toBeGreaterThan(-1)
+      expect(rebaseIdx).toBeGreaterThan(-1)
+      expect(ffMergeIdx).toBeLessThan(rebaseIdx)
+    })
+
+    it('review:shipIt bails out if main checkout is not on main branch', async () => {
+      const { getTask } = await import('../../data/sprint-queries')
+      const { getSettingJson } = await import('../../settings')
+
+      vi.mocked(getTask).mockReturnValue({
+        id: 'task-1',
+        repo: 'test-repo',
+        worktree_path: '/tmp/worktrees/test',
+        status: 'active',
+        title: 'Test Task',
+        prompt: 'Test prompt',
+        priority: 1,
+        depends_on: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
+
+      // Main repo rev-parse returns a feature branch, not 'main'
+      mockExecFileAsync.mockImplementation(
+        async (cmd: string, args: string[], opts?: { cwd?: string }) => {
+          if (cmd === 'git') {
+            if (args[0] === 'rev-parse') {
+              const isMainRepo = opts?.cwd === '/repos/test'
+              return {
+                stdout: isMainRepo ? 'feature/user-other-work\n' : 'task-branch\n',
+                stderr: ''
+              }
+            }
+            if (args[0] === 'status') return { stdout: '', stderr: '' }
+          }
+          return { stdout: '', stderr: '' }
+        }
+      )
+
+      const handlers = captureHandlers()
+      const result = await handlers['review:shipIt'](
+        _mockEvent,
+        { taskId: 'task-1', strategy: 'merge' }
+      )
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('feature/user-other-work')
+      expect(result.error).toContain('main')
+    })
+
+    it('review:shipIt returns error when local main cannot be fast-forwarded', async () => {
+      const { getTask } = await import('../../data/sprint-queries')
+      const { getSettingJson } = await import('../../settings')
+
+      vi.mocked(getTask).mockReturnValue({
+        id: 'task-1',
+        repo: 'test-repo',
+        worktree_path: '/tmp/worktrees/test',
+        status: 'active',
+        title: 'Test Task',
+        prompt: 'Test prompt',
+        priority: 1,
+        depends_on: [],
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      })
+      vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
+
+      mockExecFileAsync.mockImplementation(
+        async (cmd: string, args: string[], opts?: { cwd?: string }) => {
+          if (cmd === 'git') {
+            if (args[0] === 'rev-parse') {
+              const isMainRepo = opts?.cwd === '/repos/test'
+              return {
+                stdout: isMainRepo ? 'main\n' : 'feature-branch\n',
+                stderr: ''
+              }
+            }
+            if (args[0] === 'status') return { stdout: '', stderr: '' }
+            if (args[0] === 'fetch') return { stdout: '', stderr: '' }
+            if (args[0] === 'merge' && args[1] === '--ff-only') {
+              throw new Error('Not possible to fast-forward, aborting.')
+            }
+          }
+          return { stdout: '', stderr: '' }
+        }
+      )
+
+      const handlers = captureHandlers()
+      const result = await handlers['review:shipIt'](
+        _mockEvent,
+        { taskId: 'task-1', strategy: 'merge' }
+      )
+
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('diverged from origin/main')
     })
   })
 })
