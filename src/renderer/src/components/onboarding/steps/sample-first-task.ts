@@ -34,8 +34,7 @@ Keep it under 10 lines. Do not change any runtime behavior.
 
 ## Files to Change
 
-- \`REPLACE_WITH_ENTRY_FILE\` — e.g. \`src/main/index.ts\`, \`src/index.ts\`,
-  or \`bin/cli.ts\`. Update this path before queuing.
+- \`src/main/index.ts\`
 
 ## How to Test
 
