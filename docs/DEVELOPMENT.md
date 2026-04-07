@@ -12,6 +12,13 @@ This document captures the architecture, internal mental model, and contributor 
 
 Every piece of work flows through a structured pipeline. Tasks start as ideas and end as merged code — with human review gates at every critical point.
 
+**The short version, in four steps:**
+
+1. **Define tasks and dependencies** — Draft specs in Task Workbench, set hard/soft dependencies so agents tackle prerequisites first.
+2. **BDE spawns Claude Code in isolation** — Each task gets its own Claude Code session in its own git worktree. Sessions run in parallel without stepping on each other.
+3. **Sessions land in the Review queue** — When a session finishes, its worktree is preserved and the task moves to `review`. No auto-push, no surprise PRs.
+4. **You decide what ships** — Inspect diffs in Code Review Station, then merge locally, open a PR, request a revision, or discard.
+
 ```mermaid
 flowchart TD
     A["Backlog
@@ -100,11 +107,14 @@ sequenceDiagram
 | **Coordination** | You remember which tasks depend on which | Declarative hard/soft dependencies with auto-resolution |
 | **When it fails** | You notice, restart manually | Auto-retry (up to 3x), fast-fail detection, watchdog kill |
 | **Observability** | Scroll through terminal output | Dashboard, pipeline view, cost charts, event streams |
+| **Spend visibility** | No idea what your agents cost | Cost dashboard with per-run, hourly, and daily analytics |
 | **Cognitive load** | You track everything in your head | One screen shows all concurrent work, decisions, and status |
 
 ---
 
 ## Architecture
+
+Local-first, open architecture, clean code. No black boxes — your tasks, diffs, costs, and events all live in a SQLite file on your machine.
 
 ```mermaid
 graph TB
@@ -180,6 +190,10 @@ All state lives in a local SQLite database at `~/.bde/bde.db`. No cloud dependen
 | `cost_events` | Token usage and cost tracking per agent run |
 | `task_changes` | Field-level audit trail on every task mutation |
 | `settings` | Key-value app configuration |
+
+### Cost tracking
+
+Every Claude Code session's token usage and cost are logged to `cost_events`. The Dashboard surfaces per-run, hourly, and daily spend trends so you can spot expensive tasks, compare models, and catch runaway loops before the bill does. No external billing integration needed — the data comes straight from SDK usage events.
 
 ---
 
