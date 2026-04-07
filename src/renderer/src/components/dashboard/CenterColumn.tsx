@@ -1,4 +1,5 @@
-import { NeonCard, SankeyPipeline, type ChartBar } from '../neon'
+import { NeonCard, SankeyPipeline } from '../neon'
+import type { CompletionBucket } from '../../../../shared/ipc-channels'
 import { ChartsSection } from './ChartsSection'
 import { StatusFilter } from '../../stores/sprintUI'
 import { Activity, GitPullRequest, XCircle, AlertTriangle } from 'lucide-react'
@@ -32,8 +33,7 @@ interface CenterColumnProps {
     blocked: unknown[]
     failed: unknown[]
   }
-  chartData: ChartBar[]
-  burndownData: ChartBar[]
+  throughputData: CompletionBucket[]
   cardErrors: Record<string, string | undefined>
   successRate: number | null
   avgDuration: number | null
@@ -48,8 +48,7 @@ interface CenterColumnProps {
 export function CenterColumn({
   stats,
   partitions,
-  chartData,
-  burndownData,
+  throughputData,
   cardErrors,
   successRate,
   avgDuration,
@@ -117,8 +116,7 @@ export function CenterColumn({
       </NeonCard>
 
       <ChartsSection
-        chartData={chartData}
-        burndownData={burndownData}
+        throughputData={throughputData}
         cardErrors={cardErrors}
         successRate={successRate}
         stats={{ done: stats.done, failed: stats.failed, actualFailed: stats.actualFailed }}

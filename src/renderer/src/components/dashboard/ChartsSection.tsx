@@ -1,4 +1,5 @@
-import { NeonCard, MiniChart, type ChartBar } from '../neon'
+import { NeonCard, MiniChart } from '../neon'
+import type { CompletionBucket } from '../../../../shared/ipc-channels'
 import { useDashboardDataStore } from '../../stores/dashboardData'
 import { SuccessRing } from './SuccessRing'
 import { SuccessTrendChart } from './SuccessTrendChart'
@@ -16,8 +17,7 @@ interface DailySuccessRate {
 }
 
 interface ChartsSectionProps {
-  chartData: ChartBar[]
-  burndownData: ChartBar[]
+  throughputData: CompletionBucket[]
   cardErrors: Record<string, string | undefined>
   successRate: number | null
   stats: { done: number; failed: number; actualFailed: number }
@@ -41,8 +41,7 @@ function formatDurationMs(ms: number): string {
 
 /** Center column with pipeline visualization and charts. */
 export function ChartsSection({
-  chartData,
-  burndownData,
+  throughputData,
   cardErrors,
   successRate,
   stats,
@@ -62,9 +61,9 @@ export function ChartsSection({
   return (
     <>
       <NeonCard accent="cyan" title="Completions by Hour" icon={<Zap size={12} />}>
-        {cardErrors.chart ? (
+        {cardErrors.throughput ? (
           <div className="dashboard-card-error">
-            <div className="dashboard-card-error__message">{cardErrors.chart}</div>
+            <div className="dashboard-card-error__message">{cardErrors.throughput}</div>
             <button
               className="dashboard-card-error__retry"
               onClick={() => useDashboardDataStore.getState().fetchAll()}
@@ -74,7 +73,15 @@ export function ChartsSection({
           </div>
         ) : (
           <>
-            <MiniChart data={chartData} height={120} />
+            {/* TODO(dashboard-redesign): replaced with ThroughputChart in Task 12 */}
+            <MiniChart
+              data={throughputData.map((d) => ({
+                value: d.successCount + d.failedCount,
+                accent: 'cyan' as const,
+                label: d.hour
+              }))}
+              height={120}
+            />
             <div className="dashboard-chart-caption">completions per hour, last 24h</div>
           </>
         )}
@@ -96,24 +103,8 @@ export function ChartsSection({
         )}
       </NeonCard>
 
-      <NeonCard accent="cyan" title="Sprint Burn-Down" icon={<Target size={12} />}>
-        {cardErrors.burndown ? (
-          <div className="dashboard-card-error">
-            <div className="dashboard-card-error__message">{cardErrors.burndown}</div>
-            <button
-              className="dashboard-card-error__retry"
-              onClick={() => useDashboardDataStore.getState().fetchAll()}
-            >
-              Retry
-            </button>
-          </div>
-        ) : (
-          <>
-            <MiniChart data={burndownData} height={120} />
-            <div className="dashboard-chart-caption">tasks completed, last 7 days</div>
-          </>
-        )}
-      </NeonCard>
+      {/* TODO(dashboard-redesign): burndown card removed in Task 13 */}
+      <div style={{ display: 'none' }} />
 
       {/* Stats row: Success Rate + Avg Duration */}
       <div className="dashboard-stats-row">

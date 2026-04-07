@@ -30,13 +30,14 @@ vi.mock('../../stores/costData', () => ({
 vi.mock('../../stores/dashboardData', () => {
   const { create } = require('zustand')
   const store = create(() => ({
-    chartData: [],
-    burndownData: [],
+    throughputData: [],
+    loadData: null,
     feedEvents: [],
     prCount: 0,
     cardErrors: {},
     loading: false,
-    fetchAll: mockFetchAll
+    fetchAll: mockFetchAll,
+    fetchLoad: vi.fn()
   }))
   return { useDashboardDataStore: store }
 })
@@ -72,8 +73,8 @@ describe('DashboardView', () => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
     useSprintUI.setState({ searchQuery: '', statusFilter: 'all' })
     useDashboardDataStore.setState({
-      chartData: [],
-      burndownData: [],
+      throughputData: [],
+      loadData: null,
       feedEvents: [],
       prCount: 0,
       successTrendData: [],
@@ -139,9 +140,9 @@ describe('DashboardView', () => {
 
   it('renders chart data from completionsPerHour', () => {
     useDashboardDataStore.setState({
-      chartData: [
-        { value: 5, accent: 'cyan', label: '10:00' },
-        { value: 3, accent: 'pink', label: '11:00' }
+      throughputData: [
+        { hour: '10:00', successCount: 4, failedCount: 1 },
+        { hour: '11:00', successCount: 2, failedCount: 1 }
       ],
       loading: false
     })
@@ -187,7 +188,9 @@ describe('DashboardView', () => {
 
   it('shows "No terminal tasks" when no done/failed tasks', () => {
     render(<DashboardView />)
-    expect(screen.getByText('No terminal tasks yet. Queue and run tasks to see success metrics.')).toBeInTheDocument()
+    expect(
+      screen.getByText('No terminal tasks yet. Queue and run tasks to see success metrics.')
+    ).toBeInTheDocument()
   })
 
   it('shows success ring with percentage when done tasks exist', () => {
@@ -337,7 +340,7 @@ describe('DashboardView', () => {
   it('shows error state with retry button when all fetches fail', () => {
     useDashboardDataStore.setState({
       cardErrors: {
-        chart: 'Failed to load completions',
+        throughput: 'Failed to load completions',
         feed: 'Failed to load activity feed',
         prs: 'Failed to load PR data'
       },
@@ -353,7 +356,7 @@ describe('DashboardView', () => {
   it('retries fetching data when Retry button clicked', () => {
     useDashboardDataStore.setState({
       cardErrors: {
-        chart: 'Failed to load completions',
+        throughput: 'Failed to load completions',
         feed: 'Failed to load activity feed',
         prs: 'Failed to load PR data'
       },
@@ -362,7 +365,7 @@ describe('DashboardView', () => {
 
     render(<DashboardView />)
 
-    // Click the first retry button (chart card)
+    // Click the first retry button (throughput card)
     const retryBtns = screen.getAllByText('Retry')
     fireEvent.click(retryBtns[0])
 
@@ -371,10 +374,10 @@ describe('DashboardView', () => {
 
   // ---------- Branch coverage: loading state ----------
 
-  it('shows Loading... text during initial load with no chart data', () => {
+  it('shows Loading... text during initial load with no throughput data', () => {
     useDashboardDataStore.setState({
       loading: true,
-      chartData: []
+      throughputData: []
     })
     render(<DashboardView />)
     expect(screen.getByText('Loading...')).toBeInTheDocument()

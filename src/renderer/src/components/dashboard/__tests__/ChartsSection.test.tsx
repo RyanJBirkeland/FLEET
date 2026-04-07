@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { ChartsSection } from '../ChartsSection'
-import type { ChartBar } from '../../neon'
+import type { CompletionBucket } from '../../../../../shared/ipc-channels'
 
 vi.mock('../../neon', () => ({
   NeonCard: ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -10,7 +10,7 @@ vi.mock('../../neon', () => ({
       <div>{children}</div>
     </div>
   ),
-  MiniChart: ({ data }: { data: ChartBar[]; height: number }) => (
+  MiniChart: ({ data }: { data: Array<{ value: number }>; height: number }) => (
     <div data-testid="mini-chart">{data.length} bars</div>
   )
 }))
@@ -41,20 +41,13 @@ describe('ChartsSection', () => {
     mockFetchAll.mockClear()
   })
 
-  const mockChartData: ChartBar[] = [
-    { label: '00:00', value: 5, accent: 'cyan' },
-    { label: '01:00', value: 3, accent: 'cyan' }
-  ]
-
-  const mockBurndownData: ChartBar[] = [
-    { label: '2026-03-28', value: 2, accent: 'cyan' },
-    { label: '2026-03-29', value: 4, accent: 'cyan' },
-    { label: '2026-03-30', value: 1, accent: 'cyan' }
+  const mockThroughputData: CompletionBucket[] = [
+    { hour: '00:00', successCount: 4, failedCount: 1 },
+    { hour: '01:00', successCount: 2, failedCount: 1 }
   ]
 
   const defaultProps = {
-    chartData: mockChartData,
-    burndownData: mockBurndownData,
+    throughputData: mockThroughputData,
     cardErrors: {},
     successRate: 85,
     stats: { done: 17, failed: 3, actualFailed: 3 },
@@ -70,12 +63,11 @@ describe('ChartsSection', () => {
     expect(screen.getByTestId('neon-card-completions-by-hour')).toBeInTheDocument()
   })
 
-  it('renders MiniChart with correct data', () => {
+  it('renders MiniChart with correct data (mapped from throughputData)', () => {
     render(<ChartsSection {...defaultProps} />)
     const charts = screen.getAllByTestId('mini-chart')
-    expect(charts).toHaveLength(2) // Completions + Burndown
-    expect(charts[0]).toHaveTextContent('2 bars') // Completions chart
-    expect(charts[1]).toHaveTextContent('3 bars') // Burndown chart
+    expect(charts).toHaveLength(1) // Only Completions chart now (burndown removed)
+    expect(charts[0]).toHaveTextContent('2 bars') // 2 CompletionBuckets mapped to 2 bars
   })
 
   it('renders chart caption', () => {
@@ -83,23 +75,9 @@ describe('ChartsSection', () => {
     expect(screen.getByText('completions per hour, last 24h')).toBeInTheDocument()
   })
 
-  it('renders Sprint Burn-Down card', () => {
+  it('does not render Sprint Burn-Down card', () => {
     render(<ChartsSection {...defaultProps} />)
-    expect(screen.getByTestId('neon-card-sprint-burn-down')).toBeInTheDocument()
-  })
-
-  it('renders burndown chart caption', () => {
-    render(<ChartsSection {...defaultProps} />)
-    expect(screen.getByText('tasks completed, last 7 days')).toBeInTheDocument()
-  })
-
-  it('renders error state when burndown error exists', () => {
-    const props = {
-      ...defaultProps,
-      cardErrors: { burndown: 'Failed to load burndown data' }
-    }
-    render(<ChartsSection {...props} />)
-    expect(screen.getByText('Failed to load burndown data')).toBeInTheDocument()
+    expect(screen.queryByTestId('neon-card-sprint-burn-down')).not.toBeInTheDocument()
   })
 
   it('renders Success Rate card with SuccessRing', () => {
@@ -153,21 +131,21 @@ describe('ChartsSection', () => {
     expect(screen.getByText('1 runs tracked')).toBeInTheDocument()
   })
 
-  it('renders error state when chart error exists', () => {
+  it('renders error state when throughput error exists', () => {
     const props = {
       ...defaultProps,
-      cardErrors: { chart: 'Failed to load chart data' }
+      cardErrors: { throughput: 'Failed to load chart data' }
     }
     render(<ChartsSection {...props} />)
     expect(screen.getByText('Failed to load chart data')).toBeInTheDocument()
-    // Burndown chart still renders, so there's still one MiniChart
-    expect(screen.getAllByTestId('mini-chart')).toHaveLength(1)
+    // No MiniChart rendered when there's an error
+    expect(screen.queryByTestId('mini-chart')).not.toBeInTheDocument()
   })
 
   it('renders Retry button in error state', () => {
     const props = {
       ...defaultProps,
-      cardErrors: { chart: 'Failed to load chart data' }
+      cardErrors: { throughput: 'Failed to load chart data' }
     }
     render(<ChartsSection {...props} />)
     expect(screen.getByText('Retry')).toBeInTheDocument()
@@ -177,7 +155,7 @@ describe('ChartsSection', () => {
     // Skipped: Mock setup for nested onClick handlers needs refactoring
     const props = {
       ...defaultProps,
-      cardErrors: { chart: 'Failed to load chart data' }
+      cardErrors: { throughput: 'Failed to load chart data' }
     }
     render(<ChartsSection {...props} />)
     fireEvent.click(screen.getByText('Retry'))

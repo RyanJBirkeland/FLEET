@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { CenterColumn } from '../CenterColumn'
-import type { ChartBar } from '../../neon'
+import type { CompletionBucket } from '../../../../../shared/ipc-channels'
 
 vi.mock('../../neon', () => ({
   NeonCard: ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -41,8 +41,7 @@ vi.mock('../../stores/dashboardData', () => ({
 }))
 
 describe('CenterColumn', () => {
-  const mockChartData: ChartBar[] = []
-  const mockBurndownData: ChartBar[] = []
+  const mockThroughputData: CompletionBucket[] = []
   const defaultProps = {
     stats: {
       active: 0,
@@ -61,8 +60,7 @@ describe('CenterColumn', () => {
       blocked: [],
       failed: []
     },
-    chartData: mockChartData,
-    burndownData: mockBurndownData,
+    throughputData: mockThroughputData,
     cardErrors: {},
     successRate: 85,
     avgDuration: 120000,

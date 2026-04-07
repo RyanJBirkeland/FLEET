@@ -69,11 +69,10 @@ export default function DashboardView(): React.JSX.Element {
   }, [])
 
   // Dashboard data from centralized polling
-  const { chartData, burndownData, feedEvents, successTrendData, loading, cardErrors, lastFetchedAt } =
+  const { throughputData, feedEvents, successTrendData, loading, cardErrors, lastFetchedAt } =
     useDashboardDataStore(
       useShallow((s) => ({
-        chartData: s.chartData,
-        burndownData: s.burndownData,
+        throughputData: s.throughputData,
         feedEvents: s.feedEvents,
         successTrendData: s.successTrendData,
         loading: s.loading,
@@ -169,7 +168,7 @@ export default function DashboardView(): React.JSX.Element {
       {/* Content (above effects) */}
       <div className="dashboard-content">
         <StatusBar title="BDE Command Center" status={freshness.stale ? 'warning' : 'ok'}>
-          {loading && !chartData.length ? (
+          {loading && !throughputData.length ? (
             <span className="dashboard-status-loading">Loading...</span>
           ) : errorCount > 0 ? (
             <span className="dashboard-status-error" style={{ color: neonVar('red', 'color') }}>
@@ -233,8 +232,7 @@ export default function DashboardView(): React.JSX.Element {
             <CenterColumn
               stats={stats}
               partitions={partitions}
-              chartData={chartData}
-              burndownData={burndownData}
+              throughputData={throughputData}
               cardErrors={cardErrors}
               successRate={successRate}
               avgDuration={avgDuration}
