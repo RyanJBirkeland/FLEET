@@ -78,8 +78,8 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     label: 'Task Workbench',
     description: 'Draft task specs with AI copilot assistance',
     icon: ClipboardList,
-    shortcut: '⌘0',
-    shortcutKey: '0'
+    shortcut: '⌘9',
+    shortcutKey: '9'
   },
   planner: {
     label: 'Task Planner',
