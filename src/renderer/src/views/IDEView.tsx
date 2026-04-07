@@ -28,7 +28,7 @@ const IDE_SHORTCUTS = [
   { keys: '⌘S', desc: 'Save file' },
   { keys: '⌘W', desc: 'Close tab' },
   { keys: '⌘T', desc: 'New terminal tab' },
-  { keys: '⌘F', desc: 'Find in terminal' },
+  { keys: '⌘F', desc: 'Find in editor/terminal' },
   { keys: '⌘⇧D', desc: 'Split terminal' },
   { keys: '⌘⇧[/]', desc: 'Prev/next terminal tab' },
   { keys: '⌘+/-/0', desc: 'Terminal zoom' },

@@ -63,6 +63,9 @@ export function EditorPane({
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
       onSave?.()
     })
+    editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyF, () => {
+      editor.getAction('actions.find')?.run()
+    })
   }
 
   function handleChange(value: string | undefined): void {
