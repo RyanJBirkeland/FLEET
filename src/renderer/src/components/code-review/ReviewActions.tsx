@@ -15,6 +15,31 @@ import { useTextareaPrompt, TextareaPromptModal } from '../ui/TextareaPromptModa
 import { toast } from '../../stores/toasts'
 import { useGitHubStatus } from '../../hooks/useGitHubStatus'
 
+/**
+ * Compute the next review task after the current one.
+ * Returns null if there are no more review tasks.
+ */
+function getNextReviewTaskId(
+  currentTaskId: string,
+  allTasks: Array<{ id: string; status: string; updated_at: string }>
+): string | null {
+  const reviewTasks = allTasks
+    .filter((t) => t.status === 'review')
+    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+
+  if (reviewTasks.length === 0) return null
+
+  const currentIndex = reviewTasks.findIndex((t) => t.id === currentTaskId)
+  if (currentIndex === -1) {
+    // Current task not in review list (expected after action) — return first
+    return reviewTasks[0].id
+  }
+
+  // Return next task, or wrap to first if current is last
+  const nextIndex = currentIndex + 1
+  return nextIndex < reviewTasks.length ? reviewTasks[nextIndex].id : reviewTasks[0].id
+}
+
 export function ReviewActions(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
   const selectTask = useCodeReviewStore((s) => s.selectTask)
@@ -78,7 +103,8 @@ export function ReviewActions(): React.JSX.Element {
             10000
           )
         }
-        selectTask(null)
+        const nextTaskId = getNextReviewTaskId(task.id, tasks)
+        selectTask(nextTaskId)
         loadData()
       } else {
         toast.error(`Ship It failed: ${result.error || 'unknown error'}`)
@@ -106,7 +132,8 @@ export function ReviewActions(): React.JSX.Element {
       })
       if (result.success) {
         toast.success('Changes merged locally')
-        selectTask(null) // Clear selection after successful merge
+        const nextTaskId = getNextReviewTaskId(task.id, tasks)
+        selectTask(nextTaskId)
         loadData()
       } else {
         toast.error(`Merge failed: ${result.error || 'conflicts detected'}`)
@@ -134,7 +161,8 @@ export function ReviewActions(): React.JSX.Element {
         body: task.spec || task.prompt || ''
       })
       toast.success(`PR created: ${result.prUrl}`)
-      selectTask(null) // Clear selection after successful PR creation
+      const nextTaskId = getNextReviewTaskId(task.id, tasks)
+      selectTask(nextTaskId)
       loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to create PR')
@@ -180,7 +208,8 @@ export function ReviewActions(): React.JSX.Element {
         mode: 'fresh'
       })
       toast.success('Task re-queued with revision feedback')
-      selectTask(null)
+      const nextTaskId = getNextReviewTaskId(task.id, tasks)
+      selectTask(nextTaskId)
       loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to request revision')
@@ -220,7 +249,8 @@ export function ReviewActions(): React.JSX.Element {
     try {
       await window.api.review.discard({ taskId: task.id })
       toast.success('Changes discarded')
-      selectTask(null)
+      const nextTaskId = getNextReviewTaskId(task.id, tasks)
+      selectTask(nextTaskId)
       loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to discard')
