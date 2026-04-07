@@ -1,7 +1,7 @@
 /**
  * Shared SDK streaming utilities for Claude Agent SDK.
  */
-import { buildAgentEnvWithAuth } from './env-utils'
+import { buildAgentEnvWithAuth, getClaudeCliPath } from './env-utils'
 
 /**
  * A tool-use event observed during streaming. Used to surface what the
@@ -69,6 +69,7 @@ export async function runSdkStreaming(
       model: 'claude-sonnet-4-5',
       maxTurns: options.maxTurns ?? 1,
       env: env as Record<string, string>,
+      pathToClaudeCodeExecutable: getClaudeCliPath(),
       permissionMode: 'bypassPermissions' as const,
       allowDangerouslySkipPermissions: true,
       settingSources: ['user', 'project', 'local'],
