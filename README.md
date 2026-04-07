@@ -212,13 +212,13 @@ graph TB
         subgraph Main["Main Process"]
             AM[Agent Manager]
             DB[(SQLite<br/>WAL mode)]
-            IPC[IPC Handlers<br/>86 typed channels]
+            IPC[IPC Handlers<br/>144 typed channels]
             PRP[PR Poller]
             TTS[Task Terminal<br/>Service]
         end
 
         subgraph Renderer["Renderer Process (React)"]
-            Views["8 Views<br/>Dashboard · Agents · IDE<br/>Pipeline · Code Review<br/>Source Control · Settings<br/>Task Workbench"]
+            Views["9 Views<br/>Dashboard · Agents · IDE<br/>Pipeline · Code Review<br/>Source Control · Settings<br/>Task Workbench · Task Planner"]
             Stores[Zustand Stores]
             Panels[Panel System<br/>Split panes · Drag-and-drop<br/>Tear-off windows]
         end
@@ -293,7 +293,7 @@ All state lives in a local SQLite database at `~/.bde/bde.db`. No cloud dependen
 ### Install
 
 ```bash
-git clone https://github.com/rbtechbot/bde.git
+git clone https://github.com/RyanJBirkeland/BDE.git
 cd bde
 npm install
 npm run dev
@@ -332,7 +332,8 @@ npm run lint         # ESLint
 | Code Review | `Cmd+5` | Review agent diffs before merging |
 | Source Control | `Cmd+6` | Git staging, commits, push |
 | Settings | `Cmd+7` | 9 config tabs (connections, repos, agents, appearance, etc.) |
-| Task Workbench | — | Spec drafting with AI copilot + readiness checks |
+| Task Planner | `Cmd+8` | Multi-task workflow planning |
+| Task Workbench | `Cmd+0` | Spec drafting with AI copilot + readiness checks |
 
 The panel system supports split panes, drag-and-drop docking, and tear-off windows for multi-monitor setups.
 
@@ -400,12 +401,12 @@ src/
     agent-manager/       #   Task orchestration, worktree management, retry logic
     agent-system/        #   Native agent personalities and skills
     data/                #   Repository pattern, audit trail
-    handlers/            #   17 IPC handler modules
+    handlers/            #   23 IPC handler modules
     services/            #   Task terminal service, dependency resolution
     db.ts                #   SQLite schema + migrations
   preload/               # Type-safe IPC bridge
   renderer/src/
-    views/               # 8 top-level views
+    views/               # 9 top-level views
     stores/              # Zustand state management
     components/          # UI components (neon design system)
     hooks/               # Shared React hooks
@@ -439,6 +440,6 @@ MIT
 
 <div align="center">
 
-Built by [Ryan](https://github.com/rbtechbot) — and yes, most of BDE was built by Claude Code sessions orchestrated through BDE itself.
+Built by [Ryan](https://github.com/RyanJBirkeland) — and yes, most of BDE was built by Claude Code sessions orchestrated through BDE itself.
 
 </div>
