@@ -24,10 +24,8 @@ interface RepoConfig {
   githubRepo?: string
 }
 
-let _onStatusTerminal: ((taskId: string, status: string) => void) | null = null
-
-export function setReviewOnStatusTerminal(fn: (taskId: string, status: string) => void): void {
-  _onStatusTerminal = fn
+export interface ReviewHandlersDeps {
+  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
 }
 
 /**
@@ -65,7 +63,7 @@ function getRepoConfig(repoName: string): RepoConfig | null {
   return repos?.find((r) => r.name.toLowerCase() === target) ?? null
 }
 
-export function registerReviewHandlers(): void {
+export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
   const env = buildAgentEnv()
 
   // review:getDiff — get file list with additions/deletions for a worktree branch
@@ -293,13 +291,7 @@ export function registerReviewHandlers(): void {
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
-    if (_onStatusTerminal) {
-      _onStatusTerminal(taskId, 'done')
-    } else {
-      logger.warn(
-        `[review:mergeLocally] Task ${taskId} done but _onStatusTerminal not set — deps won't resolve`
-      )
-    }
+    deps.onStatusTerminal(taskId, 'done')
 
     return { success: true }
   })
@@ -365,13 +357,7 @@ export function registerReviewHandlers(): void {
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
-    if (_onStatusTerminal) {
-      _onStatusTerminal(taskId, 'done')
-    } else {
-      logger.warn(
-        `[review:createPr] Task ${taskId} done but _onStatusTerminal not set — deps won't resolve`
-      )
-    }
+    deps.onStatusTerminal(taskId, 'done')
 
     return { prUrl: trimmedPrUrl }
   })
@@ -469,13 +455,7 @@ export function registerReviewHandlers(): void {
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
-    if (_onStatusTerminal) {
-      _onStatusTerminal(taskId, 'cancelled')
-    } else {
-      logger.warn(
-        `[review:discard] Task ${taskId} cancelled but _onStatusTerminal not set — deps won't resolve`
-      )
-    }
+    deps.onStatusTerminal(taskId, 'cancelled')
 
     return { success: true }
   })
@@ -662,9 +642,7 @@ export function registerReviewHandlers(): void {
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
-    if (_onStatusTerminal) {
-      _onStatusTerminal(taskId, 'done')
-    }
+    deps.onStatusTerminal(taskId, 'done')
 
     return { success: true, pushed }
   })

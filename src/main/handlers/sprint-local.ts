@@ -72,15 +72,14 @@ export { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
 // --- Terminal status resolution ---
 
 const TERMINAL_STATUSES = new Set(['done', 'failed', 'error', 'cancelled'])
-let _onStatusTerminal: ((taskId: string, status: string) => void) | null = null
 
-export function setOnStatusTerminal(fn: (taskId: string, status: string) => void): void {
-  _onStatusTerminal = fn
+export interface SprintLocalDeps {
+  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
 }
 
 // --- Handler registration ---
 
-export function registerSprintLocalHandlers(): void {
+export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
   safeHandle('sprint:list', () => {
     return listTasksRecent()
   })
@@ -185,15 +184,8 @@ export function registerSprintLocalHandlers(): void {
 
     // updateTask (service) handles notifySprintMutation internally
     const result = updateTask(id, patch)
-    // SP-2: Throw error if _onStatusTerminal is not set when reaching terminal status
     if (result && patch.status && TERMINAL_STATUSES.has(patch.status as string)) {
-      if (!_onStatusTerminal) {
-        logger.error(
-          `[sprint:update] Task ${id} reached terminal status "${patch.status}" but _onStatusTerminal is not set — dependency resolution will not fire`
-        )
-      } else {
-        _onStatusTerminal(id, patch.status as string)
-      }
+      deps.onStatusTerminal(id, patch.status as string)
     }
     return result
   })
@@ -515,20 +507,13 @@ export function registerSprintLocalHandlers(): void {
 
             // updateTask (service) handles notifySprintMutation internally
             const updated = updateTask(id, filtered)
-            // SP-4: Call onStatusTerminal for terminal status changes in batch updates
             if (
               updated &&
               filtered.status &&
               typeof filtered.status === 'string' &&
               TERMINAL_STATUSES.has(filtered.status)
             ) {
-              if (!_onStatusTerminal) {
-                logger.warn(
-                  `[sprint:batchUpdate] Task ${id} reached terminal status "${filtered.status}" but _onStatusTerminal is not set`
-                )
-              } else {
-                _onStatusTerminal(id, filtered.status)
-              }
+              deps.onStatusTerminal(id, filtered.status)
             }
             results.push({
               id,

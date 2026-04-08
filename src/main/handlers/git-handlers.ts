@@ -135,13 +135,11 @@ function isGitHubRequestAllowed(method: string, path: string, body?: string): bo
   return true
 }
 
-let _onStatusTerminal: ((taskId: string, status: string) => void) | null = null
-
-export function setGitHandlersOnStatusTerminal(fn: (taskId: string, status: string) => void): void {
-  _onStatusTerminal = fn
+export interface GitHandlersDeps {
+  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
 }
 
-export function registerGitHandlers(): void {
+export function registerGitHandlers(deps: GitHandlersDeps): void {
   // --- GitHub token availability check ---
   safeHandle('github:isConfigured', () => {
     return getGitHubToken() !== null
@@ -266,10 +264,10 @@ export function registerGitHandlers(): void {
       if (!prNumber) continue
       if (result.merged) {
         const ids = markTaskDoneByPrNumber(prNumber)
-        for (const id of ids) _onStatusTerminal?.(id, 'done')
+        for (const id of ids) deps.onStatusTerminal(id, 'done')
       } else if (result.state === 'CLOSED') {
         const ids = markTaskCancelledByPrNumber(prNumber)
-        for (const id of ids) _onStatusTerminal?.(id, 'cancelled')
+        for (const id of ids) deps.onStatusTerminal(id, 'cancelled')
       }
       await updateTaskMergeableState(prNumber, result.mergeableState)
     }

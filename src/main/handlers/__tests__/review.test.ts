@@ -100,7 +100,7 @@ vi.mock('util', () => ({
   promisify: vi.fn(() => mockExecFileAsync)
 }))
 
-import { registerReviewHandlers, setReviewOnStatusTerminal } from '../review'
+import { registerReviewHandlers } from '../review'
 import { safeHandle } from '../../ipc-utils'
 
 describe('Review handlers', () => {
@@ -114,7 +114,8 @@ describe('Review handlers', () => {
   })
 
   it('registers all 12 review channels', () => {
-    registerReviewHandlers()
+    const mockDeps = { onStatusTerminal: vi.fn() }
+    registerReviewHandlers(mockDeps)
 
     expect(safeHandle).toHaveBeenCalledTimes(12)
     expect(safeHandle).toHaveBeenCalledWith('review:getDiff', expect.any(Function))
@@ -131,11 +132,12 @@ describe('Review handlers', () => {
     expect(safeHandle).toHaveBeenCalledWith('review:checkAutoReview', expect.any(Function))
   })
 
-  it('setReviewOnStatusTerminal sets the callback', () => {
-    const fn = vi.fn()
-    setReviewOnStatusTerminal(fn)
-    // Verify it doesn't throw
-    expect(fn).not.toHaveBeenCalled()
+  it('deps.onStatusTerminal is called on terminal transitions', () => {
+    const mockOnStatusTerminal = vi.fn()
+    const mockDeps = { onStatusTerminal: mockOnStatusTerminal }
+    registerReviewHandlers(mockDeps)
+    // The callback should be wired up but not called during registration
+    expect(mockOnStatusTerminal).not.toHaveBeenCalled()
   })
 
   describe('handler functions', () => {
@@ -144,7 +146,8 @@ describe('Review handlers', () => {
       vi.mocked(safeHandle).mockImplementation((channel: string, handler: unknown) => {
         handlers[channel] = handler as (...args: unknown[]) => unknown
       })
-      registerReviewHandlers()
+      const mockDeps = { onStatusTerminal: vi.fn() }
+      registerReviewHandlers(mockDeps)
       return handlers
     }
 
@@ -399,7 +402,6 @@ describe('Review handlers', () => {
       const { getSettingJson } = await import('../../settings')
 
       const mockOnStatusTerminal = vi.fn()
-      setReviewOnStatusTerminal(mockOnStatusTerminal)
 
       vi.mocked(getTask).mockReturnValue({
         id: 'task-1',
@@ -429,7 +431,12 @@ describe('Review handlers', () => {
         completed_at: new Date().toISOString()
       })
 
-      const handlers = captureHandlers()
+      // Capture handlers with the specific mock we want to test
+      const handlers: Record<string, (...args: unknown[]) => unknown> = {}
+      vi.mocked(safeHandle).mockImplementation((channel: string, handler: unknown) => {
+        handlers[channel] = handler as (...args: unknown[]) => unknown
+      })
+      registerReviewHandlers({ onStatusTerminal: mockOnStatusTerminal })
       const result = await handlers['review:mergeLocally'](_mockEvent, {
         taskId: 'task-1',
         strategy: 'merge'

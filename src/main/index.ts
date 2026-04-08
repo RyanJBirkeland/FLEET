@@ -22,7 +22,7 @@ import { registerPlaygroundHandlers } from './handlers/playground-handlers'
 import { registerDashboardHandlers } from './handlers/dashboard-handlers'
 import { registerSynthesizerHandlers } from './handlers/synthesizer-handlers'
 import { registerClaudeConfigHandlers } from './handlers/claude-config-handlers'
-import { registerReviewHandlers, setReviewOnStatusTerminal } from './handlers/review'
+import { registerReviewHandlers } from './handlers/review'
 import { registerWebhookHandlers } from './handlers/webhook-handlers'
 import { registerGroupHandlers } from './handlers/group-handlers'
 import { registerPlannerImportHandlers } from './handlers/planner-import'
@@ -51,9 +51,6 @@ import {
   pruneOldDiffSnapshots,
   DIFF_SNAPSHOT_RETENTION_DAYS
 } from './data/sprint-queries'
-import { setOnStatusTerminal } from './handlers/sprint-local'
-import { setGitHandlersOnStatusTerminal } from './handlers/git-handlers'
-import { setOnTaskTerminal } from './sprint-pr-poller'
 import { createLogger } from './logger'
 import {
   registerTearoffHandlers,
@@ -148,15 +145,12 @@ app.whenReady().then(() => {
     getSetting,
     logger: createLogger('task-terminal')
   })
-  setOnStatusTerminal(terminalService.onStatusTerminal)
-  setGitHandlersOnStatusTerminal(terminalService.onStatusTerminal)
-  setOnTaskTerminal(terminalService.onStatusTerminal)
-  setReviewOnStatusTerminal(terminalService.onStatusTerminal)
+  const terminalDeps = { onStatusTerminal: terminalService.onStatusTerminal }
 
   startPrPoller()
   app.on('will-quit', stopPrPoller)
 
-  startSprintPrPoller()
+  startSprintPrPoller(terminalDeps)
   app.on('will-quit', stopSprintPrPoller)
 
   pruneOldEvents(getDb(), getEventRetentionDays())
@@ -280,10 +274,10 @@ app.whenReady().then(() => {
   })
 
   registerConfigHandlers()
-  registerGitHandlers()
+  registerGitHandlers(terminalDeps)
   registerTerminalHandlers()
   registerWindowHandlers()
-  registerSprintLocalHandlers()
+  registerSprintLocalHandlers(terminalDeps)
   registerCostHandlers()
   registerTemplateHandlers()
   registerFsHandlers()
@@ -294,7 +288,7 @@ app.whenReady().then(() => {
   registerDashboardHandlers()
   registerTearoffHandlers()
   registerClaudeConfigHandlers()
-  registerReviewHandlers()
+  registerReviewHandlers(terminalDeps)
   registerWebhookHandlers()
   registerGroupHandlers()
   registerPlannerImportHandlers()

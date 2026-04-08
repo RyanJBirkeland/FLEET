@@ -133,7 +133,8 @@ function captureHandler(channel: string): (...args: any[]) => any {
     if (ch === channel) captured = handler as (...args: any[]) => any
   })
 
-  registerSprintLocalHandlers()
+  const mockDeps = { onStatusTerminal: vi.fn() }
+  registerSprintLocalHandlers(mockDeps)
 
   if (!captured) throw new Error(`No handler captured for channel "${channel}"`)
   return captured
