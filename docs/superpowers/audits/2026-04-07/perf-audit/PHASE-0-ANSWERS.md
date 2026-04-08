@@ -140,3 +140,19 @@ This is **Option B** in the plan's Task 2.3 (conservative retention) **plus a pe
 **Rough impact:** snapshot has ~510 tasks with ~1.6 MB total `spec` data. The Dashboard and SprintPipeline poll `sprint:list` regularly, so the renderer is downloading ~1.6 MB per poll cycle just for list display. This is a real win when implemented properly.
 
 **Recommended follow-up:** dedicated PR that introduces `SprintTaskListItem`, narrows the IPC contract, and fixes the consumer stores. Expected to be ~1 day of focused work.
+
+### Phase 2 deferrals
+
+The following Phase 2 work items were deferred during the autonomous session because they need runtime verification (the synthetic 3-agent smoke test from Task 2.0 was not built in this session — it requires running the actual app and pipeline) or carry too much risk to land without it.
+
+**Task 2.2 (F-t1-concur-2) — Batch agent_events writes.** Introduces an `EventBatcher` class with a 100ms timer + 50-event size threshold + flush-on-shutdown hook. Touches the hot path (every agent message) and adds new state. Without the smoke test to verify event ordering and shutdown drain, the regression risk is high. Expected impact: ≥10× reduction in SQLite writes per agent run.
+
+**Task 2.5 (F-t1-sysprof-2) — Defer JSON.stringify in event hot loop.** Structurally depends on Task 2.2: the meaningful "defer" target is the batcher's flush. Without 2.2, only marginal improvements are possible. Land 2.2 first, then 2.5 follows.
+
+**Task 2.6 (F-t1-concur-1) — Coalesce broadcast IPC fan-out.** Adds a 16ms (one frame) coalescer in completion.ts that collects terminal events before broadcasting. Touches the completion path and changes IPC timing semantics. Risk of breaking renderer subscribers that assume immediate broadcast. Needs runtime UI verification.
+
+**Task 2.7 (F-t1-concur-3) — Coalesce resolveDependents cascade.** The function is already idempotent (status check on line 42 short-circuits already-unblocked dependents), so the duplicate-call cost is bounded to one extra DB read per duplicate. The "proper" fix requires call-site refactor across multiple terminal paths. Marginal value vs. correctness risk doesn't justify autonomous landing.
+
+**Task 2.8 (F-t1-concur-4) — Race between task claim and dependency check.** Touches the drain loop's `taskStatusMap` build/consume cycle. Concurrency fixes here can subtly break correctness in ways that aren't caught by the test suite. Needs careful review and ideally a multi-agent stress test.
+
+**Recommended order for next session:** 2.2 (batcher) → 2.5 (defer stringify into batcher) → 2.6 (broadcast coalescing) → 2.7 (resolveDependents coalesce) → 2.8 (race fix). Build the synthetic 3-agent smoke test (Task 2.0) FIRST as the verification gate.
