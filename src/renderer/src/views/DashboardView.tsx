@@ -144,7 +144,8 @@ export default function DashboardView(): React.JSX.Element {
     }
   }, [handleRefreshDashboard, registerCommands, unregisterCommands])
 
-  // Staleness for StatusBar status prop — computed inline (cheap, no state ticker needed)
+  // Staleness for StatusBar status prop — computed inline (cheap, no state ticker needed).
+  // eslint-disable-next-line react-hooks/purity -- Date.now() intentional: recomputes on render after poll
   const dataStale = lastFetchedAt ? Date.now() - lastFetchedAt > 120_000 : false
 
   /** Navigate to Sprint Center with a pre-applied status filter. */

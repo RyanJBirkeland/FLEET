@@ -45,7 +45,7 @@ export interface SdkStreamingOptions {
    * and can mislead them with implementation-focused guidelines.
    * Defaults to `['user', 'project', 'local']`.
    */
-  settingSources?: string[]
+  settingSources?: Array<'user' | 'project' | 'local'>
 }
 
 /**

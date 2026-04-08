@@ -165,6 +165,7 @@ export function useDashboardMetrics(): DashboardMetrics {
   // Tokens 24h — sum tokens of agent runs started within last 24 hours.
   // Uses Date.now() inline; recomputes when localAgents changes (on each poll).
   const tokens24h = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() intentional: recomputes on poll, no ticker needed
     const cutoff = Date.now() - 24 * 60 * 60 * 1000
     return localAgents
       .filter((a) => new Date(a.startedAt).getTime() >= cutoff)
@@ -185,6 +186,7 @@ export function useDashboardMetrics(): DashboardMetrics {
   // Stuck tasks — active tasks that have exceeded their runtime threshold.
   // Uses Date.now() inline; recomputes when tasks changes (on each poll).
   const stuckCount = useMemo(() => {
+    // eslint-disable-next-line react-hooks/purity -- Date.now() intentional: recomputes on poll, no ticker needed
     const now = Date.now()
     return tasks.filter((t) => {
       if (t.status !== 'active' || !t.started_at) return false
