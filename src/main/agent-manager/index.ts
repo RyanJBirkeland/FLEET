@@ -30,6 +30,7 @@ import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../env-util
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
 import { getSetting, getSettingJson } from '../settings'
 import { broadcast } from '../broadcast'
+import { flushAgentEventBatcher } from '../agent-event-mapper'
 
 // ---------------------------------------------------------------------------
 // Circuit breaker constants
@@ -992,6 +993,9 @@ export class AgentManagerImpl implements AgentManager {
       }
     }
     this._activeAgents.clear()
+
+    // Flush any pending agent events to SQLite before shutdown
+    flushAgentEventBatcher()
 
     this._running = false
     this.logger.info('[agent-manager] Stopped')

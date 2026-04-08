@@ -3,7 +3,7 @@
  * Used by both adhoc-agent.ts (user-spawned) and run-agent.ts (AgentManager pipeline).
  */
 import { broadcast } from './broadcast'
-import { appendEvent } from './data/event-queries'
+import { insertEventBatch, type EventBatchItem } from './data/event-queries'
 import { getDb } from './db'
 import type { AgentEvent } from '../shared/types'
 
@@ -72,30 +72,86 @@ export function mapRawMessage(raw: unknown): AgentEvent[] {
   return events
 }
 
+// ---------------------------------------------------------------------------
+// Batching configuration
+// ---------------------------------------------------------------------------
+
+const BATCH_SIZE = 50
+const BATCH_INTERVAL_MS = 100
+
+interface PendingRow {
+  agentId: string
+  event: AgentEvent
+}
+
+const _pending: PendingRow[] = []
+let _flushTimer: ReturnType<typeof setTimeout> | null = null
+
 // Rate-limited error logging for SQLite failures
 let _lastSqliteErrorLog = 0
 const SQLITE_ERROR_LOG_INTERVAL_MS = 60_000 // Log at most once per minute
 
 /**
- * Persists an AgentEvent to SQLite, then broadcasts it via IPC.
- *
- * F-t1-concur-6: Order matters. Persist FIRST so the durable record is the
- * source of truth and the broadcast follows it. If the SQLite write fails,
- * we still broadcast (live tail UX is preserved) and log the failure
- * rate-limited. The previous order (broadcast then write) could leave the
- * renderer holding events the DB never received under WAL contention,
- * which then disappeared on reload.
+ * Scheduled timer callback — clears the timer reference then flushes.
  */
-export function emitAgentEvent(agentId: string, event: AgentEvent): void {
+function scheduledFlush(): void {
+  _flushTimer = null
+  flushAgentEventBatcher()
+}
+
+/**
+ * Flush all pending events to SQLite in a single transaction.
+ * Called either when the batch reaches BATCH_SIZE or after BATCH_INTERVAL_MS.
+ * Also called on agent manager shutdown to ensure no events are lost.
+ */
+export function flushAgentEventBatcher(): void {
+  if (_pending.length === 0) return
+
+  const rows = _pending.splice(0)
   try {
-    appendEvent(getDb(), agentId, event.type, JSON.stringify(event), event.timestamp)
+    const batch: EventBatchItem[] = rows.map(({ agentId, event }) => ({
+      agentId,
+      eventType: event.type,
+      payload: JSON.stringify(event), // stringify deferred to here
+      timestamp: event.timestamp
+    }))
+    insertEventBatch(getDb(), batch)
   } catch (err) {
     // SQLite write failure is non-fatal, but log it (rate-limited)
     const now = Date.now()
     if (now - _lastSqliteErrorLog > SQLITE_ERROR_LOG_INTERVAL_MS) {
-      console.warn(`[agent-event-mapper] SQLite write failed (will retry next event): ${err}`)
+      console.warn(
+        `[agent-event-mapper] SQLite batch write failed (${rows.length} events lost): ${err}`
+      )
       _lastSqliteErrorLog = now
     }
   }
+}
+
+/**
+ * Persists an AgentEvent to SQLite, then broadcasts it via IPC.
+ *
+ * F-t1-concur-6: Order matters. Events are queued for batch persistence
+ * (flush happens at BATCH_SIZE or BATCH_INTERVAL_MS), then broadcast
+ * immediately. The broadcast is not blocked by SQLite writes. On shutdown,
+ * flushAgentEventBatcher() is called to ensure no events are lost.
+ */
+export function emitAgentEvent(agentId: string, event: AgentEvent): void {
+  // Queue the event (stringify deferred to flush)
+  _pending.push({ agentId, event })
+
+  if (_pending.length >= BATCH_SIZE) {
+    // Batch full — flush immediately
+    if (_flushTimer) {
+      clearTimeout(_flushTimer)
+      _flushTimer = null
+    }
+    flushAgentEventBatcher()
+  } else if (!_flushTimer) {
+    // Schedule a flush if not already scheduled
+    _flushTimer = setTimeout(scheduledFlush, BATCH_INTERVAL_MS)
+  }
+
+  // Broadcast immediately (live tail UX)
   broadcast('agent:event', { agentId, event })
 }
