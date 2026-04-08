@@ -97,7 +97,6 @@ describe('db schema migrations', () => {
     expect(tables).toEqual([
       'agent_events',
       'agent_runs',
-      'cost_events',
       'review_comments',
       'settings',
       'sprint_tasks',
@@ -131,9 +130,12 @@ describe('db schema migrations', () => {
       'idx_sprint_tasks_claimed_by',
       'idx_sprint_tasks_group',
       'idx_sprint_tasks_pr_number',
+      'idx_sprint_tasks_pr_open',
       'idx_sprint_tasks_sprint',
       'idx_sprint_tasks_status',
+      'idx_sprint_tasks_status_claimed',
       'idx_task_changes_changed_at',
+      'idx_task_changes_task_changed',
       'idx_task_changes_task_id'
     ])
   })
@@ -173,11 +175,11 @@ describe('db schema migrations', () => {
     }
     db2.pragma('user_version = 2')
 
-    // Verify cost_events table does not exist yet
-    const before = db2
-      .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cost_events'")
-      .get()
-    expect(before).toBeUndefined()
+    // Verify cost columns on agent_runs do not exist yet (added by v3)
+    const beforeCols = (db2.pragma('table_info(agent_runs)') as { name: string }[]).map(
+      (c) => c.name
+    )
+    expect(beforeCols).not.toContain('cost_usd')
 
     // Now run the migration system — should only run 3+
     runMigrations(db2)
@@ -185,11 +187,17 @@ describe('db schema migrations', () => {
     const version = db2.pragma('user_version', { simple: true }) as number
     expect(version).toBe(migrations[migrations.length - 1].version)
 
-    // cost_events should now exist (migration 4)
-    const after = db2
+    // cost_usd should now exist (migration v3)
+    const afterCols = (db2.pragma('table_info(agent_runs)') as { name: string }[]).map(
+      (c) => c.name
+    )
+    expect(afterCols).toContain('cost_usd')
+
+    // cost_events should NOT exist (created in v4, dropped in v42)
+    const costEventsTable = db2
       .prepare("SELECT name FROM sqlite_master WHERE type='table' AND name='cost_events'")
-      .get() as { name: string } | undefined
-    expect(after?.name).toBe('cost_events')
+      .get()
+    expect(costEventsTable).toBeUndefined()
 
     db2.close()
   })
