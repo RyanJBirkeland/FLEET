@@ -2,6 +2,7 @@
  * Tests for extracted pure functions from index.ts:
  * - checkOAuthToken: OAuth token file validation
  * - handleWatchdogVerdict: verdict → task status update + backpressure
+ * - taskStatusMap refresh after claim (F-t1-perf-snapshot)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 

@@ -528,4 +528,88 @@ describe('AgentManagerImpl — class internals', () => {
       expect(manager._lastTaskDeps.has('task-error')).toBe(false)
     })
   })
+
+  // -------------------------------------------------------------------------
+  // 9. taskStatusMap refresh after claim (F-t1-perf-snapshot)
+  // -------------------------------------------------------------------------
+
+  describe('taskStatusMap refresh after claim', () => {
+    it('refreshes map after successful claim so subsequent tasks see updated statuses', async () => {
+      // This test simulates: drain loop builds map with task-2='blocked',
+      // then concurrent completion changes task-2 to 'queued' in DB,
+      // refresh after claim picks up the new status.
+
+      let callCount = 0
+      const mockRepo = {
+        getTask: vi.fn(),
+        updateTask: vi.fn(),
+        getQueuedTasks: vi.fn(),
+        getOrphanedTasks: vi.fn(),
+        getActiveTaskCount: vi.fn().mockReturnValue(0),
+        claimTask: vi.fn().mockReturnValue({ id: 'task-1' }),
+        // First call (drain loop builds map): task-2 is blocked
+        // Second call (refresh after claim): task-2 is now queued
+        getTasksWithDependencies: vi.fn().mockImplementation(() => {
+          callCount++
+          if (callCount === 1) {
+            return [
+              { id: 'task-1', status: 'queued', depends_on: null },
+              { id: 'task-2', status: 'blocked', depends_on: null }
+            ]
+          }
+          return [
+            { id: 'task-1', status: 'active', depends_on: null },
+            { id: 'task-2', status: 'queued', depends_on: null }
+          ]
+        })
+      }
+
+      const manager = new AgentManagerImpl(baseConfig, mockRepo as never, makeLogger())
+
+      // Simulate drain loop: build initial map from first getTasksWithDependencies call
+      const initialTasks = mockRepo.getTasksWithDependencies()
+      const taskStatusMap = new Map(initialTasks.map((t) => [t.id, t.status]))
+
+      // Verify initial state: task-2 is blocked
+      expect(taskStatusMap.get('task-2')).toBe('blocked')
+
+      const raw = makeRawTask({ id: 'task-1' })
+      await manager._processQueuedTask(raw, taskStatusMap)
+
+      // Verify refresh happened: task-2 should now be 'queued', task-1 should be 'active'
+      expect(taskStatusMap.get('task-2')).toBe('queued')
+      expect(taskStatusMap.get('task-1')).toBe('active')
+      expect(mockRepo.getTasksWithDependencies).toHaveBeenCalledTimes(2) // initial + refresh
+    })
+
+    it('continues with stale map when refresh fails (non-fatal)', async () => {
+      const mockRepo = {
+        getTask: vi.fn(),
+        updateTask: vi.fn(),
+        getQueuedTasks: vi.fn(),
+        getOrphanedTasks: vi.fn(),
+        getActiveTaskCount: vi.fn().mockReturnValue(0),
+        claimTask: vi.fn().mockReturnValue({ id: 'task-1' }),
+        getTasksWithDependencies: vi.fn().mockImplementation(() => {
+          throw new Error('DB connection lost')
+        })
+      }
+
+      const manager = new AgentManagerImpl(baseConfig, mockRepo as never, makeLogger())
+
+      const taskStatusMap = new Map([
+        ['task-1', 'queued'],
+        ['task-2', 'blocked']
+      ])
+
+      const raw = makeRawTask({ id: 'task-1' })
+
+      // Should not throw — refresh failure is caught
+      await expect(manager._processQueuedTask(raw, taskStatusMap)).resolves.toBeUndefined()
+
+      // Map unchanged since refresh failed
+      expect(taskStatusMap.get('task-2')).toBe('blocked')
+      expect(taskStatusMap.get('task-1')).toBe('queued')
+    })
+  })
 })

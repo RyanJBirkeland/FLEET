@@ -622,6 +622,18 @@ export class AgentManagerImpl implements AgentManager {
         return
       }
 
+      // Refresh snapshot: re-fetch statuses of tasks that may have changed
+      // (only active + queued + blocked — terminal tasks are stable)
+      try {
+        const freshTasks = this.repo.getTasksWithDependencies()
+        taskStatusMap.clear()
+        for (const t of freshTasks) {
+          taskStatusMap.set(t.id, t.status)
+        }
+      } catch {
+        // non-fatal: stale map is better than aborting the drain
+      }
+
       let wt: { worktreePath: string; branch: string }
       try {
         wt = await setupWorktree({
