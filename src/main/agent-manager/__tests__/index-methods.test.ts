@@ -17,6 +17,8 @@ vi.mock('../../data/sprint-queries', () => ({
 vi.mock('../dependency-index', () => ({
   createDependencyIndex: vi.fn(() => ({
     rebuild: vi.fn(),
+    update: vi.fn(),
+    remove: vi.fn(),
     getDependents: vi.fn(() => new Set()),
     areDependenciesSatisfied: vi.fn(() => ({ satisfied: true, blockedBy: [] }))
   }))
@@ -459,6 +461,71 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const result = manager._checkAndBlockDeps('task-1', '"just-a-string"', new Map())
       expect(result).toBe(false)
+    })
+  })
+
+  // ---------------------------------------------------------------------------
+  // F-t1-sre-6: _lastTaskDeps evicts terminal-status tasks to prevent growth
+  // ---------------------------------------------------------------------------
+
+  describe('_lastTaskDeps TTL for terminal tasks (F-t1-sre-6)', () => {
+    // Test the eviction logic by seeding _lastTaskDeps directly (it's now
+    // public via _ convention) and asserting the drain loop evicts terminal
+    // tasks and preserves non-terminal ones.
+    //
+    // We drive the drain loop by mocking getTasksWithDependencies to return
+    // specific task shapes, then verify map state post-drain.
+
+    function makeInlineRepo(
+      tasks: Array<{ id: string; status: string; depends_on: null }>
+    ): ISprintTaskRepository {
+      return {
+        getTask: vi.fn(),
+        updateTask: vi.fn().mockReturnValue(null),
+        getQueuedTasks: vi.fn().mockReturnValue([]),
+        getTasksWithDependencies: vi.fn().mockReturnValue(tasks),
+        getOrphanedTasks: vi.fn().mockReturnValue([]),
+        getActiveTaskCount: vi.fn().mockReturnValue(0),
+        claimTask: vi.fn()
+      }
+    }
+
+    it('evicts terminal-status task entries from _lastTaskDeps on next drain tick', async () => {
+      const repo = makeInlineRepo([
+        { id: 'task-active', status: 'active', depends_on: null },
+        { id: 'task-done', status: 'done', depends_on: null }
+      ])
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      // Directly seed the cache (simulates a task that was cached while active)
+      manager._lastTaskDeps.set('task-active', { deps: null, hash: 'h1' })
+      manager._lastTaskDeps.set('task-done', { deps: null, hash: 'h2' })
+
+      // Drain loop sees task-done as terminal → should evict from fingerprint cache
+      await manager._drainLoop()
+
+      // active task stays cached (non-terminal, hash unchanged → no mutation)
+      expect(manager._lastTaskDeps.has('task-active')).toBe(true)
+      // terminal task must be evicted
+      expect(manager._lastTaskDeps.has('task-done')).toBe(false)
+    })
+
+    it('never adds a task to _lastTaskDeps when it starts in terminal status', async () => {
+      const repo = makeInlineRepo([
+        { id: 'task-failed', status: 'failed', depends_on: null },
+        { id: 'task-cancelled', status: 'cancelled', depends_on: null },
+        { id: 'task-error', status: 'error', depends_on: null }
+      ])
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      // Map starts empty — terminal tasks should never be added
+      expect(manager._lastTaskDeps.size).toBe(0)
+      await manager._drainLoop()
+
+      // No terminal task should ever land in the cache
+      expect(manager._lastTaskDeps.has('task-failed')).toBe(false)
+      expect(manager._lastTaskDeps.has('task-cancelled')).toBe(false)
+      expect(manager._lastTaskDeps.has('task-error')).toBe(false)
     })
   })
 })

@@ -49,6 +49,13 @@ export const SPAWN_CIRCUIT_FAILURE_THRESHOLD = 5
  */
 export const SPAWN_CIRCUIT_PAUSE_MS = 5 * 60 * 1000 // 5 minutes
 
+/**
+ * Task statuses that can never transition to a non-terminal status.
+ * Used by the drain loop to evict finished tasks from the _lastTaskDeps
+ * fingerprint cache (F-t1-sre-6: prevent unbounded map growth).
+ */
+const TERMINAL_TASK_STATUSES = new Set(['done', 'cancelled', 'failed', 'error'])
+
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
 // ---------------------------------------------------------------------------
@@ -259,7 +266,8 @@ export class AgentManagerImpl implements AgentManager {
   readonly _metrics: MetricsCollector
   // F-t1-sysprof-1/-4: Cache a stable fingerprint alongside the deps array so
   // subsequent drain ticks can short-circuit the deep compare via hash equality.
-  private _lastTaskDeps = new Map<
+  // Exposed via _ prefix for testability (private by convention, not keyword).
+  _lastTaskDeps = new Map<
     string,
     { deps: TaskDependency[] | null; hash: string }
   >()
@@ -661,7 +669,19 @@ export class AgentManagerImpl implements AgentManager {
       // Update tasks with changed dependencies.
       // F-t1-sysprof-1/-4: Compare cached fingerprints — avoids re-sorting the
       // unchanged-deps case (the common path for most drain ticks).
+      // F-t1-sre-6: Evict terminal-status tasks from _lastTaskDeps — their deps
+      // never change, so keeping fingerprint entries just grows the map forever
+      // (510 tasks in prod, most terminal). Evict on first terminal encounter;
+      // dep-index edges stay intact for dependency-satisfaction checks.
       for (const task of allTasks) {
+        if (TERMINAL_TASK_STATUSES.has(task.status)) {
+          // Terminal tasks' deps are frozen — evict from fingerprint cache so
+          // the map doesn't grow without bound (510 tasks in prod, most terminal).
+          // The dep-index retains the task's edges for dependency-satisfaction
+          // checks; we only drop the fingerprint entry.
+          this._lastTaskDeps.delete(task.id)
+          continue
+        }
         const cached = this._lastTaskDeps.get(task.id)
         const newDeps = task.depends_on ?? null
         const newHash = AgentManagerImpl._depsFingerprint(newDeps)
