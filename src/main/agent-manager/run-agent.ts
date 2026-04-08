@@ -17,6 +17,7 @@ import { mapRawMessage, emitAgentEvent } from '../agent-event-mapper'
 import type { AgentEvent, TaskDependency } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
 import { sanitizePlaygroundHtml } from '../playground-sanitize'
+import { TurnTracker } from './turn-tracker'
 
 const execFile = promisify(execFileCb)
 
@@ -349,6 +350,7 @@ export async function runAgent(
     maxCostUsd: task.max_cost_usd ?? null
   }
   activeAgents.set(task.id, agent)
+  const turnTracker = new TurnTracker(agentRunId)
   let lastAgentOutput = ''
   // Persist agent_run_id so LogDrawer can find logs after restart
   try {
@@ -401,17 +403,10 @@ export async function runAgent(
       // Track cost / tokens if present (check both top-level and nested fields)
       agent.costUsd =
         getNumericField(msg, 'cost_usd') ?? getNumericField(msg, 'total_cost_usd') ?? agent.costUsd
-      agent.tokensIn = getNumericField(msg, 'tokens_in') ?? agent.tokensIn
-      agent.tokensOut = getNumericField(msg, 'tokens_out') ?? agent.tokensOut
-      // Also check nested usage object (SDK sometimes nests token counts)
-      if (typeof msg === 'object' && msg !== null) {
-        const m = msg as Record<string, unknown>
-        if (typeof m.usage === 'object' && m.usage !== null) {
-          const u = m.usage as Record<string, unknown>
-          if (typeof u.input_tokens === 'number') agent.tokensIn = u.input_tokens
-          if (typeof u.output_tokens === 'number') agent.tokensOut = u.output_tokens
-        }
-      }
+      turnTracker.observe(msg)
+      const { tokensIn, tokensOut } = turnTracker.totals()
+      agent.tokensIn = tokensIn
+      agent.tokensOut = tokensOut
       // Track exit code if present (typically in last message)
       exitCode = getNumericField(msg, 'exit_code') ?? exitCode
 
