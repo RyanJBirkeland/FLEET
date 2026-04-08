@@ -31,11 +31,20 @@ describe('buildAgentPrompt', () => {
     expect(prompt).toContain('npm install')
   })
 
-  it('includes universal preamble for all agent types', () => {
-    const types = ['pipeline', 'assistant', 'adhoc', 'copilot', 'synthesizer'] as const
+  it('includes coding agent preamble for coding agent types', () => {
+    const types = ['pipeline', 'assistant', 'adhoc'] as const
     for (const agentType of types) {
       const prompt = buildAgentPrompt({ ...baseInput, agentType })
       expect(prompt).toContain('You are a BDE')
+    }
+  })
+
+  it('includes spec drafting preamble for spec drafting agents', () => {
+    const types = ['copilot', 'synthesizer'] as const
+    for (const agentType of types) {
+      const prompt = buildAgentPrompt({ ...baseInput, agentType })
+      expect(prompt).toContain('BDE Task Workbench Copilot')
+      expect(prompt).toContain('## What you are NOT')
     }
   })
 
