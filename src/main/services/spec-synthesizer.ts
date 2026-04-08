@@ -230,8 +230,11 @@ export async function synthesizeSpec(
   // Build prompt
   const prompt = buildSpecPrompt(request, context)
 
-  // Stream generation
-  const spec = await runSdkStreaming(prompt, onChunk, activeStreams, streamId)
+  // Stream generation — settingSources:[] skips CLAUDE.md; synthesizer
+  // receives BDE conventions via its prompt and doesn't need the project file.
+  const spec = await runSdkStreaming(prompt, onChunk, activeStreams, streamId, 180_000, {
+    settingSources: []
+  })
 
   log.info(`Spec generated: ${spec.length} chars`)
   return {
@@ -252,8 +255,10 @@ export async function reviseSpec(
   // Build prompt
   const prompt = buildRevisionPrompt(request)
 
-  // Stream revision
-  const spec = await runSdkStreaming(prompt, onChunk, activeStreams, streamId)
+  // Stream revision — settingSources:[] skips CLAUDE.md (same rationale as synthesize).
+  const spec = await runSdkStreaming(prompt, onChunk, activeStreams, streamId, 180_000, {
+    settingSources: []
+  })
 
   log.info(`Spec revised: ${spec.length} chars`)
   return {

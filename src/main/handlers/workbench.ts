@@ -95,6 +95,10 @@ export function getCopilotSdkOptions(
     disallowedTools: [...COPILOT_DISALLOWED_TOOLS],
     maxTurns: COPILOT_MAX_TURNS,
     maxBudgetUsd: COPILOT_MAX_BUDGET_USD,
+    // Spec-drafting agents skip CLAUDE.md — they receive BDE conventions via
+    // their prompt (SPEC_DRAFTING_PREAMBLE) and loading the project settings
+    // file costs tokens without adding value.
+    settingSources: [],
     ...(extras?.onToolUse ? { onToolUse: extras.onToolUse } : {})
   }
 }
