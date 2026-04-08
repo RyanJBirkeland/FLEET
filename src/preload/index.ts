@@ -25,6 +25,7 @@ function typedInvoke<K extends keyof IpcChannelMap>(
 }
 
 const api = {
+  readClipboardImage: () => typedInvoke('clipboard:readImage'),
   getRepoPaths: () => typedInvoke('git:getRepoPaths'),
   openExternal: (url: string) => typedInvoke('window:openExternal', url),
   openPlaygroundInBrowser: (html: string) => typedInvoke('playground:openInBrowser', html),

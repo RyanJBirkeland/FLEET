@@ -80,4 +80,12 @@ export function registerDashboardHandlers(): void {
   safeHandle('system:loadAverage', async () => {
     return getLoadSnapshot()
   })
+
+  safeHandle('clipboard:readImage', async () => {
+    const { clipboard } = await import('electron')
+    const img = clipboard.readImage()
+    if (img.isEmpty()) return null
+    const png = img.toPNG()
+    return { data: png.toString('base64'), mimeType: 'image/png' as const }
+  })
 }

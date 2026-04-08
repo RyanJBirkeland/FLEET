@@ -21,6 +21,7 @@ declare global {
   interface Window {
     electron: ElectronAPI
     api: {
+      readClipboardImage: () => Promise<IpcResult<'clipboard:readImage'>>
       getRepoPaths: () => Promise<IpcResult<'git:getRepoPaths'>>
       openExternal: (
         ...args: IpcArgs<'window:openExternal'>

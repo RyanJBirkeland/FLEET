@@ -105,51 +105,85 @@ export function CommandBar({
     inputRef.current?.focus()
   }, [])
 
-  const handlePaste = useCallback((e: React.ClipboardEvent<HTMLTextAreaElement>): void => {
+  const handlePaste = useCallback(async (e: React.ClipboardEvent<HTMLTextAreaElement>): Promise<void> => {
     const items = e.clipboardData.items
-    let imageItem: DataTransferItem | null = null
+    let imageBlob: Blob | null = null
 
-    // Find the first image item
+    // Try the web clipboard API first (works for images dragged from browser, etc.)
     for (let i = 0; i < items.length; i++) {
       if (items[i].type.startsWith('image/')) {
-        imageItem = items[i]
+        imageBlob = items[i].getAsFile()
         break
       }
     }
 
-    // If no image, let the default paste behavior happen
-    if (!imageItem) return
-
-    e.preventDefault()
-
-    const blob = imageItem.getAsFile()
-    if (!blob) return
-
-    // Check file size (5MB limit)
-    const MAX_SIZE = 5 * 1024 * 1024
-    if (blob.size > MAX_SIZE) {
-      toast.error('Image too large (max 5MB)')
+    if (imageBlob) {
+      // Web API path — blob already in hand
+      e.preventDefault()
+      const MAX_SIZE = 5 * 1024 * 1024
+      if (imageBlob.size > MAX_SIZE) {
+        toast.error('Image too large (max 5MB)')
+        return
+      }
+      const reader = new FileReader()
+      reader.onerror = () => toast.error('Failed to read image')
+      reader.onload = () => {
+        const dataUrl = reader.result as string
+        setAttachment({
+          path: '',
+          name: `paste-${Date.now()}.png`,
+          type: 'image',
+          mimeType: imageBlob!.type || 'image/png',
+          data: dataUrl.split(',')[1],
+          preview: dataUrl
+        })
+      }
+      reader.readAsDataURL(imageBlob)
       return
     }
 
-    const reader = new FileReader()
-    reader.onerror = () => {
-      toast.error('Failed to read image')
+    // Fallback: ask the main process to read via Electron's native clipboard API.
+    // macOS screenshots (Cmd+Shift+4, Cmd+Shift+3, screencap) and images copied
+    // from native apps are often only available via nativeImage, not clipboardData.
+    //
+    // Because the paste event handler goes async here, e.preventDefault() would
+    // have no effect after the await — the browser processes the event synchronously.
+    // Instead: capture the text content now, prevent default immediately, then
+    // re-insert the text manually if we end up finding no image.
+    const pastedText = e.clipboardData.getData('text/plain')
+    e.preventDefault()
+
+    try {
+      const result = await window.api.readClipboardImage()
+      if (result) {
+        setAttachment({
+          path: '',
+          name: `paste-${Date.now()}.png`,
+          type: 'image',
+          mimeType: result.mimeType,
+          data: result.data,
+          preview: `data:${result.mimeType};base64,${result.data}`
+        })
+        return
+      }
+    } catch {
+      // Clipboard read failed — fall through to text insertion
     }
-    reader.onload = () => {
-      const dataUrl = reader.result as string
-      const base64 = dataUrl.split(',')[1]
-      setAttachment({
-        path: '',
-        name: `paste-${Date.now()}.png`,
-        type: 'image',
-        mimeType: blob.type,
-        data: base64,
-        preview: dataUrl
-      })
+
+    // No image found — manually insert the pasted text at the cursor position
+    if (pastedText) {
+      const el = inputRef.current
+      const start = el?.selectionStart ?? value.length
+      const end = el?.selectionEnd ?? value.length
+      const newValue = value.slice(0, start) + pastedText + value.slice(end)
+      setValue(newValue)
+      if (el) {
+        requestAnimationFrame(() => {
+          el.setSelectionRange(start + pastedText.length, start + pastedText.length)
+        })
+      }
     }
-    reader.readAsDataURL(blob)
-  }, [])
+  }, [value])
 
   return (
     <div

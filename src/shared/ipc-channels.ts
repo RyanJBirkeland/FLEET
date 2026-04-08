@@ -736,6 +736,12 @@ export interface LoadSnapshot {
 
 export interface SystemChannels {
   'system:loadAverage': { args: []; result: LoadSnapshot }
+  /** Read the current clipboard image via Electron's native API.
+   *  Returns null when the clipboard contains no image data. */
+  'clipboard:readImage': {
+    args: []
+    result: { data: string; mimeType: 'image/png' } | null
+  }
 }
 
 /** Code review operations */
