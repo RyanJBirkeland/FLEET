@@ -14,6 +14,8 @@ export interface TurnRecord {
   tokensIn: number
   tokensOut: number
   toolCalls: number
+  cacheTokensCreated: number
+  cacheTokensRead: number
 }
 
 export interface AgentRunRow {
@@ -271,7 +273,7 @@ export function listAgentRunsByTaskId(
 
 export function insertAgentRunTurn(db: Database.Database, record: TurnRecord): void {
   const stmt = db.prepare(
-    'INSERT INTO agent_run_turns (run_id, turn, tokens_in, tokens_out, tool_calls, recorded_at) VALUES (?, ?, ?, ?, ?, ?)'
+    'INSERT INTO agent_run_turns (run_id, turn, tokens_in, tokens_out, tool_calls, cache_tokens_created, cache_tokens_read, recorded_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)'
   )
   stmt.run(
     record.runId,
@@ -279,6 +281,8 @@ export function insertAgentRunTurn(db: Database.Database, record: TurnRecord): v
     record.tokensIn,
     record.tokensOut,
     record.toolCalls,
+    record.cacheTokensCreated,
+    record.cacheTokensRead,
     new Date().toISOString()
   )
 }
@@ -286,7 +290,7 @@ export function insertAgentRunTurn(db: Database.Database, record: TurnRecord): v
 export function listAgentRunTurns(db: Database.Database, runId: string): TurnRecord[] {
   const rows = db
     .prepare(
-      'SELECT run_id, turn, tokens_in, tokens_out, tool_calls FROM agent_run_turns WHERE run_id = ? ORDER BY turn ASC'
+      'SELECT run_id, turn, tokens_in, tokens_out, tool_calls, cache_tokens_created, cache_tokens_read FROM agent_run_turns WHERE run_id = ? ORDER BY turn ASC'
     )
     .all(runId) as Array<{
     run_id: string
@@ -294,12 +298,16 @@ export function listAgentRunTurns(db: Database.Database, runId: string): TurnRec
     tokens_in: number | null
     tokens_out: number | null
     tool_calls: number | null
+    cache_tokens_created: number | null
+    cache_tokens_read: number | null
   }>
   return rows.map((r) => ({
     runId: r.run_id,
     turn: r.turn,
     tokensIn: r.tokens_in ?? 0,
     tokensOut: r.tokens_out ?? 0,
-    toolCalls: r.tool_calls ?? 0
+    toolCalls: r.tool_calls ?? 0,
+    cacheTokensCreated: r.cache_tokens_created ?? 0,
+    cacheTokensRead: r.cache_tokens_read ?? 0
   }))
 }

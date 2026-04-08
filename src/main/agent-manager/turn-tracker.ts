@@ -4,6 +4,8 @@ import { insertAgentRunTurn } from '../data/agent-queries'
 export class TurnTracker {
   private tokensIn = 0
   private tokensOut = 0
+  private cacheTokensCreated = 0
+  private cacheTokensRead = 0
   private turnCount = 0
   private currentTurnToolCalls = 0
 
@@ -19,12 +21,18 @@ export class TurnTracker {
     // On assistant messages: extract per-turn usage, count tool_use blocks, write turn record.
     // SDK format: usage is at msg.message.usage (not msg.usage — that field is absent or stale).
     // Fallback to msg.usage for forward-compat with CLI or future SDK changes.
+    // Cache fields (cache_creation_input_tokens, cache_read_input_tokens) reveal the true
+    // context window size — input_tokens alone only counts the non-cached portion.
     if (m.type === 'assistant') {
       const message = m.message as Record<string, unknown> | undefined
       const usage = (message?.usage ?? m.usage) as Record<string, unknown> | null | undefined
       if (usage != null) {
         if (typeof usage.input_tokens === 'number') this.tokensIn += usage.input_tokens
         if (typeof usage.output_tokens === 'number') this.tokensOut += usage.output_tokens
+        if (typeof usage.cache_creation_input_tokens === 'number')
+          this.cacheTokensCreated += usage.cache_creation_input_tokens
+        if (typeof usage.cache_read_input_tokens === 'number')
+          this.cacheTokensRead += usage.cache_read_input_tokens
       }
 
       const content = message?.content ?? m.content
@@ -44,7 +52,9 @@ export class TurnTracker {
           turn: this.turnCount,
           tokensIn: this.tokensIn,
           tokensOut: this.tokensOut,
-          toolCalls: this.currentTurnToolCalls
+          toolCalls: this.currentTurnToolCalls,
+          cacheTokensCreated: this.cacheTokensCreated,
+          cacheTokensRead: this.cacheTokensRead
         })
       } catch (err) {
         // Non-fatal — must not interrupt the agent message loop, but log so migration failures are visible

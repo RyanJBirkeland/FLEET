@@ -995,6 +995,14 @@ export const migrations: Migration[] = [
       `
       db.exec(sql)
     }
+  },
+  {
+    version: 45,
+    description: 'Add cache token columns to agent_run_turns for full context window visibility',
+    up: (db) => {
+      db.prepare('ALTER TABLE agent_run_turns ADD COLUMN cache_tokens_created INTEGER').run()
+      db.prepare('ALTER TABLE agent_run_turns ADD COLUMN cache_tokens_read INTEGER').run()
+    }
   }
 ]
 

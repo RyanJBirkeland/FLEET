@@ -16,20 +16,19 @@ import { TurnTracker } from '../agent-manager/turn-tracker'
 function makeDb(): Database.Database {
   const db = new Database(':memory:')
   db.pragma('foreign_keys = ON')
-  const schema = `
-    CREATE TABLE agent_runs (id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'running');
-    CREATE TABLE agent_run_turns (
-      id          INTEGER PRIMARY KEY,
-      run_id      TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE,
-      turn        INTEGER NOT NULL,
-      tokens_in   INTEGER,
-      tokens_out  INTEGER,
-      tool_calls  INTEGER,
-      recorded_at TEXT NOT NULL
-    );
-    CREATE INDEX idx_agent_run_turns_run ON agent_run_turns(run_id);
-  `
-  db.exec(schema)
+  db.prepare("CREATE TABLE agent_runs (id TEXT PRIMARY KEY, status TEXT NOT NULL DEFAULT 'running')").run()
+  db.prepare(`CREATE TABLE agent_run_turns (
+      id                   INTEGER PRIMARY KEY,
+      run_id               TEXT NOT NULL REFERENCES agent_runs(id) ON DELETE CASCADE,
+      turn                 INTEGER NOT NULL,
+      tokens_in            INTEGER,
+      tokens_out           INTEGER,
+      tool_calls           INTEGER,
+      cache_tokens_created INTEGER,
+      cache_tokens_read    INTEGER,
+      recorded_at          TEXT NOT NULL
+    )`).run()
+  db.prepare('CREATE INDEX idx_agent_run_turns_run ON agent_run_turns(run_id)').run()
   return db
 }
 
@@ -58,6 +57,48 @@ describe('TurnTracker', () => {
     tracker.observe({ type: 'assistant', usage: { input_tokens: 100, output_tokens: 50 } })
     tracker.observe({ type: 'assistant', usage: { input_tokens: 200, output_tokens: 80 } })
     expect(tracker.totals()).toEqual({ tokensIn: 300, tokensOut: 130 })
+  })
+
+  it('accumulates cache tokens from msg.message.usage', () => {
+    const tracker = new TurnTracker('run-1', db)
+    tracker.observe({
+      type: 'assistant',
+      message: {
+        usage: { input_tokens: 10, output_tokens: 5, cache_creation_input_tokens: 80000, cache_read_input_tokens: 0 },
+        content: []
+      }
+    })
+    tracker.observe({
+      type: 'assistant',
+      message: {
+        usage: { input_tokens: 8, output_tokens: 4, cache_creation_input_tokens: 0, cache_read_input_tokens: 80000 },
+        content: []
+      }
+    })
+
+    const rows = db
+      .prepare('SELECT cache_tokens_created, cache_tokens_read FROM agent_run_turns ORDER BY turn')
+      .all() as Array<{ cache_tokens_created: number; cache_tokens_read: number }>
+
+    // Turn 1: 80k cache_creation, 0 cache_read (cumulative)
+    expect(rows[0]).toMatchObject({ cache_tokens_created: 80000, cache_tokens_read: 0 })
+    // Turn 2: cumulative 80k cache_creation + 0, cumulative 0 + 80k cache_read
+    expect(rows[1]).toMatchObject({ cache_tokens_created: 80000, cache_tokens_read: 80000 })
+  })
+
+  it('stores zero cache tokens when cache fields absent from usage', () => {
+    const tracker = new TurnTracker('run-1', db)
+    tracker.observe({
+      type: 'assistant',
+      message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
+    })
+
+    const row = db
+      .prepare('SELECT cache_tokens_created, cache_tokens_read FROM agent_run_turns')
+      .get() as { cache_tokens_created: number | null; cache_tokens_read: number | null }
+
+    expect(row.cache_tokens_created).toBe(0)
+    expect(row.cache_tokens_read).toBe(0)
   })
 
   it('ignores non-assistant messages (result/system carry no useful token data)', () => {
