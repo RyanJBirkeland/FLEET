@@ -13,6 +13,8 @@ interface SidebarItemProps {
   badgeAccent?: 'red' | 'blue' | 'orange'
   onActivate: (view: View) => void
   onContextAction: (action: string, view: View) => void
+  /** Called on mouseenter — used by NeonSidebar to preload lazy view chunks */
+  onHover?: () => void
 }
 
 interface ContextMenuState {
@@ -39,7 +41,8 @@ export function SidebarItem({
   badge,
   badgeAccent = 'orange',
   onActivate,
-  onContextAction
+  onContextAction,
+  onHover
 }: SidebarItemProps): React.JSX.Element {
   const [contextMenu, setContextMenu] = useState<ContextMenuState | null>(null)
   const menuRef = useRef<HTMLDivElement>(null)
@@ -146,6 +149,7 @@ export function SidebarItem({
             e.stopPropagation()
             onActivate(view)
           }}
+          onMouseEnter={onHover}
           onContextMenu={handleContextMenu}
           onKeyDown={handleKeyDown}
           aria-label={
