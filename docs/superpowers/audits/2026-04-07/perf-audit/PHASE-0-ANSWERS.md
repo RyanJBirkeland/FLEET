@@ -14,11 +14,19 @@ This is the cross-phase scratchpad. Append baselines, decisions, and pinned task
 ### Q2: Why is `cost_events` empty after 31K agent events?
 *Affects: Phase 1 row F-t3-db-6 / F-t3-model-3*
 
-**Method:**
+**Method:** `Grep cost_events|cost_event|CostEvent|costEvent` across `src/`. Then `Grep FROM cost_events` to find readers. Then a broader glob to confirm no other extensions.
 
 **Findings:**
 
-**Decision:**
+Only 3 files reference `cost_events` in the entire codebase:
+
+1. **`src/main/db.ts:153-167`** — migration v4 creates the table. That's the only schema reference.
+2. **`src/main/__tests__/db.test.ts:100, 176, 178, 188, 190, 192`** — migration test verifies that v4 creates the table. Tests structure only, doesn't use it.
+3. **`src/main/__tests__/integration/db-crud.test.ts:152-183`** — a `cost_events CRUD` test that INSERTs and SELECTs against the table directly. This is the *only* INSERT in the codebase, and it's only run in tests.
+
+**Zero production writers. Zero production readers.** The table was created in migration v4 (very early — likely before the cost-tracking feature was scoped) and never wired up. The actual cost tracking happens in `agent_runs` (`tokens_in`, `tokens_out`, `cache_read`, `cache_create`, `cost_usd`, `duration_ms`, `num_turns`) which is populated by the SDK adapter.
+
+**Decision:** **DROP the table** (Phase 1 Task 1.4 Option A). The CRUD tests in `db-crud.test.ts:152-183` and the migration verification in `db.test.ts:100, 176-192` must be removed/updated as part of the same commit. The drop migration will be the next available version (v35 or v36 depending on what other Phase 1 migrations land first).
 
 ---
 
