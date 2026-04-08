@@ -267,10 +267,10 @@ describe('spawnAdhocAgent', () => {
   })
 
   it('accumulates tokensIn across turns (not last-wins)', async () => {
-    // Each turn yields a result message with tokens_in: 100.
+    // Each turn yields an assistant message with usage at msg.message.usage (real SDK format).
     // With last-wins the final tokensIn would be 100; with accumulation it must be 200.
-    const turn1Handle = createMockQueryHandle([{ type: 'result', tokens_in: 100, tokens_out: 50 }])
-    const turn2Handle = createMockQueryHandle([{ type: 'result', tokens_in: 100, tokens_out: 50 }])
+    const turn1Handle = createMockQueryHandle([{ type: 'assistant', message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] } }])
+    const turn2Handle = createMockQueryHandle([{ type: 'assistant', message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] } }])
     mockQuery.mockReturnValueOnce(turn1Handle).mockReturnValueOnce(turn2Handle)
 
     const result = await spawnAdhocAgent({ task: 'test', repoPath: '/tmp/r', model: 'sonnet' })

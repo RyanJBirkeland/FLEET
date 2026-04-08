@@ -16,20 +16,17 @@ export class TurnTracker {
     if (typeof msg !== 'object' || msg === null) return
     const m = msg as Record<string, unknown>
 
-    // Accumulate from top-level fields (result/system messages)
-    if (typeof m.tokens_in === 'number') this.tokensIn += m.tokens_in
-    if (typeof m.tokens_out === 'number') this.tokensOut += m.tokens_out
-
-    // Accumulate from nested usage object (assistant messages)
-    if (typeof m.usage === 'object' && m.usage !== null) {
-      const u = m.usage as Record<string, unknown>
-      if (typeof u.input_tokens === 'number') this.tokensIn += u.input_tokens
-      if (typeof u.output_tokens === 'number') this.tokensOut += u.output_tokens
-    }
-
-    // On assistant messages: count tool_use blocks, write turn record, reset per-turn counter
+    // On assistant messages: extract per-turn usage, count tool_use blocks, write turn record.
+    // SDK format: usage is at msg.message.usage (not msg.usage — that field is absent or stale).
+    // Fallback to msg.usage for forward-compat with CLI or future SDK changes.
     if (m.type === 'assistant') {
       const message = m.message as Record<string, unknown> | undefined
+      const usage = (message?.usage ?? m.usage) as Record<string, unknown> | null | undefined
+      if (usage != null) {
+        if (typeof usage.input_tokens === 'number') this.tokensIn += usage.input_tokens
+        if (typeof usage.output_tokens === 'number') this.tokensOut += usage.output_tokens
+      }
+
       const content = message?.content ?? m.content
       if (Array.isArray(content)) {
         for (const block of content) {
