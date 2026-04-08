@@ -927,6 +927,16 @@ export const migrations: Migration[] = [
       const stmt = db.prepare('UPDATE sprint_tasks SET repo = lower(repo) WHERE repo <> lower(repo)')
       stmt.run()
     }
+  },
+  {
+    version: 39,
+    description:
+      'F-t3-db-1: Partial composite index on sprint_tasks(pr_status, pr_number) for listTasksWithOpenPrs (PR poller fires every 60s; was full-scanning)',
+    up: (db) => {
+      db.prepare(
+        "CREATE INDEX IF NOT EXISTS idx_sprint_tasks_pr_open ON sprint_tasks(pr_status, pr_number) WHERE pr_status = 'open'"
+      ).run()
+    }
   }
 ]
 
