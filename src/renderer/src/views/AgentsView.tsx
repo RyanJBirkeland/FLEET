@@ -154,10 +154,20 @@ export function AgentsView(): React.JSX.Element {
   const handleSteer = useCallback(
     async (message: string, attachment?: Attachment) => {
       if (!selectedId) return
-      const formattedMessage = attachment
-        ? buildLocalAgentMessage(message, [attachment])
-        : message
-      const result = await window.api.steerAgent(selectedId, formattedMessage)
+
+      // Text file attachments get prepended to the message as code blocks.
+      // Image attachments are passed separately so the main process can build
+      // a proper multimodal SDK message instead of embedding them as markdown
+      // (which Claude cannot see as visual content).
+      const textFormattedMessage =
+        attachment?.type === 'text' ? buildLocalAgentMessage(message, [attachment]) : message
+
+      const images =
+        attachment?.type === 'image' && attachment.data && attachment.mimeType
+          ? [{ data: attachment.data, mimeType: attachment.mimeType }]
+          : undefined
+
+      const result = await window.api.steerAgent(selectedId, textFormattedMessage, images)
       if (!result.ok) {
         toast.error(result.error ?? 'Failed to send message to agent')
       }

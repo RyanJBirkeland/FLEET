@@ -50,9 +50,14 @@ function deriveAdhocTitle(task: string): string {
   return firstLine.length > 80 ? firstLine.slice(0, 80) : firstLine
 }
 
+export interface ImageAttachment {
+  data: string     // raw base64 (no data: prefix)
+  mimeType: string // e.g. 'image/png'
+}
+
 /** Wrapper around an SDK session for ad-hoc agent management */
 interface AdhocSession {
-  send(message: string): Promise<void>
+  send(message: string, images?: ImageAttachment[]): Promise<void>
   close(): void
 }
 
@@ -154,15 +159,58 @@ export async function spawnAdhocAgent(args: {
   const turnTracker = new TurnTracker(meta.id)
 
   /**
-   * Run one conversation turn: create a query (first turn) or resume (subsequent turns).
-   * Consumes all messages until the iterator completes (result message).
+   * Build a multimodal SDKUserMessage when the caller provides images and we
+   * already have a session ID.  The generator yields exactly one message then
+   * stops — sdk.query() expects an AsyncIterable<SDKUserMessage> for this path.
    */
-  async function runTurn(message: string): Promise<void> {
+  async function* makeMultimodalPrompt(
+    message: string,
+    images: ImageAttachment[],
+    sid: string
+  ): AsyncGenerator<import('@anthropic-ai/claude-agent-sdk').SDKUserMessage> {
+    type ValidMimeType = 'image/jpeg' | 'image/png' | 'image/gif' | 'image/webp'
+    const content: Array<
+      | { type: 'text'; text: string }
+      | { type: 'image'; source: { type: 'base64'; media_type: ValidMimeType; data: string } }
+    > = []
+    if (message) content.push({ type: 'text', text: message })
+    for (const img of images) {
+      content.push({
+        type: 'image',
+        source: {
+          type: 'base64',
+          media_type: img.mimeType as ValidMimeType,
+          data: img.data
+        }
+      })
+    }
+    yield {
+      type: 'user',
+      message: { role: 'user', content },
+      parent_tool_use_id: null,
+      session_id: sid
+    } as import('@anthropic-ai/claude-agent-sdk').SDKUserMessage
+  }
+
+  /**
+   * Run one conversation turn: create a query (first turn) or resume (subsequent turns).
+   * When images are present and a session already exists, we send a proper multimodal
+   * SDKUserMessage with base64 image blocks so Claude actually sees the screenshot.
+   */
+  async function runTurn(message: string, images?: ImageAttachment[]): Promise<void> {
     if (closed) return
 
     const options = sessionId ? { ...baseOptions, resume: sessionId } : baseOptions
 
-    const queryHandle = sdk.query({ prompt: message, options })
+    // Use multimodal message when we have images + an active session ID.
+    // For the first turn (no session yet), fall back to plain text — the
+    // user spawns an agent with text, not by pasting an image.
+    const prompt =
+      images && images.length > 0 && sessionId
+        ? makeMultimodalPrompt(message, images, sessionId)
+        : message
+
+    const queryHandle = sdk.query({ prompt, options })
 
     try {
       for await (const raw of queryHandle) {
@@ -246,7 +294,7 @@ export async function spawnAdhocAgent(args: {
 
   // Track for steering / kill
   adhocSessions.set(meta.id, {
-    async send(message: string) {
+    async send(message: string, images?: ImageAttachment[]) {
       if (closed) return
 
       // Emit user message event so it appears in the console UI
@@ -256,8 +304,8 @@ export async function spawnAdhocAgent(args: {
         timestamp: Date.now()
       })
 
-      // Run the next turn with session resumption
-      await runTurn(message)
+      // Run the next turn with session resumption (multimodal when images present)
+      await runTurn(message, images)
     },
     close() {
       completeSession()

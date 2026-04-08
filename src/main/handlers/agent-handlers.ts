@@ -43,12 +43,15 @@ export function registerAgentHandlers(am?: AgentManager): void {
   safeHandle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))
   safeHandle(
     'agent:steer',
-    async (_e, { agentId, message }: { agentId: string; message: string }) => {
+    async (
+      _e,
+      { agentId, message, images }: { agentId: string; message: string; images?: Array<{ data: string; mimeType: string }> }
+    ) => {
       // Try ad-hoc agents first
       const adhocHandle = getAdhocHandle(agentId)
       if (adhocHandle) {
         try {
-          await adhocHandle.send(message)
+          await adhocHandle.send(message, images)
           return { ok: true }
         } catch (err) {
           return { ok: false, error: String(err) }

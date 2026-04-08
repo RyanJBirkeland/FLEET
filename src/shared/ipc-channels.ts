@@ -201,7 +201,7 @@ export interface AgentChannels {
     result: { content: string; nextByte: number }
   }
   'agent:steer': {
-    args: [args: { agentId: string; message: string }]
+    args: [args: { agentId: string; message: string; images?: Array<{ data: string; mimeType: string }> }]
     result: { ok: boolean; error?: string }
   }
   'agent:kill': {

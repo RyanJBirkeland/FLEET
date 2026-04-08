@@ -309,6 +309,57 @@ describe('spawnAdhocAgent', () => {
     expect(completedEvent.tokensIn).toBe(200)
   })
 
+  it('sends multimodal SDKUserMessage when images provided and session exists', async () => {
+    // First turn: establish session
+    const turn1 = createMockQueryHandle([
+      { type: 'system', subtype: 'init', session_id: 'sess-abc' }
+    ])
+    // Second turn: image steer
+    const turn2 = createMockQueryHandle([])
+    mockQuery.mockReturnValueOnce(turn1).mockReturnValueOnce(turn2)
+
+    const result = await spawnAdhocAgent({ task: 'test', repoPath: '/tmp/r', model: 'sonnet' })
+    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1), { timeout: 1000 })
+
+    // Send a steering message with an image attachment
+    await getAdhocHandle(result.id)?.send('check this screenshot', [
+      { data: 'aGVsbG8=', mimeType: 'image/png' }
+    ])
+
+    expect(mockQuery).toHaveBeenCalledTimes(2)
+    const secondCall = mockQuery.mock.calls[1][0]
+
+    // The prompt should be an async iterable (SDKUserMessage), NOT a plain string
+    expect(typeof secondCall.prompt).not.toBe('string')
+    expect(secondCall.options).toMatchObject({ resume: 'sess-abc' })
+
+    // Consume the iterable to inspect message content
+    const messages = []
+    for await (const msg of secondCall.prompt) {
+      messages.push(msg)
+    }
+    expect(messages).toHaveLength(1)
+    const content = messages[0].message.content
+    expect(content).toContainEqual({ type: 'text', text: 'check this screenshot' })
+    expect(content).toContainEqual({
+      type: 'image',
+      source: { type: 'base64', media_type: 'image/png', data: 'aGVsbG8=' }
+    })
+  })
+
+  it('falls back to plain string when no session yet (first turn image attempt)', async () => {
+    // No session established yet (no system.init consumed)
+    const handle = createMockQueryHandle([])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'test', repoPath: '/tmp/r', model: 'sonnet' })
+    await vi.waitFor(() => expect(mockQuery).toHaveBeenCalledTimes(1), { timeout: 1000 })
+
+    // The first turn's prompt should be a plain string (no session_id available)
+    const firstCall = mockQuery.mock.calls[0][0]
+    expect(typeof firstCall.prompt).toBe('string')
+  })
+
   it('emits agent:error on message consumption failure', async () => {
     const handle = {
       [Symbol.asyncIterator]: async function* () {
