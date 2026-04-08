@@ -21,7 +21,7 @@ vi.mock('../logger', () => ({
   })
 }))
 
-import { startPrPoller, stopPrPoller, getLatestPrList, refreshPrList } from '../pr-poller'
+import { startPrPoller, stopPrPoller, getLatestPrList, refreshPrList, POLL_INTERVAL_MS } from '../pr-poller'
 import { broadcast } from '../broadcast'
 import { fetchAllGitHubPages, githubFetch } from '../github-fetch'
 import { getGitHubToken } from '../config'
@@ -220,5 +220,31 @@ describe('pr-poller', () => {
     expect(result.prs.length).toBe(1)
     expect(result.checks['BDE-1'].status).toBe('pending')
     expect(result.checks['BDE-1'].total).toBe(0)
+  })
+
+  it('startPrPoller uses a single setInterval — no timer recreation on backoff (F-t1-sre-4)', async () => {
+    const setIntervalSpy = vi.spyOn(globalThis, 'setInterval')
+    const clearIntervalSpy = vi.spyOn(globalThis, 'clearInterval')
+
+    // Simulate poll errors to trigger backoff
+    vi.mocked(fetchAllGitHubPages).mockRejectedValue(new Error('network error'))
+
+    startPrPoller()
+
+    // Let initial poll fire and 3 interval ticks occur (enough to trigger backoff)
+    await vi.advanceTimersByTimeAsync(POLL_INTERVAL_MS * 3 + 100)
+
+    stopPrPoller()
+
+    // setInterval should have been called exactly once (for the main loop),
+    // not once-per-tick as in the old timer-recreation pattern.
+    const pollSetIntervalCalls = setIntervalSpy.mock.calls.filter(
+      (args) => Number(args[1]) === POLL_INTERVAL_MS
+    )
+    expect(pollSetIntervalCalls.length).toBe(1)
+
+    // clearInterval for timer recreation: should be 0 (only stopPrPoller clears)
+    // The old pattern called clearInterval inside every tick callback.
+    expect(clearIntervalSpy).toHaveBeenCalledTimes(1) // only from stopPrPoller
   })
 })
