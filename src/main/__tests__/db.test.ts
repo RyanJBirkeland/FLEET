@@ -134,6 +134,7 @@ describe('db schema migrations', () => {
       'idx_sprint_tasks_pr_open',
       'idx_sprint_tasks_sprint',
       'idx_sprint_tasks_status',
+      'idx_sprint_tasks_status_claimed',
       'idx_task_changes_changed_at',
       'idx_task_changes_task_id'
     ])

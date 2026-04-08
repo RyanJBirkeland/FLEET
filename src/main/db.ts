@@ -937,6 +937,16 @@ export const migrations: Migration[] = [
         "CREATE INDEX IF NOT EXISTS idx_sprint_tasks_pr_open ON sprint_tasks(pr_status, pr_number) WHERE pr_status = 'open'"
       ).run()
     }
+  },
+  {
+    version: 40,
+    description:
+      'F-t3-db-3: Composite index on sprint_tasks(status, claimed_by) for drain-loop and orphan queries',
+    up: (db) => {
+      db.prepare(
+        'CREATE INDEX IF NOT EXISTS idx_sprint_tasks_status_claimed ON sprint_tasks(status, claimed_by)'
+      ).run()
+    }
   }
 ]
 
