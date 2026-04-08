@@ -10,6 +10,8 @@ function makeDeps(overrides: Partial<SprintPrPollerDeps> = {}): SprintPrPollerDe
     markTaskCancelledByPrNumber: vi.fn().mockReturnValue([]),
     updateTaskMergeableState: vi.fn().mockReturnValue(undefined),
     onTaskTerminal: vi.fn().mockReturnValue(undefined),
+    // F-t1-concur-5: tests fire poller immediately; production stagger is 30s.
+    initialDelayMs: 0,
     ...overrides
   }
 }

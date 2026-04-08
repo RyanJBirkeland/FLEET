@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildAgentPrompt } from '../agent-manager/prompt-composer'
+import { buildAgentPrompt, classifyTask } from '../agent-manager/prompt-composer'
 import type { BuildPromptInput } from '../agent-manager/prompt-composer'
 
 describe('buildAgentPrompt', () => {
@@ -44,7 +44,7 @@ describe('buildAgentPrompt', () => {
     for (const agentType of types) {
       const prompt = buildAgentPrompt({ ...baseInput, agentType })
       expect(prompt).toContain('BDE Task Workbench Copilot')
-      expect(prompt).toContain('## What you are NOT')
+      expect(prompt).toContain('read-only spec drafting')
     }
   })
 
@@ -166,5 +166,78 @@ describe('buildAgentPrompt', () => {
       messages: [{ role: 'user', content: 'hi' }]
     })
     expect(prompt).toContain('spec drafting')
+  })
+
+  it('truncates pipeline taskContent at 2000 chars', () => {
+    const longSpec = 'x'.repeat(3000)
+    const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: longSpec, branch: 'b' })
+    expect(prompt).toContain('x'.repeat(2000))
+    expect(prompt).not.toContain('x'.repeat(2001))
+    expect(prompt).toContain('[spec truncated at 2000 chars')
+  })
+
+  it('does not truncate pipeline taskContent under 2000 chars', () => {
+    const shortSpec = 'y'.repeat(100)
+    const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: shortSpec, branch: 'b' })
+    expect(prompt).toContain('y'.repeat(100))
+    expect(prompt).not.toContain('[spec truncated')
+  })
+})
+
+describe('classifyTask', () => {
+  it('classifies fix keywords', () => {
+    expect(classifyTask('Bug fix: null pointer in login')).toBe('fix')
+    expect(classifyTask('fix: crash on startup')).toBe('fix')
+    expect(classifyTask('fixes #42 — wrong error message')).toBe('fix')
+  })
+
+  it('classifies refactor keywords', () => {
+    expect(classifyTask('Refactor auth module to use hooks')).toBe('refactor')
+    expect(classifyTask('Cleanup the sprint pipeline code')).toBe('refactor')
+  })
+
+  it('classifies doc keywords', () => {
+    expect(classifyTask('Add JSDoc comments to all IPC handlers')).toBe('doc')
+    expect(classifyTask('Update README with setup instructions')).toBe('doc')
+  })
+
+  it('classifies audit keywords', () => {
+    expect(classifyTask('Audit the token usage in agent pipeline')).toBe('audit')
+    expect(classifyTask('Investigate slow dashboard refresh')).toBe('audit')
+  })
+
+  it('defaults to generate for unrecognized content', () => {
+    expect(classifyTask('Add OAuth login screen')).toBe('generate')
+    expect(classifyTask('Implement sprint dependency graph')).toBe('generate')
+    expect(classifyTask('')).toBe('generate')
+  })
+
+  it('pipeline prompt includes output budget hint', () => {
+    const prompt = buildAgentPrompt({
+      agentType: 'pipeline',
+      taskContent: 'Refactor the auth module',
+      branch: 'chore/refactor'
+    })
+    expect(prompt).toContain('## Output Budget')
+    expect(prompt).toContain('refactor')
+    expect(prompt).toContain('4,000')
+  })
+
+  it('pipeline prompt classifies generate with 8K cap', () => {
+    const prompt = buildAgentPrompt({
+      agentType: 'pipeline',
+      taskContent: 'Add a new dashboard widget',
+      branch: 'feat/widget'
+    })
+    expect(prompt).toContain('generate')
+    expect(prompt).toContain('8,000')
+  })
+
+  it('non-pipeline agents do not get output budget hint', () => {
+    const prompt = buildAgentPrompt({
+      agentType: 'adhoc',
+      taskContent: 'Refactor the auth module'
+    })
+    expect(prompt).not.toContain('## Output Budget')
   })
 })

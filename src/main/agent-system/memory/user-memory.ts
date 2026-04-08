@@ -1,9 +1,19 @@
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, readFileSync, statSync } from 'fs'
 import { join } from 'path'
 import { BDE_MEMORY_DIR } from '../../paths'
 import { getSettingJson, setSettingJson } from '../../settings'
 
 const SETTING_KEY = 'memory.activeFiles'
+
+// Per-file mtime cache — avoids re-reading unchanged memory files on every
+// agent spawn. Each entry stores the file's last-known mtime and its content.
+// When statSync reports the same mtime, content is served from cache.
+const _fileCache = new Map<string, { mtime: number; content: string }>()
+
+/** Clears the mtime cache. Used in tests and when memory files are explicitly updated. */
+export function _invalidateUserMemoryCache(): void {
+  _fileCache.clear()
+}
 
 export interface UserMemoryResult {
   content: string
@@ -44,7 +54,16 @@ export function getUserMemory(): UserMemoryResult {
     }
 
     try {
-      const content = readFileSync(fullPath, 'utf-8')
+      const mtime = statSync(fullPath).mtimeMs
+      const cached = _fileCache.get(fullPath)
+      const content =
+        cached && cached.mtime === mtime
+          ? cached.content
+          : (() => {
+              const fresh = readFileSync(fullPath, 'utf-8')
+              _fileCache.set(fullPath, { mtime, content: fresh })
+              return fresh
+            })()
       sections.push(`### ${relativePath}\n\n${content}`)
       totalBytes += Buffer.byteLength(content, 'utf-8')
       remaining[relativePath] = true

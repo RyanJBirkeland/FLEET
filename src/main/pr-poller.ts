@@ -5,7 +5,7 @@ import { getConfiguredRepos } from './paths'
 import { createLogger } from './logger'
 import type { OpenPr, CheckRunSummary, PrListPayload } from '../shared/types'
 
-const POLL_INTERVAL_MS = 60_000
+export const POLL_INTERVAL_MS = 60_000
 const REQUEST_TIMEOUT_MS = 10_000
 const logger = createLogger('pr-poller')
 
@@ -18,7 +18,10 @@ function getGitHubRepos(): { owner: string; repo: string }[] {
 let timer: ReturnType<typeof setInterval> | null = null
 let latestPayload: PrListPayload | null = null
 let errorCount = 0
-let backoffDelay = POLL_INTERVAL_MS
+// Backoff state — tracks when the next poll is allowed.
+// Using state (not timer recreation) so startPrPoller uses a single
+// setInterval rather than clearInterval+setInterval on every tick.
+let nextPollAt = 0
 
 async function fetchOpenPrs(owner: string, repo: string, token: string): Promise<OpenPr[]> {
   try {
@@ -101,31 +104,32 @@ function broadcastPrList(payload: PrListPayload): void {
 }
 
 function safePoll(): void {
+  // Backoff gate — skip this tick if we're still within a backoff window.
+  if (Date.now() < nextPollAt) return
+
   poll()
     .then(() => {
-      // Reset error count and backoff on success
+      // Reset backoff on success
       errorCount = 0
-      backoffDelay = POLL_INTERVAL_MS
+      nextPollAt = 0
     })
     .catch((err) => {
       logger.error(`PR poller error: ${err instanceof Error ? err.message : String(err)}`)
       errorCount++
       // Exponential backoff with max 5 minutes
-      backoffDelay = Math.min(POLL_INTERVAL_MS * Math.pow(2, errorCount - 1), 300_000)
-      logger.warn(
-        `PR poller backing off for ${backoffDelay}ms after ${errorCount} consecutive errors`
-      )
+      const backoffMs = Math.min(POLL_INTERVAL_MS * Math.pow(2, errorCount - 1), 300_000)
+      nextPollAt = Date.now() + backoffMs
+      logger.warn(`PR poller backing off for ${backoffMs}ms after ${errorCount} consecutive errors`)
     })
 }
 
 export function startPrPoller(): void {
+  // Single interval — backoff is enforced via nextPollAt state, not timer
+  // recreation (the old clearInterval+setInterval-per-tick pattern leaked
+  // orphaned timers and called safePoll twice on every error tick).
+  nextPollAt = 0
   safePoll()
-  timer = setInterval(() => {
-    // Use dynamic backoff delay
-    clearInterval(timer!)
-    timer = setInterval(safePoll, backoffDelay)
-    safePoll()
-  }, backoffDelay)
+  timer = setInterval(safePoll, POLL_INTERVAL_MS)
 }
 
 export function stopPrPoller(): void {

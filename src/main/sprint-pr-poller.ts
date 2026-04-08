@@ -9,6 +9,12 @@ import type { PrStatusInput, PrStatusResult } from './github-pr-status'
 
 const POLL_INTERVAL_MS = 60_000
 
+// F-t1-concur-5: Stagger start by half the interval so the sprint PR poller
+// doesn't fire in lockstep with the GitHub PR poller (also 60s) and the drain
+// loop tick. Reduces SQLite + GitHub API contention by spreading work across
+// the 60s window.
+const POLL_INITIAL_DELAY_MS = 30_000
+
 export interface SprintPrPollerDeps {
   listTasksWithOpenPrs: () => SprintTask[]
   pollPrStatuses: (prs: PrStatusInput[]) => Promise<PrStatusResult[]>
@@ -17,6 +23,13 @@ export interface SprintPrPollerDeps {
   updateTaskMergeableState: (prNumber: number, state: string | null) => void
   onTaskTerminal?: (taskId: string, status: string) => void
   logger?: { info: (msg: string) => void; warn: (msg: string) => void }
+  /**
+   * F-t1-concur-5: Optional override for the startup delay. Production passes
+   * undefined to use the staggered default (30s). Tests can pass 0 to fire
+   * immediately on start() so vi.useFakeTimers() works without additional
+   * advance calls.
+   */
+  initialDelayMs?: number
 }
 
 export interface SprintPrPollerInstance {
@@ -79,12 +92,30 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
     poll().catch((err) => (deps.logger ?? console).warn(`[sprint-pr-poller] poll error: ${err}`))
   }
 
+  let initialDelayTimer: ReturnType<typeof setTimeout> | null = null
+  const initialDelay = deps.initialDelayMs ?? POLL_INITIAL_DELAY_MS
+
   return {
     start() {
-      safePoll()
-      timer = setInterval(safePoll, POLL_INTERVAL_MS)
+      // F-t1-concur-5: Delay first poll so we don't fire simultaneously
+      // with the GitHub PR poller and drain loop on app startup.
+      // initialDelay=0 fires immediately (used by tests with fake timers).
+      if (initialDelay <= 0) {
+        safePoll()
+        timer = setInterval(safePoll, POLL_INTERVAL_MS)
+        return
+      }
+      initialDelayTimer = setTimeout(() => {
+        initialDelayTimer = null
+        safePoll()
+        timer = setInterval(safePoll, POLL_INTERVAL_MS)
+      }, initialDelay)
     },
     stop() {
+      if (initialDelayTimer) {
+        clearTimeout(initialDelayTimer)
+        initialDelayTimer = null
+      }
       if (timer) {
         clearInterval(timer)
         timer = null

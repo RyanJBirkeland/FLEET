@@ -11,27 +11,32 @@ vi.mock('../../../paths', () => ({
   BDE_MEMORY_DIR: '/tmp/bde-test-memory'
 }))
 
-// Mock fs — we control existsSync and readFileSync
+// Mock fs — we control existsSync, readFileSync, and statSync
 vi.mock('fs', async () => {
   const actual = await vi.importActual<typeof import('fs')>('fs')
   return {
     ...actual,
     existsSync: vi.fn(),
-    readFileSync: vi.fn()
+    readFileSync: vi.fn(),
+    statSync: vi.fn()
   }
 })
 
-import { getUserMemory } from '../user-memory'
+import { getUserMemory, _invalidateUserMemoryCache } from '../user-memory'
 import { getSettingJson, setSettingJson } from '../../../settings'
-import { existsSync, readFileSync } from 'fs'
+import { existsSync, readFileSync, statSync } from 'fs'
 
 const mockGetSettingJson = vi.mocked(getSettingJson)
 const mockSetSettingJson = vi.mocked(setSettingJson)
 const mockExistsSync = vi.mocked(existsSync)
 const mockReadFileSync = vi.mocked(readFileSync)
+const mockStatSync = vi.mocked(statSync)
 
 beforeEach(() => {
   vi.clearAllMocks()
+  _invalidateUserMemoryCache()
+  // Default: each stat call returns a distinct mtime so cache doesn't interfere
+  mockStatSync.mockReturnValue({ mtimeMs: Date.now() } as ReturnType<typeof statSync>)
 })
 
 describe('getUserMemory', () => {
@@ -162,5 +167,44 @@ describe('getUserMemory', () => {
     expect(mockSetSettingJson).toHaveBeenCalledWith('memory.activeFiles', {
       'good.md': true
     })
+  })
+
+  // ---------------------------------------------------------------------------
+  // Mtime cache (F-t1-sysprof-3)
+  // ---------------------------------------------------------------------------
+
+  it('reads each file only once when mtime is unchanged across N calls (F-t1-sysprof-3)', () => {
+    const FIXED_MTIME = 1_000_000
+    mockStatSync.mockReturnValue({ mtimeMs: FIXED_MTIME } as ReturnType<typeof statSync>)
+    mockGetSettingJson.mockReturnValue({ 'notes.md': true })
+    mockExistsSync.mockReturnValue(true)
+    mockReadFileSync.mockReturnValue('Memory content')
+
+    for (let i = 0; i < 100; i++) {
+      getUserMemory()
+    }
+
+    // readFileSync must be called exactly once — all subsequent calls hit cache
+    expect(mockReadFileSync).toHaveBeenCalledTimes(1)
+  })
+
+  it('re-reads file when mtime changes (F-t1-sysprof-3)', () => {
+    mockGetSettingJson.mockReturnValue({ 'notes.md': true })
+    mockExistsSync.mockReturnValue(true)
+    mockReadFileSync.mockReturnValue('Memory content')
+
+    // First call with mtime=1
+    mockStatSync.mockReturnValue({ mtimeMs: 1 } as ReturnType<typeof statSync>)
+    getUserMemory()
+    expect(mockReadFileSync).toHaveBeenCalledTimes(1)
+
+    // Second call with same mtime — should use cache
+    getUserMemory()
+    expect(mockReadFileSync).toHaveBeenCalledTimes(1)
+
+    // Third call with updated mtime — cache miss, must re-read
+    mockStatSync.mockReturnValue({ mtimeMs: 2 } as ReturnType<typeof statSync>)
+    getUserMemory()
+    expect(mockReadFileSync).toHaveBeenCalledTimes(2)
   })
 })

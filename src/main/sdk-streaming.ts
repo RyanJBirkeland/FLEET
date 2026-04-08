@@ -38,6 +38,14 @@ export interface SdkStreamingOptions {
   maxBudgetUsd?: number
   /** Optional callback fired whenever the agent invokes a tool. */
   onToolUse?: (event: ToolUseEvent) => void
+  /**
+   * Claude Code settings sources to load. Pass `[]` for spec-drafting agents
+   * (copilot/synthesizer) to skip CLAUDE.md — they receive conventions via
+   * their prompt instead, and loading the project settings file costs tokens
+   * and can mislead them with implementation-focused guidelines.
+   * Defaults to `['user', 'project', 'local']`.
+   */
+  settingSources?: Array<'user' | 'project' | 'local'>
 }
 
 /**
@@ -72,7 +80,7 @@ export async function runSdkStreaming(
       pathToClaudeCodeExecutable: getClaudeCliPath(),
       permissionMode: 'bypassPermissions' as const,
       allowDangerouslySkipPermissions: true,
-      settingSources: ['user', 'project', 'local'],
+      settingSources: options.settingSources ?? ['user', 'project', 'local'],
       ...(options.cwd ? { cwd: options.cwd } : {}),
       ...(options.tools !== undefined ? { tools: options.tools } : {}),
       // Always forward disallowedTools when provided — empty array is a valid

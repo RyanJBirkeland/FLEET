@@ -3,10 +3,10 @@
 @import './neon.css';
 @import './neon-primitives.css';
 @import './neon-shell.css';
-@import './agents-neon.css';
 @import './sprint-neon.css';
 @import './sprint.css';
-@import './sprint-pipeline-neon.css';
+/* sprint-pipeline-neon.css imported by SprintPipeline.tsx (lazy chunk) */
+/* agents-neon.css imported by AgentsView.tsx (lazy chunk) */
 @import './cost.css';
 @import './memory.css';
 @import './settings.css';

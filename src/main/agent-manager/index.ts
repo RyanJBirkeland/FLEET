@@ -49,6 +49,13 @@ export const SPAWN_CIRCUIT_FAILURE_THRESHOLD = 5
  */
 export const SPAWN_CIRCUIT_PAUSE_MS = 5 * 60 * 1000 // 5 minutes
 
+/**
+ * Task statuses that can never transition to a non-terminal status.
+ * Used by the drain loop to evict finished tasks from the _lastTaskDeps
+ * fingerprint cache (F-t1-sre-6: prevent unbounded map growth).
+ */
+const TERMINAL_TASK_STATUSES = new Set(['done', 'cancelled', 'failed', 'error'])
+
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
 // ---------------------------------------------------------------------------
@@ -64,11 +71,46 @@ const defaultLogger: Logger = createLogger('agent-manager')
 // Extracted pure functions (testable independently)
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// OAuth token check cache (F-t1-sysprof-5)
+// ---------------------------------------------------------------------------
+
+/**
+ * How long to cache a successful token check (ms).
+ * Short enough to still run the 45-min proactive refresh on cache expiry.
+ */
+export const OAUTH_CHECK_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
+
+/**
+ * How long to cache a failed token check (ms).
+ * Short enough to recover quickly if the user fixes the token.
+ */
+export const OAUTH_CHECK_FAIL_CACHE_TTL_MS = 30_000 // 30 seconds
+
+let _oauthCheckResult: boolean | null = null
+let _oauthCheckExpiry = 0
+
+/**
+ * Invalidate the OAuth token check cache.
+ * Call after a forced refresh so the next drain cycle re-validates.
+ */
+export function invalidateCheckOAuthTokenCache(): void {
+  _oauthCheckResult = null
+  _oauthCheckExpiry = 0
+}
+
 /**
  * Check whether the OAuth token file exists and contains a valid token.
  * Returns true if the drain loop should proceed, false if it should skip.
+ * Results are cached for OAUTH_CHECK_CACHE_TTL_MS to avoid a file read on
+ * every drain tick (drain runs every ~5s; token validity changes at most once
+ * per hour).
  */
 export async function checkOAuthToken(logger: Logger): Promise<boolean> {
+  const now = Date.now()
+  if (_oauthCheckResult !== null && now < _oauthCheckExpiry) {
+    return _oauthCheckResult
+  }
   try {
     const tokenPath = joinPath(home(), '.bde', 'oauth-token')
     const token = (await readFile(tokenPath, 'utf-8')).trim()
@@ -76,11 +118,15 @@ export async function checkOAuthToken(logger: Logger): Promise<boolean> {
       const refreshed = await refreshOAuthTokenFromKeychain()
       if (refreshed) {
         logger.info('[agent-manager] OAuth token auto-refreshed from Keychain')
+        _oauthCheckResult = true
+        _oauthCheckExpiry = Date.now() + OAUTH_CHECK_CACHE_TTL_MS
         return true
       } else {
         logger.warn(
           '[agent-manager] OAuth token file missing/empty and keychain refresh failed — skipping drain cycle'
         )
+        _oauthCheckResult = false
+        _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
         return false
       }
     }
@@ -102,9 +148,13 @@ export async function checkOAuthToken(logger: Logger): Promise<boolean> {
       /* stat failed — continue with existing token */
     }
 
+    _oauthCheckResult = true
+    _oauthCheckExpiry = Date.now() + OAUTH_CHECK_CACHE_TTL_MS
     return true
   } catch {
     logger.warn('[agent-manager] Cannot read OAuth token file — skipping drain cycle')
+    _oauthCheckResult = false
+    _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
     return false
   }
 }
@@ -257,7 +307,13 @@ export class AgentManagerImpl implements AgentManager {
   readonly _agentPromises = new Set<Promise<void>>()
   readonly _depIndex: DependencyIndex
   readonly _metrics: MetricsCollector
-  private _lastTaskDeps = new Map<string, TaskDependency[] | null>()
+  // F-t1-sysprof-1/-4: Cache a stable fingerprint alongside the deps array so
+  // subsequent drain ticks can short-circuit the deep compare via hash equality.
+  // Exposed via _ prefix for testability (private by convention, not keyword).
+  _lastTaskDeps = new Map<
+    string,
+    { deps: TaskDependency[] | null; hash: string }
+  >()
 
   // Circuit breaker state — pauses drain loop after consecutive spawn failures.
   _consecutiveSpawnFailures = 0
@@ -603,26 +659,22 @@ export class AgentManagerImpl implements AgentManager {
   // ---- drainLoop helpers ----
 
   /**
-   * Deep-compare two dependency arrays for equality.
+   * F-t1-sysprof-1: Compute a stable fingerprint of a dependency array.
+   * The fingerprint is sort-order-independent (sorted by id) so two equivalent
+   * arrays produce the same hash regardless of insertion order.
+   *
+   * Format: "id1:type1:cond1|id2:type2:cond2|..." with entries sorted by id.
+   * The pipe and colon separators are safe because TaskDependency.id is a
+   * task UUID and type/condition are enum strings without those characters.
    */
-  private _depsEqual(a: TaskDependency[] | null, b: TaskDependency[] | null): boolean {
-    if (a === b) return true
-    if (!a || !b) return false
-    if (a.length !== b.length) return false
-    // Sort by id for stable comparison
-    const aSorted = [...a].sort((x, y) => x.id.localeCompare(y.id))
-    const bSorted = [...b].sort((x, y) => x.id.localeCompare(y.id))
-    for (let i = 0; i < aSorted.length; i++) {
-      if (
-        aSorted[i].id !== bSorted[i].id ||
-        aSorted[i].type !== bSorted[i].type ||
-        aSorted[i].condition !== bSorted[i].condition
-      ) {
-        return false
-      }
-    }
-    return true
+  static _depsFingerprint(deps: TaskDependency[] | null): string {
+    if (!deps || deps.length === 0) return ''
+    return deps
+      .map((d) => `${d.id}:${d.type}:${d.condition ?? ''}`)
+      .sort()
+      .join('|')
   }
+
 
   // ---- drainLoop ----
 
@@ -657,13 +709,28 @@ export class AgentManagerImpl implements AgentManager {
         }
       }
 
-      // Update tasks with changed dependencies
+      // Update tasks with changed dependencies.
+      // F-t1-sysprof-1/-4: Compare cached fingerprints — avoids re-sorting the
+      // unchanged-deps case (the common path for most drain ticks).
+      // F-t1-sre-6: Evict terminal-status tasks from _lastTaskDeps — their deps
+      // never change, so keeping fingerprint entries just grows the map forever
+      // (510 tasks in prod, most terminal). Evict on first terminal encounter;
+      // dep-index edges stay intact for dependency-satisfaction checks.
       for (const task of allTasks) {
-        const oldDeps = this._lastTaskDeps.get(task.id) ?? null
+        if (TERMINAL_TASK_STATUSES.has(task.status)) {
+          // Terminal tasks' deps are frozen — evict from fingerprint cache so
+          // the map doesn't grow without bound (510 tasks in prod, most terminal).
+          // The dep-index retains the task's edges for dependency-satisfaction
+          // checks; we only drop the fingerprint entry.
+          this._lastTaskDeps.delete(task.id)
+          continue
+        }
+        const cached = this._lastTaskDeps.get(task.id)
         const newDeps = task.depends_on ?? null
-        if (!this._depsEqual(oldDeps, newDeps)) {
+        const newHash = AgentManagerImpl._depsFingerprint(newDeps)
+        if (!cached || cached.hash !== newHash) {
           this._depIndex.update(task.id, newDeps)
-          this._lastTaskDeps.set(task.id, newDeps)
+          this._lastTaskDeps.set(task.id, { deps: newDeps, hash: newHash })
         }
       }
 
@@ -806,7 +873,11 @@ export class AgentManagerImpl implements AgentManager {
       // Initialize _lastTaskDeps to avoid false positives on first drain
       this._lastTaskDeps.clear()
       for (const task of tasks) {
-        this._lastTaskDeps.set(task.id, task.depends_on ?? null)
+        const deps = task.depends_on ?? null
+        this._lastTaskDeps.set(task.id, {
+          deps,
+          hash: AgentManagerImpl._depsFingerprint(deps)
+        })
       }
       this.logger.info(`[agent-manager] Dependency index built with ${tasks.length} tasks`)
     } catch (err) {

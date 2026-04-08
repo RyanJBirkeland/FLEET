@@ -77,11 +77,16 @@ let _lastSqliteErrorLog = 0
 const SQLITE_ERROR_LOG_INTERVAL_MS = 60_000 // Log at most once per minute
 
 /**
- * Broadcasts an AgentEvent via IPC and persists it to SQLite.
- * SQLite write failures are logged (rate-limited) but non-fatal — the real-time broadcast is the priority.
+ * Persists an AgentEvent to SQLite, then broadcasts it via IPC.
+ *
+ * F-t1-concur-6: Order matters. Persist FIRST so the durable record is the
+ * source of truth and the broadcast follows it. If the SQLite write fails,
+ * we still broadcast (live tail UX is preserved) and log the failure
+ * rate-limited. The previous order (broadcast then write) could leave the
+ * renderer holding events the DB never received under WAL contention,
+ * which then disappeared on reload.
  */
 export function emitAgentEvent(agentId: string, event: AgentEvent): void {
-  broadcast('agent:event', { agentId, event })
   try {
     appendEvent(getDb(), agentId, event.type, JSON.stringify(event), event.timestamp)
   } catch (err) {
@@ -92,4 +97,5 @@ export function emitAgentEvent(agentId: string, event: AgentEvent): void {
       _lastSqliteErrorLog = now
     }
   }
+  broadcast('agent:event', { agentId, event })
 }

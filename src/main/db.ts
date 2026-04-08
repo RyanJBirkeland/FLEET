@@ -927,6 +927,44 @@ export const migrations: Migration[] = [
       const stmt = db.prepare('UPDATE sprint_tasks SET repo = lower(repo) WHERE repo <> lower(repo)')
       stmt.run()
     }
+  },
+  {
+    version: 39,
+    description:
+      'F-t3-db-1: Partial composite index on sprint_tasks(pr_status, pr_number) for listTasksWithOpenPrs (PR poller fires every 60s; was full-scanning)',
+    up: (db) => {
+      db.prepare(
+        "CREATE INDEX IF NOT EXISTS idx_sprint_tasks_pr_open ON sprint_tasks(pr_status, pr_number) WHERE pr_status = 'open'"
+      ).run()
+    }
+  },
+  {
+    version: 40,
+    description:
+      'F-t3-db-3: Composite index on sprint_tasks(status, claimed_by) for drain-loop and orphan queries',
+    up: (db) => {
+      db.prepare(
+        'CREATE INDEX IF NOT EXISTS idx_sprint_tasks_status_claimed ON sprint_tasks(status, claimed_by)'
+      ).run()
+    }
+  },
+  {
+    version: 41,
+    description:
+      'F-t3-db-7: Composite index on task_changes(task_id, changed_at DESC) eliminates temp B-tree sort on history queries',
+    up: (db) => {
+      db.prepare(
+        'CREATE INDEX IF NOT EXISTS idx_task_changes_task_changed ON task_changes(task_id, changed_at DESC)'
+      ).run()
+    }
+  },
+  {
+    version: 42,
+    description:
+      'F-t3-db-6 + F-t3-model-3: Drop unused cost_events table — dark write path, never populated in production after 31K agent events. Phase 0 Q2 confirmed no production writers exist; token/cost data lives in agent_runs columns.',
+    up: (db) => {
+      db.prepare('DROP TABLE IF EXISTS cost_events').run()
+    }
   }
 ]
 

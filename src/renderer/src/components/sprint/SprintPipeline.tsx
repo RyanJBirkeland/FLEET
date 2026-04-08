@@ -57,7 +57,11 @@ export function SprintPipeline(): React.JSX.Element {
     doneViewOpen,
     logDrawerTaskId,
     conflictDrawerOpen,
-    healthCheckDrawerOpen
+    healthCheckDrawerOpen,
+    statusFilter,
+    repoFilter,
+    tagFilter,
+    searchQuery
   } = useSprintUI(
     useShallow((s) => ({
       selectedTaskId: s.selectedTaskId,
@@ -67,22 +71,37 @@ export function SprintPipeline(): React.JSX.Element {
       doneViewOpen: s.doneViewOpen,
       logDrawerTaskId: s.logDrawerTaskId,
       conflictDrawerOpen: s.conflictDrawerOpen,
-      healthCheckDrawerOpen: s.healthCheckDrawerOpen
+      healthCheckDrawerOpen: s.healthCheckDrawerOpen,
+      statusFilter: s.statusFilter,
+      repoFilter: s.repoFilter,
+      tagFilter: s.tagFilter,
+      searchQuery: s.searchQuery
     }))
   )
-  const setSelectedTaskId = useSprintUI((s) => s.setSelectedTaskId)
-  const setDrawerOpen = useSprintUI((s) => s.setDrawerOpen)
-  const setSpecPanelOpen = useSprintUI((s) => s.setSpecPanelOpen)
-  const setDoneViewOpen = useSprintUI((s) => s.setDoneViewOpen)
-  const setLogDrawerTaskId = useSprintUI((s) => s.setLogDrawerTaskId)
-  const setConflictDrawerOpen = useSprintUI((s) => s.setConflictDrawerOpen)
-  const setHealthCheckDrawerOpen = useSprintUI((s) => s.setHealthCheckDrawerOpen)
-  const setStatusFilter = useSprintUI((s) => s.setStatusFilter)
-  const clearMultiSelection = useSprintUI((s) => s.clearMultiSelection)
-  const statusFilter = useSprintUI((s) => s.statusFilter)
-  const repoFilter = useSprintUI((s) => s.repoFilter)
-  const tagFilter = useSprintUI((s) => s.tagFilter)
-  const searchQuery = useSprintUI((s) => s.searchQuery)
+  // Setters are stable Zustand references — no shallow-eq needed, one subscription
+  const {
+    setSelectedTaskId,
+    setDrawerOpen,
+    setSpecPanelOpen,
+    setDoneViewOpen,
+    setLogDrawerTaskId,
+    setConflictDrawerOpen,
+    setHealthCheckDrawerOpen,
+    setStatusFilter,
+    clearMultiSelection
+  } = useSprintUI(
+    useShallow((s) => ({
+      setSelectedTaskId: s.setSelectedTaskId,
+      setDrawerOpen: s.setDrawerOpen,
+      setSpecPanelOpen: s.setSpecPanelOpen,
+      setDoneViewOpen: s.setDoneViewOpen,
+      setLogDrawerTaskId: s.setLogDrawerTaskId,
+      setConflictDrawerOpen: s.setConflictDrawerOpen,
+      setHealthCheckDrawerOpen: s.setHealthCheckDrawerOpen,
+      setStatusFilter: s.setStatusFilter,
+      clearMultiSelection: s.clearMultiSelection
+    }))
+  )
 
   const setView = usePanelLayoutStore((s) => s.setView)
   const reduced = useReducedMotion()
