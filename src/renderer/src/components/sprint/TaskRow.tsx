@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, memo } from 'react'
 import { motion } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
@@ -12,7 +12,7 @@ interface TaskRowProps {
   onClick: (id: string) => void
 }
 
-export function TaskRow({ task, selected, onClick }: TaskRowProps): React.JSX.Element {
+function TaskRowInner({ task, selected, onClick }: TaskRowProps): React.JSX.Element {
   const [, setTick] = useState(0)
 
   // Trigger re-render every 10s for active tasks to update elapsed time
@@ -60,3 +60,6 @@ export function TaskRow({ task, selected, onClick }: TaskRowProps): React.JSX.El
     </motion.div>
   )
 }
+
+export const TaskRow = memo(TaskRowInner)
+TaskRow.displayName = 'TaskRow'

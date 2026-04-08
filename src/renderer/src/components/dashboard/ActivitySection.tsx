@@ -1,3 +1,4 @@
+import { memo } from 'react'
 import { NeonCard, ActivityFeed, MiniChart, type ChartBar } from '../neon'
 import { useDashboardDataStore } from '../../stores/dashboardData'
 import { timeAgo, formatTokens } from '../../lib/format'
@@ -18,7 +19,7 @@ interface ActivitySectionProps {
 }
 
 /** Right column with activity feed, recent completions, and token usage metrics. */
-export function ActivitySection({
+function ActivitySectionInner({
   feedEvents,
   cardErrors,
   recentCompletions,
@@ -97,3 +98,5 @@ export function ActivitySection({
     </div>
   )
 }
+
+export const ActivitySection = memo(ActivitySectionInner)
