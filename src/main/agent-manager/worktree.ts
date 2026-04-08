@@ -25,6 +25,51 @@ const execFileAsync = promisify(execFile)
 export const MIN_FREE_DISK_BYTES = 5 * 1024 * 1024 * 1024 // 5 GiB
 
 /**
+ * Bytes reserved per in-flight worktree setup. Tracked in-memory so that
+ * concurrent spawns don't all race past the disk check simultaneously
+ * (F-t1-sre-5: each sees "5 GB free" but together they consume all 5 GB).
+ *
+ * Conservative: 2 GiB per worktree (worst-case with node_modules install).
+ * Released after setupWorktree returns (success or failure).
+ */
+export const DISK_RESERVATION_BYTES = 2 * 1024 * 1024 * 1024 // 2 GiB
+
+/** In-memory map of worktreeBase → total pending reservation in bytes. */
+const _pendingReservations = new Map<string, number>()
+
+/**
+ * Mark `DISK_RESERVATION_BYTES` as reserved for `worktreeBase`.
+ * Returns the updated total reserved bytes for the base.
+ */
+export function reserveDisk(worktreeBase: string): number {
+  const existing = _pendingReservations.get(worktreeBase) ?? 0
+  const updated = existing + DISK_RESERVATION_BYTES
+  _pendingReservations.set(worktreeBase, updated)
+  return updated
+}
+
+/**
+ * Release a previously reserved `DISK_RESERVATION_BYTES` for `worktreeBase`.
+ */
+export function releaseDisk(worktreeBase: string): void {
+  const existing = _pendingReservations.get(worktreeBase) ?? 0
+  const updated = Math.max(0, existing - DISK_RESERVATION_BYTES)
+  if (updated === 0) {
+    _pendingReservations.delete(worktreeBase)
+  } else {
+    _pendingReservations.set(worktreeBase, updated)
+  }
+}
+
+/**
+ * Return the total pending disk reservation in bytes for `worktreeBase`.
+ * Exposed for testing and observability.
+ */
+export function getPendingReservation(worktreeBase: string): number {
+  return _pendingReservations.get(worktreeBase) ?? 0
+}
+
+/**
  * Tagged error thrown by `ensureFreeDiskSpace` when the requested path has
  * less than the required free bytes available. Use `instanceof` to
  * distinguish from platform errors (ENOSYS, EACCES, etc.) which the
@@ -259,68 +304,77 @@ export async function setupWorktree(
   }
 
   // Pre-check: ensure enough free disk space at the worktree base.
-  // Worktrees + node_modules can consume 1-3GB each. Failing fast here gives
-  // a clearer error than git's downstream "no space left on device" failure.
-  await ensureFreeDiskSpace(worktreeBase, MIN_FREE_DISK_BYTES, log)
+  // Includes in-flight reservations so concurrent spawns don't all see "5 GB
+  // free" simultaneously and over-commit the disk (F-t1-sre-5).
+  const pending = getPendingReservation(worktreeBase)
+  await ensureFreeDiskSpace(worktreeBase, MIN_FREE_DISK_BYTES + pending, log)
 
-  // Step 1: Fetch latest main OUTSIDE the per-repo lock.
-  // git fetch is safe to run concurrently from multiple processes — git
-  // handles locking on its own packed-refs / fetch-head writes. Holding our
-  // own lock through 30s of network I/O fully serialized worktree setup
-  // for multiple agents on the same repo (10 tasks → 5+ minute startup).
+  // Reserve disk for this worktree. Released in the finally block regardless
+  // of success or failure so subsequent spawns see accurate headroom.
+  reserveDisk(worktreeBase)
   try {
-    await execFileAsync('git', ['fetch', 'origin', 'main', '--no-tags'], {
-      cwd: repoPath,
-      env,
-      timeout: 30_000
-    })
-    log.info(`[worktree] Fetched origin/main for task ${taskId}`)
-  } catch (err) {
-    // Non-fatal — proceed with whatever HEAD we have
-    log.warn(`[worktree] Failed to fetch origin/main (proceeding anyway): ${err}`)
-  }
-
-  // Step 2: Acquire the per-repo lock for the conflict-sensitive operations.
-  // The lock guards `git worktree add`, branch creation, and the merge --ff-only
-  // (which mutates the main checkout's HEAD) — these races corrupted state in
-  // testing when multiple agents started simultaneously on the same repo.
-  acquireLock(worktreeBase, repoPath, logger)
-
-  try {
-    // Clean any stale state for this task/branch (other worktrees with the
-    // same branch name, leftover dirs, dangling refs).
-    await nukeStaleState(repoPath, worktreePath, branch, env, log)
-
-    // Fast-forward local main to match origin so the new worktree branches
-    // off the latest commit. Non-destructive — only succeeds for true ff.
+    // Step 1: Fetch latest main OUTSIDE the per-repo lock.
+    // git fetch is safe to run concurrently from multiple processes — git
+    // handles locking on its own packed-refs / fetch-head writes. Holding our
+    // own lock through 30s of network I/O fully serialized worktree setup
+    // for multiple agents on the same repo (10 tasks → 5+ minute startup).
     try {
-      await execFileAsync('git', ['merge', '--ff-only', 'origin/main'], {
+      await execFileAsync('git', ['fetch', 'origin', 'main', '--no-tags'], {
         cwd: repoPath,
         env,
-        timeout: 10_000
+        timeout: 30_000
+      })
+      log.info(`[worktree] Fetched origin/main for task ${taskId}`)
+    } catch (err) {
+      // Non-fatal — proceed with whatever HEAD we have
+      log.warn(`[worktree] Failed to fetch origin/main (proceeding anyway): ${err}`)
+    }
+
+    // Step 2: Acquire the per-repo lock for the conflict-sensitive operations.
+    // The lock guards `git worktree add`, branch creation, and the merge --ff-only
+    // (which mutates the main checkout's HEAD) — these races corrupted state in
+    // testing when multiple agents started simultaneously on the same repo.
+    acquireLock(worktreeBase, repoPath, logger)
+
+    try {
+      // Clean any stale state for this task/branch (other worktrees with the
+      // same branch name, leftover dirs, dangling refs).
+      await nukeStaleState(repoPath, worktreePath, branch, env, log)
+
+      // Fast-forward local main to match origin so the new worktree branches
+      // off the latest commit. Non-destructive — only succeeds for true ff.
+      try {
+        await execFileAsync('git', ['merge', '--ff-only', 'origin/main'], {
+          cwd: repoPath,
+          env,
+          timeout: 10_000
+        })
+      } catch (err) {
+        log.warn(`[worktree] Failed to ff-merge origin/main (proceeding anyway): ${err}`)
+      }
+
+      // Create fresh worktree + branch
+      await execFileAsync('git', ['worktree', 'add', '-b', branch, worktreePath], {
+        cwd: repoPath,
+        env
       })
     } catch (err) {
-      log.warn(`[worktree] Failed to ff-merge origin/main (proceeding anyway): ${err}`)
+      // Clean up on failure
+      try {
+        rmSync(worktreePath, { recursive: true, force: true })
+      } catch {
+        /* best effort */
+      }
+      releaseLock(worktreeBase, repoPath)
+      throw err
     }
 
-    // Create fresh worktree + branch
-    await execFileAsync('git', ['worktree', 'add', '-b', branch, worktreePath], {
-      cwd: repoPath,
-      env
-    })
-  } catch (err) {
-    // Clean up on failure
-    try {
-      rmSync(worktreePath, { recursive: true, force: true })
-    } catch {
-      /* best effort */
-    }
     releaseLock(worktreeBase, repoPath)
-    throw err
+    return { worktreePath, branch }
+  } finally {
+    // Always release the disk reservation whether setup succeeded or failed.
+    releaseDisk(worktreeBase)
   }
-
-  releaseLock(worktreeBase, repoPath)
-  return { worktreePath, branch }
 }
 
 export interface CleanupWorktreeOpts {

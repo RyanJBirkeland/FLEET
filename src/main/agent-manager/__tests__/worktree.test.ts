@@ -729,3 +729,53 @@ describe('pruneStaleWorktrees', () => {
     }
   })
 })
+
+// ---------------------------------------------------------------------------
+// F-t1-sre-5: Disk reservation prevents over-commit under concurrency
+// ---------------------------------------------------------------------------
+
+describe('disk reservation (F-t1-sre-5)', () => {
+  it('reserveDisk increments reservation and releaseDisk decrements it', async () => {
+    const { reserveDisk, releaseDisk, getPendingReservation, DISK_RESERVATION_BYTES } =
+      await import('../worktree')
+
+    const base = '/tmp/test-worktree-base'
+    expect(getPendingReservation(base)).toBe(0)
+
+    reserveDisk(base)
+    expect(getPendingReservation(base)).toBe(DISK_RESERVATION_BYTES)
+
+    reserveDisk(base)
+    expect(getPendingReservation(base)).toBe(DISK_RESERVATION_BYTES * 2)
+
+    releaseDisk(base)
+    expect(getPendingReservation(base)).toBe(DISK_RESERVATION_BYTES)
+
+    releaseDisk(base)
+    expect(getPendingReservation(base)).toBe(0)
+
+    // Map entry is removed when reservation reaches zero
+    releaseDisk(base) // idempotent below zero
+    expect(getPendingReservation(base)).toBe(0)
+  })
+
+  it('concurrent reservations add up so disk check sees cumulative headroom needed', async () => {
+    const { reserveDisk, releaseDisk, getPendingReservation, DISK_RESERVATION_BYTES } =
+      await import('../worktree')
+
+    const base = '/tmp/test-concurrent-base'
+
+    // Simulate 3 concurrent setupWorktree calls all reserving before any finishes
+    reserveDisk(base)
+    reserveDisk(base)
+    reserveDisk(base)
+
+    expect(getPendingReservation(base)).toBe(DISK_RESERVATION_BYTES * 3)
+
+    // Clean up
+    releaseDisk(base)
+    releaseDisk(base)
+    releaseDisk(base)
+    expect(getPendingReservation(base)).toBe(0)
+  })
+})
