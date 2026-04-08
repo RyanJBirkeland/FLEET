@@ -164,6 +164,8 @@ const IDLE_TIMEOUT_WARNING = `\n\n## Idle Timeout Warning\nYou will be TERMINATE
 
 const PIPELINE_SETUP_RULE = `\n\n## Pipeline Worktree Setup\nYour worktree has NO \`node_modules\`. Run \`npm install\` before invoking any of the pre-commit verification commands (\`npm run typecheck\`, \`npm run test:coverage\`, \`npm run lint\`). You may read the spec and source files first to plan. If \`npm install\` fails, report the error clearly and exit.`
 
+const CONTEXT_EFFICIENCY_HINT = `\n\n## Context Efficiency\nEach tool result stays in the conversation for the rest of this run, accumulating cost on every subsequent turn. Read precisely:\n- Use \`Read\` with \`offset\` and \`limit\` when you know the relevant section rather than reading a whole file\n- Cap exploratory greps: \`grep -m 20\` or \`| head -20\` — refine if you need more\n- Use \`Glob\` or \`grep -l\` to locate files before reading their contents\n- Read one representative file to understand a pattern; don't read every similar file\n\nYou can always read more if a narrow read didn't answer the question. Start narrow.`
+
 const PIPELINE_JUDGMENT_RULES = `\n\n## Judging Test Failures and Push Completion
 
 **Other pipeline agents may be running in parallel on this machine.** When 2+ agents run \`npm run test:coverage\` simultaneously, the system can become CPU-saturated and tests that normally pass may time out intermittently. This is NOT a reason to declare a failure "pre-existing" or "unrelated".
@@ -448,6 +450,7 @@ Before your final push, verify:
   // Pipeline-only sections: setup rule, judgment rules, time limit, idle warning, DoD
   if (agentType === 'pipeline') {
     prompt += PIPELINE_SETUP_RULE
+    prompt += CONTEXT_EFFICIENCY_HINT
     prompt += PIPELINE_JUDGMENT_RULES
     if (maxRuntimeMs && maxRuntimeMs > 0) {
       prompt += buildTimeLimitSection(maxRuntimeMs)
