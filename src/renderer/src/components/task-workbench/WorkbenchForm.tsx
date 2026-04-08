@@ -7,6 +7,7 @@ import { SpecEditor } from './SpecEditor'
 import { ValidationChecks } from './ValidationChecks'
 import { WorkbenchActions } from './WorkbenchActions'
 import { DependencyPicker } from './DependencyPicker'
+import { FormField } from './FormField'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { GlassPanel } from '../neon/GlassPanel'
 import { REPO_OPTIONS } from '../../lib/constants'
@@ -384,10 +385,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
       </div>
 
       <div className="wb-form__group">
-        <div className="wb-form__field">
-          <label htmlFor="wb-form-title" className="wb-form__label">
-            Title *
-          </label>
+        <FormField label="Title *" htmlFor="wb-form-title">
           <input
             id="wb-form-title"
             ref={titleRef}
@@ -397,11 +395,8 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
             placeholder='e.g. "Add recipe search to Feast onboarding"'
             className="wb-form__input"
           />
-        </div>
-        <div className="wb-form__field">
-          <label htmlFor="wb-form-repo" className="wb-form__label">
-            Repo
-          </label>
+        </FormField>
+        <FormField label="Repo" htmlFor="wb-form-repo">
           <select
             id="wb-form-repo"
             value={repo}
@@ -414,7 +409,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
               </option>
             ))}
           </select>
-        </div>
+        </FormField>
       </div>
 
       <div>
@@ -431,10 +426,11 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
           <div id="wb-form-advanced">
             <GlassPanel accent="purple" blur="sm" className="wb-form__advanced">
             <div className="wb-form__field--row">
-              <div className="wb-form__field wb-form__field--flex">
-                <label htmlFor="wb-form-priority" className="wb-form__label">
-                  Priority
-                </label>
+              <FormField
+                label="Priority"
+                htmlFor="wb-form-priority"
+                className="wb-form__field wb-form__field--flex"
+              >
                 <select
                   id="wb-form-priority"
                   value={priority}
@@ -447,11 +443,12 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                     </option>
                   ))}
                 </select>
-              </div>
-              <div className="wb-form__field wb-form__field--flex">
-                <label htmlFor="wb-form-model" className="wb-form__label">
-                  Model
-                </label>
+              </FormField>
+              <FormField
+                label="Model"
+                htmlFor="wb-form-model"
+                className="wb-form__field wb-form__field--flex"
+              >
                 <select
                   id="wb-form-model"
                   value={model}
@@ -463,12 +460,9 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                   <option value="claude-sonnet-4-5">Claude Sonnet 4.5</option>
                   <option value="claude-haiku-3-5">Claude Haiku 3.5</option>
                 </select>
-              </div>
+              </FormField>
             </div>
-            <div className="wb-form__field">
-              <label htmlFor="wb-form-max-cost" className="wb-form__label">
-                Max Cost (USD)
-              </label>
+            <FormField label="Max Cost (USD)" htmlFor="wb-form-max-cost">
               <input
                 id="wb-form-max-cost"
                 type="number"
@@ -481,7 +475,7 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                 placeholder="No limit"
                 className="wb-form__input"
               />
-            </div>
+            </FormField>
             <div className="wb-form__checkbox-row">
               <input
                 type="checkbox"
@@ -541,16 +535,13 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
         )}
       </div>
 
-      <div className="wb-form__field">
-        <label htmlFor="wb-form-spec" className="wb-form__label">
-          Spec
-        </label>
+      <FormField label="Spec" htmlFor="wb-form-spec">
         <SpecEditor
           onRequestGenerate={handleGenerate}
           onRequestResearch={handleResearch}
           generating={generating}
         />
-      </div>
+      </FormField>
 
       <ValidationChecks />
       <WorkbenchActions
