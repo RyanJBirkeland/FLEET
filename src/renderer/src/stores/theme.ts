@@ -51,10 +51,8 @@ function applyTheme(t: Theme): void {
 }
 
 /**
- * Migrates legacy theme values from localStorage:
- * - 'pro-dark' → 'dark' (which now applies pro-dark styling)
- * - 'pro-light' → 'light' (which now applies pro-light styling)
- * - 'warm' → 'dark'
+ * Loads the saved theme from localStorage.
+ * - 'warm' → 'dark' (legacy migration from old warm theme)
  * - unrecognized values → 'system' (the new fresh-install default)
  */
 function loadSavedTheme(): Theme {
@@ -63,14 +61,6 @@ function loadSavedTheme(): Theme {
     if (stored === 'warm') {
       localStorage.setItem('bde-theme', 'dark')
       return 'dark'
-    }
-    if (stored === 'pro-dark') {
-      localStorage.setItem('bde-theme', 'dark')
-      return 'dark'
-    }
-    if (stored === 'pro-light') {
-      localStorage.setItem('bde-theme', 'light')
-      return 'light'
     }
     if (stored === 'dark' || stored === 'light' || stored === 'system') {
       return stored
