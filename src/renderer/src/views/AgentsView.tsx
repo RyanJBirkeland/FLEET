@@ -257,7 +257,6 @@ export function AgentsView(): React.JSX.Element {
         width: '100%',
         height: '100%',
         minWidth: 600,
-        overflow: 'hidden',
         background: 'var(--bde-bg)'
       }}
       variants={VARIANTS.fadeIn}
