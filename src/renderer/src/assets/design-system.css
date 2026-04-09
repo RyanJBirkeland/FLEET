@@ -1076,8 +1076,15 @@ html.theme-pro-light .elevation-3-backdrop {
 }
 
 /* ── Shared panel separator (react-resizable-panels) ─────────────────────── */
+/* All current usages are inside horizontal Groups, so width: 4px is correct. */
+/* The Separator component from react-resizable-panels has no default dimensions, */
+/* so without explicit sizing the hit area is zero and panels cannot be dragged. */
 .panel-separator {
   background: var(--bde-accent-border);
+  flex-shrink: 0;
+  width: 4px;
+  height: 100%;
+  cursor: col-resize;
 }
 
 .panel-separator:hover,
