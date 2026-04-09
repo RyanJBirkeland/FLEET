@@ -68,8 +68,6 @@
 
 .neon-card {
   border-radius: var(--bde-radius-xl);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   box-shadow: none, transparent;
   overflow: hidden;
   /* Don't let flex parents shrink the card below its content height —
@@ -283,8 +281,6 @@
   gap: var(--bde-space-2);
   padding: var(--bde-space-2) var(--bde-space-4);
   background: var(--glass-tint-dark);
-  backdrop-filter: var(--glass-blur-sm);
-  -webkit-backdrop-filter: var(--glass-blur-sm);
 }
 
 .status-bar__dot {

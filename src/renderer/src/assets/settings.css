@@ -68,8 +68,6 @@
   padding: 6px 16px;
   border-bottom: 1px solid var(--bde-border);
   background: var(--glass-tint-dark);
-  backdrop-filter: var(--glass-blur-md);
-  -webkit-backdrop-filter: var(--glass-blur-md);
   flex-shrink: 0;
   overflow-x: auto;
 }

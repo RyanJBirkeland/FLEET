@@ -1857,8 +1857,6 @@
   top: 0;
   bottom: 0;
   background: var(--bde-surface-high);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border-left: 1px solid var(--bde-accent-border);
   z-index: 50;
   display: flex;
@@ -1885,8 +1883,6 @@
   align-items: center;
   justify-content: space-between;
   background: var(--bde-accent-surface);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   position: relative;
 }
 
@@ -2054,8 +2050,6 @@
   top: 0;
   bottom: 0;
   background: var(--bde-surface-high);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   border-left: 1px solid var(--bde-accent-border);
   z-index: 50;
   display: flex;
@@ -2082,8 +2076,6 @@
   align-items: center;
   justify-content: space-between;
   background: var(--bde-accent-surface);
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   position: relative;
 }
 

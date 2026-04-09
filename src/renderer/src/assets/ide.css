@@ -421,7 +421,6 @@
 
 .ide-sidebar__header {
   background: linear-gradient(180deg, var(--bde-accent-surface) 0%, var(--bde-surface-high) 100%);
-  backdrop-filter: none;
   border-bottom: 1px solid var(--bde-accent-border);
 }
 
@@ -494,7 +493,6 @@
 /* ── Context Menu ── */
 .ide-context-menu {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border: 1px solid var(--bde-accent-border);
 }
 
@@ -522,7 +520,6 @@
 .ide-editor-tab-bar {
   position: relative;
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border-bottom: 1px solid var(--bde-accent-border);
   /* Scroll shadow indicators for overflow */
   mask-image: linear-gradient(
@@ -647,7 +644,6 @@
 
 .terminal-view__header {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border-bottom: 1px solid var(--bde-accent-border);
 }
 
@@ -658,7 +654,6 @@
 /* ── Terminal Tab Bar ── */
 .terminal-tab-bar {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border-bottom: 1px solid var(--bde-accent-border);
 }
 
@@ -703,7 +698,6 @@
 /* ── Terminal Toolbar ── */
 .terminal-toolbar {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
 }
 
 .terminal-toolbar__btn {
@@ -732,7 +726,6 @@
 /* ── Terminal Find Bar ── */
 .terminal-find {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border: 1px solid var(--bde-accent-border);
 }
 
@@ -756,7 +749,6 @@
 /* ── Shell Picker Dropdown ── */
 .shell-picker {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border: 1px solid var(--bde-accent-border);
 }
 
@@ -789,7 +781,6 @@
 /* ── Agent Picker Dropdown ── */
 .agent-picker {
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border: 1px solid var(--bde-accent-border);
 }
 
@@ -879,7 +870,6 @@
   border-radius: 12px;
   padding: 20px 24px;
   min-width: 280px;
-  backdrop-filter: none;
   box-shadow: var(--bde-shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.4));
 }
 
@@ -936,7 +926,6 @@
   bottom: 0;
   z-index: 1000;
   background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
   display: flex;
   align-items: flex-start;
   justify-content: center;
@@ -1093,7 +1082,6 @@
   gap: 4px;
   padding: 6px 12px;
   background: var(--bde-surface-high);
-  backdrop-filter: none;
   border-bottom: 1px solid var(--bde-accent-border);
 }
 

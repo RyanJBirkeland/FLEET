@@ -284,7 +284,6 @@
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
   border-radius: 8px;
-  backdrop-filter: blur(16px) saturate(180%);
   padding: 4px 0;
   min-width: 200px;
 }
@@ -319,8 +318,6 @@
   border-radius: 8px;
   background: linear-gradient(135deg, var(--bde-accent-surface), var(--bde-surface-high));
   border: 1px solid var(--bde-accent-border);
-  backdrop-filter: blur(16px) saturate(180%);
-  -webkit-backdrop-filter: blur(16px) saturate(180%);
   box-shadow: none;
   color: var(--bde-text);
   font-size: 11px;

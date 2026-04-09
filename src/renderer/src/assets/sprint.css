@@ -458,8 +458,6 @@
   bottom: 0;
   width: 420px;
   background: var(--glass-tint-dark);
-  backdrop-filter: var(--glass-blur-lg) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur-lg) var(--glass-saturate);
   border-left: 1px solid var(--bde-border);
   z-index: 50;
   display: flex;
@@ -486,8 +484,6 @@
   align-items: flex-start;
   justify-content: space-between;
   background: var(--glass-tint-mid);
-  backdrop-filter: var(--glass-blur-md) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur-md) var(--glass-saturate);
   position: relative;
 }
 
@@ -763,7 +759,6 @@
   right: 0;
   height: 50vh;
   background: var(--glass-tint-dark);
-  backdrop-filter: var(--glass-blur-md) var(--glass-saturate);
   border-top: 1px solid var(--bde-border);
   border-radius: 12px 12px 0 0;
   display: flex;
@@ -792,8 +787,6 @@
   border-bottom: 1px solid var(--bde-border);
   flex-shrink: 0;
   background: var(--glass-tint-mid);
-  backdrop-filter: var(--glass-blur-md) var(--glass-saturate);
-  -webkit-backdrop-filter: var(--glass-blur-md) var(--glass-saturate);
   position: relative;
 }
 

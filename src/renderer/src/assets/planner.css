@@ -21,7 +21,6 @@
   padding: 16px 20px;
   border-bottom: 1px solid var(--bde-border);
   background: var(--bde-surface-high);
-  backdrop-filter: none;
 }
 
 .planner-header__title {
