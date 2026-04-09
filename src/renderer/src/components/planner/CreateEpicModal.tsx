@@ -18,12 +18,12 @@ interface CreateEpicModalProps {
 }
 
 const ACCENT_COLORS = [
-  { name: 'Cyan', value: tokens.neon.cyan },
-  { name: 'Pink', value: tokens.neon.pink },
-  { name: 'Blue', value: tokens.neon.blue },
-  { name: 'Purple', value: tokens.neon.purple },
-  { name: 'Orange', value: tokens.neon.orange },
-  { name: 'Red', value: tokens.neon.red }
+  { name: 'Cyan', value: tokens.color.accent },
+  { name: 'Pink', value: tokens.status.done },
+  { name: 'Blue', value: tokens.status.review },
+  { name: 'Purple', value: tokens.status.active },
+  { name: 'Orange', value: tokens.color.warning },
+  { name: 'Red', value: tokens.color.danger }
 ]
 
 export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.JSX.Element {
@@ -32,7 +32,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
 
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('E')
-  const [accentColor, setAccentColor] = useState(tokens.neon.cyan)
+  const [accentColor, setAccentColor] = useState(tokens.color.accent)
   const [goal, setGoal] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<EpicTemplate | null>(null)
@@ -49,7 +49,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
       // Reset form on open
       setName('')
       setIcon('E')
-      setAccentColor(tokens.neon.cyan)
+      setAccentColor(tokens.color.accent)
       setGoal('')
       setSubmitting(false)
       setSelectedTemplate(null)
@@ -235,7 +235,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
                     setSelectedTemplate(null)
                     setName('')
                     setIcon('E')
-                    setAccentColor(tokens.neon.cyan)
+                    setAccentColor(tokens.color.accent)
                     setGoal('')
                   }}
                 >

@@ -23,7 +23,7 @@ export function GlassPanel({
   className = '',
   style
 }: GlassPanelProps): React.JSX.Element {
-  const borderVal = accent ? neonVar(accent, 'border') : tokens.neon.surfaceDim
+  const borderVal = accent ? neonVar(accent, 'border') : tokens.color.border
   return (
     <div
       className={`glass-panel ${className}`.trim()}
@@ -31,8 +31,8 @@ export function GlassPanel({
         backdropFilter: BLUR_MAP[blur],
         WebkitBackdropFilter: BLUR_MAP[blur],
         background: accent
-          ? `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${tokens.neon.surfaceDeep})`
-          : tokens.neon.surfaceDeep,
+          ? `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${tokens.color.bg})`
+          : tokens.color.bg,
         border: `1px solid ${borderVal}`,
         borderRadius: tokens.radius.xl,
         boxShadow: 'none',

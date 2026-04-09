@@ -29,7 +29,7 @@ export function NeonProgress({ value, accent, label }: NeonProgressProps): React
       <div
         style={{
           height: '4px',
-          background: tokens.neon.surfaceDim,
+          background: tokens.color.surface,
           borderRadius: '2px',
           overflow: 'hidden'
         }}

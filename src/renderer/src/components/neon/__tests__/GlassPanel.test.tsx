@@ -68,9 +68,9 @@ describe('GlassPanel', () => {
     expect(panel.style.padding).toBe('20px')
   })
 
-  it('uses surfaceDim border when no accent', () => {
+  it('uses border token when no accent', () => {
     const { container } = render(<GlassPanel>X</GlassPanel>)
     const panel = container.firstChild as HTMLElement
-    expect(panel.style.border).toContain('var(--bde-surface)')
+    expect(panel.style.border).toContain('var(--bde-border)')
   })
 })
