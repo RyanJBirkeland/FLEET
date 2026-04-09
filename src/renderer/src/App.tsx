@@ -31,7 +31,6 @@ import { PollingProvider } from './components/PollingProvider'
 import { openSettings } from './lib/settings-nav'
 import { SHORTCUT_CATEGORIES } from './lib/shortcuts-data'
 import { FeatureGuideModal } from './components/help/FeatureGuideModal'
-import './assets/neon.css'
 import './assets/neon-shell.css'
 import './assets/agents-neon.css'
 
