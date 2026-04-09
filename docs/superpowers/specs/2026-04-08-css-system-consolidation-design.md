@@ -298,7 +298,9 @@ the CSS token rename — `tokens.neon.*` → `tokens.bde.*`. All component files
 - `sprint-pipeline-neon.css` is 2,575 lines — largest file in the system. Token replacement
   there is the most error-prone step. Do it last within Phase 1 and verify carefully.
 - `tokens.ts` is imported by many component files using `tokens.neon.*`. All those call sites
-  need updating in Phase 2. A single find-replace pass on `tokens.neon.` → `tokens.bde.` handles
-  this mechanically, but verify the object shape change doesn't break TypeScript consumers.
+  need updating in **Phase 1** alongside the CSS token rename. A single find-replace pass on
+  `tokens.neon.` → `tokens.bde.` handles this mechanically, but verify the object shape change
+  doesn't break TypeScript consumers. Also grep TSX files for inline glow shadows
+  (`boxShadow.*0 0`) — these won't be caught by the CSS verification grep.
 - The `--neon-pink` → `--bde-status-done` (green) color change is intentional but visible —
   "done" task status dots and badges will change from pink to green. This is a correct semantic fix.
