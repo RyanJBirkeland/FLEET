@@ -22,7 +22,7 @@ import { homedir } from 'node:os'
 import { importAgent, updateAgentMeta } from './agent-history'
 import { updateAgentRunCost } from './data/agent-queries'
 import { getDb } from './db'
-import { buildAgentEnvWithAuth, getClaudeCliPath } from './env-utils'
+import { buildAgentEnvWithAuth, getClaudeCliPath, refreshOAuthTokenFromKeychain } from './env-utils'
 import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
 import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
@@ -75,6 +75,11 @@ export async function spawnAdhocAgent(args: {
   assistant?: boolean
 }): Promise<SpawnLocalAgentResult> {
   const model = args.model || 'claude-sonnet-4-5'
+
+  // Proactively refresh the OAuth token before spawning — the pipeline drain
+  // loop handles this for pipeline agents, but adhoc agents bypass that path.
+  await refreshOAuthTokenFromKeychain().catch(() => {})
+
   const env = buildAgentEnvWithAuth()
 
   const sdk = await import('@anthropic-ai/claude-agent-sdk')
