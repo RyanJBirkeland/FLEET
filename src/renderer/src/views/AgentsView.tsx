@@ -1,12 +1,11 @@
 /**
- * AgentsView — Neon command center with three stacked zones:
+ * AgentsView — Neon command center with two stacked zones:
  * 1. Live Activity Strip (running agents as pills)
  * 2. Fleet List + Agent Console (two-pane)
- * 3. Timeline Waterfall (Gantt-style)
  */
-import { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Plus, Activity, ChevronRight } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import '../assets/agents.css'
 import '../assets/agents-neon.css'
 import { usePanelLayoutStore } from '../stores/panelLayout'
@@ -17,7 +16,6 @@ import { AgentConsole } from '../components/agents/AgentConsole'
 import { LiveActivityStrip } from '../components/agents/LiveActivityStrip'
 import { AgentLaunchpad } from '../components/agents/AgentLaunchpad'
 import { EmptyState } from '../components/ui/EmptyState'
-import { NeonCard, MiniChart, type ChartBar } from '../components/neon'
 import { toast } from '../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
@@ -39,7 +37,6 @@ export function AgentsView(): React.JSX.Element {
 
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [showLaunchpad, setShowLaunchpad] = useState(false)
-  const [chartCollapsed, setChartCollapsed] = useState(false)
   const cleanupRef = useRef<(() => void) | null>(null)
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands)
   const unregisterCommands = useCommandPaletteStore((s) => s.unregisterCommands)
@@ -123,33 +120,6 @@ export function AgentsView(): React.JSX.Element {
   }, [handleSpawnAgent, handleClearConsole, registerCommands, unregisterCommands])
 
   const selectedAgent = agents.find((a) => a.id === selectedId)
-
-  // Build line chart data: agent completions per hour over the last 6 hours
-  const activityChartData = useMemo((): ChartBar[] => {
-    // eslint-disable-next-line react-hooks/purity -- Date.now() in memo is intentional for time bucketing
-    const now = Date.now()
-    const sixHoursAgo = now - 6 * 3600 * 1000
-    const buckets: { hour: number; count: number }[] = []
-
-    // Create 6 one-hour buckets
-    for (let i = 0; i < 6; i++) {
-      buckets.push({ hour: sixHoursAgo + i * 3600 * 1000, count: 0 })
-    }
-
-    // Count agents that started in each bucket
-    for (const agent of agents) {
-      const started = new Date(agent.startedAt).getTime()
-      if (started < sixHoursAgo) continue
-      const bucketIdx = Math.min(Math.floor((started - sixHoursAgo) / 3600000), buckets.length - 1)
-      buckets[bucketIdx].count++
-    }
-
-    return buckets.map((b) => ({
-      value: b.count,
-      accent: 'cyan' as const,
-      label: new Date(b.hour).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })
-    }))
-  }, [agents])
 
   const handleSteer = useCallback(
     async (message: string, attachment?: Attachment) => {
@@ -401,63 +371,6 @@ export function AgentsView(): React.JSX.Element {
             </div>
           )}
         </div>
-      </div>
-
-      {/* Zone 3: Agent Activity Chart */}
-      <div style={{ padding: '0 12px 12px' }}>
-        <button
-          onClick={() => setChartCollapsed(!chartCollapsed)}
-          aria-label={chartCollapsed ? 'Expand activity chart' : 'Collapse activity chart'}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '6px',
-            background: 'none',
-            border: 'none',
-            color: 'var(--neon-cyan)',
-            fontSize: '11px',
-            fontWeight: 600,
-            cursor: 'pointer',
-            padding: '6px 0',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px'
-          }}
-        >
-          <ChevronRight
-            size={12}
-            style={{
-              transform: chartCollapsed ? 'rotate(0deg)' : 'rotate(90deg)',
-              transition: 'transform 150ms ease'
-            }}
-          />
-          Activity
-        </button>
-        {!chartCollapsed && (
-          <NeonCard
-            accent="cyan"
-            title="Agent Activity — Last 6 Hours"
-            icon={<Activity size={12} />}
-          >
-            <MiniChart data={activityChartData} height={80} />
-            <div
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                color: 'var(--neon-text-dim)',
-                fontSize: '9px',
-                marginTop: '4px',
-                fontFamily: 'var(--bde-font-code)'
-              }}
-            >
-              {activityChartData.length > 0 && (
-                <>
-                  <span>{activityChartData[0].label}</span>
-                  <span>{activityChartData[activityChartData.length - 1].label}</span>
-                </>
-              )}
-            </div>
-          </NeonCard>
-        )}
       </div>
     </motion.div>
   )

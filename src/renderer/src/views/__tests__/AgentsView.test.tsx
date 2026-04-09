@@ -87,8 +87,7 @@ vi.mock('../../components/neon', () => ({
       <span>{title}</span>
       {children}
     </div>
-  ),
-  MiniChart: () => <div data-testid="mini-chart" />
+  )
 }))
 
 // Mock window.api
@@ -122,11 +121,6 @@ describe('AgentsView', () => {
   it('renders Fleet header', () => {
     render(<AgentsView />)
     expect(screen.getByText('Fleet')).toBeInTheDocument()
-  })
-
-  it('renders Agent Activity chart', () => {
-    render(<AgentsView />)
-    expect(screen.getByText(/Agent Activity/)).toBeInTheDocument()
   })
 
   it('renders agents sidebar with correct CSS class', () => {
@@ -213,30 +207,5 @@ describe('AgentsView', () => {
       window.dispatchEvent(new Event('bde:open-spawn-modal'))
     })
     expect(screen.getByTestId('agent-launchpad')).toBeInTheDocument()
-  })
-
-  // ---------- Branch coverage: collapsible chart ----------
-
-  it('renders chart toggle button with aria-label', () => {
-    render(<AgentsView />)
-    const toggle = screen.getByLabelText('Collapse activity chart')
-    expect(toggle).toBeInTheDocument()
-  })
-
-  it('toggles chart visibility when toggle button clicked', () => {
-    render(<AgentsView />)
-    const toggle = screen.getByLabelText('Collapse activity chart')
-
-    // Chart should be visible initially
-    expect(screen.getByTestId('neon-card')).toBeInTheDocument()
-
-    // Click to collapse
-    fireEvent.click(toggle)
-    expect(screen.queryByTestId('neon-card')).not.toBeInTheDocument()
-    expect(screen.getByLabelText('Expand activity chart')).toBeInTheDocument()
-
-    // Click to expand
-    fireEvent.click(screen.getByLabelText('Expand activity chart'))
-    expect(screen.getByTestId('neon-card')).toBeInTheDocument()
   })
 })
