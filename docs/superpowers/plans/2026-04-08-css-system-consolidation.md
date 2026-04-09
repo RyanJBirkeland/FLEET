@@ -757,12 +757,15 @@ Replace the import block. The new imports (only files not lazy-loaded by compone
 @import './memory.css';
 @import './settings.css';
 @import './terminal.css';
-@import './ide.css';
+/* ide.css imported by IDEView.tsx (lazy chunk) */
 @import './code-review.css';
 @import './diff.css';
 @import './source-control.css';
-@import './onboarding.css';
+/* onboarding.css imported by OnboardingWizard.tsx (lazy chunk) */
 @import './planner.css';
+/* agent-launchpad.css imported by AgentLaunchpad.tsx (lazy chunk) */
+/* task-workbench.css imported by TaskWorkbench.tsx (lazy chunk) */
+/* dashboard.css imported by DashboardView.tsx (lazy chunk) */
 @import './command-palette.css';
 @import './toasts.css';
 ```
@@ -807,15 +810,15 @@ npm run lint
 
 Expected: zero errors.
 
-- [ ] **Step 7: Phase 1 verification gate — zero `--neon-*` references anywhere**
+- [ ] **Step 8: Phase 1 verification gate — zero `--neon-*` references anywhere**
 
 ```bash
 grep -rn '\-\-neon-' src/
 ```
 
-Expected: zero results. If any remain, fix before continuing.
+Expected: zero results. If any remain, fix before continuing to Phase 2.
 
-- [ ] **Step 8: Commit**
+- [ ] **Step 9: Commit**
 
 ```bash
 git add src/renderer/src/assets/main.css src/renderer/src/App.tsx src/renderer/src/views/ src/renderer/src/components/
@@ -985,10 +988,13 @@ Remove each one. `text-shadow: none` is fine to keep (it's a reset); remove any 
 - [ ] **Step 4: Verify**
 
 ```bash
-grep -rn 'box-shadow.*0 0\|text-shadow:.*[^n]' src/renderer/src/assets/
+# Zero glow box-shadows
+grep -rn 'box-shadow.*0 0' src/renderer/src/assets/
+# Zero text-shadow (excluding resets)
+grep -rn 'text-shadow' src/renderer/src/assets/ | grep -v 'text-shadow: none'
 ```
 
-Expected: zero glow box-shadows, zero glow text-shadows.
+Expected: zero results from both commands.
 
 - [ ] **Step 5: Run typecheck + tests**
 
