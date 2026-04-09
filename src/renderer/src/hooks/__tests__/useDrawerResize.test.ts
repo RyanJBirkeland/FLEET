@@ -33,13 +33,13 @@ describe('useDrawerResize', () => {
     })
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 450 }))
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 450 }))
     })
 
     expect(result.current.width).toBe(450)
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mouseup'))
+      window.dispatchEvent(new MouseEvent('mouseup'))
     })
   })
 
@@ -56,13 +56,13 @@ describe('useDrawerResize', () => {
     })
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 900 }))
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 900 }))
     })
 
     expect(result.current.width).toBe(300)
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mouseup'))
+      window.dispatchEvent(new MouseEvent('mouseup'))
     })
   })
 
@@ -79,13 +79,13 @@ describe('useDrawerResize', () => {
     })
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mousemove', { clientX: 0 }))
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 0 }))
     })
 
     expect(result.current.width).toBe(500)
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mouseup'))
+      window.dispatchEvent(new MouseEvent('mouseup'))
     })
   })
 
@@ -104,13 +104,13 @@ describe('useDrawerResize', () => {
     expect(document.body.style.cursor).toBe('col-resize')
 
     act(() => {
-      document.dispatchEvent(new MouseEvent('mouseup'))
+      window.dispatchEvent(new MouseEvent('mouseup'))
     })
 
     expect(document.body.style.cursor).toBe('')
   })
 
-  it('cleans up document listeners on unmount during drag', () => {
+  it('cleans up window listeners on unmount during drag', () => {
     const { result, unmount } = renderHook(() =>
       useDrawerResize({ defaultWidth: 400, minWidth: 200, maxWidth: 700 })
     )
@@ -127,5 +127,34 @@ describe('useDrawerResize', () => {
     unmount()
 
     expect(document.body.style.cursor).toBe('')
+  })
+
+  it('stops tracking width updates after mouseup', () => {
+    const { result } = renderHook(() =>
+      useDrawerResize({ defaultWidth: 400, minWidth: 200, maxWidth: 700 })
+    )
+
+    act(() => {
+      result.current.handleResizeStart({
+        preventDefault: () => {},
+        clientX: 500
+      } as React.MouseEvent)
+    })
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 450 }))
+    })
+
+    expect(result.current.width).toBe(450)
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mouseup'))
+    })
+
+    act(() => {
+      window.dispatchEvent(new MouseEvent('mousemove', { clientX: 300 }))
+    })
+
+    expect(result.current.width).toBe(450) // must not change after mouseup
   })
 })

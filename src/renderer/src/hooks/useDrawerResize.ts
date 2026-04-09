@@ -1,3 +1,8 @@
+/**
+ * useDrawerResize — drag-to-resize hook for right-anchored drawer panels.
+ * Returns current width and a handleResizeStart handler for the resize handle.
+ * Dragging left increases width (right-anchored convention).
+ */
 import { useState, useRef, useCallback, useEffect } from 'react'
 
 interface UseDrawerResizeConfig {
@@ -20,6 +25,8 @@ export function useDrawerResize({
   const dragging = useRef(false)
   const startX = useRef(0)
   const startWidth = useRef(defaultWidth)
+  const widthRef = useRef(defaultWidth)
+  widthRef.current = width
   // Must be a ref (not state/effect dep) to avoid stale closure on mid-drag unmount
   const cleanupRef = useRef<(() => void) | null>(null)
 
@@ -34,7 +41,7 @@ export function useDrawerResize({
       e.preventDefault()
       dragging.current = true
       startX.current = e.clientX
-      startWidth.current = width
+      startWidth.current = widthRef.current
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
 
@@ -50,22 +57,22 @@ export function useDrawerResize({
         dragging.current = false
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
-        document.removeEventListener('mousemove', onMove)
-        document.removeEventListener('mouseup', onUp)
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
         cleanupRef.current = null
       }
 
-      document.addEventListener('mousemove', onMove)
-      document.addEventListener('mouseup', onUp)
+      window.addEventListener('mousemove', onMove)
+      window.addEventListener('mouseup', onUp)
 
       cleanupRef.current = () => {
-        document.removeEventListener('mousemove', onMove)
-        document.removeEventListener('mouseup', onUp)
+        window.removeEventListener('mousemove', onMove)
+        window.removeEventListener('mouseup', onUp)
         document.body.style.cursor = ''
         document.body.style.userSelect = ''
       }
     },
-    [width, minWidth, maxWidth]
+    [minWidth, maxWidth]
   )
 
   return { width, handleResizeStart }
