@@ -3,6 +3,7 @@
  */
 import { useEffect, useState, useCallback, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { Group, Panel, Separator } from 'react-resizable-panels'
 import { Plus } from 'lucide-react'
 import '../assets/agents.css'
 import '../assets/agents-neon.css'
@@ -252,7 +253,8 @@ export function AgentsView(): React.JSX.Element {
       transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
     >
       {/* Zone 1: Fleet List + Agent Console */}
-      <div style={{ display: 'flex', flex: 1, minHeight: 0 }}>
+      <Group orientation="horizontal" style={{ flex: 1, minHeight: 0 }}>
+        <Panel defaultSize={20} minSize={12} maxSize={40}>
         {/* Fleet sidebar */}
         <div className="agents-sidebar">
           {/* Header */}
@@ -333,9 +335,11 @@ export function AgentsView(): React.JSX.Element {
             onLoadMore={loadMore}
           />
         </div>
-
+        </Panel>
+        <Separator className="panel-separator" />
+        <Panel minSize={40}>
         {/* Agent Console */}
-        <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
           {showLaunchpad || (!selectedAgent && agents.length === 0) ? (
             <AgentLaunchpad
               onAgentSpawned={() => {
@@ -365,7 +369,8 @@ export function AgentsView(): React.JSX.Element {
             </div>
           )}
         </div>
-      </div>
+        </Panel>
+      </Group>
     </motion.div>
   )
 }
