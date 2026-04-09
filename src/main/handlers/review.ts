@@ -12,7 +12,10 @@ import { getSettingJson } from '../settings'
 import { buildAgentEnv } from '../env-utils'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
+import { rmSync } from 'node:fs'
+import { join } from 'node:path'
 import { runPostMergeDedup } from '../services/post-merge-dedup'
+import { BDE_TASK_MEMORY_DIR } from '../paths'
 
 const execFileAsync = promisify(execFile)
 const logger = createLogger('review-handlers')
@@ -446,6 +449,13 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
           }
         }
       }
+    }
+
+    // Clean up task scratchpad (best-effort — directory may not exist on first run)
+    try {
+      rmSync(join(BDE_TASK_MEMORY_DIR, taskId), { recursive: true, force: true })
+    } catch {
+      /* best-effort */
     }
 
     // Mark task cancelled via terminal service
