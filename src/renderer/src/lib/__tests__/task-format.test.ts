@@ -36,7 +36,7 @@ describe('getDotColor', () => {
     expect(getDotColor('active', 'branch_only')).toBe('var(--neon-blue)')
   })
 
-  it('returns neon-cyan for queued status', () => {
+  it('returns bde-accent for queued status', () => {
     expect(getDotColor('queued')).toBe('var(--bde-accent)')
   })
 
@@ -68,7 +68,7 @@ describe('getDotColor', () => {
     expect(getDotColor('cancelled')).toBe('var(--neon-red, #ff3366)')
   })
 
-  it('returns neon-cyan for unknown status (default)', () => {
+  it('returns bde-accent for unknown status (default)', () => {
     expect(getDotColor('backlog')).toBe('var(--bde-accent)')
   })
 
