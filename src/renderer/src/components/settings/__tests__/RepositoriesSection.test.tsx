@@ -56,10 +56,10 @@ describe('RepositoriesSection', () => {
     })
   })
 
-  it('shows add form when Add Repository is clicked', async () => {
+  it('shows manual add form when Manual button is clicked', async () => {
     const user = userEvent.setup()
     render(<RepositoriesSection />)
-    await user.click(screen.getByText(/Add Repository/))
+    await user.click(screen.getByText('Manual'))
     expect(screen.getByPlaceholderText('Name')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Local path')).toBeInTheDocument()
   })
@@ -72,7 +72,7 @@ describe('RepositoriesSection', () => {
       expect(screen.getByText('No repositories configured')).toBeInTheDocument()
     })
 
-    await user.click(screen.getByText(/Add Repository/))
+    await user.click(screen.getByText('Manual'))
 
     await user.type(screen.getByPlaceholderText('Name'), 'my-project')
     await user.type(screen.getByPlaceholderText('Local path'), '/home/user/my-project')
@@ -148,7 +148,7 @@ describe('RepositoriesSection', () => {
     const user = userEvent.setup()
     render(<RepositoriesSection />)
 
-    await user.click(screen.getByText(/Add Repository/))
+    await user.click(screen.getByText('Manual'))
 
     const browseButton = screen.getByTitle('Browse')
     await user.click(browseButton)

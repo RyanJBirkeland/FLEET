@@ -551,7 +551,7 @@ const api = {
     onCloneProgress: (
       cb: (data: { owner: string; repo: string; line: string; done: boolean; error?: string; localPath?: string }) => void
     ): (() => void) => {
-      const handler = (_e: unknown, data: any): void => cb(data)
+      const handler = (_e: unknown, data: Parameters<typeof cb>[0]): void => cb(data)
       ipcRenderer.on('repos:cloneProgress', handler)
       return () => ipcRenderer.removeListener('repos:cloneProgress', handler)
     }
