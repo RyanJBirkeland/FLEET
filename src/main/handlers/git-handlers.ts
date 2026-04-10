@@ -92,6 +92,7 @@ function validatePatchBody(body: string | undefined): boolean {
 
 // GitHub API endpoint + method allowlist for security
 const GITHUB_API_ALLOWLIST: Array<{ method: string; pattern: RegExp }> = [
+  { method: 'GET', pattern: /^\/user$/ },
   { method: 'GET', pattern: /^\/repos\/[^/]+\/[^/]+\/pulls/ },
   { method: 'GET', pattern: /^\/repos\/[^/]+\/[^/]+\/issues/ },
   { method: 'GET', pattern: /^\/repos\/[^/]+\/[^/]+\/commits/ },
