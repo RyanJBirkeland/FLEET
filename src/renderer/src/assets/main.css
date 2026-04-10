@@ -1,4 +1,5 @@
-@import './base.css';
+@import './tokens.css';
+@import './reset.css';
 @import './design-system.css';
 @import './primitives.css';
 @import './shell.css';
