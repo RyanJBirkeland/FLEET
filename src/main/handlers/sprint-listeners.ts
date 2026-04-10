@@ -6,12 +6,8 @@
 import type { SprintTask } from '../../shared/types'
 import { createLogger } from '../logger'
 import { broadcast } from '../broadcast'
-import {
-  createWebhookService,
-  getWebhookEventName,
-  type WebhookConfig
-} from '../services/webhook-service'
-import { getDb } from '../db'
+import { createWebhookService, getWebhookEventName } from '../services/webhook-service'
+import { getWebhooks } from '../data/webhook-queries'
 
 const logger = createLogger('sprint-listeners')
 
@@ -24,25 +20,6 @@ export type SprintMutationListener = (event: SprintMutationEvent) => void
 const listeners: Set<SprintMutationListener> = new Set()
 
 // Initialize webhook service
-function getWebhooks(): WebhookConfig[] {
-  const db = getDb()
-  const rows = db.prepare('SELECT * FROM webhooks').all() as Array<{
-    id: string
-    url: string
-    events: string
-    secret: string | null
-    enabled: number
-  }>
-
-  return rows.map((row) => ({
-    id: row.id,
-    url: row.url,
-    events: JSON.parse(row.events) as string[],
-    secret: row.secret,
-    enabled: row.enabled === 1
-  }))
-}
-
 const webhookService = createWebhookService({ getWebhooks, logger })
 
 export function onSprintMutation(cb: SprintMutationListener): () => void {

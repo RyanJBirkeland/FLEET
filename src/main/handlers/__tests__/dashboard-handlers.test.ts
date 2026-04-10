@@ -15,11 +15,8 @@ vi.mock('../../ipc-utils', () => ({
   safeHandle: vi.fn()
 }))
 
-import {
-  registerDashboardHandlers,
-  getCompletionsPerHour,
-  getRecentEvents
-} from '../dashboard-handlers'
+import { registerDashboardHandlers } from '../dashboard-handlers'
+import { getCompletionsPerHour, getRecentEvents } from '../../data/dashboard-queries'
 import { safeHandle } from '../../ipc-utils'
 
 describe('Dashboard handlers', () => {
