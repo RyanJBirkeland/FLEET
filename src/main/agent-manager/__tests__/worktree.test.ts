@@ -181,7 +181,7 @@ describe('setupWorktree', () => {
 
     expect(result.branch).toBe('agent/bad-task-task-789')
 
-    // Verify branch delete was called (nukeStaleState runs unconditionally)
+    // Verify branch delete was called (cleanupStaleWorktrees runs unconditionally)
     const branchDeleteCall = execFileMock.mock.calls.find(
       (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('-D')
     )
@@ -328,7 +328,7 @@ describe('setupWorktree', () => {
   })
 
   it('cleans up lock and throws when worktree add fails after nuke', async () => {
-    // nukeStaleState succeeds, but worktree add itself fails
+    // cleanupStaleWorktrees succeeds, but worktree add itself fails
     execFileMock.mockImplementation((...args: unknown[]) => {
       const cb = args[args.length - 1]
       const gitArgs = args[1] as string[]
@@ -339,7 +339,7 @@ describe('setupWorktree', () => {
         return Object.assign(Promise.reject(err), { child: null }) as unknown as ChildProcess
       }
 
-      // Everything else (nukeStaleState calls) succeeds
+      // Everything else (cleanupStaleWorktrees calls) succeeds
       if (typeof cb === 'function') cb(null, '', '')
       return Object.assign(Promise.resolve({ stdout: '', stderr: '' }), {
         child: null
@@ -483,7 +483,7 @@ describe('setupWorktree', () => {
 
 describe('ensureFreeDiskSpace', () => {
   it('throws InsufficientDiskSpaceError when free space is below the threshold', async () => {
-    const { ensureFreeDiskSpace, InsufficientDiskSpaceError } = await import('../worktree')
+    const { ensureFreeDiskSpace, InsufficientDiskSpaceError } = await import('../disk-space')
     // Use an absurdly large threshold so any real disk fails
     const required = Number.MAX_SAFE_INTEGER
     await expect(ensureFreeDiskSpace(os.tmpdir(), required)).rejects.toBeInstanceOf(
