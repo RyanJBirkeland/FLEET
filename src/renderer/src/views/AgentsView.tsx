@@ -251,14 +251,7 @@ export function AgentsView(): React.JSX.Element {
 
   return (
     <motion.div
-      style={{
-        display: 'flex',
-        flexDirection: 'column',
-        width: '100%',
-        height: '100%',
-        overflow: 'hidden',
-        background: 'var(--bde-bg)'
-      }}
+      className="agents-view"
       variants={VARIANTS.fadeIn}
       initial="initial"
       animate="animate"
