@@ -541,7 +541,7 @@ describe('resolveSuccess — catch handler coverage', () => {
     })
     await resolveSuccess(catchOpts, noopLogger)
     expect(noopLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to update task task-catch after worktree eviction')
+      expect.stringContaining('Failed to update task task-catch after error')
     )
   })
 
@@ -552,7 +552,7 @@ describe('resolveSuccess — catch handler coverage', () => {
     })
     await resolveSuccess(catchOpts, noopLogger)
     expect(noopLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to update task task-catch after branch detection error')
+      expect.stringContaining('Failed to update task task-catch after error')
     )
   })
 
@@ -563,7 +563,7 @@ describe('resolveSuccess — catch handler coverage', () => {
     })
     await resolveSuccess(catchOpts, noopLogger)
     expect(noopLogger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to update task task-catch after empty branch')
+      expect.stringContaining('Failed to update task task-catch after error')
     )
   })
 
