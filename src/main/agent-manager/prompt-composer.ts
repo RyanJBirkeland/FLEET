@@ -10,7 +10,6 @@ import { assistantPersonality } from '../agent-system/personality/assistant-pers
 import { copilotPersonality } from '../agent-system/personality/copilot-personality'
 import { synthesizerPersonality } from '../agent-system/personality/synthesizer-personality'
 import { adhocPersonality } from '../agent-system/personality/adhoc-personality'
-import type { AgentPersonality } from '../agent-system/personality/types'
 import { join } from 'node:path'
 import { getAllMemory, isBdeRepo, selectUserMemory } from '../agent-system/memory'
 import { getUserMemory } from '../agent-system/memory/user-memory'
@@ -219,68 +218,14 @@ const PIPELINE_JUDGMENT_RULES = `\n\n## Judging Test Failures and Push Completio
 const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npm run test:coverage\` passes (tests + coverage thresholds)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\nDo NOT exit without verifying all five.`
 
 // ---------------------------------------------------------------------------
-// Native System Support
+// Per-Agent-Type Prompt Builders
 // ---------------------------------------------------------------------------
 
-/**
- * Get personality for agent type
- */
-function getPersonality(agentType: AgentType): AgentPersonality {
-  switch (agentType) {
-    case 'pipeline':
-      return pipelinePersonality
-    case 'assistant':
-      return assistantPersonality
-    case 'adhoc':
-      return adhocPersonality
-    case 'copilot':
-      return copilotPersonality
-    case 'synthesizer':
-      return synthesizerPersonality
-  }
-}
-
-// ---------------------------------------------------------------------------
-// Main Prompt Builder
-// ---------------------------------------------------------------------------
-
-/**
- * Build agent prompt with universal preamble, personality, memory, skills, and task content.
- *
- * This is the universal prompt builder for all BDE agents (pipeline, assistant, adhoc,
- * copilot, synthesizer). All agent spawning paths must use this function instead of
- * inline prompt assembly.
- *
- * **Native System:**
- * Injects for every agent type:
- * - Personality (voice, roleFrame, constraints) specific to the agent type
- * - Memory modules (IPC conventions, testing patterns, architecture rules)
- * - Skills (ONLY for assistant/adhoc agents — pipeline agents do not get skills)
- *
- * **Conditional Sections:**
- * - Branch info appended if `branch` is provided
- * - Playground instructions appended if `playgroundEnabled` is true
- * - Copilot conversation appended if `messages` array is provided
- * - Synthesizer codebase context appended if `codebaseContext` is provided
- *
- * @param input - Prompt configuration object
- * @param input.agentType - Type of agent: pipeline, assistant, adhoc, copilot, synthesizer
- * @param input.taskContent - Spec, prompt, or user message (optional)
- * @param input.branch - Git branch for pipeline/adhoc agents (optional)
- * @param input.playgroundEnabled - Whether to include playground instructions (optional)
- * @param input.messages - Copilot chat message history (optional)
- * @param input.formContext - Copilot form context (title, repo, spec) (optional)
- * @param input.codebaseContext - Synthesizer codebase context (file tree, relevant files) (optional)
- * @returns Complete prompt string ready for agent spawning
- */
-export function buildAgentPrompt(input: BuildPromptInput): string {
+function buildPipelinePrompt(input: BuildPromptInput): string {
   const {
-    agentType,
     taskContent,
     branch,
     playgroundEnabled,
-    messages,
-    codebaseContext,
     retryCount,
     previousNotes,
     maxRuntimeMs,
@@ -291,107 +236,283 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
     priorScratchpad
   } = input
 
-  // Start with agent-type-appropriate preamble
-  const isCodingAgent =
-    agentType === 'pipeline' || agentType === 'assistant' || agentType === 'adhoc'
-  let prompt = isCodingAgent ? CODING_AGENT_PREAMBLE : SPEC_DRAFTING_PREAMBLE
+  let prompt = CODING_AGENT_PREAMBLE
 
   // Inject personality
-  const personality = getPersonality(agentType)
+  const personality = pipelinePersonality
   prompt += '\n\n## Voice\n' + personality.voice
   prompt += '\n\n## Your Role\n' + personality.roleFrame
   prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
-
-  // Inject behavioral patterns if defined
   if (personality.patterns && personality.patterns.length > 0) {
     prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
   }
 
-  // Inject memory (BDE-specific modules only for coding agents targeting the BDE repo)
-  if (isCodingAgent) {
-    const memoryText = getAllMemory({ repoName: repoName ?? undefined })
-    if (memoryText.trim()) {
-      prompt += '\n\n## BDE Conventions\n'
-      prompt += memoryText
-    }
+  // Inject memory (BDE-specific modules only for BDE repo)
+  const memoryText = getAllMemory({ repoName: repoName ?? undefined })
+  if (memoryText.trim()) {
+    prompt += '\n\n## BDE Conventions\n'
+    prompt += memoryText
   }
 
-  // Inject user memory (files toggled active in Settings > Memory).
-  // Pipeline agents use selective pre-loading (keyword-filtered against task spec)
-  // to avoid injecting irrelevant memory files into every agent's context.
-  // All other agent types load unconditionally — interactive agents benefit from full context.
-  const userMem =
-    agentType === 'pipeline' && taskContent ? selectUserMemory(taskContent) : getUserMemory()
+  // Inject user memory (selective pre-loading for pipeline agents)
+  const userMem = taskContent ? selectUserMemory(taskContent) : getUserMemory()
   if (userMem.fileCount > 0) {
     prompt += '\n\n## User Knowledge\n'
     prompt += userMem.content
   }
 
-  // Inject skills (interactive BDE agents only — BDE-specific skills are irrelevant
-  // in other repos and would waste tokens).
-  const inBdeRepo = isBdeRepo(repoName)
-  if ((agentType === 'assistant' || agentType === 'adhoc') && inBdeRepo) {
-    prompt += '\n\n## Available Skills\n'
-    prompt += getAllSkills()
-  }
-
-  // Plugin disable note (only meaningful when BDE context is loaded)
-  if (inBdeRepo) {
+  // Plugin disable note (only when BDE context is loaded)
+  if (isBdeRepo(repoName)) {
     prompt += '\n\n## Note\n'
     prompt += 'You have BDE-native skills and conventions loaded. '
     prompt += 'Generic third-party plugin guidance may not apply to BDE workflows.'
   }
 
-  // Add conditional operational appendices
+  // Add branch appendix
   if (branch) {
     prompt += buildBranchAppendix(branch)
   }
 
-  // Adhoc/assistant agents default to playground-on (interactive sessions
-  // always have it enabled per BDE_FEATURES.md). Pipeline/copilot/synthesizer
-  // default to off and must opt in explicitly via the task flag. An explicit
-  // `false` from the caller still wins for any agent type.
-  const playgroundDefault = agentType === 'adhoc' || agentType === 'assistant'
-  const effectivePlayground = playgroundEnabled ?? playgroundDefault
+  // Playground (default off for pipeline unless explicitly enabled)
+  if (playgroundEnabled) {
+    prompt += PLAYGROUND_INSTRUCTIONS
+  }
+
+  // Prior attempt context
+  if (priorScratchpad) {
+    prompt += '\n\n## Prior Attempt Context\n\n'
+    prompt += priorScratchpad
+  }
+
+  // Scratchpad instructions
+  if (taskId) {
+    prompt += buildScratchpadSection(taskId)
+  }
+
+  // Output budget hint
+  if (taskContent) {
+    const taskClass = classifyTask(taskContent)
+    prompt += buildOutputCapHint(taskClass)
+
+    // Task specification
+    prompt += '\n\n## Task Specification\n\n'
+    prompt += 'Read this entire specification before writing any code. '
+    prompt += 'Address every section.\n\n'
+    const MAX_TASK_CONTENT_CHARS = 2000
+    if (taskContent.length > MAX_TASK_CONTENT_CHARS) {
+      prompt += taskContent.slice(0, MAX_TASK_CONTENT_CHARS)
+      prompt += `\n\n[spec truncated at ${MAX_TASK_CONTENT_CHARS} chars — see full spec in task DB]`
+    } else {
+      prompt += taskContent
+    }
+  }
+
+  // Cross-repo contract
+  if (crossRepoContract && crossRepoContract.trim()) {
+    prompt += '\n\n## Cross-Repo Contract\n\n'
+    prompt += 'This task involves API contracts with other repositories. '
+    prompt += 'Follow these contract specifications exactly:\n\n'
+    prompt += crossRepoContract
+  }
+
+  // Upstream task context
+  if (upstreamContext && upstreamContext.length > 0) {
+    prompt += '\n\n## Upstream Task Context\n\n'
+    prompt += 'This task depends on the following completed tasks:\n\n'
+    for (const upstream of upstreamContext) {
+      const cappedSpec =
+        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
+      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
+
+      if (upstream.partial_diff) {
+        const MAX_DIFF_CHARS = 2000
+        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
+        const cappedDiff = truncated
+          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
+          : upstream.partial_diff
+        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
+      }
+    }
+  }
+
+  // Retry context
+  if (retryCount && retryCount > 0) {
+    prompt += buildRetryContext(retryCount, previousNotes)
+  }
+
+  // Self-review checklist
+  prompt += `\n\n## Self-Review Checklist
+Before your final push, verify:
+- [ ] Every changed file is required by the spec
+- [ ] No console.log, commented-out code, or TODO left behind
+- [ ] No hardcoded colors, magic numbers, or secrets
+- [ ] Tests cover error states, not just happy paths
+- [ ] Commit messages explain WHY, not just WHAT
+- [ ] Preload .d.ts updated if IPC channels changed`
+
+  // Pipeline-only operational sections
+  prompt += PIPELINE_SETUP_RULE
+  prompt += CONTEXT_EFFICIENCY_HINT
+  prompt += PIPELINE_JUDGMENT_RULES
+  if (maxRuntimeMs && maxRuntimeMs > 0) {
+    prompt += buildTimeLimitSection(maxRuntimeMs)
+  }
+  prompt += IDLE_TIMEOUT_WARNING
+  prompt += DEFINITION_OF_DONE
+
+  return prompt
+}
+
+function buildAssistantPrompt(input: BuildPromptInput): string {
+  const {
+    taskContent,
+    branch,
+    playgroundEnabled,
+    upstreamContext,
+    crossRepoContract,
+    repoName
+  } = input
+
+  let prompt = CODING_AGENT_PREAMBLE
+
+  // Inject personality (assistant or adhoc)
+  const personality = input.agentType === 'assistant' ? assistantPersonality : adhocPersonality
+  prompt += '\n\n## Voice\n' + personality.voice
+  prompt += '\n\n## Your Role\n' + personality.roleFrame
+  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
+  if (personality.patterns && personality.patterns.length > 0) {
+    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
+  }
+
+  // Inject memory
+  const memoryText = getAllMemory({ repoName: repoName ?? undefined })
+  if (memoryText.trim()) {
+    prompt += '\n\n## BDE Conventions\n'
+    prompt += memoryText
+  }
+
+  // Inject user memory (full load for interactive agents)
+  const userMem = getUserMemory()
+  if (userMem.fileCount > 0) {
+    prompt += '\n\n## User Knowledge\n'
+    prompt += userMem.content
+  }
+
+  // Inject skills (BDE-specific, interactive agents only)
+  if (isBdeRepo(repoName)) {
+    prompt += '\n\n## Available Skills\n'
+    prompt += getAllSkills()
+
+    prompt += '\n\n## Note\n'
+    prompt += 'You have BDE-native skills and conventions loaded. '
+    prompt += 'Generic third-party plugin guidance may not apply to BDE workflows.'
+  }
+
+  // Add branch appendix if provided
+  if (branch) {
+    prompt += buildBranchAppendix(branch)
+  }
+
+  // Playground (default on for assistant/adhoc)
+  const effectivePlayground = playgroundEnabled ?? true
   if (effectivePlayground) {
     prompt += PLAYGROUND_INSTRUCTIONS
   }
 
-  // Add task content based on agent type
-  if (agentType === 'copilot' && messages) {
-    // Spec-drafting framing — make it explicit the copilot is NOT executing
-    prompt += '\n\n## Mode: Spec Drafting\n\n'
-    prompt +=
-      'You are helping the user draft a task SPEC, not execute the task. ' +
-      'Your goal is to help them write a clear, complete spec that a pipeline ' +
-      'agent can later execute. Use your read-only Read, Grep, and Glob tools ' +
-      'to explore the target repo whenever you need ground-truth answers about ' +
-      'files, APIs, or existing patterns.'
+  // Task content (simple append)
+  if (taskContent) {
+    prompt += '\n\n' + taskContent
+  }
 
-    // Pin the target repo so the copilot knows which path to inspect
-    if (input.repoPath) {
-      prompt += '\n\n## Target Repository\n\n'
-      prompt += `All your tool calls operate inside this repository:\n\n\`${input.repoPath}\`\n\n`
-      prompt +=
-        'When using Grep or Glob, scope searches to this path. ' +
-        'When using Read, prefer paths relative to this root.'
-    }
+  // Cross-repo contract
+  if (crossRepoContract && crossRepoContract.trim()) {
+    prompt += '\n\n## Cross-Repo Contract\n\n'
+    prompt += 'This task involves API contracts with other repositories. '
+    prompt += 'Follow these contract specifications exactly:\n\n'
+    prompt += crossRepoContract
+  }
 
-    // For copilot, add form context if available, then message history
-    if (input.formContext) {
-      const { title, repo, spec } = input.formContext
-      prompt += '\n\n## Task Context\n\n'
-      prompt += `Title: "${title}"\nRepo: ${repo}\n`
-      if (spec) {
-        prompt += `\nSpec draft:\n${spec}\n`
-      } else {
-        prompt += '\n(no spec yet)\n'
+  // Upstream task context
+  if (upstreamContext && upstreamContext.length > 0) {
+    prompt += '\n\n## Upstream Task Context\n\n'
+    prompt += 'This task depends on the following completed tasks:\n\n'
+    for (const upstream of upstreamContext) {
+      const cappedSpec =
+        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
+      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
+
+      if (upstream.partial_diff) {
+        const MAX_DIFF_CHARS = 2000
+        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
+        const cappedDiff = truncated
+          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
+          : upstream.partial_diff
+        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
       }
     }
+  }
 
-    // Cap conversation history at the 10 most recent turns (5 user + 5 assistant).
-    // Older turns add tokens with diminishing relevance — the spec draft in formContext
-    // already captures the accumulated intent.
+  return prompt
+}
+
+function buildCopilotPrompt(input: BuildPromptInput): string {
+  const { messages, playgroundEnabled, upstreamContext } = input
+
+  let prompt = SPEC_DRAFTING_PREAMBLE
+
+  // Inject personality
+  const personality = copilotPersonality
+  prompt += '\n\n## Voice\n' + personality.voice
+  prompt += '\n\n## Your Role\n' + personality.roleFrame
+  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
+  if (personality.patterns && personality.patterns.length > 0) {
+    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
+  }
+
+  // Inject user memory
+  const userMem = getUserMemory()
+  if (userMem.fileCount > 0) {
+    prompt += '\n\n## User Knowledge\n'
+    prompt += userMem.content
+  }
+
+  // Playground (default off for copilot)
+  if (playgroundEnabled) {
+    prompt += PLAYGROUND_INSTRUCTIONS
+  }
+
+  // Spec-drafting mode framing
+  prompt += '\n\n## Mode: Spec Drafting\n\n'
+  prompt +=
+    'You are helping the user draft a task SPEC, not execute the task. ' +
+    'Your goal is to help them write a clear, complete spec that a pipeline ' +
+    'agent can later execute. Use your read-only Read, Grep, and Glob tools ' +
+    'to explore the target repo whenever you need ground-truth answers about ' +
+    'files, APIs, or existing patterns.'
+
+  // Target repository pinning
+  if (input.repoPath) {
+    prompt += '\n\n## Target Repository\n\n'
+    prompt += `All your tool calls operate inside this repository:\n\n\`${input.repoPath}\`\n\n`
+    prompt +=
+      'When using Grep or Glob, scope searches to this path. ' +
+      'When using Read, prefer paths relative to this root.'
+  }
+
+  // Form context
+  if (input.formContext) {
+    const { title, repo, spec } = input.formContext
+    prompt += '\n\n## Task Context\n\n'
+    prompt += `Title: "${title}"\nRepo: ${repo}\n`
+    if (spec) {
+      prompt += `\nSpec draft:\n${spec}\n`
+    } else {
+      prompt += '\n(no spec yet)\n'
+    }
+  }
+
+  // Conversation history
+  if (messages) {
     const MAX_HISTORY_TURNS = 10
     const recentMessages =
       messages.length > MAX_HISTORY_TURNS
@@ -405,72 +526,17 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
     for (const msg of recentMessages) {
       prompt += `**${msg.role}**: ${msg.content}\n\n`
     }
-  } else if (agentType === 'synthesizer' && codebaseContext) {
-    // For synthesizer, include codebase context before task content
-    prompt += '\n\n## Codebase Context\n\n' + codebaseContext
-    if (taskContent) {
-      prompt += '\n\n## Generation Instructions\n\n' + taskContent
-    }
-  } else if (taskContent) {
-    // For pipeline agents (which have code tools), wrap the spec in a clear
-    // header so the agent knows it must read and address every section.
-    // Copilot/synthesizer have no code tools and use their own task framing.
-    if (agentType === 'pipeline') {
-      // Prior attempt context — injected before the task spec so the agent reads
-      // historical context before re-reading requirements.
-      if (priorScratchpad) {
-        prompt += '\n\n## Prior Attempt Context\n\n'
-        prompt += priorScratchpad
-      }
-
-      // Scratchpad instructions — always injected for pipeline agents with a taskId
-      if (taskId) {
-        prompt += buildScratchpadSection(taskId)
-      }
-
-      // Inject per-class output budget hint before the spec
-      const taskClass = classifyTask(taskContent)
-      prompt += buildOutputCapHint(taskClass)
-
-      prompt += '\n\n## Task Specification\n\n'
-      prompt += 'Read this entire specification before writing any code. '
-      prompt += 'Address every section.\n\n'
-      // Cap at 2000 chars — oversized specs cause context bloat and timeouts.
-      // Specs should be ≤500 words per CLAUDE.md guidelines; this is a safety net.
-      const MAX_TASK_CONTENT_CHARS = 2000
-      if (taskContent.length > MAX_TASK_CONTENT_CHARS) {
-        prompt += taskContent.slice(0, MAX_TASK_CONTENT_CHARS)
-        prompt += `\n\n[spec truncated at ${MAX_TASK_CONTENT_CHARS} chars — see full spec in task DB]`
-      } else {
-        prompt += taskContent
-      }
-    } else {
-      // For assistant, adhoc: append task content as-is
-      prompt += '\n\n' + taskContent
-    }
   }
 
-  // Inject cross-repo contract documentation when provided
-  if (crossRepoContract && crossRepoContract.trim()) {
-    prompt += '\n\n## Cross-Repo Contract\n\n'
-    prompt += 'This task involves API contracts with other repositories. '
-    prompt += 'Follow these contract specifications exactly:\n\n'
-    prompt += crossRepoContract
-  }
-
-  // Inject upstream task context when provided
+  // Upstream task context
   if (upstreamContext && upstreamContext.length > 0) {
     prompt += '\n\n## Upstream Task Context\n\n'
     prompt += 'This task depends on the following completed tasks:\n\n'
     for (const upstream of upstreamContext) {
-      // Cap upstream spec at 500 chars — we only need the intent, not full implementation detail.
       const cappedSpec =
         upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
       prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
 
-      // Include partial diff if available (salvaged partial progress from upstream task).
-      // Cap at 2000 chars: diffs for large file renames/moves can be enormous; the
-      // downstream agent only needs to understand the shape of the change, not every line.
       if (upstream.partial_diff) {
         const MAX_DIFF_CHARS = 2000
         const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
@@ -482,34 +548,82 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
     }
   }
 
-  // Inject retry context for pipeline agents on retry attempts
-  if (agentType === 'pipeline' && retryCount && retryCount > 0) {
-    prompt += buildRetryContext(retryCount, previousNotes)
+  return prompt
+}
+
+function buildSynthesizerPrompt(input: BuildPromptInput): string {
+  const { codebaseContext, taskContent, playgroundEnabled, upstreamContext } = input
+
+  let prompt = SPEC_DRAFTING_PREAMBLE
+
+  // Inject personality
+  const personality = synthesizerPersonality
+  prompt += '\n\n## Voice\n' + personality.voice
+  prompt += '\n\n## Your Role\n' + personality.roleFrame
+  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
+  if (personality.patterns && personality.patterns.length > 0) {
+    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
   }
 
-  // Self-review checklist (pipeline only)
-  if (agentType === 'pipeline') {
-    prompt += `\n\n## Self-Review Checklist
-Before your final push, verify:
-- [ ] Every changed file is required by the spec
-- [ ] No console.log, commented-out code, or TODO left behind
-- [ ] No hardcoded colors, magic numbers, or secrets
-- [ ] Tests cover error states, not just happy paths
-- [ ] Commit messages explain WHY, not just WHAT
-- [ ] Preload .d.ts updated if IPC channels changed`
+  // Inject user memory
+  const userMem = getUserMemory()
+  if (userMem.fileCount > 0) {
+    prompt += '\n\n## User Knowledge\n'
+    prompt += userMem.content
   }
 
-  // Pipeline-only sections: setup rule, judgment rules, time limit, idle warning, DoD
-  if (agentType === 'pipeline') {
-    prompt += PIPELINE_SETUP_RULE
-    prompt += CONTEXT_EFFICIENCY_HINT
-    prompt += PIPELINE_JUDGMENT_RULES
-    if (maxRuntimeMs && maxRuntimeMs > 0) {
-      prompt += buildTimeLimitSection(maxRuntimeMs)
+  // Playground (default off for synthesizer)
+  if (playgroundEnabled) {
+    prompt += PLAYGROUND_INSTRUCTIONS
+  }
+
+  // Codebase context
+  if (codebaseContext) {
+    prompt += '\n\n## Codebase Context\n\n' + codebaseContext
+  }
+
+  // Generation instructions
+  if (taskContent) {
+    prompt += '\n\n## Generation Instructions\n\n' + taskContent
+  }
+
+  // Upstream task context
+  if (upstreamContext && upstreamContext.length > 0) {
+    prompt += '\n\n## Upstream Task Context\n\n'
+    prompt += 'This task depends on the following completed tasks:\n\n'
+    for (const upstream of upstreamContext) {
+      const cappedSpec =
+        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
+      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
+
+      if (upstream.partial_diff) {
+        const MAX_DIFF_CHARS = 2000
+        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
+        const cappedDiff = truncated
+          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
+          : upstream.partial_diff
+        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
+      }
     }
-    prompt += IDLE_TIMEOUT_WARNING
-    prompt += DEFINITION_OF_DONE
   }
 
   return prompt
+}
+
+// ---------------------------------------------------------------------------
+// Main Prompt Builder (Dispatcher)
+// ---------------------------------------------------------------------------
+
+export function buildAgentPrompt(input: BuildPromptInput): string {
+  switch (input.agentType) {
+    case 'pipeline':
+      return buildPipelinePrompt(input)
+    case 'assistant':
+    case 'adhoc':
+      return buildAssistantPrompt(input)
+    case 'copilot':
+      return buildCopilotPrompt(input)
+    case 'synthesizer':
+      return buildSynthesizerPrompt(input)
+  }
 }
