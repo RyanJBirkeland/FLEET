@@ -1,0 +1,30 @@
+import { describe, it, expect } from 'vitest'
+import { getErrorMessage } from '../errors'
+
+describe('getErrorMessage', () => {
+  it('should extract message from Error instance', () => {
+    const error = new Error('Test error message')
+    expect(getErrorMessage(error)).toBe('Test error message')
+  })
+
+  it('should convert string to string', () => {
+    expect(getErrorMessage('Plain string error')).toBe('Plain string error')
+  })
+
+  it('should convert number to string', () => {
+    expect(getErrorMessage(42)).toBe('42')
+  })
+
+  it('should convert null to string', () => {
+    expect(getErrorMessage(null)).toBe('null')
+  })
+
+  it('should convert undefined to string', () => {
+    expect(getErrorMessage(undefined)).toBe('undefined')
+  })
+
+  it('should convert object to string', () => {
+    const obj = { code: 'ERR_TEST' }
+    expect(getErrorMessage(obj)).toBe('[object Object]')
+  })
+})

@@ -21,6 +21,7 @@ import type { AgentEvent, TaskDependency } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
 import { sanitizePlaygroundHtml } from '../playground-sanitize'
 import { TurnTracker } from './turn-tracker'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFile = promisify(execFileCb)
 
@@ -310,7 +311,7 @@ export async function runAgent(
       logger.warn(`[agent-manager] onSpawnFailure hook threw: ${cbErr}`)
     }
     logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
-    const errMsg = err instanceof Error ? err.message : String(err)
+    const errMsg = getErrorMessage(err)
     // Emit agent:error event so the failure is visible in agent console
     emitAgentEvent(task.id, {
       type: 'agent:error',
@@ -455,7 +456,7 @@ export async function runAgent(
     }
   } catch (err) {
     logger.error(`[agent-manager] Error consuming messages for task ${task.id}: ${err}`)
-    const errMsg = err instanceof Error ? err.message : String(err)
+    const errMsg = getErrorMessage(err)
     // Emit error event for console display
     emitAgentEvent(agentRunId, {
       type: 'agent:error',

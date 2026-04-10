@@ -6,6 +6,7 @@ import type Database from 'better-sqlite3'
 import type { TaskGroup, SprintTask } from '../../shared/types'
 import { getDb } from '../db'
 import { sanitizeTasks } from './sprint-queries'
+import { getErrorMessage } from '../../shared/errors'
 
 export interface CreateGroupInput {
   name: string
@@ -58,7 +59,7 @@ export function createGroup(input: CreateGroupInput, db?: Database.Database): Ta
 
     return row ? sanitizeGroup(row) : null
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] createGroup failed: ${msg}`)
     return null
   }
@@ -76,7 +77,7 @@ export function listGroups(db?: Database.Database): TaskGroup[] {
     >[]
     return rows.map(sanitizeGroup)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] listGroups failed: ${msg}`)
     return []
   }
@@ -93,7 +94,7 @@ export function getGroup(id: string, db?: Database.Database): TaskGroup | null {
       | undefined
     return row ? sanitizeGroup(row) : null
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] getGroup failed for id=${id}: ${msg}`)
     return null
   }
@@ -126,7 +127,7 @@ export function updateGroup(
 
     return row ? sanitizeGroup(row) : null
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] updateGroup failed for id=${id}: ${msg}`)
     return null
   }
@@ -141,7 +142,7 @@ export function deleteGroup(id: string, db?: Database.Database): void {
     conn.prepare('UPDATE sprint_tasks SET group_id = NULL WHERE group_id = ?').run(id)
     conn.prepare('DELETE FROM task_groups WHERE id = ?').run(id)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] deleteGroup failed for id=${id}: ${msg}`)
     throw err
   }
@@ -158,7 +159,7 @@ export function addTaskToGroup(taskId: string, groupId: string, db?: Database.Da
       .run(groupId, taskId)
     return result.changes > 0
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] addTaskToGroup failed: ${msg}`)
     return false
   }
@@ -173,7 +174,7 @@ export function removeTaskFromGroup(taskId: string, db?: Database.Database): boo
     const result = conn.prepare('UPDATE sprint_tasks SET group_id = NULL WHERE id = ?').run(taskId)
     return result.changes > 0
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] removeTaskFromGroup failed: ${msg}`)
     return false
   }
@@ -192,7 +193,7 @@ export function getGroupTasks(groupId: string, db?: Database.Database): SprintTa
       .all(groupId) as Record<string, unknown>[]
     return sanitizeTasks(rows)
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] getGroupTasks failed for group=${groupId}: ${msg}`)
     return []
   }
@@ -211,7 +212,7 @@ export function queueAllGroupTasks(groupId: string, db?: Database.Database): num
       .run(groupId)
     return result.changes
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] queueAllGroupTasks failed for group=${groupId}: ${msg}`)
     return 0
   }
@@ -239,7 +240,7 @@ export function reorderGroupTasks(
     transaction()
     return true
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     console.error(`[task-group-queries] reorderGroupTasks failed for group=${groupId}: ${msg}`)
     return false
   }

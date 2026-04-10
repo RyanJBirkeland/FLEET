@@ -7,6 +7,7 @@ import { safeHandle } from '../ipc-utils'
 import type { AgentManager } from '../agent-manager'
 import type { AgentManagerStatus } from '../../shared/types'
 import { getTask } from '../data/sprint-queries'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFile)
 
@@ -82,7 +83,7 @@ export function registerAgentManagerHandlers(am: AgentManager | undefined): void
         await execFileAsync('git', ['commit', '-m', msg], { cwd, encoding: 'utf-8' })
         return { ok: true, committed: true }
       } catch (err) {
-        const raw = err instanceof Error ? err.message : String(err)
+        const raw = getErrorMessage(err)
         // Friendly message when the agent is mid-write and git is holding
         // the index lock. The user can just retry.
         const friendly = /index\.lock/i.test(raw)

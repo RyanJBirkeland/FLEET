@@ -4,6 +4,7 @@ import { githubFetch, fetchAllGitHubPages } from './github-fetch'
 import { getConfiguredRepos } from './paths'
 import { createLogger } from './logger'
 import type { OpenPr, CheckRunSummary, PrListPayload } from '../shared/types'
+import { getErrorMessage } from '../shared/errors'
 
 export const POLL_INTERVAL_MS = 60_000
 const REQUEST_TIMEOUT_MS = 10_000
@@ -32,7 +33,7 @@ async function fetchOpenPrs(owner: string, repo: string, token: string): Promise
     return data.map((pr) => ({ ...pr, repo }))
   } catch (err) {
     logger.warn(
-      `Failed to fetch PRs for ${owner}/${repo}: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to fetch PRs for ${owner}/${repo}: ${getErrorMessage(err)}`
     )
     return []
   }
@@ -114,7 +115,7 @@ function safePoll(): void {
       nextPollAt = 0
     })
     .catch((err) => {
-      logger.error(`PR poller error: ${err instanceof Error ? err.message : String(err)}`)
+      logger.error(`PR poller error: ${getErrorMessage(err)}`)
       errorCount++
       // Exponential backoff with max 5 minutes
       const backoffMs = Math.min(POLL_INTERVAL_MS * Math.pow(2, errorCount - 1), 300_000)

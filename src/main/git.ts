@@ -6,6 +6,7 @@ import {
   getRepoPaths as getRepoPathsFromSettings,
   getRepoPath as getRepoPathFromSettings
 } from './paths'
+import { getErrorMessage } from '../shared/errors'
 
 const execFileAsync = promisify(execFile)
 
@@ -161,7 +162,7 @@ export async function gitPush(cwd: string): Promise<string> {
     })
     return (stdout + stderr).trim() || 'Pushed successfully'
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     throw new Error(`git push failed in ${cwd}: ${msg}`)
   }
 }
@@ -208,7 +209,7 @@ export async function gitFetch(cwd: string): Promise<{ success: boolean; error?:
     })
     return { success: true, stdout: (stdout + stderr).trim() || 'Fetched from origin' }
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     return { success: false, error: `git fetch failed in ${cwd}: ${msg}` }
   }
 }
@@ -222,7 +223,7 @@ export async function gitPull(cwd: string, currentBranch: string): Promise<{ suc
     })
     return { success: true, stdout: (stdout + stderr).trim() || 'Pulled from origin' }
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     // Check if the error is due to non-fast-forward
     if (msg.includes('non-fast-forward') || msg.includes('diverged')) {
       return { success: false, error: 'Local branch has diverged from origin. Resolve manually.' }

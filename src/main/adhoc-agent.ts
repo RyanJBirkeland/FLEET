@@ -29,6 +29,7 @@ import { buildAgentPrompt } from './agent-manager/prompt-composer'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createLogger } from './logger'
+import { getErrorMessage } from '../shared/errors'
 
 const log = createLogger('adhoc-agent')
 
@@ -108,7 +109,7 @@ export async function spawnAdhocAgent(args: {
   } catch (err) {
     log.error(`[adhoc] ${agentId} failed to create worktree: ${err}`)
     throw new Error(
-      `Failed to create adhoc worktree: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to create adhoc worktree: ${getErrorMessage(err)}`
     )
   }
 
@@ -241,11 +242,11 @@ export async function spawnAdhocAgent(args: {
       log.info(`[adhoc] ${meta.id} turn complete, session alive`)
     } catch (err) {
       log.error(
-        `[adhoc] ${meta.id} turn error: ${err instanceof Error ? err.message : String(err)}`
+        `[adhoc] ${meta.id} turn error: ${getErrorMessage(err)}`
       )
       emitAgentEvent(meta.id, {
         type: 'agent:error',
-        message: err instanceof Error ? err.message : String(err),
+        message: getErrorMessage(err),
         timestamp: Date.now()
       })
     }

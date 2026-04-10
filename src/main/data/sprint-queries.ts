@@ -11,6 +11,7 @@ import { getDb } from '../db'
 import { recordTaskChanges, recordTaskChangesBulk } from './task-changes'
 import type { Logger } from '../agent-manager/types'
 import { withRetry } from './sqlite-retry'
+import { getErrorMessage } from '../../shared/errors'
 
 // Module-level logger — defaults to console, injectable for testing/structured logging
 let logger: Logger = {
@@ -176,7 +177,7 @@ export function getTask(id: string, db?: Database.Database): SprintTask | null {
     return row ? sanitizeTask(row) : null
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getTask failed for id=${id}: ${msg}`)
     return null
   }
@@ -207,7 +208,7 @@ export function listTasks(status?: string): SprintTask[] {
     return sanitizeTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] listTasks failed: ${msg}`)
     return []
   }
@@ -238,7 +239,7 @@ export function listTasksRecent(): SprintTask[] {
     return sanitizeTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] listTasksRecent failed: ${msg}`)
     return []
   }
@@ -276,7 +277,7 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
     return result ? sanitizeTask(result) : null
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] createTask failed: ${msg}`)
     return null
   }
@@ -322,7 +323,7 @@ export function createReviewTaskFromAdhoc(input: {
     )
     return task
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] createReviewTaskFromAdhoc failed: ${msg}`)
     return null
   }
@@ -430,7 +431,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
     )
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] updateTask failed for id=${id}: ${msg}`)
     return null
   }
@@ -453,7 +454,7 @@ export function deleteTask(id: string, deletedBy: string = 'unknown'): void {
     })()
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] deleteTask failed for id=${id}: ${msg}`)
   }
 }
@@ -545,7 +546,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
     )
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] claimTask failed for id=${id}: ${msg}`)
     return null
   }
@@ -589,7 +590,7 @@ export function releaseTask(id: string, claimedBy: string): SprintTask | null {
     })()
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] releaseTask failed for id=${id}: ${msg}`)
     return null
   }
@@ -620,7 +621,7 @@ export function getQueueStats(): QueueStats {
     }
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getQueueStats failed: ${msg}`)
   }
 
@@ -639,7 +640,7 @@ export function getDoneTodayCount(): number {
     return result.count
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getDoneTodayCount failed: ${msg}`)
     return 0
   }
@@ -728,7 +729,7 @@ export function markTaskDoneByPrNumber(prNumber: number): string[] {
     })()
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] markTaskDoneByPrNumber failed for PR #${prNumber}: ${msg}`)
     return []
   }
@@ -816,7 +817,7 @@ export function markTaskCancelledByPrNumber(prNumber: number): string[] {
     })()
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] markTaskCancelledByPrNumber failed for PR #${prNumber}: ${msg}`)
     return []
   }
@@ -839,7 +840,7 @@ export function listTasksWithOpenPrs(): SprintTask[] {
     return sanitizeTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] listTasksWithOpenPrs failed: ${msg}`)
     return []
   }
@@ -853,7 +854,7 @@ export function updateTaskMergeableState(prNumber: number, mergeableState: strin
       .run(mergeableState, prNumber)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] updateTaskMergeableState failed for PR #${prNumber}: ${msg}`)
   }
 }
@@ -868,7 +869,7 @@ export function getActiveTaskCount(): number {
     // DL-17: Standardize error message format
     // Fail-closed: return MAX to prevent new claims when DB is broken.
     // This is intentional — better to block claims than to over-saturate.
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getActiveTaskCount failed: ${msg}`)
     return Infinity
   }
@@ -894,7 +895,7 @@ export function getQueuedTasks(limit: number): SprintTask[] {
     return sanitizeTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getQueuedTasks failed: ${msg}`)
     return []
   }
@@ -917,7 +918,7 @@ export function getOrphanedTasks(claimedBy: string): SprintTask[] {
     return sanitizeTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getOrphanedTasks failed: ${msg}`)
     return []
   }
@@ -930,7 +931,7 @@ export function clearSprintTaskFk(agentRunId: string): void {
       .run(agentRunId)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] clearSprintTaskFk failed for agent_run_id=${agentRunId}: ${msg}`)
   }
 }
@@ -953,7 +954,7 @@ export function getHealthCheckTasks(): SprintTask[] {
     return sanitizeTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getHealthCheckTasks failed: ${msg}`)
     return []
   }
@@ -1007,7 +1008,7 @@ export function getFailureReasonBreakdown(): FailureReasonBreakdown[] {
 
     return rows
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getFailureReasonBreakdown failed: ${msg}`)
     return []
   }
@@ -1051,7 +1052,7 @@ export function getTaskRuntimeStats(): TaskRuntimeStats {
       tasksWithDuration: result.tasksWithDuration
     }
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getTaskRuntimeStats failed: ${msg}`)
     return {
       avgDurationMs: null,
@@ -1091,7 +1092,7 @@ export function getSuccessRateBySpecType(): SpecTypeSuccessRate[] {
       success_rate: row.total > 0 ? row.done / row.total : 0
     }))
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getSuccessRateBySpecType failed: ${msg}`)
     return []
   }
@@ -1152,7 +1153,7 @@ export function getDailySuccessRate(days: number = 14): DailySuccessRate[] {
       }
     })
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     logger.warn(`[sprint-queries] getDailySuccessRate failed: ${msg}`)
     return []
   }

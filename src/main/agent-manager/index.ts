@@ -296,6 +296,7 @@ export interface AgentManager {
 // ---------------------------------------------------------------------------
 
 import type { DependencyIndex } from './dependency-index'
+import { getErrorMessage } from '../../shared/errors'
 
 export class AgentManagerImpl implements AgentManager {
   // Exposed state (testable via _ prefix)
@@ -645,7 +646,7 @@ export class AgentManagerImpl implements AgentManager {
           logger: this.logger
         })
       } catch (err) {
-        const errMsg = err instanceof Error ? err.message : String(err)
+        const errMsg = getErrorMessage(err)
         this.logger.error(`[agent-manager] setupWorktree failed for task ${task.id}: ${errMsg}`)
         // For git errors, keep the tail of the message (contains key diagnostic info)
         const fullNote = `Worktree setup failed: ${errMsg}`
