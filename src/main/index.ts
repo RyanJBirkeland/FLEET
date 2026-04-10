@@ -1,8 +1,15 @@
-import { app, shell, BrowserWindow, session } from 'electron'
+import { app, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { startDbWatcher, buildConnectSrc } from './bootstrap'
+import {
+  startDbWatcher,
+  initializeDatabase,
+  startBackgroundServices,
+  startPrPollers,
+  setupCleanupTasks,
+  setupCSP
+} from './bootstrap'
 import icon from '../../resources/icon.png?asset'
 import { registerAgentHandlers } from './handlers/agent-handlers'
 import { registerGitHandlers } from './handlers/git-handlers'
@@ -27,20 +34,11 @@ import { registerWebhookHandlers } from './handlers/webhook-handlers'
 import { registerGroupHandlers } from './handlers/group-handlers'
 import { registerPlannerImportHandlers } from './handlers/planner-import'
 import { registerRepoDiscoveryHandlers } from './handlers/repo-discovery'
-import { getDb, closeDb, backupDatabase } from './db'
-import { importSprintTasksFromSupabase } from './data/supabase-import'
-import { startPrPoller, stopPrPoller } from './pr-poller'
-import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
-import { pruneOldEvents } from './data/event-queries'
-import { pruneOldChanges } from './data/task-changes'
-import { getEventRetentionDays } from './config'
+import { closeDb } from './db'
 import { createAgentManager } from './agent-manager'
 import { createSprintTaskRepository } from './data/sprint-task-repository'
 import { getOAuthToken, ensureExtraPathsOnProcessEnv } from './env-utils'
 import { createLogger } from './logger'
-import { getErrorMessage } from '../shared/errors'
-
-const logger = createLogger('main')
 
 // Augment process.env.PATH so child_process.spawn() can find user-installed
 // CLIs (claude, gh, git, node) when launched from Finder/Spotlight. Must run
@@ -50,13 +48,7 @@ import { getSetting, getSettingJson } from './settings'
 import { createTaskTerminalService } from './services/task-terminal-service'
 import { createStatusServer } from './services/status-server'
 import { createElectronDialogService } from './dialog-service'
-import {
-  getTask,
-  updateTask,
-  getTasksWithDependencies,
-  pruneOldDiffSnapshots,
-  DIFF_SNAPSHOT_RETENTION_DAYS
-} from './data/sprint-queries'
+import { getTask, updateTask, getTasksWithDependencies } from './data/sprint-queries'
 import {
   registerTearoffHandlers,
   closeTearoffWindows,
@@ -64,8 +56,6 @@ import {
   SHARED_WEB_PREFERENCES,
   restoreTearoffWindows
 } from './tearoff-manager'
-import { loadPlugins } from './services/plugin-loader'
-import { startLoadSampler, stopLoadSampler } from './services/load-sampler'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
@@ -117,34 +107,12 @@ app.on('before-quit', () => {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.bde')
 
-  getDb()
-
-  // Ensure Claude Code has sensible default permissions for BDE agents
-  import('./claude-settings-bootstrap')
-    .then((m) => m.ensureClaudeSettings())
-    .catch((err) => {
-      logger.warn(`[main] Failed to ensure Claude settings: ${getErrorMessage(err)}`)
-    })
-
-  // Run backup on startup and every 24 hours
-  backupDatabase()
-  const backupInterval = setInterval(backupDatabase, 24 * 60 * 60 * 1000)
-  app.on('will-quit', () => clearInterval(backupInterval))
-
-  // One-time async import from Supabase (no-op if local table already has rows or credentials missing)
-  importSprintTasksFromSupabase(getDb()).catch((err) =>
-    console.warn('[startup] Supabase import skipped:', err)
-  )
+  initializeDatabase()
 
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
 
-  // Load plugins from ~/.bde/plugins/
-  loadPlugins()
-
-  // Start system load sampler (ring buffer, 120 samples × 5s = 10 min of history)
-  startLoadSampler()
-  app.on('will-quit', stopLoadSampler)
+  startBackgroundServices()
 
   // --- Task terminal service (unified dependency resolution) ---
   const terminalService = createTaskTerminalService({
@@ -160,85 +128,8 @@ app.whenReady().then(() => {
     dialog: dialogService
   }
 
-  startPrPoller()
-  app.on('will-quit', stopPrPoller)
-
-  startSprintPrPoller(terminalDeps)
-  app.on('will-quit', stopSprintPrPoller)
-
-  pruneOldEvents(getDb(), getEventRetentionDays())
-
-  // Prune agent_events periodically (every 24 hours)
-  const pruneEventsInterval = setInterval(
-    () => {
-      try {
-        pruneOldEvents(getDb(), getEventRetentionDays())
-      } catch {
-        /* non-fatal */
-      }
-    },
-    24 * 60 * 60 * 1000
-  )
-  app.on('will-quit', () => clearInterval(pruneEventsInterval))
-
-  // Prune old audit trail records (non-fatal)
-  try {
-    const pruned = pruneOldChanges(30)
-    if (pruned > 0) createLogger('startup').info(`Pruned ${pruned} old task change records`)
-  } catch (err) {
-    createLogger('startup').warn(`Failed to prune task changes: ${err}`)
-  }
-
-  // Null out review_diff_snapshot blobs on long-completed tasks (non-fatal).
-  // Snapshots can be ~500KB each — without this, the DB grows unbounded.
-  try {
-    const pruned = pruneOldDiffSnapshots(DIFF_SNAPSHOT_RETENTION_DAYS)
-    if (pruned > 0)
-      createLogger('startup').info(
-        `Cleared review_diff_snapshot on ${pruned} terminal tasks older than ${DIFF_SNAPSHOT_RETENTION_DAYS} days`
-      )
-  } catch (err) {
-    createLogger('startup').warn(`Failed to prune diff snapshots: ${err}`)
-  }
-
-  // Clean up test task artifacts (agents running tests create "Test task" records)
-  try {
-    const db = getDb()
-    const result = db.prepare("DELETE FROM sprint_tasks WHERE title LIKE 'Test task%'").run()
-    if (result.changes > 0) {
-      createLogger('startup').info(`Cleaned ${result.changes} test task artifacts`)
-    }
-  } catch {
-    /* non-fatal */
-  }
-
-  // Prune task_changes periodically (every 24 hours)
-  const pruneTakeChangesInterval = setInterval(
-    () => {
-      try {
-        pruneOldChanges(30)
-      } catch {
-        /* non-fatal */
-      }
-    },
-    24 * 60 * 60 * 1000
-  )
-  app.on('will-quit', () => clearInterval(pruneTakeChangesInterval))
-
-  // Prune review_diff_snapshot periodically (every 24 hours)
-  const pruneDiffSnapshotsInterval = setInterval(
-    () => {
-      try {
-        const cleared = pruneOldDiffSnapshots(DIFF_SNAPSHOT_RETENTION_DAYS)
-        if (cleared > 0)
-          createLogger('startup').info(`Cleared review_diff_snapshot on ${cleared} terminal tasks`)
-      } catch {
-        /* non-fatal */
-      }
-    },
-    24 * 60 * 60 * 1000
-  )
-  app.on('will-quit', () => clearInterval(pruneDiffSnapshotsInterval))
+  startPrPollers(terminalDeps)
+  setupCleanupTasks()
 
   // --- Agent Manager initialization ---
   const amConfig = {
@@ -307,32 +198,7 @@ app.whenReady().then(() => {
   registerPlannerImportHandlers({ dialog: dialogService })
   registerRepoDiscoveryHandlers()
 
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
-    const connectSrc = buildConnectSrc()
-
-    const csp = is.dev
-      ? "default-src 'self'; " +
-        "script-src 'self' 'unsafe-inline' 'unsafe-eval' http://localhost:*; " +
-        "worker-src 'self' blob:; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data:; " +
-        "font-src 'self' data:; " +
-        `connect-src 'self' ${connectSrc} http://localhost:* ws://localhost:*`
-      : "default-src 'self'; " +
-        "script-src 'self'; " +
-        "worker-src 'self' blob:; " +
-        "style-src 'self' 'unsafe-inline'; " +
-        "img-src 'self' data:; " +
-        "font-src 'self' data:; " +
-        `connect-src 'self' ${connectSrc} https://api.github.com`
-
-    callback({
-      responseHeaders: {
-        ...details.responseHeaders,
-        'Content-Security-Policy': [csp]
-      }
-    })
-  })
+  setupCSP()
 
   createWindow()
   restoreTearoffWindows()

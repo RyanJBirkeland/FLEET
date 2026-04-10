@@ -68,6 +68,7 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn().mockReturnValue(true),
   mkdirSync: vi.fn(),
   readFileSync: vi.fn().mockReturnValue('mock-oauth-token-longer-than-20-chars'),
+  readdirSync: vi.fn().mockReturnValue([]),
   statSync: vi.fn().mockReturnValue({ size: 0, mtimeMs: Date.now() }),
   renameSync: vi.fn(),
   rmSync: vi.fn()
