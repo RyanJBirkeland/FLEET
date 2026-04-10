@@ -24,8 +24,8 @@
 @import './terminal.css';
 /* ide.css imported by IDEView.tsx (lazy chunk) */
 @import './code-review.css';
-@import './diff.css';
-@import './source-control.css';
+/* diff.css styles co-located with components */
+/* source-control.css styles co-located with components */
 /* onboarding.css imported by OnboardingWizard.tsx (lazy chunk) */
 @import './planner.css';
 /* agent-launchpad.css imported by AgentLaunchpad.tsx (lazy chunk) */

@@ -1,0 +1,80 @@
+.git-file-row {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  padding: var(--bde-space-1) var(--bde-space-3);
+  cursor: pointer;
+  background-color: transparent;
+  border-radius: var(--bde-radius-sm);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+}
+
+.git-file-row--selected {
+  background-color: var(--bde-accent-dim);
+}
+
+.git-file-row:not(.git-file-row--selected):hover {
+  background-color: var(--bde-surface-high);
+}
+
+.git-file-row__status {
+  font-weight: 600;
+  font-family: var(--bde-font-code);
+  font-size: var(--bde-size-xs);
+  width: 12px;
+  flex-shrink: 0;
+  text-align: center;
+}
+
+.git-file-row__status--modified {
+  color: var(--bde-warning);
+}
+
+.git-file-row__status--added {
+  color: var(--bde-success);
+}
+
+.git-file-row__status--deleted {
+  color: var(--bde-danger);
+}
+
+.git-file-row__status--untracked {
+  color: var(--bde-text-muted);
+}
+
+.git-file-row__path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-file-row__path-dir {
+  color: var(--bde-text-muted);
+}
+
+.git-file-row__path-name {
+  color: var(--bde-text);
+}
+
+.git-file-row__stage-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: var(--bde-radius-sm);
+  border: none;
+  background: none;
+  cursor: pointer;
+  color: var(--bde-text-muted);
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.git-file-row__stage-btn:hover {
+  color: var(--bde-text);
+  background-color: var(--bde-surface-high);
+}
+

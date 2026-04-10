@@ -1,0 +1,107 @@
+.git-diff-drawer {
+  border-top: 1px solid var(--bde-border);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+  max-height: 40%;
+  min-height: 120px;
+  background-color: var(--bde-surface);
+  transition: max-height 200ms ease;
+}
+
+.git-diff-drawer--expanded {
+  max-height: 100%;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.git-diff-drawer__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--bde-space-1) var(--bde-space-3);
+  border-bottom: 1px solid var(--bde-border);
+  flex-shrink: 0;
+}
+
+.git-diff-drawer__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.git-diff-drawer__path {
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-code);
+  color: var(--bde-text-muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-diff-drawer__close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--bde-text-muted);
+  border-radius: var(--bde-radius-sm);
+  flex-shrink: 0;
+}
+
+.git-diff-drawer__close-btn:hover:not(:disabled) {
+  color: var(--bde-text);
+}
+
+.git-diff-drawer__close-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+.git-diff-drawer__content {
+  flex: 1;
+  overflow-y: auto;
+  font-family: var(--bde-font-code);
+  font-size: var(--bde-size-sm);
+}
+
+.git-diff-drawer__empty {
+  padding: var(--bde-space-3);
+  color: var(--bde-text-muted);
+  text-align: center;
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+}
+
+.git-diff-drawer__line {
+  display: block;
+  padding: 1px var(--bde-space-3);
+  white-space: pre;
+  line-height: 1.6;
+}
+
+.git-diff-drawer__line--add {
+  color: var(--bde-success);
+  background-color: var(--bde-diff-add-bg);
+}
+
+.git-diff-drawer__line--delete {
+  color: var(--bde-danger);
+  background-color: var(--bde-diff-del-bg);
+}
+
+.git-diff-drawer__line--meta {
+  color: var(--bde-info);
+  background-color: var(--bde-info-dim);
+}
+
+.git-diff-drawer__line--default {
+  color: var(--bde-text);
+  background-color: transparent;
+}
+

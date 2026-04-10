@@ -1,4 +1,5 @@
 import React from 'react'
+import './DiffFileList.css'
 import type { DiffFile } from '../../lib/diff-parser'
 import { EmptyState } from '../ui/EmptyState'
 

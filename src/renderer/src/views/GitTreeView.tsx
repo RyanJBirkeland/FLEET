@@ -1,4 +1,5 @@
 import React, { useEffect, useCallback } from 'react'
+import './GitTreeView.css'
 import { motion } from 'framer-motion'
 import {
   GitBranch,

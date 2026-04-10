@@ -1,4 +1,5 @@
 import React from 'react'
+import './GitFileRow.css'
 import { Plus, Minus } from 'lucide-react'
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import './DiffCommentWidget.css'
 import { ChevronDown, ChevronRight, MessageSquare } from 'lucide-react'
 import type { PrComment } from '../../../../shared/types'
 import { renderMarkdown } from '../../lib/render-markdown'

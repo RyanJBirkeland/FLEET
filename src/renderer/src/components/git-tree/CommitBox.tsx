@@ -1,4 +1,5 @@
 import React from 'react'
+import './CommitBox.css'
 import { GitCommitHorizontal, Upload, Loader2 } from 'lucide-react'
 
 // ---------------------------------------------------------------------------

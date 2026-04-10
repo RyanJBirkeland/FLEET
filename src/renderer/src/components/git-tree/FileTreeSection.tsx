@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import './FileTreeSection.css'
 import { ChevronDown, ChevronRight } from 'lucide-react'
 import { GitFileRow } from './GitFileRow'
 import type { GitFileEntry } from '../../stores/gitTree'

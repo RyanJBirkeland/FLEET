@@ -1,0 +1,92 @@
+.git-branch-selector {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.git-branch-selector__trigger {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-1);
+  padding: 2px var(--bde-space-2);
+  background-color: var(--bde-surface-high);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+}
+
+.git-branch-selector__trigger--enabled {
+  color: var(--bde-text);
+  cursor: pointer;
+}
+
+.git-branch-selector__trigger--disabled {
+  color: var(--bde-text-dim);
+  cursor: not-allowed;
+}
+
+.git-branch-selector__current {
+  max-width: 240px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.git-branch-selector__backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 999;
+}
+
+.git-branch-selector__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 1000;
+  min-width: 180px;
+  max-height: 240px;
+  overflow-y: auto;
+  background-color: var(--bde-surface-high);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-md);
+  box-shadow: var(--bde-shadow-md);
+  margin-top: var(--bde-space-1);
+}
+
+.git-branch-selector__empty {
+  padding: var(--bde-space-3);
+  color: var(--bde-text-muted);
+  font-size: var(--bde-size-sm);
+  text-align: center;
+}
+
+.git-branch-selector__option {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  width: 100%;
+  text-align: left;
+  padding: var(--bde-space-1) var(--bde-space-3);
+  background: none;
+  border: none;
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+  cursor: pointer;
+}
+
+.git-branch-selector__option--current {
+  background: var(--bde-accent-dim);
+  color: var(--bde-accent);
+}
+
+.git-branch-selector__option:not(.git-branch-selector__option--current):hover {
+  background-color: var(--bde-surface-high);
+}
+
+.git-branch-selector__option-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+

@@ -1,4 +1,5 @@
 import React from 'react'
+import './PlainDiffContent.css'
 import type { DiffFile } from '../../lib/diff-parser'
 import type { PrComment } from '../../../../shared/types'
 import type { PendingComment } from '../../stores/pendingReview'

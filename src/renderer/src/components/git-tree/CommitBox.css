@@ -1,0 +1,102 @@
+.git-commit-box {
+  padding: var(--bde-space-3);
+  border-bottom: 1px solid var(--bde-border);
+  display: flex;
+  flex-direction: column;
+  gap: var(--bde-space-2);
+}
+
+.git-commit-box__textarea {
+  width: 100%;
+  resize: vertical;
+  background-color: var(--bde-surface-high);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm);
+  color: var(--bde-text);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+  padding: var(--bde-space-2);
+  box-sizing: border-box;
+  outline: none;
+  line-height: 1.5;
+}
+
+.git-commit-box__textarea:focus-visible {
+  border-color: var(--bde-accent);
+}
+
+.git-commit-box__textarea:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
+}
+
+.git-commit-box__char-count {
+  font-size: 10px;
+  color: var(--bde-text-dim);
+  text-align: right;
+  margin-top: -4px;
+}
+
+.git-commit-box__char-count--over {
+  color: var(--bde-warning, #ffa500);
+}
+
+.git-commit-box__actions {
+  display: flex;
+  gap: var(--bde-space-2);
+}
+
+.git-commit-box__commit-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bde-space-1);
+  padding: var(--bde-space-1) var(--bde-space-2);
+  border: none;
+  border-radius: var(--bde-radius-sm);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+  font-weight: 600;
+}
+
+.git-commit-box__commit-btn--enabled {
+  background-color: var(--bde-accent);
+  color: var(--bde-btn-primary-text);
+  cursor: pointer;
+}
+
+.git-commit-box__commit-btn--disabled {
+  background-color: var(--bde-surface-high);
+  color: var(--bde-text-dim);
+  cursor: not-allowed;
+}
+
+.git-commit-box__count {
+  font-size: var(--bde-size-xs);
+  opacity: 0.8;
+}
+
+.git-commit-box__push-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--bde-space-1);
+  padding: var(--bde-space-1) var(--bde-space-3);
+  background-color: var(--bde-surface-high);
+  color: var(--bde-text);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+  cursor: pointer;
+}
+
+.git-commit-box__push-btn:hover:not(:disabled) {
+  border-color: var(--bde-border-hover);
+}
+
+.git-commit-box__push-btn:active:not(:disabled) {
+  transform: scale(0.97);
+}
+

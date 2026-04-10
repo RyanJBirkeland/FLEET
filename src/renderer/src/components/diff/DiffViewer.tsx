@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import './DiffViewer.css'
 import type { DiffFile, DiffLine } from '../../lib/diff-parser'
 import { countDiffLines } from '../../lib/diff-parser'
 import { usePanelLayoutStore } from '../../stores/panelLayout'

@@ -1,4 +1,5 @@
 import React, { useState } from 'react'
+import './InlineDiffDrawer.css'
 import { X, Maximize2, Minimize2 } from 'lucide-react'
 import type { GitFileEntry } from '../../stores/gitTree'
 

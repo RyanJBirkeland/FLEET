@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import './BranchSelector.css'
 import { GitBranch, ChevronDown } from 'lucide-react'
 
 // ---------------------------------------------------------------------------

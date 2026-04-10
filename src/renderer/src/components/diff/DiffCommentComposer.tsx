@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import './DiffCommentComposer.css'
 import { Button } from '../ui/Button'
 
 interface DiffCommentComposerProps {

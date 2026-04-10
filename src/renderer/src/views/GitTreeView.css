@@ -1,0 +1,140 @@
+/* ══════════════════════════════════════════════════════════
+   Git Tree View
+   ══════════════════════════════════════════════════════════ */
+
+.git-tree-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: var(--bde-surface);
+  overflow: hidden;
+}
+
+.git-tree-view__header {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  padding: var(--bde-space-2) var(--bde-space-3);
+  border-bottom: 1px solid var(--bde-border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.git-tree-view__title {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-1);
+  font-size: var(--bde-size-xs);
+  font-family: var(--bde-font-ui);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.git-tree-view__spacer {
+  flex: 1;
+}
+
+.git-tree-view__repo-select {
+  background-color: var(--bde-surface-high);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm);
+  color: var(--bde-text);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-ui);
+  padding: 2px var(--bde-space-2);
+  cursor: pointer;
+}
+
+.git-tree-view__refresh-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  background: none;
+  border: none;
+  color: var(--bde-text-muted);
+  cursor: pointer;
+  border-radius: var(--bde-radius-sm);
+  transition: all 0.15s ease;
+}
+
+.git-tree-view__refresh-btn--loading {
+  pointer-events: none;
+}
+
+.git-tree-view__refresh-btn:hover:not(:disabled) {
+  color: var(--bde-text);
+  background: var(--bde-accent-hover);
+}
+
+.git-tree-view__refresh-btn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+
+.git-tree-view__body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--bde-space-2) var(--bde-space-3);
+  display: flex;
+  flex-direction: column;
+  gap: var(--bde-space-3);
+}
+
+.git-tree-view__empty {
+  padding: var(--bde-space-6);
+}
+
+.git-tree-view__error-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  padding: var(--bde-space-2) var(--bde-space-3);
+  background: var(--bde-error-surface);
+  border-top: 1px solid var(--bde-error);
+  border-bottom: 1px solid var(--bde-error);
+}
+
+.git-tree-view__error-text {
+  flex: 1;
+  font-size: var(--bde-size-sm);
+  color: var(--bde-error);
+  font-family: var(--bde-font-code);
+}
+
+.git-tree-view__error-retry {
+  padding: 4px 12px;
+  background: var(--bde-error);
+  color: white;
+  border: none;
+  border-radius: var(--bde-radius-sm);
+  font-size: var(--bde-size-sm);
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.git-tree-view__error-retry:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--bde-error) 85%, black);
+}
+
+.git-tree-view__error-retry:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+.git-tree-view__error-dismiss {
+  padding: 4px;
+  background: none;
+  border: none;
+  color: var(--bde-text-muted);
+  cursor: pointer;
+  border-radius: var(--bde-radius-sm);
+  transition: all 0.15s ease;
+}
+
+.git-tree-view__error-dismiss:hover:not(:disabled) {
+  color: var(--bde-text);
+  background: var(--bde-accent-hover);
+}

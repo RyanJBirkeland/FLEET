@@ -1,4 +1,5 @@
 import { AlertTriangle } from 'lucide-react'
+import './DiffSizeWarning.css'
 import { Button } from '../ui/Button'
 
 interface DiffSizeWarningProps {
