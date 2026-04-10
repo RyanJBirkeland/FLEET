@@ -2,9 +2,9 @@
  * Plan import handler — parses markdown plan files into epic + tasks.
  */
 import type Database from 'better-sqlite3'
-import { dialog } from 'electron'
 import { readFile } from 'fs/promises'
 import type { TaskGroup, SprintTask } from '../../shared/types'
+import type { DialogService } from '../dialog-service'
 import { createGroup } from '../data/task-group-queries'
 import { createTask } from '../services/sprint-service'
 import { safeHandle } from '../ipc-utils'
@@ -157,13 +157,17 @@ export function importPlanFile(markdown: string, options: ImportOptions): Import
   return { epic, tasks }
 }
 
+export interface PlannerImportDeps {
+  dialog: DialogService
+}
+
 /**
  * Register planner import IPC handlers.
  */
-export function registerPlannerImportHandlers(): void {
+export function registerPlannerImportHandlers(deps: PlannerImportDeps): void {
   safeHandle('planner:import', async (_e, repo: string) => {
     // Show file picker
-    const result = await dialog.showOpenDialog({
+    const result = await deps.dialog.showOpenDialog({
       title: 'Import Plan Document',
       properties: ['openFile'],
       filters: [

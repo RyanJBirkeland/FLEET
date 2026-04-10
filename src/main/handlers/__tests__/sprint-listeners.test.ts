@@ -1,13 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-const mockSend = vi.fn()
-vi.mock('electron', () => ({
-  BrowserWindow: {
-    getAllWindows: vi.fn(() => [
-      { webContents: { send: (...args: unknown[]) => mockSend(...args) } },
-      { webContents: { send: (...args: unknown[]) => mockSend(...args) } }
-    ])
-  }
+const mockBroadcast = vi.fn()
+vi.mock('../../broadcast', () => ({
+  broadcast: (...args: unknown[]) => mockBroadcast(...args)
 }))
 
 const mockLogError = vi.fn()
@@ -20,7 +15,6 @@ vi.mock('../../logger', () => ({
   }))
 }))
 
-import { BrowserWindow } from 'electron'
 import { onSprintMutation, notifySprintMutation } from '../sprint-listeners'
 import type { SprintTask } from '../../../shared/types'
 import { nowIso } from '../../../shared/time'
@@ -117,21 +111,18 @@ describe('sprint-listeners', () => {
   })
 
   describe('IPC broadcast', () => {
-    it('sends sprint:externalChange to all renderer windows', () => {
+    it('sends sprint:externalChange via broadcast', () => {
       const task = makeTask()
       notifySprintMutation('created', task)
 
-      const windows = BrowserWindow.getAllWindows()
-      expect(windows).toHaveLength(2)
-      expect(mockSend).toHaveBeenCalledTimes(2)
-      expect(mockSend).toHaveBeenCalledWith('sprint:externalChange')
+      expect(mockBroadcast).toHaveBeenCalledTimes(1)
+      expect(mockBroadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
 
-    it('handles zero open windows gracefully', () => {
-      vi.mocked(BrowserWindow.getAllWindows).mockReturnValueOnce([])
-
+    it('calls broadcast on every mutation', () => {
       expect(() => notifySprintMutation('updated', makeTask())).not.toThrow()
-      expect(mockSend).not.toHaveBeenCalled()
+      expect(mockBroadcast).toHaveBeenCalledTimes(1)
+      expect(mockBroadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
   })
 })

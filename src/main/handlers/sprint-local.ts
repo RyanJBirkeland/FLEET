@@ -4,7 +4,7 @@ import { readFile, writeFile } from 'fs/promises'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { createLogger } from '../logger'
-import { dialog } from 'electron'
+import type { DialogService } from '../dialog-service'
 
 const execFileAsync = promisify(execFile)
 import type { TaskTemplate, ClaimedTask } from '../../shared/types'
@@ -76,6 +76,7 @@ const TERMINAL_STATUSES = new Set(['done', 'failed', 'error', 'cancelled'])
 
 export interface SprintLocalDeps {
   onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  dialog: DialogService
 }
 
 // --- Handler registration ---
@@ -334,7 +335,6 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
   })
 
   safeHandle('sprint:exportTaskHistory', async (_e, taskId: string) => {
-    const { dialog } = await import('electron')
     const { getTaskChanges } = await import('../data/task-changes')
     const { writeFile } = await import('fs/promises')
 
@@ -346,7 +346,7 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
     const changes = getTaskChanges(taskId)
 
     // Show save dialog
-    const result = await dialog.showSaveDialog({
+    const result = await deps.dialog.showSaveDialog({
       title: 'Export Task History',
       defaultPath: `task-history-${task.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`,
       filters: [{ name: 'JSON', extensions: ['json'] }]
@@ -570,7 +570,7 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
       const tasks = listTasks()
 
       // Show save dialog
-      const result = await dialog.showSaveDialog({
+      const result = await deps.dialog.showSaveDialog({
         title: 'Export Sprint Tasks',
         defaultPath: `sprint-tasks-${nowIso().split('T')[0]}.${format}`,
         filters: [

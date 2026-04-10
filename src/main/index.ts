@@ -45,6 +45,7 @@ ensureExtraPathsOnProcessEnv()
 import { getSetting, getSettingJson } from './settings'
 import { createTaskTerminalService } from './services/task-terminal-service'
 import { createStatusServer } from './services/status-server'
+import { createElectronDialogService } from './dialog-service'
 import {
   getTask,
   updateTask,
@@ -146,7 +147,11 @@ app.whenReady().then(() => {
     getSetting,
     logger: createLogger('task-terminal')
   })
-  const terminalDeps = { onStatusTerminal: terminalService.onStatusTerminal }
+  const dialogService = createElectronDialogService()
+  const terminalDeps = {
+    onStatusTerminal: terminalService.onStatusTerminal,
+    dialog: dialogService
+  }
 
   startPrPoller()
   app.on('will-quit', stopPrPoller)
@@ -292,7 +297,7 @@ app.whenReady().then(() => {
   registerReviewHandlers(terminalDeps)
   registerWebhookHandlers()
   registerGroupHandlers()
-  registerPlannerImportHandlers()
+  registerPlannerImportHandlers({ dialog: dialogService })
   registerRepoDiscoveryHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

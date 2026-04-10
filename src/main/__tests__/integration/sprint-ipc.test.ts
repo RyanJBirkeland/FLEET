@@ -194,7 +194,11 @@ describe('Sprint IPC handlers — integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     registeredHandlers.clear()
-    registerSprintLocalHandlers()
+    const mockDeps = {
+      onStatusTerminal: vi.fn(),
+      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
+    }
+    registerSprintLocalHandlers(mockDeps)
   })
 
   // 1. Create task → returns task with ID and all fields

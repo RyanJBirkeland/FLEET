@@ -4,8 +4,8 @@
  * and event-store cleanup from handler registration.
  */
 import type { SprintTask } from '../../shared/types'
-import { BrowserWindow } from 'electron'
 import { createLogger } from '../logger'
+import { broadcast } from '../broadcast'
 import {
   createWebhookService,
   getWebhookEventName,
@@ -63,9 +63,7 @@ export function notifySprintMutation(type: SprintMutationEvent['type'], task: Sp
   }
 
   // Push to renderer windows so Dashboard/SprintCenter refresh immediately
-  for (const win of BrowserWindow.getAllWindows()) {
-    win.webContents.send('sprint:externalChange')
-  }
+  broadcast('sprint:externalChange')
 
   // Fire webhooks for external integrations
   try {

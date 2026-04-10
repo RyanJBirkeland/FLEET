@@ -158,7 +158,11 @@ describe('task template resolution in claimTask', () => {
   async function registerAndClaim(taskId: string): Promise<ClaimedTask | null> {
     // Re-register handlers each test (fresh handlers map)
     const mod = await import('../handlers/sprint-local')
-    mod.registerSprintLocalHandlers()
+    const mockDeps = {
+      onStatusTerminal: vi.fn(),
+      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
+    }
+    mod.registerSprintLocalHandlers(mockDeps)
     const handler = handlers.get('sprint:claimTask')
     if (!handler) throw new Error('sprint:claimTask handler not registered')
     return handler(fakeEvent, taskId) as ClaimedTask | null

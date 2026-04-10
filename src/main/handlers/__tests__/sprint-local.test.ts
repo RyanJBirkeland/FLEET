@@ -133,7 +133,13 @@ function captureHandler(channel: string): (...args: any[]) => any {
     if (ch === channel) captured = handler as (...args: any[]) => any
   })
 
-  const mockDeps = { onStatusTerminal: vi.fn() }
+  const mockDeps = {
+    onStatusTerminal: vi.fn(),
+    dialog: {
+      showSaveDialog: vi.fn(),
+      showOpenDialog: vi.fn()
+    }
+  }
   registerSprintLocalHandlers(mockDeps)
 
   if (!captured) throw new Error(`No handler captured for channel "${channel}"`)
@@ -146,12 +152,20 @@ describe('registerSprintLocalHandlers', () => {
   })
 
   it('registers 20 handlers', () => {
-    registerSprintLocalHandlers()
+    const mockDeps = {
+      onStatusTerminal: vi.fn(),
+      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
+    }
+    registerSprintLocalHandlers(mockDeps)
     expect(safeHandle).toHaveBeenCalledTimes(20)
   })
 
   it('registers the expected channel names', () => {
-    registerSprintLocalHandlers()
+    const mockDeps = {
+      onStatusTerminal: vi.fn(),
+      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
+    }
+    registerSprintLocalHandlers(mockDeps)
     const channels = vi.mocked(safeHandle).mock.calls.map(([ch]) => ch)
     expect(channels).toContain('sprint:list')
     expect(channels).toContain('sprint:create')
