@@ -25,7 +25,7 @@ import {
   markTaskDoneByPrNumber,
   markTaskCancelledByPrNumber,
   updateTaskMergeableState
-} from './sprint-local'
+} from '../services/sprint-service'
 import type { GitHubFetchInit } from '../../shared/ipc-channels'
 import { createLogger } from '../logger'
 import { getSettingJson } from '../settings'

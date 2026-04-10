@@ -13,6 +13,7 @@ import type { Logger } from '../agent-manager/types'
 import { withRetry } from './sqlite-retry'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
+import { SPRINT_TASK_COLUMNS } from './sprint-query-constants'
 
 // Module-level logger — defaults to console, injectable for testing/structured logging
 let logger: Logger = {
@@ -26,12 +27,31 @@ export function setSprintQueriesLogger(l: Logger): void {
 }
 
 /**
+ * Error handling wrapper for query operations.
+ * Logs errors with operation context and returns fallback value.
+ * Extracted from repetitive try-catch patterns — exported for future use.
+ */
+export function withErrorLogging<T>(
+  operation: () => T,
+  fallback: T,
+  operationName: string
+): T {
+  try {
+    return operation()
+  } catch (err) {
+    const msg = getErrorMessage(err)
+    logger.warn(`[sprint-queries] ${operationName} failed: ${msg}`)
+    return fallback
+  }
+}
+
+/**
  * Sanitize a single task row from SQLite.
  * - Coerces INTEGER 0/1 to boolean for playground_enabled, needs_review
  * - Deserializes depends_on from JSON string
  * - Deserializes tags from JSON string
  */
-export function sanitizeTask(row: Record<string, unknown>): SprintTask {
+export function mapRowToTask(row: Record<string, unknown>): SprintTask {
   let revisionFeedback: unknown = row.revision_feedback
   if (typeof revisionFeedback === 'string') {
     try {
@@ -54,8 +74,8 @@ export function sanitizeTask(row: Record<string, unknown>): SprintTask {
 /**
  * Sanitize an array of task rows.
  */
-export function sanitizeTasks(rows: Record<string, unknown>[]): SprintTask[] {
-  return rows.map(sanitizeTask)
+export function mapRowsToTasks(rows: Record<string, unknown>[]): SprintTask[] {
+  return rows.map(mapRowToTask)
 }
 
 // --- Field allowlist for updates ---
@@ -136,7 +156,7 @@ export interface CreateTaskInput {
  * - booleans: 1/0
  * - null prompt: ''
  */
-function serializeField(key: string, value: unknown): unknown {
+function serializeFieldForStorage(key: string, value: unknown): unknown {
   if (key === 'depends_on') {
     const sanitized = sanitizeDependsOn(value)
     return sanitized ? JSON.stringify(sanitized) : null
@@ -163,19 +183,9 @@ export function getTask(id: string, db?: Database.Database): SprintTask | null {
   try {
     const conn = db ?? getDb()
     const row = conn
-      .prepare(
-        `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-         pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-         retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-         template_name, playground_enabled, needs_review, max_runtime_ms,
-         spec_type, created_at, updated_at, worktree_path, session_id,
-         next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-         partial_diff, assigned_reviewer, tags, sprint_id, group_id,
-         revision_feedback, review_diff_snapshot
-         FROM sprint_tasks WHERE id = ?`
-      )
+      .prepare(`SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks WHERE id = ?`)
       .get(id) as Record<string, unknown> | undefined
-    return row ? sanitizeTask(row) : null
+    return row ? mapRowToTask(row) : null
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -187,26 +197,18 @@ export function getTask(id: string, db?: Database.Database): SprintTask | null {
 export function listTasks(status?: string): SprintTask[] {
   try {
     const db = getDb()
-    const columnList = `id, title, prompt, repo, status, priority, depends_on, spec, notes,
-      pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-      retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-      template_name, playground_enabled, needs_review, max_runtime_ms,
-      spec_type, created_at, updated_at, worktree_path, session_id,
-      next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-      partial_diff, assigned_reviewer, tags, sprint_id, group_id,
-      revision_feedback, review_diff_snapshot`
     if (status) {
       const rows = db
         .prepare(
-          `SELECT ${columnList} FROM sprint_tasks WHERE status = ? ORDER BY priority ASC, created_at ASC`
+          `SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks WHERE status = ? ORDER BY priority ASC, created_at ASC`
         )
         .all(status) as Record<string, unknown>[]
-      return sanitizeTasks(rows)
+      return mapRowsToTasks(rows)
     }
     const rows = db
-      .prepare(`SELECT ${columnList} FROM sprint_tasks ORDER BY priority ASC, created_at ASC`)
+      .prepare(`SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks ORDER BY priority ASC, created_at ASC`)
       .all() as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -237,7 +239,7 @@ export function listTasksRecent(): SprintTask[] {
          ORDER BY priority ASC, created_at ASC`
       )
       .all() as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -275,7 +277,7 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
         input.cross_repo_contract ?? null
       ) as Record<string, unknown> | undefined
 
-    return result ? sanitizeTask(result) : null
+    return result ? mapRowToTask(result) : null
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -318,7 +320,7 @@ export function createReviewTaskFromAdhoc(input: {
 
     if (!result) return null
 
-    const task = sanitizeTask(result)
+    const task = mapRowToTask(result)
     logger.info(
       `[sprint-queries] Promoted adhoc work to review task ${task.id} (branch ${input.branch})`
     )
@@ -360,9 +362,9 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
         // (no audit row). Defense-in-depth — recordTaskChanges also skips
         // unchanged values, but filtering here also avoids the SQL UPDATE.
         const changedEntries = entries.filter(([key, value]) => {
-          const serializedNew = serializeField(key, value)
+          const serializedNew = serializeFieldForStorage(key, value)
           const oldRaw = (oldTask as unknown as Record<string, unknown>)[key]
-          const serializedOld = serializeField(key, oldRaw)
+          const serializedOld = serializeFieldForStorage(key, oldRaw)
           return serializedNew !== serializedOld
         })
 
@@ -383,7 +385,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
             throw new Error(`Invalid column name: ${key}`)
           }
           setClauses.push(`${key} = ?`)
-          const serialized = serializeField(key, value)
+          const serialized = serializeFieldForStorage(key, value)
           values.push(serialized)
           // For audit, store the sanitized form for depends_on/tags but original for others
           if (key === 'depends_on') {
@@ -400,13 +402,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
         const result = db
           .prepare(
             `UPDATE sprint_tasks SET ${setClauses.join(', ')} WHERE id = ?
-             RETURNING id, title, prompt, repo, status, priority, depends_on, spec, notes,
-             pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-             retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-             template_name, playground_enabled, needs_review, max_runtime_ms,
-             spec_type, created_at, updated_at, worktree_path, session_id,
-             next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-             partial_diff, tags, group_id, sprint_id, review_diff_snapshot`
+             RETURNING ${SPRINT_TASK_COLUMNS}`
           )
           .get(...values) as Record<string, unknown> | undefined
 
@@ -427,7 +423,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
           throw err
         }
 
-        return sanitizeTask(result)
+        return mapRowToTask(result)
       })()
     )
   } catch (err) {
@@ -483,13 +479,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
               `UPDATE sprint_tasks
                SET status = 'active', claimed_by = ?, started_at = ?
                WHERE id = ? AND status = 'queued'
-               RETURNING id, title, prompt, repo, status, priority, depends_on, spec, notes,
-               pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-               retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-               template_name, playground_enabled, needs_review, max_runtime_ms,
-               spec_type, created_at, updated_at, worktree_path, session_id,
-               next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-               partial_diff, tags, group_id, sprint_id, review_diff_snapshot`
+               RETURNING ${SPRINT_TASK_COLUMNS}`
             )
             .get(claimedBy, now, id) as Record<string, unknown> | undefined
 
@@ -507,7 +497,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
         })()
       )
 
-      return result ? sanitizeTask(result) : null
+      return result ? mapRowToTask(result) : null
     }
 
     // No WIP limit — original behavior with audit trail, with retry on SQLITE_BUSY
@@ -521,13 +511,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
             `UPDATE sprint_tasks
              SET status = 'active', claimed_by = ?, started_at = ?
              WHERE id = ? AND status = 'queued'
-             RETURNING id, title, prompt, repo, status, priority, depends_on, spec, notes,
-             pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-             retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-             template_name, playground_enabled, needs_review, max_runtime_ms,
-             spec_type, created_at, updated_at, worktree_path, session_id,
-             next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-             partial_diff, tags, group_id, sprint_id, review_diff_snapshot`
+             RETURNING ${SPRINT_TASK_COLUMNS}`
           )
           .get(claimedBy, now, id) as Record<string, unknown> | undefined
 
@@ -539,7 +523,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
             claimedBy,
             db
           )
-          return sanitizeTask(result)
+          return mapRowToTask(result)
         }
 
         return null
@@ -566,13 +550,7 @@ export function releaseTask(id: string, claimedBy: string): SprintTask | null {
           `UPDATE sprint_tasks
            SET status = 'queued', claimed_by = NULL, started_at = NULL, agent_run_id = NULL
            WHERE id = ? AND status = 'active' AND claimed_by = ?
-           RETURNING id, title, prompt, repo, status, priority, depends_on, spec, notes,
-           pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-           retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-           template_name, playground_enabled, needs_review, max_runtime_ms,
-           spec_type, created_at, updated_at, worktree_path, session_id,
-           next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-           partial_diff, tags, group_id, sprint_id, review_diff_snapshot`
+           RETURNING ${SPRINT_TASK_COLUMNS}`
         )
         .get(id, claimedBy) as Record<string, unknown> | undefined
 
@@ -584,7 +562,7 @@ export function releaseTask(id: string, claimedBy: string): SprintTask | null {
           claimedBy,
           db
         )
-        return sanitizeTask(result)
+        return mapRowToTask(result)
       }
 
       return null
@@ -654,13 +632,7 @@ export function markTaskDoneByPrNumber(prNumber: number): string[] {
       // Get affected tasks with full state for audit trail
       const affected = db
         .prepare(
-          `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-           pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-           retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-           template_name, playground_enabled, needs_review, max_runtime_ms,
-           spec_type, created_at, updated_at, worktree_path, session_id,
-           next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-           partial_diff, tags, group_id, sprint_id, review_diff_snapshot
+          `SELECT ${SPRINT_TASK_COLUMNS}
            FROM sprint_tasks WHERE pr_number = ? AND status = ?`
         )
         .all(prNumber, 'active') as Array<Record<string, unknown>>
@@ -695,13 +667,7 @@ export function markTaskDoneByPrNumber(prNumber: number): string[] {
       // Get tasks where pr_status will change for audit
       const prStatusAffected = db
         .prepare(
-          `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-           pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-           retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-           template_name, playground_enabled, needs_review, max_runtime_ms,
-           spec_type, created_at, updated_at, worktree_path, session_id,
-           next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-           partial_diff, tags, group_id, sprint_id, review_diff_snapshot
+          `SELECT ${SPRINT_TASK_COLUMNS}
            FROM sprint_tasks WHERE pr_number = ? AND status = 'done' AND pr_status = 'open'`
         )
         .all(prNumber) as Array<Record<string, unknown>>
@@ -743,13 +709,7 @@ export function markTaskCancelledByPrNumber(prNumber: number): string[] {
       // Get affected tasks with full state for audit trail
       const affected = db
         .prepare(
-          `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-           pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-           retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-           template_name, playground_enabled, needs_review, max_runtime_ms,
-           spec_type, created_at, updated_at, worktree_path, session_id,
-           next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-           partial_diff, tags, group_id, sprint_id, review_diff_snapshot
+          `SELECT ${SPRINT_TASK_COLUMNS}
            FROM sprint_tasks WHERE pr_number = ? AND status = ?`
         )
         .all(prNumber, 'active') as Array<Record<string, unknown>>
@@ -783,13 +743,7 @@ export function markTaskCancelledByPrNumber(prNumber: number): string[] {
       // Get ALL tasks where pr_status will change for audit (any status, not just done)
       const prStatusAffected = db
         .prepare(
-          `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-           pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-           retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-           template_name, playground_enabled, needs_review, max_runtime_ms,
-           spec_type, created_at, updated_at, worktree_path, session_id,
-           next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-           partial_diff, tags, group_id, sprint_id, review_diff_snapshot
+          `SELECT ${SPRINT_TASK_COLUMNS}
            FROM sprint_tasks WHERE pr_number = ? AND pr_status = 'open'`
         )
         .all(prNumber) as Array<Record<string, unknown>>
@@ -828,17 +782,11 @@ export function listTasksWithOpenPrs(): SprintTask[] {
   try {
     const rows = getDb()
       .prepare(
-        `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-         pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-         retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-         template_name, playground_enabled, needs_review, max_runtime_ms,
-         spec_type, created_at, updated_at, worktree_path, session_id,
-         next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-         partial_diff, assigned_reviewer, tags, sprint_id, group_id, review_diff_snapshot
+        `SELECT ${SPRINT_TASK_COLUMNS}
          FROM sprint_tasks WHERE pr_number IS NOT NULL AND pr_status = 'open'`
       )
       .all() as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -880,20 +828,14 @@ export function getQueuedTasks(limit: number): SprintTask[] {
   try {
     const rows = getDb()
       .prepare(
-        `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-         pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-         retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-         template_name, playground_enabled, needs_review, max_runtime_ms,
-         spec_type, created_at, updated_at, worktree_path, session_id,
-         next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-         partial_diff, assigned_reviewer, tags, sprint_id, group_id, review_diff_snapshot
+        `SELECT ${SPRINT_TASK_COLUMNS}
          FROM sprint_tasks
          WHERE status = 'queued' AND claimed_by IS NULL AND (next_eligible_at IS NULL OR next_eligible_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
          ORDER BY priority ASC, created_at ASC
          LIMIT ?`
       )
       .all(limit) as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -906,17 +848,11 @@ export function getOrphanedTasks(claimedBy: string): SprintTask[] {
   try {
     const rows = getDb()
       .prepare(
-        `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-         pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-         retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-         template_name, playground_enabled, needs_review, max_runtime_ms,
-         spec_type, created_at, updated_at, worktree_path, session_id,
-         next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-         partial_diff, assigned_reviewer, tags, sprint_id, group_id, review_diff_snapshot
+        `SELECT ${SPRINT_TASK_COLUMNS}
          FROM sprint_tasks WHERE status = 'active' AND claimed_by = ?`
       )
       .all(claimedBy) as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
@@ -942,17 +878,11 @@ export function getHealthCheckTasks(): SprintTask[] {
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
     const rows = getDb()
       .prepare(
-        `SELECT id, title, prompt, repo, status, priority, depends_on, spec, notes,
-         pr_url, pr_number, pr_status, pr_mergeable_state, agent_run_id,
-         retry_count, fast_fail_count, started_at, completed_at, claimed_by,
-         template_name, playground_enabled, needs_review, max_runtime_ms,
-         spec_type, created_at, updated_at, worktree_path, session_id,
-         next_eligible_at, model, retry_context, failure_reason, max_cost_usd,
-         partial_diff, assigned_reviewer, tags, sprint_id, group_id, review_diff_snapshot
+        `SELECT ${SPRINT_TASK_COLUMNS}
          FROM sprint_tasks WHERE status = 'active' AND started_at < ?`
       )
       .all(oneHourAgo) as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)

@@ -57,15 +57,12 @@ vi.mock('../../pr-poller', () => ({
   refreshPrList: vi.fn()
 }))
 
-// Mock sprint-local (imported by git-handlers for PR task status updates)
-vi.mock('../sprint-local', () => ({
+// Mock sprint-service (imported by git-handlers for PR task status updates)
+vi.mock('../../services/sprint-service', () => ({
   markTaskDoneByPrNumber: vi.fn(),
   markTaskCancelledByPrNumber: vi.fn(),
   updateTaskMergeableState: vi.fn(),
-  UPDATE_ALLOWLIST: new Set(),
-  onSprintMutation: vi.fn(),
-  buildQuickSpecPrompt: vi.fn(),
-  getTemplateScaffold: vi.fn()
+  UPDATE_ALLOWLIST: new Set()
 }))
 
 // Mock shared/github
@@ -95,7 +92,7 @@ import {
   markTaskDoneByPrNumber,
   markTaskCancelledByPrNumber,
   updateTaskMergeableState
-} from '../sprint-local'
+} from '../../services/sprint-service'
 
 const mockEvent = {} as IpcMainInvokeEvent
 

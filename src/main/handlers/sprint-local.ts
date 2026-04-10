@@ -1,16 +1,10 @@
 import { safeHandle } from '../ipc-utils'
 import { getDb } from '../db'
-import { readFile, writeFile } from 'fs/promises'
-import { execFile } from 'child_process'
-import { promisify } from 'util'
+import { readFile } from 'fs/promises'
 import { createLogger } from '../logger'
 import type { DialogService } from '../dialog-service'
-import { getErrorMessage } from '../../shared/errors'
-
-const execFileAsync = promisify(execFile)
 import type { TaskTemplate, ClaimedTask } from '../../shared/types'
 import type { WorkflowTemplate } from '../../shared/workflow-types'
-import { validateStructural } from '../../shared/spec-validation'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
 import { buildBlockedNotes, checkTaskDependencies } from '../agent-manager/dependency-helpers'
@@ -30,46 +24,20 @@ import {
   getHealthCheckTasks,
   listTasks,
   listTasksRecent,
-  claimTask,
-  releaseTask,
-  getQueueStats,
-  getDoneTodayCount,
-  markTaskDoneByPrNumber,
-  markTaskCancelledByPrNumber,
-  listTasksWithOpenPrs,
-  updateTaskMergeableState,
   UPDATE_ALLOWLIST,
-  getSuccessRateBySpecType
+  getSuccessRateBySpecType,
+  type CreateTaskInput
 } from '../services/sprint-service'
-import type { CreateTaskInput, QueueStats } from '../services/sprint-service'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import { instantiateWorkflow } from '../services/workflow-engine'
-import { nowIso } from '../../shared/time'
+import { registerSprintExportHandlers } from './sprint-export-handlers'
+import { registerSprintBatchHandlers } from './sprint-batch-handlers'
+import { registerSprintRetryHandler } from './sprint-retry-handler'
+import { validateTaskSpec } from './sprint-validation-helpers'
 
 const logger = createLogger('sprint-local')
-
-// Re-export service-layer wrappers so existing deep imports keep working
-export {
-  getTask,
-  listTasks,
-  claimTask,
-  updateTask,
-  releaseTask,
-  getQueueStats,
-  getDoneTodayCount,
-  markTaskDoneByPrNumber,
-  markTaskCancelledByPrNumber,
-  listTasksWithOpenPrs,
-  updateTaskMergeableState,
-  UPDATE_ALLOWLIST
-}
-export type { CreateTaskInput, QueueStats }
-
-// Re-export listener and spec APIs so existing deep imports keep working
-export { onSprintMutation } from './sprint-listeners'
-export { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
 
 // --- Terminal status resolution ---
 
@@ -139,33 +107,14 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
         throw new Error(`Task ${id} not found`)
       }
 
-      // Structural check
-      const structural = validateStructural({
+      // Validate spec
+      const specText = (patch.spec as string) ?? task.spec ?? null
+      await validateTaskSpec({
         title: task.title,
         repo: task.repo,
-        spec: (patch.spec as string) ?? task.spec ?? null
+        spec: specText,
+        context: 'queue'
       })
-      if (!structural.valid) {
-        throw new Error(
-          `Cannot queue task — spec quality checks failed: ${structural.errors.join('; ')}`
-        )
-      }
-
-      // Semantic check
-      const specText = (patch.spec as string) ?? task.spec
-      if (specText) {
-        const { checkSpecSemantic } = await import('../spec-semantic-check')
-        const semantic = await checkSpecSemantic({
-          title: task.title,
-          repo: task.repo,
-          spec: specText
-        })
-        if (!semantic.passed) {
-          throw new Error(
-            `Cannot queue task — semantic checks failed: ${semantic.failMessages.join('; ')}`
-          )
-        }
-      }
 
       // Dependency check (existing logic)
       const taskDeps = task.depends_on
@@ -298,32 +247,13 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
     if (task.status !== 'blocked')
       throw new Error(`Task ${taskId} is not blocked (status: ${task.status})`)
 
-    // Validate spec before unblocking (same checks as sprint:update when transitioning to queued)
-    const structural = validateStructural({
+    // Validate spec before unblocking
+    await validateTaskSpec({
       title: task.title,
       repo: task.repo,
-      spec: task.spec ?? null
+      spec: task.spec ?? null,
+      context: 'unblock'
     })
-    if (!structural.valid) {
-      throw new Error(
-        `Cannot unblock task — spec quality checks failed: ${structural.errors.join('; ')}`
-      )
-    }
-
-    // Semantic check if spec exists
-    if (task.spec) {
-      const { checkSpecSemantic } = await import('../spec-semantic-check')
-      const semantic = await checkSpecSemantic({
-        title: task.title,
-        repo: task.repo,
-        spec: task.spec
-      })
-      if (!semantic.passed) {
-        throw new Error(
-          `Cannot unblock task — semantic checks failed: ${semantic.failMessages.join('; ')}`
-        )
-      }
-    }
 
     // updateTask (service) handles notifySprintMutation internally
     const updated = updateTask(taskId, { status: 'queued' })
@@ -335,327 +265,6 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
     return getTaskChanges(taskId)
   })
 
-  safeHandle('sprint:exportTaskHistory', async (_e, taskId: string) => {
-    const { getTaskChanges } = await import('../data/task-changes')
-    const { writeFile } = await import('fs/promises')
-
-    // Get task to use title in filename suggestion
-    const task = getTask(taskId)
-    if (!task) throw new Error(`Task ${taskId} not found`)
-
-    // Get task change history
-    const changes = getTaskChanges(taskId)
-
-    // Show save dialog
-    const result = await deps.dialog.showSaveDialog({
-      title: 'Export Task History',
-      defaultPath: `task-history-${task.title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`,
-      filters: [{ name: 'JSON', extensions: ['json'] }]
-    })
-
-    if (result.canceled || !result.filePath) {
-      return { success: false }
-    }
-
-    // Prepare export data
-    const exportData = {
-      task: {
-        id: task.id,
-        title: task.title,
-        status: task.status,
-        created_at: task.created_at,
-        updated_at: task.updated_at
-      },
-      changes,
-      exportedAt: nowIso()
-    }
-
-    // Write to file
-    await writeFile(result.filePath, JSON.stringify(exportData, null, 2), 'utf-8')
-
-    return { success: true, path: result.filePath }
-  })
-
-  safeHandle('sprint:retry', async (_e, taskId: string) => {
-    const task = getTask(taskId)
-    if (!task) throw new Error(`Task ${taskId} not found`)
-    if (task.status !== 'failed' && task.status !== 'error') {
-      throw new Error(`Cannot retry task with status ${task.status}`)
-    }
-
-    // Resolve repo name to local path via repos setting
-    const repos = getSettingJson<Array<{ name: string; localPath: string }>>('repos')
-    const repoConfig = repos?.find((r) => r.name === task.repo)
-    const repoPath = repoConfig?.localPath
-
-    if (repoPath) {
-      // Clean up stale worktree/branch if they exist (best-effort)
-      const slug = task.title
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .slice(0, 40)
-      try {
-        await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath })
-        const { stdout: branches } = await execFileAsync(
-          'git',
-          ['branch', '--list', `agent/${slug}*`],
-          { cwd: repoPath }
-        )
-        for (const branch of branches
-          .split('\n')
-          .map((b) => b.trim())
-          .filter(Boolean)) {
-          await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath }).catch((err) => {
-            logger.warn(`[sprint-local] Failed to delete branch ${branch}: ${getErrorMessage(err)}`)
-          })
-        }
-      } catch {
-        /* cleanup is best-effort */
-      }
-    }
-
-    // Reset task fields — updateTask (service) handles notifySprintMutation internally
-    const updated = updateTask(taskId, {
-      status: 'queued',
-      claimed_by: null,
-      notes: null,
-      started_at: null,
-      completed_at: null,
-      fast_fail_count: 0,
-      agent_run_id: null
-    })
-    if (!updated) throw new Error(`Failed to update task ${taskId}`)
-    return updated
-  })
-
-  safeHandle(
-    'sprint:batchUpdate',
-    async (
-      _e,
-      operations: Array<{ op: 'update' | 'delete'; id: string; patch?: Record<string, unknown> }>
-    ) => {
-      const { GENERAL_PATCH_FIELDS } = await import('../../shared/types')
-      const results: Array<{ id: string; op: 'update' | 'delete'; ok: boolean; error?: string }> =
-        []
-
-      for (const rawOp of operations) {
-        const { id, op, patch } = rawOp
-        if (!id || !op) {
-          results.push({
-            id: id ?? 'unknown',
-            op: op as 'update' | 'delete',
-            ok: false,
-            error: 'id and op are required'
-          })
-          continue
-        }
-        try {
-          if (op === 'update') {
-            if (!patch || typeof patch !== 'object') {
-              results.push({
-                id,
-                op: 'update',
-                ok: false,
-                error: 'patch object required for update'
-              })
-              continue
-            }
-            const filtered: Record<string, unknown> = {}
-            for (const [k, v] of Object.entries(patch)) {
-              if (GENERAL_PATCH_FIELDS.has(k)) filtered[k] = v
-            }
-            if (Object.keys(filtered).length === 0) {
-              results.push({ id, op: 'update', ok: false, error: 'No valid fields to update' })
-              continue
-            }
-
-            // If transitioning to queued, validate spec quality
-            if (filtered.status === 'queued') {
-              const task = getTask(id)
-              if (task) {
-                const structural = validateStructural({
-                  title: task.title,
-                  repo: task.repo,
-                  spec: (filtered.spec as string) ?? task.spec ?? null
-                })
-                if (!structural.valid) {
-                  results.push({
-                    id,
-                    op: 'update',
-                    ok: false,
-                    error: `Spec quality checks failed: ${structural.errors.join('; ')}`
-                  })
-                  continue
-                }
-
-                const specText = (filtered.spec as string) ?? task.spec
-                if (specText) {
-                  const { checkSpecSemantic } = await import('../spec-semantic-check')
-                  const semantic = await checkSpecSemantic({
-                    title: task.title,
-                    repo: task.repo,
-                    spec: specText
-                  })
-                  if (!semantic.passed) {
-                    results.push({
-                      id,
-                      op: 'update',
-                      ok: false,
-                      error: `Semantic checks failed: ${semantic.failMessages.join('; ')}`
-                    })
-                    continue
-                  }
-                }
-              }
-            }
-
-            // updateTask (service) handles notifySprintMutation internally
-            const updated = updateTask(id, filtered)
-            if (
-              updated &&
-              filtered.status &&
-              typeof filtered.status === 'string' &&
-              TERMINAL_STATUSES.has(filtered.status)
-            ) {
-              deps.onStatusTerminal(id, filtered.status)
-            }
-            results.push({
-              id,
-              op: 'update',
-              ok: !!updated,
-              error: updated ? undefined : 'Task not found'
-            })
-          } else if (op === 'delete') {
-            // deleteTask (service) handles notifySprintMutation internally
-            deleteTask(id)
-            results.push({ id, op: 'delete', ok: true })
-          } else {
-            results.push({ id, op, ok: false, error: `Unknown operation: ${op}` })
-          }
-        } catch (err) {
-          results.push({ id, op, ok: false, error: String(err) })
-        }
-      }
-
-      return { results }
-    }
-  )
-
-  safeHandle(
-    'sprint:batchImport',
-    async (
-      _e,
-      tasks: Array<{
-        title: string
-        repo: string
-        prompt?: string
-        spec?: string
-        status?: string
-        dependsOnIndices?: number[]
-        depType?: 'hard' | 'soft'
-        playgroundEnabled?: boolean
-        model?: string
-        tags?: string[]
-        priority?: number
-        templateName?: string
-      }>
-    ) => {
-      const { batchImportTasks } = await import('../services/batch-import')
-      const { createSprintTaskRepository } = await import('../data/sprint-task-repository')
-      const repo = createSprintTaskRepository()
-      return batchImportTasks(tasks, repo)
-    }
-  )
-
-  safeHandle(
-    'sprint:exportTasks',
-    async (_e, format: 'json' | 'csv'): Promise<{ filePath: string | null; canceled: boolean }> => {
-      const tasks = listTasks()
-
-      // Show save dialog
-      const result = await deps.dialog.showSaveDialog({
-        title: 'Export Sprint Tasks',
-        defaultPath: `sprint-tasks-${nowIso().split('T')[0]}.${format}`,
-        filters: [
-          format === 'json'
-            ? { name: 'JSON Files', extensions: ['json'] }
-            : { name: 'CSV Files', extensions: ['csv'] }
-        ]
-      })
-
-      if (result.canceled || !result.filePath) {
-        return { filePath: null, canceled: true }
-      }
-
-      // Generate export content
-      let content: string
-      if (format === 'json') {
-        content = JSON.stringify(tasks, null, 2)
-      } else {
-        // CSV format
-        const headers = [
-          'id',
-          'title',
-          'repo',
-          'status',
-          'priority',
-          'created_at',
-          'updated_at',
-          'started_at',
-          'completed_at',
-          'claimed_by',
-          'spec',
-          'prompt',
-          'notes',
-          'pr_url',
-          'pr_number',
-          'pr_status',
-          'template_name',
-          'playground_enabled',
-          'depends_on',
-          'tags'
-        ]
-        const csvRows = [headers.join(',')]
-
-        for (const task of tasks) {
-          const row = headers.map((header) => {
-            let value = task[header as keyof typeof task]
-
-            // Handle complex types
-            if (header === 'depends_on' && Array.isArray(value)) {
-              value = JSON.stringify(value)
-            } else if (header === 'tags' && Array.isArray(value)) {
-              value = JSON.stringify(value)
-            } else if (value === null || value === undefined) {
-              value = ''
-            } else if (typeof value === 'boolean') {
-              value = value ? 'true' : 'false'
-            }
-
-            // Escape CSV special characters
-            const stringValue = String(value)
-            if (
-              stringValue.includes(',') ||
-              stringValue.includes('"') ||
-              stringValue.includes('\n')
-            ) {
-              return `"${stringValue.replace(/"/g, '""')}"`
-            }
-            return stringValue
-          })
-          csvRows.push(row.join(','))
-        }
-        content = csvRows.join('\n')
-      }
-
-      // Write to file
-      await writeFile(result.filePath, content, 'utf-8')
-      logger.info(`[sprint:exportTasks] Exported ${tasks.length} tasks to ${result.filePath}`)
-
-      return { filePath: result.filePath, canceled: false }
-    }
-  )
-
   safeHandle('sprint:failureBreakdown', async () => {
     const { getFailureReasonBreakdown } = await import('../data/sprint-queries')
     return getFailureReasonBreakdown()
@@ -664,4 +273,9 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
   safeHandle('sprint:getSuccessRateBySpecType', () => {
     return getSuccessRateBySpecType()
   })
+
+  // Register export, batch, and retry handlers
+  registerSprintExportHandlers({ dialog: deps.dialog })
+  registerSprintBatchHandlers({ onStatusTerminal: deps.onStatusTerminal })
+  registerSprintRetryHandler()
 }

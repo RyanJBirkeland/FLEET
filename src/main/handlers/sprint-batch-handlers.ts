@@ -1,0 +1,139 @@
+/**
+ * Batch operation handlers for sprint tasks.
+ * Extracted from sprint-local.ts to improve module cohesion.
+ */
+
+import { safeHandle } from '../ipc-utils'
+import { getTask, updateTask, deleteTask } from '../services/sprint-service'
+import { createSprintTaskRepository } from '../data/sprint-task-repository'
+import { validateTaskSpec } from './sprint-validation-helpers'
+
+const TERMINAL_STATUSES = new Set(['done', 'failed', 'error', 'cancelled'])
+
+export interface BatchHandlersDeps {
+  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+}
+
+export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
+  safeHandle(
+    'sprint:batchUpdate',
+    async (
+      _e,
+      operations: Array<{ op: 'update' | 'delete'; id: string; patch?: Record<string, unknown> }>
+    ) => {
+      const { GENERAL_PATCH_FIELDS } = await import('../../shared/types')
+      const results: Array<{ id: string; op: 'update' | 'delete'; ok: boolean; error?: string }> =
+        []
+
+      for (const rawOp of operations) {
+        const { id, op, patch } = rawOp
+        if (!id || !op) {
+          results.push({
+            id: id ?? 'unknown',
+            op: op as 'update' | 'delete',
+            ok: false,
+            error: 'id and op are required'
+          })
+          continue
+        }
+        try {
+          if (op === 'update') {
+            if (!patch || typeof patch !== 'object') {
+              results.push({
+                id,
+                op: 'update',
+                ok: false,
+                error: 'patch object required for update'
+              })
+              continue
+            }
+            const filtered: Record<string, unknown> = {}
+            for (const [k, v] of Object.entries(patch)) {
+              if (GENERAL_PATCH_FIELDS.has(k)) filtered[k] = v
+            }
+            if (Object.keys(filtered).length === 0) {
+              results.push({ id, op: 'update', ok: false, error: 'No valid fields to update' })
+              continue
+            }
+
+            // If transitioning to queued, validate spec quality
+            if (filtered.status === 'queued') {
+              const task = getTask(id)
+              if (task) {
+                try {
+                  const specText = (filtered.spec as string) ?? task.spec ?? null
+                  await validateTaskSpec({
+                    title: task.title,
+                    repo: task.repo,
+                    spec: specText,
+                    context: 'queue'
+                  })
+                } catch (err) {
+                  results.push({
+                    id,
+                    op: 'update',
+                    ok: false,
+                    error: err instanceof Error ? err.message : String(err)
+                  })
+                  continue
+                }
+              }
+            }
+
+            // updateTask (service) handles notifySprintMutation internally
+            const updated = updateTask(id, filtered)
+            if (
+              updated &&
+              filtered.status &&
+              typeof filtered.status === 'string' &&
+              TERMINAL_STATUSES.has(filtered.status)
+            ) {
+              deps.onStatusTerminal(id, filtered.status)
+            }
+            results.push({
+              id,
+              op: 'update',
+              ok: !!updated,
+              error: updated ? undefined : 'Task not found'
+            })
+          } else if (op === 'delete') {
+            // deleteTask (service) handles notifySprintMutation internally
+            deleteTask(id)
+            results.push({ id, op: 'delete', ok: true })
+          } else {
+            results.push({ id, op, ok: false, error: `Unknown operation: ${op}` })
+          }
+        } catch (err) {
+          results.push({ id, op, ok: false, error: String(err) })
+        }
+      }
+
+      return { results }
+    }
+  )
+
+  safeHandle(
+    'sprint:batchImport',
+    async (
+      _e,
+      tasks: Array<{
+        title: string
+        repo: string
+        prompt?: string
+        spec?: string
+        status?: string
+        dependsOnIndices?: number[]
+        depType?: 'hard' | 'soft'
+        playgroundEnabled?: boolean
+        model?: string
+        tags?: string[]
+        priority?: number
+        templateName?: string
+      }>
+    ) => {
+      const { batchImportTasks } = await import('../services/batch-import')
+      const repo = createSprintTaskRepository()
+      return batchImportTasks(tasks, repo)
+    }
+  )
+}

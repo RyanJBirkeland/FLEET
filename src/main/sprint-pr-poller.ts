@@ -132,7 +132,7 @@ import {
   markTaskDoneByPrNumber,
   markTaskCancelledByPrNumber,
   updateTaskMergeableState
-} from './handlers/sprint-local'
+} from './services/sprint-service'
 import { createLogger } from './logger'
 
 let _instance: SprintPrPollerInstance | null = null

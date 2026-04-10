@@ -5,7 +5,7 @@
 import type Database from 'better-sqlite3'
 import type { TaskGroup, SprintTask } from '../../shared/types'
 import { getDb } from '../db'
-import { sanitizeTasks } from './sprint-queries'
+import { mapRowsToTasks } from './sprint-queries'
 import { getErrorMessage } from '../../shared/errors'
 
 export interface CreateGroupInput {
@@ -191,7 +191,7 @@ export function getGroupTasks(groupId: string, db?: Database.Database): SprintTa
         'SELECT * FROM sprint_tasks WHERE group_id = ? ORDER BY sort_order ASC, priority DESC, created_at'
       )
       .all(groupId) as Record<string, unknown>[]
-    return sanitizeTasks(rows)
+    return mapRowsToTasks(rows)
   } catch (err) {
     const msg = getErrorMessage(err)
     console.error(`[task-group-queries] getGroupTasks failed for group=${groupId}: ${msg}`)
