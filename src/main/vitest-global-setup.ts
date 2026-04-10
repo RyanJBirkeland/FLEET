@@ -9,6 +9,7 @@
  *   npm run posttest:main
  */
 import { execFileSync } from 'node:child_process'
+import { getErrorMessage } from '../shared/errors'
 
 /**
  * Test the native binary by instantiating a Database in a child process.
@@ -42,7 +43,7 @@ export function setup(): void {
       timeout: 120_000
     })
   } catch (err: unknown) {
-    const msg = err instanceof Error ? err.message : String(err)
+    const msg = getErrorMessage(err)
     throw new Error(
       `[vitest-global-setup] Failed to rebuild better-sqlite3 for Node.js:\n${msg}\n\nTry: node-gyp rebuild --directory=node_modules/better-sqlite3`
     )

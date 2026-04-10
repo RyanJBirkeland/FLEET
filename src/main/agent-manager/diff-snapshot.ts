@@ -8,6 +8,7 @@ import { promisify } from 'node:util'
 import type { ReviewDiffSnapshot } from '../../shared/types'
 import { buildAgentEnv } from '../env-utils'
 import type { Logger } from './types'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFile = promisify(execFileCb)
 
@@ -90,7 +91,7 @@ export async function captureDiffSnapshot(
       } catch (err) {
         logger.warn(
           `[diff-snapshot] Failed to capture patch for ${file.path}: ${
-            err instanceof Error ? err.message : String(err)
+            getErrorMessage(err)
           }`
         )
       }
@@ -104,7 +105,7 @@ export async function captureDiffSnapshot(
     }
   } catch (err) {
     logger.warn(
-      `[diff-snapshot] capture failed: ${err instanceof Error ? err.message : String(err)}`
+      `[diff-snapshot] capture failed: ${getErrorMessage(err)}`
     )
     return null
   }

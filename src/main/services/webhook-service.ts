@@ -5,6 +5,7 @@
 import { createHmac } from 'crypto'
 import type { Logger } from '../logger'
 import type { SprintTask } from '../../shared/types'
+import { getErrorMessage } from '../../shared/errors'
 
 export interface WebhookConfig {
   id: string
@@ -109,7 +110,7 @@ export function createWebhookService(deps: WebhookServiceDeps): WebhookService {
         deps.logger.info(`[webhook] Delivered ${event} to ${url}`)
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       deps.logger.warn(`[webhook] Error delivering ${event} to ${url}: ${msg}`)
     }
   }

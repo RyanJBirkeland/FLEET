@@ -3,6 +3,7 @@
  * All functions take `db: Database.Database` as first parameter for testability.
  */
 import type Database from 'better-sqlite3'
+import { getErrorMessage } from '../../shared/errors'
 
 export function getSetting(db: Database.Database, key: string): string | null {
   const row = db.prepare('SELECT value FROM settings WHERE key = ?').get(key) as
@@ -41,7 +42,7 @@ export function getSettingJson<T>(
   } catch (err) {
     // DL-25: Log parse errors instead of swallowing silently
     console.warn(
-      `[settings-queries] Failed to parse JSON for setting "${key}": ${err instanceof Error ? err.message : String(err)}`
+      `[settings-queries] Failed to parse JSON for setting "${key}": ${getErrorMessage(err)}`
     )
     return null
   }

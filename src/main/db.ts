@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { mkdirSync, existsSync, chmodSync, statSync, unlinkSync } from 'fs'
 import path from 'path'
 import { BDE_DIR as DB_DIR, BDE_DB_PATH as DB_PATH } from './paths'
+import { getErrorMessage } from '../shared/errors'
 
 let _db: Database.Database | null = null
 
@@ -1024,7 +1025,7 @@ export function runMigrations(db: Database.Database): void {
       })
       runSingle()
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       throw new Error(`Migration v${migration.version} ("${migration.description}") failed: ${msg}`)
     }
   }

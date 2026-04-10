@@ -12,6 +12,7 @@ import type Database from 'better-sqlite3'
 import { createLogger } from '../logger'
 import { getSetting, deleteSetting } from './settings-queries'
 import { SETTING_SUPABASE_URL, SETTING_SUPABASE_KEY } from '../settings'
+import { getErrorMessage } from '../../shared/errors'
 
 const logger = createLogger('supabase-import')
 
@@ -101,7 +102,7 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
 
     rows = (await response.json()) as SupabaseSprintTaskRow[]
   } catch (err) {
-    logger.warn(`Supabase fetch error: ${err instanceof Error ? err.message : String(err)}`)
+    logger.warn(`Supabase fetch error: ${getErrorMessage(err)}`)
     return
   }
 
@@ -207,12 +208,12 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
       logger.info('Supabase credentials deleted after successful import')
     } catch (err) {
       logger.warn(
-        `Failed to delete Supabase credentials: ${err instanceof Error ? err.message : String(err)}`
+        `Failed to delete Supabase credentials: ${getErrorMessage(err)}`
       )
     }
   } catch (err) {
     logger.error(
-      `Failed to insert imported tasks: ${err instanceof Error ? err.message : String(err)}`
+      `Failed to insert imported tasks: ${getErrorMessage(err)}`
     )
   }
 }

@@ -18,6 +18,7 @@ import { buildAgentEnv } from '../env-utils'
 import { createLogger } from '../logger'
 import type { SpawnLocalAgentArgs } from '../../shared/types'
 import type { AgentManager } from '../agent-manager'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFileCb)
 const log = createLogger('agent-handlers')
@@ -173,7 +174,7 @@ export function registerAgentHandlers(am?: AgentManager): void {
       log.info(`[agents:promoteToReview] Promoted agent ${agentId} → sprint task ${task.id}`)
       return { ok: true, taskId: task.id }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       log.error(`[agents:promoteToReview] failed: ${msg}`)
       return { ok: false, error: msg }
     }

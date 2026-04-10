@@ -16,6 +16,7 @@ import { rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { runPostMergeDedup } from '../services/post-merge-dedup'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFile)
 const logger = createLogger('review-handlers')
@@ -171,7 +172,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
         )
       }
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err)
+      const errMsg = getErrorMessage(err)
       return { success: false, error: errMsg }
     }
 
@@ -186,7 +187,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       logger.info(`[review:mergeLocally] Rebasing ${branch} onto origin/main`)
       await execFileAsync('git', ['rebase', 'origin/main'], { cwd: task.worktree_path, env })
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err)
+      const errMsg = getErrorMessage(err)
       logger.error(`[review:mergeLocally] Rebase failed for task ${taskId}: ${errMsg}`)
 
       // Abort the rebase
@@ -231,7 +232,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
         )
       }
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err)
+      const errMsg = getErrorMessage(err)
 
       // Abort the failed merge/rebase
       try {
@@ -554,7 +555,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       logger.info(`[review:shipIt] Rebasing ${branch} onto origin/main`)
       await execFileAsync('git', ['rebase', 'origin/main'], { cwd: task.worktree_path, env })
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err)
+      const errMsg = getErrorMessage(err)
       logger.error(`[review:shipIt] Rebase failed for task ${taskId}: ${errMsg}`)
 
       // Abort the rebase
@@ -605,7 +606,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       } catch {
         /* best-effort */
       }
-      return { success: false, error: err instanceof Error ? err.message : String(err) }
+      return { success: false, error: getErrorMessage(err) }
     }
 
     // Post-merge CSS dedup (must run before push so dedup commit is included)
@@ -669,7 +670,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       await execFileAsync('git', ['fetch', 'origin', 'main'], { cwd: task.worktree_path, env })
       await execFileAsync('git', ['rebase', 'origin/main'], { cwd: task.worktree_path, env })
     } catch (err: unknown) {
-      const errMsg = err instanceof Error ? err.message : String(err)
+      const errMsg = getErrorMessage(err)
       logger.error(`[review:rebase] Rebase failed for task ${taskId}: ${errMsg}`)
 
       // Abort the rebase (best-effort)

@@ -9,6 +9,7 @@ import { promisify } from 'node:util'
 import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { homedir, userInfo } from 'node:os'
+import { getErrorMessage } from '../shared/errors'
 
 const EXTRA_PATHS = ['/usr/local/bin', '/opt/homebrew/bin', `${homedir()}/.local/bin`]
 
@@ -298,7 +299,7 @@ export async function refreshOAuthTokenFromKeychain(): Promise<boolean> {
       // response). Fall through to writing the existing — possibly expired —
       // accessToken so the agent fails with a visible 401 instead of this
       // function silently doing nothing.
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       console.warn(`[env-utils] OAuth token refresh failed: ${msg}`)
     }
   }

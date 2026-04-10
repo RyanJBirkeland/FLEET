@@ -4,6 +4,7 @@
 import { safeHandle } from '../ipc-utils'
 import { getDb } from '../db'
 import { createLogger } from '../logger'
+import { getErrorMessage } from '../../shared/errors'
 
 const logger = createLogger('webhook-handlers')
 
@@ -193,7 +194,7 @@ export function registerWebhookHandlers(): void {
       logger.info(`Test webhook sent to ${row.url}`)
       return { success: true, status: response.status }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : String(err)
+      const msg = getErrorMessage(err)
       logger.warn(`Test webhook failed for ${row.url}: ${msg}`)
       throw new Error(`Test failed: ${msg}`)
     }
