@@ -10,6 +10,7 @@ import { randomUUID } from 'crypto'
 import { getDb } from './db'
 import { BDE_AGENTS_INDEX as AGENTS_INDEX, BDE_AGENT_LOGS_DIR as LOGS_DIR } from './paths'
 import { clearSprintTaskFk } from './data/sprint-queries'
+import { getErrorMessage } from '../shared/errors'
 import {
   listAgents as _listAgents,
   getAgentMeta as _getAgentMeta,
@@ -109,7 +110,9 @@ export function initAgentHistory(): void {
   }
 
   // Fire-and-forget async migration
-  migrateFromJson().catch(() => {})
+  migrateFromJson().catch((err) => {
+    logger.warn(`[agent-history] Failed to migrate from agents.json: ${getErrorMessage(err)}`)
+  })
 }
 
 // --- Public API ---

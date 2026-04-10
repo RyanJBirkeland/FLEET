@@ -22,7 +22,9 @@ export function DoneStep({ onBack, onComplete, isFirst }: StepProps): React.JSX.
     setField('spec', SAMPLE_FIRST_TASK.spec)
     setField('repo', SAMPLE_FIRST_TASK.repo)
     setSpecType(SAMPLE_FIRST_TASK.specType)
-    window.api.settings.set('onboarding.completed', 'true').catch(() => {})
+    window.api.settings.set('onboarding.completed', 'true').catch((err) => {
+      console.error('Failed to mark onboarding as completed:', err)
+    })
     onComplete()
     // Defer navigation so the wizard unmounts first
     setTimeout(() => setView('task-workbench'), 0)

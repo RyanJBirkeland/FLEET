@@ -89,7 +89,8 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
       }
 
       set({ staged, unstaged, untracked, branch, loading: false })
-    } catch {
+    } catch (err) {
+      console.error('Failed to fetch git status:', err)
       set({ loading: false })
       toast.error('Failed to fetch git status')
     }
@@ -107,7 +108,8 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     try {
       const diff = await window.api.gitDiff(cwd, path)
       set({ diffContent: diff ?? '' })
-    } catch {
+    } catch (err) {
+      console.error('Failed to fetch diff:', err)
       set({ diffContent: '' })
     }
   },
@@ -120,7 +122,8 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     try {
       await window.api.gitStage(cwd, [path])
       await get().fetchStatus(cwd)
-    } catch {
+    } catch (err) {
+      console.error(`Failed to stage ${path}:`, err)
       toast.error(`Failed to stage ${path}`)
     }
   },
@@ -129,7 +132,8 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     try {
       await window.api.gitUnstage(cwd, [path])
       await get().fetchStatus(cwd)
-    } catch {
+    } catch (err) {
+      console.error(`Failed to unstage ${path}:`, err)
       toast.error(`Failed to unstage ${path}`)
     }
   },
@@ -141,7 +145,8 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     try {
       await window.api.gitUnstage(cwd, paths)
       await get().fetchStatus(cwd)
-    } catch {
+    } catch (err) {
+      console.error('Failed to unstage all files:', err)
       toast.error('Failed to unstage all files')
     }
   },
@@ -194,7 +199,8 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
       const branches = result?.branches ?? []
       const currentBranch = result?.current ?? ''
       set({ branches, branch: currentBranch })
-    } catch {
+    } catch (err) {
+      console.error('Failed to fetch branches:', err)
       set({ branches: [] })
     }
   },

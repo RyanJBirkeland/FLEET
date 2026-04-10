@@ -445,7 +445,9 @@ export const usePanelLayoutStore = create<PanelLayoutState>((set, get) => ({
     const fresh = createLeaf('dashboard')
     set({ root: fresh, focusedPanelId: fresh.panelId, activeView: 'dashboard' })
     if (typeof window !== 'undefined' && window.api?.settings) {
-      window.api.settings.setJson('panel.layout', null).catch(() => {})
+      window.api.settings.setJson('panel.layout', null).catch((err) => {
+        console.error('Failed to clear panel layout:', err)
+      })
     }
   },
 
@@ -464,8 +466,8 @@ export const usePanelLayoutStore = create<PanelLayoutState>((set, get) => ({
           ...(activeTab ? { activeView: activeTab.viewKey } : {})
         })
       }
-    } catch {
-      /* use default */
+    } catch (err) {
+      console.error('Failed to load saved panel layout:', err)
     }
   },
 
@@ -539,6 +541,8 @@ usePanelLayoutStore.subscribe((state) => {
   if (typeof window === 'undefined' || !window.api?.settings) return
   if (_saveTimeout) clearTimeout(_saveTimeout)
   _saveTimeout = setTimeout(() => {
-    window.api.settings.setJson('panel.layout', state.root).catch(() => {})
+    window.api.settings.setJson('panel.layout', state.root).catch((err) => {
+      console.error('Failed to save panel layout:', err)
+    })
   }, 500)
 })

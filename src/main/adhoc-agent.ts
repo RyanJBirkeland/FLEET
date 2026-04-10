@@ -28,9 +28,9 @@ import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
-import { createLogger } from './logger'
 import { getErrorMessage } from '../shared/errors'
 import { nowIso } from '../shared/time'
+import { createLogger } from './logger'
 
 const log = createLogger('adhoc-agent')
 
@@ -84,7 +84,9 @@ export async function spawnAdhocAgent(args: {
 
   // Proactively refresh the OAuth token before spawning — the pipeline drain
   // loop handles this for pipeline agents, but adhoc agents bypass that path.
-  await refreshOAuthTokenFromKeychain().catch(() => {})
+  await refreshOAuthTokenFromKeychain().catch((err) => {
+    log.warn(`[adhoc-agent] Failed to refresh OAuth token before spawn: ${getErrorMessage(err)}`)
+  })
 
   const env = buildAgentEnvWithAuth()
 
@@ -282,7 +284,9 @@ export async function spawnAdhocAgent(args: {
       status: 'done',
       finishedAt: nowIso(),
       exitCode: 0
-    }).catch(() => {})
+    }).catch((err) => {
+      log.warn(`[adhoc-agent] Failed to update agent meta on completion: ${getErrorMessage(err)}`)
+    })
 
     try {
       const totals = turnTracker.totals()

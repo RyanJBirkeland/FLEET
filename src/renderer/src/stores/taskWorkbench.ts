@@ -121,7 +121,8 @@ export interface PersistedDraft {
 function loadAdvancedOpen(): boolean {
   try {
     return localStorage.getItem(ADVANCED_OPEN_STORAGE_KEY) === 'true'
-  } catch {
+  } catch (err) {
+    console.error('Failed to load advanced open state:', err)
     return false
   }
 }
@@ -129,8 +130,8 @@ function loadAdvancedOpen(): boolean {
 function persistAdvancedOpen(open: boolean): void {
   try {
     localStorage.setItem(ADVANCED_OPEN_STORAGE_KEY, open ? 'true' : 'false')
-  } catch {
-    // Ignore quota errors
+  } catch (err) {
+    console.error('Failed to persist advanced open state:', err)
   }
 }
 
@@ -140,8 +141,8 @@ export function loadDraft(): Partial<PersistedDraft> | null {
     if (!raw) return null
     const parsed = JSON.parse(raw)
     if (parsed && typeof parsed === 'object') return parsed as Partial<PersistedDraft>
-  } catch {
-    // Ignore corrupt localStorage
+  } catch (err) {
+    console.error('Failed to load draft from localStorage:', err)
   }
   return null
 }
@@ -149,16 +150,16 @@ export function loadDraft(): Partial<PersistedDraft> | null {
 export function persistDraft(draft: PersistedDraft): void {
   try {
     localStorage.setItem(DRAFT_STORAGE_KEY, JSON.stringify(draft))
-  } catch {
-    // Ignore quota errors
+  } catch (err) {
+    console.error('Failed to persist draft to localStorage:', err)
   }
 }
 
 export function clearDraftStorage(): void {
   try {
     localStorage.removeItem(DRAFT_STORAGE_KEY)
-  } catch {
-    // Ignore
+  } catch (err) {
+    console.error('Failed to clear draft storage:', err)
   }
 }
 

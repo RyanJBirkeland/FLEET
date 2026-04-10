@@ -487,7 +487,11 @@ export async function runAgent(
               '[agent-manager] OAuth token auto-refreshed from Keychain after auth failure'
             )
         })
-        .catch(() => {})
+        .catch((err) => {
+          logger.warn(
+            `[agent-manager] Failed to auto-refresh OAuth token after auth failure: ${getErrorMessage(err)}`
+          )
+        })
       logger.warn(`[agent-manager] Auth failure detected — OAuth token cache invalidated`)
     }
   }

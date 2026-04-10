@@ -25,8 +25,8 @@ function debouncedPersist(presets: Record<string, FilterPreset>): void {
   persistTimer = setTimeout(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
-    } catch {
-      // Ignore quota errors
+    } catch (err) {
+      console.error('Failed to persist filter presets:', err)
     }
   }, 500)
 }
@@ -81,8 +81,8 @@ export const useFilterPresets = create<FilterPresetsState>((set, get) => ({
       }
 
       set({ presets: parsed })
-    } catch {
-      // Ignore parse errors
+    } catch (err) {
+      console.error('Failed to load filter presets:', err)
     }
   }
 }))

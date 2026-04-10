@@ -8,6 +8,7 @@ import {
   INITIAL_DRAIN_DEFER_MS,
   NOTES_MAX_LENGTH
 } from './types'
+import { getErrorMessage } from '../../shared/errors'
 import {
   makeConcurrencyState,
   setMaxSlots,
@@ -296,7 +297,6 @@ export interface AgentManager {
 // ---------------------------------------------------------------------------
 
 import type { DependencyIndex } from './dependency-index'
-import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 
 export class AgentManagerImpl implements AgentManager {
@@ -966,7 +966,9 @@ export class AgentManagerImpl implements AgentManager {
 
     // Wait for any in-flight drain to complete before aborting agents
     if (this._drainInFlight) {
-      await this._drainInFlight.catch(() => {})
+      await this._drainInFlight.catch((err) => {
+        this.logger.warn(`[agent-manager] Drain in-flight failed during shutdown: ${getErrorMessage(err)}`)
+      })
       this._drainInFlight = null
     }
 

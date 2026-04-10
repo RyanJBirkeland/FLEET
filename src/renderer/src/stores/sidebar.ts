@@ -58,7 +58,9 @@ export const useSidebarStore = create<SidebarState>((set, get) => ({
 function persistPinned(views: View[]): void {
   // settings.set expects a string value, settings.getJson parses it back
   // Verify this contract by reading src/preload/index.ts and src/main/handlers/config-handlers.ts
-  window.api.settings.set('sidebar.pinnedViews', JSON.stringify(views)).catch(() => {})
+  window.api.settings.set('sidebar.pinnedViews', JSON.stringify(views)).catch((err) => {
+    console.error('Failed to save pinned views:', err)
+  })
 }
 
 /** Helper: get unpinned views (not stored, computed) */

@@ -68,7 +68,8 @@ function loadRecentCommands(): string[] {
   try {
     const stored = localStorage.getItem(RECENT_COMMANDS_KEY)
     return stored ? JSON.parse(stored) : []
-  } catch {
+  } catch (err) {
+    console.error('Failed to load recent commands:', err)
     return []
   }
 }
@@ -76,8 +77,8 @@ function loadRecentCommands(): string[] {
 function saveRecentCommands(commandIds: string[]): void {
   try {
     localStorage.setItem(RECENT_COMMANDS_KEY, JSON.stringify(commandIds.slice(0, MAX_RECENT)))
-  } catch {
-    // Ignore localStorage errors
+  } catch (err) {
+    console.error('Failed to save recent commands:', err)
   }
 }
 

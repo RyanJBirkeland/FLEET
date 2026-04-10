@@ -78,8 +78,8 @@ export const usePromptTemplatesStore = create<PromptTemplatesState>((set, get) =
       const saved = (await window.api.settings.getJson(SETTINGS_KEY)) as PromptTemplate[] | null
       const merged = mergeTemplates(saved ?? [])
       set({ templates: merged, loading: false })
-    } catch {
-      // If settings load fails, fall back to defaults
+    } catch (err) {
+      console.error('Failed to load prompt templates:', err)
       set({ templates: [...DEFAULT_TEMPLATES], loading: false })
     }
   },

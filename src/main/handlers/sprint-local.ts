@@ -5,6 +5,7 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { createLogger } from '../logger'
 import type { DialogService } from '../dialog-service'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFile)
 import type { TaskTemplate, ClaimedTask } from '../../shared/types'
@@ -404,7 +405,9 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
           .split('\n')
           .map((b) => b.trim())
           .filter(Boolean)) {
-          await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath }).catch(() => {})
+          await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath }).catch((err) => {
+            logger.warn(`[sprint-local] Failed to delete branch ${branch}: ${getErrorMessage(err)}`)
+          })
         }
       } catch {
         /* cleanup is best-effort */

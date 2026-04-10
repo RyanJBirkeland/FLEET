@@ -37,6 +37,10 @@ import { getEventRetentionDays } from './config'
 import { createAgentManager } from './agent-manager'
 import { createSprintTaskRepository } from './data/sprint-task-repository'
 import { getOAuthToken, ensureExtraPathsOnProcessEnv } from './env-utils'
+import { createLogger } from './logger'
+import { getErrorMessage } from '../shared/errors'
+
+const logger = createLogger('main')
 
 // Augment process.env.PATH so child_process.spawn() can find user-installed
 // CLIs (claude, gh, git, node) when launched from Finder/Spotlight. Must run
@@ -53,7 +57,6 @@ import {
   pruneOldDiffSnapshots,
   DIFF_SNAPSHOT_RETENTION_DAYS
 } from './data/sprint-queries'
-import { createLogger } from './logger'
 import {
   registerTearoffHandlers,
   closeTearoffWindows,
@@ -117,7 +120,11 @@ app.whenReady().then(() => {
   getDb()
 
   // Ensure Claude Code has sensible default permissions for BDE agents
-  import('./claude-settings-bootstrap').then((m) => m.ensureClaudeSettings()).catch(() => {})
+  import('./claude-settings-bootstrap')
+    .then((m) => m.ensureClaudeSettings())
+    .catch((err) => {
+      logger.warn(`[main] Failed to ensure Claude settings: ${getErrorMessage(err)}`)
+    })
 
   // Run backup on startup and every 24 hours
   backupDatabase()

@@ -52,7 +52,8 @@ function loadFromStorage(): Notification[] {
     if (!stored) return []
     const parsed = JSON.parse(stored)
     return Array.isArray(parsed) ? parsed : []
-  } catch {
+  } catch (err) {
+    console.error('Failed to load notifications from localStorage:', err)
     return []
   }
 }
@@ -61,8 +62,8 @@ function loadFromStorage(): Notification[] {
 function saveToStorage(notifications: Notification[]): void {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications))
-  } catch {
-    // Silently fail if storage quota exceeded
+  } catch (err) {
+    console.error('Failed to save notifications to localStorage:', err)
   }
 }
 

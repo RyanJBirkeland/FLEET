@@ -60,7 +60,8 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
           hasMore: agents.length > INITIAL_DISPLAY_COUNT,
           displayedCount: INITIAL_DISPLAY_COUNT
         })
-      } catch {
+      } catch (err) {
+        console.error('Failed to load agent list:', err)
         set({ fetchError: 'Failed to load agent list' })
       }
     },
@@ -98,8 +99,8 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
       try {
         await window.api.agents.import({ meta, content })
         await get().fetchAgents()
-      } catch {
-        // Non-critical
+      } catch (err) {
+        console.error('Failed to import agent:', err)
       }
     },
 

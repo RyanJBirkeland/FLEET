@@ -25,7 +25,9 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps): React.J
     window.api
       .getRepoPaths()
       .then(setRepoPaths)
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load repo paths:', err)
+      })
   }, [loadTemplates])
 
   const visibleTemplates = templates.filter((t) => !t.hidden)

@@ -45,7 +45,9 @@ function useTearoffClosePreference(): [string | null, () => void] {
       .then((val) => {
         setPrefState(val ?? null)
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to load tear-off close action preference:', err)
+      })
   }, [])
 
   const reset = useCallback(() => {
@@ -55,7 +57,9 @@ function useTearoffClosePreference(): [string | null, () => void] {
         setPrefState(null)
         toast.success("Tear-off close preference reset — you'll be asked next time")
       })
-      .catch(() => {})
+      .catch((err) => {
+        console.error('Failed to reset tear-off close action preference:', err)
+      })
   }, [])
 
   return [pref, reset]
