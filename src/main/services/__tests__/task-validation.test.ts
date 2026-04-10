@@ -8,23 +8,19 @@ vi.mock('../../data/sprint-queries', () => ({
   listTasks: vi.fn().mockReturnValue([])
 }))
 
-// Mock dependency-helpers
-vi.mock('../../agent-manager/dependency-helpers', () => ({
+// Mock dependency-service
+vi.mock('../dependency-service', () => ({
   buildBlockedNotes: vi.fn(
     (blockedBy: string[]) => `[auto-block] Blocked by: ${blockedBy.join(', ')}`
   ),
-  checkTaskDependencies: vi.fn().mockReturnValue({ shouldBlock: false, blockedBy: [] })
-}))
-
-// Mock dependency-index (needed by dependency-helpers)
-vi.mock('../../agent-manager/dependency-index', () => ({
+  checkTaskDependencies: vi.fn().mockReturnValue({ shouldBlock: false, blockedBy: [] }),
   createDependencyIndex: vi.fn().mockReturnValue({
     areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: true })
   })
 }))
 
 import { validateTaskCreation } from '../task-validation'
-import { checkTaskDependencies } from '../../agent-manager/dependency-helpers'
+import { checkTaskDependencies } from '../dependency-service'
 
 const mockLogger = { warn: vi.fn() }
 

@@ -1,13 +1,20 @@
 /**
- * @deprecated This module has been moved to src/main/services/dependency-service.ts.
- * Import from there instead. This re-export will be removed in a future version.
+ * Shared domain service for task dependency management.
+ * Consolidates dependency checking, cycle detection, and status classification.
  */
-import type { TaskDependency } from '../../shared/types'
+
+import type { SprintTask, TaskDependency } from '../../shared/types'
+import type { Logger } from '../agent-manager/types'
 import {
   TERMINAL_STATUSES,
   FAILURE_STATUSES,
   HARD_SATISFIED_STATUSES
 } from '../../shared/task-transitions'
+
+// Re-export canonical status sets
+export { TERMINAL_STATUSES, FAILURE_STATUSES, HARD_SATISFIED_STATUSES }
+
+// ============ Dependency Index ============
 
 export interface DependencyIndex {
   rebuild(tasks: Array<{ id: string; depends_on: TaskDependency[] | null }>): void
@@ -106,6 +113,8 @@ export function createDependencyIndex(): DependencyIndex {
   }
 }
 
+// ============ Cycle Detection ============
+
 export function detectCycle(
   taskId: string,
   proposedDeps: TaskDependency[],
@@ -135,4 +144,50 @@ export function detectCycle(
     if (cycle) return cycle
   }
   return null
+}
+
+// ============ Blocked Notes Management ============
+
+const BLOCK_PREFIX = '[auto-block] '
+
+export function formatBlockedNote(blockedBy: string[]): string {
+  return `${BLOCK_PREFIX}Blocked by: ${blockedBy.join(', ')}`
+}
+
+export function stripBlockedNote(notes: string | null): string {
+  if (!notes) return ''
+  return notes.replace(/^\[auto-block\] .*\n?/, '').trim()
+}
+
+export function buildBlockedNotes(blockedBy: string[], existingNotes?: string | null): string {
+  const blockNote = formatBlockedNote(blockedBy)
+  const userNotes = stripBlockedNote(existingNotes ?? null)
+  return userNotes ? `${blockNote}\n${userNotes}` : blockNote
+}
+
+// ============ Dependency Checking ============
+
+/**
+ * Check whether a task's dependencies are satisfied.
+ * Creates a temporary dependency index from the current task list.
+ * Returns { shouldBlock: true, blockedBy: [...] } if deps are unsatisfied.
+ */
+export function checkTaskDependencies(
+  taskId: string,
+  deps: TaskDependency[],
+  logger: Logger,
+  listTasks: () => SprintTask[]
+): { shouldBlock: boolean; blockedBy: string[] } {
+  try {
+    const allTasks = listTasks()
+    const statusMap = new Map(allTasks.map((t) => [t.id, t.status]))
+    const idx = createDependencyIndex()
+    const { satisfied, blockedBy } = idx.areDependenciesSatisfied(taskId, deps, (depId: string) =>
+      statusMap.get(depId)
+    )
+    return { shouldBlock: !satisfied && blockedBy.length > 0, blockedBy }
+  } catch (err) {
+    logger.warn(`[dependency-service] checkTaskDependencies failed for ${taskId}: ${err}`)
+    return { shouldBlock: false, blockedBy: [] }
+  }
 }

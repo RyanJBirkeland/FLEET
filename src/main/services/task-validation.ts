@@ -5,7 +5,7 @@
  * to eliminate duplicated validation logic.
  */
 import { validateStructural } from '../../shared/spec-validation'
-import { buildBlockedNotes, checkTaskDependencies } from '../agent-manager/dependency-helpers'
+import { buildBlockedNotes, checkTaskDependencies } from './dependency-service'
 import type { CreateTaskInput } from '../data/sprint-queries'
 import { listTasks as queryListTasks } from '../data/sprint-queries'
 import type { SprintTask, TaskDependency } from '../../shared/types'

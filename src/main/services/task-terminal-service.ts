@@ -1,9 +1,10 @@
 import { resolveDependents } from '../agent-manager/resolve-dependents'
-import { createDependencyIndex } from '../agent-manager/dependency-index'
-import type { DependencyIndex } from '../agent-manager/dependency-index'
+import {
+  createDependencyIndex,
+  type DependencyIndex,
+  TERMINAL_STATUSES
+} from './dependency-service'
 import type { SprintTask, TaskDependency } from '../../shared/types'
-
-const TERMINAL_STATUSES = new Set(['done', 'failed', 'error', 'cancelled'])
 
 type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes' | 'title'> & {
   depends_on: TaskDependency[] | null

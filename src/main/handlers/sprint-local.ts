@@ -7,8 +7,12 @@ import type { TaskTemplate, ClaimedTask } from '../../shared/types'
 import type { WorkflowTemplate } from '../../shared/workflow-types'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
-import { buildBlockedNotes, checkTaskDependencies } from '../agent-manager/dependency-helpers'
-import { detectCycle } from '../agent-manager/dependency-index'
+import { TERMINAL_STATUSES } from '../../shared/task-transitions'
+import {
+  buildBlockedNotes,
+  checkTaskDependencies,
+  detectCycle
+} from '../services/dependency-service'
 import {
   generatePrompt,
   validateSpecPath,
@@ -38,10 +42,6 @@ import { registerSprintRetryHandler } from './sprint-retry-handler'
 import { validateTaskSpec } from './sprint-validation-helpers'
 
 const logger = createLogger('sprint-local')
-
-// --- Terminal status resolution ---
-
-const TERMINAL_STATUSES = new Set(['done', 'failed', 'error', 'cancelled'])
 
 export interface SprintLocalDeps {
   onStatusTerminal: (taskId: string, status: string) => void | Promise<void>

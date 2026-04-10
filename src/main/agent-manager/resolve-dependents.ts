@@ -1,9 +1,10 @@
-import type { DependencyIndex } from './dependency-index'
 import type { SprintTask, TaskDependency } from '../../shared/types'
 import type { Logger } from './types'
-import { buildBlockedNotes } from './dependency-helpers'
-
-const FAILURE_STATUSES = new Set(['failed', 'error', 'cancelled'])
+import {
+  type DependencyIndex,
+  buildBlockedNotes,
+  FAILURE_STATUSES
+} from '../services/dependency-service'
 
 /**
  * When a task reaches a terminal status, check all tasks that depend on it.
