@@ -26,6 +26,7 @@ import { registerReviewHandlers } from './handlers/review'
 import { registerWebhookHandlers } from './handlers/webhook-handlers'
 import { registerGroupHandlers } from './handlers/group-handlers'
 import { registerPlannerImportHandlers } from './handlers/planner-import'
+import { registerRepoDiscoveryHandlers } from './handlers/repo-discovery'
 import { getDb, closeDb, backupDatabase } from './db'
 import { importSprintTasksFromSupabase } from './data/supabase-import'
 import { startPrPoller, stopPrPoller } from './pr-poller'
@@ -292,6 +293,7 @@ app.whenReady().then(() => {
   registerWebhookHandlers()
   registerGroupHandlers()
   registerPlannerImportHandlers()
+  registerRepoDiscoveryHandlers()
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     const connectSrc = buildConnectSrc()

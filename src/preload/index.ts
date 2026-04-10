@@ -540,6 +540,21 @@ const api = {
     ): void => cb(data)
     ipcRenderer.on('synthesizer:chunk', listener)
     return () => ipcRenderer.removeListener('synthesizer:chunk', listener)
+  },
+
+  // Repository discovery
+  repoDiscovery: {
+    scanLocal: (dirs: string[]) => typedInvoke('repos:scanLocal', dirs),
+    listGithub: () => typedInvoke('repos:listGithub'),
+    clone: (owner: string, repo: string, destDir: string) =>
+      typedInvoke('repos:clone', owner, repo, destDir),
+    onCloneProgress: (
+      cb: (data: { owner: string; repo: string; line: string; done: boolean; error?: string; localPath?: string }) => void
+    ): (() => void) => {
+      const handler = (_e: unknown, data: any): void => cb(data)
+      ipcRenderer.on('repos:cloneProgress', handler)
+      return () => ipcRenderer.removeListener('repos:cloneProgress', handler)
+    }
   }
 }
 
