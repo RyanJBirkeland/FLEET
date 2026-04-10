@@ -68,10 +68,17 @@ export function LaunchpadGrid({
 }: LaunchpadGridProps): React.JSX.Element {
   const repos = useRepoOptions()
   const [prompt, setPrompt] = useState('')
-  const [repo, setRepo] = useState(repos[0]?.label ?? '')
+  const [repo, setRepo] = useState('')
   const [model, setModel] = useState('sonnet')
   const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false)
   const repoDropdownRef = useRef<HTMLDivElement>(null)
+
+  // Sync repo selection once repos load (useRepoOptions is async via IPC)
+  useEffect(() => {
+    if (repos.length > 0) {
+      setRepo((prev) => prev || repos[0].label)
+    }
+  }, [repos])
 
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
