@@ -2,6 +2,7 @@ import http from 'node:http'
 import type { AgentManager } from '../agent-manager'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { createLogger } from '../logger'
+import { nowIso } from '../../shared/time'
 
 const logger = createLogger('status-server')
 
@@ -43,7 +44,7 @@ export function createStatusServer(
           agentManager: status,
           metrics,
           queue,
-          ts: new Date().toISOString()
+          ts: nowIso()
         })
 
         res.writeHead(200, { 'Content-Type': 'application/json' })

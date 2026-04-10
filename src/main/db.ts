@@ -888,7 +888,8 @@ export const migrations: Migration[] = [
   },
   {
     version: 36,
-    description: 'Restore idx_sprint_tasks_claimed_by and idx_sprint_tasks_pr_number dropped in v17/v20 table rewrites',
+    description:
+      'Restore idx_sprint_tasks_claimed_by and idx_sprint_tasks_pr_number dropped in v17/v20 table rewrites',
     up: (db) => {
       db.exec('CREATE INDEX IF NOT EXISTS idx_sprint_tasks_claimed_by ON sprint_tasks(claimed_by)')
       db.exec('CREATE INDEX IF NOT EXISTS idx_sprint_tasks_pr_number ON sprint_tasks(pr_number)')
@@ -926,7 +927,9 @@ export const migrations: Migration[] = [
     version: 38,
     description: 'Normalize sprint_tasks.repo to lowercase for case-insensitive matching',
     up: (db) => {
-      const stmt = db.prepare('UPDATE sprint_tasks SET repo = lower(repo) WHERE repo <> lower(repo)')
+      const stmt = db.prepare(
+        'UPDATE sprint_tasks SET repo = lower(repo) WHERE repo <> lower(repo)'
+      )
       stmt.run()
     }
   },

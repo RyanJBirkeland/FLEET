@@ -93,9 +93,7 @@ export function AgentsView(): React.JSX.Element {
       return
     }
     // Emit event for AgentConsole to handle
-    window.dispatchEvent(
-      new CustomEvent('agent:clear-console', { detail: { agentId: activeId } })
-    )
+    window.dispatchEvent(new CustomEvent('agent:clear-console', { detail: { agentId: activeId } }))
   }, [activeId])
 
   const handleDismissBanner = useCallback(() => {
@@ -260,40 +258,139 @@ export function AgentsView(): React.JSX.Element {
       {/* Zone 1: Fleet List + Agent Console */}
       <Group orientation="horizontal" style={{ flex: 1, minHeight: 0 }}>
         <Panel defaultSize={20} minSize={12} maxSize={40}>
-        {/* Fleet sidebar */}
-        <div className="agents-sidebar">
-          {/* Header */}
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              padding: '10px 12px',
-              borderBottom: '1px solid var(--bde-accent-border)'
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <span
-                className="text-gradient-aurora"
+          {/* Fleet sidebar */}
+          <div className="agents-sidebar">
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '10px 12px',
+                borderBottom: '1px solid var(--bde-accent-border)'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <span
+                  className="text-gradient-aurora"
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '1.5px',
+                    fontWeight: 600
+                  }}
+                >
+                  Fleet
+                </span>
+                <div
+                  style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
+                  onMouseEnter={() => setShowTooltip(true)}
+                  onMouseLeave={() => setShowTooltip(false)}
+                >
+                  <Info
+                    size={14}
+                    style={{
+                      color: 'var(--bde-text-muted)',
+                      cursor: 'help',
+                      transition: 'color 0.2s'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.color = 'var(--bde-accent)'
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.color = 'var(--bde-text-muted)'
+                    }}
+                    aria-describedby="scratchpad-tooltip"
+                  />
+                  {showTooltip && (
+                    <div
+                      id="scratchpad-tooltip"
+                      role="tooltip"
+                      style={{
+                        position: 'absolute',
+                        top: '20px',
+                        left: '0',
+                        width: '240px',
+                        padding: '8px 10px',
+                        background: 'var(--bde-accent-surface)',
+                        border: '1px solid var(--bde-accent-border)',
+                        borderRadius: '6px',
+                        fontSize: '10px',
+                        lineHeight: 1.4,
+                        color: 'var(--bde-text-muted)',
+                        zIndex: 1000,
+                        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
+                      }}
+                    >
+                      <strong style={{ color: 'var(--bde-accent)' }}>Scratchpad.</strong> Agents
+                      here run in isolated worktrees and aren&apos;t tracked in the sprint pipeline.
+                      When an agent finishes, click <em>Promote to Code Review</em> in its console
+                      header to flow the work into the review queue. For tracked sprint work, queue
+                      tasks from <em>Task Workbench</em>.
+                    </div>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedId(null)
+                  setShowLaunchpad(true)
+                }}
+                title="New Agent"
                 style={{
-                  fontSize: '10px',
-                  textTransform: 'uppercase',
-                  letterSpacing: '1.5px',
-                  fontWeight: 600
+                  width: 24,
+                  height: 24,
+                  borderRadius: 6,
+                  border: '1px solid var(--bde-accent-border)',
+                  background: 'var(--bde-accent-surface)',
+                  color: 'var(--bde-accent)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  padding: 0
                 }}
               >
-                Fleet
-              </span>
+                <Plus size={12} />
+              </button>
+            </div>
+
+            {/* Dismissable banner for first-time users */}
+            {showScratchpadBanner && (
               <div
-                style={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}
-                onMouseEnter={() => setShowTooltip(true)}
-                onMouseLeave={() => setShowTooltip(false)}
+                role="status"
+                style={{
+                  fontSize: '10px',
+                  lineHeight: 1.4,
+                  padding: '8px 12px',
+                  borderBottom: '1px solid var(--bde-accent-border)',
+                  background: 'var(--bde-accent-surface)',
+                  color: 'var(--bde-text-muted)',
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px'
+                }}
               >
-                <Info
-                  size={14}
+                <div style={{ flex: 1 }}>
+                  <strong style={{ color: 'var(--bde-accent)' }}>Scratchpad.</strong> Agents here
+                  run in isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an
+                  agent finishes, click <em>Promote to Code Review</em> in its console header to
+                  flow the work into the review queue. For tracked sprint work, queue tasks from{' '}
+                  <em>Task Workbench</em>.
+                </div>
+                <button
+                  onClick={handleDismissBanner}
+                  aria-label="Dismiss scratchpad notice"
                   style={{
+                    background: 'transparent',
+                    border: 'none',
                     color: 'var(--bde-text-muted)',
-                    cursor: 'help',
+                    cursor: 'pointer',
+                    padding: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    flexShrink: 0,
                     transition: 'color 0.2s'
                   }}
                   onMouseEnter={(e) => {
@@ -302,158 +399,55 @@ export function AgentsView(): React.JSX.Element {
                   onMouseLeave={(e) => {
                     e.currentTarget.style.color = 'var(--bde-text-muted)'
                   }}
-                  aria-describedby="scratchpad-tooltip"
-                />
-                {showTooltip && (
-                  <div
-                    id="scratchpad-tooltip"
-                    role="tooltip"
-                    style={{
-                      position: 'absolute',
-                      top: '20px',
-                      left: '0',
-                      width: '240px',
-                      padding: '8px 10px',
-                      background: 'var(--bde-accent-surface)',
-                      border: '1px solid var(--bde-accent-border)',
-                      borderRadius: '6px',
-                      fontSize: '10px',
-                      lineHeight: 1.4,
-                      color: 'var(--bde-text-muted)',
-                      zIndex: 1000,
-                      boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)'
-                    }}
-                  >
-                    <strong style={{ color: 'var(--bde-accent)' }}>Scratchpad.</strong> Agents here run
-                    in isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an agent
-                    finishes, click <em>Promote to Code Review</em> in its console header to flow the
-                    work into the review queue. For tracked sprint work, queue tasks from{' '}
-                    <em>Task Workbench</em>.
-                  </div>
-                )}
+                >
+                  <X size={14} />
+                </button>
               </div>
-            </div>
-            <button
-              onClick={() => {
-                setSelectedId(null)
-                setShowLaunchpad(true)
-              }}
-              title="New Agent"
-              style={{
-                width: 24,
-                height: 24,
-                borderRadius: 6,
-                border: '1px solid var(--bde-accent-border)',
-                background: 'var(--bde-accent-surface)',
-                color: 'var(--bde-accent)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-                padding: 0
-              }}
-            >
-              <Plus size={12} />
-            </button>
+            )}
+
+            <AgentList
+              agents={agents}
+              selectedId={activeId}
+              onSelect={handleSelectAgent}
+              onKill={fetchAgents}
+              loading={!fetched && agents.length === 0 && !fetchError}
+              fetchError={fetchError}
+              onRetry={fetchAgents}
+              displayedCount={displayedCount}
+              hasMore={hasMore}
+              onLoadMore={loadMore}
+            />
           </div>
-
-          {/* Dismissable banner for first-time users */}
-          {showScratchpadBanner && (
-            <div
-              role="status"
-              style={{
-                fontSize: '10px',
-                lineHeight: 1.4,
-                padding: '8px 12px',
-                borderBottom: '1px solid var(--bde-accent-border)',
-                background: 'var(--bde-accent-surface)',
-                color: 'var(--bde-text-muted)',
-                display: 'flex',
-                alignItems: 'flex-start',
-                gap: '8px'
-              }}
-            >
-              <div style={{ flex: 1 }}>
-                <strong style={{ color: 'var(--bde-accent)' }}>Scratchpad.</strong> Agents here run in
-                isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an agent
-                finishes, click <em>Promote to Code Review</em> in its console header to flow the work
-                into the review queue. For tracked sprint work, queue tasks from{' '}
-                <em>Task Workbench</em>.
-              </div>
-              <button
-                onClick={handleDismissBanner}
-                aria-label="Dismiss scratchpad notice"
-                style={{
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--bde-text-muted)',
-                  cursor: 'pointer',
-                  padding: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  flexShrink: 0,
-                  transition: 'color 0.2s'
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.color = 'var(--bde-accent)'
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.color = 'var(--bde-text-muted)'
-                }}
-              >
-                <X size={14} />
-              </button>
-            </div>
-          )}
-
-          <AgentList
-            agents={agents}
-            selectedId={activeId}
-            onSelect={handleSelectAgent}
-            onKill={fetchAgents}
-            loading={!fetched && agents.length === 0 && !fetchError}
-            fetchError={fetchError}
-            onRetry={fetchAgents}
-            displayedCount={displayedCount}
-            hasMore={hasMore}
-            onLoadMore={loadMore}
-          />
-        </div>
         </Panel>
         <Separator className="panel-separator" />
         <Panel minSize={40}>
-        {/* Agent Console */}
-        <div style={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-          {showLaunchpad || (!selectedAgent && agents.length === 0) ? (
-            <AgentLaunchpad
-              onAgentSpawned={() => {
-                setShowLaunchpad(false)
-                fetchAgents()
-              }}
-            />
-          ) : selectedAgent && activeId ? (
-            <AgentConsole
-              agentId={activeId}
-              onSteer={handleSteer}
-              onCommand={handleCommand}
-            />
-          ) : (
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100%'
-              }}
-            >
-              <EmptyState
-                title="No agent selected"
-                description="Select an agent from the fleet list to view its console output."
+          {/* Agent Console */}
+          <div style={{ height: '100%', minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+            {showLaunchpad || (!selectedAgent && agents.length === 0) ? (
+              <AgentLaunchpad
+                onAgentSpawned={() => {
+                  setShowLaunchpad(false)
+                  fetchAgents()
+                }}
               />
-            </div>
-          )}
-        </div>
+            ) : selectedAgent && activeId ? (
+              <AgentConsole agentId={activeId} onSteer={handleSteer} onCommand={handleCommand} />
+            ) : (
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  height: '100%'
+                }}
+              >
+                <EmptyState
+                  title="No agent selected"
+                  description="Select an agent from the fleet list to view its console output."
+                />
+              </div>
+            )}
+          </div>
         </Panel>
       </Group>
     </motion.div>

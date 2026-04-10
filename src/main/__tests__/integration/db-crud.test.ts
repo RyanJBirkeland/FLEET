@@ -1,6 +1,7 @@
 import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { migrations, runMigrations } from '../../db'
+import { nowIso } from '../../../shared/time'
 
 let db: Database.Database
 
@@ -68,7 +69,7 @@ describe('agent_runs CRUD', () => {
 
   it('insert -> select -> update status -> select confirms update', () => {
     const id = 'run-001'
-    const now = new Date().toISOString()
+    const now = nowIso()
 
     // Insert
     db.prepare(
@@ -103,7 +104,7 @@ describe('agent_runs CRUD', () => {
     expect(() =>
       db
         .prepare('INSERT INTO agent_runs (id, bin, status, started_at) VALUES (?, ?, ?, ?)')
-        .run('run-bad', 'claude', 'invalid_status', new Date().toISOString())
+        .run('run-bad', 'claude', 'invalid_status', nowIso())
     ).toThrow()
   })
 })

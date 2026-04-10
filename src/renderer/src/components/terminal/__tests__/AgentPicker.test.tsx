@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, fireEvent } from '@testing-library/react'
 import { AgentPicker } from '../AgentPicker'
+import { nowIso } from '../../../../../shared/time'
 
 describe('AgentPicker', () => {
   const defaultProps = {
@@ -36,7 +37,7 @@ describe('AgentPicker', () => {
         repo: 'BDE',
         repoPath: '/tmp',
         task: 'Fix bug',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running' as const,
@@ -65,7 +66,7 @@ describe('AgentPicker', () => {
         repo: 'BDE',
         repoPath: '/tmp',
         task: 'Fix bug',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running' as const,

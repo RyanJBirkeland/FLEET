@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { useSprintEvents } from '../sprintEvents'
 import type { AgentEvent } from '../../../../shared/types'
 import type { TaskOutputEvent } from '../../../../shared/types'
+import { nowIso } from '../../../../shared/time'
 
 const initialState = {
   taskEvents: {},
@@ -24,7 +25,7 @@ function makeAgentEvent(text = 'hello'): AgentEvent {
 function makeTaskOutputEvent(taskId: string, type = 'agent:started'): TaskOutputEvent {
   return {
     taskId,
-    timestamp: new Date().toISOString(),
+    timestamp: nowIso(),
     type
   }
 }

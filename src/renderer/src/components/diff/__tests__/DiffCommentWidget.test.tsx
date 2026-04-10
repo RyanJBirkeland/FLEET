@@ -8,14 +8,15 @@ vi.mock('../../../lib/render-markdown', () => ({
 
 import { DiffCommentWidget } from '../DiffCommentWidget'
 import type { PrComment } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 function makeComment(overrides: Partial<PrComment> = {}): PrComment {
   return {
     id: 1,
     user: { login: 'alice', avatar_url: '' },
     body: 'test comment body',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
     html_url: 'https://github.com',
     ...overrides
   }

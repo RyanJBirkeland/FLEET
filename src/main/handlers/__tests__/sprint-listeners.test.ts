@@ -23,6 +23,7 @@ vi.mock('../../logger', () => ({
 import { BrowserWindow } from 'electron'
 import { onSprintMutation, notifySprintMutation } from '../sprint-listeners'
 import type { SprintTask } from '../../../shared/types'
+import { nowIso } from '../../../shared/time'
 
 function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
   return {
@@ -30,8 +31,8 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
     title: 'Test Task',
     status: 'active',
     priority: 'medium',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
     depends_on: [],
     ...overrides
   } as SprintTask

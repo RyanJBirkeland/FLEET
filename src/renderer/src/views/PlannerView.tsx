@@ -174,9 +174,7 @@ export default function PlannerView(): React.JSX.Element {
                 onReorderTasks={handleReorderTasks}
               />
             )}
-            {!selectedGroup && !loading && (
-              <EmptyState message="Select an epic to view details" />
-            )}
+            {!selectedGroup && !loading && <EmptyState message="Select an epic to view details" />}
           </Panel>
         </Group>
       </div>

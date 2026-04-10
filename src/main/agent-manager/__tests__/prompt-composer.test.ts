@@ -939,7 +939,7 @@ describe('buildAgentPrompt', () => {
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
         taskContent: 'implement feature x',
-        taskId: 'task-abc123',
+        taskId: 'task-abc123'
       })
       expect(prompt).toContain('## Task Scratchpad')
       expect(prompt).toContain('task-abc123')
@@ -949,7 +949,7 @@ describe('buildAgentPrompt', () => {
     it('does not inject ## Task Scratchpad when taskId is omitted', () => {
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
-        taskContent: 'implement feature x',
+        taskContent: 'implement feature x'
       })
       expect(prompt).not.toContain('## Task Scratchpad')
     })
@@ -958,7 +958,7 @@ describe('buildAgentPrompt', () => {
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
         taskContent: 'implement feature x',
-        priorScratchpad: 'I tried approach A but hit error XYZ',
+        priorScratchpad: 'I tried approach A but hit error XYZ'
       })
       expect(prompt).toContain('## Prior Attempt Context')
       expect(prompt).toContain('I tried approach A but hit error XYZ')
@@ -971,14 +971,14 @@ describe('buildAgentPrompt', () => {
     it('does not inject ## Prior Attempt Context when priorScratchpad is empty or absent', () => {
       const noScratchpad = buildAgentPrompt({
         agentType: 'pipeline',
-        taskContent: 'implement feature x',
+        taskContent: 'implement feature x'
       })
       expect(noScratchpad).not.toContain('## Prior Attempt Context')
 
       const emptyScratchpad = buildAgentPrompt({
         agentType: 'pipeline',
         taskContent: 'implement feature x',
-        priorScratchpad: '',
+        priorScratchpad: ''
       })
       expect(emptyScratchpad).not.toContain('## Prior Attempt Context')
     })
@@ -988,7 +988,7 @@ describe('buildAgentPrompt', () => {
         agentType: 'assistant',
         taskContent: 'implement feature x',
         taskId: 'task-abc123',
-        priorScratchpad: 'some prior notes',
+        priorScratchpad: 'some prior notes'
       })
       expect(prompt).not.toContain('## Task Scratchpad')
       expect(prompt).not.toContain('## Prior Attempt Context')
@@ -1005,11 +1005,11 @@ describe('buildAgentPrompt', () => {
       mockGetUserMemory.mockReturnValue({
         content: '### auth-guide.md\n\nauthentication oauth token renewal guide',
         totalBytes: 100,
-        fileCount: 1,
+        fileCount: 1
       })
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
-        taskContent: 'fix css layout overflow problem',
+        taskContent: 'fix css layout overflow problem'
       })
       // selectUserMemory finds no overlap between "css", "layout", "overflow" and auth content
       expect(prompt).not.toContain('## User Knowledge')
@@ -1020,11 +1020,11 @@ describe('buildAgentPrompt', () => {
       mockGetUserMemory.mockReturnValue({
         content: '### auth-guide.md\n\nauthentication oauth token renewal guide',
         totalBytes: 100,
-        fileCount: 1,
+        fileCount: 1
       })
       const prompt = buildAgentPrompt({
         agentType: 'pipeline',
-        taskContent: 'fix authentication token refresh error',
+        taskContent: 'fix authentication token refresh error'
       })
       // "authentication", "token", "refresh" match content → memory included
       expect(prompt).toContain('## User Knowledge')
@@ -1036,11 +1036,11 @@ describe('buildAgentPrompt', () => {
       mockGetUserMemory.mockReturnValue({
         content: '### auth-guide.md\n\nauthentication oauth token renewal guide',
         totalBytes: 100,
-        fileCount: 1,
+        fileCount: 1
       })
       const prompt = buildAgentPrompt({
         agentType: 'assistant',
-        taskContent: 'fix css layout overflow problem',
+        taskContent: 'fix css layout overflow problem'
       })
       // getUserMemory is unconditional for non-pipeline agents
       expect(prompt).toContain('## User Knowledge')

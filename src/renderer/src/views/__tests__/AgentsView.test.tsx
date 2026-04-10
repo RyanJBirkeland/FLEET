@@ -104,6 +104,7 @@ Object.defineProperty(window, 'api', {
 })
 
 import { AgentsView } from '../AgentsView'
+import { nowIso } from '../../../../shared/time'
 
 describe('AgentsView', () => {
   beforeEach(() => {
@@ -147,9 +148,7 @@ describe('AgentsView', () => {
   })
 
   it('shows "Select an agent" message when agents exist but none selected after deselect', () => {
-    mockAgentHistoryState.agents = [
-      { id: 'agent-1', startedAt: new Date().toISOString(), status: 'complete' }
-    ]
+    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'complete' }]
     // Agents exist, auto-select will fire in useEffect, but on first render selectedId is null
     // After useEffect, it will select the first agent. We need agents but to show the empty state
     // we'd need selectedId set to something invalid. This branch is hard to test directly.
@@ -161,8 +160,8 @@ describe('AgentsView', () => {
 
   it('shows AgentConsole when an agent is selected from list', () => {
     mockAgentHistoryState.agents = [
-      { id: 'agent-1', startedAt: new Date().toISOString(), status: 'running' },
-      { id: 'agent-2', startedAt: new Date().toISOString(), status: 'complete' }
+      { id: 'agent-1', startedAt: nowIso(), status: 'running' },
+      { id: 'agent-2', startedAt: nowIso(), status: 'complete' }
     ]
     render(<AgentsView />)
     // Should auto-select first agent
@@ -173,9 +172,7 @@ describe('AgentsView', () => {
   })
 
   it('shows Launchpad when New Agent button clicked', () => {
-    mockAgentHistoryState.agents = [
-      { id: 'agent-1', startedAt: new Date().toISOString(), status: 'complete' }
-    ]
+    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'complete' }]
     render(<AgentsView />)
     // Click spawn button
     fireEvent.click(screen.getByTitle('New Agent'))
@@ -193,9 +190,7 @@ describe('AgentsView', () => {
   // ---------- Branch coverage: bde:open-spawn-modal event ----------
 
   it('opens launchpad when bde:open-spawn-modal event fires', () => {
-    mockAgentHistoryState.agents = [
-      { id: 'agent-1', startedAt: new Date().toISOString(), status: 'complete' }
-    ]
+    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'complete' }]
     render(<AgentsView />)
     expect(screen.getByTestId('agent-console')).toBeInTheDocument()
     act(() => {

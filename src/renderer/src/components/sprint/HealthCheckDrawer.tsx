@@ -28,7 +28,11 @@ export function HealthCheckDrawer({
 }: HealthCheckDrawerProps): React.JSX.Element {
   const [rescuing, setRescuing] = useState<string | null>(null)
   const drawerRef = useRef<HTMLDivElement>(null)
-  const { width, handleResizeStart, handleKeyDown: handleResizeKeyDown } = useDrawerResize({
+  const {
+    width,
+    handleResizeStart,
+    handleKeyDown: handleResizeKeyDown
+  } = useDrawerResize({
     defaultWidth: 440,
     minWidth: 300,
     maxWidth: 600

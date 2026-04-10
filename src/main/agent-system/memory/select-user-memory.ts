@@ -2,9 +2,31 @@ import { basename } from 'node:path'
 import { getUserMemory, type UserMemoryResult } from './user-memory'
 
 const STOP_WORDS = new Set([
-  'the', 'this', 'that', 'with', 'from', 'have', 'will', 'your', 'they',
-  'been', 'were', 'when', 'what', 'which', 'their', 'there', 'about',
-  'into', 'more', 'also', 'each', 'should', 'must', 'only', 'both',
+  'the',
+  'this',
+  'that',
+  'with',
+  'from',
+  'have',
+  'will',
+  'your',
+  'they',
+  'been',
+  'were',
+  'when',
+  'what',
+  'which',
+  'their',
+  'there',
+  'about',
+  'into',
+  'more',
+  'also',
+  'each',
+  'should',
+  'must',
+  'only',
+  'both'
 ])
 
 function extractKeywords(text: string): Set<string> {
@@ -12,7 +34,7 @@ function extractKeywords(text: string): Set<string> {
     text
       .toLowerCase()
       .split(/\W+/)
-      .filter(tok => tok.length >= 4 && !STOP_WORDS.has(tok))
+      .filter((tok) => tok.length >= 4 && !STOP_WORDS.has(tok))
   )
 }
 
@@ -63,7 +85,7 @@ export function selectUserMemory(taskSpec: string): UserMemoryResult {
     }
 
     const lower = section.toLowerCase()
-    const hasMatch = [...keywords].some(kw => lower.includes(kw))
+    const hasMatch = [...keywords].some((kw) => lower.includes(kw))
     if (hasMatch) {
       kept.push(section)
       totalBytes += contentBytes
@@ -73,6 +95,6 @@ export function selectUserMemory(taskSpec: string): UserMemoryResult {
   return {
     content: kept.join('\n\n---\n\n'),
     totalBytes,
-    fileCount: kept.length,
+    fileCount: kept.length
   }
 }

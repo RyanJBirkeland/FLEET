@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { AgentCostRecord } from '../../../../shared/types'
 import { useCostDataStore } from '../costData'
+import { nowIso } from '../../../../shared/time'
 
 const makeRecord = (id: string, costUsd: number | null): AgentCostRecord => ({
   id,
   model: 'claude-3-5-sonnet',
-  startedAt: new Date().toISOString(),
-  finishedAt: new Date().toISOString(),
+  startedAt: nowIso(),
+  finishedAt: nowIso(),
   costUsd,
   tokensIn: 1000,
   tokensOut: 500,

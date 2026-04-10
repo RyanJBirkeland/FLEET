@@ -22,6 +22,7 @@ import { buildAgentPrompt } from './prompt-composer'
 import { sanitizePlaygroundHtml } from '../playground-sanitize'
 import { TurnTracker } from './turn-tracker'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 const execFile = promisify(execFileCb)
 
@@ -200,8 +201,15 @@ export async function runAgent(
   repoPath: string,
   deps: RunAgentDeps
 ): Promise<void> {
-  const { activeAgents, defaultModel, logger, onTaskTerminal, repo, onSpawnSuccess, onSpawnFailure } =
-    deps
+  const {
+    activeAgents,
+    defaultModel,
+    logger,
+    onTaskTerminal,
+    repo,
+    onSpawnSuccess,
+    onSpawnFailure
+  } = deps
   const effectiveModel = task.model || defaultModel
 
   const taskContent = (task.prompt || task.spec || task.title || '').trim()
@@ -209,7 +217,7 @@ export async function runAgent(
     logger.error(`[agent-manager] Task ${task.id} has no prompt/spec/title — marking error`)
     repo.updateTask(task.id, {
       status: 'error',
-      completed_at: new Date().toISOString(),
+      completed_at: nowIso(),
       notes:
         'Agent failed to start: task has no prompt, spec, or title. To fix: edit the task and provide a prompt or spec describing what the agent should do.',
       claimed_by: null
@@ -277,7 +285,7 @@ export async function runAgent(
     crossRepoContract: task.cross_repo_contract ?? undefined,
     repoName: task.repo,
     taskId: task.id,
-    priorScratchpad,
+    priorScratchpad
   })
 
   let handle: AgentHandle
@@ -321,7 +329,7 @@ export async function runAgent(
     try {
       repo.updateTask(task.id, {
         status: 'error',
-        completed_at: new Date().toISOString(),
+        completed_at: nowIso(),
         notes: `Spawn failed: ${errMsg}`,
         claimed_by: null
       })
@@ -551,7 +559,7 @@ export async function runAgent(
 
   // Classify exit (default to exit code 1 if not available, assuming failure)
   const ffResult = classifyExit(agent.startedAt, exitedAt, exitCode ?? 1, task.fast_fail_count ?? 0)
-  const now = new Date().toISOString()
+  const now = nowIso()
 
   if (ffResult === 'fast-fail-exhausted') {
     try {

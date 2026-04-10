@@ -21,6 +21,7 @@ vi.mock('../task-changes', () => ({
 }))
 
 // Import AFTER mocks are set up
+import { nowIso } from '../../../shared/time'
 import {
   getTask,
   listTasks,
@@ -209,7 +210,7 @@ describe('listTasksRecent', () => {
   })
 
   it('includes terminal tasks completed within 7 days', () => {
-    const now = new Date().toISOString()
+    const now = nowIso()
     insertTask({ id: 'recent-done', status: 'done', completed_at: now })
     insertTask({ id: 'recent-failed', status: 'failed', completed_at: now })
     insertTask({ id: 'recent-cancelled', status: 'cancelled', completed_at: now })
@@ -606,7 +607,7 @@ describe('markTaskCancelledByPrNumber', () => {
 
 describe('getDoneTodayCount', () => {
   it('counts tasks completed today', () => {
-    const now = new Date().toISOString()
+    const now = nowIso()
     insertTask({ status: 'done', completed_at: now })
     insertTask({ status: 'done', completed_at: now })
     insertTask({ status: 'done', completed_at: '2020-01-01T00:00:00Z' }) // old

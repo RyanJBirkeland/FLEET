@@ -4,7 +4,7 @@
  * and fire mutation notifications on success.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { SprintTask, CreateTaskInput, UpdateTaskInput, QueueStats } from '../../../shared/types'
+import type { SprintTask, CreateTaskInput, QueueStats } from '../../../shared/types'
 
 // Mock sprint-queries (data layer)
 vi.mock('../../data/sprint-queries', () => ({

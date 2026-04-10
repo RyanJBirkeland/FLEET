@@ -50,6 +50,7 @@ import { importAgent, updateAgentMeta } from '../agent-history'
 import { broadcast } from '../broadcast'
 import { buildAgentPrompt } from '../agent-manager/prompt-composer'
 import { setupWorktree } from '../agent-manager/worktree'
+import { nowIso } from '../../shared/time'
 
 function createMockQueryHandle(messages: unknown[] = []) {
   const handle = {
@@ -73,7 +74,7 @@ describe('spawnAdhocAgent', () => {
       repo: 'test-repo',
       repoPath: '/tmp/test-repo',
       task: 'test task',
-      startedAt: new Date().toISOString(),
+      startedAt: nowIso(),
       finishedAt: null,
       exitCode: null,
       status: 'running',
@@ -269,8 +270,18 @@ describe('spawnAdhocAgent', () => {
   it('accumulates tokensIn across turns (not last-wins)', async () => {
     // Each turn yields an assistant message with usage at msg.message.usage (real SDK format).
     // With last-wins the final tokensIn would be 100; with accumulation it must be 200.
-    const turn1Handle = createMockQueryHandle([{ type: 'assistant', message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] } }])
-    const turn2Handle = createMockQueryHandle([{ type: 'assistant', message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] } }])
+    const turn1Handle = createMockQueryHandle([
+      {
+        type: 'assistant',
+        message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
+      }
+    ])
+    const turn2Handle = createMockQueryHandle([
+      {
+        type: 'assistant',
+        message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
+      }
+    ])
     mockQuery.mockReturnValueOnce(turn1Handle).mockReturnValueOnce(turn2Handle)
 
     const result = await spawnAdhocAgent({ task: 'test', repoPath: '/tmp/r', model: 'sonnet' })
@@ -294,15 +305,17 @@ describe('spawnAdhocAgent', () => {
       { timeout: 1000 }
     )
 
-    const completedCall = vi.mocked(broadcast).mock.calls.find(
-      ([, payload]) =>
-        typeof payload === 'object' &&
-        payload !== null &&
-        'event' in payload &&
-        typeof payload.event === 'object' &&
-        payload.event !== null &&
-        (payload.event as Record<string, unknown>).type === 'agent:completed'
-    )
+    const completedCall = vi
+      .mocked(broadcast)
+      .mock.calls.find(
+        ([, payload]) =>
+          typeof payload === 'object' &&
+          payload !== null &&
+          'event' in payload &&
+          typeof payload.event === 'object' &&
+          payload.event !== null &&
+          (payload.event as Record<string, unknown>).type === 'agent:completed'
+      )
     expect(completedCall).toBeDefined()
     const completedEvent = (completedCall![1] as { event: Record<string, unknown> }).event
     // Accumulated across 2 turns: 100 + 100 = 200, not last-wins 100

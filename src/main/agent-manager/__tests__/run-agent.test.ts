@@ -55,7 +55,9 @@ vi.mock('node:fs', async (importOriginal) => {
   return {
     ...actual,
     mkdirSync: vi.fn(),
-    readFileSync: vi.fn().mockImplementation(() => { throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) }),
+    readFileSync: vi.fn().mockImplementation(() => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    })
   }
 })
 
@@ -631,7 +633,7 @@ describe('runAgent — prompt composer integration', () => {
       crossRepoContract: undefined,
       repoName: 'BDE',
       taskId: 'task-1',
-      priorScratchpad: '',
+      priorScratchpad: ''
     })
   })
 
@@ -692,10 +694,9 @@ describe('runAgent — prompt composer integration', () => {
 
       await runAgent(makeTask({ id: 'task-xyz' }), worktree, repoPath, makeDeps())
 
-      expect(mockMkdirSync).toHaveBeenCalledWith(
-        '/home/user/.bde/memory/tasks/task-xyz',
-        { recursive: true }
-      )
+      expect(mockMkdirSync).toHaveBeenCalledWith('/home/user/.bde/memory/tasks/task-xyz', {
+        recursive: true
+      })
     })
 
     it('passes empty priorScratchpad to buildAgentPrompt when progress.md is absent', async () => {

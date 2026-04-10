@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { MorningBriefing } from '../MorningBriefing'
 import type { SprintTask, AgentCostRecord } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask => ({
   id,
@@ -24,8 +25,8 @@ const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask =
   completed_at: null,
   template_name: null,
   depends_on: null,
-  updated_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
+  updated_at: nowIso(),
+  created_at: nowIso(),
   ...overrides
 })
 

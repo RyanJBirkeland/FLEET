@@ -13,6 +13,7 @@ import { createLogger } from '../logger'
 import { getSetting, deleteSetting } from './settings-queries'
 import { SETTING_SUPABASE_URL, SETTING_SUPABASE_KEY } from '../settings'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 const logger = createLogger('supabase-import')
 
@@ -186,8 +187,8 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
         playground_enabled: row.playground_enabled ? 1 : 0,
         needs_review: row.needs_review ? 1 : 0,
         max_runtime_ms: row.max_runtime_ms ?? null,
-        created_at: row.created_at ?? new Date().toISOString(),
-        updated_at: row.updated_at ?? new Date().toISOString()
+        created_at: row.created_at ?? nowIso(),
+        updated_at: row.updated_at ?? nowIso()
       })
       imported++
     }

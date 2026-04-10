@@ -7,6 +7,7 @@ import { handleWatchdogVerdict } from '../index'
 import { makeConcurrencyState } from '../concurrency'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import { MAX_RETRIES } from '../types'
+import { nowIso } from '../../../shared/time'
 
 // ---------------------------------------------------------------------------
 // AM-3: sanitizeForGit tests
@@ -64,7 +65,7 @@ describe('handleWatchdogVerdict claimed_by clearing (AM-4)', () => {
 
   it('clears claimed_by on max-runtime kill', () => {
     const concurrency = makeConcurrencyState(2)
-    const now = new Date().toISOString()
+    const now = nowIso()
 
     handleWatchdogVerdict(
       'max-runtime',
@@ -90,7 +91,7 @@ describe('handleWatchdogVerdict claimed_by clearing (AM-4)', () => {
 
   it('clears claimed_by on idle kill', () => {
     const concurrency = makeConcurrencyState(2)
-    const now = new Date().toISOString()
+    const now = nowIso()
 
     handleWatchdogVerdict('idle', 'task-456', concurrency, now, updateTaskFn, onTerminal, logger)
 
@@ -107,7 +108,7 @@ describe('handleWatchdogVerdict claimed_by clearing (AM-4)', () => {
 
   it('clears claimed_by on rate-limit-loop requeue', () => {
     const concurrency = makeConcurrencyState(2)
-    const now = new Date().toISOString()
+    const now = nowIso()
 
     handleWatchdogVerdict(
       'rate-limit-loop',

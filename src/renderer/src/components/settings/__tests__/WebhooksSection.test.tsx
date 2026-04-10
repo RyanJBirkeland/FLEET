@@ -10,6 +10,7 @@ vi.mock('../../stores/toasts', () => ({
 }))
 
 import { WebhooksSection } from '../WebhooksSection'
+import { nowIso } from '../../../../../shared/time'
 
 describe('WebhooksSection', () => {
   beforeEach(() => {
@@ -46,8 +47,8 @@ describe('WebhooksSection', () => {
         events: ['task.created'],
         enabled: true,
         secret: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       }
     ])
 
@@ -74,8 +75,8 @@ describe('WebhooksSection', () => {
         events: ['*'],
         enabled: true,
         secret: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       }
     ])
     render(<WebhooksSection />)
@@ -96,8 +97,8 @@ describe('WebhooksSection', () => {
         events: ['task.created'],
         enabled: true,
         secret: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       }
     ])
     render(<WebhooksSection />)
@@ -120,8 +121,8 @@ describe('WebhooksSection', () => {
         events: ['task.created'],
         enabled: true,
         secret: null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       }
     ])
     render(<WebhooksSection />)
@@ -142,8 +143,8 @@ describe('WebhooksSection', () => {
         events: ['task.created', 'task.completed'],
         enabled: true,
         secret: 'mysecret',
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       }
     ])
     render(<WebhooksSection />)

@@ -5,6 +5,7 @@ import { useSprintTasks } from '../../stores/sprintTasks'
 import { useNotificationsStore } from '../../stores/notifications'
 import { TASK_STATUS, PR_STATUS } from '../../../../shared/constants'
 import type { SprintTask } from '../../../../shared/types'
+import { nowIso } from '../../../../shared/time'
 
 // Mock Notification API
 class MockNotification {
@@ -67,14 +68,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: null,
       claimed_by: null,
-      started_at: new Date().toISOString(),
+      started_at: nowIso(),
       completed_at: null,
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task] })
@@ -82,7 +83,7 @@ describe('useDesktopNotifications', () => {
 
     // Now transition to done
     useSprintTasks.setState({
-      tasks: [{ ...task, status: TASK_STATUS.DONE, completed_at: new Date().toISOString() }]
+      tasks: [{ ...task, status: TASK_STATUS.DONE, completed_at: nowIso() }]
     })
     rerender()
 
@@ -112,14 +113,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: null,
       claimed_by: null,
-      started_at: new Date().toISOString(),
+      started_at: nowIso(),
       completed_at: null,
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task] })
@@ -156,14 +157,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: null,
       claimed_by: null,
-      started_at: new Date().toISOString(),
+      started_at: nowIso(),
       completed_at: null,
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task] })
@@ -203,14 +204,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: 'clean',
       pr_url: 'https://github.com/user/repo/pull/123',
       claimed_by: null,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      started_at: nowIso(),
+      completed_at: nowIso(),
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
@@ -246,14 +247,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: null,
       claimed_by: null,
-      started_at: new Date().toISOString(),
+      started_at: nowIso(),
       completed_at: null,
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task] })
@@ -292,21 +293,21 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: 'https://github.com/user/repo/pull/42',
       claimed_by: null,
-      started_at: new Date().toISOString(),
+      started_at: nowIso(),
       completed_at: null,
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task] })
     rerender()
 
     useSprintTasks.setState({
-      tasks: [{ ...task, status: TASK_STATUS.DONE, completed_at: new Date().toISOString() }]
+      tasks: [{ ...task, status: TASK_STATUS.DONE, completed_at: nowIso() }]
     })
     rerender()
 
@@ -331,14 +332,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: 'https://github.com/user/repo/pull/99',
       claimed_by: null,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      started_at: nowIso(),
+      completed_at: nowIso(),
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
@@ -380,14 +381,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: null,
       claimed_by: null,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      started_at: nowIso(),
+      completed_at: nowIso(),
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
@@ -418,14 +419,14 @@ describe('useDesktopNotifications', () => {
       pr_mergeable_state: null,
       pr_url: null,
       claimed_by: null,
-      started_at: new Date().toISOString(),
-      completed_at: new Date().toISOString(),
+      started_at: nowIso(),
+      completed_at: nowIso(),
       retry_count: 0,
       fast_fail_count: 0,
       template_name: null,
       depends_on: null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
 
     useSprintTasks.setState({ tasks: [task] })

@@ -42,7 +42,6 @@ vi.mock('../../stores/dashboardData', () => {
   return { useDashboardDataStore: store }
 })
 
-
 // ---------------------------------------------------------------------------
 // Subject + stores
 // ---------------------------------------------------------------------------
@@ -53,6 +52,7 @@ import { useSprintUI } from '../../stores/sprintUI'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useCostDataStore } from '../../stores/costData'
+import { nowIso } from '../../../../shared/time'
 
 // ---------------------------------------------------------------------------
 // Tests
@@ -200,7 +200,7 @@ describe('DashboardView', () => {
             id: '1',
             status: 'done',
             title: 'Implement feature X',
-            completed_at: new Date().toISOString()
+            completed_at: nowIso()
           }
         ],
         loading: false,
@@ -322,9 +322,7 @@ describe('DashboardView', () => {
   it('does not show fires strip when no issues', () => {
     vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
       selector({
-        tasks: [
-          { id: '1', status: 'done', title: 'Done task', completed_at: new Date().toISOString() }
-        ],
+        tasks: [{ id: '1', status: 'done', title: 'Done task', completed_at: nowIso() }],
         loading: false,
         loadData: vi.fn()
       })
@@ -344,7 +342,7 @@ describe('DashboardView', () => {
             durationMs: 60000,
             tokensIn: 30000,
             tokensOut: 5000,
-            startedAt: new Date().toISOString(),
+            startedAt: nowIso(),
             taskTitle: 'Task A'
           },
           {
@@ -352,7 +350,7 @@ describe('DashboardView', () => {
             durationMs: 120000,
             tokensIn: 60000,
             tokensOut: 10000,
-            startedAt: new Date().toISOString(),
+            startedAt: nowIso(),
             taskTitle: 'Task B'
           }
         ],

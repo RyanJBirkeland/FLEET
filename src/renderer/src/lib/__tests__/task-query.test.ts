@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { parseTaskQuery, applyPredicates } from '../task-query'
 import type { SprintTask } from '../../../../shared/types'
+import { nowIso } from '../../../../shared/time'
 
 // Helper to create a minimal task for testing
 function createTask(overrides: Partial<SprintTask> = {}): SprintTask {
@@ -25,8 +26,8 @@ function createTask(overrides: Partial<SprintTask> = {}): SprintTask {
     template_name: null,
     depends_on: null,
     tags: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
     ...overrides
   }
 }

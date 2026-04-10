@@ -48,7 +48,9 @@ vi.mock('node:fs', async (importOriginal) => {
   return {
     ...actual,
     mkdirSync: vi.fn(),
-    readFileSync: vi.fn().mockImplementation(() => { throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) }),
+    readFileSync: vi.fn().mockImplementation(() => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    })
   }
 })
 

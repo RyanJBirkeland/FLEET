@@ -18,6 +18,7 @@ vi.mock('../../../../shared/template-heuristics', () => ({
 import { useSprintTasks } from '../sprintTasks'
 import { useSprintUI } from '../sprintUI'
 import { toast } from '../toasts'
+import { nowIso } from '../../../../shared/time'
 
 const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask => ({
   id,
@@ -40,8 +41,8 @@ const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask =
   completed_at: null,
   template_name: null,
   depends_on: null,
-  updated_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
+  updated_at: nowIso(),
+  created_at: nowIso(),
   ...overrides
 })
 

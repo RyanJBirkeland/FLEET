@@ -6,6 +6,7 @@ import { detectTemplate } from '../../../shared/template-heuristics'
 import { sanitizeDependsOn } from '../../../shared/sanitize-depends-on'
 import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 import { useSprintUI } from './sprintUI'
+import { nowIso } from '../../../shared/time'
 
 export interface CreateTicketInput {
   title: string
@@ -143,7 +144,11 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         }
 
         const nextTasks = Array.from(mergedById.values())
-        return { tasks: nextTasks, activeTaskCount: countActive(nextTasks), pendingUpdates: nextPending }
+        return {
+          tasks: nextTasks,
+          activeTaskCount: countActive(nextTasks),
+          pendingUpdates: nextPending
+        }
       })
     } catch (e) {
       set({ loadError: 'Failed to load tasks — ' + (e instanceof Error ? e.message : String(e)) })
@@ -167,9 +172,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
           ...s.pendingUpdates,
           [taskId]: { ts: updateId, fields: mergedFields }
         },
-        tasks: s.tasks.map((t) =>
-          t.id === taskId ? { ...t, ...patch, updated_at: new Date().toISOString() } : t
-        )
+        tasks: s.tasks.map((t) => (t.id === taskId ? { ...t, ...patch, updated_at: nowIso() } : t))
       }
     })
     try {
@@ -252,8 +255,8 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       fast_fail_count: 0,
       template_name: data.template_name ?? null,
       depends_on: data.depends_on ?? null,
-      updated_at: new Date().toISOString(),
-      created_at: new Date().toISOString()
+      updated_at: nowIso(),
+      created_at: nowIso()
     }
     set((s) => ({
       tasks: [optimistic, ...s.tasks],
@@ -361,7 +364,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       await updateTask(task.id, {
         status: TASK_STATUS.ACTIVE,
         agent_run_id: result.id,
-        started_at: new Date().toISOString()
+        started_at: nowIso()
       })
       toast.success('Agent launched')
     } catch (e) {

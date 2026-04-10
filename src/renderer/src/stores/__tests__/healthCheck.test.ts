@@ -3,6 +3,7 @@ import { renderHook } from '@testing-library/react'
 import { useHealthCheckStore, useVisibleStuckTasks } from '../healthCheck'
 import { useSprintTasks } from '../sprintTasks'
 import type { SprintTask } from '../../../../shared/types'
+import { nowIso } from '../../../../shared/time'
 
 vi.mock('../sprintTasks', () => {
   const { create } = require('zustand')
@@ -32,8 +33,8 @@ function makeTask(id: string, status: SprintTask['status'] = 'active'): SprintTa
     fast_fail_count: 0,
     template_name: null,
     depends_on: null,
-    updated_at: new Date().toISOString(),
-    created_at: new Date().toISOString()
+    updated_at: nowIso(),
+    created_at: nowIso()
   }
 }
 

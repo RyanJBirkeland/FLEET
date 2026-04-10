@@ -102,6 +102,7 @@ vi.mock('util', () => ({
 
 import { registerReviewHandlers } from '../review'
 import { safeHandle } from '../../ipc-utils'
+import { nowIso } from '../../../shared/time'
 
 describe('Review handlers', () => {
   beforeEach(() => {
@@ -239,8 +240,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       // Mock repo config
@@ -254,9 +255,9 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        completed_at: nowIso()
       })
 
       const handlers = captureHandlers()
@@ -278,8 +279,8 @@ describe('Review handlers', () => {
         spec: '## Original Spec\n\nSome content',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(updateTask).mockReturnValue({
@@ -290,8 +291,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       const handlers = captureHandlers()
@@ -324,8 +325,8 @@ describe('Review handlers', () => {
         agent_run_id: 'existing-session-123',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(updateTask).mockReturnValue({
@@ -336,8 +337,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       const handlers = captureHandlers()
@@ -365,8 +366,8 @@ describe('Review handlers', () => {
         spec: '## Original Spec\n\nSome content',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(updateTask).mockReturnValue({
@@ -377,8 +378,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       const handlers = captureHandlers()
@@ -412,8 +413,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
@@ -426,9 +427,9 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        completed_at: nowIso()
       })
 
       // Capture handlers with the specific mock we want to test
@@ -472,8 +473,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
@@ -485,9 +486,9 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        completed_at: nowIso()
       })
 
       const handlers = captureHandlers()
@@ -518,8 +519,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
@@ -580,8 +581,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
@@ -593,9 +594,9 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        completed_at: nowIso()
       })
 
       const handlers = captureHandlers()
@@ -623,8 +624,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
 
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
@@ -696,8 +697,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
       vi.mocked(updateTask).mockReturnValue({
@@ -708,9 +709,9 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
-        completed_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso(),
+        completed_at: nowIso()
       })
 
       // Track full merge args so we can distinguish `merge --ff-only origin/main`
@@ -752,10 +753,10 @@ describe('Review handlers', () => {
       )
 
       const handlers = captureHandlers()
-      const result = await handlers['review:shipIt'](
-        _mockEvent,
-        { taskId: 'task-1', strategy: 'merge' }
-      )
+      const result = await handlers['review:shipIt'](_mockEvent, {
+        taskId: 'task-1',
+        strategy: 'merge'
+      })
 
       expect(result.success).toBe(true)
 
@@ -792,8 +793,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
 
@@ -815,10 +816,10 @@ describe('Review handlers', () => {
       )
 
       const handlers = captureHandlers()
-      const result = await handlers['review:shipIt'](
-        _mockEvent,
-        { taskId: 'task-1', strategy: 'merge' }
-      )
+      const result = await handlers['review:shipIt'](_mockEvent, {
+        taskId: 'task-1',
+        strategy: 'merge'
+      })
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('feature/user-other-work')
@@ -838,8 +839,8 @@ describe('Review handlers', () => {
         prompt: 'Test prompt',
         priority: 1,
         depends_on: [],
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       })
       vi.mocked(getSettingJson).mockReturnValue([{ name: 'test-repo', localPath: '/repos/test' }])
 
@@ -864,10 +865,10 @@ describe('Review handlers', () => {
       )
 
       const handlers = captureHandlers()
-      const result = await handlers['review:shipIt'](
-        _mockEvent,
-        { taskId: 'task-1', strategy: 'merge' }
-      )
+      const result = await handlers['review:shipIt'](_mockEvent, {
+        taskId: 'task-1',
+        strategy: 'merge'
+      })
 
       expect(result.success).toBe(false)
       expect(result.error).toContain('diverged from origin/main')

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // Mock getUserMemory before importing the module under test
 vi.mock('../user-memory', () => ({
-  getUserMemory: vi.fn(),
+  getUserMemory: vi.fn()
 }))
 
 import { selectUserMemory } from '../select-user-memory'
@@ -19,7 +19,7 @@ function makeResult(sections: string[]) {
   return {
     content,
     totalBytes: Buffer.byteLength(content, 'utf-8'),
-    fileCount: sections.length,
+    fileCount: sections.length
   }
 }
 
@@ -31,7 +31,7 @@ describe('selectUserMemory', () => {
   it('includes a file when a keyword from the task spec matches its content', () => {
     const sections = [
       makeSection('database.md', 'This file explains sqlite connection pooling and transactions.'),
-      makeSection('styles.md', 'CSS variables and color tokens for the design system.'),
+      makeSection('styles.md', 'CSS variables and color tokens for the design system.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
@@ -44,7 +44,7 @@ describe('selectUserMemory', () => {
 
   it('excludes a file with zero keyword overlap with the task spec', () => {
     const sections = [
-      makeSection('unrelated.md', 'Notes about cooking recipes and meal planning strategies.'),
+      makeSection('unrelated.md', 'Notes about cooking recipes and meal planning strategies.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
@@ -57,7 +57,7 @@ describe('selectUserMemory', () => {
   it('always includes a file named global_rules.md regardless of keywords', () => {
     const sections = [
       makeSection('global_rules.md', 'Always write tests. Follow clean code principles.'),
-      makeSection('unrelated.md', 'Completely irrelevant content about cooking.'),
+      makeSection('unrelated.md', 'Completely irrelevant content about cooking.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
@@ -71,7 +71,7 @@ describe('selectUserMemory', () => {
   it('always includes a file named _global_api.md regardless of keywords', () => {
     const sections = [
       makeSection('_global_api.md', 'Global API conventions for all agents.'),
-      makeSection('specific.md', 'Only relevant to typography styling.'),
+      makeSection('specific.md', 'Only relevant to typography styling.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
@@ -85,7 +85,7 @@ describe('selectUserMemory', () => {
   it('always includes subdir/global_rules.md because basename starts with global', () => {
     const sections = [
       makeSection('subdir/global_rules.md', 'Shared rules for all agents in subdirectory.'),
-      makeSection('subdir/specific.md', 'Only relevant to typography styling.'),
+      makeSection('subdir/specific.md', 'Only relevant to typography styling.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
@@ -99,7 +99,7 @@ describe('selectUserMemory', () => {
   it('includes all files when task spec is empty (no keywords extracted)', () => {
     const sections = [
       makeSection('file-a.md', 'Content about database migrations.'),
-      makeSection('file-b.md', 'Content about CSS design tokens.'),
+      makeSection('file-b.md', 'Content about CSS design tokens.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
@@ -126,11 +126,13 @@ describe('selectUserMemory', () => {
       makeSection('auth.md', 'OAuth credential refresh logic and keychain access patterns.'),
       makeSection('database.md', 'SQLite migration patterns and WAL mode configuration.'),
       makeSection('styling.md', 'CSS variables, neon theme, glassmorphism effects.'),
-      makeSection('testing.md', 'Vitest patterns, mock strategies, and coverage thresholds.'),
+      makeSection('testing.md', 'Vitest patterns, mock strategies, and coverage thresholds.')
     ]
     mockGetUserMemory.mockReturnValue(makeResult(sections))
 
-    const result = selectUserMemory('Fix oauth credential refresh and keychain access hang in Electron')
+    const result = selectUserMemory(
+      'Fix oauth credential refresh and keychain access hang in Electron'
+    )
 
     expect(result.fileCount).toBe(1)
     expect(result.content).toContain('auth.md')

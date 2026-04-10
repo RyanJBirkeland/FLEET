@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { DagOverlay } from '../DagOverlay'
 import type { SprintTask } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask => ({
   id,
@@ -24,8 +25,8 @@ const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask =
   completed_at: null,
   template_name: null,
   depends_on: null,
-  updated_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
+  updated_at: nowIso(),
+  created_at: nowIso(),
   ...overrides
 })
 
@@ -66,13 +67,8 @@ describe('DagOverlay', () => {
   })
 
   it('renders with dependency tasks', () => {
-    const tasks = [
-      makeTask('t1'),
-      makeTask('t2', { depends_on: [{ id: 't1', type: 'hard' }] })
-    ]
-    render(
-      <DagOverlay {...defaultProps} tasks={tasks} />
-    )
+    const tasks = [makeTask('t1'), makeTask('t2', { depends_on: [{ id: 't1', type: 'hard' }] })]
+    render(<DagOverlay {...defaultProps} tasks={tasks} />)
     // Both tasks should render
     expect(screen.getByText('Task t1')).toBeInTheDocument()
     expect(screen.getByText('Task t2')).toBeInTheDocument()
@@ -84,9 +80,7 @@ describe('DagOverlay', () => {
   })
 
   it('handles empty task list', () => {
-    const { container } = render(
-      <DagOverlay {...defaultProps} tasks={[]} />
-    )
+    const { container } = render(<DagOverlay {...defaultProps} tasks={[]} />)
     expect(container.firstChild).toBeInTheDocument()
   })
 })

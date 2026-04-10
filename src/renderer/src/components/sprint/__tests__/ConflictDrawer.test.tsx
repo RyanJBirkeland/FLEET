@@ -102,11 +102,7 @@ describe('ConflictDrawer', () => {
 
   it('renders a resize handle', () => {
     const { container } = render(
-      <ConflictDrawer
-        open={true}
-        tasks={[makeTask()]}
-        onClose={vi.fn()}
-      />
+      <ConflictDrawer open={true} tasks={[makeTask()]} onClose={vi.fn()} />
     )
     expect(container.querySelector('.drawer-resize-handle')).not.toBeNull()
   })

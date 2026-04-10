@@ -26,6 +26,7 @@ import {
 import { pruneEventsByAgentIds } from './data/event-queries'
 import type { AgentMeta } from '../shared/types'
 import { createLogger } from './logger'
+import { nowIso } from '../shared/time'
 
 const logger = createLogger('agent-history')
 
@@ -196,7 +197,7 @@ export async function updateAgentMeta(id: string, patch: Partial<AgentMeta>): Pr
 
 export async function importAgent(meta: Partial<AgentMeta>, content: string): Promise<AgentMeta> {
   const id = meta.id ?? randomUUID()
-  const startedAt = meta.startedAt ?? new Date().toISOString()
+  const startedAt = meta.startedAt ?? nowIso()
   const full: Omit<AgentMeta, 'logPath'> = {
     id,
     pid: meta.pid ?? null,
@@ -309,12 +310,12 @@ export async function listAgentRunsByTaskId(
 export function finalizeStaleAgentRuns(maxAgeMs: number = 2 * 60 * 60 * 1000): number {
   const db = getDb()
   const cutoff = new Date(Date.now() - maxAgeMs).toISOString()
-  const nowIso = new Date().toISOString()
+  const now = nowIso()
   const stmt = db.prepare(
     `UPDATE agent_runs SET status = 'failed', finished_at = ?
      WHERE status = 'running' AND started_at < ?`
   )
-  const result = stmt.run(nowIso, cutoff)
+  const result = stmt.run(now, cutoff)
   return result.changes
 }
 
@@ -336,7 +337,7 @@ export function reconcileRunningAgentRuns(isAgentActive: (taskId: string) => boo
     .all() as Array<{ id: string; sprint_task_id: string | null }>
 
   let cleaned = 0
-  const nowIso = new Date().toISOString()
+  const now = nowIso()
   const finalize = db.prepare(
     `UPDATE agent_runs SET status = 'failed', finished_at = ? WHERE id = ?`
   )
@@ -347,7 +348,7 @@ export function reconcileRunningAgentRuns(isAgentActive: (taskId: string) => boo
     if (!row.sprint_task_id) continue
     // Sprint-task agent: keep alive only if its task is still in the active set.
     if (isAgentActive(row.sprint_task_id)) continue
-    finalize.run(nowIso, row.id)
+    finalize.run(now, row.id)
     cleaned++
   }
   return cleaned
@@ -359,12 +360,12 @@ export function reconcileRunningAgentRuns(isAgentActive: (taskId: string) => boo
  */
 export function finalizeAllRunningAgentRuns(): number {
   const db = getDb()
-  const nowIso = new Date().toISOString()
+  const now = nowIso()
   const stmt = db.prepare(
     `UPDATE agent_runs SET status = 'failed', finished_at = ?
      WHERE status = 'running'`
   )
-  const result = stmt.run(nowIso)
+  const result = stmt.run(now)
   return result.changes
 }
 

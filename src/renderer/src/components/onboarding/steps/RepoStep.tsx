@@ -42,7 +42,6 @@ export function RepoStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
   }
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void checkRepos()
   }, [])
 
@@ -104,9 +103,8 @@ export function RepoStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
       <h1 className="onboarding-step__title">Repository Configuration</h1>
 
       <p className="onboarding-step__description">
-        Add a repository so BDE can dispatch agents to work on it. We&apos;ll auto-detect the
-        GitHub remote when you pick a folder. This step is optional — you can add repos later in
-        Settings.
+        Add a repository so BDE can dispatch agents to work on it. We&apos;ll auto-detect the GitHub
+        remote when you pick a folder. This step is optional — you can add repos later in Settings.
       </p>
 
       <div className="onboarding-step__checks">
@@ -142,13 +140,7 @@ export function RepoStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
                 onChange={(e) => setNewPath(e.target.value)}
                 aria-label="Local path"
               />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBrowse}
-                title="Browse"
-                type="button"
-              >
+              <Button variant="ghost" size="sm" onClick={handleBrowse} title="Browse" type="button">
                 <FolderOpen size={14} />
               </Button>
             </div>

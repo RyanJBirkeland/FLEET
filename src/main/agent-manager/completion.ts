@@ -9,6 +9,7 @@ import { broadcastCoalesced } from '../broadcast'
 import type { AgentEvent, FailureReason } from '../../shared/types'
 import { runPostMergeDedup } from '../services/post-merge-dedup'
 import { captureDiffSnapshot } from './diff-snapshot'
+import { nowIso } from '../../shared/time'
 
 const execFile = promisify(execFileCb)
 
@@ -409,7 +410,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     try {
       repo.updateTask(taskId, {
         status: 'error',
-        completed_at: new Date().toISOString(),
+        completed_at: nowIso(),
         notes: `Worktree evicted before completion (${worktreePath}). Use ~/worktrees/ instead of /tmp/.`,
         claimed_by: null
       })
@@ -435,7 +436,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     try {
       repo.updateTask(taskId, {
         status: 'error',
-        completed_at: new Date().toISOString(),
+        completed_at: nowIso(),
         notes: 'Failed to detect branch',
         claimed_by: null
       })
@@ -457,7 +458,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
     try {
       repo.updateTask(taskId, {
         status: 'error',
-        completed_at: new Date().toISOString(),
+        completed_at: nowIso(),
         notes: 'Empty branch name',
         claimed_by: null
       })
@@ -557,7 +558,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
       ...(rebaseNote ? { notes: rebaseNote } : {}),
       ...(diffSnapshotJson ? { review_diff_snapshot: diffSnapshotJson } : {}),
       rebase_base_sha: rebaseBaseSha ?? null,
-      rebased_at: rebaseSucceeded ? new Date().toISOString() : null
+      rebased_at: rebaseSucceeded ? nowIso() : null
     })
   } catch (err) {
     logger.error(`[completion] Failed to update task ${taskId} to review status: ${err}`)
@@ -678,7 +679,7 @@ export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): 
             const reviewTask = repo.getTask(taskId)
             repo.updateTask(taskId, {
               status: 'done',
-              completed_at: new Date().toISOString(),
+              completed_at: nowIso(),
               worktree_path: null,
               // Preserve duration_ms calculated at review transition
               ...(reviewTask?.duration_ms !== undefined
@@ -749,7 +750,7 @@ export function resolveFailure(opts: ResolveFailureOpts, logger?: Logger): boole
     } else {
       repo.updateTask(taskId, {
         status: 'failed',
-        completed_at: new Date().toISOString(),
+        completed_at: nowIso(),
         claimed_by: null,
         needs_review: true,
         failure_reason: failureReason,

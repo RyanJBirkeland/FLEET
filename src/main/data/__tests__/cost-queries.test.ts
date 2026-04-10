@@ -2,6 +2,7 @@ import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { runMigrations } from '../../db'
 import { getCostSummary, getRecentAgentRunsWithCost } from '../cost-queries'
+import { nowIso } from '../../../shared/time'
 
 let db: Database.Database
 
@@ -26,7 +27,7 @@ describe('getCostSummary', () => {
   })
 
   it('counts done tasks in summary', () => {
-    const now = new Date().toISOString()
+    const now = nowIso()
     db.prepare(
       `INSERT INTO agent_runs (id, bin, status, started_at, cost_usd, tokens_in, tokens_out)
        VALUES (?, 'claude', 'done', ?, 0.10, 500, 200)`
@@ -54,7 +55,7 @@ describe('getRecentAgentRunsWithCost', () => {
   })
 
   it('returns done/failed runs ordered by started_at desc', () => {
-    const now = new Date().toISOString()
+    const now = nowIso()
     const earlier = new Date(Date.now() - 60000).toISOString()
     db.prepare(
       `INSERT INTO agent_runs (id, bin, task, repo, status, started_at, cost_usd)
@@ -77,7 +78,7 @@ describe('getRecentAgentRunsWithCost', () => {
   })
 
   it('respects the limit parameter', () => {
-    const now = new Date().toISOString()
+    const now = nowIso()
     for (let i = 0; i < 5; i++) {
       db.prepare(
         `INSERT INTO agent_runs (id, bin, status, started_at) VALUES (?, 'claude', 'done', ?)`

@@ -30,6 +30,7 @@ import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createLogger } from './logger'
 import { getErrorMessage } from '../shared/errors'
+import { nowIso } from '../shared/time'
 
 const log = createLogger('adhoc-agent')
 
@@ -46,13 +47,17 @@ const ADHOC_WORKTREE_BASE = join(homedir(), 'worktrees', 'bde-adhoc')
  * recognisable instead of being a raw UUID.
  */
 function deriveAdhocTitle(task: string): string {
-  const firstLine = task.split('\n').find((l) => l.trim())?.trim() ?? 'adhoc session'
+  const firstLine =
+    task
+      .split('\n')
+      .find((l) => l.trim())
+      ?.trim() ?? 'adhoc session'
   // Cap at ~80 chars so the resulting branch slug stays short
   return firstLine.length > 80 ? firstLine.slice(0, 80) : firstLine
 }
 
 export interface ImageAttachment {
-  data: string     // raw base64 (no data: prefix)
+  data: string // raw base64 (no data: prefix)
   mimeType: string // e.g. 'image/png'
 }
 
@@ -275,7 +280,7 @@ export async function spawnAdhocAgent(args: {
 
     updateAgentMeta(meta.id, {
       status: 'done',
-      finishedAt: new Date().toISOString(),
+      finishedAt: nowIso(),
       exitCode: 0
     }).catch(() => {})
 

@@ -45,6 +45,7 @@ import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import { instantiateWorkflow } from '../services/workflow-engine'
+import { nowIso } from '../../shared/time'
 
 const logger = createLogger('sprint-local')
 
@@ -365,7 +366,7 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
         updated_at: task.updated_at
       },
       changes,
-      exportedAt: new Date().toISOString()
+      exportedAt: nowIso()
     }
 
     // Write to file
@@ -571,7 +572,7 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
       // Show save dialog
       const result = await dialog.showSaveDialog({
         title: 'Export Sprint Tasks',
-        defaultPath: `sprint-tasks-${new Date().toISOString().split('T')[0]}.${format}`,
+        defaultPath: `sprint-tasks-${nowIso().split('T')[0]}.${format}`,
         filters: [
           format === 'json'
             ? { name: 'JSON Files', extensions: ['json'] }

@@ -2,7 +2,6 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useRovingTabIndex } from '../useRovingTabIndex'
 
-// eslint-disable-next-line react-hooks/rules-of-hooks -- test helper wraps hook in renderHook
 function createHook(activeIndex = 0, count = 5) {
   const onSelect = vi.fn()
   const { result } = renderHook(() => useRovingTabIndex({ count, activeIndex, onSelect }))

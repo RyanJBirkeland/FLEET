@@ -9,6 +9,7 @@ import type { ReviewDiffSnapshot } from '../../shared/types'
 import { buildAgentEnv } from '../env-utils'
 import type { Logger } from './types'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 const execFile = promisify(execFileCb)
 
@@ -98,7 +99,7 @@ export async function captureDiffSnapshot(
     }
 
     return {
-      capturedAt: new Date().toISOString(),
+      capturedAt: nowIso(),
       totals,
       files,
       ...(truncated ? { truncated: true } : {})

@@ -284,7 +284,12 @@ export function RepositoriesSection(): React.JSX.Element {
                   ))}
                 </div>
                 <div className="settings-repo-form__actions">
-                  <Button variant="ghost" size="sm" onClick={() => setShowManual(false)} type="button">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowManual(false)}
+                    type="button"
+                  >
                     Cancel
                   </Button>
                   <Button

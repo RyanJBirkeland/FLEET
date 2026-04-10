@@ -1,6 +1,7 @@
 import '@testing-library/jest-dom'
 import { afterEach, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { nowIso } from '../../shared/time'
 
 // Ensure localStorage is available before any store modules load.
 // jsdom provides localStorage but it may not be fully functional when the
@@ -222,8 +223,8 @@ vi.stubGlobal('api', {
       events: [],
       enabled: true,
       secret: null,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
+      created_at: nowIso(),
+      updated_at: nowIso()
     }),
     update: vi.fn().mockResolvedValue(undefined),
     delete: vi.fn().mockResolvedValue(undefined),

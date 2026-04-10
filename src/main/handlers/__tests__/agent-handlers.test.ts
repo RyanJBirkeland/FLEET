@@ -67,6 +67,7 @@ import { listAgents, readLog, pruneOldAgents, getAgentMeta } from '../../agent-h
 import { spawnAdhocAgent, getAdhocHandle } from '../../adhoc-agent'
 import { getEventHistory } from '../../data/event-queries'
 import { createReviewTaskFromAdhoc } from '../../data/sprint-queries'
+import { nowIso } from '../../../shared/time'
 
 const mockEvent = {} as IpcMainInvokeEvent
 
@@ -311,8 +312,8 @@ describe('agents:promoteToReview handler', () => {
       repo: 'bde',
       repoPath: '/Users/test/bde',
       task: 'Add clipboard image paste\n\nMore details follow.',
-      startedAt: new Date().toISOString(),
-      finishedAt: new Date().toISOString(),
+      startedAt: nowIso(),
+      finishedAt: nowIso(),
       exitCode: 0,
       status: 'done',
       logPath: '/tmp/logs/adhoc-1/log.jsonl',

@@ -17,6 +17,7 @@ import { join } from 'node:path'
 import { runPostMergeDedup } from '../services/post-merge-dedup'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 const execFileAsync = promisify(execFile)
 const logger = createLogger('review-handlers')
@@ -291,7 +292,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     // Mark task done via terminal service
     const updated = _updateTask(taskId, {
       status: 'done',
-      completed_at: new Date().toISOString(),
+      completed_at: nowIso(),
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
@@ -357,7 +358,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     // Mark task done via terminal service
     const updated = _updateTask(taskId, {
       status: 'done',
-      completed_at: new Date().toISOString(),
+      completed_at: nowIso(),
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
@@ -462,7 +463,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     // Mark task cancelled via terminal service
     const updated = _updateTask(taskId, {
       status: 'cancelled',
-      completed_at: new Date().toISOString(),
+      completed_at: nowIso(),
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
@@ -649,7 +650,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     // Mark task done
     const updated = _updateTask(taskId, {
       status: 'done',
-      completed_at: new Date().toISOString(),
+      completed_at: nowIso(),
       worktree_path: null
     })
     if (updated) notifySprintMutation('updated', updated)
@@ -705,7 +706,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
 
     const updated = _updateTask(taskId, {
       rebase_base_sha: baseSha,
-      rebased_at: new Date().toISOString()
+      rebased_at: nowIso()
     })
     if (updated) notifySprintMutation('updated', updated)
 

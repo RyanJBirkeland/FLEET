@@ -13,6 +13,7 @@ vi.mock('../toasts', () => ({
 
 import { useTaskGroups } from '../taskGroups'
 import { toast } from '../toasts'
+import { nowIso } from '../../../../shared/time'
 
 const makeGroup = (id: string, overrides: Partial<TaskGroup> = {}): TaskGroup => ({
   id,
@@ -21,8 +22,8 @@ const makeGroup = (id: string, overrides: Partial<TaskGroup> = {}): TaskGroup =>
   accent_color: '#00ff00',
   goal: null,
   status: 'draft',
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
+  created_at: nowIso(),
+  updated_at: nowIso(),
   ...overrides
 })
 
@@ -47,8 +48,8 @@ const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask =
   completed_at: null,
   template_name: null,
   depends_on: null,
-  updated_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
+  updated_at: nowIso(),
+  created_at: nowIso(),
   ...overrides
 })
 

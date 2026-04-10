@@ -98,8 +98,11 @@ const api = {
   // Local agent process detection + spawning
   getAgentProcesses: () => typedInvoke('local:getAgentProcesses'),
   spawnLocalAgent: (args: SpawnLocalAgentArgs) => typedInvoke('local:spawnClaudeAgent', args),
-  steerAgent: (agentId: string, message: string, images?: Array<{ data: string; mimeType: string }>) =>
-    typedInvoke('agent:steer', { agentId, message, images }),
+  steerAgent: (
+    agentId: string,
+    message: string,
+    images?: Array<{ data: string; mimeType: string }>
+  ) => typedInvoke('agent:steer', { agentId, message, images }),
   killAgent: (agentId: string) => typedInvoke('agent:kill', agentId),
   getLatestCacheTokens: (runId: string) => typedInvoke('agent:latestCacheTokens', runId),
   tailAgentLog: (args: { logPath: string; fromByte?: number }) =>
@@ -549,7 +552,14 @@ const api = {
     clone: (owner: string, repo: string, destDir: string) =>
       typedInvoke('repos:clone', owner, repo, destDir),
     onCloneProgress: (
-      cb: (data: { owner: string; repo: string; line: string; done: boolean; error?: string; localPath?: string }) => void
+      cb: (data: {
+        owner: string
+        repo: string
+        line: string
+        done: boolean
+        error?: string
+        localPath?: string
+      }) => void
     ): (() => void) => {
       const handler = (_e: unknown, data: Parameters<typeof cb>[0]): void => cb(data)
       ipcRenderer.on('repos:cloneProgress', handler)

@@ -128,7 +128,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     expect(screen.getByText('Epics')).toBeInTheDocument()
@@ -140,7 +146,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     // Active groups are visible immediately
@@ -183,7 +195,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     const { container } = render(
-      <EpicList groups={mockGroups} selectedId="group-1" onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId="group-1"
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -199,7 +217,13 @@ describe('EpicList', () => {
     })
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -211,7 +235,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockRejectedValue(new Error('Network error'))
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -225,7 +255,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -237,7 +273,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -249,7 +291,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -261,7 +309,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     expect(screen.getByText('+ New Epic')).toBeInTheDocument()
@@ -288,7 +342,15 @@ describe('EpicList', () => {
   it('renders with empty groups array', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
-    render(<EpicList groups={[]} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />)
+    render(
+      <EpicList
+        groups={[]}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
+    )
 
     expect(screen.getByText('Epics')).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
@@ -301,7 +363,13 @@ describe('EpicList', () => {
     })
 
     const { container } = render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -317,7 +385,13 @@ describe('EpicList', () => {
     })
 
     const { container } = render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     // Expand completed section to see the completed epic
@@ -342,7 +416,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     const { container } = render(
-      <EpicList groups={mockGroups} selectedId="group-1" onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId="group-1"
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {
@@ -355,7 +435,13 @@ describe('EpicList', () => {
     window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
-      <EpicList groups={mockGroups} selectedId={null} onSelect={vi.fn()} onCreateNew={vi.fn()} {...searchProps} />
+      <EpicList
+        groups={mockGroups}
+        selectedId={null}
+        onSelect={vi.fn()}
+        onCreateNew={vi.fn()}
+        {...searchProps}
+      />
     )
 
     await waitFor(() => {

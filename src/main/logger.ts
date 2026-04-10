@@ -1,6 +1,7 @@
 import { appendFileSync, statSync, mkdirSync, existsSync, renameSync, rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
+import { nowIso } from '../shared/time'
 
 const BDE_DIR = join(homedir(), '.bde')
 const LOG_PATH = join(BDE_DIR, 'bde.log')
@@ -52,7 +53,7 @@ const ROTATION_CHECK_INTERVAL = 1000 // check every 1000 writes
 
 function fileLog(level: string, name: string, msg: string): void {
   try {
-    const ts = new Date().toISOString()
+    const ts = nowIso()
     appendFileSync(LOG_PATH, `${ts} [${level}] [${name}] ${msg}\n`)
     if (++writeCount >= ROTATION_CHECK_INTERVAL) {
       writeCount = 0

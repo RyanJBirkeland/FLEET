@@ -12,6 +12,7 @@ import { recordTaskChanges, recordTaskChangesBulk } from './task-changes'
 import type { Logger } from '../agent-manager/types'
 import { withRetry } from './sqlite-retry'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 // Module-level logger — defaults to console, injectable for testing/structured logging
 let logger: Logger = {
@@ -462,7 +463,7 @@ export function deleteTask(id: string, deletedBy: string = 'unknown'): void {
 export function claimTask(id: string, claimedBy: string, maxActive?: number): SprintTask | null {
   try {
     const db = getDb()
-    const now = new Date().toISOString()
+    const now = nowIso()
 
     if (maxActive !== undefined) {
       // Atomic WIP check — single transaction prevents TOCTOU race, with retry on SQLITE_BUSY
@@ -667,7 +668,7 @@ export function markTaskDoneByPrNumber(prNumber: number): string[] {
       const affectedIds = affected.map((r) => r.id as string)
 
       if (affectedIds.length > 0) {
-        const completedAt = new Date().toISOString()
+        const completedAt = nowIso()
 
         // F-t3-db-4: Bulk audit trail (single prepared INSERT statement reused
         // across all affected tasks instead of one prepared statement per call)
@@ -756,7 +757,7 @@ export function markTaskCancelledByPrNumber(prNumber: number): string[] {
       const affectedIds = affected.map((r) => r.id as string)
 
       if (affectedIds.length > 0) {
-        const completedAt = new Date().toISOString()
+        const completedAt = nowIso()
 
         // F-t3-db-4: Bulk audit trail
         try {

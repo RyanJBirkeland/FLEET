@@ -89,5 +89,5 @@ export const tokens = {
     fast: '100ms ease', // Hover states, toggles
     base: '150ms ease', // General interactions
     slow: '200ms ease' // Panel slides, fades
-  },
+  }
 }

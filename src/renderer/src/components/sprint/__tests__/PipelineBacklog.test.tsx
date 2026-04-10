@@ -2,6 +2,7 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { PipelineBacklog } from '../PipelineBacklog'
 import type { SprintTask } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
   return {
@@ -30,8 +31,8 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
     max_runtime_ms: null,
     spec_type: null,
     worktree_path: null,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    created_at: nowIso(),
+    updated_at: nowIso(),
     ...overrides
   }
 }

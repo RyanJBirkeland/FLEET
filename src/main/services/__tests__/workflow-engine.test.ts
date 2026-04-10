@@ -3,6 +3,7 @@ import { instantiateWorkflow } from '../workflow-engine'
 import type { WorkflowTemplate } from '../../../shared/workflow-types'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import type { SprintTask } from '../../../shared/types'
+import { nowIso } from '../../../shared/time'
 
 describe('workflow-engine', () => {
   function createMockRepo(): ISprintTaskRepository {
@@ -19,8 +20,8 @@ describe('workflow-engine', () => {
         spec: input.spec || null,
         playground_enabled: input.playground_enabled || false,
         model: input.model || null,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
+        created_at: nowIso(),
+        updated_at: nowIso()
       } as SprintTask
     })
 
@@ -211,8 +212,8 @@ describe('workflow-engine', () => {
           spec: input.spec || null,
           playground_enabled: input.playground_enabled || false,
           model: input.model || null,
-          created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString()
+          created_at: nowIso(),
+          updated_at: nowIso()
         } as SprintTask
       }),
       getTask: vi.fn(),

@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 import { UpstreamOutcomes } from '../UpstreamOutcomes'
 import type { SprintTask } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask => ({
   id,
@@ -24,16 +25,14 @@ const makeTask = (id: string, overrides: Partial<SprintTask> = {}): SprintTask =
   completed_at: null,
   template_name: null,
   depends_on: null,
-  updated_at: new Date().toISOString(),
-  created_at: new Date().toISOString(),
+  updated_at: nowIso(),
+  created_at: nowIso(),
   ...overrides
 })
 
 describe('UpstreamOutcomes', () => {
   it('returns null when no upstream tasks', () => {
-    const { container } = render(
-      <UpstreamOutcomes upstreamTasks={[]} onNavigate={vi.fn()} />
-    )
+    const { container } = render(<UpstreamOutcomes upstreamTasks={[]} onNavigate={vi.fn()} />)
     expect(container.firstChild).toBeNull()
   })
 
@@ -46,15 +45,15 @@ describe('UpstreamOutcomes', () => {
 
   it('calls onNavigate when task is clicked', () => {
     const onNavigate = vi.fn()
-    render(
-      <UpstreamOutcomes upstreamTasks={[makeTask('t1')]} onNavigate={onNavigate} />
-    )
+    render(<UpstreamOutcomes upstreamTasks={[makeTask('t1')]} onNavigate={onNavigate} />)
     fireEvent.click(screen.getByText('Task t1'))
     expect(onNavigate).toHaveBeenCalledWith('t1')
   })
 
   it('shows PR link when available', () => {
-    const tasks = [makeTask('t1', { pr_url: 'https://github.com/pr/1', pr_number: 1, pr_status: 'open' })]
+    const tasks = [
+      makeTask('t1', { pr_url: 'https://github.com/pr/1', pr_number: 1, pr_status: 'open' })
+    ]
     render(<UpstreamOutcomes upstreamTasks={tasks} onNavigate={vi.fn()} />)
     expect(screen.getByText(/PR #1/)).toBeInTheDocument()
   })

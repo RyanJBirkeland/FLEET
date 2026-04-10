@@ -5,6 +5,7 @@ import { safeHandle } from '../ipc-utils'
 import { getDb } from '../db'
 import { createLogger } from '../logger'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 const logger = createLogger('webhook-handlers')
 
@@ -162,7 +163,7 @@ export function registerWebhookHandlers(): void {
     // Fire a test event
     const testPayload = {
       event: 'webhook.test',
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       task: null
     }
 

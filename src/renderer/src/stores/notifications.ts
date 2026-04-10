@@ -4,6 +4,7 @@
  * Powers the NotificationBell component in the title bar.
  */
 import { create } from 'zustand'
+import { nowIso } from '../../../shared/time'
 
 export type NotificationType =
   | 'agent_completed'
@@ -74,7 +75,7 @@ export const useNotificationsStore = create<NotificationsStore>((set, get) => ({
       type: input.type,
       title: input.title,
       message: input.message,
-      timestamp: new Date().toISOString(),
+      timestamp: nowIso(),
       read: false,
       viewLink: input.viewLink
     }

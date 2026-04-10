@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { AgentCard } from '../AgentCard'
 import type { AgentMeta } from '../../../../../shared/types'
 import { toast } from '../../../stores/toasts'
+import { nowIso } from '../../../../../shared/time'
 
 vi.mock('../../../stores/toasts', () => ({
   toast: {
@@ -161,7 +162,7 @@ describe('AgentCard', () => {
   })
 
   it('renders done status agent without animation', () => {
-    const agent = makeAgent({ status: 'done', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'done', finishedAt: nowIso() })
     const { container } = render(<AgentCard {...defaultProps} agent={agent} />)
     // Status dot for done agents has no animation
     const dots = container.querySelectorAll('span')
@@ -169,13 +170,13 @@ describe('AgentCard', () => {
   })
 
   it('renders failed agent', () => {
-    const agent = makeAgent({ status: 'failed', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'failed', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByText('Fix the login bug')).toBeInTheDocument()
   })
 
   it('renders cancelled agent', () => {
-    const agent = makeAgent({ status: 'cancelled', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'cancelled', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByText('Fix the login bug')).toBeInTheDocument()
   })
@@ -187,13 +188,13 @@ describe('AgentCard', () => {
   })
 
   it('does not show kill button for done agents', () => {
-    const agent = makeAgent({ status: 'done', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'done', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.queryByLabelText('Stop agent')).not.toBeInTheDocument()
   })
 
   it('does not show kill button for failed agents', () => {
-    const agent = makeAgent({ status: 'failed', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'failed', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.queryByLabelText('Stop agent')).not.toBeInTheDocument()
   })
@@ -272,19 +273,19 @@ describe('AgentCard', () => {
   })
 
   it('renders CheckCircle icon for done agents', () => {
-    const agent = makeAgent({ status: 'done', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'done', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByLabelText('Done')).toBeInTheDocument()
   })
 
   it('renders XCircle icon for failed agents', () => {
-    const agent = makeAgent({ status: 'failed', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'failed', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByLabelText('Failed')).toBeInTheDocument()
   })
 
   it('renders Ban icon for cancelled agents', () => {
-    const agent = makeAgent({ status: 'cancelled', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'cancelled', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByLabelText('Cancelled')).toBeInTheDocument()
   })
@@ -296,19 +297,19 @@ describe('AgentCard', () => {
   })
 
   it('shows "Done" status label for done agents', () => {
-    const agent = makeAgent({ status: 'done', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'done', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByText('Done')).toBeInTheDocument()
   })
 
   it('shows "Failed" status label for failed agents', () => {
-    const agent = makeAgent({ status: 'failed', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'failed', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByText('Failed')).toBeInTheDocument()
   })
 
   it('shows "Cancelled" status label for cancelled agents', () => {
-    const agent = makeAgent({ status: 'cancelled', finishedAt: new Date().toISOString() })
+    const agent = makeAgent({ status: 'cancelled', finishedAt: nowIso() })
     render(<AgentCard {...defaultProps} agent={agent} />)
     expect(screen.getByText('Cancelled')).toBeInTheDocument()
   })

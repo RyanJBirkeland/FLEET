@@ -14,6 +14,7 @@ import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { useTextareaPrompt, TextareaPromptModal } from '../ui/TextareaPromptModal'
 import { toast } from '../../stores/toasts'
 import { useGitHubStatus } from '../../hooks/useGitHubStatus'
+import { nowIso } from '../../../../shared/time'
 
 /**
  * Compute the next review task after the current one.
@@ -189,7 +190,7 @@ export function ReviewActions(): React.JSX.Element {
       const nextEntries = [
         ...priorEntries,
         {
-          timestamp: new Date().toISOString(),
+          timestamp: nowIso(),
           feedback,
           attempt
         }

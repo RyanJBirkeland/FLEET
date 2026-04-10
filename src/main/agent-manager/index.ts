@@ -297,6 +297,7 @@ export interface AgentManager {
 
 import type { DependencyIndex } from './dependency-index'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 export class AgentManagerImpl implements AgentManager {
   // Exposed state (testable via _ prefix)
@@ -312,10 +313,7 @@ export class AgentManagerImpl implements AgentManager {
   // F-t1-sysprof-1/-4: Cache a stable fingerprint alongside the deps array so
   // subsequent drain ticks can short-circuit the deep compare via hash equality.
   // Exposed via _ prefix for testability (private by convention, not keyword).
-  _lastTaskDeps = new Map<
-    string,
-    { deps: TaskDependency[] | null; hash: string }
-  >()
+  _lastTaskDeps = new Map<string, { deps: TaskDependency[] | null; hash: string }>()
 
   // Circuit breaker state — pauses drain loop after consecutive spawn failures.
   _consecutiveSpawnFailures = 0
@@ -656,7 +654,7 @@ export class AgentManagerImpl implements AgentManager {
             : fullNote
         this.repo.updateTask(task.id, {
           status: 'error',
-          completed_at: new Date().toISOString(),
+          completed_at: nowIso(),
           notes,
           claimed_by: null
         })
@@ -688,7 +686,6 @@ export class AgentManagerImpl implements AgentManager {
       .sort()
       .join('|')
   }
-
 
   // ---- drainLoop ----
 
@@ -816,7 +813,7 @@ export class AgentManagerImpl implements AgentManager {
       this._activeAgents.delete(agent.taskId)
 
       // Update task based on verdict
-      const now = new Date().toISOString()
+      const now = nowIso()
       const maxRuntimeMs = agent.maxRuntimeMs ?? this.config.maxRuntimeMs
       this._concurrency = handleWatchdogVerdict(
         verdict,

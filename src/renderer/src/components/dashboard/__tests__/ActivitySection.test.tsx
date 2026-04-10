@@ -4,6 +4,7 @@ import { ActivitySection } from '../ActivitySection'
 import type { SprintTask } from '../../../../../shared/types'
 import type { FeedEvent } from '../../neon/ActivityFeed'
 import type { ChartBar } from '../../neon'
+import { nowIso } from '../../../../../shared/time'
 
 vi.mock('../../neon', () => ({
   NeonCard: ({ title, children }: { title: string; children: React.ReactNode }) => (
@@ -58,13 +59,13 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
     pr_url: null,
     claimed_by: null,
     started_at: null,
-    completed_at: new Date().toISOString(),
+    completed_at: nowIso(),
     retry_count: 0,
     fast_fail_count: 0,
     template_name: null,
     depends_on: null,
-    updated_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
+    updated_at: nowIso(),
+    created_at: nowIso(),
     ...overrides
   }
 }

@@ -45,11 +45,7 @@ export function StatCounter({
         {label}
       </div>
       <div className="stat-counter__value-row">
-        <span
-          className="stat-counter__value"
-        >
-          {value}
-        </span>
+        <span className="stat-counter__value">{value}</span>
         {suffix && (
           <span
             className="stat-counter__suffix"

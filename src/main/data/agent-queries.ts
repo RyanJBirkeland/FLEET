@@ -5,6 +5,7 @@
  */
 import type Database from 'better-sqlite3'
 import type { AgentMeta } from '../../shared/types'
+import { nowIso } from '../../shared/time'
 
 // --- Column mapping between snake_case DB rows and camelCase AgentMeta ---
 
@@ -287,7 +288,7 @@ export function insertAgentRunTurn(db: Database.Database, record: TurnRecord): v
     record.toolCalls,
     record.cacheTokensCreated,
     record.cacheTokensRead,
-    new Date().toISOString()
+    nowIso()
   )
 }
 
@@ -299,17 +300,24 @@ export function insertAgentRunTurn(db: Database.Database, record: TurnRecord): v
 export function getLatestAgentRunTurn(
   db: Database.Database,
   runId: string
-): { cacheTokensRead: number; cacheTokensCreated: number; tokensIn: number; tokensOut: number } | null {
+): {
+  cacheTokensRead: number
+  cacheTokensCreated: number
+  tokensIn: number
+  tokensOut: number
+} | null {
   const row = db
     .prepare(
       'SELECT cache_tokens_read, cache_tokens_created, tokens_in, tokens_out FROM agent_run_turns WHERE run_id = ? ORDER BY turn DESC LIMIT 1'
     )
-    .get(runId) as {
-    cache_tokens_read: number | null
-    cache_tokens_created: number | null
-    tokens_in: number | null
-    tokens_out: number | null
-  } | undefined
+    .get(runId) as
+    | {
+        cache_tokens_read: number | null
+        cache_tokens_created: number | null
+        tokens_in: number | null
+        tokens_out: number | null
+      }
+    | undefined
   if (!row) return null
   return {
     cacheTokensRead: row.cache_tokens_read ?? 0,

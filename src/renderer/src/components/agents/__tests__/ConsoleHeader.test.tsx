@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
 import { ConsoleHeader } from '../ConsoleHeader'
 import type { AgentMeta, AgentEvent } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 // Mock terminal store
 vi.mock('../../../stores/terminal', () => ({
@@ -92,7 +93,7 @@ describe('ConsoleHeader', () => {
     const doneAgent = {
       ...baseAgent,
       status: 'done' as const,
-      finishedAt: new Date().toISOString(),
+      finishedAt: nowIso(),
       exitCode: 0
     }
     render(<ConsoleHeader agent={doneAgent} events={[]} />)
@@ -155,7 +156,7 @@ describe('ConsoleHeader', () => {
     const hourAgent = {
       ...baseAgent,
       startedAt: new Date(Date.now() - 3700000).toISOString(), // ~1h
-      finishedAt: new Date().toISOString(),
+      finishedAt: nowIso(),
       status: 'done' as const
     }
     render(<ConsoleHeader agent={hourAgent} events={[]} />)

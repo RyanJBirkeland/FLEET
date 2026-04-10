@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import type { SprintTask } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 // vi.hoisted ensures these refs are available inside vi.mock factory functions
 const mocks = vi.hoisted(() => {
@@ -329,8 +330,8 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
     fast_fail_count: 0,
     template_name: null,
     depends_on: null,
-    updated_at: new Date().toISOString(),
-    created_at: new Date().toISOString(),
+    updated_at: nowIso(),
+    created_at: nowIso(),
     ...overrides
   }
 }

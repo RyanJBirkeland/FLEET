@@ -15,6 +15,7 @@ import { mkdirSync, rmSync, existsSync, readFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
 import { vi } from 'vitest'
+import { nowIso } from '../../shared/time'
 
 const TEST_DIR = join(tmpdir(), `bde-agent-history-test-${process.pid}`)
 const TEST_DB_PATH = join(TEST_DIR, 'bde.db')
@@ -495,7 +496,7 @@ describe('agent-history (SQLite)', () => {
         repo: 'bde',
         repoPath: '/tmp',
         task: 'test',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running',
@@ -520,7 +521,7 @@ describe('agent-history (SQLite)', () => {
         repo: 'bde',
         repoPath: '/tmp',
         task: 'test',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running',
@@ -549,7 +550,7 @@ describe('agent-history (SQLite)', () => {
         repo: 'bde',
         repoPath: '/tmp',
         task: 'help me',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running',
@@ -566,9 +567,9 @@ describe('agent-history (SQLite)', () => {
       expect(cleaned).toBe(0)
 
       const { getDb } = await import('../db')
-      const row = getDb()
-        .prepare('SELECT status FROM agent_runs WHERE id = ?')
-        .get('adhoc-1') as { status: string }
+      const row = getDb().prepare('SELECT status FROM agent_runs WHERE id = ?').get('adhoc-1') as {
+        status: string
+      }
       expect(row.status).toBe('running')
     })
 
@@ -581,7 +582,7 @@ describe('agent-history (SQLite)', () => {
         repo: 'bde',
         repoPath: '/tmp',
         task: 'do thing',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running',
@@ -611,7 +612,7 @@ describe('agent-history (SQLite)', () => {
         repo: 'bde',
         repoPath: '/tmp',
         task: 'do thing',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running',
@@ -622,9 +623,7 @@ describe('agent-history (SQLite)', () => {
         sprintTaskId: 'task-456'
       })
 
-      const cleaned = agentHistory.reconcileRunningAgentRuns(
-        (taskId) => taskId === 'task-456'
-      )
+      const cleaned = agentHistory.reconcileRunningAgentRuns((taskId) => taskId === 'task-456')
       expect(cleaned).toBe(0)
 
       const { getDb } = await import('../db')
@@ -640,7 +639,7 @@ describe('agent-history (SQLite)', () => {
     // returns local-time text with no `Z` suffix, which JavaScript's
     // `new Date(...)` parses as LOCAL time, shifting all duration
     // computations in the renderer by the user's TZ offset. The finalize
-    // functions now use parameterized JS-side `new Date().toISOString()`.
+    // functions now use parameterized JS-side `nowIso()`.
     async function createRunningAgent(id: string, sprintTaskId?: string): Promise<void> {
       await agentHistory.createAgentRecord({
         id,
@@ -650,7 +649,7 @@ describe('agent-history (SQLite)', () => {
         repo: 'bde',
         repoPath: '/tmp',
         task: 'reg test',
-        startedAt: new Date().toISOString(),
+        startedAt: nowIso(),
         finishedAt: null,
         exitCode: null,
         status: 'running',
@@ -664,9 +663,9 @@ describe('agent-history (SQLite)', () => {
 
     async function readFinishedAt(id: string): Promise<string> {
       const { getDb } = await import('../db')
-      const row = getDb()
-        .prepare('SELECT finished_at FROM agent_runs WHERE id = ?')
-        .get(id) as { finished_at: string }
+      const row = getDb().prepare('SELECT finished_at FROM agent_runs WHERE id = ?').get(id) as {
+        finished_at: string
+      }
       return row.finished_at
     }
 

@@ -6,6 +6,7 @@ import { createHmac } from 'crypto'
 import type { Logger } from '../logger'
 import type { SprintTask } from '../../shared/types'
 import { getErrorMessage } from '../../shared/errors'
+import { nowIso } from '../../shared/time'
 
 export interface WebhookConfig {
   id: string
@@ -79,7 +80,7 @@ export function createWebhookService(deps: WebhookServiceDeps): WebhookService {
     try {
       const payload: WebhookPayload = {
         event,
-        timestamp: new Date().toISOString(),
+        timestamp: nowIso(),
         task
       }
 
