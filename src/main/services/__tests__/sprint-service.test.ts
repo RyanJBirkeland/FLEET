@@ -4,6 +4,7 @@
  * and fire mutation notifications on success.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import type { SprintTask, CreateTaskInput, UpdateTaskInput, QueueStats } from '../../../shared/types'
 
 // Mock sprint-queries (data layer)
 vi.mock('../../data/sprint-queries', () => ({
@@ -79,8 +80,8 @@ describe('sprint-service', () => {
 
   describe('getTask', () => {
     it('delegates to sprint-queries', () => {
-      const task = { id: '1', title: 'Test' }
-      vi.mocked(_getTask).mockReturnValue(task as any)
+      const task: Partial<SprintTask> = { id: '1', title: 'Test' }
+      vi.mocked(_getTask).mockReturnValue(task as SprintTask)
       expect(getTask('1')).toEqual(task)
       expect(_getTask).toHaveBeenCalledWith('1')
     })
@@ -93,8 +94,8 @@ describe('sprint-service', () => {
 
   describe('listTasks', () => {
     it('delegates to sprint-queries with optional status filter', () => {
-      const tasks = [{ id: '1' }, { id: '2' }]
-      vi.mocked(_listTasks).mockReturnValue(tasks as any)
+      const tasks: Partial<SprintTask>[] = [{ id: '1' }, { id: '2' }]
+      vi.mocked(_listTasks).mockReturnValue(tasks as SprintTask[])
       expect(listTasks('queued')).toEqual(tasks)
       expect(_listTasks).toHaveBeenCalledWith('queued')
     })
@@ -108,11 +109,11 @@ describe('sprint-service', () => {
 
   describe('createTask', () => {
     it('creates task and fires created notification', () => {
-      const input = { title: 'New', repo: 'bde' }
-      const created = { id: 'abc', ...input }
-      vi.mocked(_createTask).mockReturnValue(created as any)
+      const input: Partial<CreateTaskInput> = { title: 'New', repo: 'bde' }
+      const created: Partial<SprintTask> = { id: 'abc', ...input }
+      vi.mocked(_createTask).mockReturnValue(created as SprintTask)
 
-      const result = createTask(input as any)
+      const result = createTask(input as CreateTaskInput)
       expect(result).toEqual(created)
       expect(_createTask).toHaveBeenCalledWith(input)
       expect(notifySprintMutation).toHaveBeenCalledWith('created', created)
@@ -120,7 +121,7 @@ describe('sprint-service', () => {
 
     it('does not notify when createTask returns null', () => {
       vi.mocked(_createTask).mockReturnValue(null)
-      const result = createTask({ title: 'Bad', repo: 'bde' } as any)
+      const result = createTask({ title: 'Bad', repo: 'bde' } as CreateTaskInput)
       expect(result).toBeNull()
       expect(notifySprintMutation).not.toHaveBeenCalled()
     })
@@ -128,8 +129,8 @@ describe('sprint-service', () => {
 
   describe('updateTask', () => {
     it('updates task and fires updated notification', () => {
-      const updated = { id: '1', title: 'Updated' }
-      vi.mocked(_updateTask).mockReturnValue(updated as any)
+      const updated: Partial<SprintTask> = { id: '1', title: 'Updated' }
+      vi.mocked(_updateTask).mockReturnValue(updated as SprintTask)
 
       const result = updateTask('1', { title: 'Updated' })
       expect(result).toEqual(updated)
@@ -147,8 +148,8 @@ describe('sprint-service', () => {
 
   describe('deleteTask', () => {
     it('deletes task and fires deleted notification', () => {
-      const task = { id: '1', title: 'Doomed' }
-      vi.mocked(_getTask).mockReturnValue(task as any)
+      const task: Partial<SprintTask> = { id: '1', title: 'Doomed' }
+      vi.mocked(_getTask).mockReturnValue(task as SprintTask)
 
       deleteTask('1')
       expect(_deleteTask).toHaveBeenCalledWith('1')
@@ -165,8 +166,8 @@ describe('sprint-service', () => {
 
   describe('claimTask', () => {
     it('claims task and fires updated notification', () => {
-      const claimed = { id: '1', claimed_by: 'agent-1' }
-      vi.mocked(_claimTask).mockReturnValue(claimed as any)
+      const claimed: Partial<SprintTask> = { id: '1', claimed_by: 'agent-1' }
+      vi.mocked(_claimTask).mockReturnValue(claimed as SprintTask)
 
       const result = claimTask('1', 'agent-1')
       expect(result).toEqual(claimed)
@@ -184,8 +185,8 @@ describe('sprint-service', () => {
 
   describe('releaseTask', () => {
     it('releases task and fires updated notification', () => {
-      const released = { id: '1', claimed_by: null }
-      vi.mocked(_releaseTask).mockReturnValue(released as any)
+      const released: Partial<SprintTask> = { id: '1', claimed_by: null }
+      vi.mocked(_releaseTask).mockReturnValue(released as SprintTask)
 
       const result = releaseTask('1', 'agent-1')
       expect(result).toEqual(released)
@@ -203,8 +204,8 @@ describe('sprint-service', () => {
 
   describe('passthrough functions', () => {
     it('getQueueStats delegates without notification', () => {
-      const stats = { queued: 5, active: 2 }
-      vi.mocked(_getQueueStats).mockReturnValue(stats as any)
+      const stats: Partial<QueueStats> = { queued: 5, active: 2 }
+      vi.mocked(_getQueueStats).mockReturnValue(stats as QueueStats)
       expect(getQueueStats()).toEqual(stats)
       expect(notifySprintMutation).not.toHaveBeenCalled()
     })
@@ -225,7 +226,8 @@ describe('sprint-service', () => {
     })
 
     it('listTasksWithOpenPrs delegates without notification', () => {
-      vi.mocked(_listTasksWithOpenPrs).mockReturnValue([{ id: '1' }] as any)
+      const tasks: Partial<SprintTask>[] = [{ id: '1' }]
+      vi.mocked(_listTasksWithOpenPrs).mockReturnValue(tasks as SprintTask[])
       expect(listTasksWithOpenPrs()).toEqual([{ id: '1' }])
     })
 
@@ -236,7 +238,8 @@ describe('sprint-service', () => {
     })
 
     it('getHealthCheckTasks delegates without notification', () => {
-      vi.mocked(_getHealthCheckTasks).mockReturnValue([{ id: '1' }] as any)
+      const tasks: Partial<SprintTask>[] = [{ id: '1' }]
+      vi.mocked(_getHealthCheckTasks).mockReturnValue(tasks as SprintTask[])
       expect(getHealthCheckTasks()).toEqual([{ id: '1' }])
     })
   })

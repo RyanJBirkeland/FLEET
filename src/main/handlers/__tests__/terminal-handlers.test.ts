@@ -2,7 +2,9 @@
  * Terminal handler unit tests
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import type { IpcMainInvokeEvent } from 'electron'
+import type { IpcMainInvokeEvent, BrowserWindow, WebContents } from 'electron'
+import type { IPty } from 'node-pty'
+import type { PtyHandle } from '../../pty'
 
 // --- Mocks must be declared before imports ---
 
@@ -38,15 +40,25 @@ import { ipcMain, BrowserWindow } from 'electron'
 import { isPtyAvailable, validateShell, createPty } from '../../pty'
 
 // Shared mock objects — defined after imports so they are available at test time
-const mockWebContents = { send: vi.fn() }
-const mockWindow = { id: 42, webContents: mockWebContents }
+const mockWebContents: Partial<WebContents> = { send: vi.fn() }
+const mockWindow: Partial<BrowserWindow> = {
+  id: 42,
+  webContents: mockWebContents as WebContents
+}
 
 /** Build a mock PtyHandle whose callbacks can be triggered manually. */
-function makeMockPtyHandle() {
+function makeMockPtyHandle(): PtyHandle & { _triggerData: (d: string) => void; _triggerExit: () => void } {
   let dataCallback: ((d: string) => void) | undefined
   let exitCallback: (() => void) | undefined
 
+  const mockProcess: Partial<IPty> = {
+    pid: 12345,
+    cols: 80,
+    rows: 24
+  }
+
   const handle = {
+    process: mockProcess as IPty,
     onData: vi.fn((cb: (data: string) => void) => {
       dataCallback = cb
     }),
@@ -80,8 +92,8 @@ describe('Terminal handlers', () => {
     vi.clearAllMocks()
     vi.mocked(isPtyAvailable).mockReturnValue(true)
     vi.mocked(validateShell).mockReturnValue(true)
-    vi.mocked(BrowserWindow.fromWebContents).mockReturnValue(mockWindow as any)
-    vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([mockWindow as any])
+    vi.mocked(BrowserWindow.fromWebContents).mockReturnValue(mockWindow as BrowserWindow)
+    vi.mocked(BrowserWindow.getAllWindows).mockReturnValue([mockWindow as BrowserWindow])
     // Re-attach send spy after clearAllMocks
     mockWebContents.send = vi.fn()
   })
@@ -98,7 +110,7 @@ describe('Terminal handlers', () => {
   describe('terminal:create', () => {
     it('returns a numeric terminal id', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -107,7 +119,7 @@ describe('Terminal handlers', () => {
     })
 
     it('increments id on each call', () => {
-      vi.mocked(createPty).mockImplementation(() => makeMockPtyHandle() as any)
+      vi.mocked(createPty).mockImplementation(() => makeMockPtyHandle())
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -135,7 +147,7 @@ describe('Terminal handlers', () => {
 
     it('sends terminal:data:<id> to the window when pty emits data', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -146,7 +158,7 @@ describe('Terminal handlers', () => {
 
     it('sends terminal:exit:<id> to the window and cleans up on pty exit', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -158,7 +170,7 @@ describe('Terminal handlers', () => {
     it('uses process.env.SHELL as default shell when none provided', () => {
       const originalShell = process.env.SHELL
       process.env.SHELL = '/bin/zsh'
-      vi.mocked(createPty).mockImplementation(() => makeMockPtyHandle() as any)
+      vi.mocked(createPty).mockImplementation(() => makeMockPtyHandle())
       const handlers = captureHandlers()
 
       handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -171,7 +183,7 @@ describe('Terminal handlers', () => {
   describe('terminal:write (ipcMain.on)', () => {
     it('writes data to the terminal if it exists', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       // Create a terminal first
@@ -185,7 +197,7 @@ describe('Terminal handlers', () => {
         | undefined
       expect(writeListener).toBeDefined()
 
-      writeListener!({} as any, { id, data: 'ls -la\n' })
+      writeListener!(mockEvent, { id, data: 'ls -la\n' })
       expect(mockHandle.write).toHaveBeenCalledWith('ls -la\n')
     })
 
@@ -198,12 +210,12 @@ describe('Terminal handlers', () => {
         | ((_e: any, args: any) => void)
         | undefined
 
-      expect(() => writeListener!({} as any, { id: 9999, data: 'hello' })).not.toThrow()
+      expect(() => writeListener!(mockEvent, { id: 9999, data: 'hello' })).not.toThrow()
     })
 
     it('silently ignores data that exceeds 65536 bytes', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -215,13 +227,13 @@ describe('Terminal handlers', () => {
         | undefined
 
       const oversized = 'x'.repeat(65_537)
-      writeListener!({} as any, { id, data: oversized })
+      writeListener!(mockEvent, { id, data: oversized })
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
 
     it('silently ignores non-string data', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -232,7 +244,7 @@ describe('Terminal handlers', () => {
         | ((_e: any, args: any) => void)
         | undefined
 
-      writeListener!({} as any, { id, data: 42 })
+      writeListener!(mockEvent, { id, data: 42 })
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
   })
@@ -240,7 +252,7 @@ describe('Terminal handlers', () => {
   describe('terminal:resize', () => {
     it('resizes an existing terminal', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -251,7 +263,7 @@ describe('Terminal handlers', () => {
 
     it('does nothing for an unknown terminal id', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -266,7 +278,7 @@ describe('Terminal handlers', () => {
   describe('terminal:kill', () => {
     it('kills and removes an existing terminal', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -277,7 +289,7 @@ describe('Terminal handlers', () => {
 
     it('does nothing for an unknown terminal id', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -287,7 +299,7 @@ describe('Terminal handlers', () => {
 
     it('terminal no longer responds to resize after kill', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -299,7 +311,7 @@ describe('Terminal handlers', () => {
 
     it('double-kill does not throw', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -311,7 +323,7 @@ describe('Terminal handlers', () => {
 
     it('write to a killed terminal is silently ignored', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -323,7 +335,7 @@ describe('Terminal handlers', () => {
         | ((_e: any, args: any) => void)
         | undefined
 
-      expect(() => writeListener!({} as any, { id, data: 'echo dead' })).not.toThrow()
+      expect(() => writeListener!(mockEvent, { id, data: 'echo dead' })).not.toThrow()
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
   })
@@ -331,7 +343,7 @@ describe('Terminal handlers', () => {
   describe('terminal:create with custom cwd', () => {
     it('passes cwd through to createPty', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       handlers['terminal:create'](mockEvent, { cols: 80, rows: 24, cwd: '/tmp/project' })
@@ -346,9 +358,9 @@ describe('Terminal handlers', () => {
       const handle2 = makeMockPtyHandle()
       const handle3 = makeMockPtyHandle()
       vi.mocked(createPty)
-        .mockReturnValueOnce(handle1 as any)
-        .mockReturnValueOnce(handle2 as any)
-        .mockReturnValueOnce(handle3 as any)
+        .mockReturnValueOnce(handle1)
+        .mockReturnValueOnce(handle2)
+        .mockReturnValueOnce(handle3)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -363,8 +375,8 @@ describe('Terminal handlers', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
       vi.mocked(createPty)
-        .mockReturnValueOnce(handle1 as any)
-        .mockReturnValueOnce(handle2 as any)
+        .mockReturnValueOnce(handle1)
+        .mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -376,8 +388,8 @@ describe('Terminal handlers', () => {
         | ((_e: any, args: any) => void)
         | undefined
 
-      writeListener!({} as any, { id: id1, data: 'for terminal 1' })
-      writeListener!({} as any, { id: id2, data: 'for terminal 2' })
+      writeListener!(mockEvent, { id: id1, data: 'for terminal 1' })
+      writeListener!(mockEvent, { id: id2, data: 'for terminal 2' })
 
       expect(handle1.write).toHaveBeenCalledWith('for terminal 1')
       expect(handle1.write).not.toHaveBeenCalledWith('for terminal 2')
@@ -389,8 +401,8 @@ describe('Terminal handlers', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
       vi.mocked(createPty)
-        .mockReturnValueOnce(handle1 as any)
-        .mockReturnValueOnce(handle2 as any)
+        .mockReturnValueOnce(handle1)
+        .mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const _id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -406,8 +418,8 @@ describe('Terminal handlers', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
       vi.mocked(createPty)
-        .mockReturnValueOnce(handle1 as any)
-        .mockReturnValueOnce(handle2 as any)
+        .mockReturnValueOnce(handle1)
+        .mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -428,8 +440,8 @@ describe('Terminal handlers', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
       vi.mocked(createPty)
-        .mockReturnValueOnce(handle1 as any)
-        .mockReturnValueOnce(handle2 as any)
+        .mockReturnValueOnce(handle1)
+        .mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -446,8 +458,8 @@ describe('Terminal handlers', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
       vi.mocked(createPty)
-        .mockReturnValueOnce(handle1 as any)
-        .mockReturnValueOnce(handle2 as any)
+        .mockReturnValueOnce(handle1)
+        .mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -468,7 +480,7 @@ describe('Terminal handlers', () => {
   describe('cleanup after pty exit', () => {
     it('resize is a no-op after pty exits naturally', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -481,7 +493,7 @@ describe('Terminal handlers', () => {
 
     it('write is a no-op after pty exits naturally', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -493,13 +505,13 @@ describe('Terminal handlers', () => {
         | ((_e: any, args: any) => void)
         | undefined
 
-      writeListener!({} as any, { id, data: 'after exit' })
+      writeListener!(mockEvent, { id, data: 'after exit' })
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
 
     it('kill after natural exit does not throw', () => {
       const mockHandle = makeMockPtyHandle()
-      vi.mocked(createPty).mockReturnValue(mockHandle as any)
+      vi.mocked(createPty).mockReturnValue(mockHandle)
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
