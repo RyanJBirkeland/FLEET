@@ -44,7 +44,12 @@ import { handleWatchdogVerdict, type WatchdogVerdict } from './watchdog-handler'
 
 // Re-export for backward compatibility with tests
 export { SPAWN_CIRCUIT_FAILURE_THRESHOLD, SPAWN_CIRCUIT_PAUSE_MS }
-export { checkOAuthToken, invalidateCheckOAuthTokenCache, OAUTH_CHECK_CACHE_TTL_MS, OAUTH_CHECK_FAIL_CACHE_TTL_MS }
+export {
+  checkOAuthToken,
+  invalidateCheckOAuthTokenCache,
+  OAUTH_CHECK_CACHE_TTL_MS,
+  OAUTH_CHECK_FAIL_CACHE_TTL_MS
+}
 export { handleWatchdogVerdict, type WatchdogVerdict }
 
 /**
@@ -755,7 +760,9 @@ export class AgentManagerImpl implements AgentManager {
     // Wait for any in-flight drain to complete before aborting agents
     if (this._drainInFlight) {
       await this._drainInFlight.catch((err) => {
-        this.logger.warn(`[agent-manager] Drain in-flight failed during shutdown: ${getErrorMessage(err)}`)
+        this.logger.warn(
+          `[agent-manager] Drain in-flight failed during shutdown: ${getErrorMessage(err)}`
+        )
       })
       this._drainInFlight = null
     }

@@ -31,11 +31,7 @@ export function setSprintQueriesLogger(l: Logger): void {
  * Logs errors with operation context and returns fallback value.
  * Extracted from repetitive try-catch patterns — exported for future use.
  */
-export function withErrorLogging<T>(
-  operation: () => T,
-  fallback: T,
-  operationName: string
-): T {
+export function withErrorLogging<T>(operation: () => T, fallback: T, operationName: string): T {
   try {
     return operation()
   } catch (err) {
@@ -206,7 +202,9 @@ export function listTasks(status?: string): SprintTask[] {
       return mapRowsToTasks(rows)
     }
     const rows = db
-      .prepare(`SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks ORDER BY priority ASC, created_at ASC`)
+      .prepare(
+        `SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks ORDER BY priority ASC, created_at ASC`
+      )
       .all() as Record<string, unknown>[]
     return mapRowsToTasks(rows)
   } catch (err) {

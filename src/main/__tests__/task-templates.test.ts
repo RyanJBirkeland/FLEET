@@ -83,7 +83,9 @@ vi.mock('../data/sprint-queries', () => ({
   getTasksWithDependencies: vi.fn(),
   getOrphanedTasks: vi.fn(),
   getActiveTaskCount: vi.fn(),
-  getSuccessRateBySpecType: vi.fn()
+  getSuccessRateBySpecType: vi.fn(),
+  createReviewTaskFromAdhoc: vi.fn(),
+  getDailySuccessRate: vi.fn()
 }))
 
 import { getSettingJson } from '../settings'

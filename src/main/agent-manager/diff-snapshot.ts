@@ -91,9 +91,7 @@ export async function captureDiffSnapshot(
         budget -= patch.length
       } catch (err) {
         logger.warn(
-          `[diff-snapshot] Failed to capture patch for ${file.path}: ${
-            getErrorMessage(err)
-          }`
+          `[diff-snapshot] Failed to capture patch for ${file.path}: ${getErrorMessage(err)}`
         )
       }
     }
@@ -105,9 +103,7 @@ export async function captureDiffSnapshot(
       ...(truncated ? { truncated: true } : {})
     }
   } catch (err) {
-    logger.warn(
-      `[diff-snapshot] capture failed: ${getErrorMessage(err)}`
-    )
+    logger.warn(`[diff-snapshot] capture failed: ${getErrorMessage(err)}`)
     return null
   }
 }

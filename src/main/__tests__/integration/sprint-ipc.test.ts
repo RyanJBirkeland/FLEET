@@ -49,6 +49,8 @@ vi.mock('../../data/sprint-queries', () => ({
   getOrphanedTasks: vi.fn(),
   getActiveTaskCount: vi.fn(),
   getSuccessRateBySpecType: vi.fn(),
+  createReviewTaskFromAdhoc: vi.fn(),
+  getDailySuccessRate: vi.fn(),
   UPDATE_ALLOWLIST: new Set([
     'title',
     'prompt',

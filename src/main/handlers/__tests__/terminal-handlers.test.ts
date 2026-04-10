@@ -47,7 +47,10 @@ const mockWindow: Partial<BrowserWindow> = {
 }
 
 /** Build a mock PtyHandle whose callbacks can be triggered manually. */
-function makeMockPtyHandle(): PtyHandle & { _triggerData: (d: string) => void; _triggerExit: () => void } {
+function makeMockPtyHandle(): PtyHandle & {
+  _triggerData: (d: string) => void
+  _triggerExit: () => void
+} {
   let dataCallback: ((d: string) => void) | undefined
   let exitCallback: (() => void) | undefined
 
@@ -374,9 +377,7 @@ describe('Terminal handlers', () => {
     it('write targets the correct terminal', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
-      vi.mocked(createPty)
-        .mockReturnValueOnce(handle1)
-        .mockReturnValueOnce(handle2)
+      vi.mocked(createPty).mockReturnValueOnce(handle1).mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -400,9 +401,7 @@ describe('Terminal handlers', () => {
     it('resize targets the correct terminal', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
-      vi.mocked(createPty)
-        .mockReturnValueOnce(handle1)
-        .mockReturnValueOnce(handle2)
+      vi.mocked(createPty).mockReturnValueOnce(handle1).mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const _id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -417,9 +416,7 @@ describe('Terminal handlers', () => {
     it('killing one terminal does not affect others', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
-      vi.mocked(createPty)
-        .mockReturnValueOnce(handle1)
-        .mockReturnValueOnce(handle2)
+      vi.mocked(createPty).mockReturnValueOnce(handle1).mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -439,9 +436,7 @@ describe('Terminal handlers', () => {
     it('data events route to the correct terminal channel', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
-      vi.mocked(createPty)
-        .mockReturnValueOnce(handle1)
-        .mockReturnValueOnce(handle2)
+      vi.mocked(createPty).mockReturnValueOnce(handle1).mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
@@ -457,9 +452,7 @@ describe('Terminal handlers', () => {
     it('exit events are independent per terminal', () => {
       const handle1 = makeMockPtyHandle()
       const handle2 = makeMockPtyHandle()
-      vi.mocked(createPty)
-        .mockReturnValueOnce(handle1)
-        .mockReturnValueOnce(handle2)
+      vi.mocked(createPty).mockReturnValueOnce(handle1).mockReturnValueOnce(handle2)
       const handlers = captureHandlers()
 
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })

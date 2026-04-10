@@ -211,10 +211,9 @@ export async function spawnWithTimeout(
       SPAWN_TIMEOUT_MS
     )
   })
-  return await Promise.race([
-    spawnAgent({ prompt, cwd, model, logger }),
-    timeoutPromise
-  ]).finally(() => clearTimeout(timer!))
+  return await Promise.race([spawnAgent({ prompt, cwd, model, logger }), timeoutPromise]).finally(
+    () => clearTimeout(timer!)
+  )
 }
 
 export interface ConsumeMessagesResult {

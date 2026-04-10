@@ -6,7 +6,7 @@ import { promisify } from 'node:util'
 import { safeHandle } from '../ipc-utils'
 import type { AgentManager } from '../agent-manager'
 import type { AgentManagerStatus } from '../../shared/types'
-import { getTask } from '../data/sprint-queries'
+import { getTask } from '../services/sprint-service'
 import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFile)

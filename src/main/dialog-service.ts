@@ -2,7 +2,12 @@
  * Dialog service abstraction — decouples handler modules from Electron dialog API.
  * Allows framework-agnostic handler code while keeping Electron implementation details isolated.
  */
-import type { SaveDialogOptions, SaveDialogReturnValue, OpenDialogOptions, OpenDialogReturnValue } from 'electron'
+import type {
+  SaveDialogOptions,
+  SaveDialogReturnValue,
+  OpenDialogOptions,
+  OpenDialogReturnValue
+} from 'electron'
 
 export interface DialogService {
   showSaveDialog(options: SaveDialogOptions): Promise<SaveDialogReturnValue>

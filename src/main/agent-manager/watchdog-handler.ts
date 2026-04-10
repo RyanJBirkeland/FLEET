@@ -41,7 +41,9 @@ export function handleWatchdogVerdict(
         )
       )
     } catch (err) {
-      logger.warn(`[watchdog-handler] Failed to update task ${taskId} after max-runtime kill: ${err}`)
+      logger.warn(
+        `[watchdog-handler] Failed to update task ${taskId} after max-runtime kill: ${err}`
+      )
     }
   } else if (verdict === 'idle') {
     try {
@@ -54,7 +56,9 @@ export function handleWatchdogVerdict(
         needs_review: true
       })
       onTerminal(taskId, 'error').catch((err) =>
-        logger.warn(`[watchdog-handler] Failed onTerminal for task ${taskId} after idle kill: ${err}`)
+        logger.warn(
+          `[watchdog-handler] Failed onTerminal for task ${taskId} after idle kill: ${err}`
+        )
       )
     } catch (err) {
       logger.warn(`[watchdog-handler] Failed to update task ${taskId} after idle kill: ${err}`)

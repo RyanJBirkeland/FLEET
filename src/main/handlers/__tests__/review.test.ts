@@ -77,7 +77,28 @@ vi.mock('../../logger', () => ({
 
 vi.mock('../../data/sprint-queries', () => ({
   getTask: vi.fn(),
-  updateTask: vi.fn()
+  updateTask: vi.fn(),
+  listTasks: vi.fn(),
+  listTasksRecent: vi.fn(),
+  createTask: vi.fn(),
+  deleteTask: vi.fn(),
+  claimTask: vi.fn(),
+  releaseTask: vi.fn(),
+  getQueueStats: vi.fn(),
+  getDoneTodayCount: vi.fn(),
+  markTaskDoneByPrNumber: vi.fn(),
+  markTaskCancelledByPrNumber: vi.fn(),
+  listTasksWithOpenPrs: vi.fn(),
+  updateTaskMergeableState: vi.fn(),
+  getHealthCheckTasks: vi.fn(),
+  getQueuedTasks: vi.fn(),
+  getTasksWithDependencies: vi.fn(),
+  getOrphanedTasks: vi.fn(),
+  getActiveTaskCount: vi.fn(),
+  getSuccessRateBySpecType: vi.fn(),
+  createReviewTaskFromAdhoc: vi.fn(),
+  getDailySuccessRate: vi.fn(),
+  UPDATE_ALLOWLIST: new Set(['title', 'status'])
 }))
 
 vi.mock('../sprint-listeners', () => ({

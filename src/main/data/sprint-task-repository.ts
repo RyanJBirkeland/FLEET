@@ -10,9 +10,14 @@
  */
 import type { SprintTask, TaskDependency } from '../../shared/types'
 import * as queries from './sprint-queries'
-import type { CreateTaskInput, QueueStats, SpecTypeSuccessRate } from './sprint-queries'
+import type {
+  CreateTaskInput,
+  QueueStats,
+  SpecTypeSuccessRate,
+  DailySuccessRate
+} from './sprint-queries'
 
-export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate }
+export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate, DailySuccessRate }
 
 export interface ISprintTaskRepository {
   getTask(id: string): SprintTask | null
@@ -39,6 +44,14 @@ export interface ISprintTaskRepository {
   updateTaskMergeableState(prNumber: number, mergeableState: string | null): void
   getHealthCheckTasks(): SprintTask[]
   getSuccessRateBySpecType(): SpecTypeSuccessRate[]
+  createReviewTaskFromAdhoc(input: {
+    title: string
+    repo: string
+    spec: string
+    worktreePath: string
+    branch: string
+  }): SprintTask | null
+  getDailySuccessRate(days?: number): DailySuccessRate[]
 }
 
 /**
@@ -66,6 +79,8 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     listTasksWithOpenPrs: queries.listTasksWithOpenPrs,
     updateTaskMergeableState: queries.updateTaskMergeableState,
     getHealthCheckTasks: queries.getHealthCheckTasks,
-    getSuccessRateBySpecType: queries.getSuccessRateBySpecType
+    getSuccessRateBySpecType: queries.getSuccessRateBySpecType,
+    createReviewTaskFromAdhoc: queries.createReviewTaskFromAdhoc,
+    getDailySuccessRate: queries.getDailySuccessRate
   }
 }

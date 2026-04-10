@@ -115,9 +115,7 @@ export async function spawnAdhocAgent(args: {
     log.info(`[adhoc] ${agentId} worktree ready at ${worktreePath} on branch ${branch}`)
   } catch (err) {
     log.error(`[adhoc] ${agentId} failed to create worktree: ${err}`)
-    throw new Error(
-      `Failed to create adhoc worktree: ${getErrorMessage(err)}`
-    )
+    throw new Error(`Failed to create adhoc worktree: ${getErrorMessage(err)}`)
   }
 
   // Build composed prompt with preamble. Pass the branch so the agent knows
@@ -248,9 +246,7 @@ export async function spawnAdhocAgent(args: {
       }
       log.info(`[adhoc] ${meta.id} turn complete, session alive`)
     } catch (err) {
-      log.error(
-        `[adhoc] ${meta.id} turn error: ${getErrorMessage(err)}`
-      )
+      log.error(`[adhoc] ${meta.id} turn error: ${getErrorMessage(err)}`)
       emitAgentEvent(meta.id, {
         type: 'agent:error',
         message: getErrorMessage(err),

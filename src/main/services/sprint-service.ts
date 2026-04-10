@@ -15,13 +15,14 @@ import {
   type ISprintTaskRepository,
   type CreateTaskInput,
   type QueueStats,
-  type SpecTypeSuccessRate
+  type SpecTypeSuccessRate,
+  type DailySuccessRate
 } from '../data/sprint-task-repository'
 import { UPDATE_ALLOWLIST } from '../data/sprint-queries'
 import type { SprintTask } from '../../shared/types'
 
 export { UPDATE_ALLOWLIST }
-export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate }
+export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate, DailySuccessRate }
 
 const repo: ISprintTaskRepository = createSprintTaskRepository()
 
@@ -97,4 +98,20 @@ export function getHealthCheckTasks(): SprintTask[] {
 
 export function getSuccessRateBySpecType(): SpecTypeSuccessRate[] {
   return repo.getSuccessRateBySpecType()
+}
+
+export function createReviewTaskFromAdhoc(input: {
+  title: string
+  repo: string
+  spec: string
+  worktreePath: string
+  branch: string
+}): SprintTask | null {
+  const row = repo.createReviewTaskFromAdhoc(input)
+  if (row) notifySprintMutation('created', row)
+  return row
+}
+
+export function getDailySuccessRate(days?: number): DailySuccessRate[] {
+  return repo.getDailySuccessRate(days)
 }

@@ -208,13 +208,9 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
       deleteSetting(db, SETTING_SUPABASE_KEY)
       logger.info('Supabase credentials deleted after successful import')
     } catch (err) {
-      logger.warn(
-        `Failed to delete Supabase credentials: ${getErrorMessage(err)}`
-      )
+      logger.warn(`Failed to delete Supabase credentials: ${getErrorMessage(err)}`)
     }
   } catch (err) {
-    logger.error(
-      `Failed to insert imported tasks: ${getErrorMessage(err)}`
-    )
+    logger.error(`Failed to insert imported tasks: ${getErrorMessage(err)}`)
   }
 }

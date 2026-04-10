@@ -32,9 +32,7 @@ async function fetchOpenPrs(owner: string, repo: string, token: string): Promise
     )
     return data.map((pr) => ({ ...pr, repo }))
   } catch (err) {
-    logger.warn(
-      `Failed to fetch PRs for ${owner}/${repo}: ${getErrorMessage(err)}`
-    )
+    logger.warn(`Failed to fetch PRs for ${owner}/${repo}: ${getErrorMessage(err)}`)
     return []
   }
 }

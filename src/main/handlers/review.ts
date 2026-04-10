@@ -6,7 +6,7 @@
  */
 import { safeHandle } from '../ipc-utils'
 import { createLogger } from '../logger'
-import { getTask as _getTask, updateTask as _updateTask } from '../data/sprint-queries'
+import { getTask as _getTask, updateTask as _updateTask } from '../services/sprint-service'
 import { notifySprintMutation } from './sprint-listeners'
 import { getSettingJson } from '../settings'
 import { buildAgentEnv } from '../env-utils'

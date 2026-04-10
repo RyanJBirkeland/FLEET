@@ -364,14 +364,8 @@ Before your final push, verify:
 }
 
 function buildAssistantPrompt(input: BuildPromptInput): string {
-  const {
-    taskContent,
-    branch,
-    playgroundEnabled,
-    upstreamContext,
-    crossRepoContract,
-    repoName
-  } = input
+  const { taskContent, branch, playgroundEnabled, upstreamContext, crossRepoContract, repoName } =
+    input
 
   let prompt = CODING_AGENT_PREAMBLE
 
