@@ -19,7 +19,10 @@ import type {
 
 export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate, DailySuccessRate }
 
-export interface ISprintTaskRepository {
+/**
+ * Methods used by the agent manager for pipeline execution.
+ */
+export interface IAgentTaskRepository {
   getTask(id: string): SprintTask | null
   updateTask(id: string, patch: Record<string, unknown>): SprintTask | null
   getQueuedTasks(limit: number): SprintTask[]
@@ -31,6 +34,22 @@ export interface ISprintTaskRepository {
   getOrphanedTasks(claimedBy: string): SprintTask[]
   getActiveTaskCount(): number
   claimTask(id: string, claimedBy: string): SprintTask | null
+}
+
+/**
+ * Methods used by the sprint PR poller for tracking GitHub PR status.
+ */
+export interface ISprintPollerRepository {
+  markTaskDoneByPrNumber(prNumber: number): string[]
+  markTaskCancelledByPrNumber(prNumber: number): string[]
+  listTasksWithOpenPrs(): SprintTask[]
+  updateTaskMergeableState(prNumber: number, mergeableState: string | null): void
+}
+
+/**
+ * Methods used by IPC handlers, dashboard, and status server.
+ */
+export interface IDashboardRepository {
   listTasks(status?: string): SprintTask[]
   listTasksRecent(): SprintTask[]
   createTask(input: CreateTaskInput): SprintTask | null
@@ -38,10 +57,6 @@ export interface ISprintTaskRepository {
   releaseTask(id: string, claimedBy: string): SprintTask | null
   getQueueStats(): QueueStats
   getDoneTodayCount(): number
-  markTaskDoneByPrNumber(prNumber: number): string[]
-  markTaskCancelledByPrNumber(prNumber: number): string[]
-  listTasksWithOpenPrs(): SprintTask[]
-  updateTaskMergeableState(prNumber: number, mergeableState: string | null): void
   getHealthCheckTasks(): SprintTask[]
   getSuccessRateBySpecType(): SpecTypeSuccessRate[]
   createReviewTaskFromAdhoc(input: {
@@ -53,6 +68,13 @@ export interface ISprintTaskRepository {
   }): SprintTask | null
   getDailySuccessRate(days?: number): DailySuccessRate[]
 }
+
+/**
+ * Complete repository interface — extends all domain-specific sub-interfaces.
+ * Provides backward compatibility for callers that need the full surface.
+ */
+export interface ISprintTaskRepository
+  extends IAgentTaskRepository, ISprintPollerRepository, IDashboardRepository {}
 
 /**
  * Concrete implementation that delegates to sprint-queries functions.
