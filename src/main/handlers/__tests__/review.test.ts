@@ -67,6 +67,33 @@ vi.mock('../../ipc-utils', () => ({
   safeHandle: vi.fn()
 }))
 
+// Mock electron (for BrowserWindow used by broadcast)
+vi.mock('electron', () => ({
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => [
+      { webContents: { send: vi.fn() } }
+    ])
+  }
+}))
+
+// Mock broadcast
+vi.mock('../../broadcast', () => ({
+  broadcast: vi.fn()
+}))
+
+// Mock webhook-service
+vi.mock('../../services/webhook-service', () => ({
+  createWebhookService: vi.fn(() => ({
+    fireWebhook: vi.fn()
+  })),
+  getWebhookEventName: vi.fn((type, task) => `sprint.task.${type}`)
+}))
+
+// Mock webhook-queries
+vi.mock('../../data/webhook-queries', () => ({
+  getWebhooks: vi.fn(() => [])
+}))
+
 vi.mock('../../logger', () => ({
   createLogger: vi.fn(() => ({
     info: vi.fn(),
@@ -99,10 +126,6 @@ vi.mock('../../data/sprint-queries', () => ({
   createReviewTaskFromAdhoc: vi.fn(),
   getDailySuccessRate: vi.fn(),
   UPDATE_ALLOWLIST: new Set(['title', 'status'])
-}))
-
-vi.mock('../sprint-listeners', () => ({
-  notifySprintMutation: vi.fn()
 }))
 
 vi.mock('../../settings', () => ({

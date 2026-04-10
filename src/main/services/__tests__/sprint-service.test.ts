@@ -6,6 +6,43 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { SprintTask, CreateTaskInput, QueueStats } from '../../../shared/types'
 
+// Mock electron (for BrowserWindow used by broadcast)
+vi.mock('electron', () => ({
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => [
+      { webContents: { send: vi.fn() } }
+    ])
+  }
+}))
+
+// Mock broadcast
+vi.mock('../../broadcast', () => ({
+  broadcast: vi.fn()
+}))
+
+// Mock webhook-service
+vi.mock('../webhook-service', () => ({
+  createWebhookService: vi.fn(() => ({
+    fireWebhook: vi.fn()
+  })),
+  getWebhookEventName: vi.fn((type, task) => `sprint.task.${type}`)
+}))
+
+// Mock webhook-queries
+vi.mock('../../data/webhook-queries', () => ({
+  getWebhooks: vi.fn(() => [])
+}))
+
+// Mock logger
+vi.mock('../../logger', () => ({
+  createLogger: vi.fn(() => ({
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }))
+}))
+
 // Mock sprint-queries (data layer)
 vi.mock('../../data/sprint-queries', () => ({
   UPDATE_ALLOWLIST: new Set(['title', 'status', 'prompt', 'spec', 'notes']),
@@ -32,11 +69,6 @@ vi.mock('../../data/sprint-queries', () => ({
   getSuccessRateBySpecType: vi.fn(),
   createReviewTaskFromAdhoc: vi.fn(),
   getDailySuccessRate: vi.fn()
-}))
-
-// Mock sprint-listeners (SSE broadcaster)
-vi.mock('../../handlers/sprint-listeners', () => ({
-  notifySprintMutation: vi.fn()
 }))
 
 import {
@@ -73,7 +105,7 @@ import {
   getHealthCheckTasks as _getHealthCheckTasks
 } from '../../data/sprint-queries'
 
-import { notifySprintMutation } from '../../handlers/sprint-listeners'
+import { broadcast } from '../../broadcast'
 
 describe('sprint-service', () => {
   beforeEach(() => {
@@ -118,14 +150,14 @@ describe('sprint-service', () => {
       const result = createTask(input as CreateTaskInput)
       expect(result).toEqual(created)
       expect(_createTask).toHaveBeenCalledWith(input)
-      expect(notifySprintMutation).toHaveBeenCalledWith('created', created)
+      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
 
     it('does not notify when createTask returns null', () => {
       vi.mocked(_createTask).mockReturnValue(null)
       const result = createTask({ title: 'Bad', repo: 'bde' } as CreateTaskInput)
       expect(result).toBeNull()
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
   })
 
@@ -137,14 +169,14 @@ describe('sprint-service', () => {
       const result = updateTask('1', { title: 'Updated' })
       expect(result).toEqual(updated)
       expect(_updateTask).toHaveBeenCalledWith('1', { title: 'Updated' })
-      expect(notifySprintMutation).toHaveBeenCalledWith('updated', updated)
+      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // updated)
     })
 
     it('does not notify when updateTask returns null', () => {
       vi.mocked(_updateTask).mockReturnValue(null)
       const result = updateTask('missing', { title: 'X' })
       expect(result).toBeNull()
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
   })
 
@@ -155,14 +187,14 @@ describe('sprint-service', () => {
 
       deleteTask('1')
       expect(_deleteTask).toHaveBeenCalledWith('1')
-      expect(notifySprintMutation).toHaveBeenCalledWith('deleted', task)
+      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
 
     it('does not notify when task not found before delete', () => {
       vi.mocked(_getTask).mockReturnValue(null)
       deleteTask('missing')
       expect(_deleteTask).toHaveBeenCalledWith('missing')
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
   })
 
@@ -174,14 +206,14 @@ describe('sprint-service', () => {
       const result = claimTask('1', 'agent-1')
       expect(result).toEqual(claimed)
       expect(_claimTask).toHaveBeenCalledWith('1', 'agent-1')
-      expect(notifySprintMutation).toHaveBeenCalledWith('updated', claimed)
+      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // claimed)
     })
 
     it('does not notify when claim fails', () => {
       vi.mocked(_claimTask).mockReturnValue(null)
       const result = claimTask('1', 'agent-1')
       expect(result).toBeNull()
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
   })
 
@@ -193,14 +225,14 @@ describe('sprint-service', () => {
       const result = releaseTask('1', 'agent-1')
       expect(result).toEqual(released)
       expect(_releaseTask).toHaveBeenCalledWith('1', 'agent-1')
-      expect(notifySprintMutation).toHaveBeenCalledWith('updated', released)
+      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // released)
     })
 
     it('does not notify when release fails', () => {
       vi.mocked(_releaseTask).mockReturnValue(null)
       const result = releaseTask('1', 'agent-1')
       expect(result).toBeNull()
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
   })
 
@@ -209,7 +241,7 @@ describe('sprint-service', () => {
       const stats: Partial<QueueStats> = { queued: 5, active: 2 }
       vi.mocked(_getQueueStats).mockReturnValue(stats as QueueStats)
       expect(getQueueStats()).toEqual(stats)
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
 
     it('getDoneTodayCount delegates without notification', () => {
@@ -236,7 +268,7 @@ describe('sprint-service', () => {
     it('updateTaskMergeableState delegates without notification', () => {
       updateTaskMergeableState(42, 'clean')
       expect(_updateTaskMergeableState).toHaveBeenCalledWith(42, 'clean')
-      expect(notifySprintMutation).not.toHaveBeenCalled()
+      expect(broadcast).not.toHaveBeenCalled()
     })
 
     it('getHealthCheckTasks delegates without notification', () => {

@@ -9,7 +9,6 @@
  * All data access goes through ISprintTaskRepository (createSprintTaskRepository).
  * No direct imports from sprint-queries — the repository is the single abstraction.
  */
-import { notifySprintMutation } from '../handlers/sprint-listeners'
 import {
   createSprintTaskRepository,
   type ISprintTaskRepository,
@@ -18,11 +17,55 @@ import {
   type SpecTypeSuccessRate,
   type DailySuccessRate
 } from '../data/sprint-task-repository'
-import { UPDATE_ALLOWLIST } from '../data/sprint-queries'
 import type { SprintTask } from '../../shared/types'
+import { createLogger } from '../logger'
+import { broadcast } from '../broadcast'
+import { createWebhookService, getWebhookEventName } from './webhook-service'
+import { getWebhooks } from '../data/webhook-queries'
 
-export { UPDATE_ALLOWLIST }
 export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate, DailySuccessRate }
+
+const logger = createLogger('sprint-service')
+
+export type SprintMutationEvent = {
+  type: 'created' | 'updated' | 'deleted'
+  task: SprintTask
+}
+export type SprintMutationListener = (event: SprintMutationEvent) => void
+
+const listeners: Set<SprintMutationListener> = new Set()
+
+// Initialize webhook service
+const webhookService = createWebhookService({ getWebhooks, logger })
+
+export function onSprintMutation(cb: SprintMutationListener): () => void {
+  listeners.add(cb)
+  return () => {
+    listeners.delete(cb)
+  }
+}
+
+export function notifySprintMutation(type: SprintMutationEvent['type'], task: SprintTask): void {
+  const event = { type, task }
+  for (const cb of listeners) {
+    try {
+      cb(event)
+    } catch (err) {
+      logger.error(`${err}`)
+    }
+  }
+
+  // Push to renderer windows so Dashboard/SprintCenter refresh immediately
+  broadcast('sprint:externalChange')
+
+  // Fire webhooks for external integrations
+  try {
+    const webhookEvent = getWebhookEventName(type, task)
+    webhookService.fireWebhook(webhookEvent, task)
+  } catch (err) {
+    logger.error(`[webhook] ${err}`)
+  }
+}
 
 const repo: ISprintTaskRepository = createSprintTaskRepository()
 

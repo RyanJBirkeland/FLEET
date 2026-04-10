@@ -9,6 +9,43 @@ vi.mock('../../ipc-utils', () => ({
   safeHandle: vi.fn()
 }))
 
+// Mock electron (for BrowserWindow used by broadcast)
+vi.mock('electron', () => ({
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => [
+      { webContents: { send: vi.fn() } }
+    ])
+  }
+}))
+
+// Mock broadcast
+vi.mock('../../broadcast', () => ({
+  broadcast: vi.fn()
+}))
+
+// Mock webhook-service
+vi.mock('../../services/webhook-service', () => ({
+  createWebhookService: vi.fn(() => ({
+    fireWebhook: vi.fn()
+  })),
+  getWebhookEventName: vi.fn((type, task) => `sprint.task.${type}`)
+}))
+
+// Mock webhook-queries
+vi.mock('../../data/webhook-queries', () => ({
+  getWebhooks: vi.fn(() => [])
+}))
+
+// Mock logger
+vi.mock('../../logger', () => ({
+  createLogger: vi.fn(() => ({
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }))
+}))
+
 // Mock agent-log-manager
 vi.mock('../../agent-log-manager', () => ({
   tailAgentLog: vi.fn(),
@@ -55,11 +92,6 @@ vi.mock('../../data/sprint-queries', () => ({
   getSuccessRateBySpecType: vi.fn(),
   getDailySuccessRate: vi.fn(),
   UPDATE_ALLOWLIST: new Set(['title', 'status'])
-}))
-
-// Mock sprint-listeners (SSE broadcaster used by sprint-service)
-vi.mock('../sprint-listeners', () => ({
-  notifySprintMutation: vi.fn()
 }))
 
 // Mock env-utils (used by promoteToReview to spawn git)

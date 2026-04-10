@@ -84,9 +84,32 @@ vi.mock('../../agent-manager/dependency-index', () => ({
   detectCycle: vi.fn(() => null)
 }))
 
-// Mock sprint-listeners — suppress SSE broadcasting
-vi.mock('../../handlers/sprint-listeners', () => ({
-  notifySprintMutation: vi.fn()
+// Mock broadcast
+vi.mock('../../broadcast', () => ({
+  broadcast: vi.fn()
+}))
+
+// Mock webhook-service
+vi.mock('../../services/webhook-service', () => ({
+  createWebhookService: vi.fn(() => ({
+    fireWebhook: vi.fn()
+  })),
+  getWebhookEventName: vi.fn((type, task) => `sprint.task.${type}`)
+}))
+
+// Mock webhook-queries
+vi.mock('../../data/webhook-queries', () => ({
+  getWebhooks: vi.fn(() => [])
+}))
+
+// Mock logger
+vi.mock('../../logger', () => ({
+  createLogger: vi.fn(() => ({
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }))
 }))
 
 // Mock spec-semantic-check
@@ -101,6 +124,11 @@ vi.mock('electron', () => ({
     handle: vi.fn((channel: string, handler: (...args: unknown[]) => unknown) => {
       registeredHandlers.set(channel, handler)
     })
+  },
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => [
+      { webContents: { send: vi.fn() } }
+    ])
   }
 }))
 

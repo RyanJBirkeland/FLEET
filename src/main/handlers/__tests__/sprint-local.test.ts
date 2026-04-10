@@ -9,6 +9,43 @@ vi.mock('../../ipc-utils', () => ({
   safeHandle: vi.fn()
 }))
 
+// Mock electron (for BrowserWindow used by broadcast)
+vi.mock('electron', () => ({
+  BrowserWindow: {
+    getAllWindows: vi.fn(() => [
+      { webContents: { send: vi.fn() } }
+    ])
+  }
+}))
+
+// Mock broadcast
+vi.mock('../../broadcast', () => ({
+  broadcast: vi.fn()
+}))
+
+// Mock webhook-service
+vi.mock('../../services/webhook-service', () => ({
+  createWebhookService: vi.fn(() => ({
+    fireWebhook: vi.fn()
+  })),
+  getWebhookEventName: vi.fn((type, task) => `sprint.task.${type}`)
+}))
+
+// Mock webhook-queries
+vi.mock('../../data/webhook-queries', () => ({
+  getWebhooks: vi.fn(() => [])
+}))
+
+// Mock logger
+vi.mock('../../logger', () => ({
+  createLogger: vi.fn(() => ({
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn()
+  }))
+}))
+
 // Mock sprint-queries (data layer)
 vi.mock('../../data/sprint-queries', () => ({
   UPDATE_ALLOWLIST: new Set(['title', 'status', 'prompt', 'spec', 'notes']),
@@ -36,12 +73,6 @@ vi.mock('../../data/sprint-queries', () => ({
   getSuccessRateBySpecType: vi.fn(),
   createReviewTaskFromAdhoc: vi.fn(),
   getDailySuccessRate: vi.fn()
-}))
-
-// Mock sprint-listeners
-vi.mock('../sprint-listeners', () => ({
-  notifySprintMutation: vi.fn(),
-  onSprintMutation: vi.fn()
 }))
 
 // Mock sprint-spec
@@ -120,7 +151,7 @@ import {
   claimTask as _claimTask,
   getHealthCheckTasks as _getHealthCheckTasks
 } from '../../data/sprint-queries'
-import { notifySprintMutation } from '../sprint-listeners'
+import { broadcast } from '../../broadcast'
 import { getSettingJson } from '../../settings'
 import { getAgentLogInfo } from '../../data/agent-queries'
 import { readLog } from '../../agent-history'
@@ -233,7 +264,7 @@ describe('sprint:create handler', () => {
     const result = await handler(mockEvent, input)
 
     expect(_createTask).toHaveBeenCalledWith(input)
-    expect(notifySprintMutation).toHaveBeenCalledWith('created', created)
+    expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     expect(result).toEqual(created)
   })
 })
@@ -257,7 +288,7 @@ describe('sprint:update handler', () => {
     const result = await handler(mockEvent, '1', { title: 'Updated' })
 
     expect(_updateTask).toHaveBeenCalledWith('1', { title: 'Updated' })
-    expect(notifySprintMutation).toHaveBeenCalledWith('updated', updated)
+    expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     expect(result).toEqual(updated)
   })
 
@@ -331,7 +362,7 @@ describe('sprint:delete handler', () => {
     const result = await handler(mockEvent, '1')
 
     expect(_deleteTask).toHaveBeenCalledWith('1')
-    expect(notifySprintMutation).toHaveBeenCalledWith('deleted', task)
+    expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     expect(result).toEqual({ ok: true })
   })
 
@@ -343,7 +374,7 @@ describe('sprint:delete handler', () => {
     await expect(handler(mockEvent, 'nonexistent')).rejects.toThrow('Task nonexistent not found')
 
     expect(_deleteTask).not.toHaveBeenCalled()
-    expect(notifySprintMutation).not.toHaveBeenCalled()
+    expect(broadcast).not.toHaveBeenCalled()
   })
 })
 

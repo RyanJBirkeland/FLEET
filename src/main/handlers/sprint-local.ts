@@ -28,10 +28,10 @@ import {
   getHealthCheckTasks,
   listTasks,
   listTasksRecent,
-  UPDATE_ALLOWLIST,
   getSuccessRateBySpecType,
   type CreateTaskInput
 } from '../services/sprint-service'
+import { UPDATE_ALLOWLIST } from '../data/sprint-queries'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
