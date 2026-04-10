@@ -36,6 +36,18 @@ export default function PlannerView(): React.JSX.Element {
     loadGroups()
   }, [loadGroups])
 
+  // Refresh groups + selected group tasks when DB changes externally
+  // (e.g. direct SQL inserts, agent manager writes, other processes)
+  useEffect(() => {
+    return window.api.onExternalSprintChange(() => {
+      loadGroups()
+      const currentGroupId = useTaskGroups.getState().selectedGroupId
+      if (currentGroupId) {
+        useTaskGroups.getState().loadGroupTasks(currentGroupId)
+      }
+    })
+  }, [loadGroups])
+
   // Filter groups by search query
   const filteredGroups = useMemo(() => {
     if (!searchQuery.trim()) return groups
