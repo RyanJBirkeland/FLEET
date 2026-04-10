@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import { REPO_OPTIONS, type RepoOption } from '../lib/constants'
+import type { RepoOption } from '../lib/constants'
 
 interface RepoConfig {
   name: string
@@ -33,13 +33,12 @@ export function useRepoOptions(): RepoOption[] {
         if (configs && configs.length > 0) {
           setRepos(toRepoOptions(configs))
         } else {
-          setRepos(REPO_OPTIONS)
+          setRepos([])
         }
         setLoaded(true)
       })
       .catch(() => {
-        // Use fallback on error
-        setRepos(REPO_OPTIONS)
+        setRepos([])
         setLoaded(true)
       })
   }, [])

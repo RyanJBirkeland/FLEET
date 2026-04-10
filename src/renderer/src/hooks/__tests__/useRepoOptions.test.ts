@@ -1,21 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useRepoOptions } from '../useRepoOptions'
-import { REPO_OPTIONS } from '../../lib/constants'
 
 describe('useRepoOptions', () => {
   beforeEach(() => {
     vi.mocked(window.api.settings.getJson).mockResolvedValue(null)
   })
 
-  it('returns empty array while loading, then REPO_OPTIONS as fallback', async () => {
+  it('returns empty array while loading, then empty array when no repos configured', async () => {
     const { result } = renderHook(() => useRepoOptions())
     // Initially returns empty array while loading
     expect(result.current).toEqual([])
 
-    // After settings load, returns REPO_OPTIONS fallback
+    // After settings load with no repos, stays empty
     await waitFor(() => {
-      expect(result.current).toEqual(REPO_OPTIONS)
+      expect(result.current).toEqual([])
     })
   })
 
@@ -42,17 +41,17 @@ describe('useRepoOptions', () => {
     })
   })
 
-  it('keeps fallback when settings returns null', async () => {
+  it('returns empty array when settings returns null', async () => {
     vi.mocked(window.api.settings.getJson).mockResolvedValue(null)
 
     const { result } = renderHook(() => useRepoOptions())
 
     await waitFor(() => {
-      expect(result.current).toEqual(REPO_OPTIONS)
+      expect(result.current).toEqual([])
     })
   })
 
-  it('keeps fallback when settings returns an empty array', async () => {
+  it('returns empty array when settings returns an empty array', async () => {
     vi.mocked(window.api.settings.getJson).mockResolvedValue([])
 
     const { result } = renderHook(() => useRepoOptions())
@@ -61,11 +60,11 @@ describe('useRepoOptions', () => {
     expect(result.current).toEqual([])
 
     await waitFor(() => {
-      expect(result.current).toEqual(REPO_OPTIONS)
+      expect(result.current).toEqual([])
     })
   })
 
-  it('keeps fallback when IPC call throws', async () => {
+  it('returns empty array when IPC call throws', async () => {
     vi.mocked(window.api.settings.getJson).mockRejectedValue(new Error('IPC error'))
 
     const { result } = renderHook(() => useRepoOptions())
@@ -74,7 +73,7 @@ describe('useRepoOptions', () => {
     expect(result.current).toEqual([])
 
     await waitFor(() => {
-      expect(result.current).toEqual(REPO_OPTIONS)
+      expect(result.current).toEqual([])
     })
   })
 })
