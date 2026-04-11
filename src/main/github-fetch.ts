@@ -92,17 +92,12 @@ function updateRateLimitState(rl: RateLimitHeaders): void {
 // User notification (main → renderer IPC push)
 // ---------------------------------------------------------------------------
 
-function broadcastRateLimitWarning(remaining: number, limit: number, resetEpoch: number): void {
-  broadcast('github:rateLimitWarning', { remaining, limit, resetEpoch })
-}
-
+/**
+ * Once-per-session gate for 401 token-expired broadcasts. The user only needs
+ * to be told once until they fix the token (or the app restarts); re-toasting
+ * on every subsequent 401 would be spammy even with the 60s debounce.
+ */
 let tokenExpiredEmitted = false
-
-function broadcastTokenExpired(): void {
-  if (tokenExpiredEmitted) return
-  tokenExpiredEmitted = true
-  broadcast('github:tokenExpired', {})
-}
 
 function checkRateLimitThreshold(): void {
   const { remaining, limit, resetEpoch, warningEmitted } = state
@@ -111,10 +106,17 @@ function checkRateLimitThreshold(): void {
   if (warningEmitted) return
 
   state.warningEmitted = true
+  // HH:MM in UTC — locale-agnostic, unambiguous, and cheap to format.
+  const resetTime = new Date(resetEpoch * 1_000).toISOString().slice(11, 16)
   logger.warn(
-    `Rate limit low: ${remaining}/${limit} remaining. Resets at ${new Date(resetEpoch * 1_000).toISOString()}`
+    `Rate limit low: ${remaining}/${limit} remaining. Resets at ${resetTime} UTC.`
   )
-  broadcastRateLimitWarning(remaining, limit, resetEpoch)
+  broadcastGitHubError({
+    kind: 'rate-limit',
+    status: 403,
+    message: `GitHub API rate limit low: ${remaining}/${limit} remaining. Resets at ${resetTime} UTC.`,
+    retryable: true
+  })
 }
 
 // ---------------------------------------------------------------------------
@@ -178,7 +180,15 @@ export async function githubFetch(url: string, options?: GithubFetchOptions): Pr
     // --- 401 Unauthorized → token expired or invalid, fail fast (no retry) ---
     if (lastResponse.status === 401) {
       logger.error('401 Unauthorized — GitHub token is invalid or expired')
-      broadcastTokenExpired()
+      if (!tokenExpiredEmitted) {
+        tokenExpiredEmitted = true
+        broadcastGitHubError({
+          kind: 'token-expired',
+          status: 401,
+          message: 'GitHub token is invalid or expired. Update it in Settings.',
+          retryable: false
+        })
+      }
       return lastResponse
     }
 
@@ -229,6 +239,10 @@ export function _resetRateLimitState(): void {
   state.resetEpoch = null
   state.warningEmitted = false
   tokenExpiredEmitted = false
+  // Also clear the github:error broadcast debounce so each test starts clean.
+  // Without this, rate-limit and token-expired broadcasts from earlier tests
+  // silently suppress identical broadcasts in later tests via the 60s debounce.
+  lastBroadcastAt.clear()
 }
 
 // ---------------------------------------------------------------------------

@@ -258,7 +258,7 @@ describe('githubFetch', () => {
     expect(fetch).toHaveBeenCalledTimes(1)
   })
 
-  it('broadcasts rate-limit warning when remaining drops below threshold', async () => {
+  it('broadcasts rate-limit warning via github:error when remaining drops below threshold', async () => {
     const lowLimitResponse = mockResponse(200, {
       'x-ratelimit-remaining': '50',
       'x-ratelimit-limit': '5000',
@@ -272,11 +272,68 @@ describe('githubFetch', () => {
       headers: { Authorization: 'Bearer tok' }
     })
 
-    expect(mockSend).toHaveBeenCalledWith('github:rateLimitWarning', {
-      remaining: 50,
-      limit: 5000,
-      resetEpoch: 1700000000
+    // Pre-formatted message includes remaining/limit and UTC reset time
+    // (1700000000 → 2023-11-14T22:13:20Z → "22:13 UTC").
+    expect(mockSend).toHaveBeenCalledWith(
+      'github:error',
+      expect.objectContaining({
+        kind: 'rate-limit',
+        status: 403,
+        message: expect.stringMatching(/50\/5000.*Resets at \d{2}:\d{2} UTC/)
+      })
+    )
+  })
+
+  it('broadcasts token-expired via github:error on 401 response', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse(401, {
+          'x-ratelimit-remaining': '4999',
+          'x-ratelimit-limit': '5000',
+          'x-ratelimit-reset': '1700000000'
+        })
+      )
+    )
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await githubFetch('https://api.github.com/test', {
+      headers: { Authorization: 'Bearer bad-token' }
     })
+
+    expect(mockSend).toHaveBeenCalledWith(
+      'github:error',
+      expect.objectContaining({
+        kind: 'token-expired',
+        status: 401,
+        message: expect.stringContaining('Settings')
+      })
+    )
+  })
+
+  it('only emits token-expired broadcast once per session', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        mockResponse(401, {
+          'x-ratelimit-remaining': '4999',
+          'x-ratelimit-limit': '5000',
+          'x-ratelimit-reset': '1700000000'
+        })
+      )
+    )
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await githubFetch('https://api.github.com/test1')
+    await githubFetch('https://api.github.com/test2')
+
+    // Count only token-expired broadcasts (ignore any rate-limit noise)
+    const tokenExpiredCalls = mockSend.mock.calls.filter(
+      ([channel, payload]) =>
+        channel === 'github:error' &&
+        (payload as { kind: string }).kind === 'token-expired'
+    )
+    expect(tokenExpiredCalls).toHaveLength(1)
   })
 
   it('does not broadcast warning when remaining is above threshold', async () => {

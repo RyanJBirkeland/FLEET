@@ -239,28 +239,10 @@ const api = {
     }
   },
 
-  // GitHub rate-limit warning push events
-  onGitHubRateLimitWarning: (
-    cb: (data: { remaining: number; limit: number; resetEpoch: number }) => void
-  ): (() => void) => {
-    const listener = (
-      _e: unknown,
-      data: { remaining: number; limit: number; resetEpoch: number }
-    ): void => cb(data)
-    ipcRenderer.on('github:rateLimitWarning', listener)
-    return () => ipcRenderer.removeListener('github:rateLimitWarning', listener)
-  },
-
-  // GitHub token expired push event
-  onGitHubTokenExpired: (cb: () => void): (() => void) => {
-    const listener = (): void => cb()
-    ipcRenderer.on('github:tokenExpired', listener)
-    return () => ipcRenderer.removeListener('github:tokenExpired', listener)
-  },
-
-  // GitHub structured error push event — fired by githubFetchJson for any
-  // classified failure (billing, network, permission, etc.). Debounced
-  // per-kind (60s) at the source, so the renderer never sees spam.
+  // GitHub structured error push event — fired by githubFetch / githubFetchJson
+  // for any classified failure (billing, network, permission, rate-limit,
+  // token-expired, etc.). Debounced per-kind (60s) at the source, so the
+  // renderer never sees spam.
   onGitHubError: (
     cb: (data: {
       kind:

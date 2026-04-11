@@ -264,15 +264,9 @@ declare global {
       listFiles: (...args: IpcArgs<'fs:listFiles'>) => Promise<IpcResult<'fs:listFiles'>>
       onDirChanged: (callback: (dirPath: string) => void) => () => void
 
-      // GitHub rate-limit warning push events
-      onGitHubRateLimitWarning: (
-        cb: (data: { remaining: number; limit: number; resetEpoch: number }) => void
-      ) => () => void
-
-      // GitHub token expired push event
-      onGitHubTokenExpired: (cb: () => void) => () => void
-
-      // GitHub structured error push event (from githubFetchJson)
+      // GitHub structured error push event — unified channel for every
+      // classified GitHub failure (rate-limit, token-expired, billing,
+      // network, permission, etc.). Debounced 60s per-kind at source.
       onGitHubError: (
         cb: (data: {
           kind:

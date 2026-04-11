@@ -15,15 +15,15 @@ const BILLING_SETTINGS_URL = 'https://github.com/settings/billing'
  * Listens for `github:error` IPC events from the main process and
  * surfaces appropriate toasts per error kind.
  *
- * This is a separate hook from `useGitHubRateLimitWarning` — that one
- * still handles the legacy `github:rateLimitWarning` and
- * `github:tokenExpired` channels which fire from inside `githubFetch`
- * itself. `github:error` is the newer channel fired from
- * `githubFetchJson`, which classifies every failure into a structured
- * `GitHubError` with a `kind` field.
+ * This is the single listener for every GitHub failure classification.
+ * Both `githubFetch` (rate-limit warnings, 401 token-expired) and
+ * `githubFetchJson` (everything else) route through the same
+ * `broadcastGitHubError` path with a structured `GitHubError` payload,
+ * so this hook handles all kinds uniformly.
  *
- * To avoid double-toasting, this hook skips `rate-limit` and
- * `token-expired` kinds — they're already covered by the legacy hook.
+ * `not-found` is intentionally not broadcast from the main process at
+ * all (it's often valid missing-resource state), so it never reaches
+ * this handler.
  */
 export function useGitHubErrorListener(): void {
   useEffect(() => {
@@ -76,15 +76,21 @@ export function useGitHubErrorListener(): void {
           toast.error(`GitHub API validation failed: ${payload.message}`, 8_000)
           break
 
+        case 'rate-limit':
+          // The main process pre-formats the message with remaining/limit
+          // and a UTC reset time, so we display it as-is.
+          toast.info(payload.message, { durationMs: 8_000 })
+          break
+
+        case 'token-expired':
+          toast.error(payload.message, 12_000)
+          break
+
         case 'unknown':
           toast.error(`GitHub API error: ${payload.message}`, 6_000)
           break
 
-        // Handled by the legacy useGitHubRateLimitWarning hook to avoid
-        // duplicate toasts. `not-found` is not broadcast from the main
-        // process at all (it's often valid missing-resource state).
-        case 'rate-limit':
-        case 'token-expired':
+        // Never broadcast from main — 404 is often valid missing-resource state.
         case 'not-found':
           break
       }

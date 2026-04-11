@@ -126,21 +126,34 @@ describe('useGitHubErrorListener', () => {
     )
   })
 
-  it('does NOT fire a toast for kind=rate-limit (handled by legacy hook)', async () => {
+  it('fires an info toast for kind=rate-limit using the pre-formatted message', async () => {
     const { toast } = await import('../../stores/toasts')
     renderHook(() => useGitHubErrorListener())
 
-    errorHandler!({ kind: 'rate-limit', message: 'rate limited', status: 403 })
+    // Main process pre-formats the message with remaining/limit/reset UTC time
+    const message = 'GitHub API rate limit low: 50/5000 remaining. Resets at 14:30 UTC.'
+    errorHandler!({ kind: 'rate-limit', message, status: 403 })
 
-    expect(toast.info).not.toHaveBeenCalled()
-    expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.info).toHaveBeenCalledWith(message, expect.objectContaining({
+      durationMs: expect.any(Number)
+    }))
   })
 
-  it('does NOT fire a toast for kind=token-expired (handled by legacy hook)', async () => {
+  it('fires an error toast for kind=token-expired using the payload message', async () => {
     const { toast } = await import('../../stores/toasts')
     renderHook(() => useGitHubErrorListener())
 
-    errorHandler!({ kind: 'token-expired', message: 'token expired', status: 401 })
+    const message = 'GitHub token is invalid or expired. Update it in Settings.'
+    errorHandler!({ kind: 'token-expired', message, status: 401 })
+
+    expect(toast.error).toHaveBeenCalledWith(message, expect.any(Number))
+  })
+
+  it('does NOT fire a toast for kind=not-found (main never broadcasts these)', async () => {
+    const { toast } = await import('../../stores/toasts')
+    renderHook(() => useGitHubErrorListener())
+
+    errorHandler!({ kind: 'not-found', message: 'resource not found', status: 404 })
 
     expect(toast.info).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalled()
