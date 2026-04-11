@@ -178,10 +178,6 @@ export function useDesktopNotifications(): void {
           fireDesktopNotification(title, message, handleNotificationClick)
         }
 
-        if (shouldNotify()) {
-          fireDesktopNotification(title, message, handleNotificationClick)
-        }
-        fireDesktopNotification(title, message, handleNotificationClick)
         notifiedTasksRef.current.add(task.id)
       }
 
@@ -208,10 +204,6 @@ export function useDesktopNotifications(): void {
           fireDesktopNotification(title, message, handleNotificationClick)
         }
 
-        if (shouldNotify()) {
-          fireDesktopNotification(title, message, handleNotificationClick)
-        }
-        fireDesktopNotification(title, message, handleNotificationClick)
         notifiedTasksRef.current.add(task.id)
       }
 
@@ -314,10 +306,6 @@ export function useDesktopNotifications(): void {
         fireDesktopNotification(title, message, handleNotificationClick)
       }
 
-      if (shouldNotify()) {
-        fireDesktopNotification(title, message, handleNotificationClick)
-      }
-      fireDesktopNotification(title, message, handleNotificationClick)
       notifiedTasksRef.current.add(`${taskId}-merged`)
     }
 

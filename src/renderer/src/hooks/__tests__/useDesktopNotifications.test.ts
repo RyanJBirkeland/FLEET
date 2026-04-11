@@ -436,4 +436,195 @@ describe('useDesktopNotifications', () => {
     const notifications = useNotificationsStore.getState().notifications
     expect(notifications).toHaveLength(0)
   })
+
+  it('fires desktop notification exactly once per event (no duplicates)', () => {
+    const constructorSpy = vi.fn()
+    const OriginalMockNotification = MockNotification
+
+    // Create a wrapped constructor to spy on calls
+    class SpyNotification extends OriginalMockNotification {
+      constructor(title: string, options?: NotificationOptions) {
+        super(title, options)
+        constructorSpy(title, options)
+      }
+    }
+    SpyNotification.permission = 'granted'
+    SpyNotification.requestPermission = OriginalMockNotification.requestPermission
+
+    vi.stubGlobal('Notification', SpyNotification)
+
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    const task: SprintTask = {
+      id: 'task-single',
+      title: 'Single notification task',
+      repo: 'bde',
+      status: TASK_STATUS.ACTIVE,
+      priority: 1,
+      notes: null,
+      spec: null,
+      prompt: 'Test task',
+      agent_run_id: 'agent-single',
+      pr_number: null,
+      pr_status: null,
+      pr_mergeable_state: null,
+      pr_url: null,
+      claimed_by: null,
+      started_at: nowIso(),
+      completed_at: null,
+      retry_count: 0,
+      fast_fail_count: 0,
+      template_name: null,
+      depends_on: null,
+      updated_at: nowIso(),
+      created_at: nowIso()
+    }
+
+    useSprintTasks.setState({ tasks: [task] })
+    rerender()
+
+    constructorSpy.mockClear()
+
+    // Transition to review
+    useSprintTasks.setState({
+      tasks: [{ ...task, status: TASK_STATUS.REVIEW }]
+    })
+    rerender()
+
+    // Should be called exactly once for active → review
+    expect(constructorSpy).toHaveBeenCalledTimes(1)
+    expect(constructorSpy).toHaveBeenCalledWith(
+      'BDE: Task Ready for Review',
+      expect.objectContaining({ body: task.title })
+    )
+
+    // Restore original
+    vi.stubGlobal('Notification', OriginalMockNotification)
+  })
+
+  it('fires exactly one desktop notification for active → done transition', () => {
+    const constructorSpy = vi.fn()
+    const OriginalMockNotification = MockNotification
+
+    class SpyNotification extends OriginalMockNotification {
+      constructor(title: string, options?: NotificationOptions) {
+        super(title, options)
+        constructorSpy(title, options)
+      }
+    }
+    SpyNotification.permission = 'granted'
+    SpyNotification.requestPermission = OriginalMockNotification.requestPermission
+
+    vi.stubGlobal('Notification', SpyNotification)
+
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    const task: SprintTask = {
+      id: 'task-done',
+      title: 'Done task',
+      repo: 'bde',
+      status: TASK_STATUS.ACTIVE,
+      priority: 1,
+      notes: null,
+      spec: null,
+      prompt: 'Test task',
+      agent_run_id: 'agent-done',
+      pr_number: null,
+      pr_status: null,
+      pr_mergeable_state: null,
+      pr_url: null,
+      claimed_by: null,
+      started_at: nowIso(),
+      completed_at: null,
+      retry_count: 0,
+      fast_fail_count: 0,
+      template_name: null,
+      depends_on: null,
+      updated_at: nowIso(),
+      created_at: nowIso()
+    }
+
+    useSprintTasks.setState({ tasks: [task] })
+    rerender()
+
+    constructorSpy.mockClear()
+
+    // Transition to done
+    useSprintTasks.setState({
+      tasks: [{ ...task, status: TASK_STATUS.DONE, completed_at: nowIso() }]
+    })
+    rerender()
+
+    // Should be called exactly once for active → done
+    expect(constructorSpy).toHaveBeenCalledTimes(1)
+    expect(constructorSpy).toHaveBeenCalledWith(
+      'BDE: Task Completed',
+      expect.objectContaining({ body: task.title })
+    )
+
+    vi.stubGlobal('Notification', OriginalMockNotification)
+  })
+
+  it('fires exactly one desktop notification for PR merged event', () => {
+    const constructorSpy = vi.fn()
+    const OriginalMockNotification = MockNotification
+
+    class SpyNotification extends OriginalMockNotification {
+      constructor(title: string, options?: NotificationOptions) {
+        super(title, options)
+        constructorSpy(title, options)
+      }
+    }
+    SpyNotification.permission = 'granted'
+    SpyNotification.requestPermission = OriginalMockNotification.requestPermission
+
+    vi.stubGlobal('Notification', SpyNotification)
+
+    const { rerender } = renderHook(() => useDesktopNotifications())
+
+    const task: SprintTask = {
+      id: 'task-merged',
+      title: 'Merged task',
+      repo: 'bde',
+      status: TASK_STATUS.DONE,
+      priority: 1,
+      notes: null,
+      spec: null,
+      prompt: 'Test task',
+      agent_run_id: 'agent-merged',
+      pr_number: 456,
+      pr_status: PR_STATUS.OPEN,
+      pr_mergeable_state: 'clean',
+      pr_url: 'https://github.com/user/repo/pull/456',
+      claimed_by: null,
+      started_at: nowIso(),
+      completed_at: nowIso(),
+      retry_count: 0,
+      fast_fail_count: 0,
+      template_name: null,
+      depends_on: null,
+      updated_at: nowIso(),
+      created_at: nowIso()
+    }
+
+    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    rerender()
+
+    constructorSpy.mockClear()
+
+    // PR gets merged
+    useSprintTasks.setState({
+      prMergedMap: { 'task-merged': true }
+    })
+    rerender()
+
+    // Should be called exactly once for PR merged
+    expect(constructorSpy).toHaveBeenCalledTimes(1)
+    expect(constructorSpy).toHaveBeenCalledWith(
+      'BDE: PR Merged',
+      expect.objectContaining({ body: expect.stringContaining('PR #456 merged') })
+    )
+
+    vi.stubGlobal('Notification', OriginalMockNotification)
+  })
 })
