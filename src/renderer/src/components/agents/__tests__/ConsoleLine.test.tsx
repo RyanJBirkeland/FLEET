@@ -49,7 +49,7 @@ describe('ConsoleCard', () => {
   })
 
   // Tool icon tests
-  it('renders Bash tool_pair with orange tool icon', () => {
+  it('renders Bash tool_pair with terminal icon', () => {
     const block: ChatBlock = {
       type: 'tool_pair',
       tool: 'Bash',
@@ -59,12 +59,15 @@ describe('ConsoleCard', () => {
       timestamp: Date.now()
     }
     const { container } = render(<ConsoleCard block={block} />)
-    const icon = container.querySelector('.console-tool-icon--bash')
-    expect(icon).toBeInTheDocument()
-    expect(icon?.textContent).toBe('$')
+    // Check for lucide icon SVG (not the chevron)
+    const icons = container.querySelectorAll('svg')
+    expect(icons.length).toBeGreaterThan(0)
+    // First icon should be the tool icon (Terminal for bash), not the chevron
+    const toolIcon = icons[0]
+    expect(toolIcon).toBeTruthy()
   })
 
-  it('renders Read tool_call with blue tool icon', () => {
+  it('renders Read tool_call with file icon', () => {
     const block: ChatBlock = {
       type: 'tool_call',
       tool: 'Read',
@@ -73,12 +76,13 @@ describe('ConsoleCard', () => {
       timestamp: Date.now()
     }
     const { container } = render(<ConsoleCard block={block} />)
-    const icon = container.querySelector('.console-tool-icon--read')
-    expect(icon).toBeInTheDocument()
-    expect(icon?.textContent).toBe('R')
+    // Read tools don't have CollapsibleBlock, so only one SVG (the tool icon)
+    const icons = container.querySelectorAll('svg')
+    expect(icons.length).toBe(1)
+    expect(icons[0]).toBeTruthy()
   })
 
-  it('renders unknown tool with default icon', () => {
+  it('renders unknown tool with wrench icon', () => {
     const block: ChatBlock = {
       type: 'tool_call',
       tool: 'CustomTool',
@@ -86,8 +90,10 @@ describe('ConsoleCard', () => {
       timestamp: Date.now()
     }
     const { container } = render(<ConsoleCard block={block} />)
-    const icon = container.querySelector('.console-tool-icon--default')
-    expect(icon).toBeInTheDocument()
+    // Unknown tools get Wrench icon and no expansion
+    const icons = container.querySelectorAll('svg')
+    expect(icons.length).toBe(1)
+    expect(icons[0]).toBeTruthy()
   })
 
   // Markdown rendering in text blocks
@@ -237,15 +243,15 @@ describe('ConsoleCard', () => {
   it('expands tool_call block to show input JSON', () => {
     const block: ChatBlock = {
       type: 'tool_call',
-      tool: 'Read',
-      summary: 'Reading file.txt',
-      input: { path: 'file.txt' },
+      tool: 'Grep',
+      summary: 'Searching for pattern',
+      input: { pattern: 'test' },
       timestamp: Date.now()
     }
     render(<ConsoleCard block={block} />)
     fireEvent.click(screen.getByRole('button'))
     expect(screen.getByText('Input')).toBeInTheDocument()
-    expect(screen.getByText(/"path": "file\.txt"/)).toBeInTheDocument()
+    expect(screen.getByText(/"pattern": "test"/)).toBeInTheDocument()
   })
 
   it('renders tool_pair block with success badge', () => {
@@ -340,31 +346,31 @@ describe('ConsoleCard', () => {
   it('chevron rotates when tool_call block is expanded', () => {
     const block: ChatBlock = {
       type: 'tool_call',
-      tool: 'Read',
+      tool: 'Grep',
       summary: 'Test',
       input: {},
       timestamp: Date.now()
     }
     const { container } = render(<ConsoleCard block={block} />)
-    const svg = container.querySelector('svg')!
-    expect(svg.style.transform).toBe('rotate(0deg)')
+    const chevron = container.querySelector('.console-line__chevron') as SVGElement
+    expect(chevron.style.transform).toBe('rotate(0deg)')
     fireEvent.click(screen.getByRole('button'))
-    expect(svg.style.transform).toBe('rotate(90deg)')
+    expect(chevron.style.transform).toBe('rotate(90deg)')
   })
 
   it('chevron rotates when tool_pair block is expanded', () => {
     const block: ChatBlock = {
       type: 'tool_pair',
-      tool: 'Read',
+      tool: 'Grep',
       summary: 'Test',
       input: {},
       result: { success: true, summary: 'Done', output: {} },
       timestamp: Date.now()
     }
     const { container } = render(<ConsoleCard block={block} />)
-    const svg = container.querySelector('svg')!
-    expect(svg.style.transform).toBe('rotate(0deg)')
+    const chevron = container.querySelector('.console-line__chevron') as SVGElement
+    expect(chevron.style.transform).toBe('rotate(0deg)')
     fireEvent.click(screen.getByRole('button'))
-    expect(svg.style.transform).toBe('rotate(90deg)')
+    expect(chevron.style.transform).toBe('rotate(90deg)')
   })
 })

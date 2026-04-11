@@ -1,5 +1,5 @@
-import '../ConsoleLine.css'
-import { formatTime } from './util'
+import './ConsoleCard.css'
+import { formatTime, getToolMeta } from './util'
 import { CollapsibleBlock } from '../CollapsibleBlock'
 import type { ToolBlock } from '../../../lib/pair-events'
 import { ToolCallCard } from './ToolCallCard'
@@ -69,25 +69,33 @@ export function ToolGroupCard({
     .join(', ')
 
   return (
-    <CollapsibleBlock
-      testId="console-line-tool-group"
-      searchClass={searchClass}
-      header={
-        <>
-          <span className="console-prefix console-prefix--tool">[tools]</span>
-          <span className="console-line__content">
-            {total} tool calls ({breakdown})
-          </span>
-          <span className="console-line__timestamp">{formatTime(timestamp)}</span>
-        </>
-      }
-      expandedContent={
-        <div className="console-tool-group__items">
-          {tools.map((tool, i) => (
-            <div key={i}>{renderToolBlock(tool, searchHighlight)}</div>
-          ))}
-        </div>
-      }
-    />
+    <div className={`console-card ${searchClass}`}>
+      <CollapsibleBlock
+        testId="console-line-tool-group"
+        searchClass=""
+        header={
+          <div className="console-card__header">
+            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+              {tools.map((t, i) => {
+                const meta = getToolMeta(t.tool)
+                return <meta.Icon key={i} size={14} style={{ color: meta.color }} />
+              })}
+            </div>
+            <span className="console-prefix console-prefix--tool">[tools]</span>
+            <span className="console-line__content">
+              {total} tool calls — {breakdown}
+            </span>
+            <span className="console-line__timestamp">{formatTime(timestamp)}</span>
+          </div>
+        }
+        expandedContent={
+          <div className="console-tool-group__items">
+            {tools.map((tool, i) => (
+              <div key={i}>{renderToolBlock(tool, searchHighlight)}</div>
+            ))}
+          </div>
+        }
+      />
+    </div>
   )
 }
