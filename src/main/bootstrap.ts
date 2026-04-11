@@ -19,6 +19,7 @@ import { loadPlugins } from './services/plugin-loader'
 import { startLoadSampler, stopLoadSampler } from './services/load-sampler'
 import type { TaskTerminalService } from './services/task-terminal-service'
 import type { DialogService } from './dialog-service'
+import { BACKUP_INTERVAL_MS, PRUNE_CHANGES_DAYS } from './constants'
 
 const logger = createLogger('bootstrap')
 
@@ -73,7 +74,7 @@ export function initializeDatabase(): void {
 
   // Run backup on startup and every 24 hours
   backupDatabase()
-  const backupInterval = setInterval(backupDatabase, 24 * 60 * 60 * 1000)
+  const backupInterval = setInterval(backupDatabase, BACKUP_INTERVAL_MS)
   app.on('will-quit', () => clearInterval(backupInterval))
 
   // One-time async import from Supabase (no-op if local table already has rows or credentials missing)
@@ -128,7 +129,7 @@ export function setupCleanupTasks(): void {
 
   // Prune old audit trail records (non-fatal)
   try {
-    const pruned = pruneOldChanges(30)
+    const pruned = pruneOldChanges(PRUNE_CHANGES_DAYS)
     if (pruned > 0) logger.info(`Pruned ${pruned} old task change records`)
   } catch (err) {
     logger.warn(`Failed to prune task changes: ${err}`)

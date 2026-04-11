@@ -11,6 +11,7 @@ import { is } from '@electron-toolkit/utils'
 import { randomUUID } from 'crypto'
 import { getSetting, getSettingJson, setSettingJson } from './settings'
 import { createLogger } from './logger'
+import { CURSOR_POLL_INTERVAL_MS, CROSS_WINDOW_DRAG_TIMEOUT_MS } from './constants'
 
 const logger = createLogger('tearoff-manager')
 
@@ -350,7 +351,7 @@ function startCursorPolling(): void {
         activeDrag.targetWinId = null
       }
     }
-  }, 32)
+  }, CURSOR_POLL_INTERVAL_MS)
 }
 
 export function handleStartCrossWindowDrag(
@@ -375,7 +376,7 @@ export function handleStartCrossWindowDrag(
   const timeout = setTimeout(() => {
     logger.info('[tearoff] cross-window drag timed out after 10s')
     cancelActiveDrag()
-  }, 10_000)
+  }, CROSS_WINDOW_DRAG_TIMEOUT_MS)
 
   activeDrag = {
     sourceWindowId: windowId,

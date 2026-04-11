@@ -8,6 +8,7 @@ import type { WorkflowTemplate } from '../../shared/workflow-types'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
 import { TERMINAL_STATUSES } from '../../shared/task-transitions'
+import { STUCK_TASK_THRESHOLD_MS } from '../constants'
 import {
   buildBlockedNotes,
   checkTaskDependencies,
@@ -186,7 +187,7 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
     try {
       const db = getDb()
       const allTasks = listTasks()
-      const oneHourAgo = Date.now() - 3600000
+      const oneHourAgo = Date.now() - STUCK_TASK_THRESHOLD_MS
       const tasksToUpdate = allTasks.filter(
         (task) =>
           ['error', 'failed'].includes(task.status) &&

@@ -7,6 +7,7 @@ import type { Logger } from '../logger'
 import type { SprintTask } from '../../shared/types'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
+import { WEBHOOK_TIMEOUT_MS } from '../constants'
 
 export interface WebhookConfig {
   id: string
@@ -100,7 +101,7 @@ export function createWebhookService(deps: WebhookServiceDeps): WebhookService {
         headers,
         body,
         // 10s timeout
-        signal: AbortSignal.timeout(10000)
+        signal: AbortSignal.timeout(WEBHOOK_TIMEOUT_MS)
       })
 
       if (!response.ok) {

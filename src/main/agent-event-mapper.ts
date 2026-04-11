@@ -6,6 +6,7 @@ import { broadcast } from './broadcast'
 import { insertEventBatch, type EventBatchItem } from './data/event-queries'
 import { getDb } from './db'
 import type { AgentEvent } from '../shared/types'
+import { TOOL_RESULT_SUMMARY_MAX_CHARS } from './constants'
 
 /**
  * Maps a raw SDK wire-protocol message to zero or more typed AgentEvents.
@@ -55,7 +56,7 @@ export function mapRawMessage(raw: unknown): AgentEvent[] {
         (typeof msg.name === 'string' && msg.name) ||
         'unknown',
       success: msg.is_error !== true,
-      summary: typeof content === 'string' ? content.slice(0, 200) : '',
+      summary: typeof content === 'string' ? content.slice(0, TOOL_RESULT_SUMMARY_MAX_CHARS) : '',
       output: content,
       timestamp: now
     })
