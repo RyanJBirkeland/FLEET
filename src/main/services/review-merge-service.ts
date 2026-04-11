@@ -42,6 +42,27 @@ export async function executeMergeStrategy(
 ): Promise<MergeResult> {
   try {
     if (strategy === 'squash') {
+      // Idempotent retry: if every commit on the branch already has a
+      // patch-equivalent on HEAD, the squash was done in a prior attempt
+      // (e.g., push failed afterwards, commit is sitting on local main).
+      // Skip merge --squash / commit and let the caller push the existing
+      // commit. `git cherry HEAD branch` prefixes applied commits with `-`
+      // and unapplied ones with `+`; if there are no `+` lines, we're done.
+      const { stdout: cherryOut } = await execFileAsync(
+        'git',
+        ['cherry', 'HEAD', branch],
+        { cwd: repoPath, env }
+      )
+      const hasNewCommits = cherryOut
+        .split('\n')
+        .some((line) => line.trim().startsWith('+'))
+      if (!hasNewCommits) {
+        logger.info(
+          `[executeMergeStrategy] Branch ${branch} is already patch-merged into HEAD — skipping squash`
+        )
+        return { success: true }
+      }
+
       await execFileAsync('git', ['merge', '--squash', branch], { cwd: repoPath, env })
       try {
         await execFileAsync('git', ['commit', '-m', `${taskTitle} (#${taskId})`], {
