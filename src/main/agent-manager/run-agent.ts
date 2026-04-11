@@ -26,10 +26,6 @@ import { nowIso } from '../../shared/time'
 
 const execFile = promisify(execFileCb)
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
 export interface RunAgentTask {
   id: string
   title: string
@@ -58,10 +54,6 @@ export interface RunAgentDeps {
   /** Optional hook called when spawnAgent throws (broken SDK/CLI, etc). */
   onSpawnFailure?: () => void
 }
-
-// ---------------------------------------------------------------------------
-// Pure helpers
-// ---------------------------------------------------------------------------
 
 const MAX_PLAYGROUND_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_PARTIAL_DIFF_SIZE = 50 * 1024 // 50KB
@@ -199,10 +191,6 @@ export async function capturePartialDiff(
     }
   }
 }
-
-// ---------------------------------------------------------------------------
-// Extracted helpers
-// ---------------------------------------------------------------------------
 
 /**
  * Spawns an agent with a timeout. Rejects if spawn takes longer than SPAWN_TIMEOUT_MS.
@@ -353,10 +341,6 @@ export async function consumeMessages(
 
   return { exitCode, lastAgentOutput }
 }
-
-// ---------------------------------------------------------------------------
-// runAgent
-// ---------------------------------------------------------------------------
 
 export async function runAgent(
   task: RunAgentTask,

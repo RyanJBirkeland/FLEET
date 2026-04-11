@@ -14,8 +14,6 @@ import {
 // Re-export canonical status sets
 export { TERMINAL_STATUSES, FAILURE_STATUSES, HARD_SATISFIED_STATUSES }
 
-// ============ Dependency Index ============
-
 export interface DependencyIndex {
   rebuild(tasks: Array<{ id: string; depends_on: TaskDependency[] | null }>): void
   update(taskId: string, deps: TaskDependency[] | null): void
@@ -113,8 +111,6 @@ export function createDependencyIndex(): DependencyIndex {
   }
 }
 
-// ============ Cycle Detection ============
-
 export function detectCycle(
   taskId: string,
   proposedDeps: TaskDependency[],
@@ -146,8 +142,6 @@ export function detectCycle(
   return null
 }
 
-// ============ Blocked Notes Management ============
-
 const BLOCK_PREFIX = '[auto-block] '
 
 export function formatBlockedNote(blockedBy: string[]): string {
@@ -164,8 +158,6 @@ export function buildBlockedNotes(blockedBy: string[], existingNotes?: string | 
   const userNotes = stripBlockedNote(existingNotes ?? null)
   return userNotes ? `${blockNote}\n${userNotes}` : blockNote
 }
-
-// ============ Dependency Checking ============
 
 /**
  * Check whether a task's dependencies are satisfied.

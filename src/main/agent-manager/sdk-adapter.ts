@@ -3,10 +3,6 @@ import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { buildAgentEnv, getOAuthToken, getClaudeCliPath } from '../env-utils'
 
-// ---------------------------------------------------------------------------
-// SDK Wire Protocol Types
-// ---------------------------------------------------------------------------
-
 /**
  * SDK wire protocol message structure. All fields are optional as the SDK
  * emits various message shapes. Typed accessors below provide safe extraction.

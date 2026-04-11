@@ -76,10 +76,6 @@ export function mapRawMessage(raw: unknown): AgentEvent[] {
   return events
 }
 
-// ---------------------------------------------------------------------------
-// Batching configuration
-// ---------------------------------------------------------------------------
-
 const BATCH_SIZE = 50
 const BATCH_INTERVAL_MS = 100
 
