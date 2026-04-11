@@ -40,7 +40,8 @@ import {
   OAUTH_CHECK_CACHE_TTL_MS,
   OAUTH_CHECK_FAIL_CACHE_TTL_MS
 } from './oauth-checker'
-import { handleWatchdogVerdict, type WatchdogVerdict } from './watchdog-handler'
+import { handleWatchdogVerdict } from './watchdog-handler'
+import type { WatchdogCheck, WatchdogAction } from './types'
 
 // Re-export for backward compatibility with tests
 export { SPAWN_CIRCUIT_FAILURE_THRESHOLD, SPAWN_CIRCUIT_PAUSE_MS }
@@ -50,7 +51,8 @@ export {
   OAUTH_CHECK_CACHE_TTL_MS,
   OAUTH_CHECK_FAIL_CACHE_TTL_MS
 }
-export { handleWatchdogVerdict, type WatchdogVerdict }
+export { handleWatchdogVerdict }
+export type { WatchdogCheck, WatchdogAction }
 
 /**
  * Task statuses that can never transition to a non-terminal status.
@@ -580,7 +582,7 @@ export class AgentManagerImpl implements AgentManager {
 
   _watchdogLoop(): void {
     // Collect agents to kill before iterating to avoid mutating Map during iteration
-    const agentsToKill: Array<{ agent: ActiveAgent; verdict: WatchdogVerdict }> = []
+    const agentsToKill: Array<{ agent: ActiveAgent; verdict: WatchdogAction }> = []
     for (const agent of this._activeAgents.values()) {
       if (this._processingTasks.has(agent.taskId)) continue
       const verdict = checkAgent(agent, Date.now(), this.config)

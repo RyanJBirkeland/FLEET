@@ -67,3 +67,7 @@ export interface ActiveAgent {
 }
 
 export type { Logger } from '../logger'
+
+// Watchdog verdict types
+export type WatchdogCheck = 'ok' | 'idle' | 'max-runtime' | 'rate-limit-loop' | 'cost-budget-exceeded'
+export type WatchdogAction = Exclude<WatchdogCheck, 'ok'>

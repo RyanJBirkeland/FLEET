@@ -7,16 +7,14 @@
  */
 
 import { applyBackpressure, type ConcurrencyState } from './concurrency'
-import type { Logger } from './types'
-
-export type WatchdogVerdict = 'max-runtime' | 'idle' | 'rate-limit-loop' | 'cost-budget-exceeded'
+import type { Logger, WatchdogAction } from './types'
 
 /**
  * Handle a watchdog verdict by updating the task and optionally applying backpressure.
  * Returns the (possibly updated) concurrency state.
  */
 export function handleWatchdogVerdict(
-  verdict: WatchdogVerdict,
+  verdict: WatchdogAction,
   taskId: string,
   concurrency: ConcurrencyState,
   now: string,
