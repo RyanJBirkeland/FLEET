@@ -1,5 +1,12 @@
 /* CreateEpicModal — template cards */
 
+.planner-template-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
 .planner-template-card {
   padding: 12px;
   border: 1px solid var(--bde-border);
@@ -17,4 +24,99 @@
 
 .planner-template-card:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.planner-template-card__icon {
+  font-size: 24px;
+  margin-bottom: 6px;
+}
+
+.planner-template-card__name {
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.planner-template-card__description {
+  font-size: 12px;
+  opacity: 0.7;
+  line-height: 1.4;
+}
+
+.planner-template-card__meta {
+  font-size: 11px;
+  opacity: 0.5;
+  margin-top: 6px;
+}
+
+.planner-selected-template-banner {
+  padding: 12px;
+  background: var(--bde-surface);
+  border: 1px solid var(--bde-accent);
+  border-radius: 6px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.planner-selected-template {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.planner-selected-template__icon {
+  font-size: 24px;
+}
+
+.planner-selected-template__details {
+  flex: 1;
+}
+
+.planner-selected-template__name {
+  font-weight: 600;
+}
+
+.planner-selected-template__description {
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.planner-epic-form__required {
+  color: var(--bde-danger);
+}
+
+.planner-epic-form__icon-input {
+  width: 60px;
+  text-align: center;
+}
+
+.planner-epic-form__order-input {
+  width: 60px;
+  text-align: center;
+}
+
+.planner-color-picker {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.planner-color-swatch {
+  width: 32px;
+  height: 32px;
+  border-radius: 4px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.planner-epic-form__task-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.prompt-modal__label--spaced {
+  margin-top: 16px;
 }

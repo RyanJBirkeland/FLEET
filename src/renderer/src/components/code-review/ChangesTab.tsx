@@ -134,15 +134,12 @@ export function ChangesTab(): React.JSX.Element {
   if (loading.diff) {
     return (
       <div className="cr-changes">
-        <div
-          className="cr-changes__files"
-          style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: 8 }}
-        >
+        <div className="cr-changes__files cr-changes__files--loading">
           <div className="bde-skeleton" style={{ height: 28 }} />
           <div className="bde-skeleton" style={{ height: 28 }} />
           <div className="bde-skeleton" style={{ height: 28 }} />
         </div>
-        <div className="cr-changes__diff" style={{ padding: 16 }}>
+        <div className="cr-changes__diff cr-changes__diff--loading">
           <div className="bde-skeleton" style={{ height: 200 }} />
         </div>
       </div>
@@ -168,15 +165,8 @@ export function ChangesTab(): React.JSX.Element {
     <div className="cr-changes" data-testid="cr-changes">
       {usingSnapshot && (
         <div
+          className="cr-changes__snapshot-banner"
           data-testid="cr-changes-snapshot-banner"
-          style={{
-            gridColumn: '1 / -1',
-            fontSize: 11,
-            padding: '6px 10px',
-            background: 'var(--bde-surface-raised, rgba(255,255,255,0.04))',
-            borderBottom: '1px solid var(--bde-border, rgba(255,255,255,0.08))',
-            color: 'var(--bde-text-dim, rgba(255,255,255,0.6))'
-          }}
           title={snapshot?.capturedAt ?? ''}
         >
           Worktree no longer available — showing archived snapshot

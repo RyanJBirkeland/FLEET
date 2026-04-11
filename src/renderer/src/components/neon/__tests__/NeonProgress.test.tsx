@@ -1,7 +1,6 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect } from 'vitest'
 import { NeonProgress } from '../NeonProgress'
-import { tokens } from '../../../design-system/tokens'
 
 describe('NeonProgress', () => {
   it('renders with correct width percentage', () => {
@@ -21,27 +20,26 @@ describe('NeonProgress', () => {
     expect(bar.style.width).toBe('100%')
   })
 
-  it('uses design token for track background', () => {
+  it('uses CSS custom property for track background', () => {
     const { container } = render(<NeonProgress value={50} accent="cyan" />)
     const fill = container.querySelector('[data-role="progress-fill"]') as HTMLElement
     const track = fill.parentElement as HTMLElement
-    // tokens.color.surface is 'var(--bde-surface)' — jsdom stores the raw value
-    expect(track.style.background).toBe(tokens.color.surface)
+    expect(track.style.background).toBe('var(--bde-surface)')
   })
 
-  it('uses design token for label font size', () => {
+  it('uses CSS custom property for label font size', () => {
     const { container } = render(<NeonProgress value={50} accent="cyan" label="Test" />)
     // The label is the first child div of the root div
     const root = container.querySelector('div') as HTMLElement
     const label = root.firstElementChild as HTMLElement
-    expect(label.style.fontSize).toBe(tokens.size.xs)
+    expect(label.style.fontSize).toBe('var(--bde-size-xs)')
   })
 
-  it('uses design token for label margin bottom', () => {
+  it('uses CSS custom property for label margin bottom', () => {
     const { container } = render(<NeonProgress value={50} accent="cyan" label="Test" />)
     const root = container.querySelector('div') as HTMLElement
     const label = root.firstElementChild as HTMLElement
-    expect(label.style.marginBottom).toBe(tokens.space[1])
+    expect(label.style.marginBottom).toBe('var(--bde-space-1)')
   })
 
   it('does not render label element when label is not provided', () => {

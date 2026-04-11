@@ -1,6 +1,5 @@
 import { type ReactNode } from 'react'
 import { type NeonAccent, neonVar } from './types'
-import { tokens } from '../../design-system/tokens'
 
 interface GlassPanelProps {
   accent?: NeonAccent
@@ -17,16 +16,16 @@ export function GlassPanel({
   className = '',
   style
 }: GlassPanelProps): React.JSX.Element {
-  const borderVal = accent ? neonVar(accent, 'border') : tokens.color.border
+  const borderVal = accent ? neonVar(accent, 'border') : 'var(--bde-border)'
   return (
     <div
       className={`glass-panel ${className}`.trim()}
       style={{
         background: accent
-          ? `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${tokens.color.bg})`
-          : tokens.color.bg,
+          ? `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${'var(--bde-bg)'})`
+          : 'var(--bde-bg)',
         border: `1px solid ${borderVal}`,
-        borderRadius: tokens.radius.xl,
+        borderRadius: 'var(--bde-radius-xl)',
         ...style
       }}
     >

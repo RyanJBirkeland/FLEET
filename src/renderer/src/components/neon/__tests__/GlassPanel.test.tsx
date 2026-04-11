@@ -20,10 +20,10 @@ describe('GlassPanel', () => {
     expect(panel.style.border).toContain('var(--bde-accent-border)')
   })
 
-  it('uses token borderRadius', () => {
+  it('uses CSS custom property for borderRadius', () => {
     const { container } = render(<GlassPanel>X</GlassPanel>)
     const panel = container.firstChild as HTMLElement
-    expect(panel.style.borderRadius).toBe('12px')
+    expect(panel.style.borderRadius).toBe('var(--bde-radius-xl)')
   })
 
   it('uses surfaceDeep background without accent', () => {

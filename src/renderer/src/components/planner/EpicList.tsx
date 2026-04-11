@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, FileUp } from 'lucide-react'
 import type { TaskGroup } from '../../../../shared/types'
-import { tokens } from '../../design-system/tokens'
 import { EmptyState } from '../ui/EmptyState'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import './EpicList.css'
@@ -61,14 +60,14 @@ export function EpicList({
   const getStatusColor = (status: TaskGroup['status']): string => {
     switch (status) {
       case 'completed':
-        return tokens.color.accent
+        return 'var(--bde-accent)'
       case 'in-pipeline':
-        return tokens.status.review
+        return 'var(--bde-status-review)'
       case 'ready':
-        return tokens.color.accent
+        return 'var(--bde-accent)'
       case 'draft':
       default:
-        return tokens.color.textMuted
+        return 'var(--bde-text-muted)'
     }
   }
 
@@ -93,10 +92,10 @@ export function EpicList({
   }
 
   const getProgressColor = (percent: number): string => {
-    if (percent === 100) return tokens.color.accent
-    if (percent >= 50) return tokens.status.review
-    if (percent > 0) return tokens.color.warning
-    return tokens.color.textDim
+    if (percent === 100) return 'var(--bde-accent)'
+    if (percent >= 50) return 'var(--bde-status-review)'
+    if (percent > 0) return 'var(--bde-warning)'
+    return 'var(--bde-text-dim)'
   }
 
   const activeGroups = groups.filter((g) => g.status !== 'completed')

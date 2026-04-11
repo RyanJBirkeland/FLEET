@@ -1,5 +1,14 @@
 /* Changes tab — file tree + diff viewer */
 
+.cr-changes__snapshot-banner {
+  grid-column: 1 / -1;
+  font-size: 11px;
+  padding: 6px 10px;
+  background: var(--bde-surface-raised, rgba(255, 255, 255, 0.04));
+  border-bottom: 1px solid var(--bde-border, rgba(255, 255, 255, 0.08));
+  color: var(--bde-text-dim, rgba(255, 255, 255, 0.6));
+}
+
 .cr-changes {
   display: flex;
   height: 100%;
@@ -12,6 +21,13 @@
   border-right: 1px solid var(--bde-border);
   overflow-y: auto;
   flex-shrink: 1;
+}
+
+.cr-changes__files--loading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px;
 }
 
 .cr-changes__file {
@@ -72,6 +88,10 @@
   flex: 1;
   overflow: auto;
   min-width: 0;
+}
+
+.cr-changes__diff--loading {
+  padding: 16px;
 }
 
 .cr-changes__diff-content {

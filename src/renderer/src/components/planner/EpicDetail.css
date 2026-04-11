@@ -113,6 +113,26 @@
   font-weight: 600;
 }
 
+.epic-detail__status-count--done {
+  color: var(--bde-status-done);
+}
+
+.epic-detail__status-count--active {
+  color: var(--bde-status-active);
+}
+
+.epic-detail__status-count--queued {
+  color: var(--bde-status-queued);
+}
+
+.epic-detail__status-count--blocked {
+  color: var(--bde-status-blocked);
+}
+
+.epic-detail__status-count--draft {
+  color: var(--bde-text-muted);
+}
+
 .epic-detail__readiness-warning {
   display: flex;
   align-items: center;

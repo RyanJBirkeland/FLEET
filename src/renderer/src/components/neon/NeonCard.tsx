@@ -1,6 +1,5 @@
 import { type ReactNode } from 'react'
 import { type NeonAccent, neonVar } from './types'
-import { tokens } from '../../design-system/tokens'
 
 interface NeonCardProps {
   accent?: NeonAccent
@@ -25,7 +24,7 @@ export function NeonCard({
     '--card-accent': neonVar(accent, 'color'),
     '--card-accent-border': neonVar(accent, 'border'),
     '--card-accent-surface': neonVar(accent, 'surface'),
-    background: `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${tokens.color.bg})`,
+    background: `linear-gradient(135deg, ${neonVar(accent, 'surface')}, ${'var(--bde-bg)'})`,
     border: `1px solid ${neonVar(accent, 'border')}`,
     ...style
   } as React.CSSProperties

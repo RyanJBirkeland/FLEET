@@ -1,6 +1,5 @@
 import React from 'react'
 import { Separator } from 'react-resizable-panels'
-import { tokens } from '../../design-system/tokens'
 
 export function PanelResizeHandle({
   direction
@@ -15,7 +14,7 @@ export function PanelResizeHandle({
         height: isVertical ? 4 : '100%',
         background: 'transparent',
         cursor: isVertical ? 'row-resize' : 'col-resize',
-        transition: tokens.transition.fast
+        transition: 'var(--bde-transition-fast)'
       }}
     />
   )

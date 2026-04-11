@@ -6,7 +6,6 @@ import { WebLinksAddon } from 'xterm-addon-web-links'
 import { useTerminalStore } from '../../stores/terminal'
 import { useThemeStore } from '../../stores/theme'
 import { getTerminalTheme } from '../../lib/terminal-theme'
-import { tokens } from '../../design-system/tokens'
 import 'xterm/css/xterm.css'
 
 /** Module-level map so TerminalView can call clear() on the active instance */
@@ -42,7 +41,7 @@ export function TerminalPane({ tabId, shell, cwd, visible }: TerminalPaneProps):
 
     const term = new Terminal({
       theme: getTerminalTheme(),
-      fontFamily: tokens.font.code,
+      fontFamily: 'var(--bde-font-code)',
       fontSize,
       lineHeight: 1.5,
       cursorBlink: true
@@ -133,7 +132,7 @@ export function TerminalPane({ tabId, shell, cwd, visible }: TerminalPaneProps):
       style={{
         width: '100%',
         height: '100%',
-        padding: tokens.space[2],
+        padding: 'var(--bde-space-2)',
         boxSizing: 'border-box',
         display: visible ? 'block' : 'none'
       }}

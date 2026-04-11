@@ -9,7 +9,6 @@ import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../l
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { useTaskGroups } from '../../stores/taskGroups'
 import { EPIC_TEMPLATES, type EpicTemplate } from './epicTemplates'
-import { tokens } from '../../design-system/tokens'
 import type { TaskGroup } from '../../../../shared/types'
 import './CreateEpicModal.css'
 
@@ -19,12 +18,12 @@ interface CreateEpicModalProps {
 }
 
 const ACCENT_COLORS = [
-  { name: 'Cyan', value: tokens.color.accent },
-  { name: 'Pink', value: tokens.status.done },
-  { name: 'Blue', value: tokens.status.review },
-  { name: 'Purple', value: tokens.status.active },
-  { name: 'Orange', value: tokens.color.warning },
-  { name: 'Red', value: tokens.color.danger }
+  { name: 'Cyan', value: 'var(--bde-accent)' },
+  { name: 'Pink', value: 'var(--bde-status-done)' },
+  { name: 'Blue', value: 'var(--bde-status-review)' },
+  { name: 'Purple', value: 'var(--bde-status-active)' },
+  { name: 'Orange', value: 'var(--bde-warning)' },
+  { name: 'Red', value: 'var(--bde-danger)' }
 ]
 
 export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.JSX.Element {
@@ -33,7 +32,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
 
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('E')
-  const [accentColor, setAccentColor] = useState(tokens.color.accent)
+  const [accentColor, setAccentColor] = useState('var(--bde-accent)')
   const [goal, setGoal] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [selectedTemplate, setSelectedTemplate] = useState<EpicTemplate | null>(null)
@@ -50,7 +49,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
       // Reset form on open
       setName('')
       setIcon('E')
-      setAccentColor(tokens.color.accent)
+      setAccentColor('var(--bde-accent)')
       setGoal('')
       setSubmitting(false)
       setSelectedTemplate(null)
@@ -174,17 +173,10 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
             {/* Template selection */}
             {!selectedTemplate && (
               <>
-                <div className="prompt-modal__label" style={{ marginTop: '16px' }}>
+                <div className="prompt-modal__label prompt-modal__label--spaced">
                   Start from Template (optional)
                 </div>
-                <div
-                  style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(2, 1fr)',
-                    gap: '12px',
-                    marginBottom: '20px'
-                  }}
-                >
+                <div className="planner-template-grid">
                   {EPIC_TEMPLATES.map((template) => (
                     <button
                       key={template.id}
@@ -192,12 +184,12 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
                       className="planner-template-card"
                       onClick={() => handleTemplateSelect(template)}
                     >
-                      <div style={{ fontSize: '24px', marginBottom: '6px' }}>{template.icon}</div>
-                      <div style={{ fontWeight: 600, marginBottom: '4px' }}>{template.name}</div>
-                      <div style={{ fontSize: '12px', opacity: 0.7, lineHeight: '1.4' }}>
+                      <div className="planner-template-card__icon">{template.icon}</div>
+                      <div className="planner-template-card__name">{template.name}</div>
+                      <div className="planner-template-card__description">
                         {template.description}
                       </div>
-                      <div style={{ fontSize: '11px', opacity: 0.5, marginTop: '6px' }}>
+                      <div className="planner-template-card__meta">
                         {template.tasks.length} task{template.tasks.length !== 1 ? 's' : ''}
                       </div>
                     </button>
@@ -207,23 +199,12 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
             )}
 
             {selectedTemplate && (
-              <div
-                style={{
-                  padding: '12px',
-                  background: 'var(--bde-surface)',
-                  border: '1px solid var(--bde-accent)',
-                  borderRadius: '6px',
-                  marginBottom: '16px',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'space-between'
-                }}
-              >
-                <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <div style={{ fontSize: '24px' }}>{selectedTemplate.icon}</div>
-                  <div>
-                    <div style={{ fontWeight: 600 }}>{selectedTemplate.name}</div>
-                    <div style={{ fontSize: '12px', opacity: 0.7 }}>
+              <div className="planner-selected-template-banner">
+                <div className="planner-selected-template">
+                  <div className="planner-selected-template__icon">{selectedTemplate.icon}</div>
+                  <div className="planner-selected-template__details">
+                    <div className="planner-selected-template__name">{selectedTemplate.name}</div>
+                    <div className="planner-selected-template__description">
                       {selectedTemplate.tasks.length} task
                       {selectedTemplate.tasks.length !== 1 ? 's' : ''}
                     </div>
@@ -236,7 +217,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
                     setSelectedTemplate(null)
                     setName('')
                     setIcon('E')
-                    setAccentColor(tokens.color.accent)
+                    setAccentColor('var(--bde-accent)')
                     setGoal('')
                   }}
                 >
@@ -247,7 +228,7 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
 
             {/* Name field */}
             <label className="prompt-modal__label" htmlFor="epic-name">
-              Name <span style={{ color: 'var(--bde-danger)' }}>*</span>
+              Name <span className="planner-epic-form__required">*</span>
             </label>
             <input
               ref={nameRef}
@@ -268,41 +249,28 @@ export function CreateEpicModal({ open, onClose }: CreateEpicModalProps): React.
               ref={iconRef}
               id="epic-icon"
               type="text"
-              className="prompt-modal__input"
+              className="prompt-modal__input planner-epic-form__icon-input"
               value={icon}
               onChange={handleIconChange}
               placeholder="E"
-              style={{ width: '60px', textAlign: 'center' }}
             />
 
             {/* Accent color picker */}
             <label className="prompt-modal__label">Accent Color</label>
-            <div
-              style={{
-                display: 'flex',
-                gap: '8px',
-                flexWrap: 'wrap',
-                marginBottom: '8px'
-              }}
-            >
+            <div className="planner-color-picker">
               {ACCENT_COLORS.map((color) => (
                 <button
                   key={color.value}
                   type="button"
                   onClick={() => setAccentColor(color.value)}
                   title={color.name}
+                  className="planner-color-swatch"
                   style={{
-                    width: '32px',
-                    height: '32px',
-                    borderRadius: '4px',
                     background: color.value,
                     border:
                       accentColor === color.value
                         ? `2px solid ${color.value}`
                         : '1px solid var(--bde-border)',
-                    boxShadow: 'none',
-                    cursor: 'pointer',
-                    transition: 'all 150ms ease',
                     opacity: accentColor === color.value ? 1 : 0.6
                   }}
                   aria-label={`Select ${color.name} accent color`}

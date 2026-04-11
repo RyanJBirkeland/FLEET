@@ -4,7 +4,6 @@
  */
 import { FileCode, Eye } from 'lucide-react'
 import './PlaygroundCard.css'
-import { tokens } from '../../design-system/tokens'
 
 export interface PlaygroundCardProps {
   /** Original filename */
@@ -35,14 +34,14 @@ export function PlaygroundCard({
       style={{
         display: 'flex',
         alignItems: 'center',
-        gap: tokens.space[3],
+        gap: 'var(--bde-space-3)',
         width: '100%',
         maxWidth: '500px',
-        padding: tokens.space[3],
-        borderRadius: tokens.radius.md,
+        padding: 'var(--bde-space-3)',
+        borderRadius: 'var(--bde-radius-md)',
         cursor: 'pointer',
-        transition: tokens.transition.fast,
-        fontFamily: tokens.font.ui,
+        transition: 'var(--bde-transition-fast)',
+        fontFamily: 'var(--bde-font-ui)',
         textAlign: 'left'
       }}
     >
@@ -55,7 +54,7 @@ export function PlaygroundCard({
           justifyContent: 'center',
           width: '40px',
           height: '40px',
-          borderRadius: tokens.radius.sm,
+          borderRadius: 'var(--bde-radius-sm)',
           flexShrink: 0
         }}
       >
@@ -67,8 +66,8 @@ export function PlaygroundCard({
         <div
           className="playground-card__filename"
           style={{
-            fontFamily: tokens.font.code,
-            fontSize: tokens.size.sm,
+            fontFamily: 'var(--bde-font-code)',
+            fontSize: 'var(--bde-size-sm)',
             fontWeight: 500,
             overflow: 'hidden',
             textOverflow: 'ellipsis',
@@ -80,8 +79,8 @@ export function PlaygroundCard({
         <div
           className="playground-card__filesize"
           style={{
-            fontSize: tokens.size.xs,
-            marginTop: tokens.space[1]
+            fontSize: 'var(--bde-size-xs)',
+            marginTop: 'var(--bde-space-1)'
           }}
         >
           {formatFileSize(sizeBytes)}
@@ -94,10 +93,10 @@ export function PlaygroundCard({
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: tokens.space[1],
-          padding: `${tokens.space[1]} ${tokens.space[2]}`,
-          borderRadius: tokens.radius.sm,
-          fontSize: tokens.size.xs,
+          gap: 'var(--bde-space-1)',
+          padding: `${'var(--bde-space-1)'} ${'var(--bde-space-2)'}`,
+          borderRadius: 'var(--bde-radius-sm)',
+          fontSize: 'var(--bde-size-xs)',
           flexShrink: 0
         }}
       >

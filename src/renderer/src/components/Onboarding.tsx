@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Check, X, AlertCircle, RefreshCw, ArrowRight, Terminal } from 'lucide-react'
-import { tokens } from '../design-system/tokens'
 import { Button } from './ui/Button'
 import { Spinner } from './ui/Spinner'
 
@@ -70,7 +69,7 @@ function CheckRow({
   optional?: boolean
 }): React.JSX.Element {
   return (
-    <div className="onboarding-check" style={{ gap: tokens.space[1] }}>
+    <div className="onboarding-check" style={{ gap: 'var(--bde-space-1)' }}>
       <div className="onboarding-check__row">
         <StatusIcon state={state} />
         <span className="onboarding-check__label">{label}</span>
@@ -78,8 +77,8 @@ function CheckRow({
           <span
             className="onboarding-check__optional"
             style={{
-              fontSize: tokens.size.xs,
-              marginLeft: tokens.space[1]
+              fontSize: 'var(--bde-size-xs)',
+              marginLeft: 'var(--bde-space-1)'
             }}
           >
             (optional)
@@ -90,8 +89,8 @@ function CheckRow({
         <p
           className="onboarding-check__help onboarding-check__help--fail"
           style={{
-            margin: `0 0 0 ${tokens.space[6]}`,
-            fontSize: tokens.size.xs
+            margin: `0 0 0 ${'var(--bde-space-6)'}`,
+            fontSize: 'var(--bde-size-xs)'
           }}
         >
           {helpText}
@@ -101,8 +100,8 @@ function CheckRow({
         <p
           className="onboarding-check__help onboarding-check__help--warn"
           style={{
-            margin: `0 0 0 ${tokens.space[6]}`,
-            fontSize: tokens.size.xs
+            margin: `0 0 0 ${'var(--bde-space-6)'}`,
+            fontSize: 'var(--bde-size-xs)'
           }}
         >
           {helpText}
@@ -190,7 +189,7 @@ export function Onboarding({ onReady }: OnboardingProps): React.JSX.Element {
 
         <p className="onboarding-subtitle">Verifying Claude Code CLI and environment</p>
 
-        <div className="onboarding-checks" style={{ gap: tokens.space[3] }}>
+        <div className="onboarding-checks" style={{ gap: 'var(--bde-space-3)' }}>
           <div className="onboarding-section-label">Required</div>
           <CheckRow
             state={cliState}

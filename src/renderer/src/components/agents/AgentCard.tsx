@@ -6,7 +6,6 @@ import { useState, useEffect } from 'react'
 import { Bot, Cpu, Clock, X, CheckCircle, XCircle, Loader, Ban } from 'lucide-react'
 import './AgentCard.css'
 import type { AgentMeta } from '../../../../shared/types'
-import { tokens } from '../../design-system/tokens'
 import { NeonCard } from '../neon/NeonCard'
 import { type NeonAccent, neonVar } from '../neon/types'
 import { toast } from '../../stores/toasts'
@@ -61,7 +60,7 @@ function StatusIndicator({ status, accent }: StatusIndicatorProps): React.JSX.El
           style={{
             width: 6,
             height: 6,
-            borderRadius: tokens.radius.full,
+            borderRadius: 'var(--bde-radius-full)',
             background: iconColor,
             flexShrink: 0
           }}
@@ -112,7 +111,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps):
         <NeonCard
           accent={accent}
           style={{
-            padding: tokens.space[2],
+            padding: 'var(--bde-space-2)',
             boxShadow: selected ? `0 0 16px ${neonVar(accent, 'glow')}` : undefined,
             border: selected ? `1px solid ${neonVar(accent, 'color')}` : undefined,
             transform: selected ? 'scale(1.02)' : undefined
@@ -142,7 +141,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps):
               <span className="agent-card__meta-text">{agent.model}</span>
               <span className="agent-card__meta-separator">·</span>
               <Clock size={10} color={neonVar(accent, 'color')} />
-              <span style={{ fontSize: tokens.size.xs, color: neonVar(accent, 'color') }}>
+              <span style={{ fontSize: 'var(--bde-size-xs)', color: neonVar(accent, 'color') }}>
                 {formatDuration(agent.startedAt, agent.finishedAt)}
               </span>
               {/* Status label for terminal statuses */}

@@ -153,13 +153,13 @@ export function ConnectionsSection(): React.JSX.Element {
         subtitle="OAuth token for agent spawning"
         status={authCardStatus}
       >
-        <div className="settings-field__row" style={{ marginTop: 0, marginBottom: 12 }}>
+        <div className="settings-field__row">
           <div className="settings-field__status">
             <Badge variant={authBadgeVariant} size="sm">
               {authBadgeLabel}
             </Badge>
             {authStatus?.expiresAt && (
-              <span style={{ fontSize: 'var(--bde-size-sm)', color: 'var(--bde-text-muted)' }}>
+              <span className="settings-field__expiry">
                 Expires: {formatExpiry(authStatus.expiresAt)}
               </span>
             )}
@@ -173,7 +173,7 @@ export function ConnectionsSection(): React.JSX.Element {
               loading={authLoading}
               type="button"
             >
-              <RefreshCw size={12} style={{ marginRight: 4 }} />
+              <RefreshCw size={12} className="settings-field__refresh-icon" />
               Refresh
             </Button>
           </div>

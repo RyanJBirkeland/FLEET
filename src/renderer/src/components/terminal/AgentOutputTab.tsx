@@ -1,6 +1,5 @@
 import { useEffect, useMemo } from 'react'
 import { useAgentEventsStore } from '../../stores/agentEvents'
-import { tokens } from '../../design-system/tokens'
 import { pairEvents } from '../../lib/pair-events'
 import { ConsoleLine } from '../agents/ConsoleLine'
 
@@ -43,12 +42,12 @@ export function AgentOutputTab({
       <div className="terminal-agent-tab">
         <div
           style={{
-            padding: tokens.space[4],
-            color: tokens.color.textDim,
-            fontFamily: tokens.font.ui,
-            fontSize: tokens.size.md,
+            padding: 'var(--bde-space-4)',
+            color: 'var(--bde-text-dim)',
+            fontFamily: 'var(--bde-font-ui)',
+            fontSize: 'var(--bde-size-md)',
             textAlign: 'center',
-            marginTop: tokens.space[8]
+            marginTop: 'var(--bde-space-8)'
           }}
         >
           Waiting for agent output…
@@ -63,10 +62,10 @@ export function AgentOutputTab({
       <div className="terminal-agent-tab">
         <div
           style={{
-            padding: tokens.space[3],
-            fontFamily: tokens.font.code,
-            fontSize: tokens.size.md,
-            color: tokens.color.text,
+            padding: 'var(--bde-space-3)',
+            fontFamily: 'var(--bde-font-code)',
+            fontSize: 'var(--bde-size-md)',
+            color: 'var(--bde-text)',
             whiteSpace: 'pre-wrap',
             lineHeight: 1.5
           }}
@@ -75,9 +74,9 @@ export function AgentOutputTab({
             <div
               key={i}
               style={{
-                borderBottom: `1px solid ${tokens.color.border}`,
-                paddingBottom: tokens.space[2],
-                marginBottom: tokens.space[2]
+                borderBottom: `1px solid ${'var(--bde-border)'}`,
+                paddingBottom: 'var(--bde-space-2)',
+                marginBottom: 'var(--bde-space-2)'
               }}
             >
               {chunk}
@@ -93,12 +92,12 @@ export function AgentOutputTab({
     <div className="terminal-agent-tab">
       <div
         style={{
-          padding: tokens.space[4],
-          color: tokens.color.textDim,
-          fontFamily: tokens.font.ui,
-          fontSize: tokens.size.md,
+          padding: 'var(--bde-space-4)',
+          color: 'var(--bde-text-dim)',
+          fontFamily: 'var(--bde-font-ui)',
+          fontSize: 'var(--bde-size-md)',
           textAlign: 'center',
-          marginTop: tokens.space[8]
+          marginTop: 'var(--bde-space-8)'
         }}
       >
         Waiting for agent output…

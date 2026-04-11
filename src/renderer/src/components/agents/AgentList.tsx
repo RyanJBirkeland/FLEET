@@ -7,7 +7,6 @@ import { useMemo, useState, useRef, useEffect } from 'react'
 import { Search, ChevronRight } from 'lucide-react'
 import './AgentList.css'
 import type { AgentMeta } from '../../../../shared/types'
-import { tokens } from '../../design-system/tokens'
 import { EmptyState } from '../ui/EmptyState'
 import { AgentCard } from './AgentCard'
 import { neonVar } from '../neon/types'
@@ -412,7 +411,7 @@ export function AgentList({
         {hasMore && onLoadMore && (
           <div
             style={{
-              padding: tokens.space[2],
+              padding: 'var(--bde-space-2)',
               display: 'flex',
               justifyContent: 'center'
             }}

@@ -53,3 +53,34 @@
   padding: 0;
   margin: 0;
 }
+
+/* ─── Auth Status Row ─────────────────────────────────────────────────────── */
+
+.settings-field__row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 0;
+  margin-bottom: 12px;
+}
+
+.settings-field__status {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 1;
+}
+
+.settings-field__actions {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-field__expiry {
+  font-size: var(--bde-size-sm);
+  color: var(--bde-text-muted);
+}
+
+.settings-field__refresh-icon {
+  margin-right: 4px;
+}

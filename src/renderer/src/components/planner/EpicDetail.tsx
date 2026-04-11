@@ -2,7 +2,6 @@ import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Edit2, MoreVertical, AlertTriangle } from 'lucide-react'
 import type { TaskGroup, SprintTask } from '../../../../shared/types'
-import { tokens } from '../../design-system/tokens'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { usePrompt, PromptModal } from '../ui/PromptModal'
 import { LoadingState } from '../ui/LoadingState'
@@ -132,33 +131,33 @@ export function EpicDetail({
   }, [counts.done, tasks.length])
 
   const progressColor = useMemo(() => {
-    if (progressPercent === 100) return tokens.color.accent
-    if (progressPercent >= 50) return tokens.status.review
-    if (progressPercent > 0) return tokens.color.warning
-    return tokens.color.textDim
+    if (progressPercent === 100) return 'var(--bde-accent)'
+    if (progressPercent >= 50) return 'var(--bde-status-review)'
+    if (progressPercent > 0) return 'var(--bde-warning)'
+    return 'var(--bde-text-dim)'
   }, [progressPercent])
 
   // Helper to get status dot color — delegates to shared getDotColor
   const getStatusColor = (status: SprintTask['status']): string => {
     switch (status) {
       case 'done':
-        return tokens.status.done
+        return 'var(--bde-status-done)'
       case 'active':
-        return tokens.status.active
+        return 'var(--bde-status-active)'
       case 'queued':
-        return tokens.status.queued
+        return 'var(--bde-status-queued)'
       case 'blocked':
-        return tokens.status.blocked
+        return 'var(--bde-status-blocked)'
       case 'review':
-        return tokens.status.review
+        return 'var(--bde-status-review)'
       case 'failed':
       case 'error':
-        return tokens.status.failed
+        return 'var(--bde-danger)'
       case 'cancelled':
-        return tokens.status.cancelled
+        return 'var(--bde-text-dim)'
       case 'backlog':
       default:
-        return tokens.color.textMuted
+        return 'var(--bde-text-muted)'
     }
   }
 
@@ -356,8 +355,8 @@ export function EpicDetail({
                 top: '100%',
                 right: 0,
                 marginTop: '4px',
-                background: tokens.color.bg,
-                border: `1px solid ${tokens.color.accent}40`,
+                background: 'var(--bde-bg)',
+                border: `1px solid ${'var(--bde-accent)'}40`,
                 borderRadius: '4px',
                 minWidth: '160px',
                 zIndex: 100,
@@ -381,7 +380,7 @@ export function EpicDetail({
                   padding: '8px 12px',
                   background: 'transparent',
                   border: 'none',
-                  color: tokens.color.text,
+                  color: 'var(--bde-text)',
                   cursor: 'pointer',
                   fontSize: '13px',
                   textAlign: 'left'
@@ -407,7 +406,7 @@ export function EpicDetail({
                   padding: '8px 12px',
                   background: 'transparent',
                   border: 'none',
-                  color: tokens.color.text,
+                  color: 'var(--bde-text)',
                   cursor: 'pointer',
                   fontSize: '13px',
                   textAlign: 'left'
@@ -432,7 +431,7 @@ export function EpicDetail({
                   padding: '8px 12px',
                   background: 'transparent',
                   border: 'none',
-                  color: tokens.color.danger,
+                  color: 'var(--bde-danger)',
                   cursor: 'pointer',
                   fontSize: '13px',
                   textAlign: 'left'
@@ -457,19 +456,19 @@ export function EpicDetail({
           />
         </div>
         <div className="epic-detail__status-breakdown">
-          <span className="epic-detail__status-count" style={{ color: tokens.status.done }}>
+          <span className="epic-detail__status-count epic-detail__status-count--done">
             {counts.done} done
           </span>
-          <span className="epic-detail__status-count" style={{ color: tokens.status.active }}>
+          <span className="epic-detail__status-count epic-detail__status-count--active">
             {counts.active} active
           </span>
-          <span className="epic-detail__status-count" style={{ color: tokens.status.queued }}>
+          <span className="epic-detail__status-count epic-detail__status-count--queued">
             {counts.queued} queued
           </span>
-          <span className="epic-detail__status-count" style={{ color: tokens.status.blocked }}>
+          <span className="epic-detail__status-count epic-detail__status-count--blocked">
             {counts.blocked} blocked
           </span>
-          <span className="epic-detail__status-count" style={{ color: tokens.color.textMuted }}>
+          <span className="epic-detail__status-count epic-detail__status-count--draft">
             {counts.draft} draft
           </span>
         </div>
@@ -518,7 +517,7 @@ export function EpicDetail({
                     onDragEnd={handleDragEnd}
                     style={{
                       opacity: isDragging ? 0.5 : 1,
-                      borderTop: isDragOver ? `2px solid ${tokens.color.accent}` : undefined,
+                      borderTop: isDragOver ? `2px solid ${'var(--bde-accent)'}` : undefined,
                       cursor: 'grab'
                     }}
                   >
@@ -583,10 +582,10 @@ export function EpicDetail({
                             width: '100%',
                             minHeight: '120px',
                             padding: '8px',
-                            background: tokens.color.bg,
-                            border: `1px solid ${tokens.color.accent}40`,
+                            background: 'var(--bde-bg)',
+                            border: `1px solid ${'var(--bde-accent)'}40`,
                             borderRadius: '4px',
-                            color: tokens.color.text,
+                            color: 'var(--bde-text)',
                             fontFamily: 'monospace',
                             fontSize: '13px',
                             resize: 'vertical'
@@ -600,9 +599,9 @@ export function EpicDetail({
                             style={{
                               padding: '6px 12px',
                               background: 'transparent',
-                              border: `1px solid ${tokens.color.textDim}`,
+                              border: `1px solid ${'var(--bde-text-dim)'}`,
                               borderRadius: '4px',
-                              color: tokens.color.text,
+                              color: 'var(--bde-text)',
                               cursor: saving ? 'not-allowed' : 'pointer',
                               fontSize: '13px'
                             }}
@@ -615,10 +614,10 @@ export function EpicDetail({
                             disabled={saving}
                             style={{
                               padding: '6px 12px',
-                              background: tokens.color.accent,
+                              background: 'var(--bde-accent)',
                               border: 'none',
                               borderRadius: '4px',
-                              color: tokens.color.bg,
+                              color: 'var(--bde-bg)',
                               cursor: saving ? 'not-allowed' : 'pointer',
                               fontSize: '13px',
                               fontWeight: 500
