@@ -107,6 +107,7 @@ function baseDeps(overrides: Partial<any> = {}) {
     resolveWorktreePath: async () => '/tmp/fake-worktree',
     getHeadCommitSha: async () => 'sha-abc',
     getDiff: async () => 'diff --git a/x b/x\n+ change',
+    getBranch: async () => 'feat/auth',
     runSdkOnce: async () =>
       JSON.stringify({
         qualityScore: 88,
@@ -206,7 +207,7 @@ describe('reviewService.reviewChanges', () => {
     expect(repo._set['task-1:sha-abc']?.qualityScore).toBe(88)
   })
 
-  it('throws on malformed model response after one retry', async () => {
+  it('throws on malformed model response', async () => {
     const svc = createReviewService(
       baseDeps({ runSdkOnce: async () => 'not json, twice' })
     )

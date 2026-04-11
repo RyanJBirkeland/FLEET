@@ -153,6 +153,7 @@ export interface ReviewServiceDeps {
   resolveWorktreePath: (taskId: string) => Promise<string>
   getHeadCommitSha: (worktreePath: string) => Promise<string>
   getDiff: (worktreePath: string) => Promise<string>
+  getBranch: (worktreePath: string) => Promise<string>
   runSdkOnce: (prompt: string, options: SdkStreamingOptions) => Promise<string>
 }
 
@@ -166,7 +167,7 @@ export interface ReviewService {
 const REVIEWER_MODEL = 'claude-opus-4-6'
 
 export function createReviewService(deps: ReviewServiceDeps): ReviewService {
-  const { repo, taskRepo, logger, resolveWorktreePath, getHeadCommitSha, getDiff, runSdkOnce } = deps
+  const { repo, taskRepo, logger, resolveWorktreePath, getHeadCommitSha, getDiff, getBranch, runSdkOnce } = deps
 
   return {
     async reviewChanges(taskId, opts) {
@@ -207,11 +208,13 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewService {
         return synthetic
       }
 
+      const branch = await getBranch(worktreePath)
+
       const prompt = buildAgentPrompt({
         agentType: 'reviewer',
         reviewerMode: 'review',
         taskContent: task.spec ?? task.title,
-        branch: (task as unknown as Record<string, unknown>)['branch'] as string | undefined ?? '',
+        branch,
         diff,
       })
 
@@ -228,17 +231,14 @@ export function createReviewService(deps: ReviewServiceDeps): ReviewService {
         throw err
       }
 
-      let parsed
+      let parsed: ParsedReview
       try {
         parsed = parseReviewResponse(raw)
-      } catch (_firstErr) {
-        logger.warn(`Parse failed once for task=${taskId} — retrying`)
-        try {
-          parsed = parseReviewResponse(raw)
-        } catch (secondErr) {
-          logger.error(`Parse failed twice for task=${taskId}: ${(secondErr as Error).message}`)
-          throw secondErr
-        }
+      } catch (err) {
+        logger.error(
+          `Parse failed for task=${taskId}: ${(err as Error).message}`
+        )
+        throw err
       }
 
       const aggregates = aggregate(parsed.perFile)
