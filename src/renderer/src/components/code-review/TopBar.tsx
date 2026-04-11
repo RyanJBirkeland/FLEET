@@ -16,27 +16,11 @@ import {
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
-import { useTextareaPrompt, TextareaPromptModal } from '../ui/TextareaPromptModal'
+import { TextareaPromptModal } from '../ui/TextareaPromptModal'
 import { toast } from '../../stores/toasts'
-import { useGitHubStatus } from '../../hooks/useGitHubStatus'
-import { nowIso } from '../../../../shared/time'
 import { ReviewQueue } from './ReviewQueue'
 import { VARIANTS } from '../../lib/motion'
-
-function getNextReviewTaskId(
-  currentTaskId: string,
-  allTasks: Array<{ id: string; status: string; updated_at: string }>
-): string | null {
-  // Exclude the current task so callers (Ship It / Merge / Discard) don't get
-  // handed back the same task they just acted on. If nothing else is in
-  // review, return null and let the auto-select effect pick up whatever
-  // transitions into review next.
-  const reviewTasks = allTasks
-    .filter((t) => t.status === 'review' && t.id !== currentTaskId)
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-
-  return reviewTasks.length > 0 ? reviewTasks[0].id : null
-}
+import { useReviewActions } from '../../hooks/useReviewActions'
 
 export function TopBar(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
@@ -46,30 +30,29 @@ export function TopBar(): React.JSX.Element {
   const tasks = useSprintTasks((s) => s.tasks)
   const loadData = useSprintTasks((s) => s.loadData)
   const task = tasks.find((t) => t.id === selectedTaskId)
-  const { confirm, confirmProps } = useConfirm()
-  const { prompt, promptProps } = useTextareaPrompt()
-  const { configured: ghConfigured } = useGitHubStatus()
-  const [mergeStrategy, setMergeStrategy] = useState<'squash' | 'merge' | 'rebase'>('squash')
-  const [actionInFlight, setActionInFlight] = useState<string | null>(null)
-  const [freshness, setFreshness] = useState<{
-    status: 'fresh' | 'stale' | 'conflict' | 'unknown' | 'loading'
-    commitsBehind?: number
-  }>({ status: 'loading' })
+  const { confirm, confirmProps: batchConfirmProps } = useConfirm()
+  const {
+    actionInFlight,
+    mergeStrategy,
+    setMergeStrategy,
+    freshness,
+    ghConfigured,
+    shipIt,
+    mergeLocally,
+    createPr,
+    requestRevision,
+    rebase,
+    discard,
+    confirmProps,
+    promptProps
+  } = useReviewActions()
   const [taskSwitcherOpen, setTaskSwitcherOpen] = useState(false)
   const [kebabOpen, setKebabOpen] = useState(false)
+  const [batchActionInFlight, setBatchActionInFlight] = useState<string | null>(null)
   const taskSwitcherRef = useRef<HTMLDivElement>(null)
   const kebabRef = useRef<HTMLDivElement>(null)
 
   const selectedTasks = tasks.filter((t) => selectedBatchIds.has(t.id) && t.status === 'review')
-
-  useEffect(() => {
-    if (!task || task.status !== 'review') return
-    setFreshness({ status: 'loading' })
-    window.api.review
-      .checkFreshness({ taskId: task.id })
-      .then(setFreshness)
-      .catch(() => setFreshness({ status: 'unknown' }))
-  }, [task?.id, task?.rebased_at])
 
   // Auto-select the first review task when the current selection is stale
   // (e.g. after Ship It marked it `done`) or missing. Without this, the
@@ -100,185 +83,14 @@ export function TopBar(): React.JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const handleShipIt = async (): Promise<void> => {
-    if (!task) return
-    const ok = await confirm({
-      title: 'Ship It',
-      message: `Merge "${task.title.slice(0, 50)}" into main using ${mergeStrategy}, push to origin, and mark done?\n\nThis will merge + push in one step.`,
-      confirmLabel: 'Ship It',
-      variant: 'default'
-    })
-    if (!ok) return
-    setActionInFlight('shipIt')
-    try {
-      const result = await window.api.review.shipIt({
-        taskId: task.id,
-        strategy: mergeStrategy
-      })
-      if (result.success) {
-        if (result.pushed) {
-          toast.success('Merged & pushed!')
-        } else {
-          toast.error(
-            'Merged locally, but push to origin FAILED. Open Source Control to retry the push, or run `git push` manually.',
-            10000
-          )
-        }
-        const nextTaskId = getNextReviewTaskId(task.id, tasks)
-        selectTask(nextTaskId)
-        loadData()
-      } else {
-        toast.error(`Ship It failed: ${result.error || 'unknown error'}`)
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Ship It failed')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleMergeLocally = async (): Promise<void> => {
-    if (!task) return
-    const ok = await confirm({
-      title: 'Merge Locally',
-      message: `Merge "${task.title.slice(0, 50)}" into your local main branch using ${mergeStrategy} strategy?`,
-      confirmLabel: 'Merge',
-      variant: 'default'
-    })
-    if (!ok) return
-    setActionInFlight('merge')
-    try {
-      const result = await window.api.review.mergeLocally({
-        taskId: task.id,
-        strategy: mergeStrategy
-      })
-      if (result.success) {
-        toast.success('Changes merged locally')
-        const nextTaskId = getNextReviewTaskId(task.id, tasks)
-        selectTask(nextTaskId)
-        loadData()
-      } else {
-        toast.error(`Merge failed: ${result.error || 'conflicts detected'}`)
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Merge failed')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleCreatePr = async (): Promise<void> => {
-    if (!task) return
-    const ok = await confirm({
-      title: 'Create Pull Request',
-      message: `Push agent branch to GitHub and create a public PR for "${task.title.slice(0, 50)}"?\n\nRepo: ${task.repo}\n\nThis action cannot be undone.`,
-      confirmLabel: 'Create PR',
-      variant: 'default'
-    })
-    if (!ok) return
-    setActionInFlight('createPr')
-    try {
-      const result = await window.api.review.createPr({
-        taskId: task.id,
-        title: task.title,
-        body: task.spec || task.prompt || ''
-      })
-      toast.success(`PR created: ${result.prUrl}`)
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create PR')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
   const handleRequestRevision = async (): Promise<void> => {
-    if (!task) return
     setKebabOpen(false)
-    const feedback = await prompt({
-      title: 'Request Revision',
-      message: 'What should the agent fix or improve?',
-      placeholder: 'Describe the changes needed...',
-      confirmLabel: 'Re-queue Task'
-    })
-    if (!feedback) return
-    setActionInFlight('revise')
-    try {
-      const priorEntries = Array.isArray(task.revision_feedback) ? task.revision_feedback : []
-      const attempt = priorEntries.length + 1
-      const nextEntries = [
-        ...priorEntries,
-        {
-          timestamp: nowIso(),
-          feedback,
-          attempt
-        }
-      ]
-      try {
-        await window.api.sprint.update(task.id, { revision_feedback: nextEntries })
-      } catch (err) {
-        console.warn('[review] Failed to persist revision feedback (audit trail only):', err)
-      }
-      await window.api.review.requestRevision({
-        taskId: task.id,
-        feedback,
-        mode: 'fresh'
-      })
-      toast.success('Task re-queued with revision feedback')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to request revision')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleRebase = async (): Promise<void> => {
-    if (!task) return
-    setActionInFlight('rebase')
-    try {
-      const result = await window.api.review.rebase({ taskId: task.id })
-      if (result.success) {
-        toast.success('Rebased onto main')
-        setFreshness({ status: 'fresh', commitsBehind: 0 })
-        loadData()
-      } else {
-        toast.error(`Rebase failed: ${result.error || 'conflicts detected'}`)
-        setFreshness({ status: 'conflict' })
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Rebase failed')
-    } finally {
-      setActionInFlight(null)
-    }
+    await requestRevision()
   }
 
   const handleDiscard = async (): Promise<void> => {
-    if (!task) return
     setKebabOpen(false)
-    const ok = await confirm({
-      title: 'Discard Changes',
-      message: `Discard all work for "${task.title.slice(0, 50)}"? This cannot be undone.`,
-      confirmLabel: 'Discard',
-      variant: 'danger'
-    })
-    if (!ok) return
-    setActionInFlight('discard')
-    try {
-      await window.api.review.discard({ taskId: task.id })
-      toast.success('Changes discarded')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to discard')
-    } finally {
-      setActionInFlight(null)
-    }
+    await discard()
   }
 
   const handleBatchMergeAll = async (): Promise<void> => {
@@ -290,7 +102,7 @@ export function TopBar(): React.JSX.Element {
     })
     if (!ok) return
 
-    setActionInFlight('batchMerge')
+    setBatchActionInFlight('batchMerge')
     let succeeded = 0
     let failed = 0
 
@@ -307,7 +119,7 @@ export function TopBar(): React.JSX.Element {
       }
     }
 
-    setActionInFlight(null)
+    setBatchActionInFlight(null)
     clearBatch()
     loadData()
 
@@ -327,7 +139,7 @@ export function TopBar(): React.JSX.Element {
     })
     if (!ok) return
 
-    setActionInFlight('batchShip')
+    setBatchActionInFlight('batchShip')
     let succeeded = 0
     let failed = 0
 
@@ -344,7 +156,7 @@ export function TopBar(): React.JSX.Element {
       }
     }
 
-    setActionInFlight(null)
+    setBatchActionInFlight(null)
     clearBatch()
     loadData()
 
@@ -364,7 +176,7 @@ export function TopBar(): React.JSX.Element {
     })
     if (!ok) return
 
-    setActionInFlight('batchPr')
+    setBatchActionInFlight('batchPr')
     let succeeded = 0
     let failed = 0
 
@@ -381,7 +193,7 @@ export function TopBar(): React.JSX.Element {
       }
     }
 
-    setActionInFlight(null)
+    setBatchActionInFlight(null)
     clearBatch()
     loadData()
 
@@ -401,7 +213,7 @@ export function TopBar(): React.JSX.Element {
     })
     if (!ok) return
 
-    setActionInFlight('batchDiscard')
+    setBatchActionInFlight('batchDiscard')
     let succeeded = 0
     let failed = 0
 
@@ -414,7 +226,7 @@ export function TopBar(): React.JSX.Element {
       }
     }
 
-    setActionInFlight(null)
+    setBatchActionInFlight(null)
     clearBatch()
     loadData()
 
@@ -446,9 +258,9 @@ export function TopBar(): React.JSX.Element {
               <button
                 className="cr-topbar__btn cr-topbar__btn--primary"
                 onClick={handleBatchMergeAll}
-                disabled={!!actionInFlight}
+                disabled={!!batchActionInFlight}
               >
-                {actionInFlight === 'batchMerge' ? (
+                {batchActionInFlight === 'batchMerge' ? (
                   <Loader2 size={14} className="spin" />
                 ) : (
                   <GitMerge size={14} />
@@ -458,9 +270,9 @@ export function TopBar(): React.JSX.Element {
               <button
                 className="cr-topbar__btn cr-topbar__btn--ship"
                 onClick={handleBatchShipAll}
-                disabled={!!actionInFlight || !ghConfigured}
+                disabled={!!batchActionInFlight || !ghConfigured}
               >
-                {actionInFlight === 'batchShip' ? (
+                {batchActionInFlight === 'batchShip' ? (
                   <Loader2 size={14} className="spin" />
                 ) : (
                   <Rocket size={14} />
@@ -470,9 +282,9 @@ export function TopBar(): React.JSX.Element {
               <button
                 className="cr-topbar__btn cr-topbar__btn--secondary"
                 onClick={handleBatchCreatePr}
-                disabled={!!actionInFlight || !ghConfigured}
+                disabled={!!batchActionInFlight || !ghConfigured}
               >
-                {actionInFlight === 'batchPr' ? (
+                {batchActionInFlight === 'batchPr' ? (
                   <Loader2 size={14} className="spin" />
                 ) : (
                   <GitPullRequest size={14} />
@@ -482,9 +294,9 @@ export function TopBar(): React.JSX.Element {
               <button
                 className="cr-topbar__btn cr-topbar__btn--ghost"
                 onClick={handleBatchDiscard}
-                disabled={!!actionInFlight}
+                disabled={!!batchActionInFlight}
               >
-                {actionInFlight === 'batchDiscard' ? (
+                {batchActionInFlight === 'batchDiscard' ? (
                   <Loader2 size={14} className="spin" />
                 ) : (
                   <Trash2 size={14} />
@@ -494,7 +306,7 @@ export function TopBar(): React.JSX.Element {
               <button
                 className="cr-topbar__btn cr-topbar__btn--ghost"
                 onClick={clearBatch}
-                disabled={!!actionInFlight}
+                disabled={!!batchActionInFlight}
               >
                 <X size={14} /> Clear
               </button>
@@ -513,6 +325,7 @@ export function TopBar(): React.JSX.Element {
             </motion.span>
           )}
         </AnimatePresence>
+        <ConfirmModal {...batchConfirmProps} />
         <ConfirmModal {...confirmProps} />
         <TextareaPromptModal {...promptProps} />
       </div>
@@ -637,7 +450,7 @@ export function TopBar(): React.JSX.Element {
               </span>
               <button
                 className="cr-topbar__btn cr-topbar__btn--ghost"
-                onClick={handleRebase}
+                onClick={rebase}
                 disabled={!!actionInFlight || freshness.status === 'fresh'}
                 title="Rebase agent branch onto current main"
               >
@@ -653,7 +466,7 @@ export function TopBar(): React.JSX.Element {
             <div className="cr-topbar__right">
               <button
                 className="cr-topbar__btn cr-topbar__btn--ship"
-                onClick={handleShipIt}
+                onClick={shipIt}
                 disabled={!!actionInFlight || !ghConfigured}
                 title={!ghConfigured ? 'Configure GitHub in Settings → Connections' : undefined}
               >
@@ -667,7 +480,7 @@ export function TopBar(): React.JSX.Element {
               <div className="cr-topbar__merge-group">
                 <button
                   className="cr-topbar__btn cr-topbar__btn--primary"
-                  onClick={handleMergeLocally}
+                  onClick={mergeLocally}
                   disabled={!!actionInFlight}
                 >
                   {actionInFlight === 'merge' ? (
@@ -692,7 +505,7 @@ export function TopBar(): React.JSX.Element {
               </div>
               <button
                 className="cr-topbar__btn cr-topbar__btn--secondary"
-                onClick={handleCreatePr}
+                onClick={createPr}
                 disabled={!!actionInFlight || !ghConfigured}
                 title={!ghConfigured ? 'Configure GitHub in Settings → Connections' : undefined}
               >

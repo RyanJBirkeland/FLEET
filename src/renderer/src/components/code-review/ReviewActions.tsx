@@ -1,5 +1,4 @@
 import './ReviewActions.css'
-import { useState, useEffect } from 'react'
 import {
   GitMerge,
   GitPullRequest,
@@ -11,61 +10,29 @@ import {
 } from 'lucide-react'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { useSprintTasks } from '../../stores/sprintTasks'
-import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
-import { useTextareaPrompt, TextareaPromptModal } from '../ui/TextareaPromptModal'
-import { toast } from '../../stores/toasts'
-import { useGitHubStatus } from '../../hooks/useGitHubStatus'
-import { nowIso } from '../../../../shared/time'
-
-/**
- * Compute the next review task after the current one.
- * Returns null if there are no more review tasks.
- */
-function getNextReviewTaskId(
-  currentTaskId: string,
-  allTasks: Array<{ id: string; status: string; updated_at: string }>
-): string | null {
-  const reviewTasks = allTasks
-    .filter((t) => t.status === 'review')
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-
-  if (reviewTasks.length === 0) return null
-
-  const currentIndex = reviewTasks.findIndex((t) => t.id === currentTaskId)
-  if (currentIndex === -1) {
-    // Current task not in review list (expected after action) — return first
-    return reviewTasks[0].id
-  }
-
-  // Return next task, or wrap to first if current is last
-  const nextIndex = currentIndex + 1
-  return nextIndex < reviewTasks.length ? reviewTasks[nextIndex].id : reviewTasks[0].id
-}
+import { ConfirmModal } from '../ui/ConfirmModal'
+import { TextareaPromptModal } from '../ui/TextareaPromptModal'
+import { useReviewActions } from '../../hooks/useReviewActions'
 
 export function ReviewActions(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
-  const selectTask = useCodeReviewStore((s) => s.selectTask)
   const tasks = useSprintTasks((s) => s.tasks)
-  const loadData = useSprintTasks((s) => s.loadData)
   const task = tasks.find((t) => t.id === selectedTaskId)
-  const { confirm, confirmProps } = useConfirm()
-  const { prompt, promptProps } = useTextareaPrompt()
-  const { configured: ghConfigured } = useGitHubStatus()
-  const [mergeStrategy, setMergeStrategy] = useState<'squash' | 'merge' | 'rebase'>('squash')
-  const [actionInFlight, setActionInFlight] = useState<string | null>(null)
-  const [freshness, setFreshness] = useState<{
-    status: 'fresh' | 'stale' | 'conflict' | 'unknown' | 'loading'
-    commitsBehind?: number
-  }>({ status: 'loading' })
-
-  useEffect(() => {
-    if (!task || task.status !== 'review') return
-    setFreshness({ status: 'loading' })
-    window.api.review
-      .checkFreshness({ taskId: task.id })
-      .then(setFreshness)
-      .catch(() => setFreshness({ status: 'unknown' }))
-  }, [task?.id, task?.rebased_at])
+  const {
+    actionInFlight,
+    mergeStrategy,
+    setMergeStrategy,
+    freshness,
+    ghConfigured,
+    shipIt,
+    mergeLocally,
+    createPr,
+    requestRevision,
+    rebase,
+    discard,
+    confirmProps,
+    promptProps
+  } = useReviewActions()
 
   if (!task || task.status !== 'review') {
     return (
@@ -75,190 +42,6 @@ export function ReviewActions(): React.JSX.Element {
         <TextareaPromptModal {...promptProps} />
       </div>
     )
-  }
-
-  const handleShipIt = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'Ship It',
-      message: `Merge "${task.title.slice(0, 50)}" into main using ${mergeStrategy}, push to origin, and mark done?\n\nThis will merge + push in one step.`,
-      confirmLabel: 'Ship It',
-      variant: 'default'
-    })
-    if (!ok) return
-    setActionInFlight('shipIt')
-    try {
-      const result = await window.api.review.shipIt({
-        taskId: task.id,
-        strategy: mergeStrategy
-      })
-      if (result.success) {
-        if (result.pushed) {
-          toast.success('Merged & pushed!')
-        } else {
-          // Partial success: merged into local main but push failed. This is
-          // NOT a normal success — usually means local main diverged from
-          // origin or the network/remote hiccupped. Surface as an error with
-          // a long duration so the user doesn't assume origin has their
-          // commit (the 'it seemed to ship' footgun).
-          toast.error(
-            'Merged locally, but push to origin FAILED. Open Source Control to retry the push, or run `git push` manually.',
-            10000
-          )
-        }
-        const nextTaskId = getNextReviewTaskId(task.id, tasks)
-        selectTask(nextTaskId)
-        loadData()
-      } else {
-        toast.error(`Ship It failed: ${result.error || 'unknown error'}`)
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Ship It failed')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleMergeLocally = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'Merge Locally',
-      message: `Merge "${task.title.slice(0, 50)}" into your local main branch using ${mergeStrategy} strategy?`,
-      confirmLabel: 'Merge',
-      variant: 'default'
-    })
-    if (!ok) return
-    setActionInFlight('merge')
-    try {
-      const result = await window.api.review.mergeLocally({
-        taskId: task.id,
-        strategy: mergeStrategy
-      })
-      if (result.success) {
-        toast.success('Changes merged locally')
-        const nextTaskId = getNextReviewTaskId(task.id, tasks)
-        selectTask(nextTaskId)
-        loadData()
-      } else {
-        toast.error(`Merge failed: ${result.error || 'conflicts detected'}`)
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Merge failed')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleCreatePr = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'Create Pull Request',
-      message: `Push agent branch to GitHub and create a public PR for "${task.title.slice(0, 50)}"?\n\nRepo: ${task.repo}\n\nThis action cannot be undone.`,
-      confirmLabel: 'Create PR',
-      variant: 'default'
-    })
-    if (!ok) return
-    setActionInFlight('createPr')
-    try {
-      const result = await window.api.review.createPr({
-        taskId: task.id,
-        title: task.title,
-        body: task.spec || task.prompt || ''
-      })
-      toast.success(`PR created: ${result.prUrl}`)
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create PR')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleRequestRevision = async (): Promise<void> => {
-    const feedback = await prompt({
-      title: 'Request Revision',
-      message: 'What should the agent fix or improve?',
-      placeholder: 'Describe the changes needed...',
-      confirmLabel: 'Re-queue Task'
-    })
-    if (!feedback) return
-    setActionInFlight('revise')
-    try {
-      // Append this revision request to the task's audit trail BEFORE we
-      // re-queue, so it's available the next time the reviewer opens this
-      // task in ConversationTab.
-      const priorEntries = Array.isArray(task.revision_feedback) ? task.revision_feedback : []
-      const attempt = priorEntries.length + 1
-      const nextEntries = [
-        ...priorEntries,
-        {
-          timestamp: nowIso(),
-          feedback,
-          attempt
-        }
-      ]
-      try {
-        await window.api.sprint.update(task.id, { revision_feedback: nextEntries })
-      } catch (err) {
-        // Non-fatal: audit trail is a hint, not a gate. Continue with the
-        // actual revision request — but log so we have visibility when it
-        // happens.
-        console.warn('[review] Failed to persist revision feedback (audit trail only):', err)
-      }
-      await window.api.review.requestRevision({
-        taskId: task.id,
-        feedback,
-        mode: 'fresh'
-      })
-      toast.success('Task re-queued with revision feedback')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to request revision')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleRebase = async (): Promise<void> => {
-    setActionInFlight('rebase')
-    try {
-      const result = await window.api.review.rebase({ taskId: task.id })
-      if (result.success) {
-        toast.success('Rebased onto main')
-        setFreshness({ status: 'fresh', commitsBehind: 0 })
-        loadData()
-      } else {
-        toast.error(`Rebase failed: ${result.error || 'conflicts detected'}`)
-        setFreshness({ status: 'conflict' })
-      }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Rebase failed')
-    } finally {
-      setActionInFlight(null)
-    }
-  }
-
-  const handleDiscard = async (): Promise<void> => {
-    const ok = await confirm({
-      title: 'Discard Changes',
-      message: `Discard all work for "${task.title.slice(0, 50)}"? This cannot be undone.`,
-      confirmLabel: 'Discard',
-      variant: 'danger'
-    })
-    if (!ok) return
-    setActionInFlight('discard')
-    try {
-      await window.api.review.discard({ taskId: task.id })
-      toast.success('Changes discarded')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to discard')
-    } finally {
-      setActionInFlight(null)
-    }
   }
 
   return (
@@ -284,7 +67,7 @@ export function ReviewActions(): React.JSX.Element {
         </span>
         <button
           className="cr-actions__btn cr-actions__btn--ghost"
-          onClick={handleRebase}
+          onClick={rebase}
           disabled={!!actionInFlight || freshness.status === 'fresh'}
           title="Rebase agent branch onto current main"
         >
@@ -300,7 +83,7 @@ export function ReviewActions(): React.JSX.Element {
         <div className="cr-actions__primary">
           <button
             className="cr-actions__btn cr-actions__btn--ship"
-            onClick={handleShipIt}
+            onClick={shipIt}
             disabled={!!actionInFlight || !ghConfigured}
             title={!ghConfigured ? 'Configure GitHub in Settings \u2192 Connections' : undefined}
           >
@@ -314,7 +97,7 @@ export function ReviewActions(): React.JSX.Element {
           <div className="cr-actions__merge-group">
             <button
               className="cr-actions__btn cr-actions__btn--primary"
-              onClick={handleMergeLocally}
+              onClick={mergeLocally}
               disabled={!!actionInFlight}
             >
               {actionInFlight === 'merge' ? (
@@ -337,7 +120,7 @@ export function ReviewActions(): React.JSX.Element {
           </div>
           <button
             className="cr-actions__btn cr-actions__btn--secondary"
-            onClick={handleCreatePr}
+            onClick={createPr}
             disabled={!!actionInFlight || !ghConfigured}
             title={!ghConfigured ? 'Configure GitHub in Settings \u2192 Connections' : undefined}
           >
@@ -352,7 +135,7 @@ export function ReviewActions(): React.JSX.Element {
         <div className="cr-actions__secondary">
           <button
             className="cr-actions__btn cr-actions__btn--ghost"
-            onClick={handleRequestRevision}
+            onClick={requestRevision}
             disabled={!!actionInFlight}
           >
             {actionInFlight === 'revise' ? (
@@ -364,7 +147,7 @@ export function ReviewActions(): React.JSX.Element {
           </button>
           <button
             className="cr-actions__btn cr-actions__btn--danger"
-            onClick={handleDiscard}
+            onClick={discard}
             disabled={!!actionInFlight}
           >
             {actionInFlight === 'discard' ? (
