@@ -59,6 +59,18 @@ export interface RunAgentDeps {
   onSpawnFailure?: () => void
 }
 
+export interface AgentExitContext {
+  task: RunAgentTask
+  agent: ActiveAgent
+  worktree: { worktreePath: string; branch: string }
+  repoPath: string
+  agentRunId: string
+  turnTracker: TurnTracker
+  exitCode: number | undefined
+  lastAgentOutput: string
+  deps: RunAgentDeps
+}
+
 // ---------------------------------------------------------------------------
 // Pure helpers
 // ---------------------------------------------------------------------------
@@ -355,6 +367,180 @@ export async function consumeMessages(
 }
 
 // ---------------------------------------------------------------------------
+// handleAgentExit
+// ---------------------------------------------------------------------------
+
+/**
+ * Handles agent exit lifecycle: event emission, watchdog check, record updates,
+ * exit classification, success/failure resolution, active map cleanup, and worktree cleanup.
+ */
+async function handleAgentExit(ctx: AgentExitContext): Promise<void> {
+  const {
+    task,
+    agent,
+    worktree,
+    repoPath,
+    agentRunId,
+    turnTracker,
+    exitCode,
+    lastAgentOutput,
+    deps
+  } = ctx
+  const { activeAgents, repo, logger, onTaskTerminal } = deps
+
+  // Agent exited
+  const exitedAt = Date.now()
+  const durationMs = exitedAt - agent.startedAt
+
+  // Emit agent:completed event for console display
+  emitAgentEvent(agentRunId, {
+    type: 'agent:completed',
+    exitCode: exitCode ?? 0,
+    costUsd: agent.costUsd,
+    tokensIn: agent.tokensIn,
+    tokensOut: agent.tokensOut,
+    durationMs,
+    timestamp: exitedAt
+  })
+
+  // Check if watchdog already cleaned up this agent
+  if (!activeAgents.has(task.id)) {
+    logger.info(`[agent-manager] Agent ${task.id} already cleaned up by watchdog`)
+    // Capture partial diff before cleanup (watchdog timeout may have left partial work)
+    await capturePartialDiff(task.id, worktree.worktreePath, repo, logger)
+
+    cleanupWorktree({
+      repoPath,
+      worktreePath: worktree.worktreePath,
+      branch: worktree.branch
+    }).catch((cleanupErr: unknown) => {
+      logger.warn(
+        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
+      )
+    })
+    return
+  }
+
+  // NOTE: Do NOT delete from activeAgents until completion handlers finish.
+  // Removing early creates a race where orphan recovery re-queues the task
+  // while resolveSuccess is still running (the task is still 'active' in the DB).
+
+  // Update agent run record with final state
+  updateAgentMeta(agentRunId, {
+    status: exitCode === 0 ? 'done' : 'failed',
+    finishedAt: new Date(exitedAt).toISOString(),
+    exitCode: exitCode ?? null,
+    costUsd: agent.costUsd,
+    tokensIn: agent.tokensIn,
+    tokensOut: agent.tokensOut
+  }).catch((err) =>
+    logger.warn(`[agent-manager] Failed to update agent record for ${agentRunId}: ${err}`)
+  )
+
+  // Persist cost breakdown (cache tokens) — non-fatal if it fails
+  try {
+    const totals = turnTracker.totals()
+    updateAgentRunCost(getDb(), agentRunId, {
+      costUsd: agent.costUsd ?? 0,
+      tokensIn: totals.tokensIn,
+      tokensOut: totals.tokensOut,
+      cacheRead: totals.cacheTokensRead,
+      cacheCreate: totals.cacheTokensCreated,
+      durationMs,
+      numTurns: totals.turnCount
+    })
+  } catch (err) {
+    logger.warn(`[agent-manager] Failed to persist cost breakdown for ${agentRunId}: ${err}`)
+  }
+
+  // Classify exit (default to exit code 1 if not available, assuming failure)
+  const ffResult = classifyExit(agent.startedAt, exitedAt, exitCode ?? 1, task.fast_fail_count ?? 0)
+  const now = nowIso()
+
+  if (ffResult === 'fast-fail-exhausted') {
+    try {
+      repo.updateTask(task.id, {
+        status: 'error',
+        completed_at: now,
+        notes:
+          "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/agent-manager.log for details. To retry: reset task status to 'queued' and clear claimed_by.",
+        claimed_by: null,
+        needs_review: true
+      })
+    } catch (err) {
+      logger.error(
+        `[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`
+      )
+    }
+    await onTaskTerminal(task.id, 'error')
+  } else if (ffResult === 'fast-fail-requeue') {
+    try {
+      repo.updateTask(task.id, {
+        status: 'queued',
+        fast_fail_count: (task.fast_fail_count ?? 0) + 1,
+        claimed_by: null
+      })
+    } catch (err) {
+      logger.error(`[agent-manager] Failed to requeue fast-fail task ${task.id}: ${err}`)
+    }
+  } else {
+    // Normal exit — attempt success resolution
+    try {
+      const ghRepo = getGhRepo(task.repo) ?? task.repo
+
+      await resolveSuccess(
+        {
+          taskId: task.id,
+          worktreePath: worktree.worktreePath,
+          title: task.title,
+          ghRepo,
+          onTaskTerminal,
+          agentSummary: lastAgentOutput || null,
+          retryCount: task.retry_count ?? 0,
+          repo
+        },
+        logger
+      )
+    } catch (err) {
+      logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
+      const isTerminal = resolveFailure(
+        { taskId: task.id, retryCount: task.retry_count ?? 0, repo },
+        logger
+      )
+      if (isTerminal) {
+        await onTaskTerminal(task.id, 'failed')
+      }
+    }
+  }
+
+  // Safe to remove from active map now — completion handler has updated the DB
+  activeAgents.delete(task.id)
+
+  // Cleanup worktree — but skip for review tasks (worktree preserved for code review)
+  const currentTask = repo.getTask(task.id)
+  if (currentTask?.status !== 'review') {
+    // Before cleanup, capture partial diff for failed tasks (salvage partial progress)
+    await capturePartialDiff(task.id, worktree.worktreePath, repo, logger)
+
+    cleanupWorktree({
+      repoPath,
+      worktreePath: worktree.worktreePath,
+      branch: worktree.branch
+    }).catch((cleanupErr: unknown) => {
+      logger.warn(
+        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
+      )
+    })
+  } else {
+    logger.info(
+      `[agent-manager] Preserving worktree for review task ${task.id} at ${worktree.worktreePath}`
+    )
+  }
+
+  logger.info(`[agent-manager] Agent completed for task ${task.id} (${ffResult})`)
+}
+
+// ---------------------------------------------------------------------------
 // runAgent
 // ---------------------------------------------------------------------------
 
@@ -576,154 +762,16 @@ export async function runAgent(
     logger
   )
 
-  // Agent exited
-  const exitedAt = Date.now()
-  const durationMs = exitedAt - agent.startedAt
-
-  // Emit agent:completed event for console display
-  emitAgentEvent(agentRunId, {
-    type: 'agent:completed',
-    exitCode: exitCode ?? 0,
-    costUsd: agent.costUsd,
-    tokensIn: agent.tokensIn,
-    tokensOut: agent.tokensOut,
-    durationMs,
-    timestamp: exitedAt
+  // Handle agent exit lifecycle
+  await handleAgentExit({
+    task,
+    agent,
+    worktree,
+    repoPath,
+    agentRunId,
+    turnTracker,
+    exitCode,
+    lastAgentOutput,
+    deps
   })
-
-  // Check if watchdog already cleaned up this agent
-  if (!activeAgents.has(task.id)) {
-    logger.info(`[agent-manager] Agent ${task.id} already cleaned up by watchdog`)
-    // Capture partial diff before cleanup (watchdog timeout may have left partial work)
-    await capturePartialDiff(task.id, worktree.worktreePath, repo, logger)
-
-    cleanupWorktree({
-      repoPath,
-      worktreePath: worktree.worktreePath,
-      branch: worktree.branch
-    }).catch((cleanupErr: unknown) => {
-      logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
-      )
-    })
-    return
-  }
-
-  // NOTE: Do NOT delete from activeAgents until completion handlers finish.
-  // Removing early creates a race where orphan recovery re-queues the task
-  // while resolveSuccess is still running (the task is still 'active' in the DB).
-
-  // Update agent run record with final state
-  updateAgentMeta(agentRunId, {
-    status: exitCode === 0 ? 'done' : 'failed',
-    finishedAt: new Date(exitedAt).toISOString(),
-    exitCode: exitCode ?? null,
-    costUsd: agent.costUsd,
-    tokensIn: agent.tokensIn,
-    tokensOut: agent.tokensOut
-  }).catch((err) =>
-    logger.warn(`[agent-manager] Failed to update agent record for ${agentRunId}: ${err}`)
-  )
-
-  // Persist cost breakdown (cache tokens) — non-fatal if it fails
-  try {
-    const totals = turnTracker.totals()
-    updateAgentRunCost(getDb(), agentRunId, {
-      costUsd: agent.costUsd ?? 0,
-      tokensIn: totals.tokensIn,
-      tokensOut: totals.tokensOut,
-      cacheRead: totals.cacheTokensRead,
-      cacheCreate: totals.cacheTokensCreated,
-      durationMs,
-      numTurns: totals.turnCount
-    })
-  } catch (err) {
-    logger.warn(`[agent-manager] Failed to persist cost breakdown for ${agentRunId}: ${err}`)
-  }
-
-  // Classify exit (default to exit code 1 if not available, assuming failure)
-  const ffResult = classifyExit(agent.startedAt, exitedAt, exitCode ?? 1, task.fast_fail_count ?? 0)
-  const now = nowIso()
-
-  if (ffResult === 'fast-fail-exhausted') {
-    try {
-      repo.updateTask(task.id, {
-        status: 'error',
-        completed_at: now,
-        notes:
-          "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/agent-manager.log for details. To retry: reset task status to 'queued' and clear claimed_by.",
-        claimed_by: null,
-        needs_review: true
-      })
-    } catch (err) {
-      logger.error(
-        `[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`
-      )
-    }
-    await onTaskTerminal(task.id, 'error')
-  } else if (ffResult === 'fast-fail-requeue') {
-    try {
-      repo.updateTask(task.id, {
-        status: 'queued',
-        fast_fail_count: (task.fast_fail_count ?? 0) + 1,
-        claimed_by: null
-      })
-    } catch (err) {
-      logger.error(`[agent-manager] Failed to requeue fast-fail task ${task.id}: ${err}`)
-    }
-  } else {
-    // Normal exit — attempt success resolution
-    try {
-      const ghRepo = getGhRepo(task.repo) ?? task.repo
-
-      await resolveSuccess(
-        {
-          taskId: task.id,
-          worktreePath: worktree.worktreePath,
-          title: task.title,
-          ghRepo,
-          onTaskTerminal,
-          agentSummary: lastAgentOutput || null,
-          retryCount: task.retry_count ?? 0,
-          repo
-        },
-        logger
-      )
-    } catch (err) {
-      logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
-      const isTerminal = resolveFailure(
-        { taskId: task.id, retryCount: task.retry_count ?? 0, repo },
-        logger
-      )
-      if (isTerminal) {
-        await onTaskTerminal(task.id, 'failed')
-      }
-    }
-  }
-
-  // Safe to remove from active map now — completion handler has updated the DB
-  activeAgents.delete(task.id)
-
-  // Cleanup worktree — but skip for review tasks (worktree preserved for code review)
-  const currentTask = repo.getTask(task.id)
-  if (currentTask?.status !== 'review') {
-    // Before cleanup, capture partial diff for failed tasks (salvage partial progress)
-    await capturePartialDiff(task.id, worktree.worktreePath, repo, logger)
-
-    cleanupWorktree({
-      repoPath,
-      worktreePath: worktree.worktreePath,
-      branch: worktree.branch
-    }).catch((cleanupErr: unknown) => {
-      logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
-      )
-    })
-  } else {
-    logger.info(
-      `[agent-manager] Preserving worktree for review task ${task.id} at ${worktree.worktreePath}`
-    )
-  }
-
-  logger.info(`[agent-manager] Agent completed for task ${task.id} (${ffResult})`)
 }
