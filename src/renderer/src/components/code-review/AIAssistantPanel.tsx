@@ -1,6 +1,6 @@
 import './AIAssistantPanel.css'
 import { useState, useRef, useEffect } from 'react'
-import { Sparkles, Send, MoreVertical } from 'lucide-react'
+import { Sparkles, Send, MoreVertical, ChevronLeft } from 'lucide-react'
 import { EmptyState } from '../ui/EmptyState'
 import { useCodeReviewStore } from '../../stores/codeReview'
 
@@ -9,6 +9,7 @@ export function AIAssistantPanel(): React.JSX.Element {
   const [showHistory, setShowHistory] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
   const [inputValue, setInputValue] = useState('')
+  const [isExpanded, setIsExpanded] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
 
@@ -50,10 +51,21 @@ export function AIAssistantPanel(): React.JSX.Element {
     setMenuOpen(false)
   }
 
-  const rootClass = showHistory ? 'cr-assistant cr-assistant--show-history' : 'cr-assistant'
+  let rootClass = 'cr-assistant'
+  if (showHistory) rootClass += ' cr-assistant--show-history'
+  if (isExpanded) rootClass += ' cr-assistant--expanded'
 
   return (
-    <aside className={rootClass} aria-label="AI Assistant">
+    <aside className={rootClass} aria-label="AI Assistant" aria-expanded={isExpanded}>
+      {!isExpanded && (
+        <button
+          className="cr-assistant__expand-btn"
+          onClick={() => setIsExpanded(true)}
+          aria-label="Expand AI Assistant"
+        >
+          <ChevronLeft size={16} />
+        </button>
+      )}
       <header className="cr-assistant__header">
         <Sparkles size={12} className="cr-assistant__icon" />
         <span className="cr-assistant__title">AI Assistant</span>
@@ -89,6 +101,13 @@ export function AIAssistantPanel(): React.JSX.Element {
                 className="cr-assistant__menu-item"
               >
                 New thread
+              </button>
+              <button
+                role="menuitem"
+                onClick={() => setIsExpanded(false)}
+                className="cr-assistant__menu-item"
+              >
+                Collapse panel
               </button>
             </div>
           )}

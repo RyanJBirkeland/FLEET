@@ -6,6 +6,55 @@
   flex-direction: column;
   border-right: 1px solid var(--bde-border);
   background: var(--bde-surface);
+  position: relative;
+}
+
+.cr-filetree__expand-btn {
+  position: absolute;
+  top: var(--bde-space-2);
+  left: var(--bde-space-2);
+  width: 32px;
+  height: 32px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--bde-accent);
+  border: none;
+  border-radius: var(--bde-radius-md);
+  color: var(--bde-btn-primary-text);
+  cursor: pointer;
+  z-index: 10;
+  transition: background 120ms ease;
+}
+
+.cr-filetree__expand-btn:hover {
+  background: var(--bde-accent-hover);
+}
+
+.cr-filetree__collapse-btn {
+  background: transparent;
+  border: none;
+  color: var(--bde-text-muted);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 var(--bde-space-2);
+  transition: color 120ms ease;
+}
+
+.cr-filetree__collapse-btn:hover {
+  color: var(--bde-text);
+}
+
+@media (max-width: 860px) {
+  .cr-filetree:not(.cr-filetree--expanded) .cr-filetree__expand-btn {
+    display: flex;
+  }
+
+  .cr-filetree:not(.cr-filetree--expanded) .cr-filetree__header,
+  .cr-filetree:not(.cr-filetree--expanded) .cr-filetree__list {
+    display: none;
+  }
 }
 
 .cr-filetree__header {

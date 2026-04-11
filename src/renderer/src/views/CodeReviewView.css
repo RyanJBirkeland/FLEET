@@ -5,6 +5,7 @@
   flex-direction: column;
   width: 100%;
   height: 100%;
+  min-width: 620px;
   min-height: 0;
   overflow: hidden;
   background: var(--bde-bg);
@@ -15,6 +16,7 @@
   flex: 1 1 auto;
   display: flex;
   min-height: 0;
+  position: relative;
 }
 
 .cr-filetree {
@@ -25,6 +27,7 @@
   overflow: hidden;
   background: var(--bde-surface);
   border-right: 1px solid var(--bde-border);
+  transition: width 180ms var(--bde-transition-base);
 }
 
 .cr-diffviewer {
@@ -40,4 +43,35 @@
   flex-shrink: 0;
   background: var(--bde-surface);
   border-left: 1px solid var(--bde-border);
+  transition: width 180ms var(--bde-transition-base);
+}
+
+@media (max-width: 1120px) {
+  .cr-assistant {
+    width: 40px;
+  }
+
+  .cr-assistant--expanded {
+    position: absolute;
+    right: 0;
+    top: 44px;
+    bottom: 0;
+    width: 384px;
+    box-shadow: var(--bde-shadow-lg);
+  }
+}
+
+@media (max-width: 860px) {
+  .cr-filetree {
+    width: 40px;
+  }
+
+  .cr-filetree--expanded {
+    position: absolute;
+    left: 0;
+    top: 44px;
+    bottom: 0;
+    width: 256px;
+    box-shadow: var(--bde-shadow-lg);
+  }
 }

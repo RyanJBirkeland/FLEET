@@ -95,4 +95,108 @@ describe('TopBar', () => {
     render(<TopBar />)
     expect(screen.getByText(/Select a task in review to see actions/i)).toBeInTheDocument()
   })
+
+  it('should show batch mode when tasks are selected', () => {
+    useSprintTasks.setState({
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          status: 'review',
+          repo: 'bde',
+          spec: 'Test spec',
+          spec_type: 'spec',
+          updated_at: '2026-04-11T00:00:00Z',
+          priority: 1,
+          needs_review: true,
+          playground_enabled: false,
+          prompt: null,
+          notes: null,
+          retry_count: 0,
+          fast_fail_count: 0,
+          agent_run_id: null,
+          pr_number: null,
+          pr_status: null,
+          pr_url: null,
+          claimed_by: null,
+          started_at: null,
+          completed_at: null,
+          template_name: null,
+          depends_on: null
+        } as SprintTask,
+        {
+          id: 'task-2',
+          title: 'Task 2',
+          status: 'review',
+          repo: 'bde',
+          spec: 'Test spec',
+          spec_type: 'spec',
+          updated_at: '2026-04-11T00:00:00Z',
+          priority: 1,
+          needs_review: true,
+          playground_enabled: false,
+          prompt: null,
+          notes: null,
+          retry_count: 0,
+          fast_fail_count: 0,
+          agent_run_id: null,
+          pr_number: null,
+          pr_status: null,
+          pr_url: null,
+          claimed_by: null,
+          started_at: null,
+          completed_at: null,
+          template_name: null,
+          depends_on: null
+        } as SprintTask
+      ]
+    })
+    const batchIds = new Set(['task-1', 'task-2'])
+    useCodeReviewStore.setState({ selectedBatchIds: batchIds })
+    render(<TopBar />)
+    expect(screen.getByText('2 tasks selected')).toBeInTheDocument()
+    expect(screen.getByText('Merge All')).toBeInTheDocument()
+    expect(screen.getByText('Ship All')).toBeInTheDocument()
+    expect(screen.getByText('Create PRs')).toBeInTheDocument()
+    expect(screen.getByText('Clear')).toBeInTheDocument()
+  })
+
+  it('should clear batch selection when Clear is clicked', async () => {
+    const user = userEvent.setup()
+    useSprintTasks.setState({
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Task 1',
+          status: 'review',
+          repo: 'bde',
+          spec: 'Test spec',
+          spec_type: 'spec',
+          updated_at: '2026-04-11T00:00:00Z',
+          priority: 1,
+          needs_review: true,
+          playground_enabled: false,
+          prompt: null,
+          notes: null,
+          retry_count: 0,
+          fast_fail_count: 0,
+          agent_run_id: null,
+          pr_number: null,
+          pr_status: null,
+          pr_url: null,
+          claimed_by: null,
+          started_at: null,
+          completed_at: null,
+          template_name: null,
+          depends_on: null
+        } as SprintTask
+      ]
+    })
+    const batchIds = new Set(['task-1'])
+    useCodeReviewStore.setState({ selectedBatchIds: batchIds })
+    render(<TopBar />)
+    const clearBtn = screen.getByText('Clear')
+    await user.click(clearBtn)
+    expect(useCodeReviewStore.getState().selectedBatchIds.size).toBe(0)
+  })
 })

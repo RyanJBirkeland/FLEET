@@ -245,3 +245,27 @@
 .cr-topbar__kebab-item--danger:hover:not(:disabled) {
   background: color-mix(in srgb, var(--bde-diff-del) 10%, var(--bde-hover));
 }
+
+.cr-topbar__content {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-3);
+  width: 100%;
+}
+
+.cr-topbar__batch {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  width: 100%;
+  padding: var(--bde-space-2) 0;
+  background: var(--bde-accent-surface);
+  border-bottom: 1px solid var(--bde-accent);
+}
+
+.cr-topbar__batch-count {
+  font-size: var(--bde-size-sm);
+  font-weight: 600;
+  color: var(--bde-accent);
+  font-family: var(--bde-font-code);
+}

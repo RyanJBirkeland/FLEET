@@ -5,7 +5,6 @@ import { TopBar } from '../components/code-review/TopBar'
 import { FileTreePanel } from '../components/code-review/FileTreePanel'
 import { DiffViewerPanel } from '../components/code-review/DiffViewerPanel'
 import { AIAssistantPanel } from '../components/code-review/AIAssistantPanel'
-import { BatchActions } from '../components/code-review/BatchActions'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 import { useCodeReviewStore } from '../stores/codeReview'
 import { useSprintTasks } from '../stores/sprintTasks'
@@ -114,15 +113,12 @@ export default function CodeReviewView(): React.JSX.Element {
     >
       <TopBar />
       <div className="cr-panels">
-        <div className="cr-filetree">
-          <FileTreePanel />
-        </div>
+        <FileTreePanel />
         <div className="cr-diffviewer">
           <DiffViewerPanel />
         </div>
         <AIAssistantPanel />
       </div>
-      <BatchActions />
     </motion.div>
   )
 }
