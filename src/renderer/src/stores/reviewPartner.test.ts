@@ -172,10 +172,36 @@ describe('useReviewPartnerStore', () => {
       expect(msgs[1]?.content).toContain('rate limit')
       expect(msgs[1]?.streaming).toBeFalsy()
     })
+
+    it('ignores chunks with mismatched streamId', async () => {
+      const chunkListeners: Array<(e: unknown, c: ChatChunk) => void> = []
+      mockApi({
+        review: {
+          autoReview: vi.fn(),
+          chatStream: vi.fn().mockResolvedValue({ streamId: 's-A' }),
+          onChatChunk: vi.fn((cb: any) => {
+            chunkListeners.push(cb)
+            return () => {}
+          }),
+          abortChat: vi.fn().mockResolvedValue(undefined),
+        },
+      })
+      await useReviewPartnerStore.getState().sendMessage('task-1', 'Hi')
+      // Chunk from a different stream — should be dropped
+      chunkListeners[0]?.({}, { streamId: 's-OTHER', chunk: 'contamination' })
+      // Chunk from the correct stream — should be applied
+      chunkListeners[0]?.({}, { streamId: 's-A', chunk: 'real ' })
+      chunkListeners[0]?.({}, { streamId: 's-A', done: true, fullText: 'real answer' })
+
+      const msgs = useReviewPartnerStore.getState().messagesByTask['task-1'] ?? []
+      expect(msgs[1]?.content).toBe('real answer')
+      expect(msgs[1]?.content).not.toContain('contamination')
+    })
   })
 
   describe('clearMessages', () => {
-    it('removes all messages for a task', () => {
+    it('removes all messages for a task and persists the clear', () => {
+      const setItem = vi.spyOn(globalThis.localStorage, 'setItem')
       useReviewPartnerStore.setState({
         messagesByTask: {
           'task-1': [{ id: '1', role: 'user', content: 'x', timestamp: 0 }],
@@ -183,6 +209,12 @@ describe('useReviewPartnerStore', () => {
       })
       useReviewPartnerStore.getState().clearMessages('task-1')
       expect(useReviewPartnerStore.getState().messagesByTask['task-1']).toEqual([])
+      // Verify localStorage was touched with the cleared state
+      const calls = setItem.mock.calls.filter(
+        ([key]) => key === 'bde:review-partner-messages'
+      )
+      expect(calls.length).toBeGreaterThan(0)
+      setItem.mockRestore()
     })
   })
 })

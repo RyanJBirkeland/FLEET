@@ -172,7 +172,7 @@ export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
       let streamId: string | null = null
 
       unsubscribe = window.api.review.onChatChunk((_e: unknown, chunk: ChatChunk) => {
-        if (streamId && chunk.streamId !== streamId) return
+        if (!streamId || chunk.streamId !== streamId) return
         set((s) => {
           const msgs = [...(s.messagesByTask[taskId] ?? [])]
           const last = msgs[msgs.length - 1]
@@ -232,7 +232,6 @@ export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
   async abortStream(taskId) {
     const streamId = get().activeStreamByTask[taskId]
     if (!streamId) return
-    await window.api.review.abortChat(streamId)
     set((s) => {
       const msgs = [...(s.messagesByTask[taskId] ?? [])]
       const last = msgs[msgs.length - 1]
@@ -244,6 +243,7 @@ export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
         activeStreamByTask: { ...s.activeStreamByTask, [taskId]: null },
       }
     })
+    await window.api.review.abortChat(streamId)
   },
 
   clearMessages(taskId) {
