@@ -219,6 +219,33 @@ describe('sprintUI store', () => {
     expect(useSprintUI.getState().tagFilter).toBeNull()
   })
 
+  // --- clearAllFilters ---
+
+  it('clearAllFilters resets every filter to its default', () => {
+    useSprintUI.getState().setStatusFilter('in-progress')
+    useSprintUI.getState().setRepoFilter('bde')
+    useSprintUI.getState().setTagFilter('urgent')
+    useSprintUI.getState().setSearchQuery('hello')
+
+    useSprintUI.getState().clearAllFilters()
+
+    const state = useSprintUI.getState()
+    expect(state.statusFilter).toBe('all')
+    expect(state.repoFilter).toBeNull()
+    expect(state.tagFilter).toBeNull()
+    expect(state.searchQuery).toBe('')
+  })
+
+  it('clearAllFilters is a no-op when no filters are set', () => {
+    useSprintUI.getState().clearAllFilters()
+
+    const state = useSprintUI.getState()
+    expect(state.statusFilter).toBe('all')
+    expect(state.repoFilter).toBeNull()
+    expect(state.tagFilter).toBeNull()
+    expect(state.searchQuery).toBe('')
+  })
+
   // --- addGeneratingId / removeGeneratingId ---
 
   it('addGeneratingId adds an id', () => {
