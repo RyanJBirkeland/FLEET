@@ -88,6 +88,8 @@ function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
 }
 
+const chunkUnsubscribeByTask = new Map<string, () => void>()
+
 const initial = loadMessages()
 
 export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
@@ -201,10 +203,12 @@ export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
           if (chunk.done || chunk.error) {
             activeStreamByTask = { ...s.activeStreamByTask, [taskId]: null }
             unsubscribe?.()
+            chunkUnsubscribeByTask.delete(taskId)
           }
           return { messagesByTask: nextMsgs, activeStreamByTask }
         })
       })
+      chunkUnsubscribeByTask.set(taskId, () => unsubscribe?.())
 
       const messages = (get().messagesByTask[taskId] ?? []).slice(0, -1) // exclude the empty streaming msg
       const { streamId: sid } = await window.api.review.chatStream({ taskId, messages })
@@ -243,6 +247,11 @@ export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
         activeStreamByTask: { ...s.activeStreamByTask, [taskId]: null },
       }
     })
+    const unsub = chunkUnsubscribeByTask.get(taskId)
+    if (unsub) {
+      unsub()
+      chunkUnsubscribeByTask.delete(taskId)
+    }
     await window.api.review.abortChat(streamId)
   },
 

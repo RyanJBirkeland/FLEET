@@ -1,8 +1,7 @@
 import './AIAssistantPanel.css'
 import { Sparkles, X, MoreHorizontal } from 'lucide-react'
-import { useState, type JSX } from 'react'
+import { useState, useEffect, useRef, type JSX } from 'react'
 import { useCodeReviewStore } from '../../stores/codeReview'
-import { useSprintTasks } from '../../stores/sprintTasks'
 import { useReviewPartnerStore } from '../../stores/reviewPartner'
 import { ReviewMetricsRow } from './ReviewMetricsRow'
 import { ReviewMessageList } from './ReviewMessageList'
@@ -11,8 +10,6 @@ import { ReviewChatInput } from './ReviewChatInput'
 
 export function AIAssistantPanel(): JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
-  // tasks available for future use (e.g. branch info display)
-  useSprintTasks((s) => s.tasks)
 
   const reviewState = useReviewPartnerStore((s) =>
     selectedTaskId ? s.reviewByTask[selectedTaskId] : undefined
@@ -30,7 +27,26 @@ export function AIAssistantPanel(): JSX.Element {
   const autoReview = useReviewPartnerStore((s) => s.autoReview)
 
   const [menuOpen, setMenuOpen] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
   const streaming = !!activeStream
+
+  useEffect(() => {
+    if (!menuOpen) return
+    function onClick(e: MouseEvent): void {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false)
+      }
+    }
+    function onKey(e: KeyboardEvent): void {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    document.addEventListener('mousedown', onClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [menuOpen])
 
   const result = reviewState?.result
   const loading = reviewState?.status === 'loading'
@@ -46,7 +62,7 @@ export function AIAssistantPanel(): JSX.Element {
             <div className="cr-assistant__title-model">Claude 4.6 Opus</div>
           </div>
         </div>
-        <div className="cr-assistant__header-actions">
+        <div className="cr-assistant__header-actions" ref={menuRef}>
           <button
             type="button"
             className="cr-assistant__menu-trigger"

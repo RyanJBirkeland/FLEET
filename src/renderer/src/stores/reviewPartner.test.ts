@@ -199,6 +199,25 @@ describe('useReviewPartnerStore', () => {
     })
   })
 
+  describe('abortStream', () => {
+    it('invokes the onChatChunk unsubscribe to prevent listener leak', async () => {
+      const unsubscribe = vi.fn()
+      mockApi({
+        review: {
+          autoReview: vi.fn(),
+          chatStream: vi.fn().mockResolvedValue({ streamId: 's-A' }),
+          onChatChunk: vi.fn(() => unsubscribe),
+          abortChat: vi.fn().mockResolvedValue(undefined),
+        },
+      })
+      await useReviewPartnerStore.getState().sendMessage('task-1', 'Hi')
+      // Seed activeStreamByTask so abortStream sees an active stream
+      useReviewPartnerStore.setState({ activeStreamByTask: { 'task-1': 's-A' } })
+      await useReviewPartnerStore.getState().abortStream('task-1')
+      expect(unsubscribe).toHaveBeenCalled()
+    })
+  })
+
   describe('clearMessages', () => {
     it('removes all messages for a task and persists the clear', () => {
       const setItem = vi.spyOn(globalThis.localStorage, 'setItem')
