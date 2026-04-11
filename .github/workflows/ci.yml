@@ -18,5 +18,17 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm run test:coverage
-      - run: npm run test:main
+
+      # Heavy test suites run on PRs only. Pushes to `main` are already verified
+      # locally by the pre-push hook (`npm run typecheck && npm test && npm run
+      # test:main`), so CI's role on push is a lightweight safety net for the
+      # bypassed-hook case. This cuts per-push CI time from ~5min to ~90s and
+      # keeps GitHub Actions minutes under the Pro tier's 3000/month budget.
+      #
+      # Job name stays `check` so the existing branch protection rule is unaffected.
+      - name: Renderer tests with coverage (PR only)
+        if: github.event_name == 'pull_request'
+        run: npm run test:coverage
+      - name: Main process tests (PR only)
+        if: github.event_name == 'pull_request'
+        run: npm run test:main
