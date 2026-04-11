@@ -93,19 +93,15 @@ export function useReviewActions(): UseReviewActionsResult {
         strategy: mergeStrategy
       })
       if (result.success) {
-        if (result.pushed) {
-          toast.success('Merged & pushed!')
-        } else {
-          toast.error(
-            'Merged locally, but push to origin FAILED. Open Source Control to retry the push, or run `git push` manually.',
-            10000
-          )
-        }
+        // After the push-failure fix, shipIt never returns {success:true, pushed:false}.
+        // A successful result means merged AND pushed — anything else returns
+        // success:false with the task still in review for retry.
+        toast.success('Merged & pushed!')
         const nextTaskId = getNextReviewTaskId(task.id, tasks)
         selectTask(nextTaskId)
         loadData()
       } else {
-        toast.error(`Ship It failed: ${result.error || 'unknown error'}`)
+        toast.error(`Ship It failed: ${result.error || 'unknown error'}`, 10000)
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Ship It failed')

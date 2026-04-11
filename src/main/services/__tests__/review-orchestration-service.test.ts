@@ -392,6 +392,65 @@ describe('review-orchestration-service', () => {
       expect(mockOnStatusTerminal).not.toHaveBeenCalled()
     })
 
+    it('should NOT mark task done or clean up worktree when git push fails', async () => {
+      // Regression: bug where push failure left the squash commit stranded on
+      // local main while the handler still cleaned up the worktree, deleted
+      // the local branch, and transitioned the task to done — so the UI had
+      // no path to retry. Push failure must leave state intact for retry.
+      const mockTask = {
+        id: 'task-push-fail',
+        repo: 'bde',
+        title: 'Push fails',
+        worktree_path: '/worktree/task-push-fail'
+      }
+      vi.mocked(sprintService.getTask).mockReturnValue(mockTask as any)
+      vi.mocked(gitOps.rebaseOntoMain).mockResolvedValue({ success: true, notes: '' })
+      vi.mocked(reviewMerge.executeMergeStrategy).mockResolvedValue({ success: true })
+      vi.mocked(reviewMerge.cleanupWorktree).mockResolvedValue()
+      vi.mocked(postMergeDedup.runPostMergeDedup).mockResolvedValue(null)
+
+      // Mock git calls: succeed on everything EXCEPT `git push`
+      getCustomMock().mockImplementation(async (
+        _cmd: string,
+        args: readonly string[],
+        opts: any
+      ) => {
+        if (args[0] === 'push') {
+          throw new Error('remote: rejected — pre-push hook failed')
+        }
+        if (opts.cwd === '/worktree/task-push-fail' && args.includes('--abbrev-ref')) {
+          return { stdout: 'agent/push-fail-branch\n', stderr: '' }
+        } else if (opts.cwd === '/repo/bde' && args.includes('--porcelain')) {
+          return { stdout: '', stderr: '' } // clean
+        } else if (opts.cwd === '/repo/bde' && args.includes('--abbrev-ref')) {
+          return { stdout: 'main\n', stderr: '' } // on main
+        } else {
+          return { stdout: '', stderr: '' }
+        }
+      })
+
+      const result = await orchestration.shipIt({
+        taskId: 'task-push-fail',
+        strategy: 'squash',
+        env: mockEnv,
+        onStatusTerminal: mockOnStatusTerminal
+      })
+
+      // Must surface the failure as a real error, not {success: true, pushed: false}
+      expect(result.success).toBe(false)
+      expect(result.error).toContain('Push failed')
+
+      // Worktree must be preserved so the user can retry
+      expect(reviewMerge.cleanupWorktree).not.toHaveBeenCalled()
+
+      // Task must NOT transition to done — stays in review for retry
+      expect(sprintService.updateTask).not.toHaveBeenCalledWith(
+        'task-push-fail',
+        expect.objectContaining({ status: 'done' })
+      )
+      expect(mockOnStatusTerminal).not.toHaveBeenCalled()
+    })
+
     it('should return error if working tree is dirty', async () => {
       const mockTask = {
         id: 'task8',

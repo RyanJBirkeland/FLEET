@@ -181,7 +181,12 @@ export interface ReviewChannels {
   }
   'review:shipIt': {
     args: [payload: { taskId: string; strategy: 'squash' | 'merge' | 'rebase' }]
-    result: { success: boolean; pushed?: boolean; error?: string }
+    // Discriminated: success implies pushed (merged + pushed + worktree cleaned
+    // + task done). Failure leaves state intact for retry — the squash commit,
+    // the worktree, and `status='review'` all remain.
+    result:
+      | { success: true; pushed: true }
+      | { success: false; error: string; conflicts?: string[] }
   }
   'review:generateSummary': {
     args: [payload: { taskId: string }]

@@ -70,12 +70,19 @@ export interface DiscardResult {
   success: boolean
 }
 
-export interface ShipItResult {
-  success: boolean
-  pushed?: boolean
-  error?: string
-  conflicts?: string[]
-}
+/**
+ * Ship It can only end in two ways:
+ * - `{ success: true, pushed: true }` — merged, pushed, worktree cleaned,
+ *   task marked done. `pushed: false` is impossible by construction: if the
+ *   push fails, the whole operation returns `{ success: false, error }`
+ *   with the squash commit still on local main, worktree preserved, and
+ *   task still in review for retry.
+ * - `{ success: false, error, conflicts? }` — any failure in fetch/FF/
+ *   rebase/merge/push. Task state is left unchanged.
+ */
+export type ShipItResult =
+  | { success: true; pushed: true }
+  | { success: false; error: string; conflicts?: string[] }
 
 export interface RebaseResult {
   success: boolean
@@ -435,7 +442,11 @@ export async function shipIt(input: ShipItInput): Promise<ShipItResult> {
     env
   )
   if (!mergeResult.success) {
-    return { success: false, error: mergeResult.error, conflicts: mergeResult.conflicts }
+    return {
+      success: false,
+      error: mergeResult.error ?? 'Unknown merge error',
+      conflicts: mergeResult.conflicts
+    }
   }
 
   // Post-merge CSS dedup
@@ -450,16 +461,23 @@ export async function shipIt(input: ShipItInput): Promise<ShipItResult> {
     logger.warn(`[shipIt] Post-merge dedup failed (non-fatal): ${err}`)
   }
 
-  // Push
-  let pushed = false
+  // Push — on failure, bail out leaving the squash commit on local main,
+  // the worktree on disk, and the task in `review` so the user can retry.
+  // Previously this was logged as a warning and the handler still cleaned up
+  // + marked done, stranding the commit with no UI retry path.
   try {
     await execFileAsync('git', ['push', 'origin', 'HEAD'], { cwd: repoPath, env })
-    pushed = true
+    logger.info(`[shipIt] Push succeeded for task ${taskId}`)
   } catch (pushErr) {
-    logger.warn(`[shipIt] Push failed for task ${taskId}: ${pushErr}`)
+    const errMsg = getErrorMessage(pushErr)
+    logger.error(`[shipIt] Push failed for task ${taskId}: ${errMsg}`)
+    return {
+      success: false,
+      error: `Push failed: ${errMsg}. The squash commit is on local main but hasn't reached origin. The worktree is preserved and the task remains in review so you can retry.`
+    }
   }
 
-  // Clean up worktree + branch
+  // Clean up worktree + branch (only reached on successful push)
   await cleanupWorktree(task.worktree_path, branch, repoPath, env)
 
   // Mark task done
@@ -471,7 +489,7 @@ export async function shipIt(input: ShipItInput): Promise<ShipItResult> {
   if (updated) notifySprintMutation('updated', updated)
   onStatusTerminal(taskId, 'done')
 
-  return { success: true, pushed }
+  return { success: true, pushed: true }
 }
 
 /**

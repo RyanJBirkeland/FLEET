@@ -1,1 +1,22 @@
+#!/bin/sh
+# Skip full verification on delete-only pushes.
+#
+# Git's pre-push hook receives one line per ref on stdin:
+#   <local ref> <local sha> <remote ref> <remote sha>
+# For a delete push, <local sha> is 40 zeros. If every ref being pushed
+# is a delete, there's no new code to verify — skip the ~60s test suite.
+has_non_delete=""
+zero_sha="0000000000000000000000000000000000000000"
+while read -r local_ref local_sha remote_ref remote_sha; do
+  if [ -z "$local_ref" ] && [ -z "$local_sha" ]; then continue; fi
+  if [ "$local_sha" != "$zero_sha" ]; then
+    has_non_delete=1
+  fi
+done
+
+if [ -z "$has_non_delete" ]; then
+  echo "pre-push: delete-only push, skipping verification"
+  exit 0
+fi
+
 npm run typecheck && npm test && npm run test:main
