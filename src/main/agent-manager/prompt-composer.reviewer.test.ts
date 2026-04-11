@@ -1,0 +1,99 @@
+import { describe, it, expect } from 'vitest'
+import { buildAgentPrompt } from './prompt-composer'
+import type { ReviewResult } from '../../shared/review-types'
+
+const reviewSeed: ReviewResult = {
+  qualityScore: 92,
+  issuesCount: 3,
+  filesCount: 8,
+  openingMessage: 'Overall solid. A few items to address.',
+  findings: { perFile: [] },
+  model: 'claude-opus-4-6',
+  createdAt: 0,
+}
+
+describe('buildAgentPrompt — reviewer', () => {
+  describe('review mode (JSON output, no tools)', () => {
+    it('contains the JSON schema instructions', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'reviewer',
+        reviewerMode: 'review',
+        taskContent: '# Spec\nImprove auth flow.',
+        diff: 'diff --git a/file.ts b/file.ts\n+ new line',
+        branch: 'feat/auth',
+      })
+      expect(prompt).toContain('qualityScore')
+      expect(prompt).toContain('perFile')
+      expect(prompt).toContain('openingMessage')
+      expect(prompt).toContain('"security" | "performance" | "correctness" | "style"')
+    })
+
+    it('includes the task spec content', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'reviewer',
+        reviewerMode: 'review',
+        taskContent: '# Spec\nImprove auth flow.',
+        diff: '+ newline',
+        branch: 'feat/auth',
+      })
+      expect(prompt).toContain('Improve auth flow.')
+    })
+
+    it('includes the diff', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'reviewer',
+        reviewerMode: 'review',
+        taskContent: '# Spec',
+        diff: 'UNIQUE_DIFF_MARKER_ABC123',
+        branch: 'feat/x',
+      })
+      expect(prompt).toContain('UNIQUE_DIFF_MARKER_ABC123')
+    })
+  })
+
+  describe('chat mode (tools enabled, conversation history)', () => {
+    it('includes the prior auto-review seed context', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'reviewer',
+        reviewerMode: 'chat',
+        taskContent: '# Spec',
+        diff: '+ change',
+        branch: 'feat/x',
+        messages: [{ role: 'user', content: 'What are the risks?' }],
+        reviewSeed,
+      })
+      expect(prompt).toContain('Overall solid. A few items to address.')
+      expect(prompt).toContain('92')
+    })
+
+    it('includes the conversation history', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'reviewer',
+        reviewerMode: 'chat',
+        taskContent: '# Spec',
+        diff: '+ change',
+        branch: 'feat/x',
+        messages: [
+          { role: 'user', content: 'UNIQUE_USER_MARKER_42' },
+          { role: 'assistant', content: 'UNIQUE_ASSISTANT_MARKER_43' },
+        ],
+        reviewSeed,
+      })
+      expect(prompt).toContain('UNIQUE_USER_MARKER_42')
+      expect(prompt).toContain('UNIQUE_ASSISTANT_MARKER_43')
+    })
+
+    it('does NOT include the JSON schema instructions', () => {
+      const prompt = buildAgentPrompt({
+        agentType: 'reviewer',
+        reviewerMode: 'chat',
+        taskContent: '# Spec',
+        diff: '+ change',
+        branch: 'feat/x',
+        messages: [{ role: 'user', content: 'Hi' }],
+        reviewSeed,
+      })
+      expect(prompt).not.toContain('Respond with ONLY a valid JSON object')
+    })
+  })
+})

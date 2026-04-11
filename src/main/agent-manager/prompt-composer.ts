@@ -16,7 +16,13 @@ import { getUserMemory } from '../agent-system/memory/user-memory'
 import { getAllSkills } from '../agent-system/skills'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
 
-export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer'
+export type AgentType =
+  | 'pipeline'
+  | 'assistant'
+  | 'adhoc'
+  | 'copilot'
+  | 'synthesizer'
+  | 'reviewer'
 
 export interface BuildPromptInput {
   agentType: AgentType
@@ -35,6 +41,10 @@ export interface BuildPromptInput {
   repoName?: string | null // target repo name (used to scope BDE-specific memory injection)
   taskId?: string // pipeline only — used to build scratchpad path
   priorScratchpad?: string // content of progress.md from prior attempt (empty string if none)
+  // Reviewer-only fields
+  reviewerMode?: 'review' | 'chat'
+  diff?: string
+  reviewSeed?: import('../../shared/review-types').ReviewResult
 }
 
 // ---------------------------------------------------------------------------
@@ -612,6 +622,96 @@ function buildSynthesizerPrompt(input: BuildPromptInput): string {
 }
 
 // ---------------------------------------------------------------------------
+// Reviewer Prompt Builders
+// ---------------------------------------------------------------------------
+
+function buildReviewerPrompt(input: BuildPromptInput): string {
+  if (input.reviewerMode === 'chat') return buildReviewerChatPrompt(input)
+  return buildReviewerReviewPrompt(input)
+}
+
+function buildReviewerReviewPrompt(input: BuildPromptInput): string {
+  const { taskContent = '', diff = '', branch = '' } = input
+
+  return `${SPEC_DRAFTING_PREAMBLE}
+
+## Role
+You are the BDE Code Review Partner running a one-shot structured review pass. You do NOT write code. You analyze a git diff and emit a single JSON object describing what you see.
+
+## Task Context
+Branch: ${branch}
+
+${taskContent}
+
+## Diff
+\`\`\`diff
+${diff}
+\`\`\`
+
+## Output Format
+Respond with ONLY a valid JSON object matching this schema — no markdown fences, no prose outside the JSON, no commentary:
+\`\`\`
+{
+  "qualityScore": <integer 0-100>,
+  "openingMessage": "<2-4 sentence summary, written as if speaking to the reviewer>",
+  "perFile": [
+    {
+      "path": "<file path as shown in the diff>",
+      "status": "clean" | "issues",
+      "comments": [
+        {
+          "line": <right-side line number>,
+          "severity": "high" | "medium" | "low",
+          "category": "security" | "performance" | "correctness" | "style",
+          "message": "<single-sentence finding>"
+        }
+      ]
+    }
+  ]
+}
+\`\`\`
+
+Be rigorous: flag real issues, skip stylistic nitpicks unless they rise to "medium" severity. A clean file should have an empty "comments" array. Quality score should reflect the whole diff, not just issues — a clean 2-line change is a 98, not a 92.`
+}
+
+function buildReviewerChatPrompt(input: BuildPromptInput): string {
+  const { taskContent = '', diff = '', branch = '', messages = [], reviewSeed } = input
+
+  const seedBlock = reviewSeed
+    ? `## Prior Review Summary
+Quality Score: ${reviewSeed.qualityScore}/100
+Opening: ${reviewSeed.openingMessage}
+`
+    : ''
+
+  const history = messages
+    .map((m) => `**${m.role}:** ${m.content}`)
+    .join('\n\n')
+
+  return `${SPEC_DRAFTING_PREAMBLE}
+
+## Role
+You are the BDE Code Review Partner answering follow-up questions about a branch that is under review. You have Read, Grep, and Glob access to the working tree — use them to inspect files when the diff alone is insufficient. You do NOT write or modify code.
+
+Cite specific file paths and line numbers where possible. Be concrete and brief.
+
+## Task Context
+Branch: ${branch}
+
+${taskContent}
+
+${seedBlock}
+
+## Diff
+\`\`\`diff
+${diff}
+\`\`\`
+
+## Conversation
+${history}`
+}
+
+// ---------------------------------------------------------------------------
 // Main Prompt Builder (Dispatcher)
 // ---------------------------------------------------------------------------
 
@@ -626,5 +726,7 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
       return buildCopilotPrompt(input)
     case 'synthesizer':
       return buildSynthesizerPrompt(input)
+    case 'reviewer':
+      return buildReviewerPrompt(input)
   }
 }
