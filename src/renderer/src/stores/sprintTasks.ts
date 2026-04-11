@@ -36,7 +36,6 @@ interface SprintTasksState {
   activeTaskCount: number
   loading: boolean
   loadError: string | null
-  prMergedMap: Record<string, boolean>
 
   // --- Optimistic update protection ---
   pendingUpdates: Record<string, { ts: number; fields: string[] }> // taskId → {timestamp, field names}
@@ -49,7 +48,6 @@ interface SprintTasksState {
   createTask: (data: CreateTicketInput) => Promise<string | null>
   launchTask: (task: SprintTask) => Promise<void>
   mergeSseUpdate: (update: { taskId: string; [key: string]: unknown }) => void
-  setPrMergedMap: (updater: (prev: Record<string, boolean>) => Record<string, boolean>) => void
   setTasks: (tasks: SprintTask[]) => void
   batchDeleteTasks: (taskIds: string[]) => Promise<void>
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
@@ -64,7 +62,6 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   activeTaskCount: 0,
   loading: true,
   loadError: null,
-  prMergedMap: {},
   pendingUpdates: {},
   pendingCreates: [],
 
@@ -399,10 +396,6 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       })
       return { tasks: nextTasks, activeTaskCount: countActive(nextTasks) }
     })
-  },
-
-  setPrMergedMap: (updater): void => {
-    set((s) => ({ prMergedMap: updater(s.prMergedMap) }))
   },
 
   setTasks: (tasks): void =>

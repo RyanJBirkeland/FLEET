@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { useNotificationsStore, type NotificationType } from '../stores/notifications'
 import { usePanelLayoutStore } from '../stores/panelLayout'
+import { usePrConflictsStore } from '../stores/prConflicts'
 import { TASK_STATUS } from '../../../shared/constants'
 import type { SprintTask } from '../../../shared/types'
 
@@ -71,9 +72,9 @@ function shouldDeliverNotification(
 
 export function useDesktopNotifications(): void {
   const tasks = useSprintTasks((s) => s.tasks)
-  const prMergedMap = useSprintTasks((s) => s.prMergedMap)
   const addNotification = useNotificationsStore((s) => s.addNotification)
   const setView = usePanelLayoutStore((s) => s.setView)
+  const prMergedMap = usePrConflictsStore((s) => s.prMergedMap)
 
   const prevTasksRef = useRef<Map<string, SprintTask>>(new Map())
   const prevPrMergedRef = useRef<Record<string, boolean>>({})

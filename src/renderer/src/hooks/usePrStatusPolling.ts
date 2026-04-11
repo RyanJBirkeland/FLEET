@@ -14,9 +14,9 @@ import type { SprintTask } from '../../../shared/types'
 
 export function usePrStatusPolling(): void {
   const tasks = useSprintTasks((s) => s.tasks)
-  const prMergedMap = useSprintTasks((s) => s.prMergedMap)
   const updateTask = useSprintTasks((s) => s.updateTask)
-  const setPrMergedMap = useSprintTasks((s) => s.setPrMergedMap)
+  const prMergedMap = usePrConflictsStore((s) => s.prMergedMap)
+  const setPrMergedMap = usePrConflictsStore((s) => s.setPrMergedMap)
 
   const prMergedRef = useRef(prMergedMap)
   // eslint-disable-next-line react-hooks/refs -- sync ref for async callback

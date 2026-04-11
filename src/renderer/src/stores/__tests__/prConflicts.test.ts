@@ -2,7 +2,8 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { usePrConflictsStore } from '../prConflicts'
 
 const initialState = {
-  conflictingTaskIds: [] as string[]
+  conflictingTaskIds: [] as string[],
+  prMergedMap: {} as Record<string, boolean>
 }
 
 describe('prConflicts store', () => {
@@ -60,5 +61,34 @@ describe('prConflicts store', () => {
     const arrRef = usePrConflictsStore.getState().conflictingTaskIds
     usePrConflictsStore.getState().setConflicts(['task-1', 'task-2'])
     expect(usePrConflictsStore.getState().conflictingTaskIds).not.toBe(arrRef)
+  })
+
+  describe('prMergedMap', () => {
+    it('starts with empty prMergedMap', () => {
+      const map = usePrConflictsStore.getState().prMergedMap
+      expect(Object.keys(map).length).toBe(0)
+      expect(typeof map).toBe('object')
+    })
+
+    it('setPrMergedMap updates via updater function', () => {
+      usePrConflictsStore.setState({ prMergedMap: {} })
+      usePrConflictsStore.getState().setPrMergedMap((prev) => ({ ...prev, 'pr-1': true }))
+      expect(usePrConflictsStore.getState().prMergedMap).toEqual({ 'pr-1': true })
+    })
+
+    it('setPrMergedMap can update multiple entries', () => {
+      usePrConflictsStore.getState().setPrMergedMap(() => ({ 'pr-1': true, 'pr-2': false }))
+      const map = usePrConflictsStore.getState().prMergedMap
+      expect(map['pr-1']).toBe(true)
+      expect(map['pr-2']).toBe(false)
+    })
+
+    it('setPrMergedMap preserves existing entries when adding new ones', () => {
+      usePrConflictsStore.getState().setPrMergedMap(() => ({ 'pr-1': true }))
+      usePrConflictsStore.getState().setPrMergedMap((prev) => ({ ...prev, 'pr-2': true }))
+      const map = usePrConflictsStore.getState().prMergedMap
+      expect(map['pr-1']).toBe(true)
+      expect(map['pr-2']).toBe(true)
+    })
   })
 })

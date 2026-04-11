@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useDesktopNotifications } from '../useDesktopNotifications'
 import { useSprintTasks } from '../../stores/sprintTasks'
+import { usePrConflictsStore } from '../../stores/prConflicts'
 import { useNotificationsStore } from '../../stores/notifications'
 import { TASK_STATUS, PR_STATUS } from '../../../../shared/constants'
 import type { SprintTask } from '../../../../shared/types'
@@ -28,7 +29,8 @@ Object.defineProperty(document, 'hasFocus', {
 
 describe('useDesktopNotifications', () => {
   beforeEach(() => {
-    useSprintTasks.setState({ tasks: [], prMergedMap: {} })
+    useSprintTasks.setState({ tasks: [] })
+    usePrConflictsStore.setState({ prMergedMap: {}, conflictingTaskIds: [] })
     useNotificationsStore.setState({ notifications: [] })
     mockHasFocus.mockReturnValue(false) // Default: window not focused
     vi.clearAllMocks()
@@ -214,11 +216,11 @@ describe('useDesktopNotifications', () => {
       created_at: nowIso()
     }
 
-    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    useSprintTasks.setState({ tasks: [task] })
     rerender()
 
     // PR gets merged
-    useSprintTasks.setState({
+    usePrConflictsStore.setState({
       prMergedMap: { 'task-3': true }
     })
     rerender()
@@ -342,11 +344,11 @@ describe('useDesktopNotifications', () => {
       created_at: nowIso()
     }
 
-    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    useSprintTasks.setState({ tasks: [task] })
     const { rerender } = renderHook(() => useDesktopNotifications())
 
     // Set merged to false — should NOT fire
-    useSprintTasks.setState({ prMergedMap: { 'task-notmerged': false } })
+    usePrConflictsStore.setState({ prMergedMap: { 'task-notmerged': false } })
     rerender()
 
     const notifications = useNotificationsStore.getState().notifications
@@ -354,11 +356,11 @@ describe('useDesktopNotifications', () => {
   })
 
   it('does not fire merged notification when task is not found in tasks array', () => {
-    useSprintTasks.setState({ tasks: [], prMergedMap: {} })
+    useSprintTasks.setState({ tasks: [] })
     const { rerender } = renderHook(() => useDesktopNotifications())
 
     // A merged ID with no corresponding task
-    useSprintTasks.setState({ prMergedMap: { 'nonexistent-task': true } })
+    usePrConflictsStore.setState({ prMergedMap: { 'nonexistent-task': true } })
     rerender()
 
     const notifications = useNotificationsStore.getState().notifications
@@ -391,10 +393,10 @@ describe('useDesktopNotifications', () => {
       created_at: nowIso()
     }
 
-    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    useSprintTasks.setState({ tasks: [task] })
     const { rerender } = renderHook(() => useDesktopNotifications())
 
-    useSprintTasks.setState({ prMergedMap: { 'task-no-pr-num': true } })
+    usePrConflictsStore.setState({ prMergedMap: { 'task-no-pr-num': true } })
     rerender()
 
     const notifications = useNotificationsStore.getState().notifications
@@ -607,13 +609,14 @@ describe('useDesktopNotifications', () => {
       created_at: nowIso()
     }
 
-    useSprintTasks.setState({ tasks: [task], prMergedMap: {} })
+    useSprintTasks.setState({ tasks: [task] })
+    usePrConflictsStore.setState({ prMergedMap: {} })
     rerender()
 
     constructorSpy.mockClear()
 
     // PR gets merged
-    useSprintTasks.setState({
+    usePrConflictsStore.setState({
       prMergedMap: { 'task-merged': true }
     })
     rerender()

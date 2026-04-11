@@ -15,7 +15,6 @@ let currentPrMergedMap: Record<string, boolean> = {}
 
 // Mock the sprintTasks store
 const mockUpdateTask = vi.fn().mockResolvedValue(undefined)
-const mockSetPrMergedMap = vi.fn()
 
 vi.mock('../../stores/sprintTasks', () => {
   const store = vi.fn((sel: (s: unknown) => unknown) =>
@@ -23,34 +22,41 @@ vi.mock('../../stores/sprintTasks', () => {
       get tasks() {
         return currentTasks
       },
-      get prMergedMap() {
-        return currentPrMergedMap
-      },
-      updateTask: mockUpdateTask,
-      setPrMergedMap: mockSetPrMergedMap
+      updateTask: mockUpdateTask
     })
   )
   ;(store as any).getState = () => ({
     get tasks() {
       return currentTasks
     },
-    get prMergedMap() {
-      return currentPrMergedMap
-    },
-    updateTask: mockUpdateTask,
-    setPrMergedMap: mockSetPrMergedMap
+    updateTask: mockUpdateTask
   })
   return { useSprintTasks: store }
 })
 
 // Mock the prConflicts store
 const mockSetConflicts = vi.fn()
+const mockSetPrMergedMap = vi.fn()
 
 vi.mock('../../stores/prConflicts', () => {
   const store = vi.fn((sel: (s: unknown) => unknown) =>
-    sel({ conflictingTaskIds: [], setConflicts: mockSetConflicts })
+    sel({
+      conflictingTaskIds: [],
+      get prMergedMap() {
+        return currentPrMergedMap
+      },
+      setConflicts: mockSetConflicts,
+      setPrMergedMap: mockSetPrMergedMap
+    })
   )
-  ;(store as any).getState = () => ({ conflictingTaskIds: [], setConflicts: mockSetConflicts })
+  ;(store as any).getState = () => ({
+    conflictingTaskIds: [],
+    get prMergedMap() {
+      return currentPrMergedMap
+    },
+    setConflicts: mockSetConflicts,
+    setPrMergedMap: mockSetPrMergedMap
+  })
   return { usePrConflictsStore: store }
 })
 

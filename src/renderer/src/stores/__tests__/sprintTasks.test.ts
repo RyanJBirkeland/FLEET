@@ -679,13 +679,6 @@ describe('sprintTasks store', () => {
     })
   })
 
-  describe('setPrMergedMap', () => {
-    it('updates prMergedMap via updater function', () => {
-      useSprintTasks.setState({ prMergedMap: {} })
-      useSprintTasks.getState().setPrMergedMap((prev) => ({ ...prev, 'pr-1': true }))
-      expect(useSprintTasks.getState().prMergedMap).toEqual({ 'pr-1': true })
-    })
-  })
 
   describe('setTasks', () => {
     it('sets tasks and sanitizes depends_on', () => {

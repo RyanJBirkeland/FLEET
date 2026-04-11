@@ -9,7 +9,6 @@ const initialState = {
   tasks: [],
   loading: true,
   loadError: null,
-  prMergedMap: {},
   pendingUpdates: {},
   pendingCreates: []
 }
