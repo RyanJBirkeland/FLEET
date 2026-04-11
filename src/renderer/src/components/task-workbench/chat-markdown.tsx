@@ -3,8 +3,8 @@
  * Handles code blocks, inline code, and plain text.
  * Detects `tickets-json` fenced blocks and renders TicketEditor inline.
  */
-import { TicketEditor } from '../components/sprint/TicketEditor'
-import type { TicketDraft } from '../components/sprint/TicketEditor'
+import { TicketEditor } from '../sprint/TicketEditor'
+import type { TicketDraft } from '../sprint/TicketEditor'
 
 /** Render markdown-ish content: code blocks, inline code, line breaks */
 export function renderContent(text: string): React.JSX.Element {

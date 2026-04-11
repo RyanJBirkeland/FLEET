@@ -4,7 +4,7 @@ import { useSprintUI } from '../stores/sprintUI'
 import { useKeybindingsStore } from '../stores/keybindings'
 import { usePanelLayoutStore, findLeaf } from '../stores/panelLayout'
 import { useAgentHistoryStore } from '../stores/agentHistory'
-import { openSettings } from '../lib/settings-nav'
+import { openSettings } from '../components/settings/settings-nav'
 
 interface UseAppShortcutsParams {
   paletteOpen: boolean

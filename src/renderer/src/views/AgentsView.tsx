@@ -15,7 +15,7 @@ import { FleetGlance } from '../components/agents/FleetGlance'
 import { toast } from '../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
-import { buildLocalAgentMessage } from '../lib/attachments'
+import { buildLocalAgentMessage } from '../adapters/attachments'
 import type { Attachment } from '../../../shared/types'
 
 export function AgentsView(): React.JSX.Element {

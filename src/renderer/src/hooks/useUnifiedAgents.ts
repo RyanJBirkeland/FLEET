@@ -14,7 +14,7 @@ import type {
   UnifiedAgentSource,
   UnifiedAgentStatus
 } from '../../../shared/types'
-import { buildUnifiedAgentList } from '../lib/agentNormalizers'
+import { buildUnifiedAgentList } from '../adapters/agent-normalizers'
 
 export type { UnifiedAgent, LocalAgent, HistoryAgent, UnifiedAgentSource, UnifiedAgentStatus }
 

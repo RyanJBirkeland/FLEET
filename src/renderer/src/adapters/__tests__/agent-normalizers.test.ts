@@ -5,7 +5,7 @@ import {
   truncateTask,
   safeTimestamp,
   buildUnifiedAgentList
-} from '../agentNormalizers'
+} from '../agent-normalizers'
 import type { AgentMeta } from '../../../../shared/types'
 import type { LocalAgentProcess } from '../../stores/localAgents'
 

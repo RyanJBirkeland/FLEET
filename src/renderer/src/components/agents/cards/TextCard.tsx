@@ -1,5 +1,5 @@
 import './ConsoleCard.css'
-import { renderAgentMarkdown } from '../../../lib/render-agent-markdown'
+import { renderAgentMarkdown } from '../render-agent-markdown'
 
 interface TextCardProps {
   text: string

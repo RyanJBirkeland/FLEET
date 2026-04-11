@@ -1,20 +1,20 @@
 import { describe, it, expect, vi } from 'vitest'
 
-vi.mock('../../stores/panelLayout', () => ({
+vi.mock('../../../stores/panelLayout', () => ({
   usePanelLayoutStore: {
     getState: vi.fn().mockReturnValue({ setView: vi.fn() })
   }
 }))
 
-vi.mock('../../stores/settingsNav', () => ({
+vi.mock('../../../stores/settingsNav', () => ({
   useSettingsNavStore: {
     getState: vi.fn().mockReturnValue({ setActiveSection: vi.fn() })
   }
 }))
 
 import { openSettings } from '../settings-nav'
-import { usePanelLayoutStore } from '../../stores/panelLayout'
-import { useSettingsNavStore } from '../../stores/settingsNav'
+import { usePanelLayoutStore } from '../../../stores/panelLayout'
+import { useSettingsNavStore } from '../../../stores/settingsNav'
 
 describe('openSettings', () => {
   it('navigates to settings view', () => {

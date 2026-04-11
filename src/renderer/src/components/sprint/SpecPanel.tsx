@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { toast } from '../../stores/toasts'
-import { renderAgentMarkdown } from '../../lib/render-agent-markdown'
+import { renderAgentMarkdown } from '../agents/render-agent-markdown'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 
 export interface SpecPanelProps {

@@ -1,5 +1,5 @@
-import { usePanelLayoutStore } from '../stores/panelLayout'
-import { useSettingsNavStore, type SettingsSectionId } from '../stores/settingsNav'
+import { usePanelLayoutStore } from '../../stores/panelLayout'
+import { useSettingsNavStore, type SettingsSectionId } from '../../stores/settingsNav'
 
 /**
  * Opens the Settings view and optionally navigates to a specific section.
