@@ -16,7 +16,6 @@ import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcu
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { useVisibleStuckTasks } from '../../stores/healthCheck'
 import { useFilteredTasks } from '../../hooks/useFilteredTasks'
-import { partitionSprintTasks } from '../../lib/partitionSprintTasks'
 import { Button } from '../ui/Button'
 import { toast } from '../../stores/toasts'
 import { PipelineBacklog } from './PipelineBacklog'
@@ -32,7 +31,7 @@ import { BulkActionBar } from './BulkActionBar'
 import { NeonCard } from '../neon'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import type { SprintTask } from '../../../../shared/types'
-import { useCommandPaletteStore, type Command } from '../../stores/commandPalette'
+import { useSprintPipelineCommands } from '../../hooks/useSprintPipelineCommands'
 
 import './SprintPipeline.css'
 
@@ -117,126 +116,17 @@ export function SprintPipeline(): React.JSX.Element {
   // --- Focus management ---
   const triggerRef = useRef<HTMLElement | null>(null)
 
+  // Cross-domain store actions (not getState() calls)
+  const selectCodeReviewTask = useCodeReviewStore((s) => s.selectTask)
+  const loadTaskInWorkbench = useTaskWorkbenchStore((s) => s.loadTask)
+
   // Register sprint commands in command palette
-  const registerCommands = useCommandPaletteStore((s) => s.registerCommands)
-  const unregisterCommands = useCommandPaletteStore((s) => s.unregisterCommands)
-
-  useEffect(() => {
-    const taskCommands: Command[] = [
-      {
-        id: 'task-create',
-        label: 'Create New Task',
-        category: 'task',
-        keywords: ['create', 'new', 'task', 'workbench'],
-        action: openWorkbench
-      },
-      {
-        id: 'task-stop-active',
-        label: 'Stop Active Task',
-        category: 'task',
-        keywords: ['stop', 'cancel', 'active'],
-        action: () => {
-          const currentTasks = useSprintTasks.getState().tasks
-          const currentPartition = partitionSprintTasks(currentTasks)
-          const activeTask = currentPartition.inProgress[0]
-          if (activeTask) {
-            handleStop(activeTask)
-          } else {
-            toast.error('No active task to stop')
-          }
-        }
-      },
-      {
-        id: 'task-retry-failed',
-        label: 'Retry First Failed Task',
-        category: 'task',
-        keywords: ['retry', 'failed', 'error'],
-        action: () => {
-          const currentTasks = useSprintTasks.getState().tasks
-          const currentPartition = partitionSprintTasks(currentTasks)
-          const failedTask = currentPartition.failed[0]
-          if (failedTask) {
-            handleRetry(failedTask)
-          } else {
-            toast.error('No failed tasks to retry')
-          }
-        }
-      }
-    ]
-
-    const filterCommands: Command[] = [
-      {
-        id: 'filter-all',
-        label: 'Show All Tasks',
-        category: 'filter',
-        keywords: ['filter', 'all', 'show'],
-        action: () => setStatusFilter('all')
-      },
-      {
-        id: 'filter-backlog',
-        label: 'Filter: Backlog',
-        category: 'filter',
-        keywords: ['filter', 'backlog'],
-        action: () => setStatusFilter('backlog')
-      },
-      {
-        id: 'filter-todo',
-        label: 'Filter: To Do',
-        category: 'filter',
-        keywords: ['filter', 'todo', 'queued'],
-        action: () => setStatusFilter('todo')
-      },
-      {
-        id: 'filter-blocked',
-        label: 'Filter: Blocked',
-        category: 'filter',
-        keywords: ['filter', 'blocked'],
-        action: () => setStatusFilter('blocked')
-      },
-      {
-        id: 'filter-active',
-        label: 'Filter: In Progress',
-        category: 'filter',
-        keywords: ['filter', 'active', 'progress'],
-        action: () => setStatusFilter('in-progress')
-      },
-      {
-        id: 'filter-review',
-        label: 'Filter: Awaiting Review',
-        category: 'filter',
-        keywords: ['filter', 'review', 'pr'],
-        action: () => setStatusFilter('awaiting-review')
-      },
-      {
-        id: 'filter-done',
-        label: 'Filter: Done',
-        category: 'filter',
-        keywords: ['filter', 'done', 'complete'],
-        action: () => setStatusFilter('done')
-      },
-      {
-        id: 'filter-failed',
-        label: 'Filter: Failed',
-        category: 'filter',
-        keywords: ['filter', 'failed', 'error'],
-        action: () => setStatusFilter('failed')
-      }
-    ]
-
-    const commands = [...taskCommands, ...filterCommands]
-    registerCommands(commands)
-
-    return () => {
-      unregisterCommands(commands.map((c) => c.id))
-    }
-  }, [
+  useSprintPipelineCommands({
     openWorkbench,
     handleStop,
     handleRetry,
-    setStatusFilter,
-    registerCommands,
-    unregisterCommands
-  ])
+    setStatusFilter
+  })
 
   // --- Local UI state ---
   const [dagOpen, setDagOpen] = useState(false)
@@ -350,10 +240,10 @@ export function SprintPipeline(): React.JSX.Element {
 
   const handleReviewChanges = useCallback(
     (task: SprintTask) => {
-      useCodeReviewStore.getState().selectTask(task.id)
+      selectCodeReviewTask(task.id)
       setView('code-review')
     },
-    [setView]
+    [selectCodeReviewTask, setView]
   )
 
   const handleClearFailures = useCallback(() => {
@@ -547,7 +437,7 @@ export function SprintPipeline(): React.JSX.Element {
               onViewLogs={() => setView('agents')}
               onOpenSpec={() => setSpecPanelOpen(true)}
               onEdit={() => {
-                useTaskWorkbenchStore.getState().loadTask(selectedTask)
+                loadTaskInWorkbench(selectedTask)
                 setView('task-workbench')
               }}
               onViewAgents={() => setView('agents')}
