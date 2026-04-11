@@ -2,7 +2,6 @@ import './ChangesTab.css'
 import { useEffect, useState, useMemo } from 'react'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { useSprintTasks } from '../../stores/sprintTasks'
-import { Plus, Minus, Edit2 } from 'lucide-react'
 import { parseDiff } from '../../lib/diff-parser'
 import { DiffViewer } from '../diff/DiffViewer'
 import { EmptyState } from '../ui/EmptyState'
@@ -23,9 +22,10 @@ export function ChangesTab(): React.JSX.Element {
   const setDiffFiles = useCodeReviewStore((s) => s.setDiffFiles)
   const setLoading = useCodeReviewStore((s) => s.setLoading)
   const loading = useCodeReviewStore((s) => s.loading)
+  const selectedDiffFile = useCodeReviewStore((s) => s.selectedDiffFile)
+  const setSelectedDiffFile = useCodeReviewStore((s) => s.setSelectedDiffFile)
   const tasks = useSprintTasks((s) => s.tasks)
 
-  const [selectedFile, setSelectedFile] = useState<string | null>(null)
   const [fileDiff, setFileDiff] = useState<string>('')
 
   const task = tasks.find((t) => t.id === selectedTaskId)
@@ -48,7 +48,7 @@ export function ChangesTab(): React.JSX.Element {
         patch: f.patch ?? ''
       }))
     )
-    setSelectedFile(snap.files[0].path)
+    setSelectedDiffFile(snap.files[0].path)
     setFileDiff(snap.files[0].patch ?? '')
   }
 
@@ -78,7 +78,7 @@ export function ChangesTab(): React.JSX.Element {
         })
         if (cancelled) return
         setDiffFiles(result.files)
-        if (result.files.length > 0) setSelectedFile(result.files[0].path)
+        if (result.files.length > 0) setSelectedDiffFile(result.files[0].path)
       } catch {
         if (cancelled) return
         if (snapshot && snapshot.files.length > 0) {
@@ -102,15 +102,15 @@ export function ChangesTab(): React.JSX.Element {
     let cancelled = false
     const load = async (): Promise<void> => {
       if (usingSnapshot) {
-        const file = snapshot?.files.find((f) => f.path === selectedFile)
+        const file = snapshot?.files.find((f) => f.path === selectedDiffFile)
         if (!cancelled) setFileDiff(file?.patch ?? '')
         return
       }
-      if (!task?.worktree_path || !selectedFile) return
+      if (!task?.worktree_path || !selectedDiffFile) return
       try {
         const result = await window.api.review.getFileDiff({
           worktreePath: task.worktree_path,
-          filePath: selectedFile,
+          filePath: selectedDiffFile,
           base: 'origin/main'
         })
         if (!cancelled) setFileDiff(result.diff)
@@ -122,7 +122,7 @@ export function ChangesTab(): React.JSX.Element {
     return () => {
       cancelled = true
     }
-  }, [task?.worktree_path, selectedFile, usingSnapshot, snapshot])
+  }, [task?.worktree_path, selectedDiffFile, usingSnapshot, snapshot])
 
   // Parse the raw diff text into structured format for DiffViewer
   // Must be called before early returns (React Hooks rule)
@@ -134,11 +134,6 @@ export function ChangesTab(): React.JSX.Element {
   if (loading.diff) {
     return (
       <div className="cr-changes">
-        <div className="cr-changes__files cr-changes__files--loading">
-          <div className="bde-skeleton" style={{ height: 28 }} />
-          <div className="bde-skeleton" style={{ height: 28 }} />
-          <div className="bde-skeleton" style={{ height: 28 }} />
-        </div>
         <div className="cr-changes__diff cr-changes__diff--loading">
           <div className="bde-skeleton" style={{ height: 200 }} />
         </div>
@@ -154,13 +149,6 @@ export function ChangesTab(): React.JSX.Element {
     )
   }
 
-  const statusIcon = (status: string): React.JSX.Element => {
-    if (status === 'A' || status === 'added') return <Plus size={12} className="cr-file-added" />
-    if (status === 'D' || status === 'deleted')
-      return <Minus size={12} className="cr-file-deleted" />
-    return <Edit2 size={12} className="cr-file-modified" />
-  }
-
   return (
     <div className="cr-changes" data-testid="cr-changes">
       {usingSnapshot && (
@@ -173,21 +161,6 @@ export function ChangesTab(): React.JSX.Element {
           {snapshot?.truncated ? ' (file stats only — diff was too large to preserve)' : ''}
         </div>
       )}
-      <div className="cr-changes__files">
-        {diffFiles.map((file) => (
-          <button
-            key={file.path}
-            className={`cr-changes__file${file.path === selectedFile ? ' cr-changes__file--selected' : ''}`}
-            onClick={() => setSelectedFile(file.path)}
-          >
-            {statusIcon(file.status)}
-            <span className="cr-changes__file-path">{file.path}</span>
-            <span className="cr-changes__file-stats">
-              +{file.additions} -{file.deletions}
-            </span>
-          </button>
-        ))}
-      </div>
       <div className="cr-changes__diff">
         {fileDiff ? (
           <DiffViewer files={parsedDiff} />

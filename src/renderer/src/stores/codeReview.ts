@@ -27,6 +27,7 @@ interface CodeReviewState {
   selectedBatchIds: Set<string>
   reviewSummary: string | null
   summaryLoading: boolean
+  selectedDiffFile: string | null
 
   selectTask: (taskId: string | null) => void
   setActiveTab: (tab: ReviewTab) => void
@@ -39,6 +40,7 @@ interface CodeReviewState {
   clearBatch: () => void
   setReviewSummary: (summary: string | null) => void
   setSummaryLoading: (loading: boolean) => void
+  setSelectedDiffFile: (path: string | null) => void
   reset: () => void
 }
 
@@ -51,7 +53,8 @@ const initialState = {
   error: null as string | null,
   selectedBatchIds: new Set<string>(),
   reviewSummary: null as string | null,
-  summaryLoading: false
+  summaryLoading: false,
+  selectedDiffFile: null as string | null
 }
 
 export const useCodeReviewStore = create<CodeReviewState>((set) => ({
@@ -63,10 +66,11 @@ export const useCodeReviewStore = create<CodeReviewState>((set) => ({
       commits: [],
       error: null,
       reviewSummary: null,
-      summaryLoading: false
+      summaryLoading: false,
+      selectedDiffFile: null
     }),
   setActiveTab: (tab): void => set({ activeTab: tab }),
-  setDiffFiles: (files): void => set({ diffFiles: files }),
+  setDiffFiles: (files): void => set({ diffFiles: files, selectedDiffFile: null }),
   setCommits: (commits): void => set({ commits }),
   setLoading: (key, loading): void => set((s) => ({ loading: { ...s.loading, [key]: loading } })),
   setError: (error): void => set({ error }),
@@ -81,5 +85,6 @@ export const useCodeReviewStore = create<CodeReviewState>((set) => ({
   clearBatch: (): void => set({ selectedBatchIds: new Set() }),
   setReviewSummary: (summary): void => set({ reviewSummary: summary }),
   setSummaryLoading: (loading): void => set({ summaryLoading: loading }),
+  setSelectedDiffFile: (path): void => set({ selectedDiffFile: path }),
   reset: (): void => set(initialState)
 }))

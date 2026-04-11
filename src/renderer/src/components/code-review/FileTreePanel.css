@@ -1,0 +1,105 @@
+/* FileTreePanel — extracted file list sidebar for Code Review */
+
+.cr-filetree {
+  width: 256px;
+  display: flex;
+  flex-direction: column;
+  border-right: 1px solid var(--bde-border);
+  background: var(--bde-surface);
+}
+
+.cr-filetree__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--bde-space-3) var(--bde-space-4);
+  border-bottom: 1px solid var(--bde-border);
+  background: var(--bde-surface-raised);
+}
+
+.cr-filetree__label {
+  font-size: var(--bde-size-sm);
+  font-weight: 600;
+  color: var(--bde-text);
+}
+
+.cr-filetree__count {
+  font-size: var(--bde-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--bde-text-dim);
+}
+
+.cr-filetree__list {
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+}
+
+.cr-filetree__row {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  width: 100%;
+  height: 28px;
+  padding: 0 var(--bde-space-4);
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--bde-border);
+  color: var(--bde-text-muted);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-code);
+  cursor: pointer;
+  text-align: left;
+}
+
+.cr-filetree__row:hover {
+  background: var(--bde-hover);
+}
+
+.cr-filetree__row:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: -2px;
+}
+
+.cr-filetree__row--selected {
+  background: var(--bde-selected);
+  border-left: 2px solid var(--bde-accent);
+  padding-left: calc(var(--bde-space-4) - 2px);
+  color: var(--bde-text);
+}
+
+.cr-filetree__filename {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--bde-size-sm);
+}
+
+.cr-filetree__stats {
+  font-size: var(--bde-size-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--bde-text-dim);
+  flex-shrink: 0;
+}
+
+.cr-file-added {
+  color: var(--bde-accent);
+  flex-shrink: 0;
+}
+
+.cr-file-deleted {
+  color: var(--bde-danger);
+  flex-shrink: 0;
+}
+
+.cr-file-modified {
+  color: var(--bde-warning);
+  flex-shrink: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cr-filetree__row {
+    transition: none;
+  }
+}
