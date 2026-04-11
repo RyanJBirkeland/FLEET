@@ -53,8 +53,8 @@
   flex: 1;
   display: grid;
   grid-template-columns: 200px 1fr 240px;
-  gap: 12px;
-  padding: 12px;
+  gap: var(--bde-space-3);
+  padding: var(--bde-space-3);
   overflow: hidden;
   min-height: 0;
 }
@@ -69,14 +69,14 @@
 }
 
 .dashboard-col--center {
-  gap: 12px;
+  gap: var(--bde-space-3);
 }
 
 /* Status Bar Freshness Indicator */
 .dashboard-status-ok {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--bde-space-1);
 }
 
 .dashboard-status-freshness {
@@ -96,7 +96,7 @@
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 8px 12px;
+  padding: var(--bde-space-2) var(--bde-space-3);
   border: 1px dashed var(--bde-accent-border);
   border-radius: 8px;
   background: none;
@@ -132,7 +132,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: var(--bde-space-4);
   text-align: center;
 }
 
@@ -146,8 +146,8 @@
 .dashboard-onboarding__cta {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 20px;
+  gap: var(--bde-space-2);
+  padding: 10px var(--bde-space-5);
   border: 1px solid var(--bde-accent-border);
   border-radius: 8px;
   background: var(--bde-accent-surface);
@@ -184,7 +184,7 @@
 }
 
 .dashboard-card-error__retry {
-  padding: 4px 12px;
+  padding: var(--bde-space-1) var(--bde-space-3);
   border-radius: var(--bde-radius-sm);
   background: var(--bde-danger-surface);
   border: 1px solid var(--bde-danger);
@@ -214,7 +214,7 @@
     grid-column: 1 / -1;
     flex-direction: row;
     flex-wrap: wrap;
-    gap: 12px;
+    gap: var(--bde-space-3);
   }
 }
 

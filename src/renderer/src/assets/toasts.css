@@ -3,10 +3,10 @@
 .toast-container {
   position: fixed;
   bottom: 40px;
-  right: 16px;
+  right: var(--bde-space-4);
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--bde-space-2);
   z-index: 200;
   pointer-events: none;
 }
@@ -16,7 +16,7 @@
   font-family: var(--bde-font-ui);
   font-size: var(--bde-size-md);
   font-weight: 500;
-  padding: 8px 16px;
+  padding: var(--bde-space-2) var(--bde-space-4);
   border-radius: 20px;
   border: none;
   cursor: pointer;
@@ -49,7 +49,7 @@
 .toast--has-action {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--bde-space-3);
 }
 
 .toast__message {

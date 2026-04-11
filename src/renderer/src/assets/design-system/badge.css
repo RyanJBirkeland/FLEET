@@ -12,7 +12,7 @@
 
 .bde-badge--sm {
   font-size: var(--bde-size-xs);
-  padding: 2px 8px;
+  padding: 2px var(--bde-space-2);
 }
 
 .bde-badge--md {

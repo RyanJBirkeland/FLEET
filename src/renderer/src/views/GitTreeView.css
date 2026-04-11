@@ -105,7 +105,7 @@
 }
 
 .git-tree-view__error-retry {
-  padding: 4px 12px;
+  padding: var(--bde-space-1) var(--bde-space-3);
   background: var(--bde-error);
   color: white;
   border: none;
@@ -125,7 +125,7 @@
 }
 
 .git-tree-view__error-dismiss {
-  padding: 4px;
+  padding: var(--bde-space-1);
   background: none;
   border: none;
   color: var(--bde-text-muted);

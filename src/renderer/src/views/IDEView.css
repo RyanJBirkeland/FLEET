@@ -69,7 +69,7 @@
   background: var(--bde-surface-high, #0d0520);
   border: 1px solid var(--bde-accent-border);
   border-radius: 12px;
-  padding: 20px 24px;
+  padding: var(--bde-space-5) var(--bde-space-6);
   min-width: 280px;
   box-shadow: var(--bde-shadow-lg, 0 8px 32px rgba(0, 0, 0, 0.4));
 }
@@ -88,7 +88,7 @@
 .ide-shortcuts-panel__row {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: var(--bde-space-3);
 }
 .ide-shortcuts-panel__key {
   min-width: 72px;

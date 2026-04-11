@@ -12,7 +12,7 @@
 
 .stg-content {
   flex: 1;
-  padding: 20px 24px;
+  padding: var(--bde-space-5) var(--bde-space-6);
   overflow-y: auto;
   min-width: 0;
 }

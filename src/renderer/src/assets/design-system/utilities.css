@@ -86,7 +86,7 @@
 .bde-tooltip::after {
   content: attr(data-tooltip);
   position: absolute;
-  padding: 4px 8px;
+  padding: var(--bde-space-1) var(--bde-space-2);
   background: var(--bde-surface-high);
   border: 1px solid var(--bde-border);
   border-radius: var(--bde-radius-sm);
@@ -267,7 +267,7 @@
   font-family: var(--bde-font-ui);
   font-size: 13px;
   font-weight: 600;
-  padding: 8px 20px;
+  padding: var(--bde-space-2) var(--bde-space-5);
   border-radius: 10px;
   border: none;
   cursor: pointer;
@@ -291,7 +291,7 @@
   font-family: var(--bde-font-ui);
   font-size: 13px;
   font-weight: 500;
-  padding: 8px 16px;
+  padding: var(--bde-space-2) var(--bde-space-4);
   border-radius: 8px;
   border: 1px solid var(--bde-border);
   cursor: pointer;

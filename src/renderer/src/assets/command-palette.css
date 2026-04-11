@@ -26,7 +26,7 @@
 
 .command-palette__input {
   width: 100%;
-  padding: 12px 16px;
+  padding: var(--bde-space-3) var(--bde-space-4);
   background: transparent;
   border: none;
   border-bottom: 1px solid var(--bde-border);
@@ -52,7 +52,7 @@
   overflow: hidden;
   overflow-y: auto;
   max-height: 320px;
-  padding: 4px;
+  padding: var(--bde-space-1);
 }
 
 .command-palette__group {
@@ -61,13 +61,13 @@
 }
 
 .command-palette__group + .command-palette__group {
-  margin-top: 4px;
+  margin-top: var(--bde-space-1);
   border-top: 1px solid var(--bde-border);
-  padding-top: 4px;
+  padding-top: var(--bde-space-1);
 }
 
 .command-palette__group-header {
-  padding: 6px 12px 2px;
+  padding: 6px var(--bde-space-3) 2px;
   font-size: var(--bde-size-xs);
   color: var(--bde-text-muted);
   text-transform: uppercase;
@@ -80,7 +80,7 @@
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  padding: 8px 12px;
+  padding: var(--bde-space-2) var(--bde-space-3);
   background: none;
   border: none;
   color: var(--bde-text);
@@ -97,7 +97,7 @@
 }
 
 .command-palette__empty {
-  padding: 16px;
+  padding: var(--bde-space-4);
   text-align: center;
   color: var(--bde-text-muted);
   font-size: var(--bde-size-md);

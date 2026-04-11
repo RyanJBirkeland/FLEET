@@ -21,9 +21,9 @@
 .tag-badge {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: var(--bde-space-1);
   border-radius: var(--bde-radius-full);
-  padding: 2px 8px;
+  padding: 2px var(--bde-space-2);
   font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.3px;
@@ -64,8 +64,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
-  padding: 6px 8px;
+  gap: var(--bde-space-1);
+  padding: 6px var(--bde-space-2);
   background: var(--bde-bg-secondary);
   border: 1px solid var(--bde-border);
   border-radius: var(--bde-radius-md);
@@ -79,7 +79,7 @@
 .tag-input__tags {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: var(--bde-space-1);
 }
 
 .tag-input__field {

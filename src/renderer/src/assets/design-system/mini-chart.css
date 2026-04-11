@@ -15,7 +15,7 @@
   background: var(--bde-overlay);
   border: 1px solid;
   border-radius: 4px;
-  padding: 3px 8px;
+  padding: 3px var(--bde-space-2);
   font-size: var(--bde-size-xs);
   max-width: 280px;
   overflow: hidden;
