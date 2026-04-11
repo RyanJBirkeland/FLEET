@@ -62,6 +62,15 @@ vi.mock('../agent-event-mapper', () => ({
   emitAgentEvent: vi.fn()
 }))
 
+// Mock env-utils (required by run-agent imports) — buildAgentEnv returns a
+// PATH that includes /opt/homebrew/bin so git can be found in packaged builds.
+vi.mock('../../env-utils', () => ({
+  buildAgentEnv: vi.fn(() => ({
+    PATH: '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin',
+    HOME: '/Users/test'
+  }))
+}))
+
 import { execFile } from 'node:child_process'
 
 const execFileMock = vi.mocked(execFile)
@@ -157,7 +166,7 @@ index abc123..def456 100644
     )
   })
 
-  it('calls git diff HEAD with correct cwd', async () => {
+  it('calls git diff HEAD with correct cwd and env (regression: spawn git ENOENT)', async () => {
     getCustomMock().mockResolvedValueOnce({ stdout: 'diff content', stderr: '' })
 
     await capturePartialDiff('task-6', '/worktree/path', mockRepo, noopLogger)
@@ -165,10 +174,16 @@ index abc123..def456 100644
     const calls = getCustomMock().mock.calls
     expect(calls[0][0]).toBe('git')
     expect(calls[0][1]).toEqual(['diff', 'HEAD'])
-    expect(calls[0][2]).toMatchObject({
+    // env must be passed so Node can resolve `git` even when process.env.PATH
+    // is the minimal launchd PATH (Finder-launched Electron). buildAgentEnv()
+    // prepends /opt/homebrew/bin, /usr/local/bin, ~/.local/bin to PATH.
+    const opts = calls[0][2] as { cwd: string; maxBuffer: number; env?: { PATH?: string } }
+    expect(opts).toMatchObject({
       cwd: '/worktree/path',
       maxBuffer: 50 * 1024
     })
+    expect(opts.env).toBeDefined()
+    expect(opts.env?.PATH).toContain('/opt/homebrew/bin')
   })
 
   it('handles updateTask failure gracefully', async () => {

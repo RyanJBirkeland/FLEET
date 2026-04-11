@@ -19,6 +19,7 @@ import { broadcast } from '../broadcast'
 import { mapRawMessage, emitAgentEvent } from '../agent-event-mapper'
 import type { AgentEvent, TaskDependency } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
+import { buildAgentEnv } from '../env-utils'
 import { sanitizePlaygroundHtml } from '../playground-sanitize'
 import { TurnTracker } from './turn-tracker'
 import { getErrorMessage } from '../../shared/errors'
@@ -146,6 +147,11 @@ export async function tryEmitPlaygroundEvent(
  * Capture uncommitted/unstaged changes from a failed agent's worktree.
  * Runs `git diff HEAD` and stores the result (capped at 50KB) in task.partial_diff.
  * This preserves partial progress when the worktree is cleaned up after failure.
+ *
+ * Passing `env: buildAgentEnv()` is required: when BDE is launched from Finder,
+ * `process.env.PATH` may not contain `/opt/homebrew/bin` or `/usr/local/bin`,
+ * causing `execFile('git', ...)` to fail with `spawn git ENOENT`. Every other
+ * git call site in the main process uses this helper — this one was the outlier.
  */
 export async function capturePartialDiff(
   taskId: string,
@@ -156,7 +162,8 @@ export async function capturePartialDiff(
   try {
     const { stdout } = await execFile('git', ['diff', 'HEAD'], {
       cwd: worktreePath,
-      maxBuffer: MAX_PARTIAL_DIFF_SIZE
+      maxBuffer: MAX_PARTIAL_DIFF_SIZE,
+      env: buildAgentEnv()
     })
 
     if (stdout.trim()) {
