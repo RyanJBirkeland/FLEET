@@ -14,7 +14,7 @@ vi.mock('../../data/sprint-queries', () => ({
   setSprintQueriesLogger: vi.fn()
 }))
 
-vi.mock('../dependency-index', () => ({
+vi.mock('../../services/dependency-service', () => ({
   createDependencyIndex: vi.fn(() => ({
     rebuild: vi.fn(),
     getDependents: vi.fn(() => new Set()),
@@ -1229,7 +1229,7 @@ describe('createAgentManager', () => {
       vi.mocked(getQueuedTasks).mockReturnValueOnce([taskWithDeps])
 
       // Mock depIndex.areDependenciesSatisfied to invoke the getStatus callback AND return unsatisfied
-      const { createDependencyIndex } = await import('../dependency-index')
+      const { createDependencyIndex } = await import('../../services/dependency-service')
       vi.mocked(createDependencyIndex).mockReturnValue({
         rebuild: vi.fn(),
         getDependents: vi.fn(() => new Set()),

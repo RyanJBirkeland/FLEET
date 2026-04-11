@@ -1,10 +1,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { formatBlockedNote, stripBlockedNote, buildBlockedNotes } from '../dependency-helpers'
+import { formatBlockedNote, stripBlockedNote, buildBlockedNotes } from '../../services/dependency-service'
 
 // Mock for createDependencyIndex used by checkTaskDependencies
-vi.mock('../dependency-index', () => ({
-  createDependencyIndex: vi.fn()
-}))
+vi.mock('../../services/dependency-service', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    createDependencyIndex: vi.fn()
+  }
+})
 
 describe('formatBlockedNote', () => {
   it('formats blocked-by list with prefix', () => {
@@ -66,8 +70,8 @@ describe('checkTaskDependencies', () => {
   })
 
   it('returns shouldBlock: false when deps are satisfied', async () => {
-    const { createDependencyIndex } = await import('../dependency-index')
-    const { checkTaskDependencies } = await import('../dependency-helpers')
+    const { createDependencyIndex } = await import('../../services/dependency-service')
+    const { checkTaskDependencies } = await import('../../services/dependency-service')
 
     const mockListTasks = vi.fn().mockReturnValue([
       { id: 'task-1', status: 'queued' },
@@ -90,8 +94,8 @@ describe('checkTaskDependencies', () => {
   })
 
   it('returns shouldBlock: true when dep is unsatisfied', async () => {
-    const { createDependencyIndex } = await import('../dependency-index')
-    const { checkTaskDependencies } = await import('../dependency-helpers')
+    const { createDependencyIndex } = await import('../../services/dependency-service')
+    const { checkTaskDependencies } = await import('../../services/dependency-service')
 
     const mockListTasks = vi.fn().mockReturnValue([
       { id: 'task-1', status: 'queued' },
@@ -114,7 +118,7 @@ describe('checkTaskDependencies', () => {
   })
 
   it('returns shouldBlock: false when listTasks fails (graceful degradation)', async () => {
-    const { checkTaskDependencies } = await import('../dependency-helpers')
+    const { checkTaskDependencies } = await import('../../services/dependency-service')
 
     const mockListTasks = vi.fn().mockImplementation(() => {
       throw new Error('DB error')

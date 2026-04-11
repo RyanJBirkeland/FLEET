@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolveDependents } from '../resolve-dependents'
-import { createDependencyIndex } from '../dependency-index'
-import type { DependencyIndex } from '../dependency-index'
+import { createDependencyIndex, type DependencyIndex } from '../../services/dependency-service'
 import type { TaskDependency } from '../../../shared/types'
 
 // Helpers to build dependency descriptors

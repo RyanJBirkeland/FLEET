@@ -1,5 +1,5 @@
 import { describe, test, expect } from 'vitest'
-import { createDependencyIndex, detectCycle } from '../dependency-index'
+import { createDependencyIndex, detectCycle } from '../../services/dependency-service'
 import type { TaskDependency } from '../../../shared/types'
 
 describe('DependencyIndex', () => {

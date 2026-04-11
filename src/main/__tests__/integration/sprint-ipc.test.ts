@@ -75,14 +75,18 @@ vi.mock('../../data/sprint-queries', () => ({
   ])
 }))
 
-vi.mock('../../agent-manager/dependency-index', () => ({
-  createDependencyIndex: vi.fn(() => ({
-    rebuild: vi.fn(),
-    getDependents: vi.fn(() => new Set()),
-    areDependenciesSatisfied: vi.fn(() => ({ satisfied: true, blockedBy: [] }))
-  })),
-  detectCycle: vi.fn(() => null)
-}))
+vi.mock('../../services/dependency-service', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    createDependencyIndex: vi.fn(() => ({
+      rebuild: vi.fn(),
+      getDependents: vi.fn(() => new Set()),
+      areDependenciesSatisfied: vi.fn(() => ({ satisfied: true, blockedBy: [] }))
+    })),
+    detectCycle: vi.fn(() => null)
+  }
+})
 
 // Mock broadcast
 vi.mock('../../broadcast', () => ({
@@ -380,7 +384,7 @@ describe('Sprint IPC handlers — integration', () => {
     ].join('\n')
 
     it('auto-blocks a queued task when dependencies are unsatisfied', async () => {
-      const { createDependencyIndex } = await import('../../agent-manager/dependency-index')
+      const { createDependencyIndex } = await import('../../services/dependency-service')
       const mockIdx = {
         rebuild: vi.fn(),
         getDependents: vi.fn(() => new Set()),
@@ -417,7 +421,7 @@ describe('Sprint IPC handlers — integration', () => {
     })
 
     it('allows queued task when all dependencies are satisfied', async () => {
-      const { createDependencyIndex } = await import('../../agent-manager/dependency-index')
+      const { createDependencyIndex } = await import('../../services/dependency-service')
       const mockIdx = {
         rebuild: vi.fn(),
         getDependents: vi.fn(() => new Set()),

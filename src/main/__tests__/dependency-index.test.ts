@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { createDependencyIndex, detectCycle } from '../agent-manager/dependency-index'
+import { createDependencyIndex, detectCycle } from '../services/dependency-service'
 
 describe('createDependencyIndex', () => {
   it('returns empty dependents for unknown task', () => {

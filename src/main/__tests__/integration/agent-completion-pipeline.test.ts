@@ -53,9 +53,8 @@ import { updateTask, getTask } from '../../data/sprint-queries'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import { resolveSuccess, resolveFailure } from '../../agent-manager/completion'
 import { resolveDependents } from '../../agent-manager/resolve-dependents'
-import { createDependencyIndex } from '../../agent-manager/dependency-index'
+import { createDependencyIndex, type DependencyIndex } from '../../services/dependency-service'
 import { MAX_RETRIES } from '../../agent-manager/types'
-import type { DependencyIndex } from '../../agent-manager/dependency-index'
 import type { TaskDependency } from '../../../shared/types'
 
 // ---------------------------------------------------------------------------

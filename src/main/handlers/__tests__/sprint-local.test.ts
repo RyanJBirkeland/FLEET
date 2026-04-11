@@ -119,12 +119,16 @@ vi.mock('fs/promises', () => ({
 }))
 
 // Mock dependency-index (used lazily inside sprint:update and sprint:validateDependencies)
-vi.mock('../../agent-manager/dependency-index', () => ({
-  createDependencyIndex: vi.fn().mockReturnValue({
-    areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: true })
-  }),
-  detectCycle: vi.fn().mockReturnValue(null)
-}))
+vi.mock('../../services/dependency-service', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    createDependencyIndex: vi.fn().mockReturnValue({
+      areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: true })
+    }),
+    detectCycle: vi.fn().mockReturnValue(null)
+  }
+})
 
 // Mock spec-semantic-check
 const mockCheckSpecSemantic = vi.fn().mockResolvedValue({
@@ -294,7 +298,7 @@ describe('sprint:update handler', () => {
 
   it('leaves status as queued when dependencies are satisfied', async () => {
     const validSpec = `${'x'.repeat(60)}\n## Problem\nBroken\n## Solution\nFix it`
-    const { createDependencyIndex } = await import('../../agent-manager/dependency-index')
+    const { createDependencyIndex } = await import('../../services/dependency-service')
     vi.mocked(createDependencyIndex).mockReturnValue({
       areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: true })
     } as any)
@@ -322,7 +326,7 @@ describe('sprint:update handler', () => {
 
   it('transitions status to blocked when dependencies are unsatisfied', async () => {
     const validSpec = `${'x'.repeat(60)}\n## Problem\nBroken\n## Solution\nFix it`
-    const { createDependencyIndex } = await import('../../agent-manager/dependency-index')
+    const { createDependencyIndex } = await import('../../services/dependency-service')
     vi.mocked(createDependencyIndex).mockReturnValue({
       areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: false, blockedBy: ['dep1'] })
     } as any)

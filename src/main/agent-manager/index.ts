@@ -19,8 +19,7 @@ import {
 import { checkAgent } from './watchdog'
 import { setupWorktree, pruneStaleWorktrees } from './worktree'
 import { recoverOrphans } from './orphan-recovery'
-import { createDependencyIndex } from './dependency-index'
-import { formatBlockedNote } from './dependency-helpers'
+import { createDependencyIndex, formatBlockedNote } from '../services/dependency-service'
 import { resolveDependents } from './resolve-dependents'
 import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
 import { setSprintQueriesLogger } from '../data/sprint-queries'
@@ -118,7 +117,7 @@ export interface AgentManager {
 // Class implementation
 // ---------------------------------------------------------------------------
 
-import type { DependencyIndex } from './dependency-index'
+import type { DependencyIndex } from '../services/dependency-service'
 import { nowIso } from '../../shared/time'
 
 export class AgentManagerImpl implements AgentManager {

@@ -24,7 +24,7 @@ vi.mock('../../data/sprint-queries', () => ({
   setSprintQueriesLogger: vi.fn()
 }))
 
-vi.mock('../../agent-manager/dependency-index', () => ({
+vi.mock('../../services/dependency-service', () => ({
   createDependencyIndex: vi.fn(() => ({
     rebuild: vi.fn(),
     getDependents: vi.fn(() => new Set()),
