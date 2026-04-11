@@ -163,6 +163,13 @@ git commit -m "feat: add shared review types for AI Review Partner"
 
 Reference pattern: `src/main/migrations/v045-add-cache-token-columns-to-agent-run-turns-for-ful.ts`
 
+- [ ] **Step 0: Verify the next migration version number**
+
+```bash
+ls src/main/migrations/ | sort | tail -3
+```
+Expected: the highest existing version is v045 at plan-writing time. If a newer migration (v046 or higher) has landed since, bump the file name *and* the `version` export in Step 1 to the next unused number. Do NOT trust the hardcoded `46` blindly.
+
 - [ ] **Step 1: Create the migration file**
 
 Write exactly:
@@ -1431,26 +1438,87 @@ git commit -m "feat: add reviewService.reviewChanges with cache + aggregation"
 
 ## Phase D — IPC layer
 
-### Task D1: Add channels + preload bridge
+### Task D1: Add typed channels + preload bridge
 
 **Files:**
-- Modify: `src/shared/ipc-channels.ts`
+- Modify: `src/shared/ipc-channels/sprint-channels.ts`
+- Modify: `src/shared/ipc-channels/index.ts`
 - Modify: `src/preload/index.ts`
 
-- [ ] **Step 1: Add the four channel constants**
+**Pattern reference:** The IPC channel system uses per-domain interface maps keyed by channel name, with `{ args: [...], result: ... }` entries. `safeHandle()` and the renderer's `typedInvoke()` derive types from the aggregated `IpcChannelMap`. Adding new channels = adding entries to a domain interface + including that interface in the `IpcChannelMap` intersection.
 
-Open `src/shared/ipc-channels.ts` and add (placed alphabetically or grouped with workbench):
+- [ ] **Step 1: Read the existing review-related channel interface for shape reference**
+
+```bash
+grep -n "ReviewChannels\|ReviewPartnerChannels" src/shared/ipc-channels/sprint-channels.ts
+```
+Expected: `ReviewChannels` exists. You're adding a sibling `ReviewPartnerChannels` interface — don't merge into the existing one, they serve different concerns (the existing `ReviewChannels` covers the review lifecycle, the new interface covers the AI partner feature).
+
+- [ ] **Step 2: Add `ReviewPartnerChannels` interface to sprint-channels.ts**
+
+At the top of `src/shared/ipc-channels/sprint-channels.ts`, add the import if not already present:
 
 ```ts
-export const REVIEW_AUTO_REVIEW = 'review:autoReview'
-export const REVIEW_CHAT_STREAM = 'review:chatStream'
-export const REVIEW_CHAT_CHUNK = 'review:chatChunk'
-export const REVIEW_CHAT_ABORT = 'review:chatAbort'
+import type { ReviewResult, PartnerMessage } from '../review-types'
 ```
 
-Note: follow whatever shape the existing file uses — if it uses const object groups instead of bare consts, match that style. Open the file first and mimic.
+Then append the new interface alongside the other exports (placement: after the existing `ReviewChannels` block):
 
-- [ ] **Step 2: Add the `review` namespace to the preload bridge**
+```ts
+export interface ReviewPartnerChannels {
+  'review:autoReview': {
+    args: [taskId: string, force: boolean]
+    result: ReviewResult
+  }
+  'review:chatStream': {
+    args: [
+      input: {
+        taskId: string
+        messages: PartnerMessage[]
+      }
+    ]
+    result: { streamId: string }
+  }
+  'review:chatAbort': {
+    args: [streamId: string]
+    result: void
+  }
+}
+```
+
+Note: `review:chatChunk` is a main→renderer **push** event (not an invoke), so it does NOT belong in this interface. The preload bridge handles push subscriptions via `ipcRenderer.on`.
+
+- [ ] **Step 3: Export the new interface from `src/shared/ipc-channels/index.ts`**
+
+Find the existing re-export block:
+
+```ts
+export type {
+  SprintChannels,
+  ReviewChannels,
+  TemplateChannels,
+  ...
+} from './sprint-channels'
+```
+
+Add `ReviewPartnerChannels` to that list.
+
+Then find the `IpcChannelMap` intersection at the bottom of the file and add:
+
+```ts
+  & import('./sprint-channels').ReviewPartnerChannels
+```
+
+…inserted in the chain alongside the existing `ReviewChannels` intersection.
+
+- [ ] **Step 4: Typecheck**
+
+```bash
+cd ~/worktrees/bde/ai-review-partner && npm run typecheck
+```
+Expected: zero errors. If TypeScript complains that `review-types.ts` isn't found from `sprint-channels.ts`, the relative path should be `../review-types` from inside the `ipc-channels/` subdirectory.
+
+- [ ] **Step 5: Add the `review` namespace to the preload bridge**
 
 Open `src/preload/index.ts`. Find the existing `workbench` entry on `window.api` and add a sibling `review` entry that follows the same shape:
 
@@ -1478,50 +1546,48 @@ review: {
 
 Also update the `Window.api` type declaration in the same file — add the matching `review` interface. Mirror the shape of the `workbench` declarations that already exist.
 
-- [ ] **Step 3: Typecheck**
+- [ ] **Step 6: Typecheck again**
 
 ```bash
 cd ~/worktrees/bde/ai-review-partner && npm run typecheck
 ```
 Expected: zero errors.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 7: Commit**
 
 ```bash
-git add src/shared/ipc-channels.ts src/preload/index.ts
-git commit -m "feat: add review:* IPC channels and preload bridge"
+git add src/shared/ipc-channels/sprint-channels.ts \
+        src/shared/ipc-channels/index.ts \
+        src/preload/index.ts
+git commit -m "feat: add ReviewPartnerChannels + preload bridge"
 ```
 
 ---
 
-### Task D2: Handler file + `review:autoReview` (TDD)
+### Task D2: Handler file with `safeHandle` + pure logic (TDD)
 
 **Files:**
 - Create: `src/main/handlers/review-assistant.ts`
 - Create: `src/main/handlers/review-assistant.test.ts`
 
-- [ ] **Step 1: Write the failing test**
+**Pattern reference:** `src/main/handlers/workbench.ts` — all handlers use `safeHandle('channel:name', async (e, input) => { ... })` from `../ipc-utils`. `safeHandle` is a typed wrapper that:
+1. Derives `args` and `result` types from `IpcChannelMap[channel]`
+2. Uses the module-level `ipcMain` — no `ipcMain` parameter needed
+3. Automatically logs unhandled errors
+
+Because `safeHandle` is tightly coupled to the module-level `ipcMain`, the handler file **cannot** take `ipcMain` as a dependency injection — the module imports it and calls `safeHandle` directly during registration. This is why we factor the logic into pure testable functions first, then wrap them in `safeHandle` calls.
+
+- [ ] **Step 1: Write the failing test for the pure logic functions**
 
 Write `src/main/handlers/review-assistant.test.ts`:
 
 ```ts
 import { describe, it, expect, vi } from 'vitest'
-import { registerReviewAssistantHandlers } from './review-assistant'
+import { handleAutoReview, handleChatStream, buildChatStreamDeps } from './review-assistant'
 import type { ReviewService } from '../services/review-service'
-import type { ReviewResult } from '../../shared/review-types'
-
-type HandlerMap = Map<string, (...args: unknown[]) => unknown>
-
-function makeFakeIpcMain(): { ipcMain: any; handlers: HandlerMap } {
-  const handlers: HandlerMap = new Map()
-  const ipcMain = {
-    handle: (channel: string, fn: (...args: unknown[]) => unknown) => {
-      handlers.set(channel, fn)
-    },
-    removeHandler: (channel: string) => handlers.delete(channel),
-  }
-  return { ipcMain, handlers }
-}
+import type { IReviewRepository } from '../data/review-repository'
+import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { ReviewResult, PartnerMessage, ChatChunk } from '../../shared/review-types'
 
 function fakeResult(): ReviewResult {
   return {
@@ -1535,46 +1601,126 @@ function fakeResult(): ReviewResult {
   }
 }
 
-describe('review-assistant handlers', () => {
-  it('registers review:autoReview and delegates to the service', async () => {
-    const { ipcMain, handlers } = makeFakeIpcMain()
+function fakeTask() {
+  return {
+    id: 'task-1',
+    title: 'Fix auth',
+    spec: '# Spec',
+    repo: 'bde',
+    branch: 'feat/auth',
+    status: 'review' as const,
+    worktree_path: '/tmp/wt',
+  } as any
+}
+
+describe('handleAutoReview', () => {
+  it('delegates to reviewService.reviewChanges', async () => {
     const reviewChanges = vi.fn().mockResolvedValue(fakeResult())
     const svc: ReviewService = { reviewChanges }
-
-    registerReviewAssistantHandlers({
-      ipcMain,
-      reviewService: svc,
-      // The chat-stream path needs these but the autoReview test doesn't exercise it
-      buildChatPrompt: () => 'prompt',
-      runSdkStreaming: async () => 'done',
-      getWebContents: () => null,
-      activeStreams: new Map(),
-      resolveWorktreePath: async () => '/tmp/wt',
-      taskRepo: { getTask: () => null } as any,
-    })
-
-    const handler = handlers.get('review:autoReview')
-    expect(handler).toBeDefined()
-    const result = await handler!({}, 'task-1', false)
+    const result = await handleAutoReview(svc, 'task-1', false)
     expect(reviewChanges).toHaveBeenCalledWith('task-1', { force: false })
-    expect((result as ReviewResult).qualityScore).toBe(88)
+    expect(result.qualityScore).toBe(88)
   })
 
   it('passes force flag through', async () => {
-    const { ipcMain, handlers } = makeFakeIpcMain()
     const reviewChanges = vi.fn().mockResolvedValue(fakeResult())
-    registerReviewAssistantHandlers({
-      ipcMain,
-      reviewService: { reviewChanges },
+    await handleAutoReview({ reviewChanges }, 'task-x', true)
+    expect(reviewChanges).toHaveBeenCalledWith('task-x', { force: true })
+  })
+
+  it('rejects when reviewService throws', async () => {
+    const reviewChanges = vi.fn().mockRejectedValue(new Error('nope'))
+    await expect(handleAutoReview({ reviewChanges }, 'task-y', false)).rejects.toThrow('nope')
+  })
+})
+
+describe('handleChatStream', () => {
+  it('starts a stream and emits chunks + done', async () => {
+    const chunks: ChatChunk[] = []
+    const sender = { send: (_ch: string, payload: ChatChunk) => chunks.push(payload) }
+    const deps = {
+      taskRepo: { getTask: () => fakeTask() } as unknown as ISprintTaskRepository,
+      reviewRepo: {
+        getCached: () => fakeResult(),
+        setCached: () => {},
+        invalidate: () => {},
+      } as IReviewRepository,
+      getHeadCommitSha: async () => 'sha-abc',
+      buildChatPrompt: vi.fn().mockReturnValue('BUILT_PROMPT'),
+      runSdkStreaming: vi.fn(
+        async (
+          _prompt: string,
+          onChunk: (c: string) => void,
+          _map: Map<string, { close: () => void }>,
+          _id: string,
+          _t: number,
+          _opts: any
+        ) => {
+          onChunk('hello ')
+          onChunk('world')
+          return 'hello world'
+        }
+      ),
+      activeStreams: new Map<string, { close: () => void }>(),
+    }
+    const input: { taskId: string; messages: PartnerMessage[] } = {
+      taskId: 'task-1',
+      messages: [{ id: 'u1', role: 'user', content: 'Hi', timestamp: 0 }],
+    }
+
+    const { streamId } = await handleChatStream(deps, input, sender as any)
+    // Streaming runs asynchronously after the return — flush microtasks
+    await new Promise((r) => setImmediate(r))
+
+    expect(streamId).toMatch(/^review-/)
+    expect(deps.buildChatPrompt).toHaveBeenCalled()
+    const promptArg = deps.buildChatPrompt.mock.calls[0]?.[0]
+    expect(promptArg?.agentType).toBe('reviewer')
+    expect(promptArg?.reviewerMode).toBe('chat')
+    expect(promptArg?.reviewSeed).toBeDefined() // seed lookup confirmed
+    expect(chunks.some((c) => c.chunk === 'hello ')).toBe(true)
+    expect(chunks.some((c) => c.done === true)).toBe(true)
+  })
+
+  it('emits error chunk when runSdkStreaming throws', async () => {
+    const chunks: ChatChunk[] = []
+    const sender = { send: (_c: string, p: ChatChunk) => chunks.push(p) }
+    const deps = {
+      taskRepo: { getTask: () => fakeTask() } as unknown as ISprintTaskRepository,
+      reviewRepo: {
+        getCached: () => null,
+        setCached: () => {},
+        invalidate: () => {},
+      } as IReviewRepository,
+      getHeadCommitSha: async () => 'sha-abc',
+      buildChatPrompt: () => 'prompt',
+      runSdkStreaming: async () => {
+        throw new Error('rate limit')
+      },
+      activeStreams: new Map<string, { close: () => void }>(),
+    }
+    await handleChatStream(
+      deps,
+      { taskId: 'task-1', messages: [] },
+      sender as any
+    )
+    await new Promise((r) => setImmediate(r))
+    expect(chunks.some((c) => c.error?.includes('rate limit'))).toBe(true)
+  })
+
+  it('throws when task is not found', async () => {
+    const sender = { send: () => {} }
+    const deps = {
+      taskRepo: { getTask: () => null } as unknown as ISprintTaskRepository,
+      reviewRepo: { getCached: () => null, setCached: () => {}, invalidate: () => {} },
+      getHeadCommitSha: async () => 'sha',
       buildChatPrompt: () => '',
       runSdkStreaming: async () => '',
-      getWebContents: () => null,
       activeStreams: new Map(),
-      resolveWorktreePath: async () => '',
-      taskRepo: { getTask: () => null } as any,
-    })
-    await handlers.get('review:autoReview')!({}, 'task-x', true)
-    expect(reviewChanges).toHaveBeenCalledWith('task-x', { force: true })
+    }
+    await expect(
+      handleChatStream(deps, { taskId: 'missing', messages: [] }, sender as any)
+    ).rejects.toThrow(/not found/i)
   })
 })
 ```
@@ -1586,120 +1732,160 @@ cd ~/worktrees/bde/ai-review-partner && npm run test:main -- --run src/main/hand
 ```
 Expected: FAIL — `Cannot find module './review-assistant'`.
 
-- [ ] **Step 3: Implement the handler skeleton with autoReview**
+- [ ] **Step 3: Implement the handler module**
 
 Write `src/main/handlers/review-assistant.ts`:
 
 ```ts
-import type { IpcMain, WebContents } from 'electron'
+import type { WebContents } from 'electron'
+import { safeHandle } from '../ipc-utils'
 import { createLogger } from '../logger'
+import { buildAgentPrompt } from '../agent-manager/prompt-composer'
+import { runSdkStreaming } from '../sdk-streaming'
 import type { ReviewService } from '../services/review-service'
+import type { IReviewRepository } from '../data/review-repository'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
-import type { SdkStreamingOptions } from '../sdk-streaming'
-import type { BuildPromptInput } from '../agent-manager/prompt-composer'
-import type { ChatChunk, PartnerMessage } from '../../shared/review-types'
+import type {
+  ChatChunk,
+  PartnerMessage,
+  ReviewResult,
+} from '../../shared/review-types'
 
 const log = createLogger('review-assistant')
 
-export interface ReviewAssistantHandlerDeps {
-  ipcMain: Pick<IpcMain, 'handle' | 'removeHandler'>
-  reviewService: ReviewService
-  taskRepo: ISprintTaskRepository
-  resolveWorktreePath: (taskId: string) => Promise<string>
-  buildChatPrompt: (input: BuildPromptInput) => string
-  runSdkStreaming: (
-    prompt: string,
-    onChunk: (chunk: string) => void,
-    activeStreams: Map<string, { close: () => void }>,
-    streamId: string,
-    timeoutMs: number,
-    options: SdkStreamingOptions
-  ) => Promise<string>
-  activeStreams: Map<string, { close: () => void }>
-  /** Return the WebContents for an invocation — typically `e.sender`. */
-  getWebContents: (evt: unknown) => WebContents | null
+// ---------- Pure logic functions (testable without ipcMain) ----------
+
+/** autoReview handler body — extracted for unit testing. */
+export async function handleAutoReview(
+  svc: Pick<ReviewService, 'reviewChanges'>,
+  taskId: string,
+  force: boolean
+): Promise<ReviewResult> {
+  log.info(`review:autoReview task=${taskId} force=${force}`)
+  return svc.reviewChanges(taskId, { force })
 }
 
-export function registerReviewAssistantHandlers(deps: ReviewAssistantHandlerDeps): () => void {
-  const { ipcMain, reviewService } = deps
+export interface ChatStreamDeps {
+  taskRepo: ISprintTaskRepository
+  reviewRepo: IReviewRepository
+  getHeadCommitSha: (worktreePath: string) => Promise<string>
+  buildChatPrompt: typeof buildAgentPrompt
+  runSdkStreaming: typeof runSdkStreaming
+  activeStreams: Map<string, { close: () => void }>
+}
 
-  ipcMain.handle('review:autoReview', async (_e, taskId: string, force: boolean) => {
-    log.info(`review:autoReview task=${taskId} force=${force}`)
-    return reviewService.reviewChanges(taskId, { force })
+/**
+ * chatStream handler body — extracted for unit testing. Returns immediately
+ * with the streamId; streaming runs asynchronously and pushes chunks to the
+ * sender via `review:chatChunk`.
+ */
+export async function handleChatStream(
+  deps: ChatStreamDeps,
+  input: { taskId: string; messages: PartnerMessage[] },
+  sender: Pick<WebContents, 'send'> | null
+): Promise<{ streamId: string }> {
+  const streamId = `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  log.info(`review:chatStream task=${input.taskId} stream=${streamId}`)
+
+  const task = deps.taskRepo.getTask(input.taskId)
+  if (!task) throw new Error(`Task not found: ${input.taskId}`)
+  if (!task.worktree_path) {
+    throw new Error(`Task ${input.taskId} has no worktree path`)
+  }
+
+  // Look up the cached review to pass as reviewSeed — gives the chat model
+  // access to the structured auto-review state, not just visible messages.
+  let reviewSeed: ReviewResult | undefined
+  try {
+    const headSha = await deps.getHeadCommitSha(task.worktree_path)
+    reviewSeed = deps.reviewRepo.getCached(input.taskId, headSha) ?? undefined
+  } catch (err) {
+    log.warn(`Could not load review seed for task=${input.taskId}`, {
+      err: (err as Error).message,
+    })
+  }
+
+  const prompt = deps.buildChatPrompt({
+    agentType: 'reviewer',
+    reviewerMode: 'chat',
+    taskContent: task.spec ?? task.title,
+    branch: task.branch ?? '',
+    messages: input.messages.map((m) => ({ role: m.role, content: m.content })),
+    reviewSeed,
   })
 
-  ipcMain.handle('review:chatStream', async (e, input: {
-    taskId: string
-    messages: PartnerMessage[]
-  }) => {
-    const streamId = `review-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
-    log.info(`review:chatStream task=${input.taskId} stream=${streamId}`)
-
-    const task = deps.taskRepo.getTask(input.taskId)
-    if (!task) throw new Error(`Task not found: ${input.taskId}`)
-    const worktreePath = await deps.resolveWorktreePath(input.taskId)
-
-    const prompt = deps.buildChatPrompt({
-      agentType: 'reviewer',
-      reviewerMode: 'chat',
-      taskContent: task.spec ?? task.title,
-      branch: task.branch ?? '',
-      messages: input.messages.map((m) => ({ role: m.role, content: m.content })),
-      // Review seed omitted here — the chat handler could look it up via the repo,
-      // but for v1 the renderer passes it implicitly through the message thread
-      // (the opening message is already seeded as the first assistant message).
-    })
-
-    const sender = deps.getWebContents(e)
-
-    // Run async; do not await. The handler returns the streamId immediately so the
-    // renderer can subscribe to review:chatChunk events.
-    void (async () => {
-      try {
-        const full = await deps.runSdkStreaming(
-          prompt,
-          (chunk) => {
-            const payload: ChatChunk = { streamId, chunk }
+  void (async () => {
+    try {
+      const full = await deps.runSdkStreaming(
+        prompt,
+        (chunk) => {
+          const payload: ChatChunk = { streamId, chunk }
+          sender?.send('review:chatChunk', payload)
+        },
+        deps.activeStreams,
+        streamId,
+        180_000,
+        {
+          cwd: task.worktree_path!,
+          tools: ['Read', 'Grep', 'Glob'],
+          model: 'claude-opus-4-6',
+          onToolUse: (event) => {
+            const payload: ChatChunk = { streamId, toolUse: event }
             sender?.send('review:chatChunk', payload)
           },
-          deps.activeStreams,
-          streamId,
-          180_000,
-          {
-            cwd: worktreePath,
-            tools: ['Read', 'Grep', 'Glob'],
-            model: 'claude-opus-4-6',
-            onToolUse: (event) => {
-              const payload: ChatChunk = { streamId, toolUse: event }
-              sender?.send('review:chatChunk', payload)
-            },
-          }
-        )
-        const done: ChatChunk = { streamId, done: true, fullText: full }
-        sender?.send('review:chatChunk', done)
-      } catch (err) {
-        log.error(`review:chatStream failed stream=${streamId}`, {
-          err: (err as Error).message,
-        })
-        const payload: ChatChunk = { streamId, error: (err as Error).message }
-        sender?.send('review:chatChunk', payload)
-      }
-    })()
+        }
+      )
+      const done: ChatChunk = { streamId, done: true, fullText: full }
+      sender?.send('review:chatChunk', done)
+    } catch (err) {
+      log.error(`review:chatStream failed stream=${streamId}`, {
+        err: (err as Error).message,
+      })
+      const payload: ChatChunk = { streamId, error: (err as Error).message }
+      sender?.send('review:chatChunk', payload)
+    }
+  })()
 
-    return { streamId }
+  return { streamId }
+}
+
+/** Build the ChatStreamDeps bag from the registration inputs. */
+export function buildChatStreamDeps(input: {
+  taskRepo: ISprintTaskRepository
+  reviewRepo: IReviewRepository
+  getHeadCommitSha: (worktreePath: string) => Promise<string>
+  activeStreams: Map<string, { close: () => void }>
+}): ChatStreamDeps {
+  return {
+    ...input,
+    buildChatPrompt: buildAgentPrompt,
+    runSdkStreaming,
+  }
+}
+
+// ---------- Registration (wraps the pure functions in safeHandle) ----------
+
+export interface ReviewAssistantRegistrationInput {
+  reviewService: ReviewService
+  chatStreamDeps: ChatStreamDeps
+}
+
+export function registerReviewAssistantHandlers(
+  input: ReviewAssistantRegistrationInput
+): void {
+  safeHandle('review:autoReview', async (_e, taskId, force) => {
+    return handleAutoReview(input.reviewService, taskId, force)
   })
 
-  ipcMain.handle('review:chatAbort', async (_e, streamId: string) => {
+  safeHandle('review:chatStream', async (e, chatInput) => {
+    return handleChatStream(input.chatStreamDeps, chatInput, e.sender)
+  })
+
+  safeHandle('review:chatAbort', async (_e, streamId) => {
     log.info(`review:chatAbort stream=${streamId}`)
-    const entry = deps.activeStreams.get(streamId)
+    const entry = input.chatStreamDeps.activeStreams.get(streamId)
     if (entry) entry.close()
   })
-
-  return () => {
-    ipcMain.removeHandler('review:autoReview')
-    ipcMain.removeHandler('review:chatStream')
-    ipcMain.removeHandler('review:chatAbort')
-  }
 }
 ```
 
@@ -1708,20 +1894,20 @@ export function registerReviewAssistantHandlers(deps: ReviewAssistantHandlerDeps
 ```bash
 cd ~/worktrees/bde/ai-review-partner && npm run test:main -- --run src/main/handlers/review-assistant.test.ts
 ```
-Expected: both tests pass.
+Expected: all 6 tests pass.
 
 - [ ] **Step 5: Typecheck + full main tests**
 
 ```bash
 cd ~/worktrees/bde/ai-review-partner && npm run typecheck && npm run test:main -- --run
 ```
-Expected: zero type errors, all tests pass.
+Expected: zero type errors, all tests pass. If TypeScript complains about `safeHandle('review:autoReview', ...)` arg types, the channel entries in `sprint-channels.ts` (Task D1) need correcting — the channel map is the source of truth for handler types.
 
 - [ ] **Step 6: Commit**
 
 ```bash
 git add src/main/handlers/review-assistant.ts src/main/handlers/review-assistant.test.ts
-git commit -m "feat: add review-assistant IPC handlers"
+git commit -m "feat: add review-assistant handlers via safeHandle"
 ```
 
 ---
@@ -1731,7 +1917,9 @@ git commit -m "feat: add review-assistant IPC handlers"
 **Files:**
 - Modify: `src/main/index.ts`
 
-- [ ] **Step 1: Read the file to find the registration block**
+**Pattern reference:** `task.worktree_path` is a column on the `SprintTask` row — confirmed in use at `src/main/handlers/review.ts:132` (`if (!task.worktree_path) throw new Error(...)`). Use this field as the canonical worktree path. Do NOT invoke `agentManager.getWorktreePath(taskId)` — no such method exists.
+
+- [ ] **Step 1: Read the file to find the existing registration block**
 
 ```bash
 grep -n "register" src/main/index.ts | head -20
@@ -1743,81 +1931,93 @@ Expected: a sequence of `register*Handlers` calls — find one nearby (e.g. `reg
 Near the top of `src/main/index.ts`, add:
 
 ```ts
-import { registerReviewAssistantHandlers } from './handlers/review-assistant'
+import {
+  registerReviewAssistantHandlers,
+  buildChatStreamDeps,
+} from './handlers/review-assistant'
 import { createReviewRepository } from './data/review-repository'
 import { createReviewService } from './services/review-service'
-import { runSdkStreaming, runSdkOnce } from './sdk-streaming'
-import { buildAgentPrompt } from './agent-manager/prompt-composer'
+import { runSdkOnce } from './sdk-streaming'
 ```
 
-- [ ] **Step 3: Register the handlers alongside the existing ones**
+- [ ] **Step 3: Build the worktree resolver closure**
 
-After the sprint-task repository is created (search for `createSprintTaskRepository` or similar to find the right spot), add:
+Since `task.worktree_path` is the canonical source, create a single helper used by both the service and the chat-stream deps:
+
+```ts
+function resolveWorktreePathViaRepo(taskId: string): string {
+  const task = sprintTaskRepository.getTask(taskId)
+  if (!task) throw new Error(`Task not found: ${taskId}`)
+  if (!task.worktree_path) {
+    throw new Error(`Task ${taskId} has no worktree_path`)
+  }
+  return task.worktree_path
+}
+```
+
+(Replace `sprintTaskRepository` with the actual identifier used in the file — typically created earlier as `const sprintTaskRepository = createSprintTaskRepository(db)`.)
+
+- [ ] **Step 4: Register the review handlers**
+
+After the sprint-task repository is created, add:
 
 ```ts
 const reviewRepo = createReviewRepository(db)
+const reviewServiceLogger = createLogger('review-service')
+
+const getHeadCommitSha = async (worktreePath: string): Promise<string> => {
+  const { execFile } = await import('node:child_process')
+  const { promisify } = await import('node:util')
+  const execFileAsync = promisify(execFile)
+  const { stdout } = await execFileAsync('git', [
+    '-C',
+    worktreePath,
+    'rev-parse',
+    'HEAD',
+  ])
+  return stdout.trim()
+}
+
 const reviewService = createReviewService({
   repo: reviewRepo,
   taskRepo: sprintTaskRepository,
-  logger: createLogger('review-service'),
-  resolveWorktreePath: async (taskId) => {
-    // Reuse existing agent-manager worktree resolver
-    const wt = agentManager.getWorktreePath(taskId)
-    if (!wt) throw new Error(`No worktree for task ${taskId}`)
-    return wt
-  },
-  getHeadCommitSha: async (wt) => {
+  logger: reviewServiceLogger,
+  resolveWorktreePath: async (taskId) => resolveWorktreePathViaRepo(taskId),
+  getHeadCommitSha,
+  getDiff: async (worktreePath) => {
     const { execFile } = await import('node:child_process')
     const { promisify } = await import('node:util')
     const execFileAsync = promisify(execFile)
-    const { stdout } = await execFileAsync('git', ['-C', wt, 'rev-parse', 'HEAD'])
-    return stdout.trim()
-  },
-  getDiff: async (wt) => {
-    const { execFile } = await import('node:child_process')
-    const { promisify } = await import('node:util')
-    const execFileAsync = promisify(execFile)
-    const { stdout } = await execFileAsync('git', ['-C', wt, 'diff', 'main...HEAD'], {
-      maxBuffer: 10 * 1024 * 1024,
-    })
+    const { stdout } = await execFileAsync(
+      'git',
+      ['-C', worktreePath, 'diff', 'main...HEAD'],
+      { maxBuffer: 10 * 1024 * 1024 }
+    )
     return stdout
   },
   runSdkOnce,
 })
 
-const reviewStreams = new Map<string, { close: () => void }>()
+const reviewActiveStreams = new Map<string, { close: () => void }>()
 registerReviewAssistantHandlers({
-  ipcMain,
   reviewService,
-  taskRepo: sprintTaskRepository,
-  resolveWorktreePath: async (taskId) => {
-    const wt = agentManager.getWorktreePath(taskId)
-    if (!wt) throw new Error(`No worktree for task ${taskId}`)
-    return wt
-  },
-  buildChatPrompt: buildAgentPrompt,
-  runSdkStreaming,
-  activeStreams: reviewStreams,
-  getWebContents: (e: any) => e?.sender ?? null,
+  chatStreamDeps: buildChatStreamDeps({
+    taskRepo: sprintTaskRepository,
+    reviewRepo,
+    getHeadCommitSha,
+    activeStreams: reviewActiveStreams,
+  }),
 })
 ```
 
-Note: the exact names of `db`, `sprintTaskRepository`, `agentManager`, and `ipcMain` in the file may differ — replace with whatever identifiers the existing registrations use.
-
-- [ ] **Step 4: If `agentManager.getWorktreePath` does not exist, use a plausible alternative**
-
-Check what's available:
-```bash
-grep -n "getWorktreePath\|worktreePath" src/main/agent-manager/index.ts
-```
-If there's an equivalent method, use it. If not, you may need to call through to a repository helper — look at how the existing Code Review flow (e.g. `ChangesTab` IPC) resolves the worktree and mimic that. Don't invent a new mechanism.
+Note: the exact names of `db` and `sprintTaskRepository` may differ — replace with whatever identifiers the existing registrations use.
 
 - [ ] **Step 5: Typecheck**
 
 ```bash
 cd ~/worktrees/bde/ai-review-partner && npm run typecheck
 ```
-Expected: zero errors. Fix any identifier mismatches.
+Expected: zero errors. Fix any identifier mismatches by grepping the file for the canonical names.
 
 - [ ] **Step 6: Main tests**
 
@@ -1948,6 +2148,27 @@ describe('useReviewPartnerStore', () => {
       const msgs = useReviewPartnerStore.getState().messagesByTask['task-1'] ?? []
       expect(msgs).toHaveLength(2)
       expect(msgs[0]?.content).toBe('Hi')
+    })
+
+    // Note: after clearMessages(taskId), messagesByTask[taskId] becomes [],
+    // so a subsequent autoReview (triggered by "Re-review") WILL re-seed the
+    // opening message. This is intentional — "Clear thread" is meant to give
+    // the user a fresh start, and seeding the new review is part of that.
+    it('re-seeds opening message after clearMessages', async () => {
+      mockApi()
+      useReviewPartnerStore.setState({
+        messagesByTask: {
+          'task-1': [
+            { id: 'u1', role: 'user', content: 'Old', timestamp: 0 },
+          ],
+        },
+      })
+      useReviewPartnerStore.getState().clearMessages('task-1')
+      await useReviewPartnerStore.getState().autoReview('task-1')
+      const msgs = useReviewPartnerStore.getState().messagesByTask['task-1'] ?? []
+      expect(msgs).toHaveLength(1)
+      expect(msgs[0]?.role).toBe('assistant')
+      expect(msgs[0]?.content).toBe('Nice work overall.')
     })
   })
 
@@ -3940,6 +4161,7 @@ cd ~/worktrees/bde/ai-review-partner && npm run dev
 ```
 
 Manual smoke checklist:
+- [ ] Toggle `Settings → Appearance` between `theme-pro-dark` and `theme-pro-light` and confirm the AI Partner panel, metric cards, chat bubbles, and file-tree badges render correctly in both themes with no hardcoded colors bleeding through.
 - [ ] Code Review view loads with three-column layout when `AI Partner` toggle is on.
 - [ ] Clicking `AI Partner` in the top bar hides the right panel; the diff expands.
 - [ ] Clicking `AI Partner` again shows it; state persists across app restart (toggle it off, kill the dev server, restart, confirm it's still off).
