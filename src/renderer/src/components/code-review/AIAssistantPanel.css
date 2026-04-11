@@ -277,3 +277,38 @@
 .cr-assistant__input button:not(:disabled):hover {
   background: var(--bde-accent-hover);
 }
+
+/* AI file status badges */
+.cr-ai-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: var(--bde-radius-sm);
+}
+.cr-ai-status--issues { color: var(--bde-warning); }
+.cr-ai-status--clean  { color: var(--bde-success); }
+
+/* AI reviewed file-header badge */
+.cr-ai-reviewed {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  padding: 2px var(--bde-space-3);
+  border-radius: var(--bde-radius-md);
+  background: var(--bde-purple-surface, var(--bde-surface-high));
+  color: var(--bde-purple);
+  font-size: var(--bde-size-xs);
+}
+.cr-ai-reviewed__count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--bde-purple);
+  color: var(--bde-bg);
+  font-weight: 600;
+}
