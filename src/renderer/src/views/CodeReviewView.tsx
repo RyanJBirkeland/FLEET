@@ -8,6 +8,8 @@ import { AIAssistantPanel } from '../components/code-review/AIAssistantPanel'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 import { useCodeReviewStore } from '../stores/codeReview'
 import { useSprintTasks } from '../stores/sprintTasks'
+import { useReviewPartnerStore } from '../stores/reviewPartner'
+import { useAutoReview } from '../hooks/useAutoReview'
 import { toast } from '../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 
@@ -20,6 +22,9 @@ export default function CodeReviewView(): React.JSX.Element {
   const selectAllBatch = useCodeReviewStore((s) => s.selectAllBatch)
   const clearBatch = useCodeReviewStore((s) => s.clearBatch)
   const tasks = useSprintTasks((s) => s.tasks)
+  const selectedTask = selectedTaskId ? tasks.find((t) => t.id === selectedTaskId) : null
+  useAutoReview(selectedTaskId, selectedTask?.status ?? null)
+  const panelOpen = useReviewPartnerStore((s) => s.panelOpen)
 
   useEffect(() => {
     const reviewCommands: Command[] = [
@@ -117,7 +122,7 @@ export default function CodeReviewView(): React.JSX.Element {
         <div className="cr-diffviewer">
           <DiffViewerPanel />
         </div>
-        <AIAssistantPanel />
+        {panelOpen && <AIAssistantPanel />}
       </div>
     </motion.div>
   )

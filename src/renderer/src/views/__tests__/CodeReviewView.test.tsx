@@ -39,20 +39,27 @@ vi.mock('../../stores/codeReview', () => {
   return { useCodeReviewStore: store }
 })
 
+// Default mock: panelOpen = false (panel absent from DOM)
+const mockReviewPartnerState = {
+  panelOpen: false,
+  reviewByTask: {},
+  messagesByTask: {},
+  activeStreamByTask: {},
+  togglePanel: vi.fn(),
+  sendMessage: vi.fn(),
+  abortStream: vi.fn(),
+  clearMessages: vi.fn(),
+  autoReview: vi.fn()
+}
+
 vi.mock('../../stores/reviewPartner', () => ({
   useReviewPartnerStore: vi.fn((sel: (s: Record<string, unknown>) => unknown) =>
-    sel({
-      panelOpen: false,
-      reviewByTask: {},
-      messagesByTask: {},
-      activeStreamByTask: {},
-      togglePanel: vi.fn(),
-      sendMessage: vi.fn(),
-      abortStream: vi.fn(),
-      clearMessages: vi.fn(),
-      autoReview: vi.fn()
-    })
+    sel(mockReviewPartnerState)
   )
+}))
+
+vi.mock('../../hooks/useAutoReview', () => ({
+  useAutoReview: vi.fn()
 }))
 
 vi.mock('../../lib/render-agent-markdown', () => ({
@@ -66,12 +73,20 @@ describe('CodeReviewView', () => {
     render(<CodeReviewView />)
     // TopBar should be present
     expect(screen.getByText('No tasks in review')).toBeInTheDocument()
-    // AI Review Partner panel should be present (updated title from Phase G1)
-    expect(screen.getByText('AI Review Partner')).toBeInTheDocument()
+    // AI Assistant panel is hidden when panelOpen = false
+    expect(screen.queryByText('AI Review Partner')).not.toBeInTheDocument()
   })
 
   it('renders the actions hint when no task selected', () => {
     render(<CodeReviewView />)
     expect(screen.getByText('No tasks in review')).toBeInTheDocument()
+  })
+
+  it('shows AI Assistant panel when panelOpen is true', () => {
+    mockReviewPartnerState.panelOpen = true
+    render(<CodeReviewView />)
+    expect(screen.getByText('AI Review Partner')).toBeInTheDocument()
+    // reset for next tests
+    mockReviewPartnerState.panelOpen = false
   })
 })
