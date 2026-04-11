@@ -1,4 +1,4 @@
-import { NeonCard, SankeyPipeline, MiniChart, type ChartBar } from '../neon'
+import { NeonCard, SankeyPipeline, MiniChart, type ChartBar, type SankeyStageKey } from '../neon'
 import { ThroughputChart } from './ThroughputChart'
 import { SuccessRateChart } from './SuccessRateChart'
 import { LoadAverageChart } from './LoadAverageChart'
@@ -11,6 +11,16 @@ import type { StatusFilter } from '../../stores/sprintUI'
 import { Activity, Zap, TrendingUp, Cpu, Coins } from 'lucide-react'
 import { useDashboardDataStore } from '../../stores/dashboardData'
 import './CenterColumn.css'
+
+/** Translates Sankey stage keys to sprint domain StatusFilter values. */
+const STAGE_TO_FILTER: Record<SankeyStageKey, StatusFilter> = {
+  queued: 'todo',
+  active: 'in-progress',
+  review: 'awaiting-review',
+  done: 'done',
+  blocked: 'blocked',
+  failed: 'failed'
+}
 
 interface DashboardStats {
   active: number
@@ -85,7 +95,7 @@ export function CenterColumn({
             blocked: partitions.blocked.length,
             failed: partitions.failed.length
           }}
-          onStageClick={onFilterClick}
+          onStageClick={(stage) => onFilterClick(STAGE_TO_FILTER[stage])}
         />
       </NeonCard>
 

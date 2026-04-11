@@ -1,9 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { useReducedMotion } from 'framer-motion'
-import type { StatusFilter } from '../../stores/sprintUI'
 import type { NeonAccent } from './types'
 import { neonVar } from './types'
-import { formatCount, STAGE_CONFIG, STAGE_TO_FILTER, type SankeyStageKey } from './sankey-utils'
+import { formatCount, STAGE_CONFIG, type SankeyStageKey } from './sankey-utils'
 import '../../assets/sankey-pipeline.css'
 
 interface SankeyPipelineProps {
@@ -15,7 +14,7 @@ interface SankeyPipelineProps {
     blocked: number
     failed: number
   }
-  onStageClick?: (filter: StatusFilter) => void
+  onStageClick?: (stage: SankeyStageKey) => void
   animated?: boolean
   className?: string
 }
@@ -146,13 +145,13 @@ export function SankeyPipeline({
   const flashingStages = useMemo(() => new Set(transitions.map((t) => t.to)), [transitions])
 
   function handleClick(key: SankeyStageKey): void {
-    onStageClick?.(STAGE_TO_FILTER[key])
+    onStageClick?.(key)
   }
 
   function handleKeyDown(e: React.KeyboardEvent, key: SankeyStageKey): void {
     if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
-      onStageClick?.(STAGE_TO_FILTER[key])
+      onStageClick?.(key)
     }
   }
 

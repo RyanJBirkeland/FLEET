@@ -1,5 +1,4 @@
 import type { NeonAccent } from './types'
-import type { StatusFilter } from '../../stores/sprintUI'
 
 /** Format count for display. Abbreviates 1000+ as "1.2k". */
 export function formatCount(n: number): string {
@@ -23,15 +22,6 @@ export const STAGE_CONFIG: Record<SankeyStageKey, StageConfig> = {
   done: { accent: 'blue', label: 'DONE', problem: false },
   blocked: { accent: 'red', label: 'BLOCKED', problem: true },
   failed: { accent: 'red', label: 'FAILED', problem: true }
-}
-
-export const STAGE_TO_FILTER: Record<SankeyStageKey, StatusFilter> = {
-  queued: 'todo',
-  active: 'in-progress',
-  review: 'awaiting-review',
-  done: 'done',
-  blocked: 'blocked',
-  failed: 'failed'
 }
 
 /** Happy path stage keys in flow order. */

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, fireEvent, act } from '@testing-library/react'
-import { formatCount, STAGE_CONFIG, STAGE_TO_FILTER } from '../sankey-utils'
+import { formatCount, STAGE_CONFIG } from '../sankey-utils'
 import { SankeyPipeline } from '../SankeyPipeline'
 
 const defaultStages = {
@@ -45,12 +45,12 @@ describe('SankeyPipeline', () => {
     expect(branchPaths.length).toBe(3)
   })
 
-  it('calls onStageClick with correct StatusFilter', () => {
+  it('calls onStageClick with correct SankeyStageKey', () => {
     const onClick = vi.fn()
     render(<SankeyPipeline stages={defaultStages} onStageClick={onClick} />)
     const queuedNode = screen.getByText('QUEUED').closest('[data-role="sankey-node"]')!
     fireEvent.click(queuedNode)
-    expect(onClick).toHaveBeenCalledWith('todo')
+    expect(onClick).toHaveBeenCalledWith('queued')
   })
 
   it('handles keyboard activation on nodes', () => {
@@ -58,7 +58,7 @@ describe('SankeyPipeline', () => {
     render(<SankeyPipeline stages={defaultStages} onStageClick={onClick} />)
     const activeNode = screen.getByText('ACTIVE').closest('[data-role="sankey-node"]')!
     fireEvent.keyDown(activeNode, { key: 'Enter' })
-    expect(onClick).toHaveBeenCalledWith('in-progress')
+    expect(onClick).toHaveBeenCalledWith('active')
   })
 
   it('applies custom className', () => {
@@ -150,17 +150,6 @@ describe('sankey-utils', () => {
         expect(config).toHaveProperty('accent')
         expect(config).toHaveProperty('label')
       }
-    })
-  })
-
-  describe('STAGE_TO_FILTER', () => {
-    it('maps stage keys to StatusFilter values', () => {
-      expect(STAGE_TO_FILTER.queued).toBe('todo')
-      expect(STAGE_TO_FILTER.active).toBe('in-progress')
-      expect(STAGE_TO_FILTER.review).toBe('awaiting-review')
-      expect(STAGE_TO_FILTER.done).toBe('done')
-      expect(STAGE_TO_FILTER.blocked).toBe('blocked')
-      expect(STAGE_TO_FILTER.failed).toBe('failed')
     })
   })
 })
