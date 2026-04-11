@@ -12,7 +12,7 @@ import { useAgentEventsStore } from '../stores/agentEvents'
 import { AgentList } from '../components/agents/AgentList'
 import { AgentConsole } from '../components/agents/AgentConsole'
 import { AgentLaunchpad } from '../components/agents/AgentLaunchpad'
-import { EmptyState } from '../components/ui/EmptyState'
+import { FleetGlance } from '../components/agents/FleetGlance'
 import { toast } from '../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
@@ -350,13 +350,11 @@ export function AgentsView(): React.JSX.Element {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  height: '100%'
+                  height: '100%',
+                  overflow: 'auto'
                 }}
               >
-                <EmptyState
-                  title="No agent selected"
-                  description="Select an agent from the fleet list to view its console output."
-                />
+                <FleetGlance agents={agents} onSelect={handleSelectAgent} />
               </div>
             )}
           </div>

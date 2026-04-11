@@ -1,0 +1,217 @@
+/**
+ * FleetGlance — neon-themed fleet overview styling.
+ */
+
+.fleet-glance {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  padding: 32px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+/* Fleet status row */
+.fleet-glance__status-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 20px;
+  background: linear-gradient(
+    135deg,
+    var(--neon-purple-surface),
+    var(--bde-bg)
+  );
+  border: 1px solid var(--neon-purple-border);
+  border-radius: var(--bde-radius-md);
+}
+
+.fleet-glance__stat {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: var(--bde-bg-subtle);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm);
+  flex: 1;
+  min-width: 140px;
+}
+
+.fleet-glance__stat-icon {
+  flex-shrink: 0;
+}
+
+.fleet-glance__stat-icon--running {
+  color: var(--neon-cyan-color);
+}
+
+.fleet-glance__stat-icon--done {
+  color: var(--neon-green-color);
+}
+
+.fleet-glance__stat-icon--failed {
+  color: var(--neon-red-color);
+}
+
+.fleet-glance__stat-icon--cost {
+  color: var(--neon-orange-color);
+}
+
+.fleet-glance__stat-icon--runtime {
+  color: var(--neon-purple-color);
+}
+
+.fleet-glance__stat-label {
+  font-size: 12px;
+  color: var(--bde-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  flex: 1;
+}
+
+.fleet-glance__stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--bde-text);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Section */
+.fleet-glance__section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.fleet-glance__section-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--bde-text-dim);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0;
+  padding-left: 4px;
+}
+
+/* List */
+.fleet-glance__list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fleet-glance__item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: var(--bde-bg-subtle);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease-out;
+  text-align: left;
+}
+
+.fleet-glance__item:hover {
+  background: var(--bde-bg-hover);
+  border-color: var(--neon-cyan-border);
+  box-shadow: 0 0 8px var(--neon-cyan-color);
+}
+
+.fleet-glance__status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fleet-glance__status-dot--running {
+  background: var(--neon-cyan-color);
+  box-shadow: 0 0 8px var(--neon-cyan-color);
+  animation: pulse-dot 2s ease-in-out infinite;
+}
+
+@keyframes pulse-dot {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+.fleet-glance__task {
+  flex: 1;
+  font-size: 14px;
+  color: var(--bde-text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.fleet-glance__hint {
+  font-size: 12px;
+  color: var(--bde-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.fleet-glance__duration {
+  font-size: 12px;
+  color: var(--bde-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 60px;
+  text-align: right;
+}
+
+.fleet-glance__cost {
+  font-size: 12px;
+  color: var(--neon-orange-color);
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 50px;
+  text-align: right;
+}
+
+.fleet-glance__ago {
+  font-size: 12px;
+  color: var(--bde-text-dim);
+  font-family: 'JetBrains Mono', monospace;
+  min-width: 60px;
+  text-align: right;
+}
+
+.fleet-glance__completion-icon {
+  flex-shrink: 0;
+}
+
+.fleet-glance__completion-icon--done {
+  color: var(--neon-green-color);
+}
+
+.fleet-glance__completion-icon--failed {
+  color: var(--neon-red-color);
+}
+
+/* Empty state */
+.fleet-glance__empty {
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--bde-text-dim);
+}
+
+.fleet-glance__empty p {
+  margin: 0 0 12px;
+  font-size: 14px;
+}
+
+.fleet-glance__empty-hint {
+  font-size: 12px;
+  color: var(--bde-text-dimmer);
+}
+
+.fleet-glance__empty-hint strong {
+  color: var(--neon-cyan-color);
+  font-weight: 600;
+}
