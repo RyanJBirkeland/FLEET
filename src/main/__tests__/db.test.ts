@@ -104,6 +104,7 @@ describe('db schema migrations', () => {
       'sprints',
       'task_changes',
       'task_groups',
+      'task_reviews',
       'webhooks'
     ])
   })
@@ -139,7 +140,8 @@ describe('db schema migrations', () => {
       'idx_sprint_tasks_status_claimed',
       'idx_task_changes_changed_at',
       'idx_task_changes_task_changed',
-      'idx_task_changes_task_id'
+      'idx_task_changes_task_id',
+      'idx_task_reviews_task'
     ])
   })
 
