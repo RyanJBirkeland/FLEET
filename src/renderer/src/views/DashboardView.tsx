@@ -53,6 +53,8 @@ export default function DashboardView(): React.JSX.Element {
   const localAgents = useCostDataStore((s) => s.localAgents)
   const setStatusFilter = useSprintUI((s) => s.setStatusFilter)
   const setSearchQuery = useSprintUI((s) => s.setSearchQuery)
+  const setRepoFilter = useSprintUI((s) => s.setRepoFilter)
+  const setTagFilter = useSprintUI((s) => s.setTagFilter)
   const setView = usePanelLayoutStore((s) => s.setView)
   const fetchDashboardData = useDashboardDataStore((s) => s.fetchAll)
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands)
@@ -154,10 +156,12 @@ export default function DashboardView(): React.JSX.Element {
   const navigateToSprintWithFilter = useCallback(
     (status: StatusFilter) => {
       setSearchQuery('')
+      setRepoFilter(null)
+      setTagFilter(null)
       setStatusFilter(status)
       setView('sprint')
     },
-    [setStatusFilter, setSearchQuery, setView]
+    [setStatusFilter, setSearchQuery, setRepoFilter, setTagFilter, setView]
   )
 
   const handleCompletionClick = useCallback(() => {

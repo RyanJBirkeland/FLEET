@@ -52,6 +52,7 @@ interface SprintUIState {
   toggleTaskSelection: (id: string) => void
   clearMultiSelection: () => void
   setPipelineDensity: (density: PipelineDensity) => void
+  clearAllFilters: () => void
 }
 
 export const useSprintUI = create<SprintUIState>((set, get) => ({
@@ -128,5 +129,9 @@ export const useSprintUI = create<SprintUIState>((set, get) => ({
 
   setPipelineDensity: (density): void => {
     set({ pipelineDensity: density })
+  },
+
+  clearAllFilters: (): void => {
+    set({ statusFilter: 'all', repoFilter: null, tagFilter: null, searchQuery: '' })
   }
 }))

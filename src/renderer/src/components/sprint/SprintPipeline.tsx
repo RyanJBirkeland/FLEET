@@ -24,6 +24,7 @@ import { PipelineStage } from './PipelineStage'
 import { TaskDetailDrawer } from './TaskDetailDrawer'
 import { PipelineErrorBoundary } from './PipelineErrorBoundary'
 import { PipelineFilterBar } from './PipelineFilterBar'
+import { PipelineFilterBanner } from './PipelineFilterBanner'
 import { PipelineHeader } from './PipelineHeader'
 import { PipelineOverlays } from './PipelineOverlays'
 import { DagOverlay } from './DagOverlay'
@@ -522,6 +523,8 @@ export function SprintPipeline(): React.JSX.Element {
       />
 
       <PipelineFilterBar tasks={tasks} />
+
+      <PipelineFilterBanner filteredTasks={filteredTasks} totalTasks={tasks} />
 
       {loading && tasks.length === 0 && (
         <div className="sprint-pipeline__body">
