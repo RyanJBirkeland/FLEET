@@ -8,6 +8,11 @@
   overflow: hidden;
 }
 
+.stg-sidebar {
+  width: 220px;
+  flex-shrink: 0;
+}
+
 /* ─── Content ──────────────────────────────────────────────────────────── */
 
 .stg-content {
