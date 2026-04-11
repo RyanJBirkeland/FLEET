@@ -10,10 +10,21 @@ vi.mock('../../../stores/codeReview', () => {
   const store = create(() => ({
     diffFiles: [],
     selectedDiffFile: null,
+    selectedTaskId: null as string | null,
     setSelectedDiffFile: mockSetSelectedDiffFile
   }))
   return { useCodeReviewStore: store }
 })
+
+const partnerState = vi.hoisted(() => ({
+  reviewByTask: {} as Record<string, { result?: unknown } | undefined>
+}))
+
+vi.mock('../../../stores/reviewPartner', () => ({
+  useReviewPartnerStore: vi.fn(
+    (sel: (s: typeof partnerState) => unknown) => sel(partnerState)
+  )
+}))
 
 import { FileTreePanel } from '../FileTreePanel'
 import { useCodeReviewStore } from '../../../stores/codeReview'
@@ -24,8 +35,10 @@ describe('FileTreePanel', () => {
     useCodeReviewStore.setState({
       diffFiles: [],
       selectedDiffFile: null,
+      selectedTaskId: null,
       setSelectedDiffFile: mockSetSelectedDiffFile
     })
+    partnerState.reviewByTask = {}
   })
 
   it('renders header with file count', () => {
@@ -101,5 +114,57 @@ describe('FileTreePanel', () => {
     render(<FileTreePanel />)
     expect(screen.getByText('Files')).toBeInTheDocument()
     expect(screen.getByText('0')).toBeInTheDocument()
+  })
+
+  it('shows issues badge for a file with findings', () => {
+    useCodeReviewStore.setState({
+      selectedTaskId: 'task-1',
+      diffFiles: [
+        { path: 'src/risky.ts', status: 'M', additions: 5, deletions: 0, patch: '' }
+      ]
+    })
+    partnerState.reviewByTask = {
+      'task-1': {
+        result: {
+          findings: {
+            perFile: [{ path: 'src/risky.ts', status: 'issues', commentCount: 2, comments: [] }]
+          }
+        }
+      }
+    }
+    render(<FileTreePanel />)
+    expect(screen.getByRole('img', { name: 'File has issues' })).toBeInTheDocument()
+  })
+
+  it('shows clean badge for a file with no issues', () => {
+    useCodeReviewStore.setState({
+      selectedTaskId: 'task-1',
+      diffFiles: [
+        { path: 'src/clean.ts', status: 'M', additions: 2, deletions: 0, patch: '' }
+      ]
+    })
+    partnerState.reviewByTask = {
+      'task-1': {
+        result: {
+          findings: {
+            perFile: [{ path: 'src/clean.ts', status: 'clean', commentCount: 0, comments: [] }]
+          }
+        }
+      }
+    }
+    render(<FileTreePanel />)
+    expect(screen.getByRole('img', { name: 'File reviewed clean' })).toBeInTheDocument()
+  })
+
+  it('shows no badge for unreviewed files', () => {
+    useCodeReviewStore.setState({
+      selectedTaskId: 'task-1',
+      diffFiles: [
+        { path: 'src/unknown.ts', status: 'M', additions: 1, deletions: 0, patch: '' }
+      ]
+    })
+    partnerState.reviewByTask = { 'task-1': { result: { findings: { perFile: [] } } } }
+    render(<FileTreePanel />)
+    expect(screen.queryByRole('img', { name: /file/i })).not.toBeInTheDocument()
   })
 })

@@ -1,13 +1,25 @@
 import './FileTreePanel.css'
 import { useState } from 'react'
 import { useCodeReviewStore } from '../../stores/codeReview'
+import { useReviewPartnerStore } from '../../stores/reviewPartner'
 import { Plus, Minus, Edit2, ChevronRight } from 'lucide-react'
+import { AIFileStatusBadge, type FileReviewStatus } from './AIFileStatusBadge'
 
 export function FileTreePanel(): React.JSX.Element {
   const diffFiles = useCodeReviewStore((s) => s.diffFiles)
   const selectedDiffFile = useCodeReviewStore((s) => s.selectedDiffFile)
   const setSelectedDiffFile = useCodeReviewStore((s) => s.setSelectedDiffFile)
+  const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
+  const reviewResult = useReviewPartnerStore((s) =>
+    selectedTaskId ? s.reviewByTask[selectedTaskId]?.result : undefined
+  )
   const [isExpanded, setIsExpanded] = useState(false)
+
+  function statusForPath(path: string): FileReviewStatus {
+    const finding = reviewResult?.findings.perFile.find((f) => f.path === path)
+    if (!finding) return 'unreviewed'
+    return finding.status
+  }
 
   const statusIcon = (status: string): React.JSX.Element => {
     if (status === 'A' || status === 'added') return <Plus size={12} className="cr-file-added" />
@@ -54,6 +66,7 @@ export function FileTreePanel(): React.JSX.Element {
             >
               {statusIcon(file.status)}
               <span className="cr-filetree__filename">{file.path}</span>
+              <AIFileStatusBadge status={statusForPath(file.path)} />
               <span className="cr-filetree__stats">
                 +{file.additions} −{file.deletions}
               </span>
