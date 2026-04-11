@@ -13,6 +13,8 @@
 
 import { broadcast } from './broadcast'
 import { createLogger } from './logger'
+import { getErrorMessage } from '../shared/errors'
+import type { GitHubError, GitHubResult } from '../shared/types/github-errors'
 
 const logger = createLogger('github-fetch')
 
@@ -276,4 +278,166 @@ export async function fetchAllGitHubPages<T>(
   }
 
   return items
+}
+
+// ---------------------------------------------------------------------------
+// Structured error classification + typed JSON fetch
+// ---------------------------------------------------------------------------
+
+/**
+ * Classify an HTTP error Response into a structured `GitHubError`.
+ * Uses header/body signals to distinguish rate-limit, billing (Actions
+ * disabled), permission (missing scope), not-found, and server errors.
+ */
+export function classifyHttpError(response: Response, body: string): GitHubError {
+  const status = response.status
+  if (status === 401) {
+    return {
+      kind: 'token-expired',
+      status,
+      message: 'GitHub token is invalid or expired',
+      retryable: false
+    }
+  }
+  if (status === 403) {
+    const remaining = response.headers.get('x-ratelimit-remaining')
+    if (remaining === '0') {
+      return {
+        kind: 'rate-limit',
+        status,
+        message: 'GitHub API rate limit exceeded',
+        retryable: true
+      }
+    }
+    // Body-text heuristic for Actions-disabled / billing-blocked responses.
+    // GitHub returns this when workflow jobs fail to start due to account
+    // payment issues or spending-limit cap.
+    if (/not started|spending limit|billing|payment has failed|payment/i.test(body)) {
+      return {
+        kind: 'billing',
+        status,
+        message: 'GitHub Actions disabled — billing issue or spending limit reached',
+        retryable: false
+      }
+    }
+    return {
+      kind: 'permission',
+      status,
+      message: `GitHub API forbidden: ${body.slice(0, 200) || 'no details'}`,
+      retryable: false
+    }
+  }
+  if (status === 404) {
+    return { kind: 'not-found', status, message: 'Resource not found', retryable: false }
+  }
+  if (status === 422) {
+    return {
+      kind: 'validation',
+      status,
+      message: `Validation failed: ${body.slice(0, 200) || 'no details'}`,
+      retryable: false
+    }
+  }
+  if (status >= 500 && status < 600) {
+    return { kind: 'server', status, message: `GitHub server error (${status})`, retryable: true }
+  }
+  return { kind: 'unknown', status, message: `HTTP ${status}`, retryable: false }
+}
+
+/**
+ * Classify a thrown error from `fetch()` (not an HTTP error — a transport
+ * failure) into a structured `GitHubError`. All transport failures collapse
+ * to `kind: 'network'` and are retryable.
+ */
+export function classifyNetworkError(err: unknown): GitHubError {
+  const msg = getErrorMessage(err)
+  if (err instanceof Error && err.name === 'AbortError') {
+    return { kind: 'network', message: 'Request timed out', retryable: true }
+  }
+  if (/ENOTFOUND|EAI_AGAIN|ECONNREFUSED|ECONNRESET|ETIMEDOUT/.test(msg)) {
+    return { kind: 'network', message: `Network error: ${msg}`, retryable: true }
+  }
+  return { kind: 'network', message: `Network error: ${msg}`, retryable: true }
+}
+
+// Debounce error broadcasts so a 60s poll loop doesn't spam identical toasts.
+const lastBroadcastAt: Map<string, number> = new Map()
+const BROADCAST_DEBOUNCE_MS = 60_000
+
+function broadcastGitHubError(error: GitHubError): void {
+  const now = Date.now()
+  const last = lastBroadcastAt.get(error.kind) ?? 0
+  if (now - last < BROADCAST_DEBOUNCE_MS) return
+  lastBroadcastAt.set(error.kind, now)
+  broadcast('github:error', { kind: error.kind, message: error.message, status: error.status })
+}
+
+/** Reset broadcast debounce state — tests only. */
+export function _resetGitHubErrorBroadcasts(): void {
+  lastBroadcastAt.clear()
+}
+
+/**
+ * JSON-flavored `githubFetch`. Handles token absence, network errors,
+ * and HTTP errors in a single Result shape. Errors are automatically
+ * broadcast (debounced) to the renderer via `github:error` so the UI
+ * can surface toasts/banners without every consumer wiring it up.
+ *
+ * Note: not-found errors are intentionally NOT broadcast — a 404 is
+ * often a valid "missing resource" state, not a failure worth alerting.
+ */
+export async function githubFetchJson<T>(
+  url: string,
+  token: string | null,
+  options?: GithubFetchOptions
+): Promise<GitHubResult<T>> {
+  if (!token) {
+    return {
+      ok: false,
+      error: {
+        kind: 'no-token',
+        message: 'No GitHub token configured. Set one in Settings → Connections.',
+        retryable: false
+      }
+    }
+  }
+
+  let response: Response
+  try {
+    response = await githubFetch(url, {
+      ...options,
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/vnd.github+json',
+        ...options?.headers
+      }
+    })
+  } catch (err) {
+    const error = classifyNetworkError(err)
+    logger.warn(`[githubFetchJson] network error for ${url}: ${error.message}`)
+    broadcastGitHubError(error)
+    return { ok: false, error }
+  }
+
+  if (response.ok) {
+    try {
+      const data = (await response.json()) as T
+      return { ok: true, data }
+    } catch (parseErr) {
+      const error: GitHubError = {
+        kind: 'unknown',
+        message: `JSON parse failed: ${getErrorMessage(parseErr)}`,
+        retryable: false
+      }
+      return { ok: false, error }
+    }
+  }
+
+  const body = await response.text().catch(() => '')
+  const error = classifyHttpError(response, body)
+  // Don't spam users about missing resources — 404 is often expected state.
+  if (error.kind !== 'not-found') {
+    broadcastGitHubError(error)
+  }
+  return { ok: false, error }
 }

@@ -1,6 +1,6 @@
 import { broadcast as broadcastEvent } from './broadcast'
 import { getGitHubToken } from './config'
-import { githubFetch, fetchAllGitHubPages } from './github-fetch'
+import { githubFetchJson, fetchAllGitHubPages } from './github-fetch'
 import { getConfiguredRepos } from './paths'
 import { createLogger } from './logger'
 import type { OpenPr, CheckRunSummary, PrListPayload } from '../shared/types'
@@ -44,35 +44,30 @@ async function fetchCheckRuns(
   token: string
 ): Promise<CheckRunSummary> {
   const empty: CheckRunSummary = { status: 'pending', total: 0, passed: 0, failed: 0, pending: 0 }
-  try {
-    const res = await githubFetch(
-      `https://api.github.com/repos/${owner}/${repo}/commits/${sha}/check-runs`,
-      {
-        headers: {
-          Authorization: `Bearer ${token}`,
-          Accept: 'application/vnd.github+json'
-        },
-        timeoutMs: REQUEST_TIMEOUT_MS
-      }
-    )
-    if (!res.ok) return empty
-    const data = (await res.json()) as {
-      total_count: number
-      check_runs: { status: string; conclusion: string | null }[]
-    }
-    let passed = 0
-    let failed = 0
-    let pending = 0
-    for (const run of data.check_runs) {
-      if (run.status !== 'completed') pending++
-      else if (run.conclusion === 'success' || run.conclusion === 'skipped') passed++
-      else failed++
-    }
-    const status: CheckRunSummary['status'] = failed > 0 ? 'fail' : pending > 0 ? 'pending' : 'pass'
-    return { status, total: data.total_count, passed, failed, pending }
-  } catch {
-    return empty
+  const result = await githubFetchJson<{
+    total_count: number
+    check_runs: { status: string; conclusion: string | null }[]
+  }>(
+    `https://api.github.com/repos/${owner}/${repo}/commits/${sha}/check-runs`,
+    token,
+    { timeoutMs: REQUEST_TIMEOUT_MS }
+  )
+  // On any error, degrade to the "pending" sentinel so the UI doesn't flash
+  // false positives. Error details are logged + broadcast by githubFetchJson
+  // via `github:error` for the renderer toast system to surface.
+  if (!result.ok) return empty
+
+  const data = result.data
+  let passed = 0
+  let failed = 0
+  let pending = 0
+  for (const run of data.check_runs) {
+    if (run.status !== 'completed') pending++
+    else if (run.conclusion === 'success' || run.conclusion === 'skipped') passed++
+    else failed++
   }
+  const status: CheckRunSummary['status'] = failed > 0 ? 'fail' : pending > 0 ? 'pending' : 'pass'
+  return { status, total: data.total_count, passed, failed, pending }
 }
 
 async function poll(): Promise<void> {

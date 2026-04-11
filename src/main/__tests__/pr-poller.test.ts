@@ -10,6 +10,7 @@ vi.mock('../paths', () => ({
 }))
 vi.mock('../github-fetch', () => ({
   githubFetch: vi.fn(),
+  githubFetchJson: vi.fn(),
   fetchAllGitHubPages: vi.fn()
 }))
 vi.mock('../logger', () => ({
@@ -29,7 +30,7 @@ import {
   POLL_INTERVAL_MS
 } from '../pr-poller'
 import { broadcast } from '../broadcast'
-import { fetchAllGitHubPages, githubFetch } from '../github-fetch'
+import { fetchAllGitHubPages, githubFetch, githubFetchJson } from '../github-fetch'
 import { getGitHubToken } from '../config'
 import { getConfiguredRepos } from '../paths'
 
@@ -42,6 +43,10 @@ function setupDefaultMocks(): void {
   vi.mocked(githubFetch).mockResolvedValue({
     ok: true,
     json: () => Promise.resolve({ total_count: 0, check_runs: [] })
+  } as any)
+  vi.mocked(githubFetchJson).mockResolvedValue({
+    ok: true,
+    data: { total_count: 0, check_runs: [] }
   } as any)
 }
 
@@ -141,21 +146,20 @@ describe('pr-poller', () => {
         repo: 'BDE'
       }
     ])
-    vi.mocked(githubFetch).mockResolvedValue({
+    vi.mocked(githubFetchJson).mockResolvedValue({
       ok: true,
-      json: () =>
-        Promise.resolve({
-          total_count: 2,
-          check_runs: [
-            { status: 'completed', conclusion: 'success' },
-            { status: 'completed', conclusion: 'failure' }
-          ]
-        })
+      data: {
+        total_count: 2,
+        check_runs: [
+          { status: 'completed', conclusion: 'success' },
+          { status: 'completed', conclusion: 'failure' }
+        ]
+      }
     } as any)
 
     const result = await refreshPrList()
 
-    expect(githubFetch).toHaveBeenCalled()
+    expect(githubFetchJson).toHaveBeenCalled()
     expect(result.checks).toBeDefined()
     expect(result.checks['BDE-42']).toBeDefined()
     expect(result.checks['BDE-42'].failed).toBe(1)
@@ -215,14 +219,15 @@ describe('pr-poller', () => {
         repo: 'BDE'
       }
     ])
-    vi.mocked(githubFetch).mockResolvedValue({
+    vi.mocked(githubFetchJson).mockResolvedValue({
       ok: false,
-      json: () => Promise.resolve({})
+      error: { kind: 'server', status: 503, message: 'GitHub server error (503)', retryable: true }
     } as any)
 
     const result = await refreshPrList()
 
-    // Should still return result with empty check summary
+    // Should still return result with empty check summary (the error is
+    // broadcast via github:error but the poller degrades gracefully).
     expect(result.prs.length).toBe(1)
     expect(result.checks['BDE-1'].status).toBe('pending')
     expect(result.checks['BDE-1'].total).toBe(0)

@@ -415,7 +415,16 @@ describe('git.ts', () => {
       })
 
       it('returns error state on non-OK HTTP response', async () => {
-        mockFetch.mockResolvedValueOnce({ ok: false, headers: { get: (): null => null } })
+        // githubFetchJson (used by fetchPrStatusRest) reads the response body
+        // via .text() to classify 403 as rate-limit/billing/permission, so
+        // the mock needs to provide it even for a non-OK response.
+        mockFetch.mockResolvedValueOnce({
+          ok: false,
+          status: 500,
+          headers: { get: (): null => null },
+          text: () => Promise.resolve(''),
+          json: () => Promise.resolve({})
+        })
 
         const results = await pollPrStatuses([
           { taskId: 't1', prUrl: 'https://github.com/octocat/repo/pull/1' }
