@@ -12,16 +12,28 @@ vi.mock('../../stores/codeReview', () => {
   const store = create(() => ({
     selectedTaskId: null,
     activeTab: 'changes',
+    diffMode: 'diff',
     diffFiles: [],
     commits: [],
     loading: {},
     error: null,
+    selectedBatchIds: new Set(),
+    reviewSummary: null,
+    summaryLoading: false,
+    selectedDiffFile: null,
     selectTask: vi.fn(),
     setActiveTab: vi.fn(),
+    setDiffMode: vi.fn(),
     setDiffFiles: vi.fn(),
     setCommits: vi.fn(),
     setLoading: vi.fn(),
     setError: vi.fn(),
+    toggleBatchId: vi.fn(),
+    selectAllBatch: vi.fn(),
+    clearBatch: vi.fn(),
+    setReviewSummary: vi.fn(),
+    setSummaryLoading: vi.fn(),
+    setSelectedDiffFile: vi.fn(),
     reset: vi.fn()
   }))
   return { useCodeReviewStore: store }
@@ -34,11 +46,12 @@ vi.mock('../../lib/render-agent-markdown', () => ({
 import CodeReviewView from '../CodeReviewView'
 
 describe('CodeReviewView', () => {
-  it('renders the view shell with queue and detail areas', () => {
+  it('renders the three-column shell with TopBar', () => {
     render(<CodeReviewView />)
-    expect(screen.getByText('Review Queue')).toBeInTheDocument()
-    // Detail shows empty state when no task selected
-    expect(screen.getByText('No task selected')).toBeInTheDocument()
+    // TopBar should be present
+    expect(screen.getByText('Select a task in review to see actions')).toBeInTheDocument()
+    // Three-column structure should exist (check for placeholder AI Assistant)
+    expect(screen.getByText('AI Assistant')).toBeInTheDocument()
   })
 
   it('renders the actions hint when no task selected', () => {

@@ -1,0 +1,100 @@
+.cr-diffviewer {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bde-bg);
+}
+
+.cr-diffviewer__header {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 var(--bde-space-4);
+  background: var(--bde-surface);
+  border-bottom: 1px solid var(--bde-border);
+  flex-shrink: 0;
+}
+
+.cr-diffviewer__breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cr-diffviewer__path {
+  font-size: var(--bde-size-sm);
+  color: var(--bde-text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cr-diffviewer__path--empty {
+  color: var(--bde-text-dim);
+  font-style: italic;
+}
+
+.cr-diffviewer__copy-btn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  border-radius: var(--bde-radius-sm);
+  color: var(--bde-text-dim);
+  cursor: pointer;
+  transition: all 120ms ease;
+  opacity: 0;
+}
+
+.cr-diffviewer__breadcrumb:hover .cr-diffviewer__copy-btn {
+  opacity: 1;
+}
+
+.cr-diffviewer__copy-btn:hover {
+  background: var(--bde-hover);
+  color: var(--bde-text);
+}
+
+.cr-diffviewer__mode-control {
+  display: flex;
+  gap: var(--bde-space-1);
+  padding: 2px;
+  background: var(--bde-surface-high);
+  border-radius: var(--bde-radius-md);
+}
+
+.cr-diffviewer__mode-pill {
+  padding: 2px var(--bde-space-3);
+  background: transparent;
+  border: none;
+  border-radius: var(--bde-radius-md);
+  font-size: var(--bde-size-xs);
+  font-weight: 500;
+  color: var(--bde-text-muted);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.cr-diffviewer__mode-pill:hover {
+  color: var(--bde-text);
+}
+
+.cr-diffviewer__mode-pill--active {
+  background: var(--bde-accent-surface);
+  color: var(--bde-accent);
+}
+
+.cr-diffviewer__body {
+  flex: 1 1 auto;
+  overflow: auto;
+  min-height: 0;
+}

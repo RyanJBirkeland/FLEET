@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 
 export type ReviewTab = 'changes' | 'commits' | 'tests' | 'conversation'
+export type DiffMode = 'diff' | 'commits' | 'tests'
 
 export interface DiffFile {
   path: string
@@ -20,6 +21,7 @@ export interface ReviewCommit {
 interface CodeReviewState {
   selectedTaskId: string | null
   activeTab: ReviewTab
+  diffMode: DiffMode
   diffFiles: DiffFile[]
   commits: ReviewCommit[]
   loading: Record<string, boolean>
@@ -31,6 +33,7 @@ interface CodeReviewState {
 
   selectTask: (taskId: string | null) => void
   setActiveTab: (tab: ReviewTab) => void
+  setDiffMode: (mode: DiffMode) => void
   setDiffFiles: (files: DiffFile[]) => void
   setCommits: (commits: ReviewCommit[]) => void
   setLoading: (key: string, loading: boolean) => void
@@ -47,6 +50,7 @@ interface CodeReviewState {
 const initialState = {
   selectedTaskId: null as string | null,
   activeTab: 'changes' as ReviewTab,
+  diffMode: 'diff' as DiffMode,
   diffFiles: [] as DiffFile[],
   commits: [] as ReviewCommit[],
   loading: {} as Record<string, boolean>,
@@ -62,6 +66,7 @@ export const useCodeReviewStore = create<CodeReviewState>((set) => ({
   selectTask: (taskId): void =>
     set({
       selectedTaskId: taskId,
+      diffMode: 'diff',
       diffFiles: [],
       commits: [],
       error: null,
@@ -70,6 +75,7 @@ export const useCodeReviewStore = create<CodeReviewState>((set) => ({
       selectedDiffFile: null
     }),
   setActiveTab: (tab): void => set({ activeTab: tab }),
+  setDiffMode: (mode): void => set({ diffMode: mode }),
   setDiffFiles: (files): void => set({ diffFiles: files, selectedDiffFile: null }),
   setCommits: (commits): void => set({ commits }),
   setLoading: (key, loading): void => set((s) => ({ loading: { ...s.loading, [key]: loading } })),

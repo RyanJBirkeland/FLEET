@@ -49,7 +49,7 @@ export function ReviewQueue(): React.JSX.Element {
   }, [reviewTasks, selectedTaskId, selectTask])
 
   return (
-    <aside className="cr-queue">
+    <div className="cr-queue">
       <div className="cr-queue__header">
         <label className="cr-queue__select-all">
           <input
@@ -108,6 +108,6 @@ export function ReviewQueue(): React.JSX.Element {
           <EmptyState message="No tasks awaiting review. Complete agent runs will appear here for inspection." />
         )}
       </motion.div>
-    </aside>
+    </div>
   )
 }

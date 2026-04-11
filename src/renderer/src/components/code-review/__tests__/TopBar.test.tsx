@@ -1,0 +1,98 @@
+import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { TopBar } from '../TopBar'
+import { useCodeReviewStore } from '../../../stores/codeReview'
+import { useSprintTasks } from '../../../stores/sprintTasks'
+import type { SprintTask } from '../../../../../shared/types/task-types'
+
+vi.mock('../../../hooks/useGitHubStatus', () => ({
+  useGitHubStatus: () => ({ configured: true })
+}))
+
+vi.mock('../ReviewQueue', () => ({
+  ReviewQueue: () => <div data-testid="review-queue">Queue</div>
+}))
+
+describe('TopBar', () => {
+  beforeEach(() => {
+    useCodeReviewStore.getState().reset()
+    useSprintTasks.setState({
+      tasks: [
+        {
+          id: 'task-1',
+          title: 'Test Task 1',
+          status: 'review',
+          repo: 'bde',
+          spec: 'Test spec',
+          spec_type: 'spec',
+          updated_at: '2026-04-11T00:00:00Z',
+          priority: 1,
+          needs_review: true,
+          playground_enabled: false,
+          prompt: null,
+          notes: null,
+          retry_count: 0,
+          fast_fail_count: 0,
+          agent_run_id: null,
+          pr_number: null,
+          pr_status: null,
+          pr_url: null,
+          claimed_by: null,
+          started_at: null,
+          completed_at: null,
+          template_name: null,
+          depends_on: null
+        } as SprintTask
+      ]
+    })
+    useCodeReviewStore.getState().selectTask('task-1')
+    window.api = {
+      review: {
+        checkFreshness: vi.fn().mockResolvedValue({ status: 'fresh', commitsBehind: 0 })
+      }
+    } as never
+  })
+
+  it('should render with selected task', () => {
+    render(<TopBar />)
+    expect(screen.getByText('Test Task 1')).toBeInTheDocument()
+  })
+
+  it('should render action buttons', () => {
+    render(<TopBar />)
+    expect(screen.getByText(/Ship It/i)).toBeInTheDocument()
+    expect(screen.getByText(/Merge Locally/i)).toBeInTheDocument()
+    expect(screen.getByText(/Create PR/i)).toBeInTheDocument()
+  })
+
+  it('should show freshness badge', async () => {
+    render(<TopBar />)
+    await waitFor(() => {
+      expect(screen.getByText('Fresh')).toBeInTheDocument()
+    })
+  })
+
+  it('should open task switcher popover on click', async () => {
+    const user = userEvent.setup()
+    render(<TopBar />)
+    const taskBtn = screen.getByRole('button', { name: /Test Task 1/i })
+    await user.click(taskBtn)
+    expect(screen.getByTestId('review-queue')).toBeInTheDocument()
+  })
+
+  it('should open kebab menu on click', async () => {
+    const user = userEvent.setup()
+    render(<TopBar />)
+    const kebabBtn = screen.getByLabelText('More actions')
+    await user.click(kebabBtn)
+    expect(screen.getByRole('menuitem', { name: /Revise/i })).toBeInTheDocument()
+    expect(screen.getByRole('menuitem', { name: /Discard/i })).toBeInTheDocument()
+  })
+
+  it('should render hint when no task selected', () => {
+    useCodeReviewStore.getState().selectTask(null)
+    render(<TopBar />)
+    expect(screen.getByText(/Select a task in review to see actions/i)).toBeInTheDocument()
+  })
+})

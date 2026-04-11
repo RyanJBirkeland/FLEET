@@ -1,9 +1,9 @@
 import './CodeReviewView.css'
 import { useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { ReviewQueue } from '../components/code-review/ReviewQueue'
-import { ReviewDetail } from '../components/code-review/ReviewDetail'
-import { ReviewActions } from '../components/code-review/ReviewActions'
+import { TopBar } from '../components/code-review/TopBar'
+import { FileTreePanel } from '../components/code-review/FileTreePanel'
+import { DiffViewerPanel } from '../components/code-review/DiffViewerPanel'
 import { BatchActions } from '../components/code-review/BatchActions'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 import { useCodeReviewStore } from '../stores/codeReview'
@@ -111,12 +111,17 @@ export default function CodeReviewView(): React.JSX.Element {
       animate="animate"
       transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
     >
-      <div className="view-layout">
-        <ReviewQueue />
-        <div className="cr-main view-content">
-          <ReviewDetail />
-          <ReviewActions />
+      <TopBar />
+      <div className="cr-panels">
+        <div className="cr-filetree">
+          <FileTreePanel />
         </div>
+        <div className="cr-diffviewer">
+          <DiffViewerPanel />
+        </div>
+        <section className="cr-assistant cr-assistant--placeholder">
+          AI Assistant
+        </section>
       </div>
       <BatchActions />
     </motion.div>
