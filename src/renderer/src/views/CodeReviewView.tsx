@@ -4,6 +4,7 @@ import { motion } from 'framer-motion'
 import { TopBar } from '../components/code-review/TopBar'
 import { FileTreePanel } from '../components/code-review/FileTreePanel'
 import { DiffViewerPanel } from '../components/code-review/DiffViewerPanel'
+import { AIAssistantPanel } from '../components/code-review/AIAssistantPanel'
 import { BatchActions } from '../components/code-review/BatchActions'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 import { useCodeReviewStore } from '../stores/codeReview'
@@ -119,9 +120,7 @@ export default function CodeReviewView(): React.JSX.Element {
         <div className="cr-diffviewer">
           <DiffViewerPanel />
         </div>
-        <section className="cr-assistant cr-assistant--placeholder">
-          AI Assistant
-        </section>
+        <AIAssistantPanel />
       </div>
       <BatchActions />
     </motion.div>
