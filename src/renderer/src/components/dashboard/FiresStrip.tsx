@@ -1,4 +1,5 @@
 import React from 'react'
+import './FiresStrip.css'
 
 interface LoadSaturation {
   load1: number
@@ -11,17 +12,6 @@ interface FiresStripProps {
   stuck: number
   loadSaturated: LoadSaturation | null
   onClick: (kind: 'failed' | 'blocked' | 'stuck' | 'load') => void
-}
-
-const buttonStyle: React.CSSProperties = {
-  background: 'transparent',
-  border: 'none',
-  color: '#fca5a5',
-  cursor: 'pointer',
-  fontFamily: 'inherit',
-  fontSize: 'inherit',
-  padding: '2px 6px',
-  borderRadius: 3
 }
 
 export function FiresStrip({
@@ -43,7 +33,7 @@ export function FiresStrip({
         key="failed"
         type="button"
         aria-label={`${failed} failed task${failed === 1 ? '' : 's'}`}
-        style={buttonStyle}
+        className="fires-strip__alert"
         onClick={() => onClick('failed')}
       >
         {failed} failed
@@ -57,7 +47,7 @@ export function FiresStrip({
         key="blocked"
         type="button"
         aria-label={`${blocked} blocked task${blocked === 1 ? '' : 's'}`}
-        style={buttonStyle}
+        className="fires-strip__alert"
         onClick={() => onClick('blocked')}
       >
         {blocked} blocked
@@ -71,7 +61,7 @@ export function FiresStrip({
         key="stuck"
         type="button"
         aria-label={`${stuck} stuck task${stuck === 1 ? '' : 's'}`}
-        style={buttonStyle}
+        className="fires-strip__alert"
         onClick={() => onClick('stuck')}
       >
         {stuck} stuck &gt;1h
@@ -85,7 +75,7 @@ export function FiresStrip({
         key="load"
         type="button"
         aria-label={`load ${Math.round(loadSaturated.load1)} / ${loadSaturated.cpuCount} cores`}
-        style={buttonStyle}
+        className="fires-strip__alert"
         onClick={() => onClick('load')}
       >
         load {Math.round(loadSaturated.load1)} / {loadSaturated.cpuCount} cores
@@ -97,7 +87,7 @@ export function FiresStrip({
   segments.forEach((seg, i) => {
     if (i > 0) {
       withSeparators.push(
-        <span key={`sep-${i}`} style={{ color: '#7f1d1d' }} aria-hidden="true">
+        <span key={`sep-${i}`} className="fires-strip__separator" aria-hidden="true">
           ·
         </span>
       )
@@ -106,23 +96,7 @@ export function FiresStrip({
   })
 
   return (
-    <div
-      role="region"
-      aria-label="Dashboard alerts"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 4,
-        padding: '8px 12px',
-        marginBottom: 10,
-        background: 'rgba(220, 38, 38, 0.08)',
-        border: '1px solid #7f1d1d',
-        borderRadius: 6,
-        fontFamily: 'ui-monospace, Menlo, monospace',
-        fontSize: 11,
-        color: '#fca5a5'
-      }}
-    >
+    <div role="region" aria-label="Dashboard alerts" className="fires-strip">
       <strong style={{ marginRight: 6 }}>⚠ ATTENTION</strong>
       {withSeparators}
     </div>
