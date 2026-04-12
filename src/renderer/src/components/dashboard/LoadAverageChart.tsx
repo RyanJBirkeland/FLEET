@@ -37,10 +37,10 @@ function severityColor(sev: Severity): string {
   return '#f87171'
 }
 
-const LINE1_COLOR = '#f87171'
-const LINE5_COLOR = '#38bdf8'
-const LINE15_COLOR = '#64748b'
-const SATURATION_COLOR = '#fbbf24'
+const LINE1_COLOR = 'var(--bde-danger)'
+const LINE5_COLOR = 'var(--bde-accent)'
+const LINE15_COLOR = 'var(--bde-text-dim)'
+const SATURATION_COLOR = 'var(--bde-warning)'
 
 export function LoadAverageChart({
   samples,
@@ -102,7 +102,7 @@ export function LoadAverageChart({
 
   const trendLabel =
     trend === 'cooling' ? '▼ cooling' : trend === 'climbing' ? '▲ climbing' : '— steady'
-  const trendColor = trend === 'cooling' ? '#4ade80' : trend === 'climbing' ? '#f87171' : '#64748b'
+  const trendColor = trend === 'cooling' ? 'var(--bde-success)' : trend === 'climbing' ? 'var(--bde-danger)' : 'var(--bde-text-dim)'
 
   return (
     <div
