@@ -13,7 +13,7 @@ interface SidebarItemProps {
   badgeAccent?: 'red' | 'blue' | 'orange'
   onActivate: (view: View) => void
   onContextAction: (action: string, view: View) => void
-  /** Called on mouseenter — used by NeonSidebar to preload lazy view chunks */
+  /** Called on mouseenter — used by Sidebar to preload lazy view chunks */
   onHover?: () => void
 }
 

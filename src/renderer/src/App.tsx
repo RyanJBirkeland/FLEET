@@ -6,7 +6,7 @@ import { CommandPalette } from './components/layout/CommandPalette'
 import { QuickCreateBar } from './components/sprint/QuickCreateBar'
 import { ToastContainer } from './components/layout/ToastContainer'
 import { UnifiedHeader } from './components/layout/UnifiedHeader'
-import { NeonSidebar } from './components/layout/NeonSidebar'
+import { Sidebar } from './components/layout/Sidebar'
 import { Onboarding } from './components/Onboarding'
 import './App.css'
 import { OnboardingWizard } from './components/onboarding/OnboardingWizard'
@@ -238,7 +238,7 @@ function App(): React.JSX.Element {
         </a>
         <UnifiedHeader />
         <div className="app-shell__body">
-          <NeonSidebar model={DEFAULT_MODEL.modelId} />
+          <Sidebar model={DEFAULT_MODEL.modelId} />
           <main id="main-content" className="app-shell__content" aria-label="Main content">
             <PanelRenderer node={root} />
           </main>

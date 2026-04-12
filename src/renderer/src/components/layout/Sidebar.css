@@ -1,6 +1,6 @@
-/* Neon sidebar + items + context menu + tooltip + model badge */
+/* Sidebar + items + context menu + tooltip + model badge */
 
-.neon-sidebar {
+.sidebar {
   width: 52px;
   background: linear-gradient(180deg, var(--bde-accent-surface) 0%, var(--bde-surface-high) 100%);
   border-right: 1px solid var(--bde-accent-border);
@@ -13,7 +13,7 @@
   overflow-y: auto;
 }
 
-.neon-sidebar__nav {
+.sidebar__nav {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -23,7 +23,7 @@
   padding: 0 6px;
 }
 
-.neon-sidebar__footer {
+.sidebar__footer {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -134,8 +134,8 @@
   outline: none;
 }
 
-/* ── Neon Tooltip ── */
-.neon-tooltip {
+/* ── Sidebar Tooltip ── */
+.sidebar-tooltip {
   position: fixed;
   z-index: 1000;
   padding: 6px 12px;
@@ -148,17 +148,17 @@
   font-weight: 500;
   white-space: nowrap;
   pointer-events: none;
-  animation: neon-tooltip-in 150ms ease forwards;
+  animation: sidebar-tooltip-in 150ms ease forwards;
 }
 
-.neon-tooltip__shortcut {
+.sidebar-tooltip__shortcut {
   color: var(--bde-status-active);
   margin-left: 8px;
   font-size: 10px;
   font-family: var(--bde-font-code);
 }
 
-@keyframes neon-tooltip-in {
+@keyframes sidebar-tooltip-in {
   from {
     opacity: 0;
     transform: translateX(-4px);
@@ -187,7 +187,7 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .neon-tooltip {
+  .sidebar-tooltip {
     animation: none;
   }
 }

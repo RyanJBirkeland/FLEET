@@ -1,4 +1,4 @@
-import './NeonSidebar.css'
+import './Sidebar.css'
 import React, { useState, useRef } from 'react'
 import { MoreHorizontal } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
@@ -11,11 +11,11 @@ import { VIEW_LOADERS } from './view-resolver'
 import { VIEW_REGISTRY } from '../../lib/view-registry'
 import { useSprintTasks } from '../../stores/sprintTasks'
 
-interface NeonSidebarProps {
+interface SidebarProps {
   model?: string
 }
 
-export function NeonSidebar({ model }: NeonSidebarProps): React.JSX.Element {
+export function Sidebar({ model }: SidebarProps): React.JSX.Element {
   const [overflowOpen, setOverflowOpen] = useState(false)
   const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null)
   const moreButtonRef = useRef<HTMLButtonElement>(null)
@@ -122,8 +122,8 @@ export function NeonSidebar({ model }: NeonSidebarProps): React.JSX.Element {
   }
 
   return (
-    <div className="neon-sidebar">
-      <nav className="neon-sidebar__nav">
+    <div className="sidebar">
+      <nav className="sidebar__nav">
         {pinnedViews.map((view) => {
           const meta = VIEW_REGISTRY[view]
           const Icon = meta.icon
@@ -172,7 +172,7 @@ export function NeonSidebar({ model }: NeonSidebarProps): React.JSX.Element {
         )}
       </nav>
 
-      <div className="neon-sidebar__footer">
+      <div className="sidebar__footer">
         {model && <div className="sidebar-model-badge">{model}</div>}
       </div>
 

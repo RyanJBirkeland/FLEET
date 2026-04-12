@@ -1,4 +1,4 @@
-// src/renderer/src/components/layout/__tests__/NeonSidebar.test.tsx
+// src/renderer/src/components/layout/__tests__/Sidebar.test.tsx
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
@@ -64,7 +64,7 @@ vi.mock('../../../stores/panelLayout', () => {
   }
 })
 
-describe('NeonSidebar', () => {
+describe('Sidebar', () => {
   it('shows blue badge count on Code Review when tasks are in review status', async () => {
     mockReviewCount = 2
     // pin code-review so the badge-bearing item renders
@@ -77,8 +77,8 @@ describe('NeonSidebar', () => {
       }
       return sel ? sel(state) : state
     })
-    const { NeonSidebar } = await import('../NeonSidebar')
-    render(<NeonSidebar />)
+    const { Sidebar } = await import('../Sidebar')
+    render(<Sidebar />)
     const badge = screen.getByTestId('sidebar-badge-code-review')
     expect(badge).toHaveTextContent('2')
     expect(badge).toHaveAttribute('data-accent', 'blue')
@@ -96,8 +96,8 @@ describe('NeonSidebar', () => {
       }
       return sel ? sel(state) : state
     })
-    const { NeonSidebar } = await import('../NeonSidebar')
-    render(<NeonSidebar />)
+    const { Sidebar } = await import('../Sidebar')
+    render(<Sidebar />)
     const badge = screen.getByTestId('sidebar-badge-sprint')
     expect(badge).toHaveTextContent('3')
     expect(badge).toHaveAttribute('data-accent', 'red')
@@ -115,28 +115,28 @@ describe('NeonSidebar', () => {
       }
       return sel ? sel(state) : state
     })
-    const { NeonSidebar } = await import('../NeonSidebar')
-    render(<NeonSidebar />)
+    const { Sidebar } = await import('../Sidebar')
+    render(<Sidebar />)
     expect(screen.queryByTestId('sidebar-badge-sprint')).toBeNull()
   })
 
   it('renders pinned view icons', async () => {
-    const { NeonSidebar } = await import('../NeonSidebar')
-    render(<NeonSidebar />)
+    const { Sidebar } = await import('../Sidebar')
+    render(<Sidebar />)
     // Should render 3 pinned items + more button
     const buttons = screen.getAllByRole('button')
     expect(buttons.length).toBeGreaterThanOrEqual(3)
   })
 
   it('renders the more button', async () => {
-    const { NeonSidebar } = await import('../NeonSidebar')
-    render(<NeonSidebar />)
+    const { Sidebar } = await import('../Sidebar')
+    render(<Sidebar />)
     expect(screen.getByLabelText('More views')).toBeInTheDocument()
   })
 
   it('renders model badge', async () => {
-    const { NeonSidebar } = await import('../NeonSidebar')
-    render(<NeonSidebar model="haiku" />)
+    const { Sidebar } = await import('../Sidebar')
+    render(<Sidebar model="haiku" />)
     expect(screen.getByText('haiku')).toBeInTheDocument()
   })
 })

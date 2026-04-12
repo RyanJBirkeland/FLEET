@@ -14,7 +14,7 @@ const GitTreeView = lazy(() => import('../../views/GitTreeView'))
 const PlannerView = lazy(() => import('../../views/PlannerView'))
 
 // ---------------------------------------------------------------------------
-// Lazy view preloading map — used by NeonSidebar for hover-based preloading
+// Lazy view preloading map — used by Sidebar for hover-based preloading
 // ---------------------------------------------------------------------------
 
 // eslint-disable-next-line react-refresh/only-export-components
