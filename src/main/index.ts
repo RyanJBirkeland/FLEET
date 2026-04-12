@@ -47,6 +47,7 @@ import { createAgentManager } from './agent-manager'
 import { createSprintTaskRepository } from './data/sprint-task-repository'
 import { getOAuthToken, ensureExtraPathsOnProcessEnv } from './env-utils'
 import { createLogger } from './logger'
+import { setSprintQueriesLogger } from './data/sprint-queries'
 
 // Augment process.env.PATH so child_process.spawn() can find user-installed
 // CLIs (claude, gh, git, node) when launched from Finder/Spotlight. Must run
@@ -163,9 +164,14 @@ app.whenReady().then(() => {
   if (autoStart) {
     getOAuthToken()
 
+    // Wire sprint-queries to use the same structured file logger as the agent manager
+    const logger = createLogger('agent-manager')
+    setSprintQueriesLogger(logger)
+
     const am = createAgentManager(
       { ...amConfig, onStatusTerminal: terminalService.onStatusTerminal },
-      repo
+      repo,
+      logger
     )
     am.start()
     app.on('will-quit', () => am.stop(10_000))
