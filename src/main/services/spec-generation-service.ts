@@ -2,7 +2,7 @@
  * Spec generation service — AI-powered task spec creation.
  */
 import { runSdkStreaming, type SdkStreamingOptions } from '../sdk-streaming'
-import { buildQuickSpecPrompt, getTemplateScaffold } from '../handlers/sprint-spec'
+import { buildQuickSpecPrompt, getTemplateScaffold } from './spec-template-service'
 
 /** Active streaming handles, keyed by streamId. */
 const activeStreams = new Map<string, { close: () => void }>()
