@@ -2,6 +2,10 @@
  * Task and sprint-related types — task definitions, dependencies, templates, and operations.
  */
 
+import type { TaskStatus } from '../task-state-machine'
+
+export type { TaskStatus }
+
 export interface TaskDependency {
   id: string
   type: 'hard' | 'soft'
@@ -39,16 +43,7 @@ export interface SprintTask {
   repo: string
   prompt: string | null
   priority: number
-  status:
-    | 'backlog'
-    | 'queued'
-    | 'blocked'
-    | 'active'
-    | 'review'
-    | 'done'
-    | 'cancelled'
-    | 'failed'
-    | 'error'
+  status: TaskStatus
   notes: string | null
   spec: string | null
   retry_count: number

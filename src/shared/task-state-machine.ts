@@ -43,7 +43,7 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
  * Terminal statuses — task has reached end of lifecycle.
  * No further automatic transitions occur.
  */
-export const TERMINAL_STATUSES: ReadonlySet<TaskStatus> = new Set([
+export const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
   'done',
   'cancelled',
   'failed',
@@ -54,28 +54,28 @@ export const TERMINAL_STATUSES: ReadonlySet<TaskStatus> = new Set([
  * Failure statuses — task did not complete successfully.
  * Subset of terminal statuses.
  */
-export const FAILURE_STATUSES: ReadonlySet<TaskStatus> = new Set(['failed', 'error', 'cancelled'])
+export const FAILURE_STATUSES: ReadonlySet<string> = new Set(['failed', 'error', 'cancelled'])
 
 /**
  * Statuses that satisfy hard dependencies.
  * Only 'done' unblocks downstream tasks with hard dependencies.
  */
-export const HARD_SATISFIED_STATUSES: ReadonlySet<TaskStatus> = new Set(['done'])
+export const HARD_SATISFIED_STATUSES: ReadonlySet<string> = new Set(['done'])
 
 /**
  * Valid state transitions — adjacency list representation.
  * Copied verbatim from src/shared/task-transitions.ts (as of D1a).
  */
-export const VALID_TRANSITIONS: Readonly<Record<TaskStatus, readonly TaskStatus[]>> = {
-  backlog: ['queued', 'blocked', 'cancelled'],
-  queued: ['active', 'blocked', 'cancelled'],
-  blocked: ['queued', 'cancelled'],
-  active: ['review', 'done', 'failed', 'error', 'cancelled', 'queued'],
-  review: ['queued', 'done', 'cancelled'],
-  done: ['cancelled'],
-  failed: ['queued', 'cancelled'],
-  error: ['queued', 'cancelled'],
-  cancelled: []
+export const VALID_TRANSITIONS: Record<string, Set<string>> = {
+  backlog: new Set(['queued', 'blocked', 'cancelled']),
+  queued: new Set(['active', 'blocked', 'cancelled']),
+  blocked: new Set(['queued', 'cancelled']),
+  active: new Set(['review', 'done', 'failed', 'error', 'cancelled', 'queued']),
+  review: new Set(['queued', 'done', 'cancelled']),
+  done: new Set(['cancelled']),
+  failed: new Set(['queued', 'cancelled']),
+  error: new Set(['queued', 'cancelled']),
+  cancelled: new Set([])
 }
 
 /**
@@ -185,30 +185,30 @@ export const STATUS_METADATA: Readonly<Record<TaskStatus, StatusMetadata>> = {
 /**
  * Check if a transition from one status to another is valid.
  */
-export function isValidTransition(from: TaskStatus, to: TaskStatus): boolean {
+export function isValidTransition(from: string, to: string): boolean {
   const allowed = VALID_TRANSITIONS[from]
   if (!allowed) return false
-  return allowed.includes(to)
+  return allowed.has(to)
 }
 
 /**
  * Check if a status is terminal (end of lifecycle).
  */
-export function isTerminal(status: TaskStatus): boolean {
-  return TERMINAL_STATUSES.has(status)
+export function isTerminal(status: string): boolean {
+  return TERMINAL_STATUSES.has(status as TaskStatus)
 }
 
 /**
  * Check if a status represents a failure.
  */
-export function isFailure(status: TaskStatus): boolean {
-  return FAILURE_STATUSES.has(status)
+export function isFailure(status: string): boolean {
+  return FAILURE_STATUSES.has(status as TaskStatus)
 }
 
 /**
  * Check if a status satisfies hard dependencies.
  * Only 'done' returns true; all other statuses return false.
  */
-export function isHardSatisfied(status: TaskStatus): boolean {
-  return HARD_SATISFIED_STATUSES.has(status)
+export function isHardSatisfied(status: string): boolean {
+  return HARD_SATISFIED_STATUSES.has(status as TaskStatus)
 }
