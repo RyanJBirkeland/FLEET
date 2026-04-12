@@ -15,13 +15,17 @@ import {
   setMaxSlots,
   availableSlots,
   tryRecover,
+  applyBackpressure,
   type ConcurrencyState
 } from './concurrency'
 import { checkAgent } from './watchdog'
 import { setupWorktree, pruneStaleWorktrees } from './worktree'
 import { recoverOrphans } from './orphan-recovery'
 import { createDependencyIndex, formatBlockedNote } from '../services/dependency-service'
-import { createEpicDependencyIndex, type EpicDependencyIndex } from '../services/epic-dependency-service'
+import {
+  createEpicDependencyIndex,
+  type EpicDependencyIndex
+} from '../services/epic-dependency-service'
 import { resolveDependents } from './resolve-dependents'
 import { getGroup, getGroupTasks, getGroupsWithDependencies } from '../data/task-group-queries'
 import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
@@ -42,7 +46,7 @@ import {
   OAUTH_CHECK_CACHE_TTL_MS,
   OAUTH_CHECK_FAIL_CACHE_TTL_MS
 } from './oauth-checker'
-import { handleWatchdogVerdict } from './watchdog-handler'
+import { handleWatchdogVerdict, type WatchdogVerdictResult } from './watchdog-handler'
 import type { WatchdogCheck, WatchdogAction } from './types'
 
 // Re-export for backward compatibility with tests
@@ -54,7 +58,7 @@ export {
   OAUTH_CHECK_FAIL_CACHE_TTL_MS
 }
 export { handleWatchdogVerdict }
-export type { WatchdogCheck, WatchdogAction }
+export type { WatchdogCheck, WatchdogAction, WatchdogVerdictResult }
 
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
@@ -612,16 +616,30 @@ export class AgentManagerImpl implements AgentManager {
       // Update task based on verdict
       const now = nowIso()
       const maxRuntimeMs = agent.maxRuntimeMs ?? this.config.maxRuntimeMs
-      this._concurrency = handleWatchdogVerdict(
-        verdict,
-        agent.taskId,
-        this._concurrency,
-        now,
-        this.repo.updateTask,
-        this.onTaskTerminal.bind(this),
-        this.logger,
-        maxRuntimeMs
-      )
+      const verdictResult = handleWatchdogVerdict(verdict, now, maxRuntimeMs)
+
+      // Apply verdict
+      if (verdictResult.taskUpdate) {
+        try {
+          this.repo.updateTask(agent.taskId, verdictResult.taskUpdate)
+        } catch (err) {
+          this.logger.warn(
+            `[agent-manager] Failed to update task ${agent.taskId} after ${verdict} verdict: ${err}`
+          )
+        }
+      }
+
+      if (verdictResult.shouldNotifyTerminal && verdictResult.terminalStatus) {
+        this.onTaskTerminal(agent.taskId, verdictResult.terminalStatus).catch((err) =>
+          this.logger.warn(
+            `[agent-manager] Failed onTerminal for task ${agent.taskId} after ${verdict} verdict: ${err}`
+          )
+        )
+      }
+
+      if (verdict === 'rate-limit-loop') {
+        this._concurrency = applyBackpressure(this._concurrency, Date.now())
+      }
     }
   }
 

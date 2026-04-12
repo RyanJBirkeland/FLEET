@@ -1,11 +1,10 @@
 /**
  * Tests for critical/high security audit fixes (AM-1 through AM-6)
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { resolveFailure } from '../completion'
 import { sanitizeForGit } from '../git-operations'
 import { handleWatchdogVerdict } from '../index'
-import { makeConcurrencyState } from '../concurrency'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import { MAX_RETRIES } from '../types'
 import { nowIso } from '../../../shared/time'
@@ -52,82 +51,41 @@ describe('sanitizeForGit (AM-3)', () => {
 // ---------------------------------------------------------------------------
 
 describe('handleWatchdogVerdict claimed_by clearing (AM-4)', () => {
-  let updateTaskFn: ReturnType<typeof vi.fn>
-  let onTerminal: ReturnType<typeof vi.fn>
-  const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-
-  beforeEach(() => {
-    updateTaskFn = vi.fn()
-    onTerminal = vi.fn().mockResolvedValue(undefined)
-    logger.info.mockClear()
-    logger.warn.mockClear()
-    logger.error.mockClear()
-  })
-
   it('clears claimed_by on max-runtime kill', () => {
-    const concurrency = makeConcurrencyState(2)
     const now = nowIso()
 
-    handleWatchdogVerdict(
-      'max-runtime',
-      'task-123',
-      concurrency,
-      now,
-      updateTaskFn,
-      onTerminal,
-      logger,
-      3600000
-    )
+    const result = handleWatchdogVerdict('max-runtime', now, 3600000)
 
-    expect(updateTaskFn).toHaveBeenCalledWith(
-      'task-123',
-      expect.objectContaining({
-        status: 'error',
-        completed_at: now,
-        claimed_by: null,
-        needs_review: true
-      })
-    )
+    expect(result.taskUpdate).toMatchObject({
+      status: 'error',
+      completed_at: now,
+      claimed_by: null,
+      needs_review: true
+    })
   })
 
   it('clears claimed_by on idle kill', () => {
-    const concurrency = makeConcurrencyState(2)
     const now = nowIso()
 
-    handleWatchdogVerdict('idle', 'task-456', concurrency, now, updateTaskFn, onTerminal, logger)
+    const result = handleWatchdogVerdict('idle', now)
 
-    expect(updateTaskFn).toHaveBeenCalledWith(
-      'task-456',
-      expect.objectContaining({
-        status: 'error',
-        completed_at: now,
-        claimed_by: null,
-        needs_review: true
-      })
-    )
+    expect(result.taskUpdate).toMatchObject({
+      status: 'error',
+      completed_at: now,
+      claimed_by: null,
+      needs_review: true
+    })
   })
 
   it('clears claimed_by on rate-limit-loop requeue', () => {
-    const concurrency = makeConcurrencyState(2)
     const now = nowIso()
 
-    handleWatchdogVerdict(
-      'rate-limit-loop',
-      'task-789',
-      concurrency,
-      now,
-      updateTaskFn,
-      onTerminal,
-      logger
-    )
+    const result = handleWatchdogVerdict('rate-limit-loop', now)
 
-    expect(updateTaskFn).toHaveBeenCalledWith(
-      'task-789',
-      expect.objectContaining({
-        status: 'queued',
-        claimed_by: null
-      })
-    )
+    expect(result.taskUpdate).toMatchObject({
+      status: 'queued',
+      claimed_by: null
+    })
   })
 })
 

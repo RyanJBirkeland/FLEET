@@ -852,7 +852,7 @@ describe('createAgentManager', () => {
       await vi.advanceTimersByTimeAsync(10_100)
       for (let i = 0; i < 20; i++) await vi.advanceTimersByTimeAsync(1)
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to update task task-1 after max-runtime kill')
+        expect.stringContaining('Failed to update task task-1 after max-runtime verdict')
       )
       vi.mocked(updateTask).mockReturnValue(null) // reset
       mgr.stop(0).catch(() => {})
@@ -883,7 +883,7 @@ describe('createAgentManager', () => {
       await vi.advanceTimersByTimeAsync(10_100)
       for (let i = 0; i < 20; i++) await vi.advanceTimersByTimeAsync(1)
       expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to update task task-1 after idle kill')
+        expect.stringContaining('Failed to update task task-1 after idle verdict')
       )
       vi.mocked(updateTask).mockReturnValue(null)
       mgr.stop(0).catch(() => {})

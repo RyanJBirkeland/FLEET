@@ -1,7 +1,6 @@
 /**
  * Tests for extracted pure functions from index.ts:
  * - checkOAuthToken: OAuth token file validation
- * - handleWatchdogVerdict: verdict → task status update + backpressure
  * - taskStatusMap refresh after claim (F-t1-perf-snapshot)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -23,10 +22,7 @@ import {
   OAUTH_CHECK_CACHE_TTL_MS,
   OAUTH_CHECK_FAIL_CACHE_TTL_MS
 } from '../oauth-checker'
-import { handleWatchdogVerdict } from '../watchdog-handler'
-import { makeConcurrencyState, type ConcurrencyState } from '../concurrency'
 import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../../env-utils'
-import type { Logger } from '../types'
 
 const readFileMock = vi.mocked(readFile)
 const statMock = vi.mocked(stat)
@@ -166,154 +162,5 @@ describe('checkOAuthToken', () => {
     } finally {
       vi.useRealTimers()
     }
-  })
-})
-
-describe('handleWatchdogVerdict', () => {
-  let logger: ReturnType<typeof makeLogger>
-  let mockUpdateTask: ReturnType<typeof vi.fn>
-  let mockOnTerminal: ReturnType<typeof vi.fn>
-  let concurrency: ConcurrencyState
-
-  beforeEach(() => {
-    logger = makeLogger()
-    mockUpdateTask = vi.fn().mockReturnValue(null)
-    mockOnTerminal = vi.fn().mockResolvedValue(undefined)
-    concurrency = makeConcurrencyState(2)
-  })
-
-  it('marks task as error with "Max runtime exceeded" on max-runtime', async () => {
-    const now = '2026-03-25T12:00:00.000Z'
-    handleWatchdogVerdict(
-      'max-runtime',
-      'task-1',
-      concurrency,
-      now,
-      mockUpdateTask,
-      mockOnTerminal,
-      logger,
-      60 * 60 * 1000 // 60 minutes
-    )
-    expect(mockUpdateTask).toHaveBeenCalledWith('task-1', {
-      status: 'error',
-      completed_at: now,
-      claimed_by: null, // AM-4 fix
-      notes:
-        'Agent exceeded the maximum runtime of 60 minutes. The task may be too large for a single agent session. Consider breaking it into smaller subtasks.',
-      needs_review: true
-    })
-    await vi.waitFor(() => {
-      expect(mockOnTerminal).toHaveBeenCalledWith('task-1', 'error')
-    })
-  })
-
-  it('marks task as error with "Idle timeout" on idle', async () => {
-    const now = '2026-03-25T12:00:00.000Z'
-    handleWatchdogVerdict(
-      'idle',
-      'task-2',
-      concurrency,
-      now,
-      mockUpdateTask,
-      mockOnTerminal,
-      logger
-    )
-    expect(mockUpdateTask).toHaveBeenCalledWith('task-2', {
-      status: 'error',
-      completed_at: now,
-      claimed_by: null, // AM-4 fix
-      notes:
-        "Agent produced no output for 15 minutes. The agent may be stuck or rate-limited. Check agent events for the last activity. To retry: reset task status to 'queued'.",
-      needs_review: true
-    })
-    await vi.waitFor(() => {
-      expect(mockOnTerminal).toHaveBeenCalledWith('task-2', 'error')
-    })
-  })
-
-  it('re-queues task and applies backpressure on rate-limit-loop', () => {
-    const result = handleWatchdogVerdict(
-      'rate-limit-loop',
-      'task-3',
-      concurrency,
-      '',
-      mockUpdateTask,
-      mockOnTerminal,
-      logger
-    )
-    expect(mockUpdateTask).toHaveBeenCalledWith('task-3', {
-      status: 'queued',
-      claimed_by: null,
-      notes:
-        'Agent hit API rate limits 10+ times and was re-queued with lower concurrency. This usually resolves automatically. If it persists, reduce maxConcurrent in Settings or wait for rate limit cooldown.'
-    })
-    expect(result.effectiveSlots).toBeLessThan(concurrency.effectiveSlots)
-    expect(mockOnTerminal).not.toHaveBeenCalled()
-  })
-
-  it('reaches floor when backpressure applied at effectiveSlots=2', () => {
-    const result = handleWatchdogVerdict(
-      'rate-limit-loop',
-      'task-4',
-      makeConcurrencyState(2),
-      '',
-      mockUpdateTask,
-      mockOnTerminal,
-      logger
-    )
-    expect(result.effectiveSlots).toBe(1)
-    expect(result.atFloor).toBe(true)
-  })
-
-  it('logs warning when updateTask rejects for max-runtime', async () => {
-    mockUpdateTask.mockImplementation(() => {
-      throw new Error('DB error')
-    })
-    handleWatchdogVerdict(
-      'max-runtime',
-      'task-5',
-      concurrency,
-      '',
-      mockUpdateTask,
-      mockOnTerminal,
-      logger
-    )
-    await vi.waitFor(() => {
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to update task task-5 after max-runtime kill')
-      )
-    })
-  })
-
-  it('logs warning when updateTask rejects for idle', async () => {
-    mockUpdateTask.mockImplementation(() => {
-      throw new Error('DB error')
-    })
-    handleWatchdogVerdict('idle', 'task-6', concurrency, '', mockUpdateTask, mockOnTerminal, logger)
-    await vi.waitFor(() => {
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to update task task-6 after idle kill')
-      )
-    })
-  })
-
-  it('logs warning when updateTask rejects for rate-limit-loop', async () => {
-    mockUpdateTask.mockImplementation(() => {
-      throw new Error('DB error')
-    })
-    handleWatchdogVerdict(
-      'rate-limit-loop',
-      'task-7',
-      concurrency,
-      '',
-      mockUpdateTask,
-      mockOnTerminal,
-      logger
-    )
-    await vi.waitFor(() => {
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Failed to requeue rate-limited task task-7')
-      )
-    })
   })
 })
