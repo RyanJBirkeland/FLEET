@@ -24,7 +24,10 @@ export default function PlannerView(): React.JSX.Element {
     queueAllTasks,
     updateGroup,
     deleteGroup,
-    reorderTasks
+    reorderTasks,
+    addDependency,
+    removeDependency,
+    updateDependencyCondition
   } = useTaskGroups()
 
   const [searchQuery, setSearchQuery] = useState('')
@@ -160,6 +163,12 @@ export default function PlannerView(): React.JSX.Element {
             <EpicDetail
               group={selectedGroup}
               tasks={groupTasks}
+              allGroups={groups}
+              onAddDependency={(dep) => addDependency(selectedGroup.id, dep)}
+              onRemoveDependency={(upstreamId) => removeDependency(selectedGroup.id, upstreamId)}
+              onUpdateDependencyCondition={(upstreamId, condition) =>
+                updateDependencyCondition(selectedGroup.id, upstreamId, condition)
+              }
               loading={loading}
               onQueueAll={handleQueueAll}
               onAddTask={handleAddTask}

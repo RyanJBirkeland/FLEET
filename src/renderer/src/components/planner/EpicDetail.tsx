@@ -1,18 +1,26 @@
 import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Edit2, MoreVertical, AlertTriangle } from 'lucide-react'
-import type { TaskGroup, SprintTask } from '../../../../shared/types'
+import type { TaskGroup, SprintTask, EpicDependency } from '../../../../shared/types'
 import { STATUS_METADATA } from '../../../../shared/task-state-machine'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { usePrompt, PromptModal } from '../ui/PromptModal'
 import { LoadingState } from '../ui/LoadingState'
 import { toast } from '../../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
+import { EpicDependencySection } from './EpicDependencySection'
 import './EpicDetail.css'
 
 export interface EpicDetailProps {
   group: TaskGroup
   tasks: SprintTask[]
+  allGroups: TaskGroup[]
+  onAddDependency: (dep: EpicDependency) => Promise<void>
+  onRemoveDependency: (upstreamId: string) => Promise<void>
+  onUpdateDependencyCondition: (
+    upstreamId: string,
+    condition: EpicDependency['condition']
+  ) => Promise<void>
   loading?: boolean
   onQueueAll: () => void
   onAddTask: () => void
@@ -34,6 +42,10 @@ interface StatusCounts {
 export function EpicDetail({
   group,
   tasks,
+  allGroups,
+  onAddDependency,
+  onRemoveDependency,
+  onUpdateDependencyCondition,
   loading = false,
   onQueueAll,
   onAddTask,
@@ -434,6 +446,15 @@ export function EpicDetail({
           </div>
         )}
       </div>
+
+      {/* Epic Dependencies */}
+      <EpicDependencySection
+        group={group}
+        allGroups={allGroups}
+        onAddDependency={onAddDependency}
+        onRemoveDependency={onRemoveDependency}
+        onUpdateCondition={onUpdateDependencyCondition}
+      />
 
       {/* Task List */}
       <motion.div

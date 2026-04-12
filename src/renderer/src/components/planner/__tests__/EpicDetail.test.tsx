@@ -104,6 +104,10 @@ describe('EpicDetail', () => {
   const defaultProps = {
     group: mockGroup,
     tasks: mockTasks,
+    allGroups: [mockGroup],
+    onAddDependency: vi.fn().mockResolvedValue(undefined),
+    onRemoveDependency: vi.fn().mockResolvedValue(undefined),
+    onUpdateDependencyCondition: vi.fn().mockResolvedValue(undefined),
     onQueueAll: vi.fn(),
     onAddTask: vi.fn(),
     onEditTask: vi.fn()

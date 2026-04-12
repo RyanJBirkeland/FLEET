@@ -49,6 +49,18 @@ Tasks can declare dependencies on other tasks with `hard` or `soft` edges.
 - **Cycle detection**: `dependency-index.ts` maintains an in-memory reverse index and rejects cycles at creation time
 - Related: Sprint Pipeline
 
+### Task Planner
+
+Multi-task workflow planning view (Cmd+8). Organizes tasks into epics (task groups) for phased execution.
+
+- **Epics (Task Groups)**: Named collections of related tasks with shared goal, icon, and accent color. Each epic has a status: `draft` → `ready` → `in-pipeline` → `completed`
+- **Epic list**: Left sidebar shows all epics with search/filter. Click to view epic details
+- **Epic detail**: Right panel shows progress bar, task list with drag-to-reorder, and dependency management
+- **Epic dependencies**: Epics can depend on other epics with three condition types: `on_success` (all upstream tasks must succeed), `always` (any outcome unblocks), or `manual` (requires explicit "Mark Complete" action). Cycle detection prevents circular dependencies
+- **Task creation**: "Add Task" button opens Task Workbench with the epic pre-selected
+- **Batch queuing**: "Queue All" transitions all draft tasks with specs to `queued` status in one action
+- Related: Task Workbench, Sprint Pipeline, Task Dependencies
+
 ## Agent System
 
 ### Agent Types
