@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildChatPrompt } from '../../handlers/workbench'
+import { buildChatPrompt } from '../../services/copilot-service'
 
 describe('workbench handlers', () => {
   describe('buildChatPrompt', () => {
