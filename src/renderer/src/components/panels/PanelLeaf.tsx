@@ -7,23 +7,6 @@ import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import './PanelLeaf.css'
 
 // ---------------------------------------------------------------------------
-// Lazy view preloading map — trigger on hover in ActivityBar
-// ---------------------------------------------------------------------------
-
-// eslint-disable-next-line react-refresh/only-export-components
-export const VIEW_LOADERS: Partial<Record<View, () => Promise<unknown>>> = {
-  dashboard: () => import('../../views/DashboardView'),
-  sprint: () => import('../../views/SprintView'),
-  settings: () => import('../../views/SettingsView'),
-  'code-review': () => import('../../views/CodeReviewView'),
-  'task-workbench': () => import('../../views/TaskWorkbenchView'),
-  git: () => import('../../views/GitTreeView'),
-  ide: () => import('../../views/IDEView'),
-  planner: () => import('../../views/PlannerView'),
-  agents: () => import('../../views/AgentsView')
-}
-
-// ---------------------------------------------------------------------------
 // ViewSkeleton — pulsing loading fallback
 // ---------------------------------------------------------------------------
 

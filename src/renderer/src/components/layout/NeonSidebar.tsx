@@ -7,7 +7,7 @@ import { OverflowMenu } from './OverflowMenu'
 import { NavTooltip } from '../ui/NavTooltip'
 import { useSidebarStore, getUnpinnedViews } from '../../stores/sidebar'
 import { usePanelLayoutStore, getOpenViews, type View } from '../../stores/panelLayout'
-import { VIEW_LOADERS } from '../panels/PanelLeaf'
+import { VIEW_LOADERS } from './view-resolver'
 import { VIEW_REGISTRY } from '../../lib/view-registry'
 import { useSprintTasks } from '../../stores/sprintTasks'
 
