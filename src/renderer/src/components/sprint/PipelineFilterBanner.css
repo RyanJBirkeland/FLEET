@@ -40,7 +40,7 @@
   border-radius: 3px;
   font-size: 11px;
   font-family: var(--font-mono, 'Courier New', monospace);
-  color: var(--bde-accent-text, #00ffaa);
+  color: var(--bde-accent-text);
   white-space: nowrap;
 }
 
@@ -54,7 +54,7 @@
   border-radius: 3px;
   font-size: 11px;
   font-weight: 500;
-  color: var(--bde-accent-text, #00ffaa);
+  color: var(--bde-accent-text);
   cursor: pointer;
   white-space: nowrap;
   transition: all 0.15s ease;
@@ -62,7 +62,7 @@
 
 .pipeline-filter-banner__clear:hover {
   background: var(--bde-accent-surface, rgba(0, 255, 170, 0.1));
-  border-color: var(--bde-accent-text, #00ffaa);
+  border-color: var(--bde-accent-text);
 }
 
 .pipeline-filter-banner__clear:active {

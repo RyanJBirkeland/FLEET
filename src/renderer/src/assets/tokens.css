@@ -166,6 +166,8 @@ html.theme-pro-dark {
   --bde-text: #dfe1e5;
   --bde-text-muted: #9da0a6;
   --bde-text-dim: #6f737a;
+  --bde-accent-text: #6cb8ff;
+  --bde-text-dimmer: rgba(255, 255, 255, 0.35);
   --bde-danger: #db5c5c;
   --bde-danger-dim: rgba(219, 92, 92, 0.15);
   --bde-void: #141414;
@@ -322,6 +324,8 @@ html.theme-pro-light {
   --bde-text: #1e1f22;
   --bde-text-muted: #5e6166;
   --bde-text-dim: #818388;
+  --bde-accent-text: #1a6bb5;
+  --bde-text-dimmer: #9ca0a8;
   --bde-danger: #cc4848;
   --bde-danger-dim: rgba(204, 72, 72, 0.1);
   --bde-void: #ebedf0;
