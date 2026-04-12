@@ -20,7 +20,7 @@
 .console-header__status-dot--running {
   background: var(--bde-accent);
   box-shadow: 0 0 8px var(--bde-accent);
-  animation: neon-pulse 2s ease-in-out infinite;
+  animation: bde-pulse 2s ease-in-out infinite;
 }
 
 .console-header__status-dot--done {

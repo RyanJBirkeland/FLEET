@@ -13,7 +13,7 @@
 }
 
 .neon-badge--pulse {
-  animation: neon-pulse 3s ease-in-out infinite;
+  animation: bde-pulse 3s ease-in-out infinite;
 }
 
 /* ── TagBadge & TagInput ──────────────────────────── */

@@ -28,7 +28,7 @@
   height: 8px;
   border-radius: 50%;
   background: var(--bde-accent);
-  animation: neon-breathe 2s ease-in-out infinite;
+  animation: bde-breathe 2s ease-in-out infinite;
 }
 
 .launchpad__header-title {

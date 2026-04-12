@@ -12,7 +12,7 @@
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  animation: neon-breathe 2s ease-in-out infinite;
+  animation: bde-breathe 2s ease-in-out infinite;
 }
 
 .status-bar__dot--ok {
