@@ -13,6 +13,23 @@ const TaskWorkbenchView = lazy(() => import('../../views/TaskWorkbenchView'))
 const GitTreeView = lazy(() => import('../../views/GitTreeView'))
 const PlannerView = lazy(() => import('../../views/PlannerView'))
 
+// ---------------------------------------------------------------------------
+// Lazy view preloading map — used by NeonSidebar for hover-based preloading
+// ---------------------------------------------------------------------------
+
+// eslint-disable-next-line react-refresh/only-export-components
+export const VIEW_LOADERS: Partial<Record<View, () => Promise<unknown>>> = {
+  dashboard: () => import('../../views/DashboardView'),
+  sprint: () => import('../../views/SprintView'),
+  settings: () => import('../../views/SettingsView'),
+  'code-review': () => import('../../views/CodeReviewView'),
+  'task-workbench': () => import('../../views/TaskWorkbenchView'),
+  git: () => import('../../views/GitTreeView'),
+  ide: () => import('../../views/IDEView'),
+  planner: () => import('../../views/PlannerView'),
+  agents: () => import('../../views/AgentsView')
+}
+
 export function resolveView(viewKey: View): React.ReactNode {
   switch (viewKey) {
     case 'dashboard':
