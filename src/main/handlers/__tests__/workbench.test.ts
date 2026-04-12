@@ -172,15 +172,15 @@ const mockAgentManager = {
 } as any
 
 // Import handlers after mocks are set up
+import { registerWorkbenchHandlers } from '../workbench'
 import {
-  registerWorkbenchHandlers,
   COPILOT_ALLOWED_TOOLS,
   COPILOT_DISALLOWED_TOOLS,
   COPILOT_MAX_BUDGET_USD,
   COPILOT_MAX_TURNS,
   getCopilotSdkOptions,
   buildChatPrompt
-} from '../workbench'
+} from '../../services/copilot-service'
 import { safeHandle } from '../../ipc-utils'
 
 describe('Workbench handlers', () => {

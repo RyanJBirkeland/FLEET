@@ -7,110 +7,17 @@ import { getRepoPath } from '../git'
 import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { listTasks } from '../services/sprint-service'
-import { buildQuickSpecPrompt, getTemplateScaffold } from './sprint-spec'
 import type { AgentManager } from '../agent-manager'
 import { checkSpecSemantic } from '../spec-semantic-check'
-import { buildAgentPrompt } from '../agent-manager/prompt-composer'
-import { runSdkStreaming, type SdkStreamingOptions } from '../sdk-streaming'
+import { runSdkStreaming } from '../sdk-streaming'
 import { extractTasksFromPlan } from '../services/plan-extractor'
+import { buildChatPrompt, getCopilotSdkOptions } from '../services/copilot-service'
+import { generateSpec } from '../services/spec-generation-service'
 
 const execFileAsync = promisify(execFile)
 
 /** Active streaming handles, keyed by streamId. */
 const activeStreams = new Map<string, { close: () => void }>()
-
-/** Run a single-turn SDK query (non-streaming). Returns the text response. */
-async function runSdkPrint(
-  prompt: string,
-  timeoutMs = 120_000,
-  options?: SdkStreamingOptions
-): Promise<string> {
-  return runSdkStreaming(prompt, () => {}, activeStreams, `print-${Date.now()}`, timeoutMs, options)
-}
-
-export function buildChatPrompt(
-  messages: Array<{ role: string; content: string }>,
-  formContext: { title: string; repo: string; spec: string },
-  repoPath?: string
-): string {
-  return buildAgentPrompt({
-    agentType: 'copilot',
-    messages,
-    formContext,
-    repoPath,
-    repoName: formContext.repo
-  })
-}
-
-/**
- * Read-only tools the copilot may use against the target repo.
- * Anything not in this list (Edit, Write, Bash, etc.) is unavailable.
- */
-export const COPILOT_ALLOWED_TOOLS = ['Read', 'Grep', 'Glob'] as const
-
-/**
- * Defense-in-depth: tools the copilot must NEVER run, even if the SDK
- * defaults shift. Pairs with COPILOT_ALLOWED_TOOLS for read-only enforcement.
- * The denylist is intentionally broad — anything that mutates files, executes
- * commands, fetches the network, spawns subagents, or escapes the chat loop
- * must be explicitly listed here, not just absent from the allowlist.
- */
-export const COPILOT_DISALLOWED_TOOLS = [
-  'Edit',
-  'Write',
-  'Bash',
-  'KillBash',
-  'BashOutput',
-  'NotebookEdit',
-  'WebFetch',
-  'WebSearch',
-  'Task',
-  'ExitPlanMode',
-  'TodoWrite',
-  'SlashCommand'
-] as const
-
-/**
- * Hard ceiling on per-turn copilot spend. With `maxTurns: 8` the copilot can
- * chain Read/Grep many times — without a dollar cap, a prompt-injected loop
- * could rack up real cost. The SDK aborts the query if exceeded.
- */
-export const COPILOT_MAX_BUDGET_USD = 0.5
-
-/** Maximum turns for the copilot — enough to chain Grep → Read → answer. */
-export const COPILOT_MAX_TURNS = 8
-
-/**
- * Build the SDK options used for every copilot invocation. Centralized so
- * that all IPC paths (streaming and non-streaming) get the same restricted
- * tool list, dollar ceiling, and turn limit. NEVER bypass this helper.
- */
-export function getCopilotSdkOptions(
-  repoPath: string | undefined,
-  extras?: Pick<SdkStreamingOptions, 'onToolUse'>
-): SdkStreamingOptions {
-  return {
-    cwd: repoPath,
-    tools: [...COPILOT_ALLOWED_TOOLS],
-    disallowedTools: [...COPILOT_DISALLOWED_TOOLS],
-    maxTurns: COPILOT_MAX_TURNS,
-    maxBudgetUsd: COPILOT_MAX_BUDGET_USD,
-    // Spec-drafting agents skip CLAUDE.md — they receive BDE conventions via
-    // their prompt (SPEC_DRAFTING_PREAMBLE) and loading the project settings
-    // file costs tokens without adding value.
-    settingSources: [],
-    ...(extras?.onToolUse ? { onToolUse: extras.onToolUse } : {})
-  }
-}
-
-export function buildSpecGenerationPrompt(input: {
-  title: string
-  repo: string
-  templateHint: string
-}): string {
-  const scaffold = getTemplateScaffold(input.templateHint)
-  return buildQuickSpecPrompt(input.title, input.repo, input.templateHint, scaffold)
-}
 
 export function registerWorkbenchHandlers(am?: AgentManager): void {
   // --- Fully implemented: Operational validation checks ---
@@ -421,13 +328,8 @@ export function registerWorkbenchHandlers(am?: AgentManager): void {
   safeHandle(
     'workbench:generateSpec',
     async (_e, input: { title: string; repo: string; templateHint: string }) => {
-      const prompt = buildSpecGenerationPrompt(input)
-      try {
-        const result = await runSdkPrint(prompt)
-        return { spec: result || `# ${input.title}\n\n(No spec generated)` }
-      } catch (err) {
-        return { spec: `# ${input.title}\n\nError generating spec: ${(err as Error).message}` }
-      }
+      const spec = await generateSpec(input)
+      return { spec }
     }
   )
 
