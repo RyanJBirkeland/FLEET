@@ -522,14 +522,12 @@ const api = {
 
     // AI Review Partner
     autoReview: (taskId: string, force?: boolean) =>
-      ipcRenderer.invoke('review:autoReview', taskId, force ?? false) as Promise<
-        import('../shared/types').ReviewResult
-      >,
+      typedInvoke('review:autoReview', taskId, force ?? false),
     chatStream: (params: {
       taskId: string
       messages: import('../shared/types').PartnerMessage[]
     }) =>
-      ipcRenderer.invoke('review:chatStream', params) as Promise<{ streamId: string }>,
+      typedInvoke('review:chatStream', params),
     onChatChunk: (
       listener: (evt: unknown, chunk: import('../shared/types').ChatChunk) => void
     ) => {
@@ -537,7 +535,7 @@ const api = {
       return () => ipcRenderer.removeListener('review:chatChunk', listener as never)
     },
     abortChat: (streamId: string) =>
-      ipcRenderer.invoke('review:chatAbort', streamId) as Promise<void>
+      typedInvoke('review:chatAbort', streamId)
   },
 
   // Spec Synthesizer
