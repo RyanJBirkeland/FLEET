@@ -56,7 +56,6 @@ import { getSetting, getSettingJson } from './settings'
 import { createTaskTerminalService } from './services/task-terminal-service'
 import { createStatusServer } from './services/status-server'
 import { createElectronDialogService } from './dialog-service'
-import { getTasksWithDependencies } from './data/sprint-queries'
 import { getTask, updateTask } from './services/sprint-service'
 import {
   registerTearoffHandlers,
@@ -123,11 +122,15 @@ app.whenReady().then(() => {
 
   startBackgroundServices()
 
+  // Hoist repo construction so it's available to BOTH the terminal service
+  // (always) and the agent manager (when autoStart).
+  const repo = createSprintTaskRepository()
+
   // --- Task terminal service (unified dependency resolution) ---
   const terminalService = createTaskTerminalService({
     getTask,
     updateTask,
-    getTasksWithDependencies,
+    getTasksWithDependencies: () => repo.getTasksWithDependencies(),
     getSetting,
     logger: createLogger('task-terminal')
   })
@@ -156,7 +159,6 @@ app.whenReady().then(() => {
   if (autoStart) {
     getOAuthToken()
 
-    const repo = createSprintTaskRepository()
     const am = createAgentManager(
       { ...amConfig, onStatusTerminal: terminalService.onStatusTerminal },
       repo
