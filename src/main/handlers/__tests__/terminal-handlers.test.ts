@@ -105,13 +105,13 @@ describe('Terminal handlers', () => {
     mockWebContents.send = vi.fn()
   })
 
-  it('registers 3 safeHandle channels and 1 ipcMain.on listener', () => {
+  it('registers 3 safeHandle channels and 1 safeOn channel', () => {
     registerTerminalHandlers()
     expect(safeHandle).toHaveBeenCalledTimes(3)
     expect(safeHandle).toHaveBeenCalledWith('terminal:create', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('terminal:resize', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('terminal:kill', expect.any(Function))
-    expect(ipcMain.on).toHaveBeenCalledWith('terminal:write', expect.any(Function))
+    expect(safeOn).toHaveBeenCalledWith('terminal:write', expect.any(Function))
   })
 
   describe('terminal:create', () => {
@@ -196,28 +196,17 @@ describe('Terminal handlers', () => {
       // Create a terminal first
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
 
-      // Capture the ipcMain.on handler
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
-      expect(writeListener).toBeDefined()
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
-      writeListener!(mockEvent, { id, data: 'ls -la\n' })
+      writeListener(mockEvent, { id, data: 'ls -la\n' })
       expect(mockHandle.write).toHaveBeenCalledWith('ls -la\n')
     })
 
     it('silently ignores writes to unknown terminal ids', () => {
-      captureHandlers()
+      const handlers = captureHandlers()
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
-
-      expect(() => writeListener!(mockEvent, { id: 9999, data: 'hello' })).not.toThrow()
+      expect(() => writeListener(mockEvent, { id: 9999, data: 'hello' })).not.toThrow()
     })
 
     it('silently ignores data that exceeds 65536 bytes', () => {
@@ -226,15 +215,10 @@ describe('Terminal handlers', () => {
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
-
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
       const oversized = 'x'.repeat(65_537)
-      writeListener!(mockEvent, { id, data: oversized })
+      writeListener(mockEvent, { id, data: oversized })
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
 
@@ -244,14 +228,9 @@ describe('Terminal handlers', () => {
       const handlers = captureHandlers()
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
-
-      writeListener!(mockEvent, { id, data: 42 })
+      writeListener(mockEvent, { id, data: 42 })
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
   })
@@ -335,14 +314,9 @@ describe('Terminal handlers', () => {
 
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
       handlers['terminal:kill']({} as IpcMainInvokeEvent, id)
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
-
-      expect(() => writeListener!(mockEvent, { id, data: 'echo dead' })).not.toThrow()
+      expect(() => writeListener(mockEvent, { id, data: 'echo dead' })).not.toThrow()
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
   })
@@ -387,14 +361,10 @@ describe('Terminal handlers', () => {
       const id1 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
       const id2 = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
 
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
-      writeListener!(mockEvent, { id: id1, data: 'for terminal 1' })
-      writeListener!(mockEvent, { id: id2, data: 'for terminal 2' })
+      writeListener(mockEvent, { id: id1, data: 'for terminal 1' })
+      writeListener(mockEvent, { id: id2, data: 'for terminal 2' })
 
       expect(handle1.write).toHaveBeenCalledWith('for terminal 1')
       expect(handle1.write).not.toHaveBeenCalledWith('for terminal 2')
@@ -496,13 +466,9 @@ describe('Terminal handlers', () => {
       const id = handlers['terminal:create'](mockEvent, { cols: 80, rows: 24 })
       mockHandle._triggerExit()
 
-      const writeListener = vi
-        .mocked(ipcMain.on)
-        .mock.calls.find(([ch]) => ch === 'terminal:write')?.[1] as
-        | ((_e: any, args: any) => void)
-        | undefined
+      const writeListener = handlers['terminal:write'] as (_e: any, args: any) => void
 
-      writeListener!(mockEvent, { id, data: 'after exit' })
+      writeListener(mockEvent, { id, data: 'after exit' })
       expect(mockHandle.write).not.toHaveBeenCalled()
     })
 

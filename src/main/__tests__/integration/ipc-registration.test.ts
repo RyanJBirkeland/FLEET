@@ -83,7 +83,7 @@ function extractRegisteredChannels(): Set<string> {
   //   safeHandle('channel:name', ...)
   //   ipcMain.handle('channel:name', ...)
   //   ipcMain.on('channel:name', ...)
-  const handlePattern = /(?:safeHandle|ipcMain\.handle|ipcMain\.on)\s*\(\s*'([^']+)'/g
+  const handlePattern = /(?:safeHandle|safeOn|ipcMain\.handle|ipcMain\.on)\s*\(\s*'([^']+)'/g
 
   for (const filePath of allFiles) {
     let source: string
