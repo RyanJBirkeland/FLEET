@@ -464,57 +464,31 @@ export function deleteTask(id: string, deletedBy: string = 'unknown'): void {
   }
 }
 
+function checkWipLimit(db: Database.Database, maxActive: number): boolean {
+  const { count } = db
+    .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'active'")
+    .get() as { count: number }
+  return count < maxActive
+}
+
 export function claimTask(id: string, claimedBy: string, maxActive?: number): SprintTask | null {
   try {
     const db = getDb()
     const now = nowIso()
 
-    if (maxActive !== undefined) {
-      // Atomic WIP check — single transaction prevents TOCTOU race, with retry on SQLITE_BUSY
-      const result = withRetry(() =>
-        db.transaction(() => {
-          const { count } = db
-            .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'active'")
-            .get() as { count: number }
-          if (count >= maxActive) return null
-
-          // DL-13 & DL-18: Record audit trail before update (pass db for consistency)
-          const oldTask = getTask(id, db)
-          if (!oldTask) return null
-
-          const updated = db
-            .prepare(
-              `UPDATE sprint_tasks
-               SET status = 'active', claimed_by = ?, started_at = ?
-               WHERE id = ? AND status = 'queued'
-               RETURNING ${SPRINT_TASK_COLUMNS}`
-            )
-            .get(claimedBy, now, id) as Record<string, unknown> | undefined
-
-          if (updated) {
-            recordTaskChanges(
-              id,
-              oldTask as unknown as Record<string, unknown>,
-              { status: 'active', claimed_by: claimedBy, started_at: now },
-              claimedBy,
-              db
-            )
-          }
-
-          return updated
-        })()
-      )
-
-      return result ? mapRowToTask(result) : null
-    }
-
-    // No WIP limit — original behavior with audit trail, with retry on SQLITE_BUSY
-    return withRetry(() =>
+    // Atomic WIP check + claim in single transaction with retry on SQLITE_BUSY
+    const result = withRetry(() =>
       db.transaction(() => {
+        // Optional WIP limit enforcement
+        if (maxActive !== undefined && !checkWipLimit(db, maxActive)) {
+          return null
+        }
+
+        // DL-13 & DL-18: Record audit trail before update (pass db for consistency)
         const oldTask = getTask(id, db)
         if (!oldTask) return null
 
-        const result = db
+        const updated = db
           .prepare(
             `UPDATE sprint_tasks
              SET status = 'active', claimed_by = ?, started_at = ?
@@ -523,7 +497,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
           )
           .get(claimedBy, now, id) as Record<string, unknown> | undefined
 
-        if (result) {
+        if (updated) {
           recordTaskChanges(
             id,
             oldTask as unknown as Record<string, unknown>,
@@ -531,12 +505,13 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
             claimedBy,
             db
           )
-          return mapRowToTask(result)
         }
 
-        return null
+        return updated
       })()
     )
+
+    return result ? mapRowToTask(result) : null
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
