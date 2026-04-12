@@ -1,4 +1,4 @@
-import { Check, ChevronDown } from 'lucide-react'
+import { Check, ChevronDown, Loader2 } from 'lucide-react'
 import { useEffect, useRef, useState, type JSX, type KeyboardEvent } from 'react'
 
 interface Props {
@@ -8,6 +8,8 @@ interface Props {
   onRequestRevision: () => void
   onDiscard: () => void
   disabled?: boolean
+  /** True while any review action IPC call is in flight. Shows a spinner and blocks re-click. */
+  loading?: boolean
 }
 
 export function ApproveDropdown({
@@ -17,6 +19,7 @@ export function ApproveDropdown({
   onRequestRevision,
   onDiscard,
   disabled = false,
+  loading = false,
 }: Props): JSX.Element {
   const [open, setOpen] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -87,14 +90,15 @@ export function ApproveDropdown({
         type="button"
         ref={triggerRef}
         className="cr-approve__trigger"
-        disabled={disabled}
+        disabled={disabled || loading}
         aria-haspopup="menu"
         aria-expanded={open}
+        aria-busy={loading || undefined}
         onClick={() => setOpen((v) => !v)}
       >
-        <Check size={14} />
+        {loading ? <Loader2 size={14} className="cr-approve__spinner" /> : <Check size={14} />}
         <span>Approve</span>
-        <ChevronDown size={12} />
+        {!loading && <ChevronDown size={12} />}
       </button>
       {open && (
         <div
