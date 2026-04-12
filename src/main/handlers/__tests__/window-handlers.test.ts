@@ -35,7 +35,7 @@ vi.mock('../../ipc-utils', () => ({
 
 import { registerWindowHandlers } from '../window-handlers'
 import { safeHandle, safeOn } from '../../ipc-utils'
-import { ipcMain, shell } from 'electron'
+import { shell } from 'electron'
 import { writeFileSync } from 'fs'
 import { tmpdir } from 'os'
 

@@ -37,7 +37,7 @@ vi.mock('../../pty', async (importOriginal) => {
 
 import { registerTerminalHandlers } from '../terminal-handlers'
 import { safeHandle, safeOn } from '../../ipc-utils'
-import { ipcMain, BrowserWindow } from 'electron'
+import { BrowserWindow } from 'electron'
 import { isPtyAvailable, validateShell, createPty } from '../../pty'
 
 // Shared mock objects — defined after imports so they are available at test time
