@@ -60,35 +60,6 @@
   border-bottom: 1px solid var(--bde-border);
 }
 
-.planner-epic-list__search-icon {
-  position: absolute;
-  left: 20px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--bde-text-dim);
-  pointer-events: none;
-}
-
-.planner-epic-list__search-input {
-  width: 100%;
-  padding: 6px var(--bde-space-2) 6px 28px;
-  background: var(--bde-surface);
-  border: 1px solid var(--bde-border);
-  border-radius: 6px;
-  color: var(--bde-text);
-  font-size: 12px;
-  font-family: var(--bde-font-code);
-  outline: none;
-  transition: border-color 150ms ease;
-}
-
-.planner-epic-list__search-input:focus-visible {
-  border-color: var(--bde-accent);
-}
-
-.planner-epic-list__search-input::placeholder {
-  color: var(--bde-text-dim);
-}
 
 .planner-epic-list__scroll {
   flex: 1;

@@ -188,15 +188,19 @@ export function EpicList({
       </div>
 
       <div className="planner-epic-list__search">
-        <Search size={14} className="planner-epic-list__search-icon" />
-        <input
-          type="text"
-          placeholder="Search epics..."
-          aria-label="Search epics"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          className="planner-epic-list__search-input"
-        />
+        <div className="bde-input bde-input--has-prefix">
+          <span className="bde-input__prefix">
+            <Search size={14} />
+          </span>
+          <input
+            type="text"
+            placeholder="Search epics..."
+            aria-label="Search epics"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            className="bde-input__field"
+          />
+        </div>
       </div>
 
       <motion.div
