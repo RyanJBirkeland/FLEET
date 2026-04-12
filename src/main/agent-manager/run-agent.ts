@@ -244,7 +244,7 @@ async function handleOAuthRefresh(logger: Logger): Promise<void> {
 function trackAgentCosts(msg: unknown, agent: ActiveAgent, turnTracker: TurnTracker): void {
   agent.costUsd =
     getNumericField(msg, 'cost_usd') ?? getNumericField(msg, 'total_cost_usd') ?? agent.costUsd
-  turnTracker.observe(msg)
+  turnTracker.processMessage(msg)
   const { tokensIn, tokensOut } = turnTracker.totals()
   agent.tokensIn = tokensIn
   agent.tokensOut = tokensOut

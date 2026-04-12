@@ -53,7 +53,7 @@ interface SprintTasksState {
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
 }
 
-function countActive(tasks: SprintTask[]): number {
+function countActiveTasks(tasks: SprintTask[]): number {
   return tasks.reduce((n, t) => n + (t.status === TASK_STATUS.ACTIVE ? 1 : 0), 0)
 }
 
@@ -143,7 +143,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         const nextTasks = Array.from(mergedById.values())
         return {
           tasks: nextTasks,
-          activeTaskCount: countActive(nextTasks),
+          activeTaskCount: countActiveTasks(nextTasks),
           pendingUpdates: nextPending
         }
       })
@@ -394,7 +394,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         }
         return merged
       })
-      return { tasks: nextTasks, activeTaskCount: countActive(nextTasks) }
+      return { tasks: nextTasks, activeTaskCount: countActiveTasks(nextTasks) }
     })
   },
 

@@ -245,7 +245,7 @@ export async function spawnAdhocAgent(args: {
           // Track cost/token fields
           if (typeof rawMessage.cost_usd === 'number') costUsd = rawMessage.cost_usd
           if (typeof rawMessage.total_cost_usd === 'number') costUsd = rawMessage.total_cost_usd
-          turnTracker.observe(rawMessage)
+          turnTracker.processMessage(rawMessage)
           ;({ tokensIn, tokensOut } = turnTracker.totals())
         }
       }

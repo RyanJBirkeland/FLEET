@@ -14,7 +14,7 @@ export class TurnTracker {
     private db?: import('better-sqlite3').Database
   ) {}
 
-  observe(msg: unknown): void {
+  processMessage(msg: unknown): void {
     if (typeof msg !== 'object' || msg === null) return
     const m = msg as Record<string, unknown>
 

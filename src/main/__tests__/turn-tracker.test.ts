@@ -51,11 +51,11 @@ describe('TurnTracker', () => {
 
   it('accumulates tokens from msg.message.usage (real SDK format)', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
     })
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 200, output_tokens: 80 }, content: [] }
     })
@@ -64,14 +64,14 @@ describe('TurnTracker', () => {
 
   it('falls back to msg.usage when msg.message.usage absent', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({ type: 'assistant', usage: { input_tokens: 100, output_tokens: 50 } })
-    tracker.observe({ type: 'assistant', usage: { input_tokens: 200, output_tokens: 80 } })
+    tracker.processMessage({ type: 'assistant', usage: { input_tokens: 100, output_tokens: 50 } })
+    tracker.processMessage({ type: 'assistant', usage: { input_tokens: 200, output_tokens: 80 } })
     expect(tracker.totals()).toMatchObject({ tokensIn: 300, tokensOut: 130 })
   })
 
   it('accumulates cache tokens from msg.message.usage', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: {
         usage: {
@@ -83,7 +83,7 @@ describe('TurnTracker', () => {
         content: []
       }
     })
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: {
         usage: {
@@ -108,7 +108,7 @@ describe('TurnTracker', () => {
 
   it('stores zero cache tokens when cache fields absent from usage', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
     })
@@ -123,14 +123,14 @@ describe('TurnTracker', () => {
 
   it('ignores non-assistant messages (result/system carry no useful token data)', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({ type: 'result', tokens_in: 500, tokens_out: 200 })
-    tracker.observe({ type: 'system', subtype: 'init' })
+    tracker.processMessage({ type: 'result', tokens_in: 500, tokens_out: 200 })
+    tracker.processMessage({ type: 'system', subtype: 'init' })
     expect(tracker.totals()).toMatchObject({ tokensIn: 0, tokensOut: 0 })
   })
 
   it('ignores top-level tokens_in/tokens_out even on assistant messages', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] },
       tokens_in: 10,
@@ -143,14 +143,14 @@ describe('TurnTracker', () => {
   it('writes one turn row per assistant message with cumulative totals', () => {
     const tracker = new TurnTracker('run-1', db)
 
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: {
         usage: { input_tokens: 100, output_tokens: 50 },
         content: [{ type: 'tool_use', name: 'Read' }]
       }
     })
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 200, output_tokens: 80 }, content: [] }
     })
@@ -166,7 +166,7 @@ describe('TurnTracker', () => {
 
   it('resets tool_calls per turn but keeps cumulative tokens', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: {
         usage: { input_tokens: 100, output_tokens: 50 },
@@ -176,7 +176,7 @@ describe('TurnTracker', () => {
         ]
       }
     })
-    tracker.observe({
+    tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 50, output_tokens: 20 }, content: [] }
     })
@@ -192,8 +192,8 @@ describe('TurnTracker', () => {
 
   it('returns zero totals and writes no rows for a zero-turn run', () => {
     const tracker = new TurnTracker('run-1', db)
-    tracker.observe({ type: 'system', subtype: 'init' })
-    tracker.observe({ type: 'result', tokens_in: 50, tokens_out: 10 })
+    tracker.processMessage({ type: 'system', subtype: 'init' })
+    tracker.processMessage({ type: 'result', tokens_in: 50, tokens_out: 10 })
 
     expect(tracker.totals()).toMatchObject({ tokensIn: 0, tokensOut: 0 })
     const count = (db.prepare('SELECT COUNT(*) as c FROM agent_run_turns').get() as { c: number }).c
@@ -203,10 +203,10 @@ describe('TurnTracker', () => {
   it('ignores non-object and null messages without throwing', () => {
     const tracker = new TurnTracker('run-1', db)
     expect(() => {
-      tracker.observe(null)
-      tracker.observe(undefined)
-      tracker.observe('string message')
-      tracker.observe(42)
+      tracker.processMessage(null)
+      tracker.processMessage(undefined)
+      tracker.processMessage('string message')
+      tracker.processMessage(42)
     }).not.toThrow()
     expect(tracker.totals()).toMatchObject({ tokensIn: 0, tokensOut: 0 })
   })

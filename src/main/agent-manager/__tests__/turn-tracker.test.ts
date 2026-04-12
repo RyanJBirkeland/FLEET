@@ -20,27 +20,27 @@ describe('turn-tracker', () => {
     tracker = new TurnTracker('run-123', mockDb)
   })
 
-  describe('observe', () => {
+  describe('processMessage', () => {
     it('should ignore non-object messages', () => {
-      tracker.observe(null)
-      tracker.observe('string')
-      tracker.observe(123)
-      tracker.observe(undefined)
+      tracker.processMessage(null)
+      tracker.processMessage('string')
+      tracker.processMessage(123)
+      tracker.processMessage(undefined)
 
       const totals = tracker.totals()
       expect(totals.turnCount).toBe(0)
     })
 
     it('should ignore non-assistant messages', () => {
-      tracker.observe({ type: 'user', message: { content: [] } })
-      tracker.observe({ type: 'tool_result', message: {} })
+      tracker.processMessage({ type: 'user', message: { content: [] } })
+      tracker.processMessage({ type: 'tool_result', message: {} })
 
       const totals = tracker.totals()
       expect(totals.turnCount).toBe(0)
     })
 
     it('should track assistant message token usage from message.usage', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: {
           usage: {
@@ -62,7 +62,7 @@ describe('turn-tracker', () => {
     })
 
     it('should fallback to msg.usage if message.usage absent', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         usage: {
           input_tokens: 75,
@@ -77,11 +77,11 @@ describe('turn-tracker', () => {
     })
 
     it('should accumulate tokens across turns', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
       })
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: { usage: { input_tokens: 200, output_tokens: 75 }, content: [] }
       })
@@ -93,7 +93,7 @@ describe('turn-tracker', () => {
     })
 
     it('should count tool_use blocks in content', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: {
           usage: { input_tokens: 100, output_tokens: 50 },
@@ -117,7 +117,7 @@ describe('turn-tracker', () => {
     })
 
     it('should reset tool call count after each turn', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: {
           usage: { input_tokens: 100, output_tokens: 50 },
@@ -125,7 +125,7 @@ describe('turn-tracker', () => {
         }
       })
 
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: {
           usage: { input_tokens: 100, output_tokens: 50 },
@@ -141,7 +141,7 @@ describe('turn-tracker', () => {
     })
 
     it('should handle missing usage gracefully', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: { content: [] }
       })
@@ -153,7 +153,7 @@ describe('turn-tracker', () => {
     })
 
     it('should call insertAgentRunTurn on assistant messages', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: {
           usage: { input_tokens: 100, output_tokens: 50 },
@@ -179,7 +179,7 @@ describe('turn-tracker', () => {
       })
 
       expect(() => {
-        tracker.observe({
+        tracker.processMessage({
           type: 'assistant',
           message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
         })
@@ -208,7 +208,7 @@ describe('turn-tracker', () => {
     })
 
     it('should reflect accumulated state', () => {
-      tracker.observe({
+      tracker.processMessage({
         type: 'assistant',
         message: {
           usage: {
