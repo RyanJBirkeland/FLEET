@@ -306,8 +306,8 @@ describe('EpicDetail', () => {
     render(<EpicDetail {...defaultProps} />)
 
     expect(screen.getByText('Done')).toBeInTheDocument()
-    expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('Draft')).toBeInTheDocument()
+    expect(screen.getByText('In Progress')).toBeInTheDocument()
+    expect(screen.getByText('Backlog')).toBeInTheDocument()
   })
 
   it('should handle tasks with null spec as missing specs', () => {

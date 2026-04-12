@@ -2,6 +2,7 @@ import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { Edit2, MoreVertical, AlertTriangle } from 'lucide-react'
 import type { TaskGroup, SprintTask } from '../../../../shared/types'
+import { STATUS_METADATA } from '../../../../shared/task-state-machine'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { usePrompt, PromptModal } from '../ui/PromptModal'
 import { LoadingState } from '../ui/LoadingState'
@@ -136,55 +137,6 @@ export function EpicDetail({
     if (progressPercent > 0) return 'var(--bde-warning)'
     return 'var(--bde-text-dim)'
   }, [progressPercent])
-
-  // Helper to get status dot color — delegates to shared getDotColor
-  const getStatusColor = (status: SprintTask['status']): string => {
-    switch (status) {
-      case 'done':
-        return 'var(--bde-status-done)'
-      case 'active':
-        return 'var(--bde-status-active)'
-      case 'queued':
-        return 'var(--bde-status-queued)'
-      case 'blocked':
-        return 'var(--bde-status-blocked)'
-      case 'review':
-        return 'var(--bde-status-review)'
-      case 'failed':
-      case 'error':
-        return 'var(--bde-danger)'
-      case 'cancelled':
-        return 'var(--bde-text-dim)'
-      case 'backlog':
-      default:
-        return 'var(--bde-text-muted)'
-    }
-  }
-
-  // Helper to get status label
-  const getStatusLabel = (status: SprintTask['status']): string => {
-    switch (status) {
-      case 'done':
-        return 'Done'
-      case 'active':
-        return 'Active'
-      case 'queued':
-        return 'Queued'
-      case 'blocked':
-        return 'Blocked'
-      case 'review':
-        return 'Review'
-      case 'failed':
-        return 'Failed'
-      case 'error':
-        return 'Error'
-      case 'cancelled':
-        return 'Cancelled'
-      case 'backlog':
-      default:
-        return 'Draft'
-    }
-  }
 
   const queueDisabled = tasksNeedingSpecs > 0
 
@@ -525,7 +477,7 @@ export function EpicDetail({
                       <>
                         <div
                           className="epic-detail__task-status-dot"
-                          style={{ background: getStatusColor(task.status) }}
+                          style={{ background: `var(${STATUS_METADATA[task.status].colorToken})` }}
                         />
                         <span
                           className="epic-detail__task-title"
@@ -548,9 +500,9 @@ export function EpicDetail({
                         )}
                         <span
                           className="epic-detail__task-status-badge"
-                          style={{ color: getStatusColor(task.status) }}
+                          style={{ color: `var(${STATUS_METADATA[task.status].colorToken})` }}
                         >
-                          {getStatusLabel(task.status)}
+                          {STATUS_METADATA[task.status].label}
                         </span>
                         <button
                           type="button"

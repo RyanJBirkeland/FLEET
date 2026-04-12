@@ -4,7 +4,8 @@ import { AlertTriangle, Clock, Zap, GitBranch, Slash, XCircle } from 'lucide-rea
 import type { LucideIcon } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
-import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { formatElapsed } from '../../lib/task-format'
+import { STATUS_METADATA } from '../../../../shared/task-state-machine'
 import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import { useSprintUI } from '../../stores/sprintUI'
 import { formatDuration } from '../../lib/format'
@@ -127,7 +128,12 @@ function TaskPillInner({
     >
       <div
         className="task-pill__dot"
-        style={{ background: getDotColor(task.status, task.pr_status) }}
+        style={{
+          background:
+            task.pr_status === 'open' || task.pr_status === 'branch_only'
+              ? 'var(--bde-status-review)'
+              : `var(${STATUS_METADATA[task.status].colorToken})`
+        }}
       />
       {failureInfo && (
         <span title={failureInfo.label}>

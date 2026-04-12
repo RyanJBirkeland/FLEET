@@ -1,5 +1,6 @@
 import type { SprintTask } from '../../../shared/types'
-import { TASK_STATUS, PR_STATUS } from '../../../shared/constants'
+import { PR_STATUS } from '../../../shared/constants'
+import { STATUS_METADATA } from '../../../shared/task-state-machine'
 
 export interface SprintPartition {
   backlog: SprintTask[]
@@ -34,36 +35,38 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
   const failed: SprintTask[] = []
 
   for (const task of tasks) {
-    switch (task.status) {
-      case TASK_STATUS.BACKLOG:
+    // Special case: active tasks with PR override go to awaitingReview
+    // (depends on both status and pr_status — can't be metadata-driven)
+    if (
+      task.status === 'active' &&
+      (task.pr_status === PR_STATUS.OPEN || task.pr_status === PR_STATUS.BRANCH_ONLY)
+    ) {
+      awaitingReview.push(task)
+      continue
+    }
+
+    // All other statuses: route via metadata.bucketKey
+    const bucketKey = STATUS_METADATA[task.status].bucketKey
+    switch (bucketKey) {
+      case 'backlog':
         backlog.push(task)
         break
-      case TASK_STATUS.QUEUED:
+      case 'todo':
         todo.push(task)
         break
-      case TASK_STATUS.BLOCKED:
+      case 'blocked':
         blocked.push(task)
         break
-      case TASK_STATUS.ACTIVE:
-        if (task.pr_status === PR_STATUS.OPEN || task.pr_status === PR_STATUS.BRANCH_ONLY) {
-          awaitingReview.push(task)
-        } else {
-          inProgress.push(task)
-        }
+      case 'inProgress':
+        inProgress.push(task)
         break
-      case TASK_STATUS.REVIEW:
+      case 'awaitingReview':
         awaitingReview.push(task)
         break
-      case TASK_STATUS.DONE:
+      case 'done':
         done.push(task)
         break
-      case TASK_STATUS.CANCELLED:
-        failed.push(task)
-        break
-      case TASK_STATUS.FAILED:
-        failed.push(task)
-        break
-      case TASK_STATUS.ERROR:
+      case 'failed':
         failed.push(task)
         break
     }
