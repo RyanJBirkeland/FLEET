@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { CompletionBucket, LoadSnapshot } from '../../../shared/ipc-channels'
-import type { FeedEvent } from '../components/neon/ActivityFeed'
+import type { FeedEvent } from '../lib/dashboard-types'
 
 interface DailySuccessRate {
   date: string

@@ -1,11 +1,7 @@
-import { type NeonAccent, neonVar } from './types'
+import { neonVar } from './types'
+import type { FeedEvent } from '../../lib/dashboard-types'
 
-export interface FeedEvent {
-  id: string
-  label: string
-  accent: NeonAccent
-  timestamp: number
-}
+export type { FeedEvent }
 
 interface ActivityFeedProps {
   events: FeedEvent[]
