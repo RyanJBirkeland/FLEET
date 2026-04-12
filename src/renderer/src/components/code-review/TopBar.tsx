@@ -415,7 +415,7 @@ export function TopBar(): React.JSX.Element {
                       onCreatePR={actions.createPr}
                       onRequestRevision={actions.requestRevision}
                       onDiscard={actions.discard}
-                      disabled={!!actions.actionInFlight}
+                      loading={!!actions.actionInFlight}
                     />
                   </div>
                 </>
