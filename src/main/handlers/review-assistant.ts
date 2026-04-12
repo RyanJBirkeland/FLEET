@@ -6,11 +6,7 @@ import { runSdkStreaming } from '../sdk-streaming'
 import type { ReviewService } from '../services/review-service'
 import type { IReviewRepository } from '../data/review-repository'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
-import type {
-  ChatChunk,
-  PartnerMessage,
-  ReviewResult,
-} from '../../shared/types'
+import type { ChatChunk, PartnerMessage, ReviewResult } from '../../shared/types'
 
 const log = createLogger('review-assistant')
 
@@ -76,7 +72,7 @@ export async function handleChatStream(
     branch,
     diff,
     messages: input.messages.map((m) => ({ role: m.role, content: m.content })),
-    reviewSeed,
+    reviewSeed
   })
 
   void (async () => {
@@ -97,7 +93,7 @@ export async function handleChatStream(
           onToolUse: (event) => {
             const payload: ChatChunk = { streamId, toolUse: event }
             sender?.send('review:chatChunk', payload)
-          },
+          }
         }
       )
       const done: ChatChunk = { streamId, done: true, fullText: full }
@@ -126,7 +122,7 @@ export function buildChatStreamDeps(input: {
   return {
     ...input,
     buildChatPrompt: buildAgentPrompt,
-    runSdkStreaming,
+    runSdkStreaming
   }
 }
 
@@ -137,9 +133,7 @@ export interface ReviewAssistantRegistrationInput {
   chatStreamDeps: ChatStreamDeps
 }
 
-export function registerReviewAssistantHandlers(
-  input: ReviewAssistantRegistrationInput
-): void {
+export function registerReviewAssistantHandlers(input: ReviewAssistantRegistrationInput): void {
   safeHandle('review:autoReview', async (_e, taskId, force) => {
     return handleAutoReview(input.reviewService, taskId, force)
   })

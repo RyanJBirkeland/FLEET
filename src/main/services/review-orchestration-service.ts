@@ -15,11 +15,7 @@ import { promisify } from 'util'
 import { rmSync } from 'node:fs'
 import { join } from 'node:path'
 import { createLogger } from '../logger'
-import {
-  mergeAgentBranch,
-  cleanupWorktree,
-  executeMergeStrategy
-} from './review-merge-service'
+import { mergeAgentBranch, cleanupWorktree, executeMergeStrategy } from './review-merge-service'
 import { createPullRequest } from './review-pr-service'
 import { getTask as _getTask, updateTask as _updateTask } from './sprint-service'
 import { runPostMergeDedup } from './post-merge-dedup'
@@ -149,11 +145,10 @@ export async function mergeLocally(input: MergeLocallyInput): Promise<MergeLocal
   if (!task.worktree_path) throw new Error(`Task ${taskId} has no worktree path`)
 
   // Get branch name from the worktree
-  const { stdout: branchName } = await execFileAsync(
-    'git',
-    ['rev-parse', '--abbrev-ref', 'HEAD'],
-    { cwd: task.worktree_path, env }
-  )
+  const { stdout: branchName } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: task.worktree_path,
+    env
+  })
   const branch = branchName.trim()
 
   // Resolve repo local path
@@ -214,11 +209,10 @@ export async function createPr(input: CreatePrInput): Promise<CreatePrResult> {
   if (!task.worktree_path) throw new Error(`Task ${taskId} has no worktree path`)
 
   // Get branch name from the worktree
-  const { stdout: branchOut } = await execFileAsync(
-    'git',
-    ['rev-parse', '--abbrev-ref', 'HEAD'],
-    { cwd: task.worktree_path, env }
-  )
+  const { stdout: branchOut } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: task.worktree_path,
+    env
+  })
   const branch = branchOut.trim()
 
   // Push and create PR (or get existing)
@@ -269,9 +263,7 @@ export async function createPr(input: CreatePrInput): Promise<CreatePrResult> {
  * (it's a UI-only partition, not a DB status). Tasks awaiting review have
  * status='active' or 'done' with pr_status='open'.
  */
-export async function requestRevision(
-  input: RequestRevisionInput
-): Promise<RequestRevisionResult> {
+export async function requestRevision(input: RequestRevisionInput): Promise<RequestRevisionResult> {
   const { taskId, feedback, mode } = input
 
   const task = _getTask(taskId)
@@ -373,11 +365,10 @@ export async function shipIt(input: ShipItInput): Promise<ShipItResult> {
   if (!task.worktree_path) throw new Error(`Task ${taskId} has no worktree path`)
 
   // Get branch name from the worktree
-  const { stdout: branchName } = await execFileAsync(
-    'git',
-    ['rev-parse', '--abbrev-ref', 'HEAD'],
-    { cwd: task.worktree_path, env }
-  )
+  const { stdout: branchName } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+    cwd: task.worktree_path,
+    env
+  })
   const branch = branchName.trim()
 
   // Resolve repo local path

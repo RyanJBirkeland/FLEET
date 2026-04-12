@@ -9,9 +9,7 @@ import type { SprintTask, CreateTaskInput, QueueStats } from '../../../shared/ty
 // Mock electron (for BrowserWindow used by broadcast)
 vi.mock('electron', () => ({
   BrowserWindow: {
-    getAllWindows: vi.fn(() => [
-      { webContents: { send: vi.fn() } }
-    ])
+    getAllWindows: vi.fn(() => [{ webContents: { send: vi.fn() } }])
   }
 }))
 

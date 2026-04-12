@@ -143,7 +143,7 @@
 
 .settings-discovery-tab--active {
   color: var(--bde-text, #fff);
-  border-bottom-color: var(--bde-accent, #6C8EEF);
+  border-bottom-color: var(--bde-accent, #6c8eef);
 }
 
 .settings-discovery-search {
@@ -212,7 +212,7 @@
 
 .settings-discovery-row__github {
   font-size: 11px;
-  color: var(--bde-accent, #6C8EEF);
+  color: var(--bde-accent, #6c8eef);
 }
 
 .settings-discovery-row__progress {
@@ -223,7 +223,7 @@
 
 .settings-discovery-row__error {
   font-size: 11px;
-  color: var(--bde-danger, #EF4444);
+  color: var(--bde-danger, #ef4444);
 }
 
 .settings-discovery-empty {
@@ -241,7 +241,7 @@
   align-items: center;
   gap: var(--bde-space-2);
   padding: var(--bde-space-3) var(--bde-space-5);
-  color: var(--bde-danger, #EF4444);
+  color: var(--bde-danger, #ef4444);
   font-size: 13px;
 }
 

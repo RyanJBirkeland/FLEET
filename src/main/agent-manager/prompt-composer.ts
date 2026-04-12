@@ -16,13 +16,7 @@ import { getUserMemory } from '../agent-system/memory/user-memory'
 import { getAllSkills } from '../agent-system/skills'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
 
-export type AgentType =
-  | 'pipeline'
-  | 'assistant'
-  | 'adhoc'
-  | 'copilot'
-  | 'synthesizer'
-  | 'reviewer'
+export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer' | 'reviewer'
 
 export interface BuildPromptInput {
   agentType: AgentType
@@ -696,9 +690,7 @@ Opening: ${reviewSeed.openingMessage}
 `
     : ''
 
-  const history = messages
-    .map((m) => `**${m.role}:** ${m.content}`)
-    .join('\n\n')
+  const history = messages.map((m) => `**${m.role}:** ${m.content}`).join('\n\n')
 
   return `${REVIEWER_PREAMBLE}
 

@@ -272,11 +272,11 @@ export function AgentsView(): React.JSX.Element {
                 />
                 {showTooltip && (
                   <div id="scratchpad-tooltip" role="tooltip" className="agents-view__tooltip">
-                    <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents
-                    here run in isolated worktrees and aren&apos;t tracked in the sprint pipeline.
-                    When an agent finishes, click <em>Promote to Code Review</em> in its console
-                    header to flow the work into the review queue. For tracked sprint work, queue
-                    tasks from <em>Task Workbench</em>.
+                    <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents here
+                    run in isolated worktrees and aren&apos;t tracked in the sprint pipeline. When
+                    an agent finishes, click <em>Promote to Code Review</em> in its console header
+                    to flow the work into the review queue. For tracked sprint work, queue tasks
+                    from <em>Task Workbench</em>.
                   </div>
                 )}
               </div>
@@ -297,10 +297,10 @@ export function AgentsView(): React.JSX.Element {
           {showScratchpadBanner && (
             <div role="status" className="agents-view__scratchpad-banner">
               <div className="agents-view__scratchpad-banner-text">
-                <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents here
-                run in isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an
-                agent finishes, click <em>Promote to Code Review</em> in its console header to
-                flow the work into the review queue. For tracked sprint work, queue tasks from{' '}
+                <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents here run
+                in isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an agent
+                finishes, click <em>Promote to Code Review</em> in its console header to flow the
+                work into the review queue. For tracked sprint work, queue tasks from{' '}
                 <em>Task Workbench</em>.
               </div>
               <button

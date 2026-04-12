@@ -276,24 +276,24 @@ html.theme-pro-dark {
   --bde-radius-xl: 8px;
 
   /* ── New unified tokens ── */
-  --bde-accent-surface:   rgba(74, 136, 199, 0.10);
-  --bde-accent-border:    rgba(74, 136, 199, 0.28);
-  --bde-warning-surface:  rgba(204, 136, 51, 0.10);
-  --bde-warning-border:   rgba(204, 136, 51, 0.30);
-  --bde-danger-surface:   rgba(219, 92, 92, 0.10);
-  --bde-danger-border:    rgba(219, 92, 92, 0.30);
-  --bde-status-active:    #7c6af7;
-  --bde-status-review:    var(--bde-accent);
-  --bde-status-blocked:   var(--bde-warning);
-  --bde-status-done:      #4caf82;
-  --bde-status-queued:    var(--bde-accent);
+  --bde-accent-surface: rgba(74, 136, 199, 0.1);
+  --bde-accent-border: rgba(74, 136, 199, 0.28);
+  --bde-warning-surface: rgba(204, 136, 51, 0.1);
+  --bde-warning-border: rgba(204, 136, 51, 0.3);
+  --bde-danger-surface: rgba(219, 92, 92, 0.1);
+  --bde-danger-border: rgba(219, 92, 92, 0.3);
+  --bde-status-active: #7c6af7;
+  --bde-status-review: var(--bde-accent);
+  --bde-status-blocked: var(--bde-warning);
+  --bde-status-done: #4caf82;
+  --bde-status-queued: var(--bde-accent);
 
   /* ── Semantic aliases ───────────────────────────────── */
-  --bde-error:            var(--bde-danger);
-  --bde-bg-elevated:      var(--bde-surface-high);
-  --bde-bg-secondary:     var(--bde-surface);
-  --bde-surface-hover:    var(--bde-hover);
-  --bde-success-surface:  rgba(95, 173, 101, 0.10);
+  --bde-error: var(--bde-danger);
+  --bde-bg-elevated: var(--bde-surface-high);
+  --bde-bg-secondary: var(--bde-surface);
+  --bde-surface-hover: var(--bde-hover);
+  --bde-success-surface: rgba(95, 173, 101, 0.1);
 }
 
 /* ── Pro Light — IntelliJ-inspired professional light theme ── */
@@ -431,22 +431,22 @@ html.theme-pro-light {
   --bde-radius-xl: 8px;
 
   /* ── New unified tokens ── */
-  --bde-accent-surface:   rgba(38, 117, 191, 0.08);
-  --bde-accent-border:    rgba(38, 117, 191, 0.25);
-  --bde-warning-surface:  rgba(184, 115, 32, 0.08);
-  --bde-warning-border:   rgba(184, 115, 32, 0.28);
-  --bde-danger-surface:   rgba(201, 64, 64, 0.08);
-  --bde-danger-border:    rgba(201, 64, 64, 0.28);
-  --bde-status-active:    #6356e5;
-  --bde-status-review:    var(--bde-accent);
-  --bde-status-blocked:   var(--bde-warning);
-  --bde-status-done:      #3a9b6f;
-  --bde-status-queued:    var(--bde-accent);
+  --bde-accent-surface: rgba(38, 117, 191, 0.08);
+  --bde-accent-border: rgba(38, 117, 191, 0.25);
+  --bde-warning-surface: rgba(184, 115, 32, 0.08);
+  --bde-warning-border: rgba(184, 115, 32, 0.28);
+  --bde-danger-surface: rgba(201, 64, 64, 0.08);
+  --bde-danger-border: rgba(201, 64, 64, 0.28);
+  --bde-status-active: #6356e5;
+  --bde-status-review: var(--bde-accent);
+  --bde-status-blocked: var(--bde-warning);
+  --bde-status-done: #3a9b6f;
+  --bde-status-queued: var(--bde-accent);
 
   /* ── Semantic aliases ───────────────────────────────── */
-  --bde-error:            var(--bde-danger);
-  --bde-bg-elevated:      var(--bde-surface-high);
-  --bde-bg-secondary:     var(--bde-surface);
-  --bde-surface-hover:    var(--bde-hover);
-  --bde-success-surface:  rgba(73, 160, 75, 0.08);
+  --bde-error: var(--bde-danger);
+  --bde-bg-elevated: var(--bde-surface-high);
+  --bde-bg-secondary: var(--bde-surface);
+  --bde-surface-hover: var(--bde-hover);
+  --bde-success-surface: rgba(73, 160, 75, 0.08);
 }

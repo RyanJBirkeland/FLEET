@@ -526,16 +526,12 @@ const api = {
     chatStream: (params: {
       taskId: string
       messages: import('../shared/types').PartnerMessage[]
-    }) =>
-      typedInvoke('review:chatStream', params),
-    onChatChunk: (
-      listener: (evt: unknown, chunk: import('../shared/types').ChatChunk) => void
-    ) => {
+    }) => typedInvoke('review:chatStream', params),
+    onChatChunk: (listener: (evt: unknown, chunk: import('../shared/types').ChatChunk) => void) => {
       ipcRenderer.on('review:chatChunk', listener as never)
       return () => ipcRenderer.removeListener('review:chatChunk', listener as never)
     },
-    abortChat: (streamId: string) =>
-      typedInvoke('review:chatAbort', streamId)
+    abortChat: (streamId: string) => typedInvoke('review:chatAbort', streamId)
   },
 
   // Spec Synthesizer

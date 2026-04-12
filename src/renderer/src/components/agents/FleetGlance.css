@@ -17,11 +17,7 @@
   gap: 16px;
   flex-wrap: wrap;
   padding: 20px;
-  background: linear-gradient(
-    135deg,
-    var(--neon-purple-surface),
-    var(--bde-bg)
-  );
+  background: linear-gradient(135deg, var(--neon-purple-surface), var(--bde-bg));
   border: 1px solid var(--neon-purple-border);
   border-radius: var(--bde-radius-md);
 }
