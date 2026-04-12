@@ -1089,6 +1089,24 @@ describe('createAgentManager', () => {
         expect.stringContaining('resolveDependents failed for task-1')
       )
     })
+
+    it('guards against duplicate invocation for same taskId', async () => {
+      const { resolveDependents } = await import('../resolve-dependents')
+      vi.mocked(resolveDependents).mockClear()
+      const logger = makeLogger()
+      const mgr = createAgentManager(baseConfig, mockRepo, logger)
+
+      // First call should succeed
+      await mgr.onTaskTerminal('task-1', 'done')
+      expect(vi.mocked(resolveDependents)).toHaveBeenCalledTimes(1)
+
+      // Second call with same taskId should be no-op
+      await mgr.onTaskTerminal('task-1', 'done')
+      expect(vi.mocked(resolveDependents)).toHaveBeenCalledTimes(1)
+      expect(logger.warn).toHaveBeenCalledWith(
+        '[agent-manager] onTaskTerminal duplicate for task-1'
+      )
+    })
   })
 
   describe('start() error handlers', () => {

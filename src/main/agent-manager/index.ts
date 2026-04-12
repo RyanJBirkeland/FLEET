@@ -134,6 +134,10 @@ export class AgentManagerImpl implements AgentManager {
   // Exposed via _ prefix for testability (private by convention, not keyword).
   _lastTaskDeps = new Map<string, { deps: TaskDependency[] | null; hash: string }>()
 
+  // F-t4-lifecycle-5: Idempotency guard to prevent double dependency resolution
+  // when watchdog and completion handler race.
+  private readonly _terminalCalled = new Set<string>()
+
   // Circuit breaker — pauses drain loop after consecutive spawn failures.
   private readonly _circuitBreaker: CircuitBreaker
 
@@ -220,30 +224,42 @@ export class AgentManagerImpl implements AgentManager {
   }
 
   async onTaskTerminal(taskId: string, status: string): Promise<void> {
-    if (status === 'done' || status === 'review') {
-      this._metrics.increment('agentsCompleted')
-    } else if (status === 'failed' || status === 'error') {
-      this._metrics.increment('agentsFailed')
+    // F-t4-lifecycle-5: Guard against double-invocation when watchdog and completion handler race
+    if (this._terminalCalled.has(taskId)) {
+      this.logger.warn(`[agent-manager] onTaskTerminal duplicate for ${taskId}`)
+      return
     }
-    if (this.config.onStatusTerminal) {
-      this.config.onStatusTerminal(taskId, status)
-    } else {
-      try {
-        resolveDependents(
-          taskId,
-          status,
-          this._depIndex,
-          this.repo.getTask,
-          this.repo.updateTask,
-          this.logger,
-          getSetting,
-          this._epicIndex,
-          getGroup,
-          getGroupTasks
-        )
-      } catch (err) {
-        this.logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${err}`)
+    this._terminalCalled.add(taskId)
+
+    try {
+      if (status === 'done' || status === 'review') {
+        this._metrics.increment('agentsCompleted')
+      } else if (status === 'failed' || status === 'error') {
+        this._metrics.increment('agentsFailed')
       }
+      if (this.config.onStatusTerminal) {
+        this.config.onStatusTerminal(taskId, status)
+      } else {
+        try {
+          resolveDependents(
+            taskId,
+            status,
+            this._depIndex,
+            this.repo.getTask,
+            this.repo.updateTask,
+            this.logger,
+            getSetting,
+            this._epicIndex,
+            getGroup,
+            getGroupTasks
+          )
+        } catch (err) {
+          this.logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${err}`)
+        }
+      }
+    } finally {
+      // Clean up after 5 seconds to prevent unbounded memory growth
+      setTimeout(() => this._terminalCalled.delete(taskId), 5000)
     }
   }
 
