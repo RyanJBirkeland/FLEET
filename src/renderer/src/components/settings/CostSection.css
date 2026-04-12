@@ -83,18 +83,14 @@
   gap: var(--bde-space-4);
 }
 
-/* ── Cost panel (shared base) ────────────────────────── */
+/* ── Cost panel — uses .bde-card base ────────────────── */
 
 .cost-panel {
-  border: 1px solid var(--bde-border);
-  border-radius: var(--bde-radius-lg);
-  background: var(--bde-surface);
   padding: var(--bde-space-4) var(--bde-space-5);
   display: flex;
   flex-direction: column;
   gap: var(--bde-space-3);
   position: relative;
-  overflow: hidden;
 }
 
 .cost-panel::before {

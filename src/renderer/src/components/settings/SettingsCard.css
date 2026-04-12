@@ -1,16 +1,7 @@
-/* ─── Settings Card ─────────────────────────────────────────────────────── */
+/* ─── Settings Card — uses .bde-card base ──────────────────────────────── */
 
 .stg-card {
-  background: var(--bde-surface);
-  border: 1px solid var(--bde-border);
-  border-radius: 10px;
-  padding: var(--bde-space-4);
   margin-bottom: var(--bde-space-3);
-  overflow: hidden;
-}
-
-.stg-card--full-bleed {
-  padding: 0;
 }
 
 .stg-card__header {

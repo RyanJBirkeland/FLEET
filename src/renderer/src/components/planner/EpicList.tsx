@@ -111,7 +111,7 @@ export function EpicList({
     return (
       <motion.button
         key={group.id}
-        className={`planner-epic-item ${isSelected ? 'planner-epic-item--selected' : ''}`}
+        className={`bde-card bde-card--clickable bde-card--pad-md planner-epic-item ${isSelected ? 'planner-epic-item--selected' : ''}`}
         onClick={() => onSelect(group.id)}
         type="button"
         variants={VARIANTS.staggerChild}

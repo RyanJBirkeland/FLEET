@@ -53,23 +53,23 @@ describe('SettingsCard', () => {
     expect(screen.getByTestId('card-icon')).toBeInTheDocument()
   })
 
-  it('applies full-bleed class when noPadding is true', () => {
+  it('applies pad-none class when noPadding is true', () => {
     const { container } = render(
       <SettingsCard title="My Card" noPadding>
         <div>body</div>
       </SettingsCard>
     )
     const card = container.querySelector('.stg-card')
-    expect(card).toHaveClass('stg-card--full-bleed')
+    expect(card).toHaveClass('bde-card--pad-none')
   })
 
-  it('does not apply full-bleed class when noPadding is false', () => {
+  it('applies pad-md class when noPadding is false', () => {
     const { container } = render(
       <SettingsCard title="My Card" noPadding={false}>
         <div>body</div>
       </SettingsCard>
     )
     const card = container.querySelector('.stg-card')
-    expect(card).not.toHaveClass('stg-card--full-bleed')
+    expect(card).toHaveClass('bde-card--pad-md')
   })
 })

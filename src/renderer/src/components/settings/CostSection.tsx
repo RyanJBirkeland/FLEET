@@ -47,7 +47,7 @@ function truncate(s: string, max: number): string {
 
 function ClaudeCodePanel({ summary }: { summary: CostSummary }): React.JSX.Element {
   return (
-    <div className="cost-panel cost-panel--blue">
+    <div className="bde-card bde-card--pad-none cost-panel cost-panel--blue">
       <h3 className="cost-panel__title">Claude Code</h3>
       <span className="cost-panel__badge cost-panel__badge--blue">Subscription</span>
 
