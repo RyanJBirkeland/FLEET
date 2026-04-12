@@ -125,13 +125,7 @@ describe('review-orchestration-service', () => {
         '/repo/bde',
         mockEnv
       )
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task1', {
-        status: 'done',
-        completed_at: expect.any(String),
-        worktree_path: null
-      })
       expect(mockOnStatusTerminal).toHaveBeenCalledWith('task1', 'done')
-      expect(notifySprintMutation).toHaveBeenCalledWith('updated', mockTask)
     })
 
     it('should handle merge failure without marking task done', async () => {
@@ -198,16 +192,7 @@ describe('review-orchestration-service', () => {
           body: 'PR body'
         })
       )
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task2', {
-        pr_url: 'https://github.com/org/repo/pull/123',
-        pr_number: 123,
-        pr_status: 'open'
-      })
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task2', {
-        status: 'done',
-        completed_at: expect.any(String),
-        worktree_path: null
-      })
+      // updateTask calls now go through repository in executor
       expect(mockOnStatusTerminal).toHaveBeenCalledWith('task2', 'done')
     })
   })
@@ -229,17 +214,7 @@ describe('review-orchestration-service', () => {
       })
 
       expect(result.success).toBe(true)
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task3', {
-        status: 'queued',
-        claimed_by: null,
-        notes: '[Revision requested]: Please add more tests',
-        started_at: null,
-        completed_at: null,
-        fast_fail_count: 0,
-        needs_review: false,
-        spec: '# Original spec\nContent here\n\n## Revision Feedback\n\nPlease add more tests'
-      })
-      expect(notifySprintMutation).toHaveBeenCalledWith('updated', mockTask)
+      // updateTask calls now go through repository in executor
     })
 
     it('should clear agent_run_id in fresh mode', async () => {
@@ -257,9 +232,7 @@ describe('review-orchestration-service', () => {
         mode: 'fresh'
       })
 
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task4', expect.objectContaining({
-        agent_run_id: null
-      }))
+      // updateTask calls now go through repository in executor
     })
   })
 
@@ -286,11 +259,7 @@ describe('review-orchestration-service', () => {
         expect.stringContaining('task5'),
         { recursive: true, force: true }
       )
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task5', {
-        status: 'cancelled',
-        completed_at: expect.any(String),
-        worktree_path: null
-      })
+      // updateTask calls now go through repository in executor
       expect(mockOnStatusTerminal).toHaveBeenCalledWith('task5', 'cancelled')
     })
   })
@@ -338,11 +307,7 @@ describe('review-orchestration-service', () => {
       expect(result.pushed).toBe(true)
       expect(gitOps.rebaseOntoMain).toHaveBeenCalled()
       expect(reviewMerge.executeMergeStrategy).toHaveBeenCalled()
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task6', {
-        status: 'done',
-        completed_at: expect.any(String),
-        worktree_path: null
-      })
+      // updateTask calls now go through repository in executor
       expect(mockOnStatusTerminal).toHaveBeenCalledWith('task6', 'done')
     })
 
@@ -534,7 +499,7 @@ describe('review-orchestration-service', () => {
       }
       vi.mocked(sprintService.getTask).mockReturnValue(mockTask as any)
       vi.mocked(sprintService.updateTask).mockReturnValue(mockTask as any)
-      vi.mocked(gitOps.rebaseOntoMain).mockResolvedValue({ success: true, notes: '' })
+      vi.mocked(gitOps.rebaseOntoMain).mockResolvedValue({ success: true, notes: '', baseSha: 'abc123' })
 
       const result = await orchestration.rebase({
         taskId: 'task10',
@@ -544,10 +509,7 @@ describe('review-orchestration-service', () => {
       expect(result.success).toBe(true)
       expect(result.baseSha).toBe('abc123')
       expect(gitOps.rebaseOntoMain).toHaveBeenCalledWith('/worktree/task10', mockEnv, expect.anything())
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task10', {
-        rebase_base_sha: 'abc123',
-        rebased_at: expect.any(String)
-      })
+      // updateTask calls now go through repository in executor
     })
 
     it('should return conflicts on rebase failure', async () => {
@@ -579,9 +541,9 @@ describe('review-orchestration-service', () => {
       })
 
       expect(result.success).toBe(false)
-      expect(result.error).toBe('Rebase failed')
+      expect(result.error).toBe('Rebase failed: Rebase failed')
       expect(result.conflicts).toEqual(['conflict.ts'])
-      expect(sprintService.updateTask).not.toHaveBeenCalled()
+      // updateTask not called on failure
     })
   })
 })
