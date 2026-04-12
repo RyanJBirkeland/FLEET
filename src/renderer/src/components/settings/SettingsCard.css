@@ -78,51 +78,6 @@
   gap: var(--bde-space-2);
 }
 
-/* ─── Status Pills (used in cards) ──────────────────────────────────────── */
-
-.stg-status-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 3px 10px;
-  border-radius: var(--bde-space-5);
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.stg-status-pill--success {
-  color: var(--bde-status-done);
-  background: var(--bde-accent-surface);
-}
-
-.stg-status-pill--info {
-  color: var(--bde-status-active);
-  background: var(--bde-accent-surface);
-}
-
-.stg-status-pill--warning {
-  color: var(--bde-warning);
-  background: var(--bde-warning-surface);
-}
-
-.stg-status-pill--neutral {
-  color: var(--bde-text-muted);
-  background: var(--bde-surface);
-}
-
-.stg-status-pill--error {
-  color: var(--bde-danger);
-  background: var(--bde-danger-surface);
-}
-
-.stg-status-pill__dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--bde-status-done);
-  flex-shrink: 0;
-}
-
 /* ─── Form Fields (used in cards) ───────────────────────────────────────── */
 
 .stg-field {
