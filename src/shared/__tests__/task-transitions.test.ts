@@ -1,4 +1,4 @@
-import { isValidTransition, VALID_TRANSITIONS } from '../task-transitions'
+import { isValidTransition, VALID_TRANSITIONS } from '../task-state-machine'
 
 describe('task-transitions', () => {
   it('allows backlog → queued', () => {

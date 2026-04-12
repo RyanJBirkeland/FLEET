@@ -7,7 +7,7 @@ import { safeHandle } from '../ipc-utils'
 import { getTask, updateTask, deleteTask } from '../services/sprint-service'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import { validateTaskSpec } from './sprint-validation-helpers'
-import { TERMINAL_STATUSES } from '../../shared/task-transitions'
+import { TERMINAL_STATUSES } from '../../shared/task-state-machine'
 
 export interface BatchHandlersDeps {
   onStatusTerminal: (taskId: string, status: string) => void | Promise<void>

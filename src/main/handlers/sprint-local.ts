@@ -7,7 +7,7 @@ import type { TaskTemplate, ClaimedTask } from '../../shared/types'
 import type { WorkflowTemplate } from '../../shared/workflow-types'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
-import { TERMINAL_STATUSES } from '../../shared/task-transitions'
+import { TERMINAL_STATUSES } from '../../shared/task-state-machine'
 import {
   buildBlockedNotes,
   computeBlockState,
