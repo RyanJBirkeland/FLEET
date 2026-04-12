@@ -9,7 +9,7 @@ import {
   TERMINAL_STATUSES,
   FAILURE_STATUSES,
   HARD_SATISFIED_STATUSES
-} from '../../shared/task-transitions'
+} from '../../shared/task-state-machine'
 import { createEpicDependencyIndex } from './epic-dependency-service'
 
 // Re-export canonical status sets
