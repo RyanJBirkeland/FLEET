@@ -25,7 +25,6 @@ import { createEpicDependencyIndex, type EpicDependencyIndex } from '../services
 import { resolveDependents } from './resolve-dependents'
 import { getGroup, getGroupTasks, getGroupsWithDependencies } from '../data/task-group-queries'
 import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
-import { setSprintQueriesLogger } from '../data/sprint-queries'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { getRepoPaths } from '../paths'
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
@@ -165,9 +164,6 @@ export class AgentManagerImpl implements AgentManager {
     this._epicIndex = createEpicDependencyIndex()
     this._metrics = createMetricsCollector()
     this._circuitBreaker = new CircuitBreaker(logger)
-
-    // Wire sprint-queries to use the same structured file logger as the agent manager
-    setSprintQueriesLogger(logger)
 
     // Build runAgentDeps with bound onTaskTerminal
     this.runAgentDeps = {
