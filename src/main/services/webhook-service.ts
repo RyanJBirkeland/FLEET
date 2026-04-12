@@ -8,6 +8,7 @@ import type { SprintTask } from '../../shared/types'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 import { WEBHOOK_TIMEOUT_MS } from '../constants'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 export interface WebhookConfig {
   id: string
@@ -42,14 +43,17 @@ function signPayload(payload: string, secret: string): string {
 }
 
 /**
- * Map sprint mutation type to webhook event name
+ * Map sprint mutation type to webhook event name.
+ * Note: Event names are webhook API-specific (e.g., 'task.completed', 'task.failed')
+ * and intentionally differ from STATUS_METADATA labels. These names form the public
+ * webhook API contract and cannot be changed without breaking existing integrations.
  */
 function mapEventName(mutationType: 'created' | 'updated' | 'deleted', task: SprintTask): string {
   if (mutationType === 'created') return 'task.created'
   if (mutationType === 'deleted') return 'task.deleted'
 
   // For updates, emit specific event based on status
-  const status = task.status
+  const status = task.status as TaskStatus
   if (status === 'done') return 'task.completed'
   if (status === 'failed' || status === 'error') return 'task.failed'
   if (status === 'active') return 'task.started'

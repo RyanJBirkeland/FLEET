@@ -54,13 +54,6 @@ export {
 export { handleWatchdogVerdict }
 export type { WatchdogCheck, WatchdogAction }
 
-/**
- * Task statuses that can never transition to a non-terminal status.
- * Used by the drain loop to evict finished tasks from the _lastTaskDeps
- * fingerprint cache (F-t1-sre-6: prevent unbounded map growth).
- */
-const TERMINAL_TASK_STATUSES = new Set(['done', 'cancelled', 'failed', 'error'])
-
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
 // ---------------------------------------------------------------------------
@@ -120,6 +113,7 @@ export interface AgentManager {
 
 import type { DependencyIndex } from '../services/dependency-service'
 import { nowIso } from '../../shared/time'
+import { isTerminal } from '../../shared/task-state-machine'
 
 export class AgentManagerImpl implements AgentManager {
   // Exposed state (testable via _ prefix)
@@ -523,7 +517,7 @@ export class AgentManagerImpl implements AgentManager {
       // (510 tasks in prod, most terminal). Evict on first terminal encounter;
       // dep-index edges stay intact for dependency-satisfaction checks.
       for (const task of allTasks) {
-        if (TERMINAL_TASK_STATUSES.has(task.status)) {
+        if (isTerminal(task.status)) {
           // Terminal tasks' deps are frozen — evict from fingerprint cache so
           // the map doesn't grow without bound (510 tasks in prod, most terminal).
           // The dep-index retains the task's edges for dependency-satisfaction

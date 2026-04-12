@@ -141,6 +141,8 @@ export function flagStuckTasks(): void {
   const oneHourAgo = Date.now() - STUCK_TASK_THRESHOLD_MS
   const stuck = allTasks.filter(
     (t) =>
+      // Note: Uses ['error', 'failed'] instead of isFailure() from task-state-machine
+      // because cancelled tasks are intentionally excluded from stuck-task flagging.
       ['error', 'failed'].includes(t.status) &&
       !t.needs_review &&
       new Date(t.updated_at).getTime() < oneHourAgo
