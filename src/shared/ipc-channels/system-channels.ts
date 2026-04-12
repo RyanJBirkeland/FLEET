@@ -8,6 +8,10 @@ export interface TerminalChannels {
     args: [opts: { cols: number; rows: number; shell?: string; cwd?: string }]
     result: number
   }
+  'terminal:write': {
+    args: [args: { id: number; data: string }]
+    result: void
+  }
   'terminal:resize': {
     args: [args: { id: number; cols: number; rows: number }]
     result: void

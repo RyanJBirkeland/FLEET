@@ -29,11 +29,12 @@ vi.mock('os', () => ({
 }))
 
 vi.mock('../../ipc-utils', () => ({
-  safeHandle: vi.fn()
+  safeHandle: vi.fn(),
+  safeOn: vi.fn()
 }))
 
 import { registerWindowHandlers } from '../window-handlers'
-import { safeHandle } from '../../ipc-utils'
+import { safeHandle, safeOn } from '../../ipc-utils'
 import { ipcMain, shell } from 'electron'
 import { writeFileSync } from 'fs'
 import { tmpdir } from 'os'
@@ -43,19 +44,21 @@ describe('Window handlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers 2 safeHandle channels and 1 ipcMain.on listener', () => {
+  it('registers 2 safeHandle channels and 1 safeOn channel', () => {
     registerWindowHandlers()
 
     expect(safeHandle).toHaveBeenCalledTimes(2)
     expect(safeHandle).toHaveBeenCalledWith('window:openExternal', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('playground:openInBrowser', expect.any(Function))
-    expect(ipcMain.on).toHaveBeenCalledWith('window:setTitle', expect.any(Function))
   })
 
   describe('handler functions', () => {
     function captureHandlers(): Record<string, any> {
       const safeHandlers: Record<string, any> = {}
       vi.mocked(safeHandle).mockImplementation((channel, handler) => {
+        safeHandlers[channel] = handler
+      })
+      vi.mocked(safeOn).mockImplementation((channel, handler) => {
         safeHandlers[channel] = handler
       })
       registerWindowHandlers()

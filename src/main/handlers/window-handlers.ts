@@ -1,11 +1,8 @@
-import { BrowserWindow, ipcMain, shell } from 'electron'
+import { BrowserWindow, shell } from 'electron'
 import { writeFileSync } from 'fs'
 import { join } from 'path'
 import { tmpdir } from 'os'
-import { safeHandle } from '../ipc-utils'
-import { createLogger } from '../logger'
-
-const logger = createLogger('window-handlers')
+import { safeHandle, safeOn } from '../ipc-utils'
 
 const ALLOWED_URL_SCHEMES = new Set(['https:', 'http:', 'mailto:'])
 
@@ -18,13 +15,9 @@ export function registerWindowHandlers(): void {
     return shell.openExternal(url)
   })
 
-  ipcMain.on('window:setTitle', (_e, title: string) => {
-    try {
-      const win = BrowserWindow.getFocusedWindow()
-      if (win && typeof title === 'string') win.setTitle(title)
-    } catch (err) {
-      logger.error(`setTitle: ${err}`)
-    }
+  safeOn('window:setTitle', (_e, title: string) => {
+    const win = BrowserWindow.getFocusedWindow()
+    if (win && typeof title === 'string') win.setTitle(title)
   })
 
   safeHandle('playground:openInBrowser', async (_e, html: string) => {

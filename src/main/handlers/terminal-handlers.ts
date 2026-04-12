@@ -1,10 +1,7 @@
-import { BrowserWindow, ipcMain } from 'electron'
-import { safeHandle } from '../ipc-utils'
+import { BrowserWindow } from 'electron'
+import { safeHandle, safeOn } from '../ipc-utils'
 import { createPty, isPtyAvailable, validateShell, _setPty } from '../pty'
 import type { PtyHandle } from '../pty'
-import { createLogger } from '../logger'
-
-const logger = createLogger('terminal-handlers')
 
 export { _setPty }
 
@@ -49,13 +46,9 @@ export function registerTerminalHandlers(): void {
     }
   )
 
-  ipcMain.on('terminal:write', (_e, { id, data }: { id: number; data: string }) => {
-    try {
-      if (typeof data !== 'string' || data.length > 65_536) return
-      terminals.get(id)?.write(data)
-    } catch (err) {
-      logger.error(`write: ${err}`)
-    }
+  safeOn('terminal:write', (_e, { id, data }: { id: number; data: string }) => {
+    if (typeof data !== 'string' || data.length > 65_536) return
+    terminals.get(id)?.write(data)
   })
 
   safeHandle(

@@ -24,3 +24,20 @@ export function safeHandle<K extends keyof IpcChannelMap>(
     }
   })
 }
+
+/**
+ * Type-safe IPC event listener for fire-and-forget channels.
+ * Use this for one-way messages (ipcRenderer.send) instead of safeHandle (invoke/handle).
+ */
+export function safeOn<K extends keyof IpcChannelMap>(
+  channel: K,
+  handler: (e: Electron.IpcMainEvent, ...args: IpcChannelMap[K]['args']) => void
+): void {
+  ipcMain.on(channel, (e, ...args) => {
+    try {
+      handler(e, ...(args as IpcChannelMap[K]['args']))
+    } catch (err) {
+      logger.error(`[${channel}] unhandled error: ${err}`)
+    }
+  })
+}

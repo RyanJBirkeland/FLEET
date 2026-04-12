@@ -19,7 +19,8 @@ vi.mock('electron', () => ({
 }))
 
 vi.mock('../../ipc-utils', () => ({
-  safeHandle: vi.fn()
+  safeHandle: vi.fn(),
+  safeOn: vi.fn()
 }))
 
 // We use _setPty to inject a mock pty rather than vi.mock (CJS require can't be intercepted)
@@ -35,7 +36,7 @@ vi.mock('../../pty', async (importOriginal) => {
 })
 
 import { registerTerminalHandlers } from '../terminal-handlers'
-import { safeHandle } from '../../ipc-utils'
+import { safeHandle, safeOn } from '../../ipc-utils'
 import { ipcMain, BrowserWindow } from 'electron'
 import { isPtyAvailable, validateShell, createPty } from '../../pty'
 
@@ -80,10 +81,13 @@ function makeMockPtyHandle(): PtyHandle & {
 
 const mockEvent = { sender: mockWebContents } as unknown as IpcMainInvokeEvent
 
-/** Capture the safeHandle handler for a given channel after registering all handlers. */
+/** Capture the safeHandle and safeOn handlers after registering all handlers. */
 function captureHandlers(): Record<string, (...args: any[]) => any> {
   const handlers: Record<string, (...args: any[]) => any> = {}
   vi.mocked(safeHandle).mockImplementation((channel, handler) => {
+    handlers[channel] = handler as (...args: any[]) => any
+  })
+  vi.mocked(safeOn).mockImplementation((channel, handler) => {
     handlers[channel] = handler as (...args: any[]) => any
   })
   registerTerminalHandlers()

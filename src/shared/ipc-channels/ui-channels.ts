@@ -8,6 +8,10 @@ export interface WindowChannels {
     args: [url: string]
     result: void
   }
+  'window:setTitle': {
+    args: [title: string]
+    result: void
+  }
   'playground:openInBrowser': {
     args: [html: string]
     result: string
