@@ -200,6 +200,73 @@ function buildOutputCapHint(taskClass: TaskClass): string {
 }
 
 // ---------------------------------------------------------------------------
+// Shared Prompt Section Builders
+// ---------------------------------------------------------------------------
+
+interface Personality {
+  voice: string
+  roleFrame: string
+  constraints: string[]
+  patterns?: string[]
+}
+
+/**
+ * Formats a personality object into a standard prompt section.
+ * Used by all agent types to inject their personality traits.
+ */
+function buildPersonalitySection(personality: Personality): string {
+  let section = '\n\n## Voice\n' + personality.voice
+  section += '\n\n## Your Role\n' + personality.roleFrame
+  section += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
+  if (personality.patterns && personality.patterns.length > 0) {
+    section += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
+  }
+  return section
+}
+
+/**
+ * Truncates a spec string to maxChars with a truncation indicator.
+ * Returns the original string if it's under the limit.
+ */
+function truncateSpec(spec: string, maxChars: number): string {
+  if (spec.length <= maxChars) {
+    return spec
+  }
+  return spec.slice(0, maxChars) + '...'
+}
+
+/**
+ * Formats upstream task context (dependencies) into a standard prompt section.
+ * Used by pipeline, assistant, copilot, and synthesizer agents.
+ */
+function buildUpstreamContextSection(
+  upstreamContext?: Array<{ title: string; spec: string; partial_diff?: string }>
+): string {
+  if (!upstreamContext || upstreamContext.length === 0) {
+    return ''
+  }
+
+  let section = '\n\n## Upstream Task Context\n\n'
+  section += 'This task depends on the following completed tasks:\n\n'
+
+  for (const upstream of upstreamContext) {
+    const cappedSpec = truncateSpec(upstream.spec, 500)
+    section += `### ${upstream.title}\n\n${cappedSpec}\n\n`
+
+    if (upstream.partial_diff) {
+      const MAX_DIFF_CHARS = 2000
+      const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
+      const cappedDiff = truncated
+        ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
+        : upstream.partial_diff
+      section += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
+    }
+  }
+
+  return section
+}
+
+// ---------------------------------------------------------------------------
 // Pipeline-Specific Sections
 // ---------------------------------------------------------------------------
 
@@ -256,13 +323,7 @@ function buildPipelinePrompt(input: BuildPromptInput): string {
   let prompt = CODING_AGENT_PREAMBLE
 
   // Inject personality
-  const personality = pipelinePersonality
-  prompt += '\n\n## Voice\n' + personality.voice
-  prompt += '\n\n## Your Role\n' + personality.roleFrame
-  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
-  if (personality.patterns && personality.patterns.length > 0) {
-    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
-  }
+  prompt += buildPersonalitySection(pipelinePersonality)
 
   // Inject memory (BDE-specific modules only for BDE repo)
   const memoryText = getAllMemory({ repoName: repoName ?? undefined })
@@ -323,11 +384,11 @@ function buildPipelinePrompt(input: BuildPromptInput): string {
     // mid-sized spec, cutting off the Files to Change / How to Test sections and
     // causing agents to skip test writing. See 2026-04-11 RCA.
     const MAX_TASK_CONTENT_CHARS = 8000
-    if (taskContent.length > MAX_TASK_CONTENT_CHARS) {
-      prompt += taskContent.slice(0, MAX_TASK_CONTENT_CHARS)
+    const truncatedContent = truncateSpec(taskContent, MAX_TASK_CONTENT_CHARS)
+    const wasTruncated = taskContent.length > MAX_TASK_CONTENT_CHARS
+    prompt += truncatedContent
+    if (wasTruncated) {
       prompt += `\n\n[spec truncated at ${MAX_TASK_CONTENT_CHARS} chars — see full spec in task DB]`
-    } else {
-      prompt += taskContent
     }
   }
 
@@ -340,24 +401,7 @@ function buildPipelinePrompt(input: BuildPromptInput): string {
   }
 
   // Upstream task context
-  if (upstreamContext && upstreamContext.length > 0) {
-    prompt += '\n\n## Upstream Task Context\n\n'
-    prompt += 'This task depends on the following completed tasks:\n\n'
-    for (const upstream of upstreamContext) {
-      const cappedSpec =
-        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
-      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
-
-      if (upstream.partial_diff) {
-        const MAX_DIFF_CHARS = 2000
-        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
-        const cappedDiff = truncated
-          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
-          : upstream.partial_diff
-        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
-      }
-    }
-  }
+  prompt += buildUpstreamContextSection(upstreamContext)
 
   // Retry context
   if (retryCount && retryCount > 0) {
@@ -395,12 +439,7 @@ function buildAssistantPrompt(input: BuildPromptInput): string {
 
   // Inject personality (assistant or adhoc)
   const personality = input.agentType === 'assistant' ? assistantPersonality : adhocPersonality
-  prompt += '\n\n## Voice\n' + personality.voice
-  prompt += '\n\n## Your Role\n' + personality.roleFrame
-  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
-  if (personality.patterns && personality.patterns.length > 0) {
-    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
-  }
+  prompt += buildPersonalitySection(personality)
 
   // Inject memory
   const memoryText = getAllMemory({ repoName: repoName ?? undefined })
@@ -451,24 +490,7 @@ function buildAssistantPrompt(input: BuildPromptInput): string {
   }
 
   // Upstream task context
-  if (upstreamContext && upstreamContext.length > 0) {
-    prompt += '\n\n## Upstream Task Context\n\n'
-    prompt += 'This task depends on the following completed tasks:\n\n'
-    for (const upstream of upstreamContext) {
-      const cappedSpec =
-        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
-      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
-
-      if (upstream.partial_diff) {
-        const MAX_DIFF_CHARS = 2000
-        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
-        const cappedDiff = truncated
-          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
-          : upstream.partial_diff
-        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
-      }
-    }
-  }
+  prompt += buildUpstreamContextSection(upstreamContext)
 
   return prompt
 }
@@ -479,13 +501,7 @@ function buildCopilotPrompt(input: BuildPromptInput): string {
   let prompt = SPEC_DRAFTING_PREAMBLE
 
   // Inject personality
-  const personality = copilotPersonality
-  prompt += '\n\n## Voice\n' + personality.voice
-  prompt += '\n\n## Your Role\n' + personality.roleFrame
-  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
-  if (personality.patterns && personality.patterns.length > 0) {
-    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
-  }
+  prompt += buildPersonalitySection(copilotPersonality)
 
   // Inject user memory
   const userMem = getUserMemory()
@@ -547,24 +563,7 @@ function buildCopilotPrompt(input: BuildPromptInput): string {
   }
 
   // Upstream task context
-  if (upstreamContext && upstreamContext.length > 0) {
-    prompt += '\n\n## Upstream Task Context\n\n'
-    prompt += 'This task depends on the following completed tasks:\n\n'
-    for (const upstream of upstreamContext) {
-      const cappedSpec =
-        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
-      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
-
-      if (upstream.partial_diff) {
-        const MAX_DIFF_CHARS = 2000
-        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
-        const cappedDiff = truncated
-          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
-          : upstream.partial_diff
-        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
-      }
-    }
-  }
+  prompt += buildUpstreamContextSection(upstreamContext)
 
   return prompt
 }
@@ -575,13 +574,7 @@ function buildSynthesizerPrompt(input: BuildPromptInput): string {
   let prompt = SPEC_DRAFTING_PREAMBLE
 
   // Inject personality
-  const personality = synthesizerPersonality
-  prompt += '\n\n## Voice\n' + personality.voice
-  prompt += '\n\n## Your Role\n' + personality.roleFrame
-  prompt += '\n\n## Constraints\n' + personality.constraints.map((c) => `- ${c}`).join('\n')
-  if (personality.patterns && personality.patterns.length > 0) {
-    prompt += '\n\n## Behavioral Patterns\n' + personality.patterns.map((p) => `- ${p}`).join('\n')
-  }
+  prompt += buildPersonalitySection(synthesizerPersonality)
 
   // Inject user memory
   const userMem = getUserMemory()
@@ -606,24 +599,7 @@ function buildSynthesizerPrompt(input: BuildPromptInput): string {
   }
 
   // Upstream task context
-  if (upstreamContext && upstreamContext.length > 0) {
-    prompt += '\n\n## Upstream Task Context\n\n'
-    prompt += 'This task depends on the following completed tasks:\n\n'
-    for (const upstream of upstreamContext) {
-      const cappedSpec =
-        upstream.spec.length > 500 ? upstream.spec.slice(0, 500) + '...' : upstream.spec
-      prompt += `### ${upstream.title}\n\n${cappedSpec}\n\n`
-
-      if (upstream.partial_diff) {
-        const MAX_DIFF_CHARS = 2000
-        const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
-        const cappedDiff = truncated
-          ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
-          : upstream.partial_diff
-        prompt += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
-      }
-    }
-  }
+  prompt += buildUpstreamContextSection(upstreamContext)
 
   return prompt
 }
