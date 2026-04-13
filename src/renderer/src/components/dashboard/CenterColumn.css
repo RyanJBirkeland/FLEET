@@ -31,7 +31,7 @@
 /* Morning Briefing Card */
 .dashboard-briefing {
   padding: var(--bde-space-3) var(--bde-space-3) 0;
-  animation: fadeIn 0.3s ease;
+  animation: bde-fade-in 0.3s ease;
 }
 
 .dashboard-briefing__content {

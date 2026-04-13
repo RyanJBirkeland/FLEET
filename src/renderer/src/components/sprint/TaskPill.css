@@ -154,7 +154,7 @@
 .task-pill__stale-icon {
   color: var(--bde-danger);
   flex-shrink: 0;
-  animation: pipeline-pulse 2s ease-in-out infinite;
+  animation: bde-pulse 2s ease-in-out infinite;
 }
 
 .task-pill__fail--push {
@@ -195,7 +195,7 @@
   height: 6px;
   border-radius: 50%;
   background: var(--bde-accent);
-  animation: pipeline-pulse 2s ease-in-out infinite;
+  animation: bde-pulse 2s ease-in-out infinite;
   flex-shrink: 0;
 }
 

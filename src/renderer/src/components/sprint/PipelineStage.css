@@ -58,7 +58,7 @@
   background: var(--bde-status-done);
 }
 
-@keyframes pipeline-pulse {
+@keyframes bde-pulse {
   0%,
   100% {
     opacity: 1;

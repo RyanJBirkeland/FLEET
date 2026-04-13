@@ -74,7 +74,7 @@
 }
 
 /* 6.3 Pulsing glow */
-@keyframes pulse-glow {
+@keyframes bde-pulse-glow {
   0%,
   100% {
     box-shadow:
@@ -90,7 +90,7 @@
 }
 
 .glow-pulse {
-  animation: pulse-glow 2.5s ease-in-out infinite;
+  animation: bde-pulse-glow 2.5s ease-in-out infinite;
 }
 
 /* ── 2.3 Gradient Border ─────────────────────────────── */

@@ -130,10 +130,10 @@
 .fleet-glance__status-dot--running {
   background: var(--bde-accent);
   box-shadow: 0 0 8px var(--bde-accent);
-  animation: pulse-dot 2s ease-in-out infinite;
+  animation: bde-pulse-dot 2s ease-in-out infinite;
 }
 
-@keyframes pulse-dot {
+@keyframes bde-pulse-dot {
   0%,
   100% {
     opacity: 1;

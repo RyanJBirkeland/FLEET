@@ -151,7 +151,7 @@
   height: 6px;
   border-radius: var(--bde-radius-full);
   flex-shrink: 0;
-  animation: pulse-glow 1.5s ease-in-out infinite;
+  animation: bde-pulse-glow 1.5s ease-in-out infinite;
 }
 
 .agent-list__scroll-container {
