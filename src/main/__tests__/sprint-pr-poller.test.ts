@@ -240,8 +240,9 @@ describe('createSprintPrPoller', () => {
 
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'done')
     expect(logWarn).toHaveBeenCalledWith(
-      expect.stringContaining('onTaskTerminal failed for task-1')
+      expect.stringContaining('onTaskTerminal failed; will retry next cycle')
     )
+    expect(logWarn).toHaveBeenCalledWith(expect.stringMatching(/task-1/))
   })
 
   it('logs errors when onTaskTerminal rejects for closed PRs', async () => {
@@ -267,8 +268,9 @@ describe('createSprintPrPoller', () => {
 
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'cancelled')
     expect(logWarn).toHaveBeenCalledWith(
-      expect.stringContaining('onTaskTerminal failed for task-1')
+      expect.stringContaining('onTaskTerminal failed; will retry next cycle')
     )
+    expect(logWarn).toHaveBeenCalledWith(expect.stringMatching(/task-1/))
   })
 })
 

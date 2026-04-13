@@ -69,11 +69,14 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
             return Promise.resolve(deps.onTaskTerminal!(id, 'done'))
           })
           const results = await Promise.allSettled(promises)
-          results.forEach((r, i) => {
-            if (r.status === 'rejected') {
-              log.warn(`[sprint-pr-poller] onTaskTerminal failed for ${ids[i]}: ${r.reason}`)
-            }
-          })
+          const failed = results
+            .map((r, i) => (r.status === 'rejected' ? { id: ids[i], reason: String(r.reason) } : null))
+            .filter(Boolean)
+          if (failed.length > 0) {
+            log.warn(
+              `[sprint-pr-poller] onTaskTerminal failed; will retry next cycle: ${JSON.stringify(failed)}`
+            )
+          }
         } else {
           log.warn(
             `[sprint-pr-poller] onTaskTerminal not wired — dependency resolution will not fire`
@@ -88,11 +91,14 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
           if (deps.onTaskTerminal) {
             const promises = ids.map((id) => Promise.resolve(deps.onTaskTerminal!(id, 'cancelled')))
             const results = await Promise.allSettled(promises)
-            results.forEach((r, i) => {
-              if (r.status === 'rejected') {
-                log.warn(`[sprint-pr-poller] onTaskTerminal failed for ${ids[i]}: ${r.reason}`)
-              }
-            })
+            const failed = results
+              .map((r, i) => (r.status === 'rejected' ? { id: ids[i], reason: String(r.reason) } : null))
+              .filter(Boolean)
+            if (failed.length > 0) {
+              log.warn(
+                `[sprint-pr-poller] onTaskTerminal failed; will retry next cycle: ${JSON.stringify(failed)}`
+              )
+            }
           }
         }
       }
