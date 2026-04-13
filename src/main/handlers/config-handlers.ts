@@ -7,11 +7,21 @@ import {
   listProfiles,
   deleteProfile
 } from '../services/settings-profiles'
+import { validateWorktreeBase } from '../paths'
+
+/** Setting keys that require path safety validation before writing. */
+const PATH_VALIDATORS: Record<string, (value: string) => void> = {
+  'agentManager.worktreeBase': validateWorktreeBase
+}
 
 export function registerConfigHandlers(): void {
   // Settings CRUD
   safeHandle('settings:get', (_e, key: string) => getSetting(key))
-  safeHandle('settings:set', (_e, key: string, value: string) => setSetting(key, value))
+  safeHandle('settings:set', (_e, key: string, value: string) => {
+    const validate = PATH_VALIDATORS[key]
+    if (validate) validate(value)
+    setSetting(key, value)
+  })
   safeHandle('settings:getJson', (_e, key: string) => getSettingJson(key))
   safeHandle('settings:setJson', (_e, key: string, value: unknown) => setSettingJson(key, value))
   safeHandle('settings:delete', (_e, key: string) => deleteSetting(key))

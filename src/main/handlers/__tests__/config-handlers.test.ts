@@ -3,6 +3,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IpcMainInvokeEvent } from 'electron'
+import { homedir } from 'os'
+import { join } from 'path'
 
 vi.mock('../../settings', () => ({
   getSetting: vi.fn(),
@@ -162,6 +164,49 @@ describe('Config handlers', () => {
       handlers['settings:deleteProfile'](mockEvent, 'dev-mode')
 
       expect(deleteProfile).toHaveBeenCalledWith('dev-mode')
+    })
+
+    describe('settings:set — worktreeBase path validation', () => {
+      it('allows agentManager.worktreeBase set to a path inside homedir', () => {
+        const handlers = captureHandlers()
+        const safePath = join(homedir(), 'worktrees', 'bde')
+
+        expect(() =>
+          handlers['settings:set'](mockEvent, 'agentManager.worktreeBase', safePath)
+        ).not.toThrow()
+
+        expect(setSetting).toHaveBeenCalledWith('agentManager.worktreeBase', safePath)
+      })
+
+      it('rejects agentManager.worktreeBase set to /etc/malicious', () => {
+        const handlers = captureHandlers()
+
+        expect(() =>
+          handlers['settings:set'](mockEvent, 'agentManager.worktreeBase', '/etc/malicious')
+        ).toThrow(/home directory/i)
+
+        expect(setSetting).not.toHaveBeenCalled()
+      })
+
+      it('rejects agentManager.worktreeBase set to /tmp/bad (outside homedir)', () => {
+        const handlers = captureHandlers()
+
+        expect(() =>
+          handlers['settings:set'](mockEvent, 'agentManager.worktreeBase', '/tmp/bad')
+        ).toThrow(/home directory/i)
+
+        expect(setSetting).not.toHaveBeenCalled()
+      })
+
+      it('does not validate other setting keys', () => {
+        const handlers = captureHandlers()
+
+        expect(() =>
+          handlers['settings:set'](mockEvent, 'some.other.key', '/etc/whatever')
+        ).not.toThrow()
+
+        expect(setSetting).toHaveBeenCalledWith('some.other.key', '/etc/whatever')
+      })
     })
   })
 })
