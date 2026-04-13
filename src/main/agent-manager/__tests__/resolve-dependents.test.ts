@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolveDependents } from '../resolve-dependents'
 import { createDependencyIndex, type DependencyIndex } from '../../services/dependency-service'
 import type { TaskDependency } from '../../../shared/types'
+import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
 
 // Helpers to build dependency descriptors
 const hardDep = (id: string): TaskDependency => ({ id, type: 'hard' })
@@ -17,7 +18,6 @@ type MockTask = {
 }
 
 function makeIndex(dependentsMap: Record<string, string[]>): DependencyIndex {
-  const TERMINAL = new Set(['done', 'cancelled', 'failed', 'error'])
   return {
     rebuild: () => {},
     getDependents(taskId: string): Set<string> {
@@ -34,7 +34,7 @@ function makeIndex(dependentsMap: Record<string, string[]>): DependencyIndex {
         if (dep.type === 'hard') {
           if (status !== 'done') blockedBy.push(dep.id)
         } else {
-          if (!status || !TERMINAL.has(status)) blockedBy.push(dep.id)
+          if (!status || !TERMINAL_STATUSES.has(status)) blockedBy.push(dep.id)
         }
       }
       return { satisfied: blockedBy.length === 0, blockedBy }

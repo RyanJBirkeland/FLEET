@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
 
 const mockBroadcast = vi.fn()
 vi.mock('../../broadcast', () => ({
@@ -118,11 +119,10 @@ describe('sprint-listeners', () => {
       // Use a minimal inline handler that mirrors the real sprint:update logic
       // (avoid module-level vi.mock by testing the logic directly)
       const patch = { status: 'cancelled' }
-      const TERMINAL_STATUSES_LOCAL = new Set(['done', 'cancelled', 'failed', 'error'])
 
       // Simulate the CURRENT (buggy) behavior
       const result = mockUpdateTask('task-1', patch)
-      if (result && patch.status && TERMINAL_STATUSES_LOCAL.has(patch.status)) {
+      if (result && patch.status && TERMINAL_STATUSES.has(patch.status)) {
         mockOnStatusTerminal('task-1', patch.status)
       }
       // Should NOT have fired with the current bug
@@ -131,7 +131,7 @@ describe('sprint-listeners', () => {
       // Simulate the FIXED behavior
       mockOnStatusTerminal.mockClear()
       mockUpdateTask('task-1', patch) // returns null again
-      if (patch.status && TERMINAL_STATUSES_LOCAL.has(patch.status)) {
+      if (patch.status && TERMINAL_STATUSES.has(patch.status)) {
         // Fixed: always fire if the patch has a terminal status
         mockOnStatusTerminal('task-1', patch.status)
       }
