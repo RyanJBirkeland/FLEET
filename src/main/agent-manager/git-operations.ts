@@ -284,10 +284,7 @@ export async function findOrCreatePR(
  * List all worktrees in porcelain format.
  * Returns stdout containing worktree metadata.
  */
-export async function listWorktrees(
-  repoPath: string,
-  env: NodeJS.ProcessEnv
-): Promise<string> {
+export async function listWorktrees(repoPath: string, env: NodeJS.ProcessEnv): Promise<string> {
   const { stdout } = await execFile('git', ['worktree', 'list', '--porcelain'], {
     cwd: repoPath,
     env
@@ -312,10 +309,7 @@ export async function removeWorktreeForce(
 /**
  * Prune stale worktree administrative files.
  */
-export async function pruneWorktrees(
-  repoPath: string,
-  env: NodeJS.ProcessEnv
-): Promise<void> {
+export async function pruneWorktrees(repoPath: string, env: NodeJS.ProcessEnv): Promise<void> {
   await execFile('git', ['worktree', 'prune'], { cwd: repoPath, env })
 }
 

@@ -78,7 +78,7 @@ for (const event of mappedEvents) {
 }
 ```
 
-Each SDK message produces 1-5 events (text, tool_use, tool_result blocks). A typical 15-minute agent session processes 500-2000 messages, meaning 1000-10000 calls to `JSON.stringify()` per agent. This serialization happens _synchronously_ on every message tick, blocking the message loop briefly.
+Each SDK message produces 1-5 events (text, tool*use, tool_result blocks). A typical 15-minute agent session processes 500-2000 messages, meaning 1000-10000 calls to `JSON.stringify()` per agent. This serialization happens \_synchronously* on every message tick, blocking the message loop briefly.
 
 **Impact:** At 1 agent this is sub-millisecond, but with 3+ concurrent agents (which is common), synchronous JSON serialization adds measurable jitter to message consumption. Under high throughput (tool-heavy tasks), this can cause visible lag in the UI's event display and may accumulate into periodic frame skips.
 

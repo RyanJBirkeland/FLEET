@@ -66,10 +66,7 @@ function TaskPillInner({
   }, [task.status])
 
   const isActive = task.status === 'active' && !!task.started_at
-  useBackoffInterval(
-    () => setElapsed(formatElapsed(task.started_at!)),
-    isActive ? 10_000 : null
-  )
+  useBackoffInterval(() => setElapsed(formatElapsed(task.started_at!)), isActive ? 10_000 : null)
   // Set initial elapsed value when task becomes active
   useEffect(() => {
     if (isActive) setElapsed(formatElapsed(task.started_at!))

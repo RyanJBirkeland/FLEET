@@ -178,6 +178,6 @@ BDE has a strong core positioning ("a steering system for Claude Code at scale")
 
 - **Category:** Copy
 - **Location:** `README.md:343-351` vs `docs/BDE_FEATURES.md` Agent Types table
-- **Observation:** README shows 5 types but the adhoc vs assistant distinction reads as "User-spawned one-off" vs "Conversational help and recommendations" — which is vague. BDE_FEATURES.md is clearer that assistant adds _playground-always-enabled_ and a proactive personality.
+- **Observation:** README shows 5 types but the adhoc vs assistant distinction reads as "User-spawned one-off" vs "Conversational help and recommendations" — which is vague. BDE*FEATURES.md is clearer that assistant adds \_playground-always-enabled* and a proactive personality.
 - **Why it matters:** Story hole — readers won't know when to use which. Also undermines the "5 distinct types" flex if two of them blur together.
 - **Recommendation:** Either collapse adhoc+assistant into one row with a "mode" column, or sharpen the copy to make the split obvious (e.g., assistant = "ask questions, get recommendations"; adhoc = "one-shot tasks, no back-and-forth").

@@ -70,10 +70,7 @@ export function TaskDetailDrawer({
   }, [task.id])
 
   const isActive = task.status === 'active' && !!task.started_at
-  useBackoffInterval(
-    () => setElapsed(formatElapsed(task.started_at!)),
-    isActive ? 10_000 : null
-  )
+  useBackoffInterval(() => setElapsed(formatElapsed(task.started_at!)), isActive ? 10_000 : null)
   // Compute initial elapsed value synchronously
   if (isActive && !elapsed) {
     setElapsed(formatElapsed(task.started_at!))

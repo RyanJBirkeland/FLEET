@@ -46,7 +46,7 @@ The core create→queue→execute→review→done loop is feature-rich but fragm
 
 - **Category:** Polish
 - **Location:** `src/renderer/src/components/sprint/PipelineStage.tsx:83`
-- **Observation:** The Review stage shows the subtitle "PRs awaiting merge" — but per BDE_FEATURES.md, agents now stop at `review` status with the worktree preserved for _local_ inspection. PRs are an opt-in action from the Code Review Station, not the default. The subtitle is leftover from the old PR-driven model.
+- **Observation:** The Review stage shows the subtitle "PRs awaiting merge" — but per BDE*FEATURES.md, agents now stop at `review` status with the worktree preserved for \_local* inspection. PRs are an opt-in action from the Code Review Station, not the default. The subtitle is leftover from the old PR-driven model.
 - **Why it matters:** The whole new product story is "human reviews work before it becomes a PR." The label undermines that story right where users look first.
 - **Recommendation:** Change to "Awaiting human review" or "Worktrees awaiting integration."
 
