@@ -8,8 +8,11 @@ import { getSettingJson } from '../settings'
 import { safeHandle } from '../ipc-utils'
 import { broadcast } from '../broadcast'
 import type { LocalRepoInfo, GithubRepoInfo, CloneProgressEvent } from '../../shared/ipc-channels'
+import { createLogger } from '../logger'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFile)
+const logger = createLogger('repo-discovery')
 
 interface RepoConfig {
   name: string
@@ -48,7 +51,8 @@ export async function scanLocalRepos(dirs: string[]): Promise<LocalRepoInfo[]> {
     let entries: string[]
     try {
       entries = await readdir(dir)
-    } catch {
+    } catch (err) {
+      logger.warn(`[discoverRepos] failed to read directory ${dir}: ${getErrorMessage(err)}`)
       continue
     }
 
@@ -58,7 +62,8 @@ export async function scanLocalRepos(dirs: string[]): Promise<LocalRepoInfo[]> {
         const s = await stat(fullPath)
         if (!s.isDirectory()) return null
         await access(path.join(fullPath, '.git'))
-      } catch {
+      } catch (err) {
+        logger.warn(`[discoverRepos] failed to stat or access ${fullPath}: ${getErrorMessage(err)}`)
         return null
       }
 
@@ -75,7 +80,8 @@ export async function scanLocalRepos(dirs: string[]): Promise<LocalRepoInfo[]> {
           owner = parsed.owner
           repo = parsed.repo
         }
-      } catch {
+      } catch (err) {
+        logger.warn(`[discoverRepos] failed to get remote for ${fullPath}: ${getErrorMessage(err)}`)
         // No remote — still return it
       }
 

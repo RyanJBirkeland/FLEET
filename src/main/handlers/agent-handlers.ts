@@ -82,7 +82,8 @@ export function registerAgentHandlers(am?: AgentManager): void {
       try {
         am.killAgent(agentId)
         return { ok: true }
-      } catch {
+      } catch (err) {
+        log.warn(`[killAgent] exception for ${agentId}: ${getErrorMessage(err)}`)
         /* fall through */
       }
     }

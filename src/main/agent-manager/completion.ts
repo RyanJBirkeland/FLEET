@@ -11,6 +11,7 @@ import { runPostMergeDedup } from '../services/post-merge-dedup'
 import { captureDiffSnapshot } from './diff-snapshot'
 import { nowIso } from '../../shared/time'
 import { rebaseOntoMain, findOrCreatePR as findOrCreatePRUtil, sanitizeForGit } from './git-operations'
+import { getErrorMessage } from '../../shared/errors'
 
 const execFile = promisify(execFileCb)
 
@@ -119,8 +120,9 @@ async function autoCommitIfDirty(
           cwd: worktreePath,
           env
         })
-      } catch {
+      } catch (err) {
         // Non-fatal — artifact may not exist or not be tracked
+        logger.info(`[completion] artifact cleanup failed for ${path}: ${getErrorMessage(err)}`)
       }
     }
 
