@@ -16,7 +16,11 @@ vi.mock('../../stores/sprintTasks', () => {
     sel({ tasks: mockTasks, loadData: mockLoadData })
   )
   ;(store as any).getState = () => ({ tasks: mockTasks, loadData: mockLoadData })
-  return { useSprintTasks: store }
+  return {
+    useSprintTasks: store,
+    selectActiveTaskCount: (s: { tasks: { status: string }[] }) =>
+      s.tasks.filter((t) => t.status === 'active').length
+  }
 })
 
 describe('useSprintPolling', () => {

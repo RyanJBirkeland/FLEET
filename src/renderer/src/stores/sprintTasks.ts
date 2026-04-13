@@ -29,9 +29,6 @@ const PENDING_UPDATE_TTL = 2000
 interface SprintTasksState {
   // --- Data ---
   tasks: SprintTask[]
-  /** Derived from tasks — number of tasks currently in ACTIVE status. Maintained incrementally
-   *  so consumers can read it in O(1) instead of scanning tasks with .some(). */
-  activeTaskCount: number
   loading: boolean
   loadError: string | null
 
@@ -52,13 +49,11 @@ interface SprintTasksState {
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
 }
 
-function countActiveTasks(tasks: SprintTask[]): number {
-  return tasks.reduce((n, t) => n + (t.status === TASK_STATUS.ACTIVE ? 1 : 0), 0)
-}
+export const selectActiveTaskCount = (state: SprintTasksState): number =>
+  state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
 
 export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   tasks: [],
-  activeTaskCount: 0,
   loading: true,
   loadError: null,
   pendingUpdates: {},
@@ -142,7 +137,6 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         const nextTasks = Array.from(mergedById.values())
         return {
           tasks: nextTasks,
-          activeTaskCount: countActiveTasks(nextTasks),
           pendingUpdates: nextPending
         }
       })
@@ -376,7 +370,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         }
         return merged
       })
-      return { tasks: nextTasks, activeTaskCount: countActiveTasks(nextTasks) }
+      return { tasks: nextTasks }
     })
   },
 
