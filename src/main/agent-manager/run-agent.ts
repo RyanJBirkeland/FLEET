@@ -118,7 +118,7 @@ function detectPlaygroundWrite(
   const htmlPath = detectHtmlWrite(msg)
   if (htmlPath) {
     tryEmitPlaygroundEvent(task.id, htmlPath, worktreePath, logger).catch((err) => {
-      logger.warn(`[run-agent] playground emit failed for task ${task.id}: ${err}`)
+      logger.warn(`[run-agent] playground emit failed for task ${task.id}: ${err instanceof Error ? err.stack ?? err.message : String(err)}`)
     })
   }
 }
@@ -468,7 +468,7 @@ function initializeAgentTracking(
     worktreePath: worktree.worktreePath,
     branch: worktree.branch
   }).catch((err) =>
-    logger.warn(`[agent-manager] Failed to create agent record for ${agentRunId}: ${err}`)
+    logger.warn(`[agent-manager] Failed to create agent record for ${agentRunId}: ${err instanceof Error ? err.stack ?? err.message : String(err)}`)
   )
 
   emitAgentEvent(agentRunId, {
@@ -531,7 +531,7 @@ function persistAgentRunTelemetry(
     tokensIn: agent.tokensIn,
     tokensOut: agent.tokensOut
   }).catch((err) =>
-    logger.warn(`[agent-manager] Failed to update agent record for ${agentRunId}: ${err}`)
+    logger.warn(`[agent-manager] Failed to update agent record for ${agentRunId}: ${err instanceof Error ? err.stack ?? err.message : String(err)}`)
   )
 
   try {
@@ -643,7 +643,7 @@ async function cleanupOrPreserveWorktree(
       branch: worktree.branch
     }).catch((err: unknown) => {
       logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${err}`
+        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${err instanceof Error ? err.stack ?? err.message : String(err)}`
       )
     })
   } else {
@@ -694,7 +694,7 @@ async function finalizeAgentRun(
       branch: worktree.branch
     }).catch((cleanupErr: unknown) => {
       logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
+        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr instanceof Error ? cleanupErr.stack ?? cleanupErr.message : String(cleanupErr)}`
       )
     })
     return
