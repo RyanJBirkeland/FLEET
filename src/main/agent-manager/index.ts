@@ -202,6 +202,66 @@ export class AgentManagerImpl implements AgentManager {
     return this.repo.claimTask(taskId, EXECUTOR_ID) !== null
   }
 
+  /**
+   * Incrementally refresh the dependency index from the repository.
+   *
+   * - Removes tasks that have been deleted from both the dep-index and the
+   *   fingerprint cache.
+   * - Evicts terminal-status tasks from the fingerprint cache (their deps are
+   *   frozen; keeping entries just grows the map unboundedly).
+   * - Updates the dep-index for tasks whose dependency fingerprint changed.
+   *
+   * Returns a Map<taskId, status> built from the current task list.
+   * On repo error, logs a warning and returns an empty map so the drain loop
+   * continues with a stale-but-safe state.
+   *
+   * Exposed via _ convention (not private keyword) for testability.
+   */
+  refreshDependencyIndex(): Map<string, string> {
+    try {
+      const allTasks = this.repo.getTasksWithDependencies()
+      const currentTaskIds = new Set(allTasks.map((t) => t.id))
+
+      // Remove deleted tasks from index
+      for (const oldId of this._lastTaskDeps.keys()) {
+        if (!currentTaskIds.has(oldId)) {
+          this._depIndex.remove(oldId)
+          this._lastTaskDeps.delete(oldId)
+        }
+      }
+
+      // Update tasks with changed dependencies.
+      // F-t1-sysprof-1/-4: Compare cached fingerprints — avoids re-sorting the
+      // unchanged-deps case (the common path for most drain ticks).
+      // F-t1-sre-6: Evict terminal-status tasks from _lastTaskDeps — their deps
+      // never change, so keeping fingerprint entries just grows the map forever
+      // (510 tasks in prod, most terminal). Evict on first terminal encounter;
+      // dep-index edges stay intact for dependency-satisfaction checks.
+      for (const task of allTasks) {
+        if (isTerminal(task.status)) {
+          // Terminal tasks' deps are frozen — evict from fingerprint cache so
+          // the map doesn't grow without bound (510 tasks in prod, most terminal).
+          // The dep-index retains the task's edges for dependency-satisfaction
+          // checks; we only drop the fingerprint entry.
+          this._lastTaskDeps.delete(task.id)
+          continue
+        }
+        const cached = this._lastTaskDeps.get(task.id)
+        const newDeps = task.depends_on ?? null
+        const newHash = AgentManagerImpl._depsFingerprint(newDeps)
+        if (!cached || cached.hash !== newHash) {
+          this._depIndex.update(task.id, newDeps)
+          this._lastTaskDeps.set(task.id, { deps: newDeps, hash: newHash })
+        }
+      }
+
+      return new Map(allTasks.map((t) => [t.id, t.status]))
+    } catch (err) {
+      this.logger.warn(`[agent-manager] Failed to refresh dependency index: ${err}`)
+      return new Map()
+    }
+  }
+
   async onTaskTerminal(taskId: string, status: string): Promise<void> {
     // F-t4-lifecycle-5: Guard against double-invocation when watchdog and completion handler race
     if (this._terminalCalled.has(taskId)) {
@@ -415,48 +475,7 @@ export class AgentManagerImpl implements AgentManager {
     const drainStart = Date.now()
 
     // Incrementally update dependency index instead of full rebuild
-    let taskStatusMap = new Map<string, string>()
-    try {
-      const allTasks = this.repo.getTasksWithDependencies()
-      const currentTaskIds = new Set(allTasks.map((t) => t.id))
-
-      // Remove deleted tasks from index
-      for (const oldId of this._lastTaskDeps.keys()) {
-        if (!currentTaskIds.has(oldId)) {
-          this._depIndex.remove(oldId)
-          this._lastTaskDeps.delete(oldId)
-        }
-      }
-
-      // Update tasks with changed dependencies.
-      // F-t1-sysprof-1/-4: Compare cached fingerprints — avoids re-sorting the
-      // unchanged-deps case (the common path for most drain ticks).
-      // F-t1-sre-6: Evict terminal-status tasks from _lastTaskDeps — their deps
-      // never change, so keeping fingerprint entries just grows the map forever
-      // (510 tasks in prod, most terminal). Evict on first terminal encounter;
-      // dep-index edges stay intact for dependency-satisfaction checks.
-      for (const task of allTasks) {
-        if (isTerminal(task.status)) {
-          // Terminal tasks' deps are frozen — evict from fingerprint cache so
-          // the map doesn't grow without bound (510 tasks in prod, most terminal).
-          // The dep-index retains the task's edges for dependency-satisfaction
-          // checks; we only drop the fingerprint entry.
-          this._lastTaskDeps.delete(task.id)
-          continue
-        }
-        const cached = this._lastTaskDeps.get(task.id)
-        const newDeps = task.depends_on ?? null
-        const newHash = AgentManagerImpl._depsFingerprint(newDeps)
-        if (!cached || cached.hash !== newHash) {
-          this._depIndex.update(task.id, newDeps)
-          this._lastTaskDeps.set(task.id, { deps: newDeps, hash: newHash })
-        }
-      }
-
-      taskStatusMap = new Map(allTasks.map((t) => [t.id, t.status]))
-    } catch (err) {
-      this.logger.warn(`[agent-manager] Failed to refresh dependency index: ${err}`)
-    }
+    const taskStatusMap = this.refreshDependencyIndex()
 
     const available = availableSlots(this._concurrency, this._activeAgents.size)
     if (available <= 0) return

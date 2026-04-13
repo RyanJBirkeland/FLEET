@@ -677,6 +677,81 @@ describe('AgentManagerImpl — class internals', () => {
   })
 
   // -------------------------------------------------------------------------
+  // refreshDependencyIndex
+  // -------------------------------------------------------------------------
+
+  describe('refreshDependencyIndex', () => {
+    function makeInlineRepo(
+      tasks: Array<{ id: string; status: string; depends_on: null }>
+    ): ISprintTaskRepository {
+      return {
+        getTask: vi.fn(),
+        updateTask: vi.fn().mockReturnValue(null),
+        getQueuedTasks: vi.fn().mockReturnValue([]),
+        getTasksWithDependencies: vi.fn().mockReturnValue(tasks),
+        getOrphanedTasks: vi.fn().mockReturnValue([]),
+        getActiveTaskCount: vi.fn().mockReturnValue(0),
+        claimTask: vi.fn()
+      }
+    }
+
+    it('returns a Map of task IDs to statuses from repo.getTasksWithDependencies()', () => {
+      const repo = makeInlineRepo([
+        { id: 'task-a', status: 'queued', depends_on: null },
+        { id: 'task-b', status: 'active', depends_on: null }
+      ])
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      const result = manager.refreshDependencyIndex()
+
+      expect(result).toBeInstanceOf(Map)
+      expect(result.get('task-a')).toBe('queued')
+      expect(result.get('task-b')).toBe('active')
+      expect(result.size).toBe(2)
+    })
+
+    it('removes deleted tasks from _lastTaskDeps fingerprint cache', () => {
+      const repo = makeInlineRepo([{ id: 'task-b', status: 'queued', depends_on: null }])
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      // Pre-seed cache with task-a (which is no longer in DB)
+      manager._lastTaskDeps.set('task-a', { deps: null, hash: 'old-hash' })
+      manager._lastTaskDeps.set('task-b', { deps: null, hash: 'old-hash' })
+
+      manager.refreshDependencyIndex()
+
+      // task-a was deleted → should be removed from cache
+      expect(manager._lastTaskDeps.has('task-a')).toBe(false)
+      // task-b still exists (non-terminal) → should be in cache
+      expect(manager._lastTaskDeps.has('task-b')).toBe(true)
+    })
+
+    it('returns empty map and logs warning when repo throws', () => {
+      const repo: ISprintTaskRepository = {
+        getTask: vi.fn(),
+        updateTask: vi.fn(),
+        getQueuedTasks: vi.fn(),
+        getTasksWithDependencies: vi.fn().mockImplementation(() => {
+          throw new Error('DB error')
+        }),
+        getOrphanedTasks: vi.fn(),
+        getActiveTaskCount: vi.fn().mockReturnValue(0),
+        claimTask: vi.fn()
+      }
+      const logger = makeLogger()
+      const manager = new AgentManagerImpl(baseConfig, repo, logger)
+
+      const result = manager.refreshDependencyIndex()
+
+      expect(result).toBeInstanceOf(Map)
+      expect(result.size).toBe(0)
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('Failed to refresh dependency index')
+      )
+    })
+  })
+
+  // -------------------------------------------------------------------------
   // onTaskTerminal — dep index rebuild
   // -------------------------------------------------------------------------
 
