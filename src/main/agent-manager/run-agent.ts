@@ -351,71 +351,74 @@ async function validateAndPreparePrompt(
 }
 
 /**
- * Phase 2: Spawns the agent and initializes tracking infrastructure.
- * Returns the active agent and turn tracker, or throws on spawn failure.
+ * Handles a spawn failure: runs optional callback, emits error event,
+ * updates task to error, triggers terminal handler, cleans up worktree,
+ * then re-throws the original error.
  */
-async function spawnAndWireAgent(
+async function handleSpawnFailure(
+  err: unknown,
   task: RunAgentTask,
-  prompt: string,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
-  effectiveModel: string,
   deps: RunAgentDeps
-): Promise<{ agent: ActiveAgent; agentRunId: string; turnTracker: TurnTracker }> {
-  const { activeAgents, logger, repo, onTaskTerminal, onSpawnSuccess, onSpawnFailure } = deps
-
-  let handle: AgentHandle
+): Promise<never> {
+  const { logger, repo, onTaskTerminal, onSpawnFailure } = deps
   try {
-    handle = await spawnWithTimeout(prompt, worktree.worktreePath, effectiveModel, logger)
-    try {
-      onSpawnSuccess?.()
-    } catch (cbErr) {
-      logger.warn(`[agent-manager] onSpawnSuccess hook threw: ${cbErr}`)
-    }
-  } catch (err) {
-    try {
-      onSpawnFailure?.()
-    } catch (cbErr) {
-      logger.warn(`[agent-manager] onSpawnFailure hook threw: ${cbErr}`)
-    }
-    logError(logger, `[agent-manager] spawnAgent failed for task ${task.id}`, err)
-    const errMsg = err instanceof Error ? err.message : String(err)
-    emitAgentEvent(task.id, {
-      type: 'agent:error',
-      message: `Spawn failed: ${errMsg}`,
-      timestamp: Date.now()
-    })
-    try {
-      repo.updateTask(task.id, {
-        status: 'error',
-        completed_at: nowIso(),
-        notes: `Spawn failed: ${errMsg}`,
-        claimed_by: null
-      })
-    } catch (updateErr) {
-      logger.warn(
-        `[agent-manager] Failed to update task ${task.id} after spawn failure: ${updateErr}`
-      )
-    }
-    await onTaskTerminal(task.id, 'error')
-    try {
-      await cleanupWorktree({
-        repoPath,
-        worktreePath: worktree.worktreePath,
-        branch: worktree.branch,
-        logger
-      })
-    } catch (cleanupErr) {
-      logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
-      )
-    }
-    throw err
+    onSpawnFailure?.()
+  } catch (cbErr) {
+    logger.warn(`[agent-manager] onSpawnFailure hook threw: ${cbErr}`)
   }
+  logError(logger, `[agent-manager] spawnAgent failed for task ${task.id}`, err)
+  const errMsg = err instanceof Error ? err.message : String(err)
+  emitAgentEvent(task.id, {
+    type: 'agent:error',
+    message: `Spawn failed: ${errMsg}`,
+    timestamp: Date.now()
+  })
+  try {
+    repo.updateTask(task.id, {
+      status: 'error',
+      completed_at: nowIso(),
+      notes: `Spawn failed: ${errMsg}`,
+      claimed_by: null
+    })
+  } catch (updateErr) {
+    logger.warn(
+      `[agent-manager] Failed to update task ${task.id} after spawn failure: ${updateErr}`
+    )
+  }
+  await onTaskTerminal(task.id, 'error')
+  try {
+    await cleanupWorktree({
+      repoPath,
+      worktreePath: worktree.worktreePath,
+      branch: worktree.branch,
+      logger
+    })
+  } catch (cleanupErr) {
+    logger.warn(
+      `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
+    )
+  }
+  throw err
+}
 
+/**
+ * Wires stderr, builds the ActiveAgent, registers it in the map,
+ * persists agent_run_id, fires the agent record, and emits agent:started.
+ */
+function initializeAgentTracking(
+  task: RunAgentTask,
+  handle: AgentHandle,
+  effectiveModel: string,
+  worktree: { worktreePath: string; branch: string },
+  prompt: string,
+  activeAgents: Map<string, ActiveAgent>,
+  repo: ISprintTaskRepository,
+  logger: Logger
+): { agent: ActiveAgent; agentRunId: string; turnTracker: TurnTracker } {
   const agentRunId = randomUUID()
 
-  // Wire stderr capture
   handle.onStderr = (line: string) => {
     emitAgentEvent(agentRunId, { type: 'agent:stderr', text: line, timestamp: Date.now() })
   }
@@ -434,18 +437,15 @@ async function spawnAndWireAgent(
     maxRuntimeMs: task.max_runtime_ms ?? null,
     maxCostUsd: task.max_cost_usd ?? null
   }
-
   activeAgents.set(task.id, agent)
   const turnTracker = new TurnTracker(agentRunId)
 
-  // Persist agent_run_id
   try {
     repo.updateTask(task.id, { agent_run_id: agentRunId })
   } catch (err) {
     logger.warn(`[agent-manager] Failed to persist agent_run_id for task ${task.id}: ${err}`)
   }
 
-  // Persist agent run to SQLite
   createAgentRecord({
     id: agentRunId,
     pid: null,
@@ -471,7 +471,6 @@ async function spawnAndWireAgent(
     logger.warn(`[agent-manager] Failed to create agent record for ${agentRunId}: ${err}`)
   )
 
-  // Emit agent:started event
   emitAgentEvent(agentRunId, {
     type: 'agent:started',
     model: effectiveModel,
@@ -479,6 +478,36 @@ async function spawnAndWireAgent(
   })
 
   return { agent, agentRunId, turnTracker }
+}
+
+/**
+ * Phase 2: Spawns the agent and initializes tracking infrastructure.
+ * Returns the active agent and turn tracker, or throws on spawn failure.
+ */
+async function spawnAndWireAgent(
+  task: RunAgentTask,
+  prompt: string,
+  worktree: { worktreePath: string; branch: string },
+  repoPath: string,
+  effectiveModel: string,
+  deps: RunAgentDeps
+): Promise<{ agent: ActiveAgent; agentRunId: string; turnTracker: TurnTracker }> {
+  const { activeAgents, logger, repo, onSpawnSuccess } = deps
+
+  let handle: AgentHandle
+  try {
+    handle = await spawnWithTimeout(prompt, worktree.worktreePath, effectiveModel, logger)
+    try {
+      onSpawnSuccess?.()
+    } catch (cbErr) {
+      logger.warn(`[agent-manager] onSpawnSuccess hook threw: ${cbErr}`)
+    }
+  } catch (err) {
+    await handleSpawnFailure(err, task, worktree, repoPath, deps)
+    throw err // unreachable — handleSpawnFailure always throws; satisfies TypeScript
+  }
+
+  return initializeAgentTracking(task, handle, effectiveModel, worktree, prompt, activeAgents, repo, logger)
 }
 
 /**
