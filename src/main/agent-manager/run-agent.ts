@@ -305,8 +305,8 @@ export function readPriorScratchpad(taskId: string): string {
 }
 
 /**
- * Context assembly phase: builds the agent prompt string from task data.
- * Pure function — no side effects, no task mutations, no callbacks.
+ * Assembles the full run context for an agent: upstream context, prior scratchpad,
+ * and the built prompt. No task mutations, no callbacks.
  */
 export async function assembleRunContext(
   task: RunAgentTask,
