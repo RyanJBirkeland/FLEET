@@ -62,6 +62,10 @@ async function runSdkQuery(prompt: string): Promise<string> {
   return fullText.trim()
 }
 
+/**
+ * @deprecated Use SpecQualityService.validateFull() via createSpecQualityService() instead.
+ * This function will be removed in a future cleanup pass.
+ */
 export async function checkSpecSemantic(input: {
   title: string
   repo: string
