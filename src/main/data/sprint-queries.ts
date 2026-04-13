@@ -3,7 +3,7 @@
  * All functions are synchronous and use the local SQLite database via getDb().
  */
 import type Database from 'better-sqlite3'
-import type { SprintTask, TaskDependency } from '../../shared/types'
+import type { SprintTask } from '../../shared/types'
 import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
 import { sanitizeTags } from '../../shared/sanitize-tags'
 import { getDb } from '../db'
@@ -16,7 +16,7 @@ import { validateTransition } from '../../shared/task-state-machine'
 import { getSprintQueriesLogger } from './sprint-query-logger'
 import { mapRowToTask, mapRowsToTasks, serializeFieldForStorage } from './sprint-task-mapper'
 import { UPDATE_ALLOWLIST, COLUMN_MAP } from './sprint-task-types'
-import type { CreateTaskInput, QueueStats } from './sprint-task-types'
+import type { CreateTaskInput } from './sprint-task-types'
 
 // Re-export reporting functions and types for backward compatibility
 export {
@@ -53,6 +53,16 @@ export {
 
 // Re-export queue and concurrency ops for backward compatibility
 export { claimTask, releaseTask, getQueuedTasks, getActiveTaskCount } from './sprint-queue-ops'
+
+// Re-export agent health and dependency queries for backward compatibility
+export {
+  getQueueStats,
+  getOrphanedTasks,
+  clearSprintTaskFk,
+  getHealthCheckTasks,
+  getAllTaskIds,
+  getTasksWithDependencies
+} from './sprint-agent-queries'
 
 
 export function getTask(id: string, db?: Database.Database): SprintTask | null {
@@ -336,111 +346,6 @@ export function deleteTask(id: string, deletedBy: string = 'unknown'): void {
 }
 
 
-export function getQueueStats(): QueueStats {
-  const stats: QueueStats = {
-    backlog: 0,
-    queued: 0,
-    active: 0,
-    review: 0,
-    done: 0,
-    failed: 0,
-    cancelled: 0,
-    error: 0,
-    blocked: 0
-  }
-
-  try {
-    const rows = getDb()
-      .prepare('SELECT status, COUNT(*) as count FROM sprint_tasks GROUP BY status')
-      .all() as Array<{ status: string; count: number }>
-
-    for (const row of rows) {
-      if (row.status in stats) {
-        stats[row.status as keyof QueueStats] = row.count
-      }
-    }
-  } catch (err) {
-    // DL-17: Standardize error message format
-    const msg = getErrorMessage(err)
-    getSprintQueriesLogger().warn(`[sprint-queries] getQueueStats failed: ${msg}`)
-  }
-
-  return stats
-}
-
-export function getOrphanedTasks(claimedBy: string): SprintTask[] {
-  try {
-    const rows = getDb()
-      .prepare(
-        `SELECT ${SPRINT_TASK_COLUMNS}
-         FROM sprint_tasks WHERE status = 'active' AND claimed_by = ?`
-      )
-      .all(claimedBy) as Record<string, unknown>[]
-    return mapRowsToTasks(rows)
-  } catch (err) {
-    // DL-17: Standardize error message format
-    const msg = getErrorMessage(err)
-    getSprintQueriesLogger().warn(`[sprint-queries] getOrphanedTasks failed: ${msg}`)
-    return []
-  }
-}
-
-export function clearSprintTaskFk(agentRunId: string): void {
-  try {
-    getDb()
-      .prepare('UPDATE sprint_tasks SET agent_run_id = NULL WHERE agent_run_id = ?')
-      .run(agentRunId)
-  } catch (err) {
-    // DL-17: Standardize error message format
-    const msg = getErrorMessage(err)
-    getSprintQueriesLogger().warn(`[sprint-queries] clearSprintTaskFk failed for agent_run_id=${agentRunId}: ${msg}`)
-  }
-}
-
-export function getHealthCheckTasks(): SprintTask[] {
-  try {
-    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString()
-    const rows = getDb()
-      .prepare(
-        `SELECT ${SPRINT_TASK_COLUMNS}
-         FROM sprint_tasks WHERE status = 'active' AND started_at < ?`
-      )
-      .all(oneHourAgo) as Record<string, unknown>[]
-    return mapRowsToTasks(rows)
-  } catch (err) {
-    // DL-17: Standardize error message format
-    const msg = getErrorMessage(err)
-    getSprintQueriesLogger().warn(`[sprint-queries] getHealthCheckTasks failed: ${msg}`)
-    return []
-  }
-}
-
-export function getAllTaskIds(): Set<string> {
-  // No try/catch: DB errors must propagate so callers get a 500,
-  // not a misleading 400 "task IDs do not exist" from an empty Set.
-  const rows = getDb().prepare('SELECT id FROM sprint_tasks').all() as Array<{ id: string }>
-  return new Set(rows.map((r) => r.id))
-}
-
-export function getTasksWithDependencies(): Array<{
-  id: string
-  depends_on: TaskDependency[] | null
-  status: string
-}> {
-  // No try/catch: DB errors must propagate (same rationale as getAllTaskIds).
-  // Query ALL tasks, not just those with depends_on — cycle detection needs
-  // the full graph to catch cycles involving tasks receiving their first dependency.
-  const rows = getDb().prepare('SELECT id, depends_on, status FROM sprint_tasks').all() as Array<{
-    id: string
-    depends_on: string | null
-    status: string
-  }>
-
-  return rows.map((row) => ({
-    ...row,
-    depends_on: row.depends_on ? sanitizeDependsOn(row.depends_on) : null
-  }))
-}
 
 /**
  * How many days to retain `review_diff_snapshot` blobs for tasks in terminal
