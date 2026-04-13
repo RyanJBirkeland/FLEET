@@ -8,12 +8,12 @@ import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
 import { sanitizeTags } from '../../shared/sanitize-tags'
 import { getDb } from '../db'
 import { recordTaskChanges, recordTaskChangesBulk } from './task-changes'
-import type { Logger } from '../logger'
 import { withRetry } from './sqlite-retry'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 import { SPRINT_TASK_COLUMNS } from './sprint-query-constants'
 import { validateTransition } from '../../shared/task-state-machine'
+import { getSprintQueriesLogger } from './sprint-query-logger'
 
 // Re-export reporting functions and types for backward compatibility
 export {
@@ -30,32 +30,8 @@ export type {
   DailySuccessRate
 } from './reporting-queries'
 
-// Module-level logger — defaults to console, injectable for testing/structured logging
-let logger: Logger = {
-  info: (m) => console.log(m),
-  warn: (m) => console.warn(m),
-  error: (m) => console.error(m),
-  debug: (m) => console.debug(m)
-}
-
-export function setSprintQueriesLogger(l: Logger): void {
-  logger = l
-}
-
-/**
- * Error handling wrapper for query operations.
- * Logs errors with operation context and returns fallback value.
- * Extracted from repetitive try-catch patterns — exported for future use.
- */
-export function withErrorLogging<T>(operation: () => T, fallback: T, operationName: string): T {
-  try {
-    return operation()
-  } catch (err) {
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] ${operationName} failed: ${msg}`)
-    return fallback
-  }
-}
+// Re-export logger infrastructure for backward compatibility
+export { setSprintQueriesLogger, withErrorLogging } from './sprint-query-logger'
 
 /**
  * Sanitize a single task row from SQLite.
@@ -211,7 +187,7 @@ export function getTask(id: string, db?: Database.Database): SprintTask | null {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getTask failed for id=${id}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] getTask failed for id=${id}: ${msg}`)
     return null
   }
 }
@@ -236,7 +212,7 @@ export function listTasks(status?: string): SprintTask[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] listTasks failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] listTasks failed: ${msg}`)
     return []
   }
 }
@@ -267,7 +243,7 @@ export function listTasksRecent(): SprintTask[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] listTasksRecent failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] listTasksRecent failed: ${msg}`)
     return []
   }
 }
@@ -305,7 +281,7 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] createTask failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] createTask failed: ${msg}`)
     return null
   }
 }
@@ -344,7 +320,7 @@ export function createReviewTaskFromAdhoc(input: {
   })
 
   if (updated) {
-    logger.info(
+    getSprintQueriesLogger().info(
       `[sprint-queries] Promoted adhoc work to review task ${updated.id} (branch ${input.branch})`
     )
   }
@@ -439,7 +415,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
             db
           )
         } catch (err) {
-          logger.warn(`[sprint-queries] Failed to record task changes: ${err}`)
+          getSprintQueriesLogger().warn(`[sprint-queries] Failed to record task changes: ${err}`)
           // Re-throw to abort transaction
           throw err
         }
@@ -454,7 +430,7 @@ export function updateTask(id: string, patch: Record<string, unknown>): SprintTa
     }
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] updateTask failed for id=${id}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] updateTask failed for id=${id}: ${msg}`)
     return null
   }
 }
@@ -477,7 +453,7 @@ export function deleteTask(id: string, deletedBy: string = 'unknown'): void {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] deleteTask failed for id=${id}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] deleteTask failed for id=${id}: ${msg}`)
   }
 }
 
@@ -532,7 +508,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number): Sp
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] claimTask failed for id=${id}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] claimTask failed for id=${id}: ${msg}`)
     return null
   }
 }
@@ -570,7 +546,7 @@ export function releaseTask(id: string, claimedBy: string): SprintTask | null {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] releaseTask failed for id=${id}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] releaseTask failed for id=${id}: ${msg}`)
     return null
   }
 }
@@ -601,7 +577,7 @@ export function getQueueStats(): QueueStats {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getQueueStats failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] getQueueStats failed: ${msg}`)
   }
 
   return stats
@@ -755,7 +731,7 @@ export function markTaskDoneByPrNumber(prNumber: number): string[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] markTaskDoneByPrNumber failed for PR #${prNumber}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] markTaskDoneByPrNumber failed for PR #${prNumber}: ${msg}`)
     return []
   }
 }
@@ -771,7 +747,7 @@ export function markTaskCancelledByPrNumber(prNumber: number): string[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] markTaskCancelledByPrNumber failed for PR #${prNumber}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] markTaskCancelledByPrNumber failed for PR #${prNumber}: ${msg}`)
     return []
   }
 }
@@ -788,7 +764,7 @@ export function listTasksWithOpenPrs(): SprintTask[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] listTasksWithOpenPrs failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] listTasksWithOpenPrs failed: ${msg}`)
     return []
   }
 }
@@ -821,7 +797,7 @@ export function updateTaskMergeableState(prNumber: number, mergeableState: strin
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] updateTaskMergeableState failed for PR #${prNumber}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] updateTaskMergeableState failed for PR #${prNumber}: ${msg}`)
   }
 }
 
@@ -836,7 +812,7 @@ export function getActiveTaskCount(): number {
     // Fail-closed: return MAX to prevent new claims when DB is broken.
     // This is intentional — better to block claims than to over-saturate.
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getActiveTaskCount failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] getActiveTaskCount failed: ${msg}`)
     return Infinity
   }
 }
@@ -856,7 +832,7 @@ export function getQueuedTasks(limit: number): SprintTask[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getQueuedTasks failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] getQueuedTasks failed: ${msg}`)
     return []
   }
 }
@@ -873,7 +849,7 @@ export function getOrphanedTasks(claimedBy: string): SprintTask[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getOrphanedTasks failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] getOrphanedTasks failed: ${msg}`)
     return []
   }
 }
@@ -886,7 +862,7 @@ export function clearSprintTaskFk(agentRunId: string): void {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] clearSprintTaskFk failed for agent_run_id=${agentRunId}: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] clearSprintTaskFk failed for agent_run_id=${agentRunId}: ${msg}`)
   }
 }
 
@@ -903,7 +879,7 @@ export function getHealthCheckTasks(): SprintTask[] {
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getHealthCheckTasks failed: ${msg}`)
+    getSprintQueriesLogger().warn(`[sprint-queries] getHealthCheckTasks failed: ${msg}`)
     return []
   }
 }
