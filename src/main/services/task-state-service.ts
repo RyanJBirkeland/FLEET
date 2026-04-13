@@ -13,7 +13,7 @@
 
 import type { Logger } from '../logger'
 import { buildBlockedNotes, computeBlockState } from './dependency-service'
-import { validateTaskSpec } from '../handlers/sprint-validation-helpers'
+import { validateTaskSpec } from './spec-quality/index'
 import { getTask, listTasks } from './sprint-mutations'
 import { listGroups } from '../data/task-group-queries'
 
