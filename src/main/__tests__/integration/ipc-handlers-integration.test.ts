@@ -213,13 +213,13 @@ describe('IPC handlers integration', () => {
       expect(result).toEqual({ ok: true })
     })
 
-    it('agent-manager:kill throws when AgentManager is undefined', async () => {
+    it('agent-manager:kill returns error when AgentManager is undefined', async () => {
       handlers.clear()
       registerAgentManagerHandlers(undefined)
 
-      await expect(invoke('agent-manager:kill', 'task-123')).rejects.toThrow(
-        'Agent manager not available'
-      )
+      const result = await invoke('agent-manager:kill', 'task-123')
+
+      expect(result).toEqual({ ok: false, error: 'Agent manager not available' })
     })
   })
 })

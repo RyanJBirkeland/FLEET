@@ -122,12 +122,12 @@ describe('Agent manager handlers', () => {
     })
 
     describe('agent-manager:kill', () => {
-      it('throws when am is undefined', async () => {
+      it('returns error when am is undefined', async () => {
         const handlers = captureHandlers()
 
-        await expect(handlers['agent-manager:kill'](mockEvent, 'task-123')).rejects.toThrow(
-          'Agent manager not available'
-        )
+        const result = await handlers['agent-manager:kill'](mockEvent, 'task-123')
+
+        expect(result).toEqual({ ok: false, error: 'Agent manager not available' })
       })
 
       it('calls killAgent and returns ok:true when agent manager is provided', async () => {
@@ -139,6 +139,18 @@ describe('Agent manager handlers', () => {
 
         expect(mockKillAgent).toHaveBeenCalledWith('task-123')
         expect(result).toEqual({ ok: true })
+      })
+
+      it('returns error when killAgent throws', async () => {
+        const mockKillAgent = vi.fn().mockImplementation(() => {
+          throw new Error('Agent not found')
+        })
+        const mockAm = { killAgent: mockKillAgent }
+        const handlers = captureHandlersWithAm(mockAm as any)
+
+        const result = await handlers['agent-manager:kill'](mockEvent, 'task-123')
+
+        expect(result).toEqual({ ok: false, error: 'Agent not found' })
       })
     })
     describe('agent-manager:checkpoint', () => {

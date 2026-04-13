@@ -320,9 +320,14 @@ describe('github:fetch handler', () => {
     vi.mocked(getGitHubToken).mockReturnValue('ghp_token')
 
     const handler = captureHandler('github:fetch')
-    await expect(handler(mockEvent, 'https://evil.example.com/steal')).rejects.toThrow(
-      'github:fetch only allows api.github.com URLs'
-    )
+    const result = await handler(mockEvent, 'https://evil.example.com/steal')
+
+    expect(result).toEqual({
+      ok: false,
+      status: 0,
+      body: { error: 'github:fetch only allows api.github.com URLs' },
+      linkNext: null
+    })
   })
 
   describe('allowlist validation', () => {
@@ -413,46 +418,66 @@ describe('github:fetch handler', () => {
 
     it('rejects DELETE requests', async () => {
       const handler = captureHandler('github:fetch')
-      await expect(handler(mockEvent, '/repos/owner/repo', { method: 'DELETE' })).rejects.toThrow(
-        'GitHub API request not allowed'
-      )
+      const result = await handler(mockEvent, '/repos/owner/repo', { method: 'DELETE' })
 
+      expect(result).toMatchObject({
+        ok: false,
+        status: 0,
+        body: { error: expect.stringContaining('GitHub API request not allowed') },
+        linkNext: null
+      })
       expect(githubFetch).not.toHaveBeenCalled()
     })
 
     it('rejects POST to non-allowlisted endpoints', async () => {
       const handler = captureHandler('github:fetch')
-      await expect(
-        handler(mockEvent, '/repos/owner/repo/collaborators', { method: 'POST' })
-      ).rejects.toThrow('GitHub API request not allowed')
+      const result = await handler(mockEvent, '/repos/owner/repo/collaborators', { method: 'POST' })
 
+      expect(result).toMatchObject({
+        ok: false,
+        status: 0,
+        body: { error: expect.stringContaining('GitHub API request not allowed') },
+        linkNext: null
+      })
       expect(githubFetch).not.toHaveBeenCalled()
     })
 
     it('rejects requests to admin endpoints', async () => {
       const handler = captureHandler('github:fetch')
-      await expect(handler(mockEvent, '/admin/users', { method: 'GET' })).rejects.toThrow(
-        'GitHub API request not allowed'
-      )
+      const result = await handler(mockEvent, '/admin/users', { method: 'GET' })
 
+      expect(result).toMatchObject({
+        ok: false,
+        status: 0,
+        body: { error: expect.stringContaining('GitHub API request not allowed') },
+        linkNext: null
+      })
       expect(githubFetch).not.toHaveBeenCalled()
     })
 
     it('rejects requests to delete repo endpoints', async () => {
       const handler = captureHandler('github:fetch')
-      await expect(handler(mockEvent, '/repos/owner/repo', { method: 'DELETE' })).rejects.toThrow(
-        'GitHub API request not allowed'
-      )
+      const result = await handler(mockEvent, '/repos/owner/repo', { method: 'DELETE' })
 
+      expect(result).toMatchObject({
+        ok: false,
+        status: 0,
+        body: { error: expect.stringContaining('GitHub API request not allowed') },
+        linkNext: null
+      })
       expect(githubFetch).not.toHaveBeenCalled()
     })
 
     it('provides descriptive error message for rejected requests', async () => {
       const handler = captureHandler('github:fetch')
-      await expect(
-        handler(mockEvent, '/repos/owner/repo/collaborators', { method: 'POST' })
-      ).rejects.toThrow(/POST.*\/repos\/owner\/repo\/collaborators/)
+      const result = await handler(mockEvent, '/repos/owner/repo/collaborators', { method: 'POST' })
 
+      expect(result).toMatchObject({
+        ok: false,
+        status: 0,
+        body: { error: expect.stringMatching(/POST.*\/repos\/owner\/repo\/collaborators/) },
+        linkNext: null
+      })
       expect(githubFetch).not.toHaveBeenCalled()
     })
   })
