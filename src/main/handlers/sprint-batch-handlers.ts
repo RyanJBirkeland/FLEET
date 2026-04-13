@@ -10,6 +10,7 @@ import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { validateTaskSpec } from '../services/spec-quality/index'
 import { TERMINAL_STATUSES } from '../../shared/task-state-machine'
 import { getSettingJson } from '../settings'
+import { validateAndFilterPatch } from '../lib/patch-validation'
 
 export interface BatchHandlersDeps {
   onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
@@ -49,11 +50,8 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
               })
               continue
             }
-            const filtered: Record<string, unknown> = {}
-            for (const [k, v] of Object.entries(patch)) {
-              if (GENERAL_PATCH_FIELDS.has(k)) filtered[k] = v
-            }
-            if (Object.keys(filtered).length === 0) {
+            const filtered = validateAndFilterPatch(patch, GENERAL_PATCH_FIELDS)
+            if (filtered === null) {
               results.push({ id, op: 'update', ok: false, error: 'No valid fields to update' })
               continue
             }

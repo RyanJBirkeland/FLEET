@@ -30,6 +30,7 @@ import {
 } from '../services/sprint-service'
 import { UPDATE_ALLOWLIST, createSprintTaskRepository } from '../data/sprint-task-repository'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import { validateAndFilterPatch } from '../lib/patch-validation'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { instantiateWorkflow } from '../services/workflow-engine'
@@ -84,13 +85,8 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps, repo?: ISprin
 
   safeHandle('sprint:update', async (_e, id: string, patch: Record<string, unknown>) => {
     // SP-6: Filter patch fields through UPDATE_ALLOWLIST
-    const filteredPatch: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(patch)) {
-      if (UPDATE_ALLOWLIST.has(key)) {
-        filteredPatch[key] = value
-      }
-    }
-    if (Object.keys(filteredPatch).length === 0) {
+    const filteredPatch = validateAndFilterPatch(patch, UPDATE_ALLOWLIST)
+    if (filteredPatch === null) {
       throw new Error('No valid fields to update')
     }
     patch = filteredPatch
