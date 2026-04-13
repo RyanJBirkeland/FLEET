@@ -1,5 +1,5 @@
 /**
- * Tests for critical/high security audit fixes (AM-1 through AM-6)
+ * Tests for critical/high security audit fixes (AM-1 through AM-6, plus lifecycle fixes)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { resolveFailure } from '../completion'
@@ -9,6 +9,24 @@ import { makeConcurrencyState } from '../concurrency'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import { MAX_RETRIES } from '../types'
 import { nowIso } from '../../../shared/time'
+import { tryEmitPlaygroundEvent } from '../run-agent'
+
+// ---------------------------------------------------------------------------
+// Mocks for tryEmitPlaygroundEvent tests
+// ---------------------------------------------------------------------------
+
+vi.mock('../../broadcast', () => ({
+  broadcast: vi.fn()
+}))
+
+vi.mock('node:fs/promises', () => ({
+  stat: vi.fn(),
+  readFile: vi.fn()
+}))
+
+vi.mock('../../playground-sanitize', () => ({
+  sanitizePlaygroundHtml: vi.fn((html: string) => html)
+}))
 
 // ---------------------------------------------------------------------------
 // AM-3: sanitizeForGit tests
@@ -199,5 +217,69 @@ describe('resolveFailure terminal status on DB error (AM-5)', () => {
         notes: 'Agent produced no commits'
       })
     )
+  })
+})
+
+// ---------------------------------------------------------------------------
+// Fix 4: Playground path trailing slash — sibling directory traversal blocked
+// ---------------------------------------------------------------------------
+
+describe('tryEmitPlaygroundEvent — path containment (Fix 4: trailing slash)', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('blocks a sibling directory that shares a path prefix (trailing slash fix)', async () => {
+    const { broadcast } = await import('../../broadcast')
+    const { stat } = await import('node:fs/promises')
+    vi.mocked(stat).mockResolvedValue({ size: 100 } as any)
+
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+
+    // /worktrees/abc123-evil passes startsWith('/worktrees/abc123') WITHOUT trailing slash fix
+    // It must be blocked because it is NOT inside /worktrees/abc123
+    await tryEmitPlaygroundEvent(
+      'task-1',
+      '/worktrees/abc123-evil/attack.html',
+      '/worktrees/abc123',
+      logger
+    )
+
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Path traversal blocked'))
+    expect(broadcast).not.toHaveBeenCalled()
+  })
+
+  it('allows a file directly inside the worktree root', async () => {
+    const { broadcast } = await import('../../broadcast')
+    const { stat, readFile } = await import('node:fs/promises')
+    vi.mocked(stat).mockResolvedValue({ size: 100 } as any)
+    vi.mocked(readFile).mockResolvedValue('<html/>' as any)
+
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+
+    await tryEmitPlaygroundEvent(
+      'task-1',
+      '/worktrees/abc123/output.html',
+      '/worktrees/abc123',
+      logger
+    )
+
+    expect(broadcast).toHaveBeenCalled()
+  })
+
+  it('allows a file in a subdirectory inside the worktree', async () => {
+    const { broadcast } = await import('../../broadcast')
+    const { stat, readFile } = await import('node:fs/promises')
+    vi.mocked(stat).mockResolvedValue({ size: 100 } as any)
+    vi.mocked(readFile).mockResolvedValue('<html/>' as any)
+
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+
+    await tryEmitPlaygroundEvent(
+      'task-1',
+      '/worktrees/abc123/dist/index.html',
+      '/worktrees/abc123',
+      logger
+    )
+
+    expect(broadcast).toHaveBeenCalled()
   })
 })

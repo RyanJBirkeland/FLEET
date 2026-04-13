@@ -351,6 +351,55 @@ describe('AgentManagerImpl — class internals', () => {
       expect(manager._activeAgents.has('task-b')).toBe(false)
       expect(agentB.handle.abort).toHaveBeenCalledOnce()
     })
+
+    it('Fix 2: calls process.kill(SIGKILL) on the underlying subprocess when available', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      const killFn = vi.fn()
+      const agent = makeActiveAgent('task-sigkill')
+      // Attach a mock process with kill() to the handle, simulating the SDK subprocess
+      ;(agent.handle as any).process = { kill: killFn }
+      manager._activeAgents.set('task-sigkill', agent)
+
+      vi.mocked(checkAgent).mockReturnValue('max-runtime')
+
+      manager._watchdogLoop()
+
+      expect(agent.handle.abort).toHaveBeenCalledOnce()
+      expect(killFn).toHaveBeenCalledWith('SIGKILL')
+    })
+
+    it('Fix 2: does not throw when process.kill is not available on the handle', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      const agent = makeActiveAgent('task-no-proc')
+      // No process property on handle
+      manager._activeAgents.set('task-no-proc', agent)
+
+      vi.mocked(checkAgent).mockReturnValue('max-runtime')
+
+      expect(() => manager._watchdogLoop()).not.toThrow()
+      expect(agent.handle.abort).toHaveBeenCalledOnce()
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Fix 3: stop() timeout default is 60 seconds
+  // -------------------------------------------------------------------------
+
+  describe('Fix 3: stop() timeout value', () => {
+    it('default stop() timeout is 60000ms (not 10000ms)', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      // Vite may compile 60_000 to 6e4 or 60000; all represent 60 seconds.
+      // Check for any of: 60_000, 60000, 6e4
+      const src = manager.stop.toString()
+      const matches60s =
+        /timeoutMs\s*=\s*60[_]?000/.test(src) ||
+        /timeoutMs\s*=\s*6e4/.test(src) ||
+        /timeoutMs\s*=\s*60000/.test(src)
+      expect(matches60s).toBe(true)
+      // Verify it is NOT the old 10s value
+      expect(src).not.toMatch(/timeoutMs\s*=\s*1e4\b/)
+      expect(src).not.toMatch(/timeoutMs\s*=\s*10_?000\b/)
+    })
   })
 
   // -------------------------------------------------------------------------

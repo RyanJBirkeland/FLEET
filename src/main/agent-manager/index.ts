@@ -625,6 +625,12 @@ export class AgentManagerImpl implements AgentManager {
       }
       try {
         agent.handle.abort()
+        // SDK may not expose process — revisit when SDK exposes subprocess handle
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const proc = (agent.handle as any).process
+        if (proc && typeof proc.kill === 'function') {
+          proc.kill('SIGKILL')
+        }
       } catch (err) {
         this.logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
       }
@@ -775,7 +781,8 @@ export class AgentManagerImpl implements AgentManager {
     this.logger.info('[agent-manager] Started')
   }
 
-  async stop(timeoutMs = 10_000): Promise<void> {
+  // finalizeAgentRun includes git rebase + PR creation which can take 30+ seconds
+  async stop(timeoutMs = 60_000): Promise<void> {
     this._shuttingDown = true
 
     if (this.pollTimer) {
