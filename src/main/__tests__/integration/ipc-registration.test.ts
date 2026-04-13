@@ -124,7 +124,6 @@ describe('IPC Registration Completeness', () => {
     //
     // Note: Some channels are server-side only and not exposed in preload:
     // - sprint:getChanges, sprint:batchUpdate (Queue API internal)
-    // - playground:show (dev-only IPC)
     //
     // review:checkAutoReview and review:generateSummary are defined in IPC map but
     // not yet implemented (planned future features)

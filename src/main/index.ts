@@ -25,7 +25,6 @@ import { registerAgentManagerHandlers } from './handlers/agent-manager-handlers'
 import { registerWorkbenchHandlers } from './handlers/workbench'
 import { registerMemorySearchHandler } from './handlers/memory-search'
 import { registerIdeFsHandlers } from './handlers/ide-fs-handlers'
-import { registerPlaygroundHandlers } from './handlers/playground-handlers'
 import { registerDashboardHandlers } from './handlers/dashboard-handlers'
 import { registerSynthesizerHandlers } from './handlers/synthesizer-handlers'
 import { registerClaudeConfigHandlers } from './handlers/claude-config-handlers'
@@ -209,7 +208,6 @@ app.whenReady().then(() => {
   registerIdeFsHandlers()
   registerMemorySearchHandler()
   registerAuthHandlers()
-  registerPlaygroundHandlers()
   registerDashboardHandlers()
   registerTearoffHandlers()
   registerClaudeConfigHandlers()

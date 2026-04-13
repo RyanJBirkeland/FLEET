@@ -42,14 +42,6 @@ export interface TearoffChannels {
   }
 }
 
-/** Dev Playground operations */
-export interface PlaygroundChannels {
-  'playground:show': {
-    args: [input: { filePath: string; rootPath: string }]
-    result: void
-  }
-}
-
 /** Dashboard analytics */
 export interface CompletionBucket {
   hour: string

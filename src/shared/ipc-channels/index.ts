@@ -42,7 +42,6 @@ export type { SettingsChannels, ClaudeConfigChannels, AuthChannels } from './set
 export type {
   WindowChannels,
   TearoffChannels,
-  PlaygroundChannels,
   DashboardChannels,
   CompletionBucket,
   DashboardEvent,
@@ -84,7 +83,6 @@ export type IpcChannelMap = import('./settings-channels').SettingsChannels &
   import('./agent-channels').AgentManagerChannels &
   import('./system-channels').TerminalChannels &
   import('./system-channels').WorkbenchChannels &
-  import('./ui-channels').PlaygroundChannels &
   import('./ui-channels').DashboardChannels &
   import('./sprint-channels').SynthesizerChannels &
   import('./sprint-channels').ReviewChannels &

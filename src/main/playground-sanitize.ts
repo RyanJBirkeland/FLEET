@@ -1,7 +1,6 @@
 /**
  * Dev Playground HTML sanitization — removes XSS vectors before broadcasting
- * to renderer. Used by both manual playground:show IPC and auto-detected
- * pipeline agent HTML writes.
+ * to renderer. Used by auto-detected pipeline agent HTML writes.
  */
 import DOMPurify from 'dompurify'
 import { JSDOM } from 'jsdom'
