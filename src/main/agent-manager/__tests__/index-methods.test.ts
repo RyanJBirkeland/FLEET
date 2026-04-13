@@ -776,4 +776,129 @@ describe('AgentManagerImpl — class internals', () => {
       expect(rebuildSpy).toHaveBeenCalled()
     })
   })
+
+  // -------------------------------------------------------------------------
+  // _validateDrainPreconditions
+  // -------------------------------------------------------------------------
+
+  describe('_validateDrainPreconditions', () => {
+    it('returns false when _shuttingDown is true', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      manager._shuttingDown = true
+      expect(manager._validateDrainPreconditions()).toBe(false)
+    })
+
+    it('returns false when circuit breaker is open', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      // Force circuit open by recording enough failures
+      vi.spyOn(manager, '_isCircuitOpen').mockReturnValue(true)
+      expect(manager._validateDrainPreconditions()).toBe(false)
+    })
+
+    it('logs a warning when circuit breaker is open', () => {
+      const logger = makeLogger()
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), logger)
+      vi.spyOn(manager, '_isCircuitOpen').mockReturnValue(true)
+      manager._validateDrainPreconditions()
+      expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('circuit breaker'))
+    })
+
+    it('returns true when neither _shuttingDown nor circuit breaker is open', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      manager._shuttingDown = false
+      vi.spyOn(manager, '_isCircuitOpen').mockReturnValue(false)
+      expect(manager._validateDrainPreconditions()).toBe(true)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // _drainQueuedTasks
+  // -------------------------------------------------------------------------
+
+  describe('_drainQueuedTasks', () => {
+    function makeInlineRepo(
+      queuedTasks: Array<Record<string, unknown>>
+    ): ISprintTaskRepository {
+      return {
+        getTask: vi.fn(),
+        updateTask: vi.fn().mockReturnValue(null),
+        getQueuedTasks: vi.fn().mockReturnValue(queuedTasks),
+        getTasksWithDependencies: vi.fn().mockReturnValue([]),
+        getOrphanedTasks: vi.fn().mockReturnValue([]),
+        getActiveTaskCount: vi.fn().mockReturnValue(0),
+        claimTask: vi.fn()
+      }
+    }
+
+    it('calls _processQueuedTask for each fetched task', async () => {
+      const tasks = [makeRawTask({ id: 'task-1' }), makeRawTask({ id: 'task-2' })]
+      const repo = makeInlineRepo(tasks)
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+      const processSpy = vi.spyOn(manager, '_processQueuedTask').mockResolvedValue(undefined)
+
+      const taskStatusMap = new Map<string, string>()
+      await manager._drainQueuedTasks(2, taskStatusMap)
+
+      expect(processSpy).toHaveBeenCalledTimes(2)
+      expect(processSpy).toHaveBeenCalledWith(tasks[0], taskStatusMap)
+      expect(processSpy).toHaveBeenCalledWith(tasks[1], taskStatusMap)
+    })
+
+    it('stops early when _shuttingDown becomes true mid-loop', async () => {
+      const tasks = [
+        makeRawTask({ id: 'task-1' }),
+        makeRawTask({ id: 'task-2' }),
+        makeRawTask({ id: 'task-3' })
+      ]
+      const repo = makeInlineRepo(tasks)
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      let callCount = 0
+      vi.spyOn(manager, '_processQueuedTask').mockImplementation(async () => {
+        callCount++
+        if (callCount === 1) {
+          manager._shuttingDown = true
+        }
+      })
+
+      await manager._drainQueuedTasks(3, new Map())
+
+      // Should stop after the first task triggers _shuttingDown
+      expect(callCount).toBe(1)
+    })
+
+    it('stops early when no slots are available mid-loop', async () => {
+      const tasks = [makeRawTask({ id: 'task-1' }), makeRawTask({ id: 'task-2' })]
+      const repo = makeInlineRepo(tasks)
+      const config = { ...baseConfig, maxConcurrent: 1 }
+      const manager = new AgentManagerImpl(config, repo, makeLogger())
+
+      vi.spyOn(manager, '_processQueuedTask').mockImplementation(async () => {
+        // Simulate a slot being consumed after the first task
+        manager._activeAgents.set('fill-slot', makeActiveAgent('fill-slot'))
+      })
+
+      await manager._drainQueuedTasks(2, new Map())
+
+      // Only first task processed; second skipped due to no available slots
+      expect(manager._processQueuedTask).toHaveBeenCalledTimes(1)
+    })
+
+    it('logs errors per task without stopping the loop', async () => {
+      const tasks = [makeRawTask({ id: 'task-1' }), makeRawTask({ id: 'task-2' })]
+      const repo = makeInlineRepo(tasks)
+      const logger = makeLogger()
+      const manager = new AgentManagerImpl(baseConfig, repo, logger)
+
+      vi.spyOn(manager, '_processQueuedTask')
+        .mockRejectedValueOnce(new Error('task-1 exploded'))
+        .mockResolvedValueOnce(undefined)
+
+      await manager._drainQueuedTasks(2, new Map())
+
+      // Both tasks attempted — error didn't stop the loop
+      expect(manager._processQueuedTask).toHaveBeenCalledTimes(2)
+      expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('task-1'))
+    })
+  })
 })

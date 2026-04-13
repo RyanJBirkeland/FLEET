@@ -436,7 +436,7 @@ export class AgentManagerImpl implements AgentManager {
     }
   }
 
-  // ---- drainLoop helpers ----
+  // ---- static helpers ----
 
   /**
    * F-t1-sysprof-1: Compute a stable fingerprint of a dependency array.
@@ -455,6 +455,58 @@ export class AgentManagerImpl implements AgentManager {
       .join('|')
   }
 
+  // ---- drainLoop helpers ----
+
+  /**
+   * Guard checks before running a drain tick.
+   * Returns false (and logs as needed) if the drain should be skipped.
+   *
+   * Exposed via _ prefix for testability.
+   */
+  _validateDrainPreconditions(): boolean {
+    if (this._shuttingDown) return false
+    if (this._isCircuitOpen()) {
+      this.logger.warn(
+        `[agent-manager] Skipping drain — circuit breaker open until ${new Date(
+          this._circuitOpenUntil
+        ).toISOString()}`
+      )
+      return false
+    }
+    return true
+  }
+
+  /**
+   * Fetch queued tasks (up to `available` slots) and process each one.
+   * Stops early if `_shuttingDown` is set or slots are exhausted mid-loop.
+   * Errors from individual tasks are logged but do not stop the loop.
+   *
+   * Exposed via _ prefix for testability.
+   */
+  async _drainQueuedTasks(
+    available: number,
+    taskStatusMap: Map<string, string>
+  ): Promise<void> {
+    this.logger.info(`[agent-manager] Fetching queued tasks (limit=${available})...`)
+    const queued = this.fetchQueuedTasks(available)
+    this.logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
+    for (const raw of queued) {
+      if (this._shuttingDown) break
+      // Re-check slots before each task — an earlier iteration may have filled a slot
+      if (availableSlots(this._concurrency, this._activeAgents.size) <= 0) {
+        this.logger.info('[agent-manager] No slots available — stopping drain iteration')
+        break
+      }
+      try {
+        await this._processQueuedTask(raw, taskStatusMap)
+      } catch (err) {
+        this.logger.error(
+          `[agent-manager] Failed to process task ${(raw as Record<string, unknown>).id}: ${err}`
+        )
+      }
+    }
+  }
+
   // ---- drainLoop ----
 
   async _drainLoop(): Promise<void> {
@@ -462,15 +514,8 @@ export class AgentManagerImpl implements AgentManager {
     this.logger.info(
       `[agent-manager] Drain loop starting (shuttingDown=${this._shuttingDown}, slots=${availableSlots(this._concurrency, this._activeAgents.size)})`
     )
-    if (this._shuttingDown) return
-    if (this._isCircuitOpen()) {
-      this.logger.warn(
-        `[agent-manager] Skipping drain — circuit breaker open until ${new Date(
-          this._circuitOpenUntil
-        ).toISOString()}`
-      )
-      return
-    }
+    if (!this._validateDrainPreconditions()) return
+
     this._metrics.increment('drainLoopCount')
     const drainStart = Date.now()
 
@@ -484,24 +529,7 @@ export class AgentManagerImpl implements AgentManager {
       const tokenOk = await checkOAuthToken(this.logger)
       if (!tokenOk) return
 
-      this.logger.info(`[agent-manager] Fetching queued tasks (limit=${available})...`)
-      const queued = this.fetchQueuedTasks(available)
-      this.logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
-      for (const raw of queued) {
-        if (this._shuttingDown) break
-        // Re-check slots before each task — an earlier iteration may have filled a slot
-        if (availableSlots(this._concurrency, this._activeAgents.size) <= 0) {
-          this.logger.info('[agent-manager] No slots available — stopping drain iteration')
-          break
-        }
-        try {
-          await this._processQueuedTask(raw, taskStatusMap)
-        } catch (err) {
-          this.logger.error(
-            `[agent-manager] Failed to process task ${(raw as Record<string, unknown>).id}: ${err}`
-          )
-        }
-      }
+      await this._drainQueuedTasks(available, taskStatusMap)
     } catch (err) {
       this.logger.error(`[agent-manager] Drain loop error: ${err}`)
     }
