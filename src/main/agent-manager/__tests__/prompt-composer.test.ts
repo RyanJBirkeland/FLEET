@@ -1004,9 +1004,11 @@ describe('buildAgentPrompt', () => {
 
   describe('prompt length validation guard', () => {
     beforeEach(() => {
-      // Reset to a valid long prompt by default
+      // Reset to a valid long prompt by default — must exceed the 200-char guard
       mockBuildReviewerPrompt.mockReturnValue(
-        'default reviewer prompt that is long enough to pass validation checks'
+        'default reviewer prompt that is long enough to pass the prompt length validation guard — ' +
+          'this string is intentionally padded to exceed the 200-character minimum threshold required by buildAgentPrompt' +
+          ' (extra padding to be safe)'
       )
     })
 
@@ -1028,7 +1030,7 @@ describe('buildAgentPrompt', () => {
 
     it('does not throw for valid prompts from all agent types', () => {
       // Each agent type should produce a prompt well over 200 chars — no throw expected.
-      const types: AgentType[] = ['pipeline', 'assistant', 'adhoc', 'copilot', 'synthesizer']
+      const types: AgentType[] = ['pipeline', 'assistant', 'adhoc', 'copilot', 'synthesizer', 'reviewer']
       for (const agentType of types) {
         expect(() => buildAgentPrompt({ agentType })).not.toThrow()
         const prompt = buildAgentPrompt({ agentType })
