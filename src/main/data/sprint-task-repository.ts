@@ -8,9 +8,10 @@
  * delegates to this repository. The agent manager uses this interface directly
  * for dependency injection in tests.
  */
-import type { SprintTask, TaskDependency } from '../../shared/types'
+import type { SprintTask, TaskDependency, TaskGroup, EpicDependency } from '../../shared/types'
 import * as queries from './sprint-queries'
 import * as reportingQueries from './reporting-queries'
+import * as groupQueries from './task-group-queries'
 import type { CreateTaskInput, QueueStats } from './sprint-queries'
 import type {
   SpecTypeSuccessRate,
@@ -41,6 +42,9 @@ export interface IAgentTaskRepository {
   getOrphanedTasks(claimedBy: string): SprintTask[]
   getActiveTaskCount(): number
   claimTask(id: string, claimedBy: string): SprintTask | null
+  getGroup(id: string): TaskGroup | null
+  getGroupTasks(groupId: string): SprintTask[]
+  getGroupsWithDependencies(): Array<{ id: string; depends_on: EpicDependency[] | null }>
 }
 
 /**
@@ -97,6 +101,9 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     getOrphanedTasks: queries.getOrphanedTasks,
     getActiveTaskCount: queries.getActiveTaskCount,
     claimTask: queries.claimTask,
+    getGroup: groupQueries.getGroup,
+    getGroupTasks: groupQueries.getGroupTasks,
+    getGroupsWithDependencies: groupQueries.getGroupsWithDependencies,
     listTasks: queries.listTasks,
     listTasksRecent: queries.listTasksRecent,
     createTask: queries.createTask,

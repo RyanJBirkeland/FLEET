@@ -180,7 +180,10 @@ function makeMockRepo(): ISprintTaskRepository {
     getTasksWithDependencies: () => (getTasksWithDependencies as any)(),
     getOrphanedTasks: (...args: [string]) => (getOrphanedTasks as any)(...args),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
-    claimTask: (...args: [string, string]) => (claimTask as any)(...args)
+    claimTask: (...args: [string, string]) => (claimTask as any)(...args),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
 }
 

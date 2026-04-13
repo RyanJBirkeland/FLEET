@@ -23,7 +23,6 @@ import { recoverOrphans } from './orphan-recovery'
 import { createDependencyIndex, formatBlockedNote } from '../services/dependency-service'
 import { createEpicDependencyIndex, type EpicDependencyIndex } from '../services/epic-dependency-service'
 import { resolveDependents } from './resolve-dependents'
-import { getGroup, getGroupTasks, getGroupsWithDependencies } from '../data/task-group-queries'
 import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { getRepoPaths } from '../paths'
@@ -251,8 +250,8 @@ export class AgentManagerImpl implements AgentManager {
             this.logger,
             getSetting,
             this._epicIndex,
-            getGroup,
-            getGroupTasks
+            this.repo.getGroup,
+            this.repo.getGroupTasks
           )
         } catch (err) {
           this.logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${err}`)
@@ -713,7 +712,7 @@ export class AgentManagerImpl implements AgentManager {
     try {
       const tasks = this.repo.getTasksWithDependencies()
       this._depIndex.rebuild(tasks)
-      const groups = getGroupsWithDependencies()
+      const groups = this.repo.getGroupsWithDependencies()
       this._epicIndex.rebuild(groups)
       // Initialize _lastTaskDeps to avoid false positives on first drain
       this._lastTaskDeps.clear()
