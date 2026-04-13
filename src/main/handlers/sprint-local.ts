@@ -33,9 +33,6 @@ import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import { instantiateWorkflow } from '../services/workflow-engine'
-import { registerSprintExportHandlers } from './sprint-export-handlers'
-import { registerSprintBatchHandlers } from './sprint-batch-handlers'
-import { registerSprintRetryHandler } from './sprint-retry-handler'
 import { validateTaskSpec } from './sprint-validation-helpers'
 import { listGroups } from '../data/task-group-queries'
 
@@ -252,9 +249,4 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps): void {
   safeHandle('sprint:getSuccessRateBySpecType', () => {
     return getSuccessRateBySpecType()
   })
-
-  // Register export, batch, and retry handlers
-  registerSprintExportHandlers({ dialog: deps.dialog })
-  registerSprintBatchHandlers({ onStatusTerminal: deps.onStatusTerminal })
-  registerSprintRetryHandler()
 }

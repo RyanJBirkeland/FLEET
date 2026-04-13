@@ -17,6 +17,9 @@ import { registerTerminalHandlers } from './handlers/terminal-handlers'
 import { registerConfigHandlers } from './handlers/config-handlers'
 import { registerWindowHandlers } from './handlers/window-handlers'
 import { registerSprintLocalHandlers } from './handlers/sprint-local'
+import { registerSprintExportHandlers } from './handlers/sprint-export-handlers'
+import { registerSprintBatchHandlers } from './handlers/sprint-batch-handlers'
+import { registerSprintRetryHandler } from './handlers/sprint-retry-handler'
 import { registerCostHandlers } from './handlers/cost-handlers'
 import { registerFsHandlers } from './fs'
 import { registerTemplateHandlers } from './handlers/template-handlers'
@@ -199,6 +202,9 @@ app.whenReady().then(() => {
   registerTerminalHandlers()
   registerWindowHandlers()
   registerSprintLocalHandlers(terminalDeps)
+  registerSprintExportHandlers({ dialog: terminalDeps.dialog })
+  registerSprintBatchHandlers({ onStatusTerminal: terminalDeps.onStatusTerminal })
+  registerSprintRetryHandler()
   registerCostHandlers()
   registerTemplateHandlers()
   registerFsHandlers()

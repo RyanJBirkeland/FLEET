@@ -187,13 +187,13 @@ describe('registerSprintLocalHandlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers 20 handlers', () => {
+  it('registers 15 handlers', () => {
     const mockDeps = {
       onStatusTerminal: vi.fn(),
       dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
     }
     registerSprintLocalHandlers(mockDeps)
-    expect(safeHandle).toHaveBeenCalledTimes(20)
+    expect(safeHandle).toHaveBeenCalledTimes(15)
   })
 
   it('registers the expected channel names', () => {
@@ -216,12 +216,7 @@ describe('registerSprintLocalHandlers', () => {
     expect(channels).toContain('sprint:validateDependencies')
     expect(channels).toContain('sprint:unblockTask')
     expect(channels).toContain('sprint:getChanges')
-    expect(channels).toContain('sprint:retry')
-    expect(channels).toContain('sprint:exportTasks')
-    expect(channels).toContain('sprint:batchUpdate')
-    expect(channels).toContain('sprint:batchImport')
     expect(channels).toContain('sprint:failureBreakdown')
-    expect(channels).toContain('sprint:exportTaskHistory')
     expect(channels).toContain('sprint:getSuccessRateBySpecType')
   })
 })
