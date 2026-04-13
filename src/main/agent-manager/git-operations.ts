@@ -483,6 +483,7 @@ export async function cleanupWorktreeAndBranch(
 }
 
 export interface SquashMergeOpts {
+  taskId: string
   branch: string
   worktreePath: string
   repoPath: string
@@ -498,7 +499,7 @@ export interface SquashMergeOpts {
 export async function executeSquashMerge(
   opts: SquashMergeOpts
 ): Promise<'merged' | 'dirty-main' | 'failed'> {
-  const { branch, worktreePath, repoPath, title, logger } = opts
+  const { taskId, branch, worktreePath, repoPath, title, logger } = opts
   const env = buildAgentEnv()
   const { stdout: statusOut } = await execFile('git', ['status', '--porcelain'], {
     cwd: repoPath,
@@ -516,7 +517,7 @@ export async function executeSquashMerge(
       cwd: repoPath,
       env
     })
-    await execFile('git', ['commit', '-m', `${sanitizeForGit(title)} (#${branch})`], {
+    await execFile('git', ['commit', '-m', `${sanitizeForGit(title)} (#${taskId})`], {
       cwd: repoPath,
       env
     })

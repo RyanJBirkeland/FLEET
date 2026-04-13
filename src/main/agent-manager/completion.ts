@@ -230,6 +230,7 @@ async function attemptAutoMerge(opts: AutoMergeOpts): Promise<void> {
       }
 
       const mergeResult = await executeSquashMerge({
+        taskId,
         branch,
         worktreePath,
         repoPath: repoConfig.localPath,
