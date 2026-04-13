@@ -1,9 +1,88 @@
 import { join, resolve } from 'path'
 import { homedir, tmpdir } from 'os'
+import { realpathSync } from 'fs'
+
+// ---------------------------------------------------------------------------
+// Path safety validators
+// ---------------------------------------------------------------------------
+
+/**
+ * Validates that a proposed worktreeBase path is inside the user's home
+ * directory. Throws if the path resolves outside of `~`.
+ *
+ * Security: prevents the agentManager.worktreeBase setting from being pointed
+ * at arbitrary system directories (e.g. /etc, /var/root).
+ */
+export function validateWorktreeBase(value: string): void {
+  if (!value) {
+    throw new Error(
+      'agentManager.worktreeBase must not be empty — provide a path inside your home directory'
+    )
+  }
+  const resolved = resolve(value)
+  const home = homedir()
+  if (!resolved.startsWith(home + '/') && resolved !== home) {
+    throw new Error(
+      `agentManager.worktreeBase must be inside your home directory (${home}). ` +
+        `Rejected: ${resolved}`
+    )
+  }
+}
+
+/**
+ * Validates that BDE_TEST_DB is either `:memory:` (SQLite in-memory) or a
+ * path inside the system temp directory. Throws for any other location.
+ *
+ * Security: prevents a misconfigured test environment from writing the SQLite
+ * database to an arbitrary system path.
+ *
+ * Pass `undefined` when the env var is not set — no validation is performed.
+ *
+ * macOS note: `/tmp` is a symlink to `/private/tmp`, and `os.tmpdir()` returns
+ * the user-session temp dir (`/private/var/folders/...`). We resolve both the
+ * input value and `/tmp` to their canonical paths for comparison.
+ */
+export function validateTestDbPath(value: string | undefined): void {
+  if (value === undefined || value === ':memory:') return
+
+  // Resolve symlinks in the input so we compare canonical paths
+  let resolvedValue: string
+  try {
+    resolvedValue = realpathSync(resolve(value))
+  } catch {
+    // File doesn't exist yet — resolve without realpathSync
+    resolvedValue = resolve(value)
+  }
+
+  // Build the set of allowed canonical tmp prefixes.
+  // On macOS, /tmp → /private/tmp; os.tmpdir() → /private/var/folders/...
+  const rawPrefixes = [tmpdir(), '/tmp']
+  const allowedPrefixes = new Set<string>()
+  for (const p of rawPrefixes) {
+    allowedPrefixes.add(p + '/')
+    try {
+      allowedPrefixes.add(realpathSync(p) + '/')
+    } catch {
+      // skip if path doesn't exist on this platform
+    }
+  }
+
+  const isAllowed = [...allowedPrefixes].some((prefix) => resolvedValue.startsWith(prefix))
+
+  if (!isAllowed) {
+    throw new Error(
+      `BDE_TEST_DB must be ':memory:' or a path inside the system tmp directory. ` +
+        `Rejected: ${resolvedValue}`
+    )
+  }
+}
 
 // --- BDE data directory ---
 export const BDE_DIR = join(homedir(), '.bde')
-// Allow tests to redirect the DB to an isolated path (prevents test artifact pollution)
+
+// Allow tests to redirect the DB to an isolated path (prevents test artifact pollution).
+// Validate the path to prevent pointing the database at arbitrary system files.
+validateTestDbPath(process.env.BDE_TEST_DB)
 export const BDE_DB_PATH = process.env.BDE_TEST_DB ?? join(BDE_DIR, 'bde.db')
 export const BDE_AGENTS_INDEX = join(BDE_DIR, 'agents.json')
 export const BDE_AGENT_LOGS_DIR = join(BDE_DIR, 'agent-logs')

@@ -101,7 +101,7 @@ export async function tryEmitPlaygroundEvent(
     const { resolve } = await import('node:path')
     const resolvedPath = resolve(absolutePath)
     const resolvedWorktree = resolve(worktreePath)
-    if (!resolvedPath.startsWith(resolvedWorktree)) {
+    if (!resolvedPath.startsWith(resolvedWorktree + '/') && resolvedPath !== resolvedWorktree) {
       logger.warn(`[playground] Path traversal blocked: ${filePath} (resolved to ${resolvedPath})`)
       return
     }

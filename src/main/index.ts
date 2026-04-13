@@ -33,7 +33,6 @@ import { createTaskTerminalService } from './services/task-terminal-service'
 import { createStatusServer } from './services/status-server'
 import { createElectronDialogService } from './dialog-service'
 import { getTask, updateTask } from './services/sprint-service'
-import { getGroup, getGroupTasks, getGroupsWithDependencies } from './data/task-group-queries'
 import {
   closeTearoffWindows,
   setQuitting,
@@ -107,9 +106,9 @@ app.whenReady().then(() => {
     getTask,
     updateTask,
     getTasksWithDependencies: () => repo.getTasksWithDependencies(),
-    getGroup,
-    getGroupsWithDependencies,
-    listGroupTasks: getGroupTasks,
+    getGroup: (id) => repo.getGroup(id),
+    getGroupsWithDependencies: () => repo.getGroupsWithDependencies(),
+    listGroupTasks: (groupId) => repo.getGroupTasks(groupId),
     getSetting,
     logger: createLogger('task-terminal')
   })

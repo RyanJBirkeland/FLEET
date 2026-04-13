@@ -193,7 +193,7 @@ export function MemorySection(): React.JSX.Element {
 
     setIsSearching(true)
     try {
-      const results = await memoryService.search(query)
+      const { results } = await memoryService.search(query)
       setSearchResults(results)
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to search memory files')

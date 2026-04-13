@@ -9,9 +9,10 @@ describe('memory service', () => {
     ])
     vi.mocked(window.api.readMemoryFile).mockResolvedValue('# Note content')
     vi.mocked(window.api.writeMemoryFile).mockResolvedValue(undefined)
-    vi.mocked(window.api.searchMemory).mockResolvedValue([
-      { path: '/mem/note.md', matches: [{ line: 1, content: '# Note content' }] }
-    ])
+    vi.mocked(window.api.searchMemory).mockResolvedValue({
+      results: [{ path: '/mem/note.md', matches: [{ line: 1, content: '# Note content' }] }],
+      timedOut: false
+    })
     vi.mocked(window.api.getActiveMemoryFiles).mockResolvedValue({ '/mem/note.md': true })
     vi.mocked(window.api.setMemoryFileActive).mockResolvedValue({ '/mem/note.md': false })
   })
@@ -37,8 +38,9 @@ describe('memory service', () => {
   it('search delegates to window.api.searchMemory', async () => {
     const result = await search('note')
     expect(window.api.searchMemory).toHaveBeenCalledWith('note')
-    expect(result).toHaveLength(1)
-    expect(result[0].matches[0].content).toBe('# Note content')
+    expect(result.results).toHaveLength(1)
+    expect(result.results[0].matches[0].content).toBe('# Note content')
+    expect(result.timedOut).toBe(false)
   })
 
   it('getActiveFiles delegates to window.api.getActiveMemoryFiles', async () => {

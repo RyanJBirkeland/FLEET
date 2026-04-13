@@ -54,7 +54,7 @@ describe('MemorySection — agent knowledge toggles', () => {
     vi.mocked(memoryService.readFile).mockResolvedValue('# Content')
     vi.mocked(memoryService.getActiveFiles).mockResolvedValue({ 'MEMORY.md': true })
     vi.mocked(memoryService.setFileActive).mockResolvedValue({})
-    vi.mocked(memoryService.search).mockResolvedValue([])
+    vi.mocked(memoryService.search).mockResolvedValue({ results: [], timedOut: false })
   })
 
   it('renders toggle icon for each file', async () => {

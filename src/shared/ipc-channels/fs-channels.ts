@@ -58,10 +58,13 @@ export interface MemoryChannels {
   }
   'memory:search': {
     args: [query: string]
-    result: Array<{
-      path: string
-      matches: Array<{ line: number; content: string }>
-    }>
+    result: {
+      results: Array<{
+        path: string
+        matches: Array<{ line: number; content: string }>
+      }>
+      timedOut: boolean
+    }
   }
   'memory:getActiveFiles': {
     args: []

@@ -5,6 +5,9 @@ import { safeHandle } from '../ipc-utils'
 import { promisify } from 'util'
 import { execFile } from 'child_process'
 import { BDE_MEMORY_DIR } from '../paths'
+import { createLogger } from '../logger'
+
+const logger = createLogger('memory-search')
 
 const execFileAsync = promisify(execFile)
 
@@ -18,20 +21,43 @@ export interface MemorySearchResult {
   matches: MemorySearchMatch[]
 }
 
+export interface MemorySearchResponse {
+  results: MemorySearchResult[]
+  timedOut: boolean
+}
+
 /**
  * Search memory files using grep.
- * Returns array of files with matching lines.
+ * Returns an object with matching file results and a timedOut flag.
+ * timedOut is true when the grep process was killed due to the 5-second timeout.
  */
-async function searchMemory(query: string): Promise<MemorySearchResult[]> {
+async function searchMemory(query: string): Promise<MemorySearchResponse> {
+  // Input validation
+  if (typeof query !== 'string' || query.length > 200) {
+    logger.warn('memory:search query rejected: exceeds 200 char limit')
+    throw new Error('Query must be a string of 200 characters or fewer')
+  }
+
   if (!query.trim()) {
-    return []
+    return { results: [], timedOut: false }
+  }
+
+  // Strip catastrophic backtracking patterns
+  const safeQuery = query
+    .replace(/(\(\?:.*\))[+*]/g, '') // non-capturing groups with quantifiers
+    .replace(/\([^)]*\)[+*]{2,}/g, '') // groups with multiple sequential quantifiers
+    .replace(/\([^)]*[+*|][^)]*\)[+*{]/g, '') // capturing groups with nested quantifiers
+
+  if (safeQuery !== query) {
+    logger.warn('memory:search: stripped dangerous backtracking patterns from query')
   }
 
   try {
-    const { stdout } = await execFileAsync('grep', ['-rni', '--', query, '.'], {
+    const { stdout } = await execFileAsync('grep', ['-rni', '--', safeQuery, '.'], {
       cwd: BDE_MEMORY_DIR,
       encoding: 'utf-8',
-      maxBuffer: 5 * 1024 * 1024 // 5MB
+      maxBuffer: 5 * 1024 * 1024, // 5MB
+      timeout: 5000
     })
 
     const lines = stdout.trim().split('\n').filter(Boolean)
@@ -55,15 +81,26 @@ async function searchMemory(query: string): Promise<MemorySearchResult[]> {
     }
 
     // Convert map to array of results
-    return Array.from(fileMap.entries()).map(([path, matches]) => ({
+    const results = Array.from(fileMap.entries()).map(([path, matches]) => ({
       path,
       matches
     }))
+
+    return { results, timedOut: false }
   } catch (err: unknown) {
+    const error = err as { code?: number | string; killed?: boolean; signal?: string }
+
     // grep exits with code 1 when no matches found
-    if ((err as { code?: number }).code === 1) {
-      return []
+    if (error.code === 1) {
+      return { results: [], timedOut: false }
     }
+
+    // execFile with timeout option kills the process with SIGTERM and sets killed=true
+    if (error.killed === true || error.signal === 'SIGTERM' || error.code === 'ETIMEDOUT') {
+      logger.warn('memory:search: grep timed out, returning empty results')
+      return { results: [], timedOut: true }
+    }
+
     throw err
   }
 }
