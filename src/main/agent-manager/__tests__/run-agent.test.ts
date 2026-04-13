@@ -10,6 +10,8 @@ import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import type { ActiveAgent } from '../types'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { buildAgentPrompt } from '../prompt-composer'
+import { TurnTracker } from '../turn-tracker'
+import { emitAgentEvent } from '../../agent-event-mapper'
 const mockMkdirSync = vi.mocked(mkdirSync)
 const mockReadFileSync = vi.mocked(readFileSync)
 const mockBuildAgentPrompt = vi.mocked(buildAgentPrompt)
@@ -88,6 +90,12 @@ vi.mock('node:fs/promises', () => ({
 vi.mock('../../env-utils', () => ({
   invalidateOAuthToken: vi.fn(),
   refreshOAuthTokenFromKeychain: vi.fn().mockResolvedValue(false)
+}))
+
+vi.mock('../../agent-event-mapper', () => ({
+  mapRawMessage: vi.fn().mockReturnValue([]),
+  emitAgentEvent: vi.fn(),
+  flushAgentEventBatcher: vi.fn()
 }))
 
 // ---------------------------------------------------------------------------
@@ -913,7 +921,6 @@ describe('consumeMessages', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns streamError when message stream throws a non-auth error', async () => {
-    const { TurnTracker } = await import('../turn-tracker')
     const error = new Error('Stream closed unexpectedly')
     const handle = makeErrorHandle(error)
     const agent: ActiveAgent = {
@@ -947,5 +954,9 @@ describe('consumeMessages', () => {
     expect(result.streamError).toBeInstanceOf(Error)
     expect(result.streamError?.message).toBe('Stream closed unexpectedly')
     expect(result.exitCode).toBeUndefined()
+    expect(emitAgentEvent).toHaveBeenCalledWith(
+      'run-1',
+      expect.objectContaining({ type: 'agent:error', message: 'Stream closed unexpectedly' })
+    )
   })
 })

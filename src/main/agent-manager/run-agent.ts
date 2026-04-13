@@ -73,7 +73,7 @@ export type RunAgentDeps = RunAgentSpawnDeps & RunAgentDataDeps & RunAgentEventD
 export interface ConsumeMessagesResult {
   exitCode: number | undefined
   lastAgentOutput: string
-  streamError?: Error  // set if the message stream threw
+  streamError?: Error
 }
 
 /**
