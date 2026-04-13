@@ -441,6 +441,26 @@ export class AgentManagerImpl implements AgentManager {
 
   // ---- watchdogLoop ----
 
+  /**
+   * Abort an active agent's handle and send SIGKILL to its subprocess if available,
+   * then remove it from the active agents map.
+   * SDK may not expose process — revisit when SDK exposes subprocess handle.
+   */
+  private killActiveAgent(agent: ActiveAgent): void {
+    try {
+      agent.handle.abort()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const proc = (agent.handle as any).process
+      if (proc && typeof proc.kill === 'function') {
+        proc.kill('SIGKILL')
+      }
+    } catch (err) {
+      this.logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
+    }
+    // Delete agent — activeCount is derived from activeAgents.size
+    this._activeAgents.delete(agent.taskId)
+  }
+
   _watchdogLoop(): void {
     // Collect agents to kill before iterating to avoid mutating Map during iteration
     const agentsToKill: Array<{ agent: ActiveAgent; verdict: WatchdogAction }> = []
@@ -459,20 +479,8 @@ export class AgentManagerImpl implements AgentManager {
       if (verdict === 'rate-limit-loop') {
         this._metrics.increment('retriesQueued')
       }
-      try {
-        agent.handle.abort()
-        // SDK may not expose process — revisit when SDK exposes subprocess handle
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const proc = (agent.handle as any).process
-        if (proc && typeof proc.kill === 'function') {
-          proc.kill('SIGKILL')
-        }
-      } catch (err) {
-        this.logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
-      }
 
-      // Delete agent — activeCount is derived from activeAgents.size
-      this._activeAgents.delete(agent.taskId)
+      this.killActiveAgent(agent)
 
       // Get verdict decision, then apply side effects
       const now = nowIso()
