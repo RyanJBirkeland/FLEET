@@ -503,11 +503,10 @@ const api = {
       taskId: string
       messages: import('../shared/types').PartnerMessage[]
     }) => typedInvoke('review:chatStream', params),
-    onChatChunk: (
-      listener: (evt: unknown, chunk: BroadcastChannels['review:chatChunk']) => void
-    ) => {
-      ipcRenderer.on('review:chatChunk', listener as never)
-      return () => ipcRenderer.removeListener('review:chatChunk', listener as never)
+    onChatChunk: (cb: (data: BroadcastChannels['review:chatChunk']) => void): (() => void) => {
+      const listener = (_e: unknown, data: BroadcastChannels['review:chatChunk']): void => cb(data)
+      ipcRenderer.on('review:chatChunk', listener)
+      return () => ipcRenderer.removeListener('review:chatChunk', listener)
     },
     abortChat: (streamId: string) => typedInvoke('review:chatAbort', streamId)
   },
