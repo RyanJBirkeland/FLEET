@@ -166,6 +166,39 @@ describe('Config handlers', () => {
       expect(deleteProfile).toHaveBeenCalledWith('dev-mode')
     })
 
+    describe('profile name validation', () => {
+      const invalidNames = [
+        '',
+        'a'.repeat(51),
+        '../etc',
+        'name with spaces',
+        'name!@#',
+        'name\0null',
+      ]
+      const validNames = ['dev-mode', 'my_profile', 'Profile123', 'a', 'z-9_Z']
+
+      describe('settings:saveProfile', () => {
+        for (const name of invalidNames) {
+          it(`rejects invalid name: "${name.slice(0, 20)}"`, () => {
+            const handlers = captureHandlers()
+            expect(() =>
+              handlers['settings:saveProfile'](mockEvent, name)
+            ).toThrow(/invalid profile name/i)
+            expect(saveProfile).not.toHaveBeenCalled()
+          })
+        }
+
+        for (const name of validNames) {
+          it(`accepts valid name: "${name}"`, () => {
+            const handlers = captureHandlers()
+            expect(() =>
+              handlers['settings:saveProfile'](mockEvent, name)
+            ).not.toThrow()
+          })
+        }
+      })
+    })
+
     describe('settings:set — worktreeBase path validation', () => {
       it('allows agentManager.worktreeBase set to a path inside homedir', () => {
         const handlers = captureHandlers()

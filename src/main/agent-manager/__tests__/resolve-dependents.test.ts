@@ -42,6 +42,43 @@ function makeIndex(dependentsMap: Record<string, string[]>): DependencyIndex {
   }
 }
 
+describe('resolveDependents terminal-status guard', () => {
+  it('returns immediately when completedStatus is "active" (non-terminal)', () => {
+    const index = makeIndex({ A: ['B'] })
+    const getTask = vi.fn()
+    const updateTask = vi.fn()
+
+    resolveDependents('A', 'active', index, getTask, updateTask)
+
+    expect(getTask).not.toHaveBeenCalled()
+    expect(updateTask).not.toHaveBeenCalled()
+  })
+
+  it('returns immediately when completedStatus is "queued" (non-terminal)', () => {
+    const index = makeIndex({ A: ['B'] })
+    const getTask = vi.fn()
+    const updateTask = vi.fn()
+
+    resolveDependents('A', 'queued', index, getTask, updateTask)
+
+    expect(getTask).not.toHaveBeenCalled()
+    expect(updateTask).not.toHaveBeenCalled()
+  })
+
+  it('proceeds normally when completedStatus is "done" (terminal)', () => {
+    const index = makeIndex({ A: ['B'] })
+    const tasks: Record<string, MockTask> = {
+      B: { id: 'B', status: 'blocked', notes: null, depends_on: [hardDep('A')] }
+    }
+    const getTask = vi.fn((id: string) => tasks[id] ?? null)
+    const updateTask = vi.fn()
+
+    resolveDependents('A', 'done', index, getTask, updateTask)
+
+    expect(getTask).toHaveBeenCalledWith('B')
+  })
+})
+
 describe('resolveDependents', () => {
   let updateTask: (id: string, patch: Record<string, unknown>) => unknown
 
@@ -464,6 +501,37 @@ describe('resolveDependents', () => {
         status: 'cancelled',
         notes: '[auto-cancel] Upstream task "A" failed'
       })
+    })
+
+    it('calls onTaskTerminal for each cascade-cancelled dependent', () => {
+      // Task A failed (hard dep). B depends on A (hard). C depends on B (hard).
+      const index = makeIndex({ A: ['B'], B: ['C'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'A', notes: null, depends_on: null },
+        B: { id: 'B', status: 'blocked', title: 'B', notes: null, depends_on: [hardDep('A')] },
+        C: { id: 'C', status: 'blocked', title: 'C', notes: null, depends_on: [hardDep('B')] }
+      }
+      const getTask = vi.fn((id: string) => tasks[id] ?? null)
+      const updateTask2 = vi.fn().mockImplementation(
+        (id: string, patch: Record<string, unknown>) => {
+          if (patch.status) tasks[id] = { ...tasks[id], status: patch.status as string }
+          return tasks[id]
+        }
+      )
+      const onTaskTerminal = vi.fn()
+      const getSetting = vi.fn().mockReturnValue('cancel') // cascade enabled
+
+      resolveDependents(
+        'A', 'failed', index, getTask, updateTask2,
+        undefined, getSetting, undefined, undefined, undefined,
+        onTaskTerminal
+      )
+
+      // B and C should both be cancelled and notified
+      expect(updateTask2).toHaveBeenCalledWith('B', expect.objectContaining({ status: 'cancelled' }))
+      expect(updateTask2).toHaveBeenCalledWith('C', expect.objectContaining({ status: 'cancelled' }))
+      expect(onTaskTerminal).toHaveBeenCalledWith('B', 'cancelled')
+      expect(onTaskTerminal).toHaveBeenCalledWith('C', 'cancelled')
     })
   })
 })

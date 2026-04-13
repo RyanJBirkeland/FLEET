@@ -31,7 +31,8 @@ export interface BatchImportResult {
  */
 export function batchImportTasks(
   tasks: BatchTaskInput[],
-  repo: ISprintTaskRepository
+  repo: ISprintTaskRepository,
+  configuredRepos?: string[]
 ): BatchImportResult {
   const created: SprintTask[] = []
   const errors: string[] = []
@@ -43,6 +44,18 @@ export function batchImportTasks(
     if (!t.title || !t.repo) {
       errors.push(`Task[${i}]: missing required title or repo`)
       continue
+    }
+
+    // Validate repo against configured repos if list is provided
+    if (configuredRepos && configuredRepos.length > 0) {
+      const repoLower = t.repo.toLowerCase()
+      const isConfigured = configuredRepos.some((r) => r.toLowerCase() === repoLower)
+      if (!isConfigured) {
+        errors.push(
+          `Task[${i}]: repo "${t.repo}" is not configured. Configured repos: ${configuredRepos.join(', ')}`
+        )
+        continue
+      }
     }
 
     // Build dependency array from indices

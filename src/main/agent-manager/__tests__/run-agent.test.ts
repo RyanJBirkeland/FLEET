@@ -3,8 +3,8 @@
  * watchdog race, fast-fail paths, and completion fallback.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runAgent, detectHtmlWrite, tryEmitPlaygroundEvent } from '../run-agent'
-import type { RunAgentTask, RunAgentDeps } from '../run-agent'
+import { runAgent, detectHtmlWrite, tryEmitPlaygroundEvent, validateTaskForRun, assembleRunContext } from '../run-agent'
+import type { RunAgentTask, RunAgentDeps, RunAgentSpawnDeps, RunAgentDataDeps, RunAgentEventDeps } from '../run-agent'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import type { ActiveAgent } from '../types'
 import { mkdirSync, readFileSync } from 'node:fs'
@@ -728,5 +728,88 @@ describe('runAgent — prompt composer integration', () => {
         })
       )
     })
+  })
+})
+
+// Compile-time: RunAgentDeps must satisfy each sub-interface
+type _SpawnCheck = RunAgentDeps extends RunAgentSpawnDeps ? true : never
+type _DataCheck = RunAgentDeps extends RunAgentDataDeps ? true : never
+type _EventCheck = RunAgentDeps extends RunAgentEventDeps ? true : never
+
+describe('validateTaskForRun', () => {
+  it('throws and calls onTaskTerminal when task has no content', async () => {
+    const mockRepoLocal = {
+      updateTask: vi.fn().mockReturnValue(null),
+      getTask: vi.fn().mockReturnValue(null)
+    } as unknown as ISprintTaskRepository
+    const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+
+    const emptyTask: RunAgentTask = {
+      id: 'task-1', title: '', prompt: null, spec: null,
+      repo: 'bde', retry_count: 0, fast_fail_count: 0
+    }
+
+    await expect(
+      validateTaskForRun(emptyTask, { worktreePath: '/wt', branch: 'b' }, '/repo', {
+        activeAgents: new Map(),
+        defaultModel: 'claude-3-5-sonnet-20241022',
+        logger,
+        onTaskTerminal,
+        repo: mockRepoLocal
+      })
+    ).rejects.toThrow('Task has no content')
+
+    expect(onTaskTerminal).toHaveBeenCalledWith('task-1', 'error')
+    expect(mockRepoLocal.updateTask).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ status: 'error' })
+    )
+  })
+
+  it('resolves without throwing when task has a title', async () => {
+    const mockRepoLocal = {
+      updateTask: vi.fn(),
+      getTask: vi.fn().mockReturnValue(null)
+    } as unknown as ISprintTaskRepository
+    const task: RunAgentTask = {
+      id: 'task-1', title: 'Do the thing', prompt: null, spec: null,
+      repo: 'bde', retry_count: 0, fast_fail_count: 0
+    }
+
+    await expect(
+      validateTaskForRun(task, { worktreePath: '/wt', branch: 'b' }, '/repo', {
+        activeAgents: new Map(),
+        defaultModel: 'claude-3-5-sonnet-20241022',
+        logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+        onTaskTerminal: vi.fn(),
+        repo: mockRepoLocal
+      })
+    ).resolves.toBeUndefined()
+
+    expect(mockRepoLocal.updateTask).not.toHaveBeenCalled()
+  })
+})
+
+describe('assembleRunContext', () => {
+  it('returns a non-empty prompt string', async () => {
+    const mockRepoLocal = {
+      getTask: vi.fn().mockReturnValue(null)
+    } as unknown as ISprintTaskRepository
+    const task: RunAgentTask = {
+      id: 'task-1', title: 'Test task', prompt: 'Do the thing.',
+      spec: null, repo: 'bde', retry_count: 0, fast_fail_count: 0
+    }
+
+    const prompt = await assembleRunContext(task, { worktreePath: '/wt', branch: 'feat/x' }, {
+      activeAgents: new Map(),
+      defaultModel: 'claude-3-5-sonnet-20241022',
+      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+      onTaskTerminal: vi.fn(),
+      repo: mockRepoLocal
+    })
+
+    expect(typeof prompt).toBe('string')
+    expect(prompt.length).toBeGreaterThan(0)
   })
 })

@@ -8,6 +8,7 @@ import { getTask, updateTask, deleteTask } from '../services/sprint-service'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import { validateTaskSpec } from './sprint-validation-helpers'
 import { TERMINAL_STATUSES } from '../../shared/task-state-machine'
+import { getSettingJson } from '../settings'
 
 export interface BatchHandlersDeps {
   onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
@@ -128,7 +129,14 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
     ) => {
       const { batchImportTasks } = await import('../services/batch-import')
       const repo = createSprintTaskRepository()
-      return batchImportTasks(tasks, repo)
+      const reposConfig =
+        getSettingJson<Array<{ name: string; localPath: string }>>('repos') ?? []
+      const configuredRepos = reposConfig.map((r) => r.name.toLowerCase())
+      return batchImportTasks(
+        tasks,
+        repo,
+        configuredRepos.length > 0 ? configuredRepos : undefined
+      )
     }
   )
 }

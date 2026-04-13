@@ -14,6 +14,16 @@ const PATH_VALIDATORS: Record<string, (value: string) => void> = {
   'agentManager.worktreeBase': validateWorktreeBase
 }
 
+const PROFILE_NAME_REGEX = /^[a-zA-Z0-9_-]{1,50}$/
+
+function validateProfileName(name: string): void {
+  if (!PROFILE_NAME_REGEX.test(name)) {
+    throw new Error(
+      `Invalid profile name "${name}". Names must be 1–50 characters using only letters, digits, underscores, or hyphens.`
+    )
+  }
+}
+
 export function registerConfigHandlers(): void {
   // Settings CRUD
   safeHandle('settings:get', (_e, key: string) => getSetting(key))
@@ -27,9 +37,21 @@ export function registerConfigHandlers(): void {
   safeHandle('settings:delete', (_e, key: string) => deleteSetting(key))
 
   // Settings profiles
-  safeHandle('settings:saveProfile', (_e, name: string) => saveProfile(name))
-  safeHandle('settings:loadProfile', (_e, name: string) => loadProfile(name))
-  safeHandle('settings:applyProfile', (_e, name: string) => applyProfile(name))
+  safeHandle('settings:saveProfile', (_e, name: string) => {
+    validateProfileName(name)
+    return saveProfile(name)
+  })
+  safeHandle('settings:loadProfile', (_e, name: string) => {
+    validateProfileName(name)
+    return loadProfile(name)
+  })
+  safeHandle('settings:applyProfile', (_e, name: string) => {
+    validateProfileName(name)
+    return applyProfile(name)
+  })
   safeHandle('settings:listProfiles', () => listProfiles())
-  safeHandle('settings:deleteProfile', (_e, name: string) => deleteProfile(name))
+  safeHandle('settings:deleteProfile', (_e, name: string) => {
+    validateProfileName(name)
+    return deleteProfile(name)
+  })
 }

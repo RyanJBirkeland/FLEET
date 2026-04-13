@@ -75,14 +75,14 @@ describe('DependencyIndex', () => {
       expect(result.satisfied).toBe(false)
     })
 
-    test('soft dep failed = satisfied', () => {
+    test('soft dep failed = satisfied (soft unblocks on any terminal outcome)', () => {
       const idx = createDependencyIndex()
       const deps: TaskDependency[] = [{ id: 'A', type: 'soft' }]
       const result = idx.areDependenciesSatisfied('T', deps, () => 'failed')
       expect(result).toEqual({ satisfied: true, blockedBy: [] })
     })
 
-    test('soft dep cancelled = satisfied', () => {
+    test('soft dep cancelled = satisfied (soft unblocks on any terminal outcome)', () => {
       const idx = createDependencyIndex()
       const deps: TaskDependency[] = [{ id: 'A', type: 'soft' }]
       const result = idx.areDependenciesSatisfied('T', deps, () => 'cancelled')

@@ -662,4 +662,30 @@ describe('AgentManagerImpl — class internals', () => {
       expect(taskStatusMap.get('task-1')).toBe('queued')
     })
   })
+
+  // -------------------------------------------------------------------------
+  // onTaskTerminal — dep index rebuild
+  // -------------------------------------------------------------------------
+
+  describe('onTaskTerminal dep index rebuild', () => {
+    it('rebuilds dep index before calling resolveDependents', async () => {
+      const freshTasks = [
+        { id: 'task-A', status: 'done', depends_on: null },
+        { id: 'task-B', status: 'blocked', depends_on: [{ id: 'task-A', type: 'hard' }] }
+      ]
+
+      vi.mocked(getTasksWithDependencies).mockReturnValue(freshTasks as never)
+      vi.mocked(updateTask).mockReturnValue(null)
+      vi.mocked(getTask).mockImplementation(
+        (id: string) => (freshTasks.find((t) => t.id === id) ?? null) as never
+      )
+
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      const rebuildSpy = vi.spyOn(manager._depIndex, 'rebuild')
+
+      await manager.onTaskTerminal('task-A', 'done')
+
+      expect(rebuildSpy).toHaveBeenCalled()
+    })
+  })
 })

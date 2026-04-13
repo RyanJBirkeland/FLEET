@@ -44,17 +44,35 @@ export interface RunAgentTask {
   cross_repo_contract?: string | null
 }
 
-export interface RunAgentDeps {
+/** Spawn lifecycle and agent process management. */
+export interface RunAgentSpawnDeps {
   activeAgents: Map<string, ActiveAgent>
   defaultModel: string
   logger: Logger
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
-  repo: ISprintTaskRepository
-  /** Optional hook called when an agent process is successfully spawned. */
+  /** Optional — called when agent process successfully spawns. */
   onSpawnSuccess?: () => void
-  /** Optional hook called when spawnAgent throws (broken SDK/CLI, etc). */
+  /** Optional — called when spawnAgent throws. */
   onSpawnFailure?: () => void
 }
+
+/** Sprint task data access. */
+export interface RunAgentDataDeps {
+  repo: ISprintTaskRepository
+  logger: Logger
+}
+
+/** Terminal status notification. */
+export interface RunAgentEventDeps {
+  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  logger: Logger
+}
+
+/**
+ * Full dependency bag for runAgent(). Composed via intersection so callers
+ * that only consume a sub-set can depend on the narrower interface.
+ */
+export type RunAgentDeps = RunAgentSpawnDeps & RunAgentDataDeps & RunAgentEventDeps
 
 const MAX_PLAYGROUND_SIZE = 5 * 1024 * 1024 // 5MB
 const MAX_PARTIAL_DIFF_SIZE = 50 * 1024 // 50KB
@@ -361,14 +379,19 @@ export async function consumeMessages(
  * Phase 1: Validates task content and prepares the agent prompt.
  * Throws if task has no content (early validation failure).
  */
-async function validateAndPreparePrompt(
+/**
+ * Validation phase: verifies the task has executable content.
+ * On failure, transitions the task to 'error' status, calls onTaskTerminal,
+ * and cleans up the worktree before throwing 'Task has no content'.
+ * Has side effects — do NOT call this more than once per task run.
+ */
+export async function validateTaskForRun(
   task: RunAgentTask,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   deps: RunAgentDeps
-): Promise<string> {
+): Promise<void> {
   const { logger, repo, onTaskTerminal } = deps
-
   const taskContent = (task.prompt || task.spec || task.title || '').trim()
   if (!taskContent) {
     logger.error(`[agent-manager] Task ${task.id} has no prompt/spec/title — marking error`)
@@ -394,6 +417,19 @@ async function validateAndPreparePrompt(
     }
     throw new Error('Task has no content')
   }
+}
+
+/**
+ * Context assembly phase: builds the agent prompt string from task data.
+ * Pure function — no side effects, no task mutations, no callbacks.
+ */
+export async function assembleRunContext(
+  task: RunAgentTask,
+  worktree: { worktreePath: string; branch: string },
+  deps: RunAgentDeps
+): Promise<string> {
+  const { logger, repo } = deps
+  const taskContent = (task.prompt || task.spec || task.title || '').trim()
 
   // Fetch upstream task specs for context propagation
   const upstreamContext: Array<{ title: string; spec: string; partial_diff?: string }> = []
@@ -443,6 +479,16 @@ async function validateAndPreparePrompt(
     taskId: task.id,
     priorScratchpad
   })
+}
+
+async function validateAndPreparePrompt(
+  task: RunAgentTask,
+  worktree: { worktreePath: string; branch: string },
+  repoPath: string,
+  deps: RunAgentDeps
+): Promise<string> {
+  await validateTaskForRun(task, worktree, repoPath, deps)
+  return assembleRunContext(task, worktree, deps)
 }
 
 /**

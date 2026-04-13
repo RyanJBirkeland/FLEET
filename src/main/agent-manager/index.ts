@@ -243,6 +243,16 @@ export class AgentManagerImpl implements AgentManager {
         // so the drain loop can claim newly-unblocked tasks in the same tick.
         // This differs from task-terminal-service's batched setTimeout(0) approach.
         // See ResolveDependentsParams in types.ts for the conceptual contract.
+        // Rebuild dep index first to pick up any tasks created/modified since
+        // the last drain tick — stale index causes missed unblocking.
+        try {
+          const freshTasks = this.repo.getTasksWithDependencies()
+          this._depIndex.rebuild(freshTasks)
+        } catch (rebuildErr) {
+          this.logger.warn(
+            `[agent-manager] dep index rebuild failed before resolution for ${taskId}: ${rebuildErr}`
+          )
+        }
         try {
           resolveDependents(
             taskId,
@@ -254,7 +264,8 @@ export class AgentManagerImpl implements AgentManager {
             getSetting,
             this._epicIndex,
             this.repo.getGroup,
-            this.repo.getGroupTasks
+            this.repo.getGroupTasks,
+            this.onTaskTerminal.bind(this)
           )
         } catch (err) {
           this.logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${err}`)
