@@ -167,7 +167,12 @@ export function resolveDependents(
 
         // Re-check block state with fresh data
         const { shouldBlock, blockedBy } = computeBlockState(task, {
-          logger: logger ?? { warn: console.warn, info: console.info, error: console.error },
+          logger: logger ?? {
+            warn: console.warn,
+            info: console.info,
+            error: console.error,
+            debug: console.debug
+          },
           listTasks: () => {
             // Build a fresh task list from all known epics
             const allTasks: SprintTask[] = []

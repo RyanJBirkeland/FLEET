@@ -11,6 +11,7 @@ export interface Logger {
   info(msg: string): void
   warn(msg: string): void
   error(msg: string): void
+  debug(msg: string): void
 }
 
 function ensureLogDir(): void {
@@ -80,6 +81,25 @@ export function createLogger(name: string): Logger {
     error: (m: string) => {
       console.error(`[${name}]`, m)
       fileLog('ERROR', name, m)
+    },
+    debug: (m: string) => {
+      console.debug(`[${name}]`, m)
+      fileLog('DEBUG', name, m)
     }
+  }
+}
+
+/**
+ * Logs an error with full context including stack trace.
+ * Logs message at error level and stack trace at debug level.
+ */
+export function logError(logger: Logger, context: string, err: unknown): void {
+  if (err instanceof Error) {
+    logger.error(`${context}: ${err.message}`)
+    if (err.stack) {
+      logger.debug(`Stack: ${err.stack.split('\n').slice(1, 4).join(' | ')}`)
+    }
+  } else {
+    logger.error(`${context}: ${String(err)}`)
   }
 }

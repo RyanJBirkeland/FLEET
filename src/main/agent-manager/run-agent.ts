@@ -1,5 +1,6 @@
 import type { ActiveAgent, AgentHandle } from './types'
 import type { Logger } from '../logger'
+import { logError } from '../logger'
 import { SPAWN_TIMEOUT_MS, LAST_OUTPUT_MAX_LENGTH } from './types'
 import { classifyExit } from './fast-fail'
 import { cleanupWorktree } from './worktree'
@@ -22,7 +23,6 @@ import type { AgentEvent, TaskDependency } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
 import { sanitizePlaygroundHtml } from '../playground-sanitize'
 import { TurnTracker } from './turn-tracker'
-import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 
 const execFile = promisify(execFileCb)
@@ -231,9 +231,7 @@ async function handleOAuthRefresh(logger: Logger): Promise<void> {
         logger.info('[agent-manager] OAuth token auto-refreshed from Keychain after auth failure')
     })
     .catch((err) => {
-      logger.warn(
-        `[agent-manager] Failed to auto-refresh OAuth token after auth failure: ${getErrorMessage(err)}`
-      )
+      logError(logger, '[agent-manager] Failed to auto-refresh OAuth token after auth failure', err)
     })
   logger.warn(`[agent-manager] Auth failure detected — OAuth token cache invalidated`)
 }
@@ -338,8 +336,8 @@ export async function consumeMessages(
       lastAgentOutput = result.lastAgentOutput
     }
   } catch (err) {
-    logger.error(`[agent-manager] Error consuming messages for task ${task.id}: ${err}`)
-    const errMsg = getErrorMessage(err)
+    logError(logger, `[agent-manager] Error consuming messages for task ${task.id}`, err)
+    const errMsg = err instanceof Error ? err.message : String(err)
     // Emit error event for console display
     emitAgentEvent(agentRunId, {
       type: 'agent:error',
@@ -467,8 +465,8 @@ export async function runAgent(
     } catch (cbErr) {
       logger.warn(`[agent-manager] onSpawnFailure hook threw: ${cbErr}`)
     }
-    logger.error(`[agent-manager] spawnAgent failed for task ${task.id}: ${err}`)
-    const errMsg = getErrorMessage(err)
+    logError(logger, `[agent-manager] spawnAgent failed for task ${task.id}`, err)
+    const errMsg = err instanceof Error ? err.message : String(err)
     // Emit agent:error event so the failure is visible in agent console
     emitAgentEvent(task.id, {
       type: 'agent:error',

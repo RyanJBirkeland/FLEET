@@ -1,5 +1,6 @@
 import type { AgentManagerConfig, ActiveAgent, SteerResult } from './types'
 import type { Logger } from '../logger'
+import { logError } from '../logger'
 import type { TaskDependency } from '../../shared/types'
 import {
   EXECUTOR_ID,
@@ -9,7 +10,6 @@ import {
   INITIAL_DRAIN_DEFER_MS,
   NOTES_MAX_LENGTH
 } from './types'
-import { getErrorMessage } from '../../shared/errors'
 import {
   makeConcurrencyState,
   setMaxSlots,
@@ -462,8 +462,8 @@ export class AgentManagerImpl implements AgentManager {
           logger: this.logger
         })
       } catch (err) {
-        const errMsg = getErrorMessage(err)
-        this.logger.error(`[agent-manager] setupWorktree failed for task ${task.id}: ${errMsg}`)
+        logError(this.logger, `[agent-manager] setupWorktree failed for task ${task.id}`, err)
+        const errMsg = err instanceof Error ? err.message : String(err)
         // For git errors, keep the tail of the message (contains key diagnostic info)
         const fullNote = `Worktree setup failed: ${errMsg}`
         const notes =
@@ -798,9 +798,7 @@ export class AgentManagerImpl implements AgentManager {
     // Wait for any in-flight drain to complete before aborting agents
     if (this._drainInFlight) {
       await this._drainInFlight.catch((err) => {
-        this.logger.warn(
-          `[agent-manager] Drain in-flight failed during shutdown: ${getErrorMessage(err)}`
-        )
+        logError(this.logger, '[agent-manager] Drain in-flight failed during shutdown', err)
       })
       this._drainInFlight = null
     }

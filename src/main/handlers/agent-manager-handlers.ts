@@ -7,9 +7,10 @@ import { safeHandle } from '../ipc-utils'
 import type { AgentManager } from '../agent-manager'
 import type { AgentManagerStatus } from '../../shared/types'
 import { getTask } from '../services/sprint-service'
-import { getErrorMessage } from '../../shared/errors'
+import { createLogger, logError } from '../logger'
 
 const execFileAsync = promisify(execFile)
+const log = createLogger('agent-manager-handlers')
 
 const STOPPED_STATUS: AgentManagerStatus = {
   running: false,
@@ -37,7 +38,8 @@ export function registerAgentManagerHandlers(am: AgentManager | undefined): void
       am.killAgent(taskId)
       return { ok: true }
     } catch (err) {
-      return { ok: false, error: getErrorMessage(err) }
+      logError(log, `[agent-manager:killAgent] failed for ${taskId}`, err)
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
 
@@ -87,7 +89,8 @@ export function registerAgentManagerHandlers(am: AgentManager | undefined): void
         await execFileAsync('git', ['commit', '-m', msg], { cwd, encoding: 'utf-8' })
         return { ok: true, committed: true }
       } catch (err) {
-        const raw = getErrorMessage(err)
+        logError(log, `[agent-manager:snapshot] git commit failed for ${taskId}`, err)
+        const raw = err instanceof Error ? err.message : String(err)
         // Friendly message when the agent is mid-write and git is holding
         // the index lock. The user can just retry.
         const friendly = /index\.lock/i.test(raw)

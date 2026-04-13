@@ -21,7 +21,12 @@ export interface TaskTerminalServiceDeps {
   getGroupsWithDependencies: () => Array<{ id: string; depends_on: EpicDependency[] | null }>
   listGroupTasks: (groupId: string) => SprintTask[]
   getSetting?: (key: string) => string | null
-  logger: { info: (msg: string) => void; warn: (msg: string) => void; error: (msg: string) => void }
+  logger: {
+    info: (msg: string) => void
+    warn: (msg: string) => void
+    error: (msg: string) => void
+    debug: (msg: string) => void
+  }
 }
 
 export interface TaskTerminalService {

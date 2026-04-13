@@ -15,10 +15,9 @@ import type { AgentMeta } from '../agent-history'
 import { spawnAdhocAgent, getAdhocHandle } from '../adhoc-agent'
 import { createReviewTaskFromAdhoc } from '../services/sprint-service'
 import { buildAgentEnv } from '../env-utils'
-import { createLogger } from '../logger'
+import { createLogger, logError } from '../logger'
 import type { SpawnLocalAgentArgs } from '../../shared/types'
 import type { AgentManager } from '../agent-manager'
-import { getErrorMessage } from '../../shared/errors'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 
 const execFileAsync = promisify(execFileCb)
@@ -63,7 +62,8 @@ export function registerAgentHandlers(am?: AgentManager): void {
           await adhocHandle.send(message, images)
           return { ok: true }
         } catch (err) {
-          return { ok: false, error: getErrorMessage(err) }
+          logError(log, '[agents:send] adhoc send failed', err)
+          return { ok: false, error: err instanceof Error ? err.message : String(err) }
         }
       }
       // Try local AgentManager
@@ -87,7 +87,7 @@ export function registerAgentHandlers(am?: AgentManager): void {
         am.killAgent(agentId)
         return { ok: true }
       } catch (err) {
-        log.warn(`[killAgent] exception for ${agentId}: ${getErrorMessage(err)}`)
+        logError(log, `[killAgent] exception for ${agentId}`, err)
         /* fall through */
       }
     }
@@ -190,8 +190,8 @@ export function registerAgentHandlers(am?: AgentManager): void {
         log.info(`[agents:promoteToReview] Promoted agent ${agentId} → sprint task ${task.id}`)
         return { ok: true, taskId: task.id }
       } catch (err) {
-        const msg = getErrorMessage(err)
-        log.error(`[agents:promoteToReview] failed: ${msg}`)
+        logError(log, '[agents:promoteToReview] failed', err)
+        const msg = err instanceof Error ? err.message : String(err)
         return { ok: false, error: msg }
       }
     }

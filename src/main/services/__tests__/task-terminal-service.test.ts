@@ -23,7 +23,7 @@ function makeDeps(overrides: Partial<TaskTerminalServiceDeps> = {}): TaskTermina
     getGroupsWithDependencies: vi.fn().mockReturnValue([]),
     listGroupTasks: vi.fn().mockReturnValue([]),
     getSetting: vi.fn().mockReturnValue(null),
-    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+    logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
     ...overrides
   }
 }

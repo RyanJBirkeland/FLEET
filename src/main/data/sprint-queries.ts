@@ -34,7 +34,8 @@ export type {
 let logger: Logger = {
   info: (m) => console.log(m),
   warn: (m) => console.warn(m),
-  error: (m) => console.error(m)
+  error: (m) => console.error(m),
+  debug: (m) => console.debug(m)
 }
 
 export function setSprintQueriesLogger(l: Logger): void {
