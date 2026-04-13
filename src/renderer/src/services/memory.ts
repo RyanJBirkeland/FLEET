@@ -22,7 +22,9 @@ export async function writeFile(path: string, content: string): Promise<void> {
   return window.api.writeMemoryFile(path, content)
 }
 
-export async function search(query: string): Promise<MemorySearchResult[]> {
+export async function search(
+  query: string
+): Promise<{ results: MemorySearchResult[]; timedOut: boolean }> {
   return window.api.searchMemory(query)
 }
 

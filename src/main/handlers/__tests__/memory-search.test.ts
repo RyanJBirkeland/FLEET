@@ -69,22 +69,25 @@ projects/foo.md:12:more test content`
       })
     )
 
-    expect(result).toEqual([
-      {
-        path: 'MEMORY.md',
-        matches: [
-          { line: 1, content: 'This is a test line' },
-          { line: 5, content: 'Another test match' }
-        ]
-      },
-      {
-        path: 'projects/foo.md',
-        matches: [
-          { line: 10, content: 'test result here' },
-          { line: 12, content: 'more test content' }
-        ]
-      }
-    ])
+    expect(result).toEqual({
+      timedOut: false,
+      results: [
+        {
+          path: 'MEMORY.md',
+          matches: [
+            { line: 1, content: 'This is a test line' },
+            { line: 5, content: 'Another test match' }
+          ]
+        },
+        {
+          path: 'projects/foo.md',
+          matches: [
+            { line: 10, content: 'test result here' },
+            { line: 12, content: 'more test content' }
+          ]
+        }
+      ]
+    })
   })
 
   it('returns empty array when no matches found', async () => {
@@ -105,7 +108,7 @@ projects/foo.md:12:more test content`
     const mockEvent = {} as IpcMainInvokeEvent
     const result = await searchHandler(mockEvent, 'nonexistent')
 
-    expect(result).toEqual([])
+    expect(result).toEqual({ results: [], timedOut: false })
   })
 
   it('throws error for grep failures other than no matches', async () => {
@@ -142,7 +145,7 @@ projects/foo.md:12:more test content`
     const mockEvent = {} as IpcMainInvokeEvent
     const result = await searchHandler(mockEvent, '')
 
-    expect(result).toEqual([])
+    expect(result).toEqual({ results: [], timedOut: false })
   })
 
   it('rejects query longer than 200 characters', async () => {
@@ -208,5 +211,48 @@ projects/foo.md:12:more test content`
       expect.any(Array),
       expect.objectContaining({ timeout: 5000 })
     )
+  })
+
+  it('returns timedOut:true when grep is killed due to timeout (killed=true)', async () => {
+    let searchHandler: any
+
+    vi.mocked(safeHandle).mockImplementation((channel, handler) => {
+      if (channel === 'memory:search') {
+        searchHandler = handler
+      }
+    })
+
+    const error: any = new Error('Process timeout')
+    error.killed = true
+    error.signal = 'SIGTERM'
+    mockExecFileAsync.mockRejectedValue(error)
+
+    registerMemorySearchHandler()
+
+    const mockEvent = {} as IpcMainInvokeEvent
+    const result = await searchHandler(mockEvent, 'something')
+
+    expect(result).toEqual({ results: [], timedOut: true })
+  })
+
+  it('returns timedOut:true when grep errors with ETIMEDOUT code', async () => {
+    let searchHandler: any
+
+    vi.mocked(safeHandle).mockImplementation((channel, handler) => {
+      if (channel === 'memory:search') {
+        searchHandler = handler
+      }
+    })
+
+    const error: any = new Error('ETIMEDOUT')
+    error.code = 'ETIMEDOUT'
+    mockExecFileAsync.mockRejectedValue(error)
+
+    registerMemorySearchHandler()
+
+    const mockEvent = {} as IpcMainInvokeEvent
+    const result = await searchHandler(mockEvent, 'something')
+
+    expect(result).toEqual({ results: [], timedOut: true })
   })
 })
