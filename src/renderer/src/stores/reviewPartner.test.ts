@@ -1,8 +1,19 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { useReviewPartnerStore } from './reviewPartner'
 
 describe('useReviewPartnerStore', () => {
+  const localStorageMock = {
+    getItem: vi.fn(() => null),
+    setItem: vi.fn(),
+    removeItem: vi.fn(),
+    clear: vi.fn(),
+    length: 0,
+    key: vi.fn()
+  }
+
   beforeEach(() => {
+    vi.stubGlobal('localStorage', localStorageMock)
+    vi.clearAllMocks()
     // Reset store state between tests
     useReviewPartnerStore.setState({
       panelOpen: false,
@@ -10,6 +21,10 @@ describe('useReviewPartnerStore', () => {
       messagesByTask: {},
       activeStreamByTask: {}
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   describe('panel toggle', () => {
@@ -23,7 +38,6 @@ describe('useReviewPartnerStore', () => {
 
   describe('clearMessages', () => {
     it('removes all messages for a task and persists the clear', () => {
-      const setItem = vi.spyOn(globalThis.localStorage, 'setItem')
       useReviewPartnerStore.setState({
         messagesByTask: {
           'task-1': [{ id: '1', role: 'user', content: 'x', timestamp: 0 }]
@@ -32,9 +46,10 @@ describe('useReviewPartnerStore', () => {
       useReviewPartnerStore.getState().clearMessages('task-1')
       expect(useReviewPartnerStore.getState().messagesByTask['task-1']).toEqual([])
       // Verify localStorage was touched with the cleared state
-      const calls = setItem.mock.calls.filter(([key]) => key === 'bde:review-partner-messages')
+      const calls = localStorageMock.setItem.mock.calls.filter(
+        ([key]) => key === 'bde:review-partner-messages'
+      )
       expect(calls.length).toBeGreaterThan(0)
-      setItem.mockRestore()
     })
   })
 })
