@@ -11,36 +11,12 @@ import {
   setupCSP
 } from './bootstrap'
 import icon from '../../resources/icon.png?asset'
-import { registerAgentHandlers } from './handlers/agent-handlers'
-import { registerGitHandlers } from './handlers/git-handlers'
-import { registerTerminalHandlers } from './handlers/terminal-handlers'
-import { registerConfigHandlers } from './handlers/config-handlers'
-import { registerWindowHandlers } from './handlers/window-handlers'
-import { registerSprintLocalHandlers } from './handlers/sprint-local'
-import { registerSprintExportHandlers } from './handlers/sprint-export-handlers'
-import { registerSprintBatchHandlers } from './handlers/sprint-batch-handlers'
-import { registerSprintRetryHandler } from './handlers/sprint-retry-handler'
-import { registerCostHandlers } from './handlers/cost-handlers'
-import { registerFsHandlers } from './fs'
-import { registerTemplateHandlers } from './handlers/template-handlers'
-import { registerAuthHandlers } from './handlers/auth-handlers'
-import { registerAgentManagerHandlers } from './handlers/agent-manager-handlers'
-import { registerWorkbenchHandlers } from './handlers/workbench'
-import { registerMemorySearchHandler } from './handlers/memory-search'
-import { registerIdeFsHandlers } from './handlers/ide-fs-handlers'
-import { registerDashboardHandlers } from './handlers/dashboard-handlers'
-import { registerSynthesizerHandlers } from './handlers/synthesizer-handlers'
-import { registerClaudeConfigHandlers } from './handlers/claude-config-handlers'
-import { registerReviewHandlers } from './handlers/review'
-import { registerReviewAssistantHandlers, buildChatStreamDeps } from './handlers/review-assistant'
+import { registerAllHandlers, type AppHandlerDeps } from './handlers/registry'
+import { buildChatStreamDeps } from './handlers/review-assistant'
 import { createReviewRepository } from './data/review-repository'
 import { createReviewService } from './services/review-service'
 import { runSdkOnce } from './sdk-streaming'
 import { getDb } from './db'
-import { registerWebhookHandlers } from './handlers/webhook-handlers'
-import { registerGroupHandlers } from './handlers/group-handlers'
-import { registerPlannerImportHandlers } from './handlers/planner-import'
-import { registerRepoDiscoveryHandlers } from './handlers/repo-discovery'
 import { closeDb } from './db'
 import { createAgentManager } from './agent-manager'
 import { createSprintTaskRepository } from './data/sprint-task-repository'
@@ -59,7 +35,6 @@ import { createElectronDialogService } from './dialog-service'
 import { getTask, updateTask } from './services/sprint-service'
 import { getGroup, getGroupTasks, getGroupsWithDependencies } from './data/task-group-queries'
 import {
-  registerTearoffHandlers,
   closeTearoffWindows,
   setQuitting,
   SHARED_WEB_PREFERENCES,
@@ -160,6 +135,7 @@ app.whenReady().then(() => {
   const autoStart = getSettingJson<boolean>('agentManager.autoStart') ?? true
 
   // Start agent manager immediately — auth is checked inside the drain loop
+  let agentManager: ReturnType<typeof createAgentManager> | undefined
   if (autoStart) {
     getOAuthToken()
 
@@ -182,41 +158,14 @@ app.whenReady().then(() => {
     })
     app.on('will-quit', () => statusServer.stop())
 
-    registerAgentHandlers(am)
-    registerAgentManagerHandlers(am)
-    registerWorkbenchHandlers(am)
-  } else {
-    registerAgentHandlers()
-    registerAgentManagerHandlers(undefined)
-    registerWorkbenchHandlers()
+    agentManager = am
   }
-
-  registerSynthesizerHandlers()
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
   })
 
-  registerConfigHandlers()
-  registerGitHandlers(terminalDeps)
-  registerTerminalHandlers()
-  registerWindowHandlers()
-  registerSprintLocalHandlers(terminalDeps)
-  registerSprintExportHandlers({ dialog: terminalDeps.dialog })
-  registerSprintBatchHandlers({ onStatusTerminal: terminalDeps.onStatusTerminal })
-  registerSprintRetryHandler()
-  registerCostHandlers()
-  registerTemplateHandlers()
-  registerFsHandlers()
-  registerIdeFsHandlers()
-  registerMemorySearchHandler()
-  registerAuthHandlers()
-  registerDashboardHandlers()
-  registerTearoffHandlers()
-  registerClaudeConfigHandlers()
-  registerReviewHandlers(terminalDeps)
-
-  // AI Review Partner
+  // AI Review Partner setup
   const reviewDb = getDb()
   const reviewRepo = createReviewRepository(reviewDb)
   const sprintTaskRepository = createSprintTaskRepository()
@@ -275,22 +224,23 @@ app.whenReady().then(() => {
   })
 
   const reviewActiveStreams = new Map<string, { close: () => void }>()
-  registerReviewAssistantHandlers({
-    reviewService,
-    chatStreamDeps: buildChatStreamDeps({
-      taskRepo: sprintTaskRepository,
-      reviewRepo,
-      getHeadCommitSha,
-      getBranch,
-      getDiff,
-      activeStreams: reviewActiveStreams
-    })
+  const reviewChatStreamDeps = buildChatStreamDeps({
+    taskRepo: sprintTaskRepository,
+    reviewRepo,
+    getHeadCommitSha,
+    getBranch,
+    getDiff,
+    activeStreams: reviewActiveStreams
   })
 
-  registerWebhookHandlers()
-  registerGroupHandlers()
-  registerPlannerImportHandlers({ dialog: dialogService })
-  registerRepoDiscoveryHandlers()
+  // Register all IPC handlers
+  const handlerDeps: AppHandlerDeps = {
+    agentManager,
+    terminalDeps,
+    reviewService,
+    reviewChatStreamDeps
+  }
+  registerAllHandlers(handlerDeps)
 
   setupCSP()
 

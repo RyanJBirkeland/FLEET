@@ -1,0 +1,104 @@
+import type { AgentManager } from '../agent-manager'
+import type { TaskTerminalService } from '../services/task-terminal-service'
+import type { DialogService } from '../dialog-service'
+import type { ReviewService } from '../services/review-service'
+import type { ChatStreamDeps } from './review-assistant'
+
+import { registerAgentHandlers } from './agent-handlers'
+import { registerGitHandlers } from './git-handlers'
+import { registerTerminalHandlers } from './terminal-handlers'
+import { registerConfigHandlers } from './config-handlers'
+import { registerWindowHandlers } from './window-handlers'
+import { registerSprintLocalHandlers } from './sprint-local'
+import { registerSprintExportHandlers } from './sprint-export-handlers'
+import { registerSprintBatchHandlers } from './sprint-batch-handlers'
+import { registerSprintRetryHandler } from './sprint-retry-handler'
+import { registerCostHandlers } from './cost-handlers'
+import { registerFsHandlers } from '../fs'
+import { registerTemplateHandlers } from './template-handlers'
+import { registerAuthHandlers } from './auth-handlers'
+import { registerAgentManagerHandlers } from './agent-manager-handlers'
+import { registerWorkbenchHandlers } from './workbench'
+import { registerMemorySearchHandler } from './memory-search'
+import { registerIdeFsHandlers } from './ide-fs-handlers'
+import { registerDashboardHandlers } from './dashboard-handlers'
+import { registerSynthesizerHandlers } from './synthesizer-handlers'
+import { registerClaudeConfigHandlers } from './claude-config-handlers'
+import { registerReviewHandlers } from './review'
+import { registerReviewAssistantHandlers } from './review-assistant'
+import { registerWebhookHandlers } from './webhook-handlers'
+import { registerGroupHandlers } from './group-handlers'
+import { registerPlannerImportHandlers } from './planner-import'
+import { registerRepoDiscoveryHandlers } from './repo-discovery'
+import { registerTearoffHandlers } from '../tearoff-manager'
+
+export interface TerminalDeps {
+  onStatusTerminal: TaskTerminalService['onStatusTerminal']
+  dialog: DialogService
+}
+
+export interface AppHandlerDeps {
+  agentManager?: AgentManager
+  terminalDeps: TerminalDeps
+  reviewService?: ReviewService
+  reviewChatStreamDeps?: ChatStreamDeps
+}
+
+/**
+ * Registers all IPC handlers for the application.
+ * Consolidates handler registration to reduce coupling in index.ts.
+ */
+export function registerAllHandlers(deps: AppHandlerDeps): void {
+  const { agentManager, terminalDeps, reviewService, reviewChatStreamDeps } = deps
+
+  // Agent-related handlers (conditional on agentManager presence)
+  if (agentManager) {
+    registerAgentHandlers(agentManager)
+    registerAgentManagerHandlers(agentManager)
+    registerWorkbenchHandlers(agentManager)
+  } else {
+    registerAgentHandlers()
+    registerAgentManagerHandlers(undefined)
+    registerWorkbenchHandlers()
+  }
+
+  registerSynthesizerHandlers()
+
+  // Core handlers
+  registerConfigHandlers()
+  registerGitHandlers(terminalDeps)
+  registerTerminalHandlers()
+  registerWindowHandlers()
+
+  // Sprint task handlers
+  registerSprintLocalHandlers(terminalDeps)
+  registerSprintExportHandlers({ dialog: terminalDeps.dialog })
+  registerSprintBatchHandlers({ onStatusTerminal: terminalDeps.onStatusTerminal })
+  registerSprintRetryHandler()
+
+  // Utility handlers
+  registerCostHandlers()
+  registerTemplateHandlers()
+  registerFsHandlers()
+  registerIdeFsHandlers()
+  registerMemorySearchHandler()
+  registerAuthHandlers()
+  registerDashboardHandlers()
+  registerTearoffHandlers()
+  registerClaudeConfigHandlers()
+
+  // Review handlers
+  registerReviewHandlers(terminalDeps)
+  if (reviewService && reviewChatStreamDeps) {
+    registerReviewAssistantHandlers({
+      reviewService,
+      chatStreamDeps: reviewChatStreamDeps
+    })
+  }
+
+  // Planning and discovery handlers
+  registerWebhookHandlers()
+  registerGroupHandlers()
+  registerPlannerImportHandlers({ dialog: terminalDeps.dialog })
+  registerRepoDiscoveryHandlers()
+}
