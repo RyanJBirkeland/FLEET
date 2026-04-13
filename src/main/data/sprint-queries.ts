@@ -310,34 +310,30 @@ export function createReviewTaskFromAdhoc(input: {
   worktreePath: string
   branch: string
 }): SprintTask | null {
-  try {
-    const db = getDb()
-    const result = db
-      .prepare(
-        `INSERT INTO sprint_tasks (title, repo, prompt, spec, status, worktree_path, started_at, completed_at)
-         VALUES (?, ?, ?, ?, 'review', ?, datetime('now'), NULL)
-         RETURNING *`
-      )
-      .get(
-        input.title,
-        input.repo,
-        input.spec, // prompt mirrors spec — keeps the agent's full task message accessible
-        input.spec,
-        input.worktreePath
-      ) as Record<string, unknown> | undefined
+  // Reuse createTask instead of duplicating INSERT logic
+  const task = createTask({
+    title: input.title,
+    repo: input.repo,
+    spec: input.spec,
+    prompt: input.spec, // prompt mirrors spec — keeps the agent's full task message accessible
+    status: 'review'
+  })
 
-    if (!result) return null
+  if (!task) return null
 
-    const task = mapRowToTask(result)
+  // Set fields not in the create allowlist (worktree_path, started_at)
+  const updated = updateTask(task.id, {
+    worktree_path: input.worktreePath,
+    started_at: nowIso()
+  })
+
+  if (updated) {
     logger.info(
-      `[sprint-queries] Promoted adhoc work to review task ${task.id} (branch ${input.branch})`
+      `[sprint-queries] Promoted adhoc work to review task ${updated.id} (branch ${input.branch})`
     )
-    return task
-  } catch (err) {
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] createReviewTaskFromAdhoc failed: ${msg}`)
-    return null
   }
+
+  return updated
 }
 
 export function updateTask(id: string, patch: Record<string, unknown>): SprintTask | null {
