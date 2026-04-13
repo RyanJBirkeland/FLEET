@@ -7,7 +7,7 @@ import { safeHandle } from '../ipc-utils'
 import { getTask, updateTask, deleteTask } from '../services/sprint-service'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
-import { validateTaskSpec } from './sprint-validation-helpers'
+import { validateTaskSpec } from '../services/spec-quality/index'
 import { TERMINAL_STATUSES } from '../../shared/task-state-machine'
 import { getSettingJson } from '../settings'
 
