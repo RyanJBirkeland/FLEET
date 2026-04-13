@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { VIEW_LABELS } from '../lib/view-registry'
 import type { View, DropZone } from '../lib/view-types'
+import { toast } from './toasts'
 
 // Re-export for backward compatibility
 export type { View, DropZone }
@@ -439,6 +440,7 @@ export const usePanelLayoutStore = create<PanelLayoutState>((set, get) => ({
     if (typeof window !== 'undefined' && window.api?.settings) {
       window.api.settings.setJson('panel.layout', null).catch((err) => {
         console.error('Failed to clear panel layout:', err)
+        toast.error('Settings save failed — changes may be lost on restart')
       })
     }
   },
@@ -537,6 +539,7 @@ function flushLayoutPersistence(): void {
   if (lastLayoutToSave && typeof window !== 'undefined' && window.api?.settings) {
     window.api.settings.setJson('panel.layout', lastLayoutToSave).catch((err) => {
       console.error('Failed to save panel layout:', err)
+      toast.error('Settings save failed — changes may be lost on restart')
     })
   }
 }

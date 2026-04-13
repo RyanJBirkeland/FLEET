@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { View } from './panelLayout'
+import { toast } from './toasts'
 
 const ALL_VIEWS: View[] = [
   'dashboard',
@@ -60,6 +61,7 @@ function persistPinned(views: View[]): void {
   // Verify this contract by reading src/preload/index.ts and src/main/handlers/config-handlers.ts
   window.api.settings.set('sidebar.pinnedViews', JSON.stringify(views)).catch((err) => {
     console.error('Failed to save pinned views:', err)
+    toast.error('Settings save failed — changes may be lost on restart')
   })
 }
 
