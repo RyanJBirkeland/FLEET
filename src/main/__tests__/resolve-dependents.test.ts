@@ -204,3 +204,78 @@ describe('resolveDependents', () => {
     expect(getTaskStatus('dep-1')).toBe('done')
   })
 })
+
+describe('cascade cancellation atomicity', () => {
+  it('calls runInTransaction once wrapping all updateTask calls', () => {
+    const transactionFn = vi.fn((fn: () => void) => fn())
+
+    const index = mockIndex({
+      getDependents: vi.fn((id: string) => {
+        if (id === 'dep-1') return new Set(['task-1', 'task-2'])
+        return new Set()
+      }),
+      areDependenciesSatisfied: vi
+        .fn()
+        .mockReturnValue({ satisfied: false, blockedBy: ['dep-1'] })
+    })
+
+    const task1 = mockTask({ id: 'task-1', status: 'blocked', depends_on: [{ id: 'dep-1', type: 'hard' }] })
+    const task2 = mockTask({ id: 'task-2', status: 'blocked', depends_on: [{ id: 'dep-1', type: 'hard' }] })
+    const getTask = vi.fn((id: string) => {
+      if (id === 'task-1') return task1
+      if (id === 'task-2') return task2
+      if (id === 'dep-1') return mockTask({ id: 'dep-1', status: 'failed', title: 'dep-1', depends_on: [] })
+      return null
+    })
+    const updateTask = vi.fn()
+
+    resolveDependents(
+      'dep-1',
+      'failed',       // trigger cascade
+      index,
+      getTask,
+      updateTask,
+      undefined,
+      () => 'cancel', // getSetting returns 'cancel'
+      undefined,
+      undefined,
+      undefined,
+      transactionFn   // new parameter
+    )
+
+    // Transaction wrapper should be called once for the entire cascade
+    expect(transactionFn).toHaveBeenCalledTimes(1)
+  })
+
+  it('leaves db consistent when one updateTask throws midway', () => {
+    const rollbackCalled = { value: false }
+    const transactionFn = vi.fn((fn: () => void) => {
+      try {
+        fn()
+      } catch {
+        rollbackCalled.value = true
+        throw new Error('Transaction rolled back')
+      }
+    })
+
+    const index = mockIndex({
+      getDependents: vi.fn(() => new Set(['task-1', 'task-2']))
+    })
+
+    const getTask = vi.fn((id: string) => {
+      if (id === 'dep-1') return mockTask({ id: 'dep-1', status: 'failed', title: 'dep-1', depends_on: [] })
+      return mockTask({ id, status: 'blocked', depends_on: [{ id: 'dep-1', type: 'hard' }], notes: null })
+    })
+    let callCount = 0
+    const updateTask = vi.fn(() => {
+      callCount++
+      if (callCount === 2) throw new Error('DB error on task-2')
+    })
+
+    expect(() =>
+      resolveDependents('dep-1', 'failed', index, getTask, updateTask, undefined, () => 'cancel', undefined, undefined, undefined, transactionFn)
+    ).toThrow('Transaction rolled back')
+
+    expect(rollbackCalled.value).toBe(true)
+  })
+})
