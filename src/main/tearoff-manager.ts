@@ -12,6 +12,7 @@ import { randomUUID } from 'crypto'
 import { getSetting, getSettingJson, setSettingJson } from './settings'
 import { createLogger } from './logger'
 import { CURSOR_POLL_INTERVAL_MS, CROSS_WINDOW_DRAG_TIMEOUT_MS } from './constants'
+import { safeHandle } from './ipc-utils'
 
 const logger = createLogger('tearoff-manager')
 
@@ -458,7 +459,7 @@ export function cancelActiveDrag(): void {
 
 export function registerTearoffHandlers(): void {
   // tearoff:create — renderer requests a new tear-off window
-  ipcMain.handle(
+  safeHandle(
     'tearoff:create',
     (
       _event,
@@ -524,7 +525,7 @@ export function registerTearoffHandlers(): void {
   // tearoff:closeConfirmed — tear-off window sends its close-dialog action back to the
   // main process. Routes to the per-window dynamic response channel that handleCloseRequest
   // is listening on via ipcMain.once.
-  ipcMain.handle(
+  safeHandle(
     'tearoff:closeConfirmed',
     (event, payload: { action: 'return' | 'close'; remember: boolean }) => {
       // Identify which tear-off window sent this response
@@ -550,7 +551,7 @@ export function registerTearoffHandlers(): void {
   )
 
   // tearoff:startCrossWindowDrag — renderer initiates a cross-window drag
-  ipcMain.handle(
+  safeHandle(
     'tearoff:startCrossWindowDrag',
     (_event, payload: { windowId: string; viewKey: string }) => {
       return handleStartCrossWindowDrag(payload.windowId, payload.viewKey)
