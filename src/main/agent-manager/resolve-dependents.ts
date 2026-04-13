@@ -38,7 +38,8 @@ export function resolveDependents(
   epicIndex?: EpicDependencyIndex,
   getGroup?: (id: string) => TaskGroup | null,
   listGroupTasks?: (groupId: string) => SprintTask[],
-  onTaskTerminal?: (taskId: string, status: string) => void
+  onTaskTerminal?: (taskId: string, status: string) => void,
+  runInTransaction?: (fn: () => void) => void
 ): void {
   // Guard: only process terminal statuses — calling with active/queued/blocked
   // produces nonsensical cascade-cancel and satisfaction results.
@@ -56,77 +57,95 @@ export function resolveDependents(
   const cascadeBehavior = getSetting?.('dependency.cascadeBehavior') ?? 'continue'
   const shouldCascadeCancel = cascadeBehavior === 'cancel' && FAILURE_STATUSES.has(completedStatus)
 
-  for (const depId of dependents) {
-    try {
-      const task = getTask(depId)
-      if (!task || task.status !== 'blocked') continue
-      if (!task.depends_on || task.depends_on.length === 0) continue
+  // Process a single dependent. When shouldCascadeCancel is true and the dependent has
+  // a hard dep on the failed task, cancel it. Otherwise fall through to normal unblocking.
+  const processDependent = (depId: string): void => {
+    const task = getTask(depId)
+    if (!task || task.status !== 'blocked') return
+    if (!task.depends_on || task.depends_on.length === 0) return
 
-      // Build a status cache; seed with the task we just completed so we
-      // don't need a redundant DB round-trip for it.
-      const statusCache = new Map<string, string | undefined>()
-      statusCache.set(completedTaskId, completedStatus)
-
-      for (const dep of task.depends_on) {
-        if (!statusCache.has(dep.id)) {
-          const depTask = getTask(dep.id)
-          statusCache.set(dep.id, depTask?.status)
-        }
+    // Build a status cache; seed with the task we just completed so we
+    // don't need a redundant DB round-trip for it.
+    const statusCache = new Map<string, string | undefined>()
+    statusCache.set(completedTaskId, completedStatus)
+    for (const dep of task.depends_on) {
+      if (!statusCache.has(dep.id)) {
+        const depTask = getTask(dep.id)
+        statusCache.set(dep.id, depTask?.status)
       }
+    }
 
-      // Check if this task has a hard dependency on the failed task
-      const hasHardDepOnFailed = task.depends_on.some(
-        (dep) => dep.id === completedTaskId && dep.type === 'hard'
-      )
+    // Check if this task has a hard dependency on the failed task
+    const hasHardDepOnFailed = task.depends_on.some(
+      (dep) => dep.id === completedTaskId && dep.type === 'hard'
+    )
 
-      // If cascade cancel is enabled and this task has a hard dep on the failed task, cancel it
-      if (shouldCascadeCancel && hasHardDepOnFailed) {
-        const failedTask = getTask(completedTaskId)
-        const failedTitle = failedTask?.title ?? completedTaskId
-        const cancelNote = `[auto-cancel] Upstream task "${failedTitle}" failed`
-        updateTask(depId, { status: 'cancelled', notes: cancelNote })
-        // Notify terminal listeners so dependents of this cancelled task are resolved
-        try {
-          onTaskTerminal?.(depId, 'cancelled')
-        } catch (err) {
-          ;(logger ?? console).warn(
-            `[resolve-dependents] onTaskTerminal threw for ${depId}: ${err}`
-          )
-        }
-
-        // Recursively cancel this task's blocked dependents
-        resolveDependents(
-          depId,
-          'cancelled',
-          index,
-          getTask,
-          updateTask,
-          logger,
-          getSetting,
-          epicIndex,
-          getGroup,
-          listGroupTasks,
-          onTaskTerminal
+    // If cascade cancel is enabled and this task has a hard dep on the failed task, cancel it
+    if (shouldCascadeCancel && hasHardDepOnFailed) {
+      const failedTask = getTask(completedTaskId)
+      const failedTitle = failedTask?.title ?? completedTaskId
+      const cancelNote = `[auto-cancel] Upstream task "${failedTitle}" failed`
+      updateTask(depId, { status: 'cancelled', notes: cancelNote })
+      // Notify terminal listeners so dependents of this cancelled task are resolved
+      try {
+        onTaskTerminal?.(depId, 'cancelled')
+      } catch (err) {
+        ;(logger ?? console).warn(
+          `[resolve-dependents] onTaskTerminal threw for ${depId}: ${err}`
         )
-        continue
       }
-
-      const { satisfied, blockedBy } = index.areDependenciesSatisfied(
+      // Recursively cancel this task's blocked dependents — pass runInTransaction
+      // so nested cascades are also wrapped in the outer transaction
+      resolveDependents(
         depId,
-        task.depends_on,
-        (id) => statusCache.get(id)
+        'cancelled',
+        index,
+        getTask,
+        updateTask,
+        logger,
+        getSetting,
+        epicIndex,
+        getGroup,
+        listGroupTasks,
+        onTaskTerminal,
+        runInTransaction
       )
+      return
+    }
 
-      if (satisfied) {
-        // Unblock the task (keep existing notes as-is)
-        updateTask(depId, { status: 'queued' })
-      } else if (blockedBy.length > 0) {
-        // Update blocking notes with current blocking dependencies, preserving user notes
-        const currentTask = getTask(depId)
-        updateTask(depId, { notes: buildBlockedNotes(blockedBy, currentTask?.notes ?? null) })
+    const { satisfied, blockedBy } = index.areDependenciesSatisfied(
+      depId,
+      task.depends_on,
+      (id) => statusCache.get(id)
+    )
+
+    if (satisfied) {
+      // Unblock the task (keep existing notes as-is)
+      updateTask(depId, { status: 'queued' })
+    } else if (blockedBy.length > 0) {
+      // Update blocking notes with current blocking dependencies, preserving user notes
+      const currentTask = getTask(depId)
+      updateTask(depId, { notes: buildBlockedNotes(blockedBy, currentTask?.notes ?? null) })
+    }
+  }
+
+  if (shouldCascadeCancel && runInTransaction) {
+    // Cascade path with transaction: wrap the entire loop atomically so
+    // partial-cancel failures roll back the whole batch.
+    const runCascadeLoop = (): void => {
+      for (const depId of dependents) {
+        processDependent(depId)
       }
-    } catch (err) {
-      ;(logger ?? console).warn(`[resolve-dependents] Error resolving dependent ${depId}: ${err}`)
+    }
+    runInTransaction(runCascadeLoop)
+  } else {
+    // Non-cascade or no transaction: per-dependent try/catch for fault isolation
+    for (const depId of dependents) {
+      try {
+        processDependent(depId)
+      } catch (err) {
+        ;(logger ?? console).warn(`[resolve-dependents] Error resolving dependent ${depId}: ${err}`)
+      }
     }
   }
 

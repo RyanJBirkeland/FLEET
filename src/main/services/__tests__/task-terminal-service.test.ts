@@ -70,7 +70,8 @@ describe('createTaskTerminalService', () => {
       deps.getSetting,
       expect.anything(), // epicIndex
       deps.getGroup,
-      deps.listGroupTasks
+      deps.listGroupTasks,
+      undefined // runInTransaction (not provided by default)
     )
   })
 
@@ -161,7 +162,8 @@ describe('createTaskTerminalService', () => {
       deps.getSetting,
       expect.anything(),
       deps.getGroup,
-      deps.listGroupTasks
+      deps.listGroupTasks,
+      undefined // runInTransaction (not provided by default)
     )
   })
 
