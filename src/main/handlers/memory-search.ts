@@ -5,6 +5,9 @@ import { safeHandle } from '../ipc-utils'
 import { promisify } from 'util'
 import { execFile } from 'child_process'
 import { BDE_MEMORY_DIR } from '../paths'
+import { createLogger } from '../logger'
+
+const logger = createLogger('memory-search')
 
 const execFileAsync = promisify(execFile)
 
@@ -31,6 +34,7 @@ export interface MemorySearchResponse {
 async function searchMemory(query: string): Promise<MemorySearchResponse> {
   // Input validation
   if (typeof query !== 'string' || query.length > 200) {
+    logger.warn('memory:search query rejected: exceeds 200 char limit')
     throw new Error('Query must be a string of 200 characters or fewer')
   }
 
@@ -39,7 +43,14 @@ async function searchMemory(query: string): Promise<MemorySearchResponse> {
   }
 
   // Strip catastrophic backtracking patterns
-  const safeQuery = query.replace(/(\(\?:.*\))[+*]/g, '').replace(/\([^)]*\)[+*]{2,}/g, '')
+  const safeQuery = query
+    .replace(/(\(\?:.*\))[+*]/g, '') // non-capturing groups with quantifiers
+    .replace(/\([^)]*\)[+*]{2,}/g, '') // groups with multiple sequential quantifiers
+    .replace(/\([^)]*[+*|][^)]*\)[+*{]/g, '') // capturing groups with nested quantifiers
+
+  if (safeQuery !== query) {
+    logger.warn('memory:search: stripped dangerous backtracking patterns from query')
+  }
 
   try {
     const { stdout } = await execFileAsync('grep', ['-rni', '--', safeQuery, '.'], {
@@ -86,6 +97,7 @@ async function searchMemory(query: string): Promise<MemorySearchResponse> {
 
     // execFile with timeout option kills the process with SIGTERM and sets killed=true
     if (error.killed === true || error.signal === 'SIGTERM' || error.code === 'ETIMEDOUT') {
+      logger.warn('memory:search: grep timed out, returning empty results')
       return { results: [], timedOut: true }
     }
 

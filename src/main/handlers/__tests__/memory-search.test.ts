@@ -190,6 +190,29 @@ projects/foo.md:12:more test content`
     expect(queryArg).not.toBe('(?:a+)+')
   })
 
+  it('strips capturing groups with nested quantifiers (e.g. (a+)+) from query', async () => {
+    let searchHandler: any
+
+    vi.mocked(safeHandle).mockImplementation((channel, handler) => {
+      if (channel === 'memory:search') {
+        searchHandler = handler
+      }
+    })
+
+    mockExecFileAsync.mockResolvedValue({ stdout: '' })
+
+    registerMemorySearchHandler()
+
+    const mockEvent = {} as IpcMainInvokeEvent
+    // Pattern with nested quantifier in capturing group: (a+)+ → dangerous, strip
+    await searchHandler(mockEvent, '(a+)+b')
+
+    // The safeQuery passed to grep should NOT contain the original dangerous pattern
+    const calledWith = mockExecFileAsync.mock.calls[0]
+    const queryArg = calledWith[1][2] // grep args: ['-rni', '--', query, '.']
+    expect(queryArg).not.toBe('(a+)+b')
+  })
+
   it('applies a 5-second timeout to the grep call', async () => {
     let searchHandler: any
 
