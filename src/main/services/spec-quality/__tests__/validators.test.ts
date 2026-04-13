@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { SpecParser } from '../spec-parser'
 import { RequiredSectionsValidator } from '../validators/required-sections-validator'
 import { FilePathsValidator } from '../validators/file-paths-validator'
@@ -6,6 +6,8 @@ import { NumberedStepsValidator } from '../validators/numbered-steps-validator'
 import { BannedPhrasesValidator } from '../validators/banned-phrases-validator'
 import { SizeWarningsValidator } from '../validators/size-warnings-validator'
 import { SpecQualityService } from '../spec-quality-service'
+import type { IAsyncSpecValidator } from '../../../../shared/spec-quality/interfaces'
+import type { ParsedSpec } from '../../../../shared/spec-quality/types'
 
 const parser = new SpecParser()
 
@@ -247,5 +249,68 @@ describe('SpecQualityService.validateStructural', () => {
     const result = service.validateStructural(spec)
     expect(result.valid).toBe(true)
     expect(result.warnings.some(w => w.code === 'SPEC_TOO_LONG')).toBe(true)
+  })
+})
+
+describe('SpecQualityService.validateFull — async validator integration', () => {
+  const syncValidators = [
+    new RequiredSectionsValidator(),
+    new FilePathsValidator(),
+    new NumberedStepsValidator(),
+    new BannedPhrasesValidator(),
+    new SizeWarningsValidator(),
+  ]
+
+  it('skips async validators when structural validation has errors', async () => {
+    const mockAsyncValidator: IAsyncSpecValidator = {
+      validate: vi.fn().mockResolvedValue([]),
+    }
+
+    const service = new SpecQualityService(parser, syncValidators, [mockAsyncValidator])
+
+    // Spec with missing required sections triggers structural errors
+    const result = await service.validateFull('## Overview\nSomething.')
+
+    expect(result.valid).toBe(false)
+    expect(result.prescriptivenessChecked).toBe(false)
+    expect(mockAsyncValidator.validate).not.toHaveBeenCalled()
+  })
+
+  it('sets prescriptivenessChecked to true after validateFull completes on a valid spec', async () => {
+    const mockAsyncValidator: IAsyncSpecValidator = {
+      validate: vi.fn().mockResolvedValue([]),
+    }
+
+    const service = new SpecQualityService(parser, syncValidators, [mockAsyncValidator])
+
+    const result = await service.validateFull(VALID_SPEC)
+
+    expect(result.prescriptivenessChecked).toBe(true)
+    expect(mockAsyncValidator.validate).toHaveBeenCalledOnce()
+    // Verify it was called with a ParsedSpec
+    const callArg = (mockAsyncValidator.validate as ReturnType<typeof vi.fn>).mock
+      .calls[0][0] as ParsedSpec
+    expect(callArg.sections.length).toBeGreaterThan(0)
+  })
+
+  it('includes async issues in the final result', async () => {
+    const mockAsyncValidator: IAsyncSpecValidator = {
+      validate: vi.fn().mockResolvedValue([
+        {
+          code: 'STEP_REQUIRES_DESIGN_DECISION' as const,
+          severity: 'warning' as const,
+          message: 'Spec may require design decisions: Step 2 asks agent to choose an approach.',
+        },
+      ]),
+    }
+
+    const service = new SpecQualityService(parser, syncValidators, [mockAsyncValidator])
+
+    const result = await service.validateFull(VALID_SPEC)
+
+    expect(result.prescriptivenessChecked).toBe(true)
+    expect(result.warnings.some(w => w.code === 'STEP_REQUIRES_DESIGN_DECISION')).toBe(true)
+    // Warnings don't invalidate the result
+    expect(result.valid).toBe(true)
   })
 })

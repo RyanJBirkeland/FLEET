@@ -5,6 +5,7 @@ import { FilePathsValidator } from './validators/file-paths-validator'
 import { NumberedStepsValidator } from './validators/numbered-steps-validator'
 import { BannedPhrasesValidator } from './validators/banned-phrases-validator'
 import { SizeWarningsValidator } from './validators/size-warnings-validator'
+import { PrescriptivenessValidator } from './validators/prescriptiveness-validator'
 
 /** Composition root — only place concrete class names appear outside tests */
 export function createSpecQualityService(): SpecQualityService {
@@ -17,6 +18,6 @@ export function createSpecQualityService(): SpecQualityService {
       new BannedPhrasesValidator(),
       new SizeWarningsValidator(),
     ],
-    [] // async validators added in next task
+    [new PrescriptivenessValidator()]
   )
 }
