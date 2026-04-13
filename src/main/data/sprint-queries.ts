@@ -792,18 +792,18 @@ export function updateTaskMergeableState(prNumber: number, mergeableState: strin
   if (!mergeableState) return
   try {
     const db = getDb()
-    // F-t3-audit-trail-1: record pr_mergeable_state changes in the audit trail.
-    // Read all affected tasks first so we can capture the old value per task.
-    const sql = `SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks WHERE pr_number = ?`
-    const affected = db.prepare(sql).all(prNumber) as Array<Record<string, unknown>>
+    db.transaction(() => {
+      // F-t3-audit-trail-1: record pr_mergeable_state changes in the audit trail.
+      // Read all affected tasks first so we can capture the old value per task.
+      const sql = `SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks WHERE pr_number = ?`
+      const affected = db.prepare(sql).all(prNumber) as Array<Record<string, unknown>>
 
-    db.prepare('UPDATE sprint_tasks SET pr_mergeable_state = ? WHERE pr_number = ?').run(
-      mergeableState,
-      prNumber
-    )
+      db.prepare('UPDATE sprint_tasks SET pr_mergeable_state = ? WHERE pr_number = ?').run(
+        mergeableState,
+        prNumber
+      )
 
-    for (const oldTask of affected) {
-      try {
+      for (const oldTask of affected) {
         recordTaskChanges(
           oldTask.id as string,
           oldTask,
@@ -811,14 +811,8 @@ export function updateTaskMergeableState(prNumber: number, mergeableState: strin
           'pr-poller',
           db
         )
-      } catch (auditErr) {
-        // Audit failure is non-fatal here — the state update already committed.
-        // Log a warning so the gap is visible without blocking the poller.
-        logger.warn(
-          `[sprint-queries] updateTaskMergeableState: audit record failed for task ${oldTask.id as string}: ${auditErr}`
-        )
       }
-    }
+    })()
   } catch (err) {
     // DL-17: Standardize error message format
     const msg = getErrorMessage(err)

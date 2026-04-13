@@ -869,3 +869,22 @@ describe('updateTaskMergeableState — audit trail (F-t3-audit-trail-1)', () => 
     expect(mockRecordTaskChanges).not.toHaveBeenCalled()
   })
 })
+
+// F-t3-audit-trail-2: updateTaskMergeableState audit atomicity
+describe('updateTaskMergeableState — audit atomicity (F-t3-audit-trail-2)', () => {
+  it('rolls back pr_mergeable_state update when recordTaskChanges throws', () => {
+    insertTask({ id: 'merge-atomic-1', pr_number: 99 })
+
+    // Make the per-task audit writer throw
+    mockRecordTaskChanges.mockImplementationOnce(() => {
+      throw new Error('audit DB write failed')
+    })
+
+    // The outer function swallows errors — transaction should have rolled back
+    updateTaskMergeableState(99, 'dirty')
+
+    // pr_mergeable_state must still be null — the UPDATE was rolled back with the audit failure
+    const task = getTask('merge-atomic-1')!
+    expect(task.pr_mergeable_state).toBeNull()
+  })
+})
