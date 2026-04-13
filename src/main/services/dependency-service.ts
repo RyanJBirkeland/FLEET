@@ -82,6 +82,27 @@ export function createDependencyIndex(): DependencyIndex {
     getDependents(taskId) {
       return reverseMap.get(taskId) ?? new Set()
     },
+    /**
+     * Determine whether a task's dependencies are all satisfied.
+     *
+     * Semantics by dependency type / condition:
+     *
+     * - **hard** (no condition set): upstream must be in `HARD_SATISFIED_STATUSES`
+     *   (currently only `'done'`). A failed/cancelled/errored hard dependency
+     *   keeps the downstream task blocked indefinitely.
+     *
+     * - **soft** (no condition set): upstream must be in `TERMINAL_STATUSES`
+     *   (`done`, `cancelled`, `failed`, `error`). The downstream task unblocks
+     *   regardless of whether the upstream succeeded or failed — "unblock on any
+     *   terminal outcome".
+     *
+     * - **condition: 'on_success'**: equivalent to hard — upstream must be `done`.
+     * - **condition: 'on_failure'**: upstream must be in `FAILURE_STATUSES`.
+     * - **condition: 'always'**: upstream must be in `TERMINAL_STATUSES` (same as soft).
+     *
+     * Deleted upstream tasks (status `undefined`) are treated as satisfied to avoid
+     * permanently blocking downstream tasks when an upstream task is removed.
+     */
     areDependenciesSatisfied(_taskId, deps, getTaskStatus) {
       if (deps.length === 0) return { satisfied: true, blockedBy: [] }
       const blockedBy: string[] = []

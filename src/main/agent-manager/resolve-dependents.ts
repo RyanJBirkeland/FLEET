@@ -4,7 +4,8 @@ import {
   type DependencyIndex,
   buildBlockedNotes,
   computeBlockState,
-  FAILURE_STATUSES
+  FAILURE_STATUSES,
+  TERMINAL_STATUSES
 } from '../services/dependency-service'
 import type { EpicDependencyIndex } from '../services/epic-dependency-service'
 
@@ -36,8 +37,18 @@ export function resolveDependents(
   getSetting?: (key: string) => string | null,
   epicIndex?: EpicDependencyIndex,
   getGroup?: (id: string) => TaskGroup | null,
-  listGroupTasks?: (groupId: string) => SprintTask[]
+  listGroupTasks?: (groupId: string) => SprintTask[],
+  onTaskTerminal?: (taskId: string, status: string) => void
 ): void {
+  // Guard: only process terminal statuses — calling with active/queued/blocked
+  // produces nonsensical cascade-cancel and satisfaction results.
+  if (!TERMINAL_STATUSES.has(completedStatus)) {
+    logger?.warn(
+      `[resolve-dependents] Called with non-terminal status "${completedStatus}" for task ${completedTaskId} — skipping`
+    )
+    return
+  }
+
   const dependents = index.getDependents(completedTaskId)
   if (dependents.size === 0) return
 
@@ -74,6 +85,14 @@ export function resolveDependents(
         const failedTitle = failedTask?.title ?? completedTaskId
         const cancelNote = `[auto-cancel] Upstream task "${failedTitle}" failed`
         updateTask(depId, { status: 'cancelled', notes: cancelNote })
+        // Notify terminal listeners so dependents of this cancelled task are resolved
+        try {
+          onTaskTerminal?.(depId, 'cancelled')
+        } catch (err) {
+          ;(logger ?? console).warn(
+            `[resolve-dependents] onTaskTerminal threw for ${depId}: ${err}`
+          )
+        }
 
         // Recursively cancel this task's blocked dependents
         resolveDependents(
@@ -86,7 +105,8 @@ export function resolveDependents(
           getSetting,
           epicIndex,
           getGroup,
-          listGroupTasks
+          listGroupTasks,
+          onTaskTerminal
         )
         continue
       }

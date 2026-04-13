@@ -273,7 +273,14 @@ export function reorderGroupTasks(
 }
 
 /**
- * Add an epic dependency to a group.
+ * Persist a new epic dependency edge to the database.
+ *
+ * IMPORTANT: Cycle detection MUST be performed BEFORE calling this function.
+ * Use `detectEpicCycle()` from `src/main/services/epic-dependency-service.ts`.
+ * All callers must go through the `groups:addDependency` IPC handler in
+ * `src/main/handlers/group-handlers.ts`, which enforces this invariant.
+ * Direct calls to this function that bypass cycle detection can corrupt the
+ * epic dependency graph.
  */
 export function addGroupDependency(
   groupId: string,
