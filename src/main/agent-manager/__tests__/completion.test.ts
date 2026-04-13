@@ -459,6 +459,36 @@ describe('resolveSuccess', () => {
     )
   })
 
+  it('skips commit when working directory is clean', async () => {
+    mockExecFileSequence([
+      { stdout: 'agent/add-login-page\n' }, // git rev-parse
+      { stdout: '' }, // git status --porcelain (clean — no uncommitted changes)
+      { stdout: '' }, // git fetch origin main
+      { stdout: '' }, // git rebase origin/main
+      { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
+      { stdout: '1\n' } // git rev-list --count (has prior commits)
+    ])
+
+    await resolveSuccess(opts, noopLogger)
+
+    const calls = getCustomMock().mock.calls as Array<[string, string[], unknown]>
+
+    // Verify git commit was NOT called
+    const commitCall = calls.find(
+      (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('commit')
+    )
+    expect(commitCall).toBeUndefined()
+
+    // Task should still transition to review
+    expect(updateTaskMock).toHaveBeenCalledWith(opts.taskId, {
+      status: 'review',
+      worktree_path: opts.worktreePath,
+      claimed_by: null,
+      rebase_base_sha: 'abc123',
+      rebased_at: expect.any(String)
+    })
+  })
+
   it('sets task to error and calls onTaskTerminal when branch name is empty', async () => {
     mockExecFileSequence([
       { stdout: '' } // git rev-parse returns empty string
