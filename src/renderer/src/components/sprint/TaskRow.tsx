@@ -3,7 +3,7 @@ import { motion } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
-import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
+import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useSprintUI } from '../../stores/sprintUI'
 
 import './TaskRow.css'
@@ -19,7 +19,7 @@ function TaskRowInner({ task, selected, onClick }: TaskRowProps): React.JSX.Elem
 
   // Trigger re-render every 10s for active tasks to update elapsed time
   const isActive = task.status === 'active' && !!task.started_at
-  useVisibilityAwareInterval(() => setTick((t) => t + 1), isActive ? 10_000 : null)
+  useBackoffInterval(() => setTick((t) => t + 1), isActive ? 10_000 : null)
 
   const elapsed = task.status === 'active' && task.started_at ? formatElapsed(task.started_at) : ''
 

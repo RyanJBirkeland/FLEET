@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useAgentHistoryStore } from '../stores/agentHistory'
-import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useBackoffInterval } from './useBackoffInterval'
 import { POLL_SESSIONS_INTERVAL } from '../lib/constants'
 
 export function useAgentSessionPolling(): void {
@@ -10,5 +10,5 @@ export function useAgentSessionPolling(): void {
     fetchAgents()
   }, [fetchAgents])
 
-  useVisibilityAwareInterval(fetchAgents, POLL_SESSIONS_INTERVAL)
+  useBackoffInterval(fetchAgents, POLL_SESSIONS_INTERVAL)
 }

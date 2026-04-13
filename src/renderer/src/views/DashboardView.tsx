@@ -7,7 +7,6 @@ import { useDashboardDataStore } from '../stores/dashboardData'
 import { useSprintUI, type StatusFilter } from '../stores/sprintUI'
 import { usePanelLayoutStore } from '../stores/panelLayout'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
-import { useVisibilityAwareInterval } from '../hooks/useVisibilityAwareInterval'
 import { useBackoffInterval } from '../hooks/useBackoffInterval'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION } from '../lib/motion'
 import { POLL_LOAD_AVERAGE } from '../lib/constants'
@@ -32,7 +31,7 @@ import { ErrorBoundary } from '../components/ui/ErrorBoundary'
  */
 function FreshnessLabel({ lastFetchedAt }: { lastFetchedAt: number }): React.JSX.Element | null {
   const [now, setNow] = useState(() => Date.now())
-  useVisibilityAwareInterval(() => setNow(Date.now()), 10_000)
+  useBackoffInterval(() => setNow(Date.now()), 10_000)
   const ago = Math.floor((now - lastFetchedAt) / 1000)
   if (ago < 0) return null
   const text = ago < 10 ? 'just now' : ago < 60 ? `${ago}s ago` : `${Math.floor(ago / 60)}m ago`

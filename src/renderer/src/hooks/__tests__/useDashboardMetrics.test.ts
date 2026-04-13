@@ -21,9 +21,9 @@ vi.mock('../../stores/dashboardData', () => ({
   )
 }))
 
-// Mock useVisibilityAwareInterval to prevent timer side-effects
-vi.mock('../useVisibilityAwareInterval', () => ({
-  useVisibilityAwareInterval: vi.fn()
+// Mock useBackoffInterval to prevent timer side-effects
+vi.mock('../useBackoffInterval', () => ({
+  useBackoffInterval: vi.fn()
 }))
 
 import { useDashboardMetrics } from '../useDashboardMetrics'

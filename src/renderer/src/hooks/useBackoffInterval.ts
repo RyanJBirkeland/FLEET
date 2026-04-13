@@ -15,16 +15,14 @@ interface BackoffOptions {
  * - if callback throws/rejects, interval increases by backoffFactor (up to maxMs)
  * - on success, interval resets to baseMs + random jitter
  * - pauses when document is hidden, fires soon after becoming visible
+ * - pass null for baseMs to disable the interval entirely
  */
 export function useBackoffInterval(
   callback: () => void | Promise<void>,
-  baseMs: number,
+  baseMs: number | null,
   options: BackoffOptions = {}
 ): void {
-  const { maxMs = baseMs * 5, jitterMs = Math.round(baseMs * 0.1), backoffFactor = 2 } = options
-
   const savedCallback = useRef(callback)
-  const currentInterval = useRef(baseMs)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   useEffect(() => {
@@ -32,6 +30,14 @@ export function useBackoffInterval(
   }, [callback])
 
   useEffect(() => {
+    if (baseMs === null) return
+
+    const intervalMs: number = baseMs
+    const maxMs = options.maxMs ?? intervalMs * 5
+    const jitterMs = options.jitterMs ?? Math.round(intervalMs * 0.1)
+    const backoffFactor = options.backoffFactor ?? 2
+    let currentInterval = intervalMs
+
     let cancelled = false
 
     function jitter(): number {
@@ -46,16 +52,16 @@ export function useBackoffInterval(
       }
       try {
         await savedCallback.current()
-        currentInterval.current = baseMs
+        currentInterval = intervalMs
       } catch {
-        currentInterval.current = Math.min(currentInterval.current * backoffFactor, maxMs)
+        currentInterval = Math.min(currentInterval * backoffFactor, maxMs)
       }
       schedule()
     }
 
     function schedule(): void {
       if (cancelled) return
-      timerRef.current = setTimeout(tick, currentInterval.current + jitter())
+      timerRef.current = setTimeout(tick, currentInterval + jitter())
     }
 
     // Initial fire with jitter offset
@@ -74,5 +80,5 @@ export function useBackoffInterval(
       if (timerRef.current) clearTimeout(timerRef.current)
       document.removeEventListener('visibilitychange', onVisibilityChange)
     }
-  }, [baseMs, maxMs, jitterMs, backoffFactor])
+  }, [baseMs, options.maxMs, options.jitterMs, options.backoffFactor])
 }

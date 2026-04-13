@@ -4,7 +4,7 @@ import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintUI } from '../../stores/sprintUI'
 import { useAgentEventsStore } from '../../stores/agentEvents'
 import { formatElapsed, getDotColor } from '../../lib/task-format'
-import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
+import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { TaskDetailActionButtons } from './TaskDetailActionButtons'
 import { AgentActivityPreview } from './AgentActivityPreview'
 import { UpstreamOutcomes } from './UpstreamOutcomes'
@@ -70,7 +70,7 @@ export function TaskDetailDrawer({
   }, [task.id])
 
   const isActive = task.status === 'active' && !!task.started_at
-  useVisibilityAwareInterval(
+  useBackoffInterval(
     () => setElapsed(formatElapsed(task.started_at!)),
     isActive ? 10_000 : null
   )

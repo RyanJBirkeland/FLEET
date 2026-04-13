@@ -3,7 +3,7 @@
  * Extracted from SprintCenter to reduce component complexity.
  */
 import { useEffect } from 'react'
-import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useBackoffInterval } from './useBackoffInterval'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { POLL_SPRINT_INTERVAL, POLL_SPRINT_ACTIVE_MS } from '../lib/constants'
 
@@ -18,7 +18,7 @@ export function useSprintPolling(): void {
   useEffect(() => {
     loadData()
   }, [loadData])
-  useVisibilityAwareInterval(loadData, sprintPollMs)
+  useBackoffInterval(loadData, sprintPollMs)
 
   // Instant refresh when an external process writes to bde.db
   useEffect(() => {

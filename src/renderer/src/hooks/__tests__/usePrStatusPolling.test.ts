@@ -4,9 +4,9 @@ import { usePrStatusPolling } from '../usePrStatusPolling'
 import type { SprintTask } from '../../../../shared/types'
 import { nowIso } from '../../../../shared/time'
 
-// Mock useVisibilityAwareInterval to prevent timer side-effects
-vi.mock('../useVisibilityAwareInterval', () => ({
-  useVisibilityAwareInterval: vi.fn()
+// Mock useBackoffInterval to prevent timer side-effects
+vi.mock('../useBackoffInterval', () => ({
+  useBackoffInterval: vi.fn()
 }))
 
 // Mutable state that tests can override

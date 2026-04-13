@@ -1,10 +1,10 @@
 import { useCallback, useEffect } from 'react'
 import { useHealthCheckStore } from '../stores/healthCheck'
-import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useBackoffInterval } from './useBackoffInterval'
 import { POLL_HEALTH_CHECK_MS } from '../lib/constants'
 
 /**
- * useHealthCheckPolling — polls for stuck tasks on a visibility-aware interval.
+ * useHealthCheckPolling — polls for stuck tasks with backoff on errors.
  * Writes results to the healthCheck store. No return value.
  */
 export function useHealthCheckPolling(): void {
@@ -22,5 +22,5 @@ export function useHealthCheckPolling(): void {
   useEffect(() => {
     runHealthCheck()
   }, [runHealthCheck])
-  useVisibilityAwareInterval(runHealthCheck, POLL_HEALTH_CHECK_MS)
+  useBackoffInterval(runHealthCheck, POLL_HEALTH_CHECK_MS)
 }

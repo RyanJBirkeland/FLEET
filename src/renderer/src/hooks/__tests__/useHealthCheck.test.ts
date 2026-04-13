@@ -2,9 +2,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook, waitFor } from '@testing-library/react'
 import { useHealthCheckPolling } from '../useHealthCheck'
 
-// Mock useVisibilityAwareInterval to prevent timer side-effects
-vi.mock('../useVisibilityAwareInterval', () => ({
-  useVisibilityAwareInterval: vi.fn()
+// Mock useBackoffInterval to prevent timer side-effects
+vi.mock('../useBackoffInterval', () => ({
+  useBackoffInterval: vi.fn()
 }))
 
 // Mock the healthCheck store

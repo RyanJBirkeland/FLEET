@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useCostPolling } from '../useCostPolling'
 
-// Mock useVisibilityAwareInterval to prevent timer side-effects
-const mockUseVisibilityAwareInterval = vi.fn()
-vi.mock('../useVisibilityAwareInterval', () => ({
-  useVisibilityAwareInterval: (...args: unknown[]) => mockUseVisibilityAwareInterval(...args)
+// Mock useBackoffInterval to prevent timer side-effects
+const mockUseBackoffInterval = vi.fn()
+vi.mock('../useBackoffInterval', () => ({
+  useBackoffInterval: (...args: unknown[]) => mockUseBackoffInterval(...args)
 }))
 
 // Mock the costData store
@@ -22,7 +22,7 @@ vi.mock('../../stores/costData', () => {
 describe('useCostPolling', () => {
   beforeEach(() => {
     mockFetchLocalAgents.mockClear()
-    mockUseVisibilityAwareInterval.mockClear()
+    mockUseBackoffInterval.mockClear()
   })
 
   it('renders without error', () => {
@@ -36,8 +36,8 @@ describe('useCostPolling', () => {
     expect(mockFetchLocalAgents).toHaveBeenCalledTimes(1)
   })
 
-  it('registers useVisibilityAwareInterval with fetchLocalAgents and POLL_COST_INTERVAL', () => {
+  it('registers useBackoffInterval with fetchLocalAgents and POLL_COST_INTERVAL', () => {
     renderHook(() => useCostPolling())
-    expect(mockUseVisibilityAwareInterval).toHaveBeenCalledWith(mockFetchLocalAgents, 30_000)
+    expect(mockUseBackoffInterval).toHaveBeenCalledWith(mockFetchLocalAgents, 30_000)
   })
 })

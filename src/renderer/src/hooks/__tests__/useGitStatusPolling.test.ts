@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useGitStatusPolling } from '../useGitStatusPolling'
 
-// Mock useVisibilityAwareInterval to prevent timer side-effects
-const mockUseVisibilityAwareInterval = vi.fn()
-vi.mock('../useVisibilityAwareInterval', () => ({
-  useVisibilityAwareInterval: (...args: unknown[]) => mockUseVisibilityAwareInterval(...args)
+// Mock useBackoffInterval to prevent timer side-effects
+const mockUseBackoffInterval = vi.fn()
+vi.mock('../useBackoffInterval', () => ({
+  useBackoffInterval: (...args: unknown[]) => mockUseBackoffInterval(...args)
 }))
 
 // Mock the gitTree store
@@ -23,7 +23,7 @@ vi.mock('../../stores/gitTree', () => {
 describe('useGitStatusPolling', () => {
   beforeEach(() => {
     mockFetchStatus.mockClear()
-    mockUseVisibilityAwareInterval.mockClear()
+    mockUseBackoffInterval.mockClear()
     mockActiveRepo = '/Users/test/repos/bde'
   })
 
@@ -33,21 +33,21 @@ describe('useGitStatusPolling', () => {
     }).not.toThrow()
   })
 
-  it('registers useVisibilityAwareInterval with POLL_GIT_STATUS_INTERVAL when repo is active', () => {
+  it('registers useBackoffInterval with POLL_GIT_STATUS_INTERVAL when repo is active', () => {
     renderHook(() => useGitStatusPolling())
-    expect(mockUseVisibilityAwareInterval).toHaveBeenCalledWith(expect.any(Function), 30_000)
+    expect(mockUseBackoffInterval).toHaveBeenCalledWith(expect.any(Function), 30_000)
   })
 
   it('passes null interval when no active repo', () => {
     mockActiveRepo = null
     renderHook(() => useGitStatusPolling())
-    expect(mockUseVisibilityAwareInterval).toHaveBeenCalledWith(expect.any(Function), null)
+    expect(mockUseBackoffInterval).toHaveBeenCalledWith(expect.any(Function), null)
   })
 
   it('poll callback calls fetchStatus with activeRepo', () => {
     renderHook(() => useGitStatusPolling())
-    // Extract the poll callback passed to useVisibilityAwareInterval
-    const pollFn = mockUseVisibilityAwareInterval.mock.calls[0][0]
+    // Extract the poll callback passed to useBackoffInterval
+    const pollFn = mockUseBackoffInterval.mock.calls[0][0]
     pollFn()
     expect(mockFetchStatus).toHaveBeenCalledWith('/Users/test/repos/bde')
   })
@@ -55,7 +55,7 @@ describe('useGitStatusPolling', () => {
   it('poll callback does not call fetchStatus when no activeRepo', () => {
     mockActiveRepo = null
     renderHook(() => useGitStatusPolling())
-    const pollFn = mockUseVisibilityAwareInterval.mock.calls[0][0]
+    const pollFn = mockUseBackoffInterval.mock.calls[0][0]
     pollFn()
     expect(mockFetchStatus).not.toHaveBeenCalled()
   })

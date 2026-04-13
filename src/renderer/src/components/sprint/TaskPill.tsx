@@ -6,7 +6,7 @@ import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
 import { formatElapsed } from '../../lib/task-format'
 import { STATUS_METADATA } from '../../../../shared/task-state-machine'
-import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
+import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useSprintUI } from '../../stores/sprintUI'
 import { formatDuration } from '../../lib/format'
 import { useTaskCost } from '../../hooks/useTaskCost'
@@ -66,7 +66,7 @@ function TaskPillInner({
   }, [task.status])
 
   const isActive = task.status === 'active' && !!task.started_at
-  useVisibilityAwareInterval(
+  useBackoffInterval(
     () => setElapsed(formatElapsed(task.started_at!)),
     isActive ? 10_000 : null
   )

@@ -4,7 +4,7 @@
  * and fires immediate polls when tasks transition from active to done.
  */
 import { useEffect, useRef, useCallback } from 'react'
-import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useBackoffInterval } from './useBackoffInterval'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { usePrConflictsStore } from '../stores/prConflicts'
 import { toast } from '../stores/toasts'
@@ -94,7 +94,7 @@ export function usePrStatusPolling(): void {
   useEffect(() => {
     pollPrStatusesCurrent()
   }, [pollPrStatusesCurrent])
-  useVisibilityAwareInterval(pollPrStatusesCurrent, POLL_PR_STATUS_MS)
+  useBackoffInterval(pollPrStatusesCurrent, POLL_PR_STATUS_MS)
 
   // Detect active->done transitions and trigger immediate PR poll
   const prevTasksRef = useRef<SprintTask[]>([])

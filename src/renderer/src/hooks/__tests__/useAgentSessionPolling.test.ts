@@ -2,10 +2,10 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { renderHook } from '@testing-library/react'
 import { useAgentSessionPolling } from '../useAgentSessionPolling'
 
-// Mock useVisibilityAwareInterval to prevent timer side-effects
-const mockUseVisibilityAwareInterval = vi.fn()
-vi.mock('../useVisibilityAwareInterval', () => ({
-  useVisibilityAwareInterval: (...args: unknown[]) => mockUseVisibilityAwareInterval(...args)
+// Mock useBackoffInterval to prevent timer side-effects
+const mockUseBackoffInterval = vi.fn()
+vi.mock('../useBackoffInterval', () => ({
+  useBackoffInterval: (...args: unknown[]) => mockUseBackoffInterval(...args)
 }))
 
 // Mock the agentHistory store
@@ -20,7 +20,7 @@ vi.mock('../../stores/agentHistory', () => {
 describe('useAgentSessionPolling', () => {
   beforeEach(() => {
     mockFetchAgents.mockClear()
-    mockUseVisibilityAwareInterval.mockClear()
+    mockUseBackoffInterval.mockClear()
   })
 
   it('renders without error', () => {
@@ -34,8 +34,8 @@ describe('useAgentSessionPolling', () => {
     expect(mockFetchAgents).toHaveBeenCalledTimes(1)
   })
 
-  it('registers useVisibilityAwareInterval with fetchAgents and POLL_SESSIONS_INTERVAL', () => {
+  it('registers useBackoffInterval with fetchAgents and POLL_SESSIONS_INTERVAL', () => {
     renderHook(() => useAgentSessionPolling())
-    expect(mockUseVisibilityAwareInterval).toHaveBeenCalledWith(mockFetchAgents, 10_000)
+    expect(mockUseBackoffInterval).toHaveBeenCalledWith(mockFetchAgents, 10_000)
   })
 })

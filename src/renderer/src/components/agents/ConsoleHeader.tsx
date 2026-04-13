@@ -10,7 +10,6 @@ import { useTerminalStore } from '../../stores/terminal'
 import { toast } from '../../stores/toasts'
 import { formatDuration, formatElapsed } from '../../lib/format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
-import { useVisibilityAwareInterval } from '../../hooks/useVisibilityAwareInterval'
 import { derivePhaseLabel } from '../../lib/agent-phase'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { useCodeReviewStore } from '../../stores/codeReview'
@@ -52,7 +51,7 @@ export function ConsoleHeader({ agent, events }: ConsoleHeaderProps): React.JSX.
   useBackoffInterval(fetchCtx, 3000, { maxMs: 10_000 })
 
   // Live duration ticker for running agents
-  useVisibilityAwareInterval(
+  useBackoffInterval(
     () => {
       setDuration(
         agent.finishedAt

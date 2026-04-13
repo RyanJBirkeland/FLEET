@@ -1,6 +1,6 @@
 import { useCallback } from 'react'
 import { useGitTreeStore } from '../stores/gitTree'
-import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useBackoffInterval } from './useBackoffInterval'
 import { POLL_GIT_STATUS_INTERVAL } from '../lib/constants'
 
 export function useGitStatusPolling(): void {
@@ -11,5 +11,5 @@ export function useGitStatusPolling(): void {
     if (activeRepo) fetchStatus(activeRepo)
   }, [activeRepo, fetchStatus])
 
-  useVisibilityAwareInterval(poll, activeRepo ? POLL_GIT_STATUS_INTERVAL : null)
+  useBackoffInterval(poll, activeRepo ? POLL_GIT_STATUS_INTERVAL : null)
 }

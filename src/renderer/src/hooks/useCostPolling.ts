@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import { useCostDataStore } from '../stores/costData'
-import { useVisibilityAwareInterval } from './useVisibilityAwareInterval'
+import { useBackoffInterval } from './useBackoffInterval'
 import { POLL_COST_INTERVAL } from '../lib/constants'
 
 export function useCostPolling(): void {
@@ -10,5 +10,5 @@ export function useCostPolling(): void {
     fetchLocalAgents()
   }, [fetchLocalAgents])
 
-  useVisibilityAwareInterval(fetchLocalAgents, POLL_COST_INTERVAL)
+  useBackoffInterval(fetchLocalAgents, POLL_COST_INTERVAL)
 }
