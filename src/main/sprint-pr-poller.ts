@@ -38,6 +38,27 @@ export interface SprintPrPollerInstance {
   stop: () => void
 }
 
+type Logger = NonNullable<SprintPrPollerDeps['logger']>
+
+async function notifyTaskTerminalBatch(
+  ids: string[],
+  status: string,
+  onTaskTerminal: (taskId: string, status: string) => void,
+  log: Logger
+): Promise<void> {
+  if (ids.length === 0) return
+  const promises = ids.map((id) => Promise.resolve(onTaskTerminal(id, status)))
+  const results = await Promise.allSettled(promises)
+  const failed = results
+    .map((r, i) => (r.status === 'rejected' ? { id: ids[i], reason: String(r.reason) } : null))
+    .filter(Boolean)
+  if (failed.length > 0) {
+    log.warn(
+      `[sprint-pr-poller] onTaskTerminal failed; will retry next cycle: ${JSON.stringify(failed)}`
+    )
+  }
+}
+
 export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerInstance {
   if (!deps.onTaskTerminal) {
     throw new Error(
@@ -70,45 +91,15 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
         log.info(
           `[sprint-pr-poller] PR #${prNumber} merged — marked ${ids.length} task(s) done: ${ids.join(', ') || '(none)'}`
         )
-        {
-          const promises = ids.map((id) => {
-            log.info(`[sprint-pr-poller] Calling onTaskTerminal(${id}, 'done')`)
-            return Promise.resolve(deps.onTaskTerminal(id, 'done'))
-          })
-          const results = await Promise.allSettled(promises)
-          const failed = results
-            .map((r, i) =>
-              r.status === 'rejected' ? { id: ids[i], reason: String(r.reason) } : null
-            )
-            .filter(Boolean)
-          if (failed.length > 0) {
-            log.warn(
-              `[sprint-pr-poller] onTaskTerminal failed; will retry next cycle: ${JSON.stringify(failed)}`
-            )
-          }
-        }
+        ids.forEach((id) => log.info(`[sprint-pr-poller] Calling onTaskTerminal(${id}, 'done')`))
+        await notifyTaskTerminalBatch(ids, 'done', deps.onTaskTerminal, log)
       } else if (result.state === 'CLOSED') {
         const ids = deps.markTaskCancelledByPrNumber(prNumber)
         if (ids.length > 0) {
           log.info(
             `[sprint-pr-poller] PR #${prNumber} closed — cancelled ${ids.length} task(s): ${ids.join(', ')}`
           )
-          {
-            const promises = ids.map((id) =>
-              Promise.resolve(deps.onTaskTerminal(id, 'cancelled'))
-            )
-            const results = await Promise.allSettled(promises)
-            const failed = results
-              .map((r, i) =>
-                r.status === 'rejected' ? { id: ids[i], reason: String(r.reason) } : null
-              )
-              .filter(Boolean)
-            if (failed.length > 0) {
-              log.warn(
-                `[sprint-pr-poller] onTaskTerminal failed; will retry next cycle: ${JSON.stringify(failed)}`
-              )
-            }
-          }
+          await notifyTaskTerminalBatch(ids, 'cancelled', deps.onTaskTerminal, log)
         }
       }
       deps.updateTaskMergeableState(prNumber, result.mergeableState)
