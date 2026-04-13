@@ -3,7 +3,7 @@
  * watchdog race, fast-fail paths, and completion fallback.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runAgent, validateTaskForRun, assembleRunContext } from '../run-agent'
+import { runAgent, validateTaskForRun, assembleRunContext, fetchUpstreamContext, readPriorScratchpad } from '../run-agent'
 import { detectHtmlWrite, tryEmitPlaygroundEvent } from '../playground-handler'
 import type { RunAgentTask, RunAgentDeps, RunAgentSpawnDeps, RunAgentDataDeps, RunAgentEventDeps } from '../run-agent'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
@@ -794,6 +794,95 @@ describe('validateTaskForRun', () => {
     ).resolves.toBeUndefined()
 
     expect(mockRepoLocal.updateTask).not.toHaveBeenCalled()
+  })
+})
+
+describe('fetchUpstreamContext', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('returns [] when deps is null', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const result = fetchUpstreamContext(null, mockRepo, logger)
+    expect(result).toEqual([])
+  })
+
+  it('returns [] when deps is undefined', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const result = fetchUpstreamContext(undefined, mockRepo, logger)
+    expect(result).toEqual([])
+  })
+
+  it('returns [] when deps is an empty array', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const result = fetchUpstreamContext([], mockRepo, logger)
+    expect(result).toEqual([])
+  })
+
+  it('returns context entries for done upstream tasks with non-empty spec', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    ;(mockRepo.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
+      id: 'upstream-1',
+      title: 'Upstream task',
+      status: 'done',
+      spec: 'Do the upstream thing',
+      prompt: null,
+      partial_diff: 'diff content'
+    })
+    const result = fetchUpstreamContext([{ id: 'upstream-1', type: 'hard' }], mockRepo, logger)
+    expect(result).toEqual([
+      { title: 'Upstream task', spec: 'Do the upstream thing', partial_diff: 'diff content' }
+    ])
+  })
+
+  it('skips upstream tasks that are not done', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    ;(mockRepo.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
+      id: 'upstream-1',
+      title: 'Active task',
+      status: 'active',
+      spec: 'Some spec',
+      prompt: null
+    })
+    const result = fetchUpstreamContext([{ id: 'upstream-1', type: 'hard' }], mockRepo, logger)
+    expect(result).toEqual([])
+  })
+
+  it('skips upstream tasks with empty spec', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    ;(mockRepo.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
+      id: 'upstream-1',
+      title: 'Done task',
+      status: 'done',
+      spec: '',
+      prompt: ''
+    })
+    const result = fetchUpstreamContext([{ id: 'upstream-1', type: 'hard' }], mockRepo, logger)
+    expect(result).toEqual([])
+  })
+})
+
+describe('readPriorScratchpad', () => {
+  beforeEach(() => {
+    mockMkdirSync.mockReset()
+    mockReadFileSync.mockReset()
+  })
+
+  it('returns empty string when no progress.md exists', () => {
+    mockReadFileSync.mockImplementation(() => {
+      throw Object.assign(new Error('ENOENT'), { code: 'ENOENT' })
+    })
+    const result = readPriorScratchpad('task-abc')
+    expect(result).toBe('')
+    expect(mockMkdirSync).toHaveBeenCalledWith(
+      '/home/user/.bde/memory/tasks/task-abc',
+      { recursive: true }
+    )
+  })
+
+  it('returns file contents when progress.md exists', () => {
+    mockReadFileSync.mockReturnValue('## Prior notes\nSome progress was made')
+    const result = readPriorScratchpad('task-abc')
+    expect(result).toBe('## Prior notes\nSome progress was made')
   })
 })
 

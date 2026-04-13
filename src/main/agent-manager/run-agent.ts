@@ -258,6 +258,53 @@ export async function validateTaskForRun(
 }
 
 /**
+ * Fetches upstream task specs for context propagation.
+ * Iterates declared dependencies, resolves each done task's spec,
+ * and returns an array of context entries for the agent prompt.
+ */
+export function fetchUpstreamContext(
+  deps: TaskDependency[] | null | undefined,
+  repo: ISprintTaskRepository,
+  logger: Logger
+): Array<{ title: string; spec: string; partial_diff?: string }> {
+  const upstreamContext: Array<{ title: string; spec: string; partial_diff?: string }> = []
+  if (!deps || deps.length === 0) return upstreamContext
+  for (const dep of deps) {
+    try {
+      const upstreamTask = repo.getTask(dep.id)
+      if (upstreamTask && upstreamTask.status === 'done') {
+        const spec = upstreamTask.spec || upstreamTask.prompt || ''
+        if (spec.trim()) {
+          upstreamContext.push({
+            title: upstreamTask.title,
+            spec: spec.trim(),
+            partial_diff: upstreamTask.partial_diff || undefined
+          })
+        }
+      }
+    } catch (err) {
+      logger.warn(`[agent-manager] Failed to fetch upstream task ${dep.id}: ${err}`)
+    }
+  }
+  return upstreamContext
+}
+
+/**
+ * Creates the task scratchpad directory (idempotent) and reads any prior
+ * progress.md content. Returns an empty string on first run.
+ */
+export function readPriorScratchpad(taskId: string): string {
+  const scratchpadDir = join(BDE_TASK_MEMORY_DIR, taskId)
+  mkdirSync(scratchpadDir, { recursive: true })
+  try {
+    return readFileSync(join(scratchpadDir, 'progress.md'), 'utf-8')
+  } catch {
+    // Expected on first run
+    return ''
+  }
+}
+
+/**
  * Context assembly phase: builds the agent prompt string from task data.
  * Pure function — no side effects, no task mutations, no callbacks.
  */
@@ -268,40 +315,8 @@ export async function assembleRunContext(
 ): Promise<string> {
   const { logger, repo } = deps
   const taskContent = (task.prompt || task.spec || task.title || '').trim()
-
-  // Fetch upstream task specs for context propagation
-  const upstreamContext: Array<{ title: string; spec: string; partial_diff?: string }> = []
-  if (task.depends_on && task.depends_on.length > 0) {
-    for (const dep of task.depends_on) {
-      try {
-        const upstreamTask = repo.getTask(dep.id)
-        if (upstreamTask && upstreamTask.status === 'done') {
-          const spec = upstreamTask.spec || upstreamTask.prompt || ''
-          if (spec.trim()) {
-            upstreamContext.push({
-              title: upstreamTask.title,
-              spec: spec.trim(),
-              partial_diff: upstreamTask.partial_diff || undefined
-            })
-          }
-        }
-      } catch (err) {
-        logger.warn(`[agent-manager] Failed to fetch upstream task ${dep.id}: ${err}`)
-      }
-    }
-  }
-
-  // Create task scratchpad directory (idempotent)
-  const scratchpadDir = join(BDE_TASK_MEMORY_DIR, task.id)
-  mkdirSync(scratchpadDir, { recursive: true })
-
-  // Read prior scratchpad content if present
-  let priorScratchpad = ''
-  try {
-    priorScratchpad = readFileSync(join(scratchpadDir, 'progress.md'), 'utf-8')
-  } catch {
-    // Expected on first run
-  }
+  const upstreamContext = fetchUpstreamContext(task.depends_on, repo, logger)
+  const priorScratchpad = readPriorScratchpad(task.id)
 
   return buildAgentPrompt({
     agentType: 'pipeline',
