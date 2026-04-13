@@ -438,6 +438,7 @@ useTaskWorkbenchStore.subscribe((state, prev) => {
 // Debounced draft persistence — only when in create mode (edit mode mutations
 // shouldn't pollute the create-mode draft).
 let draftSaveTimer: ReturnType<typeof setTimeout> | null = null
+let lastDraftToSave: PersistedDraft | null = null
 const DRAFT_FIELDS: Array<keyof TaskWorkbenchState> = [
   'title',
   'repo',
@@ -451,26 +452,42 @@ const DRAFT_FIELDS: Array<keyof TaskWorkbenchState> = [
   'specType'
 ]
 
+function flushDraftPersistence(): void {
+  if (draftSaveTimer) {
+    clearTimeout(draftSaveTimer)
+    draftSaveTimer = null
+  }
+  if (lastDraftToSave) {
+    if (draftHasContent(lastDraftToSave)) {
+      persistDraft(lastDraftToSave)
+    } else {
+      clearDraftStorage()
+    }
+  }
+}
+
 useTaskWorkbenchStore.subscribe((state, prev) => {
   if (state.mode !== 'create') return
   // Only save when one of the persisted fields actually changed.
   const changed = DRAFT_FIELDS.some((k) => state[k] !== prev[k])
   if (!changed) return
 
+  const snapshot: PersistedDraft = {
+    title: state.title,
+    repo: state.repo,
+    priority: state.priority,
+    spec: state.spec,
+    dependsOn: state.dependsOn,
+    playgroundEnabled: state.playgroundEnabled,
+    maxCostUsd: state.maxCostUsd,
+    model: state.model,
+    crossRepoContract: state.crossRepoContract,
+    specType: state.specType
+  }
+  lastDraftToSave = snapshot
+
   if (draftSaveTimer) clearTimeout(draftSaveTimer)
   draftSaveTimer = setTimeout(() => {
-    const snapshot: PersistedDraft = {
-      title: state.title,
-      repo: state.repo,
-      priority: state.priority,
-      spec: state.spec,
-      dependsOn: state.dependsOn,
-      playgroundEnabled: state.playgroundEnabled,
-      maxCostUsd: state.maxCostUsd,
-      model: state.model,
-      crossRepoContract: state.crossRepoContract,
-      specType: state.specType
-    }
     if (draftHasContent(snapshot)) {
       persistDraft(snapshot)
     } else {
@@ -479,3 +496,8 @@ useTaskWorkbenchStore.subscribe((state, prev) => {
     }
   }, DRAFT_SAVE_DEBOUNCE_MS)
 })
+
+// Flush pending draft persistence on window close/reload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushDraftPersistence)
+}

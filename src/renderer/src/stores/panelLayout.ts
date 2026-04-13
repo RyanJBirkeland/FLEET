@@ -527,10 +527,24 @@ export const usePanelLayoutStore = create<PanelLayoutState>((set, get) => ({
 // ---------------------------------------------------------------------------
 
 let _saveTimeout: ReturnType<typeof setTimeout> | null = null
+let lastLayoutToSave: PanelNode | null = null
+
+function flushLayoutPersistence(): void {
+  if (_saveTimeout) {
+    clearTimeout(_saveTimeout)
+    _saveTimeout = null
+  }
+  if (lastLayoutToSave && typeof window !== 'undefined' && window.api?.settings) {
+    window.api.settings.setJson('panel.layout', lastLayoutToSave).catch((err) => {
+      console.error('Failed to save panel layout:', err)
+    })
+  }
+}
 
 usePanelLayoutStore.subscribe((state) => {
   if (!state.persistable) return
   if (typeof window === 'undefined' || !window.api?.settings) return
+  lastLayoutToSave = state.root
   if (_saveTimeout) clearTimeout(_saveTimeout)
   _saveTimeout = setTimeout(() => {
     window.api.settings.setJson('panel.layout', state.root).catch((err) => {
@@ -538,3 +552,8 @@ usePanelLayoutStore.subscribe((state) => {
     })
   }, 500)
 })
+
+// Flush pending layout persistence on window close/reload
+if (typeof window !== 'undefined') {
+  window.addEventListener('beforeunload', flushLayoutPersistence)
+}
