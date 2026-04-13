@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createDebouncedPersister } from '../lib/createDebouncedPersister'
 import type { StatusFilter } from './sprintUI'
 
 const STORAGE_KEY = 'bde:filterPresets'
@@ -18,18 +19,13 @@ interface FilterPresetsState {
   restoreFromStorage: () => void
 }
 
-let persistTimer: ReturnType<typeof setTimeout> | null = null
-
-function debouncedPersist(presets: Record<string, FilterPreset>): void {
-  if (persistTimer) clearTimeout(persistTimer)
-  persistTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
-    } catch (err) {
-      console.error('Failed to persist filter presets:', err)
-    }
-  }, 500)
-}
+const [debouncedPersist] = createDebouncedPersister<Record<string, FilterPreset>>((presets) => {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(presets))
+  } catch (err) {
+    console.error('Failed to persist filter presets:', err)
+  }
+}, 500)
 
 export const useFilterPresets = create<FilterPresetsState>((set, get) => ({
   presets: {},

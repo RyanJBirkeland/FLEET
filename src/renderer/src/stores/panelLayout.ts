@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import { VIEW_LABELS } from '../lib/view-registry'
 import type { View, DropZone } from '../lib/view-types'
 import { toast } from './toasts'
+import { createDebouncedPersister } from '../lib/createDebouncedPersister'
 
 // Re-export for backward compatibility
 export type { View, DropZone }
@@ -528,14 +529,17 @@ export const usePanelLayoutStore = create<PanelLayoutState>((set, get) => ({
 // Persist layout on every mutation (debounced)
 // ---------------------------------------------------------------------------
 
-let _saveTimeout: ReturnType<typeof setTimeout> | null = null
 let lastLayoutToSave: PanelNode | null = null
 
+const [persistLayout, cancelLayoutPersist] = createDebouncedPersister<PanelNode>((layout) => {
+  if (typeof window === 'undefined' || !window.api?.settings) return
+  window.api.settings.setJson('panel.layout', layout).catch((err) => {
+    console.error('Failed to save panel layout:', err)
+  })
+}, 500)
+
 function flushLayoutPersistence(): void {
-  if (_saveTimeout) {
-    clearTimeout(_saveTimeout)
-    _saveTimeout = null
-  }
+  cancelLayoutPersist()
   if (lastLayoutToSave && typeof window !== 'undefined' && window.api?.settings) {
     window.api.settings.setJson('panel.layout', lastLayoutToSave).catch((err) => {
       console.error('Failed to save panel layout:', err)
@@ -548,12 +552,7 @@ usePanelLayoutStore.subscribe((state) => {
   if (!state.persistable) return
   if (typeof window === 'undefined' || !window.api?.settings) return
   lastLayoutToSave = state.root
-  if (_saveTimeout) clearTimeout(_saveTimeout)
-  _saveTimeout = setTimeout(() => {
-    window.api.settings.setJson('panel.layout', state.root).catch((err) => {
-      console.error('Failed to save panel layout:', err)
-    })
-  }, 500)
+  persistLayout(state.root)
 })
 
 // Flush pending layout persistence on window close/reload

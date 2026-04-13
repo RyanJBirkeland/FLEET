@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import type { SprintTask, TaskDependency } from '../../../shared/types'
 import type { SpecType } from '../../../shared/spec-validation'
+import { createDebouncedPersister } from '../lib/createDebouncedPersister'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -219,6 +220,36 @@ function initialState(): DefaultsShape {
 }
 
 // ---------------------------------------------------------------------------
+// Debounced draft persister (declared before store so resetForm can cancel it)
+// ---------------------------------------------------------------------------
+
+let lastDraftToSave: PersistedDraft | null = null
+const DRAFT_FIELDS: Array<keyof TaskWorkbenchState> = [
+  'title',
+  'repo',
+  'priority',
+  'spec',
+  'dependsOn',
+  'playgroundEnabled',
+  'maxCostUsd',
+  'model',
+  'crossRepoContract',
+  'specType'
+]
+
+const [debouncedPersistDraft, cancelDraftPersist] = createDebouncedPersister<PersistedDraft>(
+  (snapshot) => {
+    if (draftHasContent(snapshot)) {
+      persistDraft(snapshot)
+    } else {
+      // Empty form → clear any stale draft.
+      clearDraftStorage()
+    }
+  },
+  DRAFT_SAVE_DEBOUNCE_MS
+)
+
+// ---------------------------------------------------------------------------
 // Store
 // ---------------------------------------------------------------------------
 
@@ -230,10 +261,7 @@ export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
   setSpecType: (type) => set({ specType: type }),
 
   resetForm: () => {
-    if (draftSaveTimer) {
-      clearTimeout(draftSaveTimer)
-      draftSaveTimer = null
-    }
+    cancelDraftPersist()
     clearDraftStorage()
     set(emptyDefaults())
   },
@@ -319,28 +347,10 @@ useTaskWorkbenchStore.subscribe((state, prev) => {
   }
 })
 
-// Debounced draft persistence — only when in create mode (edit mode mutations
+// Debounced draft subscriber — only active in create mode (edit mode mutations
 // shouldn't pollute the create-mode draft).
-let draftSaveTimer: ReturnType<typeof setTimeout> | null = null
-let lastDraftToSave: PersistedDraft | null = null
-const DRAFT_FIELDS: Array<keyof TaskWorkbenchState> = [
-  'title',
-  'repo',
-  'priority',
-  'spec',
-  'dependsOn',
-  'playgroundEnabled',
-  'maxCostUsd',
-  'model',
-  'crossRepoContract',
-  'specType'
-]
-
 function flushDraftPersistence(): void {
-  if (draftSaveTimer) {
-    clearTimeout(draftSaveTimer)
-    draftSaveTimer = null
-  }
+  cancelDraftPersist()
   if (lastDraftToSave) {
     if (draftHasContent(lastDraftToSave)) {
       persistDraft(lastDraftToSave)
@@ -369,16 +379,7 @@ useTaskWorkbenchStore.subscribe((state, prev) => {
     specType: state.specType
   }
   lastDraftToSave = snapshot
-
-  if (draftSaveTimer) clearTimeout(draftSaveTimer)
-  draftSaveTimer = setTimeout(() => {
-    if (draftHasContent(snapshot)) {
-      persistDraft(snapshot)
-    } else {
-      // Empty form → clear any stale draft.
-      clearDraftStorage()
-    }
-  }, DRAFT_SAVE_DEBOUNCE_MS)
+  debouncedPersistDraft(snapshot)
 })
 
 // Flush pending draft persistence on window close/reload

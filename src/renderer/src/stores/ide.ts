@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createDebouncedPersister } from '../lib/createDebouncedPersister'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -305,15 +306,15 @@ export const useIDEStore = create<IDEState>((set) => ({
 // Persistence subscriber (debounced, 2s)
 // ---------------------------------------------------------------------------
 
-let persistTimer: ReturnType<typeof setTimeout> | null = null
 let lastSerialized = ''
 let lastToSave: unknown = null
 
+const [persistIDEState, cancelIDEPersist] = createDebouncedPersister<unknown>((state) => {
+  window.api.settings.setJson('ide.state', state)
+}, 2000)
+
 function flushPersistence(): void {
-  if (persistTimer) {
-    clearTimeout(persistTimer)
-    persistTimer = null
-  }
+  cancelIDEPersist()
   if (lastToSave) {
     window.api.settings.setJson('ide.state', lastToSave)
   }
@@ -338,11 +339,7 @@ useIDEStore.subscribe((state) => {
   if (serialized === lastSerialized) return // Skip — nothing changed
   lastSerialized = serialized
   lastToSave = toSave
-
-  if (persistTimer) clearTimeout(persistTimer)
-  persistTimer = setTimeout(() => {
-    window.api.settings.setJson('ide.state', toSave)
-  }, 2000)
+  persistIDEState(toSave)
 })
 
 // Flush pending persistence on window close/reload

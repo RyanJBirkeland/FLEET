@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { createDebouncedPersister } from '../lib/createDebouncedPersister'
 
 export interface PendingComment {
   id: string
@@ -88,10 +89,23 @@ export const usePendingReviewStore = create<PendingReviewStore>((set, get) => ({
 }))
 
 // Auto-persist to localStorage whenever pendingComments changes (debounced 500ms)
-let persistTimer: ReturnType<typeof setTimeout> | null = null
+const [persistPendingComments] = createDebouncedPersister<Record<string, PendingComment[]>>(
+  (pendingComments) => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(pendingComments))
+    } catch {
+      // Storage quota exceeded or unavailable — ignore
+    }
+  },
+  500
+)
 
+usePendingReviewStore.subscribe((state) => {
+  persistPendingComments(state.pendingComments)
+})
+
+// Flush immediately on window close to prevent data loss
 function flushToStorage(): void {
-  if (persistTimer) clearTimeout(persistTimer)
   try {
     const state = usePendingReviewStore.getState()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state.pendingComments))
@@ -100,16 +114,4 @@ function flushToStorage(): void {
   }
 }
 
-usePendingReviewStore.subscribe((state) => {
-  if (persistTimer) clearTimeout(persistTimer)
-  persistTimer = setTimeout(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state.pendingComments))
-    } catch {
-      // Storage quota exceeded or unavailable — ignore
-    }
-  }, 500)
-})
-
-// Flush immediately on window close to prevent data loss
 window.addEventListener('beforeunload', flushToStorage)
