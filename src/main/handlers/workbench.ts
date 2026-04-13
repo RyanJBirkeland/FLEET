@@ -8,7 +8,8 @@ import { execFile } from 'child_process'
 import { promisify } from 'util'
 import { listTasks } from '../services/sprint-service'
 import type { AgentManager } from '../agent-manager'
-import { checkSpecSemantic } from '../spec-semantic-check'
+import { createSpecQualityService } from '../services/spec-quality/factory'
+import type { SpecQualityResult } from '../../shared/spec-quality/types'
 import { runSdkStreaming } from '../sdk-streaming'
 import { extractTasksFromPlan } from '../services/plan-extractor'
 import { buildChatPrompt, getCopilotSdkOptions } from '../services/copilot-service'
@@ -18,6 +19,66 @@ import { getErrorMessage } from '../../shared/errors'
 
 const execFileAsync = promisify(execFile)
 const log = createLogger('workbench')
+
+/** Module-level singleton — created once, reused across all checkSpec calls. */
+const specQualityService = createSpecQualityService()
+
+type CheckStatus = 'pass' | 'warn' | 'fail'
+interface CheckField { status: CheckStatus; message: string }
+
+/** Maps a SpecQualityResult to the { clarity, scope, filesExist } shape the renderer expects. */
+function mapQualityResult(result: SpecQualityResult): {
+  clarity: CheckField
+  scope: CheckField
+  filesExist: CheckField
+} {
+  // clarity — blocked by any error; warned by prescriptiveness issue; otherwise pass
+  const SCOPE_CODES = new Set(['TOO_MANY_FILES', 'TOO_MANY_STEPS', 'SPEC_TOO_LONG'] as const)
+  const FILES_CODES = new Set(['FILES_SECTION_NO_PATHS'] as const)
+
+  const scopeIssues = result.issues.filter(i => SCOPE_CODES.has(i.code as 'TOO_MANY_FILES'))
+  const filesIssues = result.issues.filter(i => FILES_CODES.has(i.code as 'FILES_SECTION_NO_PATHS'))
+  const clarityIssues = result.issues.filter(
+    i => !SCOPE_CODES.has(i.code as 'TOO_MANY_FILES') && !FILES_CODES.has(i.code as 'FILES_SECTION_NO_PATHS')
+  )
+
+  const clarityErrors = clarityIssues.filter(i => i.severity === 'error')
+  const clarityWarnings = clarityIssues.filter(i => i.severity === 'warning')
+
+  let clarity: CheckField
+  if (clarityErrors.length > 0) {
+    const messages = clarityErrors.map(i => i.message).join('; ')
+    clarity = { status: 'fail', message: messages }
+  } else if (clarityWarnings.length > 0) {
+    clarity = { status: 'warn', message: clarityWarnings[0].message }
+  } else {
+    clarity = { status: 'pass', message: 'Spec is clear and actionable' }
+  }
+
+  const scopeErrors = scopeIssues.filter(i => i.severity === 'error')
+  const scopeWarnings = scopeIssues.filter(i => i.severity === 'warning')
+  let scope: CheckField
+  if (scopeErrors.length > 0) {
+    scope = { status: 'fail', message: scopeErrors.map(i => i.message).join('; ') }
+  } else if (scopeWarnings.length > 0) {
+    scope = { status: 'warn', message: scopeWarnings[0].message }
+  } else {
+    scope = { status: 'pass', message: 'Scope looks achievable in one session' }
+  }
+
+  const filesErrors = filesIssues.filter(i => i.severity === 'error')
+  const filesWarnings = filesIssues.filter(i => i.severity === 'warning')
+  let filesExist: CheckField
+  if (filesErrors.length > 0) {
+    filesExist = { status: 'fail', message: filesErrors.map(i => i.message).join('; ') }
+  } else if (filesWarnings.length > 0) {
+    filesExist = { status: 'warn', message: filesWarnings[0].message }
+  } else {
+    filesExist = { status: 'pass', message: 'File paths look specific and plausible' }
+  }
+
+  return { clarity, scope, filesExist }
+}
 
 /** Active streaming handles, keyed by streamId. */
 const activeStreams = new Map<string, { close: () => void }>()
@@ -343,11 +404,8 @@ export function registerWorkbenchHandlers(am?: AgentManager): void {
   safeHandle(
     'workbench:checkSpec',
     async (_e, input: { title: string; repo: string; spec: string; specType?: string | null }) => {
-      const summary = await checkSpecSemantic({
-        ...input,
-        specType: (input.specType as import('../../shared/spec-validation').SpecType) ?? null
-      })
-      return summary.results // Returns { clarity, scope, filesExist } — same shape as before
+      const result = await specQualityService.validateFull(input.spec)
+      return mapQualityResult(result)
     }
   )
 

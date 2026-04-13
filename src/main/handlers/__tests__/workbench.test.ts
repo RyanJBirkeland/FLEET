@@ -82,7 +82,8 @@ vi.mock('../../sdk-streaming', async () => {
 
 vi.mock('../../env-utils', () => ({
   buildAgentEnv: () => ({ ...process.env }),
-  buildAgentEnvWithAuth: () => ({ ...process.env })
+  buildAgentEnvWithAuth: () => ({ ...process.env }),
+  getClaudeCliPath: () => 'claude'
 }))
 
 /** Helper: create a fake spawn child that writes `output` to stdout and exits 0. */
@@ -438,7 +439,7 @@ describe('Workbench handlers', () => {
     })
   })
 
-  it('checkSpec stub returns all expected fields', async () => {
+  it('checkSpec returns { clarity, scope, filesExist } shape from SpecQualityService', async () => {
     let checkSpecHandler: any
 
     vi.mocked(safeHandle).mockImplementation((channel, handler) => {
@@ -449,14 +450,11 @@ describe('Workbench handlers', () => {
 
     registerWorkbenchHandlers(mockAgentManager)
 
-    // Set SDK response for spec checking
-    mockSdkResponse = JSON.stringify({
-      clarity: { status: 'warn', message: 'Placeholder clarity check' },
-      scope: { status: 'warn', message: 'Placeholder scope check' },
-      filesExist: { status: 'warn', message: 'Placeholder files check' }
-    })
-
     const mockEvent = {} as IpcMainInvokeEvent
+
+    // A spec with no required sections fails structural validation immediately —
+    // SpecQualityService returns errors for all four missing required sections,
+    // and the prescriptiveness AI check is skipped (only runs when structural passes).
     const result = await checkSpecHandler(mockEvent, {
       title: 'Test Task',
       repo: 'BDE',
@@ -466,8 +464,47 @@ describe('Workbench handlers', () => {
     expect(result).toHaveProperty('clarity')
     expect(result).toHaveProperty('scope')
     expect(result).toHaveProperty('filesExist')
-    expect(result.clarity.status).toBe('warn')
-    expect(result.scope.status).toBe('warn')
-    expect(result.filesExist.status).toBe('warn')
+    // Structural errors → clarity is fail
+    expect(result.clarity.status).toBe('fail')
+    expect(result.clarity.message).toMatch(/Missing required section/i)
+    // No scope or file-path issues in this plain text spec
+    expect(result.scope.status).toBe('pass')
+    expect(result.filesExist.status).toBe('pass')
+  })
+
+  it('checkSpec passes a well-formed spec with all required sections', async () => {
+    let checkSpecHandler: any
+
+    vi.mocked(safeHandle).mockImplementation((channel, handler) => {
+      if (channel === 'workbench:checkSpec') {
+        checkSpecHandler = handler
+      }
+    })
+
+    registerWorkbenchHandlers(mockAgentManager)
+
+    // SDK mock returns no design-decision issues
+    mockSdkResponse = JSON.stringify({ requiresDesignDecision: false, reason: '' })
+
+    const mockEvent = {} as IpcMainInvokeEvent
+    const wellFormedSpec = [
+      '## Overview\nDo the thing.',
+      '## Files to Change\n- src/main/foo.ts',
+      '## Implementation Steps\n1. Add function bar() to src/main/foo.ts',
+      '## How to Test\nRun npm test'
+    ].join('\n\n')
+
+    const result = await checkSpecHandler(mockEvent, {
+      title: 'Test Task',
+      repo: 'BDE',
+      spec: wellFormedSpec
+    })
+
+    expect(result).toHaveProperty('clarity')
+    expect(result).toHaveProperty('scope')
+    expect(result).toHaveProperty('filesExist')
+    expect(result.clarity.status).toBe('pass')
+    expect(result.scope.status).toBe('pass')
+    expect(result.filesExist.status).toBe('pass')
   })
 })
