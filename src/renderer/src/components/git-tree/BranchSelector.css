@@ -36,14 +36,14 @@
 .git-branch-selector__backdrop {
   position: fixed;
   inset: 0;
-  z-index: 999;
+  z-index: var(--z-dropdown-backdrop);
 }
 
 .git-branch-selector__dropdown {
   position: absolute;
   top: 100%;
   left: 0;
-  z-index: 1000;
+  z-index: var(--z-dropdown);
   min-width: 180px;
   max-height: 240px;
   overflow-y: auto;

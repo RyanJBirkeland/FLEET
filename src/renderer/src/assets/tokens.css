@@ -150,6 +150,17 @@
   --tracking-normal: 0;
   --tracking-wide: 0.06em;
   --tracking-widest: 0.12em;
+
+  /* Z-index scale */
+  --z-base: 1;
+  --z-dropdown-backdrop: 999;
+  --z-dropdown: 1000;
+  --z-sticky: 1050;
+  --z-modal-backdrop: 1099;
+  --z-modal: 1100;
+  --z-tooltip: 1200;
+  --z-notification: 1300;
+  --z-fullscreen: 9999;
 }
 
 /* ── Pro Dark — IntelliJ-inspired professional theme ── */

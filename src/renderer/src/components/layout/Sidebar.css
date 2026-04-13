@@ -104,7 +104,7 @@
 /* ── Sidebar Context Menu ── */
 .sidebar-context-menu {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-dropdown);
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
   border-radius: var(--bde-radius-lg);
@@ -137,7 +137,7 @@
 /* ── Sidebar Tooltip ── */
 .sidebar-tooltip {
   position: fixed;
-  z-index: 1000;
+  z-index: var(--z-tooltip);
   padding: 6px 12px;
   border-radius: var(--bde-radius-lg);
   background: linear-gradient(135deg, var(--bde-accent-surface), var(--bde-surface-high));
