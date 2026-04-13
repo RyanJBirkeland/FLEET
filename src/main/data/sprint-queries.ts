@@ -15,6 +15,21 @@ import { nowIso } from '../../shared/time'
 import { SPRINT_TASK_COLUMNS } from './sprint-query-constants'
 import { validateTransition } from '../../shared/task-state-machine'
 
+// Re-export reporting functions and types for backward compatibility
+export {
+  getDoneTodayCount,
+  getFailureReasonBreakdown,
+  getTaskRuntimeStats,
+  getSuccessRateBySpecType,
+  getDailySuccessRate
+} from './reporting-queries'
+export type {
+  FailureReasonBreakdown,
+  TaskRuntimeStats,
+  SpecTypeSuccessRate,
+  DailySuccessRate
+} from './reporting-queries'
+
 // Module-level logger — defaults to console, injectable for testing/structured logging
 let logger: Logger = {
   info: (m) => console.log(m),
@@ -586,24 +601,6 @@ export function getQueueStats(): QueueStats {
   return stats
 }
 
-export function getDoneTodayCount(): number {
-  try {
-    const today = new Date()
-    today.setHours(0, 0, 0, 0)
-
-    const result = getDb()
-      .prepare('SELECT COUNT(*) as count FROM sprint_tasks WHERE status = ? AND completed_at >= ?')
-      .get('done', today.toISOString()) as { count: number }
-
-    return result.count
-  } catch (err) {
-    // DL-17: Standardize error message format
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getDoneTodayCount failed: ${msg}`)
-    return 0
-  }
-}
-
 /**
  * Transitions active tasks to done status for a given PR number.
  * Records audit trail and returns affected task IDs.
@@ -917,178 +914,6 @@ export function getTasksWithDependencies(): Array<{
     ...row,
     depends_on: row.depends_on ? sanitizeDependsOn(row.depends_on) : null
   }))
-}
-
-export interface FailureReasonBreakdown {
-  reason: string
-  count: number
-}
-
-export function getFailureReasonBreakdown(): FailureReasonBreakdown[] {
-  try {
-    const rows = getDb()
-      .prepare(
-        `SELECT
-          COALESCE(failure_reason, 'Unknown') as reason,
-          COUNT(*) as count
-         FROM sprint_tasks
-         WHERE status IN ('failed', 'error')
-         GROUP BY failure_reason
-         ORDER BY count DESC`
-      )
-      .all() as Array<{ reason: string; count: number }>
-
-    return rows
-  } catch (err) {
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getFailureReasonBreakdown failed: ${msg}`)
-    return []
-  }
-}
-
-export interface TaskRuntimeStats {
-  avgDurationMs: number | null
-  minDurationMs: number | null
-  maxDurationMs: number | null
-  tasksWithDuration: number
-}
-
-/**
- * Get runtime statistics from completed tasks with duration_ms populated.
- * Returns aggregate stats (avg, min, max) for terminal tasks.
- */
-export function getTaskRuntimeStats(): TaskRuntimeStats {
-  try {
-    const result = getDb()
-      .prepare(
-        `SELECT
-          AVG(duration_ms) as avgDurationMs,
-          MIN(duration_ms) as minDurationMs,
-          MAX(duration_ms) as maxDurationMs,
-          COUNT(*) as tasksWithDuration
-         FROM sprint_tasks
-         WHERE duration_ms IS NOT NULL
-           AND status IN ('done', 'failed', 'review')`
-      )
-      .get() as {
-      avgDurationMs: number | null
-      minDurationMs: number | null
-      maxDurationMs: number | null
-      tasksWithDuration: number
-    }
-
-    return {
-      avgDurationMs: result.avgDurationMs,
-      minDurationMs: result.minDurationMs,
-      maxDurationMs: result.maxDurationMs,
-      tasksWithDuration: result.tasksWithDuration
-    }
-  } catch (err) {
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getTaskRuntimeStats failed: ${msg}`)
-    return {
-      avgDurationMs: null,
-      minDurationMs: null,
-      maxDurationMs: null,
-      tasksWithDuration: 0
-    }
-  }
-}
-
-export interface SpecTypeSuccessRate {
-  spec_type: string | null
-  done: number
-  total: number
-  success_rate: number
-}
-
-export function getSuccessRateBySpecType(): SpecTypeSuccessRate[] {
-  try {
-    const db = getDb()
-    const rows = db
-      .prepare(
-        `SELECT
-           spec_type,
-           SUM(CASE WHEN status = 'done' THEN 1 ELSE 0 END) as done,
-           COUNT(*) as total
-         FROM sprint_tasks
-         WHERE status IN ('done', 'failed', 'error', 'cancelled')
-         GROUP BY spec_type`
-      )
-      .all() as Array<{ spec_type: string | null; done: number; total: number }>
-
-    return rows.map((row) => ({
-      spec_type: row.spec_type ?? null,
-      done: row.done,
-      total: row.total,
-      success_rate: row.total > 0 ? row.done / row.total : 0
-    }))
-  } catch (err) {
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getSuccessRateBySpecType failed: ${msg}`)
-    return []
-  }
-}
-
-export interface DailySuccessRate {
-  date: string
-  successRate: number | null
-  doneCount: number
-  failedCount: number
-}
-
-/**
- * Get daily success rates for the last N days with gap-filling.
- * Success rate = done / (done + failed + error) per day.
- * Days with no terminal tasks return null success rate but are included in results.
- */
-export function getDailySuccessRate(days: number = 14): DailySuccessRate[] {
-  try {
-    const db = getDb()
-    // Generate continuous date range for last N days, then LEFT JOIN with task stats
-    const rows = db
-      .prepare(
-        `WITH RECURSIVE dates(date) AS (
-          SELECT date('now', '-${days - 1} days')
-          UNION ALL
-          SELECT date(date, '+1 day')
-          FROM dates
-          WHERE date < date('now')
-        ),
-        daily_stats AS (
-          SELECT
-            date(completed_at) as date,
-            COUNT(CASE WHEN status = 'done' THEN 1 END) as done,
-            COUNT(CASE WHEN status IN ('failed', 'error') THEN 1 END) as failed
-          FROM sprint_tasks
-          WHERE completed_at IS NOT NULL
-            AND date(completed_at) >= date('now', '-${days} days')
-          GROUP BY date(completed_at)
-        )
-        SELECT
-          dates.date,
-          COALESCE(daily_stats.done, 0) as done,
-          COALESCE(daily_stats.failed, 0) as failed
-        FROM dates
-        LEFT JOIN daily_stats ON dates.date = daily_stats.date
-        ORDER BY dates.date ASC`
-      )
-      .all() as Array<{ date: string; done: number; failed: number }>
-
-    return rows.map((row) => {
-      const total = row.done + row.failed
-      return {
-        date: row.date,
-        successRate: total > 0 ? (row.done / total) * 100 : null,
-        doneCount: row.done,
-        failedCount: row.failed
-      }
-    })
-  } catch (err) {
-    const msg = getErrorMessage(err)
-    logger.warn(`[sprint-queries] getDailySuccessRate failed: ${msg}`)
-    return []
-  }
 }
 
 /**

@@ -55,7 +55,6 @@ vi.mock('../../data/sprint-queries', () => ({
   claimTask: vi.fn(),
   releaseTask: vi.fn(),
   getQueueStats: vi.fn(),
-  getDoneTodayCount: vi.fn(),
   markTaskDoneByPrNumber: vi.fn(),
   markTaskCancelledByPrNumber: vi.fn(),
   listTasksWithOpenPrs: vi.fn(),
@@ -66,8 +65,13 @@ vi.mock('../../data/sprint-queries', () => ({
   getTasksWithDependencies: vi.fn(),
   getOrphanedTasks: vi.fn(),
   getActiveTaskCount: vi.fn(),
+  createReviewTaskFromAdhoc: vi.fn()
+}))
+
+// Mock reporting-queries (reporting/analytics layer)
+vi.mock('../../data/reporting-queries', () => ({
+  getDoneTodayCount: vi.fn(),
   getSuccessRateBySpecType: vi.fn(),
-  createReviewTaskFromAdhoc: vi.fn(),
   getDailySuccessRate: vi.fn(),
   getFailureReasonBreakdown: vi.fn()
 }))
@@ -98,13 +102,16 @@ import {
   claimTask as _claimTask,
   releaseTask as _releaseTask,
   getQueueStats as _getQueueStats,
-  getDoneTodayCount as _getDoneTodayCount,
   markTaskDoneByPrNumber as _markTaskDoneByPrNumber,
   markTaskCancelledByPrNumber as _markTaskCancelledByPrNumber,
   listTasksWithOpenPrs as _listTasksWithOpenPrs,
   updateTaskMergeableState as _updateTaskMergeableState,
   getHealthCheckTasks as _getHealthCheckTasks
 } from '../../data/sprint-queries'
+
+import {
+  getDoneTodayCount as _getDoneTodayCount
+} from '../../data/reporting-queries'
 
 import { broadcast } from '../../broadcast'
 

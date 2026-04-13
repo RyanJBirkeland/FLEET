@@ -10,13 +10,13 @@
  */
 import type { SprintTask, TaskDependency } from '../../shared/types'
 import * as queries from './sprint-queries'
+import * as reportingQueries from './reporting-queries'
+import type { CreateTaskInput, QueueStats } from './sprint-queries'
 import type {
-  CreateTaskInput,
-  QueueStats,
   SpecTypeSuccessRate,
   DailySuccessRate,
   FailureReasonBreakdown
-} from './sprint-queries'
+} from './reporting-queries'
 
 export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate, DailySuccessRate, FailureReasonBreakdown }
 
@@ -24,7 +24,7 @@ export type { CreateTaskInput, QueueStats, SpecTypeSuccessRate, DailySuccessRate
 export { UPDATE_ALLOWLIST } from './sprint-queries'
 export { pruneOldDiffSnapshots, DIFF_SNAPSHOT_RETENTION_DAYS } from './sprint-queries'
 export { clearSprintTaskFk } from './sprint-queries'
-export { getFailureReasonBreakdown } from './sprint-queries'
+export { getFailureReasonBreakdown } from './reporting-queries'
 
 /**
  * Methods used by the agent manager for pipeline execution.
@@ -103,15 +103,15 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     deleteTask: queries.deleteTask,
     releaseTask: queries.releaseTask,
     getQueueStats: queries.getQueueStats,
-    getDoneTodayCount: queries.getDoneTodayCount,
+    getDoneTodayCount: reportingQueries.getDoneTodayCount,
     markTaskDoneByPrNumber: queries.markTaskDoneByPrNumber,
     markTaskCancelledByPrNumber: queries.markTaskCancelledByPrNumber,
     listTasksWithOpenPrs: queries.listTasksWithOpenPrs,
     updateTaskMergeableState: queries.updateTaskMergeableState,
     getHealthCheckTasks: queries.getHealthCheckTasks,
-    getSuccessRateBySpecType: queries.getSuccessRateBySpecType,
+    getSuccessRateBySpecType: reportingQueries.getSuccessRateBySpecType,
     createReviewTaskFromAdhoc: queries.createReviewTaskFromAdhoc,
-    getDailySuccessRate: queries.getDailySuccessRate,
-    getFailureReasonBreakdown: queries.getFailureReasonBreakdown
+    getDailySuccessRate: reportingQueries.getDailySuccessRate,
+    getFailureReasonBreakdown: reportingQueries.getFailureReasonBreakdown
   }
 }

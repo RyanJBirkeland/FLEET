@@ -1,10 +1,11 @@
 /**
  * Tests for sprint task repository factory wiring.
- * Ensures all interface methods are correctly delegated to sprint-queries.
+ * Ensures all interface methods are correctly delegated to sprint-queries and reporting-queries.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { createSprintTaskRepository } from '../sprint-task-repository'
 import * as queries from '../sprint-queries'
+import * as reportingQueries from '../reporting-queries'
 
 vi.mock('../sprint-queries', () => ({
   getTask: vi.fn(),
@@ -20,14 +21,17 @@ vi.mock('../sprint-queries', () => ({
   deleteTask: vi.fn(),
   releaseTask: vi.fn(),
   getQueueStats: vi.fn(),
-  getDoneTodayCount: vi.fn(),
   markTaskDoneByPrNumber: vi.fn(),
   markTaskCancelledByPrNumber: vi.fn(),
   listTasksWithOpenPrs: vi.fn(),
   updateTaskMergeableState: vi.fn(),
   getHealthCheckTasks: vi.fn(),
+  createReviewTaskFromAdhoc: vi.fn()
+}))
+
+vi.mock('../reporting-queries', () => ({
+  getDoneTodayCount: vi.fn(),
   getSuccessRateBySpecType: vi.fn(),
-  createReviewTaskFromAdhoc: vi.fn(),
   getDailySuccessRate: vi.fn(),
   getFailureReasonBreakdown: vi.fn()
 }))
@@ -226,13 +230,13 @@ describe('createSprintTaskRepository', () => {
       expect(result).toBe(mockStats)
     })
 
-    it('should delegate getDoneTodayCount to queries.getDoneTodayCount', () => {
+    it('should delegate getDoneTodayCount to reportingQueries.getDoneTodayCount', () => {
       const repo = createSprintTaskRepository()
-      vi.mocked(queries.getDoneTodayCount).mockReturnValue(7)
+      vi.mocked(reportingQueries.getDoneTodayCount).mockReturnValue(7)
 
       const result = repo.getDoneTodayCount()
 
-      expect(queries.getDoneTodayCount).toHaveBeenCalled()
+      expect(reportingQueries.getDoneTodayCount).toHaveBeenCalled()
       expect(result).toBe(7)
     })
 
@@ -247,14 +251,14 @@ describe('createSprintTaskRepository', () => {
       expect(result).toBe(mockTasks)
     })
 
-    it('should delegate getSuccessRateBySpecType to queries.getSuccessRateBySpecType', () => {
+    it('should delegate getSuccessRateBySpecType to reportingQueries.getSuccessRateBySpecType', () => {
       const repo = createSprintTaskRepository()
       const mockRates = [{ spec_type: 'feature', success_rate: 0.85 }]
-      vi.mocked(queries.getSuccessRateBySpecType).mockReturnValue(mockRates as any)
+      vi.mocked(reportingQueries.getSuccessRateBySpecType).mockReturnValue(mockRates as any)
 
       const result = repo.getSuccessRateBySpecType()
 
-      expect(queries.getSuccessRateBySpecType).toHaveBeenCalled()
+      expect(reportingQueries.getSuccessRateBySpecType).toHaveBeenCalled()
       expect(result).toBe(mockRates)
     })
   })
