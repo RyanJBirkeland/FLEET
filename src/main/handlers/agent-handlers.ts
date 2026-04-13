@@ -19,6 +19,7 @@ import { createLogger } from '../logger'
 import type { SpawnLocalAgentArgs } from '../../shared/types'
 import type { AgentManager } from '../agent-manager'
 import { getErrorMessage } from '../../shared/errors'
+import { createSprintTaskRepository } from '../data/sprint-task-repository'
 
 const execFileAsync = promisify(execFileCb)
 const log = createLogger('agent-handlers')
@@ -30,6 +31,8 @@ export interface PromoteToReviewResult {
 }
 
 export function registerAgentHandlers(am?: AgentManager): void {
+  const repo = createSprintTaskRepository()
+
   safeHandle('local:getAgentProcesses', async () => {
     return []
   })
@@ -38,7 +41,8 @@ export function registerAgentHandlers(am?: AgentManager): void {
       task: args.task,
       repoPath: args.repoPath,
       model: args.model,
-      assistant: args.assistant
+      assistant: args.assistant,
+      repo
     })
   })
   safeHandle('local:tailAgentLog', (_e, args: TailLogArgs) => tailAgentLog(args))

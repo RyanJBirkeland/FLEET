@@ -23,14 +23,13 @@ import { basename, join } from 'node:path'
 import { homedir } from 'node:os'
 import { importAgent, updateAgentMeta, getAgentMeta } from './agent-history'
 import { updateAgentRunCost } from './data/agent-queries'
-import { getDb } from './db'
 import { buildAgentEnvWithAuth, getClaudeCliPath, refreshOAuthTokenFromKeychain } from './env-utils'
 import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
 import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
-import { createReviewTaskFromAdhoc } from './data/sprint-queries'
+import type { ISprintTaskRepository } from './data/sprint-task-repository'
 import { getErrorMessage } from '../shared/errors'
 import { nowIso } from '../shared/time'
 import { createLogger } from './logger'
@@ -84,6 +83,7 @@ export async function spawnAdhocAgent(args: {
   repoPath: string
   model?: string
   assistant?: boolean
+  repo: ISprintTaskRepository
 }): Promise<SpawnLocalAgentResult> {
   const model = args.model || 'claude-sonnet-4-5'
 
@@ -289,6 +289,8 @@ export async function spawnAdhocAgent(args: {
 
     try {
       const totals = turnTracker.totals()
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { getDb } = require('./db')
       updateAgentRunCost(getDb(), meta.id, {
         costUsd,
         tokensIn: totals.tokensIn,
@@ -348,7 +350,7 @@ export async function spawnAdhocAgent(args: {
         ?.trim() ?? 'Adhoc agent session'
     const title = firstLine.length > 120 ? firstLine.slice(0, 117) + '...' : firstLine
 
-    const task = createReviewTaskFromAdhoc({
+    const task = args.repo.createReviewTaskFromAdhoc({
       title,
       repo: meta.repo,
       spec: meta.task,
