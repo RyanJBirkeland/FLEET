@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { buildAgentPrompt } from './prompt-composer'
+import { buildReviewerPrompt } from './prompt-composer-reviewer'
 import type { ReviewResult } from '../../shared/types'
 
 const reviewSeed: ReviewResult = {
@@ -12,10 +12,10 @@ const reviewSeed: ReviewResult = {
   createdAt: 0,
 }
 
-describe('buildAgentPrompt — reviewer', () => {
+describe('buildReviewerPrompt', () => {
   describe('review mode (JSON output, no tools)', () => {
     it('contains the JSON schema instructions', () => {
-      const prompt = buildAgentPrompt({
+      const prompt = buildReviewerPrompt({
         agentType: 'reviewer',
         reviewerMode: 'review',
         taskContent: '# Spec\nImprove auth flow.',
@@ -29,7 +29,7 @@ describe('buildAgentPrompt — reviewer', () => {
     })
 
     it('includes the task spec content', () => {
-      const prompt = buildAgentPrompt({
+      const prompt = buildReviewerPrompt({
         agentType: 'reviewer',
         reviewerMode: 'review',
         taskContent: '# Spec\nImprove auth flow.',
@@ -40,7 +40,7 @@ describe('buildAgentPrompt — reviewer', () => {
     })
 
     it('includes the diff', () => {
-      const prompt = buildAgentPrompt({
+      const prompt = buildReviewerPrompt({
         agentType: 'reviewer',
         reviewerMode: 'review',
         taskContent: '# Spec',
@@ -53,7 +53,7 @@ describe('buildAgentPrompt — reviewer', () => {
 
   describe('chat mode (tools enabled, conversation history)', () => {
     it('includes the prior auto-review seed context', () => {
-      const prompt = buildAgentPrompt({
+      const prompt = buildReviewerPrompt({
         agentType: 'reviewer',
         reviewerMode: 'chat',
         taskContent: '# Spec',
@@ -67,7 +67,7 @@ describe('buildAgentPrompt — reviewer', () => {
     })
 
     it('includes the conversation history', () => {
-      const prompt = buildAgentPrompt({
+      const prompt = buildReviewerPrompt({
         agentType: 'reviewer',
         reviewerMode: 'chat',
         taskContent: '# Spec',
@@ -84,7 +84,7 @@ describe('buildAgentPrompt — reviewer', () => {
     })
 
     it('does NOT include the JSON schema instructions', () => {
-      const prompt = buildAgentPrompt({
+      const prompt = buildReviewerPrompt({
         agentType: 'reviewer',
         reviewerMode: 'chat',
         taskContent: '# Spec',
