@@ -511,6 +511,118 @@ async function spawnAndWireAgent(
 }
 
 /**
+ * Fire-and-forget: updates the agent_runs record and persists cost/token totals.
+ * Non-blocking — failures are logged as warnings, not propagated.
+ */
+function persistAgentRunTelemetry(
+  agentRunId: string,
+  agent: ActiveAgent,
+  exitCode: number | undefined,
+  turnTracker: TurnTracker,
+  exitedAt: number,
+  durationMs: number,
+  logger: Logger
+): void {
+  updateAgentMeta(agentRunId, {
+    status: exitCode === 0 ? 'done' : 'failed',
+    finishedAt: new Date(exitedAt).toISOString(),
+    exitCode: exitCode ?? null,
+    costUsd: agent.costUsd,
+    tokensIn: agent.tokensIn,
+    tokensOut: agent.tokensOut
+  }).catch((err) =>
+    logger.warn(`[agent-manager] Failed to update agent record for ${agentRunId}: ${err}`)
+  )
+
+  try {
+    const totals = turnTracker.totals()
+    updateAgentRunCost(getDb(), agentRunId, {
+      costUsd: agent.costUsd ?? 0,
+      tokensIn: totals.tokensIn,
+      tokensOut: totals.tokensOut,
+      cacheRead: totals.cacheTokensRead,
+      cacheCreate: totals.cacheTokensCreated,
+      durationMs,
+      numTurns: totals.turnCount
+    })
+  } catch (err) {
+    logger.warn(`[agent-manager] Failed to persist cost breakdown for ${agentRunId}: ${err}`)
+  }
+}
+
+/**
+ * Classifies the agent exit (fast-fail vs normal) and drives the appropriate
+ * task status transition and terminal notification.
+ */
+async function resolveAgentExit(
+  task: RunAgentTask,
+  exitCode: number | undefined,
+  lastAgentOutput: string,
+  agent: ActiveAgent,
+  worktree: { worktreePath: string; branch: string },
+  repo: ISprintTaskRepository,
+  onTaskTerminal: (taskId: string, status: string) => Promise<void>,
+  logger: Logger
+): Promise<void> {
+  const ffResult = classifyExit(agent.startedAt, Date.now(), exitCode ?? 1, task.fast_fail_count ?? 0)
+  const now = nowIso()
+
+  if (ffResult === 'fast-fail-exhausted') {
+    try {
+      repo.updateTask(task.id, {
+        status: 'error',
+        completed_at: now,
+        notes:
+          "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/agent-manager.log for details. To retry: reset task status to 'queued' and clear claimed_by.",
+        claimed_by: null,
+        needs_review: true
+      })
+    } catch (err) {
+      logger.error(
+        `[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`
+      )
+    }
+    await onTaskTerminal(task.id, 'error')
+  } else if (ffResult === 'fast-fail-requeue') {
+    try {
+      repo.updateTask(task.id, {
+        status: 'queued',
+        fast_fail_count: (task.fast_fail_count ?? 0) + 1,
+        claimed_by: null
+      })
+    } catch (err) {
+      logger.error(`[agent-manager] Failed to requeue fast-fail task ${task.id}: ${err}`)
+    }
+  } else {
+    try {
+      const ghRepo = getGhRepo(task.repo) ?? task.repo
+      await resolveSuccess(
+        {
+          taskId: task.id,
+          worktreePath: worktree.worktreePath,
+          title: task.title,
+          ghRepo,
+          onTaskTerminal,
+          agentSummary: lastAgentOutput || null,
+          retryCount: task.retry_count ?? 0,
+          repo
+        },
+        logger
+      )
+    } catch (err) {
+      logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
+      const isTerminal = resolveFailure(
+        { taskId: task.id, retryCount: task.retry_count ?? 0, repo },
+        logger
+      )
+      if (isTerminal) {
+        await onTaskTerminal(task.id, 'failed')
+      }
+    }
+  }
+}
+
+/**
  * Phase 3: Finalizes agent run — emits completion event, classifies exit,
  * runs resolution handlers, and cleans up resources.
  */
@@ -557,92 +669,8 @@ async function finalizeAgentRun(
     return
   }
 
-  // Update agent run record
-  updateAgentMeta(agentRunId, {
-    status: exitCode === 0 ? 'done' : 'failed',
-    finishedAt: new Date(exitedAt).toISOString(),
-    exitCode: exitCode ?? null,
-    costUsd: agent.costUsd,
-    tokensIn: agent.tokensIn,
-    tokensOut: agent.tokensOut
-  }).catch((err) =>
-    logger.warn(`[agent-manager] Failed to update agent record for ${agentRunId}: ${err}`)
-  )
-
-  // Persist cost breakdown
-  try {
-    const totals = turnTracker.totals()
-    updateAgentRunCost(getDb(), agentRunId, {
-      costUsd: agent.costUsd ?? 0,
-      tokensIn: totals.tokensIn,
-      tokensOut: totals.tokensOut,
-      cacheRead: totals.cacheTokensRead,
-      cacheCreate: totals.cacheTokensCreated,
-      durationMs,
-      numTurns: totals.turnCount
-    })
-  } catch (err) {
-    logger.warn(`[agent-manager] Failed to persist cost breakdown for ${agentRunId}: ${err}`)
-  }
-
-  // Classify exit
-  const ffResult = classifyExit(agent.startedAt, exitedAt, exitCode ?? 1, task.fast_fail_count ?? 0)
-  const now = nowIso()
-
-  if (ffResult === 'fast-fail-exhausted') {
-    try {
-      repo.updateTask(task.id, {
-        status: 'error',
-        completed_at: now,
-        notes:
-          "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/agent-manager.log for details. To retry: reset task status to 'queued' and clear claimed_by.",
-        claimed_by: null,
-        needs_review: true
-      })
-    } catch (err) {
-      logger.error(
-        `[agent-manager] Failed to update task ${task.id} after fast-fail exhausted: ${err}`
-      )
-    }
-    await onTaskTerminal(task.id, 'error')
-  } else if (ffResult === 'fast-fail-requeue') {
-    try {
-      repo.updateTask(task.id, {
-        status: 'queued',
-        fast_fail_count: (task.fast_fail_count ?? 0) + 1,
-        claimed_by: null
-      })
-    } catch (err) {
-      logger.error(`[agent-manager] Failed to requeue fast-fail task ${task.id}: ${err}`)
-    }
-  } else {
-    // Normal exit — attempt success resolution
-    try {
-      const ghRepo = getGhRepo(task.repo) ?? task.repo
-      await resolveSuccess(
-        {
-          taskId: task.id,
-          worktreePath: worktree.worktreePath,
-          title: task.title,
-          ghRepo,
-          onTaskTerminal,
-          agentSummary: lastAgentOutput || null,
-          retryCount: task.retry_count ?? 0,
-          repo
-        },
-        logger
-      )
-    } catch (err) {
-      logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
-      const isTerminal = resolveFailure(
-        { taskId: task.id, retryCount: task.retry_count ?? 0, repo },
-        logger
-      )
-      if (isTerminal) {
-        await onTaskTerminal(task.id, 'failed')
-      }
-    }
-  }
+  persistAgentRunTelemetry(agentRunId, agent, exitCode, turnTracker, exitedAt, durationMs, logger)
+  await resolveAgentExit(task, exitCode, lastAgentOutput, agent, worktree, repo, onTaskTerminal, logger)
 
   // Remove from active map
   activeAgents.delete(task.id)
@@ -666,7 +694,7 @@ async function finalizeAgentRun(
     )
   }
 
-  logger.info(`[agent-manager] Agent completed for task ${task.id} (${ffResult})`)
+  logger.info(`[agent-manager] Agent completed for task ${task.id} (exitCode=${exitCode ?? 'none'})`)
 }
 
 export async function runAgent(
