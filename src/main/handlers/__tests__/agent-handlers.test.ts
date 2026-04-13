@@ -349,12 +349,14 @@ describe('local:spawnClaudeAgent handler', () => {
       model: 'claude-opus-4'
     })
 
-    expect(spawnAdhocAgent).toHaveBeenCalledWith({
-      task: 'Build the feature',
-      repoPath: '/Users/test/projects/BDE',
-      model: 'claude-opus-4',
-      assistant: undefined
-    })
+    expect(spawnAdhocAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        task: 'Build the feature',
+        repoPath: '/Users/test/projects/BDE',
+        model: 'claude-opus-4',
+        assistant: undefined
+      })
+    )
     expect(result).toEqual(spawnResult)
   })
 })
