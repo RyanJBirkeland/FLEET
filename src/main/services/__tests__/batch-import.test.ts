@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { batchImportTasks } from '../batch-import'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 
@@ -120,5 +120,52 @@ describe('batchImportTasks', () => {
     expect(result.created).toHaveLength(0)
     expect(result.errors).toHaveLength(1)
     expect(result.errors[0]).toContain('Failed to create task')
+  })
+
+  describe('repo validation against configuredRepos', () => {
+    const mockRepo = {
+      createTask: vi.fn().mockImplementation((input) => ({ id: 'generated-id', ...input }))
+    } as unknown as ISprintTaskRepository
+
+    beforeEach(() => vi.clearAllMocks())
+
+    it('creates tasks when repo is valid', () => {
+      const result = batchImportTasks(
+        [{ title: 'Task A', repo: 'bde' }],
+        mockRepo,
+        ['bde', 'life-os']
+      )
+      expect(result.errors).toHaveLength(0)
+      expect(result.created).toHaveLength(1)
+    })
+
+    it('rejects tasks with unconfigured repo when configuredRepos provided', () => {
+      const result = batchImportTasks(
+        [{ title: 'Task A', repo: 'unknown-repo' }],
+        mockRepo,
+        ['bde', 'life-os']
+      )
+      expect(result.errors).toHaveLength(1)
+      expect(result.errors[0]).toMatch(/unknown-repo.*not configured/i)
+      expect(result.created).toHaveLength(0)
+      expect(mockRepo.createTask).not.toHaveBeenCalled()
+    })
+
+    it('repo comparison is case-insensitive', () => {
+      const result = batchImportTasks(
+        [{ title: 'Task A', repo: 'BDE' }],
+        mockRepo,
+        ['bde']
+      )
+      expect(result.errors).toHaveLength(0)
+    })
+
+    it('skips repo validation when configuredRepos is undefined (backward compat)', () => {
+      const result = batchImportTasks(
+        [{ title: 'Task A', repo: 'any-repo' }],
+        mockRepo
+      )
+      expect(result.errors).toHaveLength(0)
+    })
   })
 })
