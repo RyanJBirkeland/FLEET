@@ -210,7 +210,7 @@
 .terminal-tab__close {
   width: 14px;
   height: 14px;
-  border-radius: 2px;
+  border-radius: var(--bde-radius-sm);
   border: none;
   background: transparent;
   color: var(--bde-text-dim);
@@ -395,7 +395,7 @@
   background: transparent;
   color: var(--bde-text-muted);
   cursor: pointer;
-  border-radius: 3px;
+  border-radius: var(--bde-radius-sm);
 }
 .terminal-find__btn:hover:not(:disabled) {
   background: var(--bde-hover-strong);

@@ -7,7 +7,7 @@
 }
 
 .wb-actions__btn {
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   padding: var(--bde-space-2) var(--bde-space-4);
   font-size: 13px;
   font-family: inherit;

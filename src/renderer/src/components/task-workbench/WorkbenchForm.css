@@ -48,7 +48,7 @@
   padding: 10px var(--bde-space-3);
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-text);
   font-size: 13px;
   outline: none;
@@ -77,7 +77,7 @@
   padding: 10px var(--bde-space-3);
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-text);
   font-size: 13px;
   outline: none;

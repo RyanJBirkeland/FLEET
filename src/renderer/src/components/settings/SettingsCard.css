@@ -88,7 +88,7 @@
   width: 100%;
   background: var(--bde-surface);
   border: 1px solid var(--bde-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   padding: var(--bde-space-2) var(--bde-space-3);
   color: var(--bde-text);
   font-family: var(--bde-font-code);
@@ -112,7 +112,7 @@
 .settings-section {
   background: var(--glass-tint-dark);
   border: 1px solid var(--bde-border);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   padding: var(--bde-space-4);
   margin-bottom: var(--bde-space-3);
 }

@@ -67,7 +67,7 @@
 button.wb-checks__item--actionable {
   background: transparent;
   border: 1px solid transparent;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   padding: var(--bde-space-1) 6px;
   margin: 0;
   width: 100%;

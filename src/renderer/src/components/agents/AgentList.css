@@ -50,7 +50,7 @@
   padding: var(--bde-space-1) 10px;
   background: var(--bde-surface-high);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-text-dim);
   font-family: var(--bde-font-code);
   font-size: 11px;

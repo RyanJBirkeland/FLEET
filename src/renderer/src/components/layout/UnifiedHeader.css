@@ -115,7 +115,7 @@
   color: var(--bde-text-dim);
   cursor: pointer;
   -webkit-app-region: no-drag;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   transition:
     color 150ms ease,
     background 150ms ease;
@@ -151,7 +151,7 @@
   justify-content: center;
   width: 24px;
   height: 24px;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   color: var(--bde-text-dim);
   cursor: pointer;
   transition:
@@ -190,7 +190,7 @@
   transition:
     background 100ms ease,
     color 100ms ease;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   background: none;
   border: none;
   width: 100%;
@@ -249,7 +249,7 @@
   transition:
     background 100ms ease,
     color 100ms ease;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
 }
 
 .overflow-menu__customize-btn:hover:not(:disabled),
@@ -370,7 +370,7 @@
   padding: 8px 16px;
   background: var(--bde-surface);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   box-shadow: var(--bde-shadow-lg);
   width: min(560px, 80vw);
   font-family: var(--bde-font-code);
@@ -405,7 +405,7 @@
 }
 .quick-create-bar__hint kbd {
   padding: 1px 4px;
-  border-radius: 3px;
+  border-radius: var(--bde-radius-sm);
   background: var(--bde-surface-high);
   border: 1px solid var(--bde-border);
   font-size: 9px;

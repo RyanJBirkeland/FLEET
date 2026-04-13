@@ -17,7 +17,7 @@
   font-size: var(--bde-size-md);
   font-weight: 500;
   padding: 8px 16px;
-  border-radius: 20px;
+  border-radius: var(--bde-radius-xl);
   border: none;
   cursor: pointer;
   pointer-events: auto;

@@ -54,7 +54,7 @@
   color: var(--bde-text-dim);
   cursor: pointer;
   padding: var(--bde-space-1);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -79,7 +79,7 @@
   color: var(--bde-text-dim);
   cursor: pointer;
   padding: var(--bde-space-1);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;

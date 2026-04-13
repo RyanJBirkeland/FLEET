@@ -34,7 +34,7 @@
 .dashboard-completion-row[role='button'] {
   cursor: pointer;
   padding: var(--bde-space-1) 6px;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   transition: background 0.15s ease;
 }
 
@@ -93,7 +93,7 @@
   justify-content: space-between;
   gap: var(--bde-space-2);
   padding: 6px var(--bde-space-2);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   transition: background 0.15s ease;
 }
 

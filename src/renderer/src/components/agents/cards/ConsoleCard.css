@@ -2,7 +2,7 @@
 .console-card {
   padding: var(--bde-space-3);
   margin-bottom: var(--bde-space-3);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: 12px;
   font-family: var(--bde-font-code);
   line-height: 1.5;

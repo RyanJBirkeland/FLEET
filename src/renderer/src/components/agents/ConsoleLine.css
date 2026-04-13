@@ -99,7 +99,7 @@
   background: var(--bde-accent-surface);
   color: var(--bde-accent);
   padding: 1px 5px;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   font-size: 11px;
 }
 
@@ -119,7 +119,7 @@
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   font-size: 10px;
   flex-shrink: 0;
   font-weight: 700;
@@ -160,7 +160,7 @@
 .console-completion-card {
   margin: var(--bde-space-3);
   padding: var(--bde-space-4);
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   background: linear-gradient(135deg, var(--bde-accent-surface) 0%, var(--bde-surface-high) 100%);
   border: 1px solid var(--bde-accent-border);
   font-family: var(--bde-font-code);
@@ -254,7 +254,7 @@
 .console-badge {
   display: inline-block;
   padding: 0 6px;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   font-size: 10px;
   flex-shrink: 0;
   font-weight: 600;

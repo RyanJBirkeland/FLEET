@@ -55,7 +55,7 @@
   padding: var(--bde-space-1) var(--bde-space-2);
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   min-width: 0;
 }
 
@@ -72,7 +72,7 @@
 .wb-deps__type {
   flex-shrink: 0;
   padding: 1px 6px;
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
@@ -117,7 +117,7 @@
   font-size: 11px;
   line-height: 1;
   padding: 1px 3px;
-  border-radius: 3px;
+  border-radius: var(--bde-radius-sm);
   transition: color 150ms ease;
 }
 
@@ -137,7 +137,7 @@
 .wb-deps__add {
   background: none;
   border: 1px dashed var(--bde-accent-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-text-muted);
   font-size: 12px;
   cursor: pointer;
@@ -161,7 +161,7 @@
 .wb-deps__picker {
   background: var(--bde-surface-high, var(--bde-bg));
   border: 1px solid var(--bde-accent-border);
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   box-shadow: var(--bde-shadow-md);
   overflow: hidden;
 }

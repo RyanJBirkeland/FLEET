@@ -16,7 +16,7 @@
   max-height: 400px;
   background: var(--bde-surface-high, var(--bde-surface));
   border: 1px solid var(--bde-border);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   box-shadow: var(--bde-shadow-lg);
   display: flex;
   flex-direction: column;

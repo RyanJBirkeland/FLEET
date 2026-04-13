@@ -18,7 +18,7 @@
   font-weight: 600;
   font-family: var(--bde-font-ui);
   padding: 1px 4px;
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   min-width: 14px;
   height: 14px;
   display: flex;

@@ -121,7 +121,7 @@
   display: inline-block;
   width: fit-content;
   padding: 2px var(--bde-space-2);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   font-size: var(--bde-size-xs);
   font-weight: 600;
   text-transform: uppercase;
@@ -306,7 +306,7 @@
   display: inline-block;
   padding: 1px var(--bde-space-2);
   border: 1px solid var(--bde-border);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   font-size: var(--bde-size-xs);
   font-weight: 500;
   color: var(--bde-text-muted);

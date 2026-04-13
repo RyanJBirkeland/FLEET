@@ -27,7 +27,7 @@
 
 .editor-breadcrumb__segment {
   padding: 1px var(--bde-space-1);
-  border-radius: 3px;
+  border-radius: var(--bde-radius-sm);
   cursor: default;
 }
 

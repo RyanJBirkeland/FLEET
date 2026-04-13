@@ -2,7 +2,7 @@
 .task-row {
   background: var(--bde-border);
   border: 1px solid var(--bde-border);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   padding: var(--bde-space-1) 10px;
   cursor: pointer;
   transition: all 150ms ease;
@@ -45,7 +45,7 @@
   color: var(--bde-accent);
   background: var(--bde-accent-surface);
   padding: 1px 5px;
-  border-radius: 3px;
+  border-radius: var(--bde-radius-sm);
   flex-shrink: 0;
   font-weight: 600;
 }
@@ -59,7 +59,7 @@
 .task-row__priority {
   font-size: var(--font-2xs, 10px);
   padding: 1px var(--bde-space-1);
-  border-radius: 3px;
+  border-radius: var(--bde-radius-sm);
   flex-shrink: 0;
   font-weight: 600;
 }

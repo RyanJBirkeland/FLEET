@@ -103,7 +103,7 @@
   top: 100%;
   right: 0;
   margin-top: var(--bde-space-1);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 1000;
   min-width: 80px;
@@ -115,7 +115,7 @@
   align-items: center;
   gap: var(--bde-space-1);
   padding: var(--bde-space-1) 10px;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: var(--font-2xs, 10px);
   font-weight: 600;
   font-family: var(--bde-font-code);

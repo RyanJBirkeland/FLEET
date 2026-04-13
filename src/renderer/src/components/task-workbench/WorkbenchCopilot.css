@@ -62,7 +62,7 @@
 .wb-copilot__bubble {
   max-width: 90%;
   padding: var(--bde-space-2) var(--bde-space-3);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: 13px;
   color: var(--bde-text);
   line-height: 1.5;
@@ -125,7 +125,7 @@
 .wb-copilot__insert-btn {
   background: var(--bde-accent-surface);
   border: 1px solid var(--bde-accent);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   color: var(--bde-accent);
   padding: 1px var(--bde-space-2);
   font-size: 11px;
@@ -167,7 +167,7 @@
 .wb-copilot__cancel-btn {
   background: none;
   border: 1px solid var(--bde-border);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   color: var(--bde-text-muted);
   padding: 1px var(--bde-space-2);
   font-size: 11px;
@@ -206,7 +206,7 @@
   padding: var(--bde-space-2);
   background: var(--bde-border);
   border: 1px solid var(--bde-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-text);
   font-size: 13px;
   font-family: inherit;
@@ -230,7 +230,7 @@
   align-self: flex-end;
   padding: var(--bde-space-2) var(--bde-space-3);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: 12px;
   font-weight: 600;
   font-family: inherit;

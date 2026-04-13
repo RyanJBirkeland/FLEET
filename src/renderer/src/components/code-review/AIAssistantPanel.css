@@ -307,7 +307,7 @@
   justify-content: center;
   min-width: 16px;
   padding: 0 4px;
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   background: var(--bde-purple);
   color: var(--bde-bg);
   font-weight: 600;

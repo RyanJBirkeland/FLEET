@@ -54,7 +54,7 @@
 
 .dashboard-briefing__button {
   padding: var(--bde-space-2) var(--bde-space-4);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -105,7 +105,7 @@
   align-items: center;
   gap: var(--bde-space-3);
   padding: 6px var(--bde-space-2);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
   background: var(--bde-border);
 }
 

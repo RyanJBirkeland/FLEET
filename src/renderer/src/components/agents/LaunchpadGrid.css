@@ -60,7 +60,7 @@
 .launchpad__tile {
   background: linear-gradient(135deg, var(--bde-surface), transparent);
   border: 1px solid var(--bde-border);
-  border-radius: 12px;
+  border-radius: var(--bde-radius-xl);
   padding: 18px 14px;
   text-align: center;
   cursor: pointer;
@@ -139,7 +139,7 @@
   flex: 1;
   background: var(--bde-border);
   border: 1px solid var(--bde-surface);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   padding: var(--bde-space-3) var(--bde-space-4);
   color: var(--bde-text);
   font-size: 13px;
@@ -174,7 +174,7 @@
   gap: 6px;
   background: var(--bde-accent-surface);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   padding: var(--bde-space-3) 18px;
   color: var(--bde-accent);
   font-size: 12px;
@@ -214,7 +214,7 @@
   font-size: 11px;
   padding: 6px 10px;
   border: 1px solid var(--bde-border);
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   cursor: pointer;
   white-space: nowrap;
   background: none;
@@ -249,7 +249,7 @@
   overflow-y: auto;
   background: var(--bde-border);
   border: 1px solid var(--bde-surface);
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
   margin-top: var(--bde-space-1);
 }
@@ -302,7 +302,7 @@
 
 .launchpad__model-pill {
   padding: var(--bde-space-1) 10px;
-  border-radius: 12px;
+  border-radius: var(--bde-radius-xl);
   font-size: 10px;
   font-weight: 600;
   cursor: pointer;

@@ -25,7 +25,7 @@
   font-size: 11px;
   font-weight: 600;
   padding: 2px var(--bde-space-2);
-  border-radius: 4px;
+  border-radius: var(--bde-radius-sm);
 }
 
 .rab__freshness--fresh {
@@ -73,7 +73,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px var(--bde-space-3);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: 12px;
   font-family: var(--bde-font-code);
   font-weight: 600;
@@ -99,7 +99,7 @@
   background: var(--bde-accent-surface);
   border-color: var(--bde-accent-border);
   color: var(--bde-accent);
-  border-radius: 6px 0 0 6px;
+  border-radius: var(--bde-radius-md) 0 0 var(--bde-radius-md);
 }
 
 .rab__btn--primary:hover:not(:disabled) {
@@ -172,7 +172,7 @@
   background: var(--bde-border);
   border: 1px solid var(--bde-accent-border);
   border-left: none;
-  border-radius: 0 6px 6px 0;
+  border-radius: 0 var(--bde-radius-md) var(--bde-radius-md) 0;
   color: var(--bde-text-muted);
   font-size: 11px;
   font-family: var(--bde-font-code);

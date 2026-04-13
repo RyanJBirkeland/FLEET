@@ -25,7 +25,7 @@
 .stg-sidebar__search-input {
   width: 100%;
   padding: 6px var(--bde-space-2) 6px 28px;
-  border-radius: 5px;
+  border-radius: var(--bde-radius-md);
   border: 1px solid var(--bde-accent-border);
   background: var(--bde-surface);
   color: var(--bde-text);
@@ -61,7 +61,7 @@
   align-items: center;
   gap: 7px;
   padding: 6px var(--bde-space-2);
-  border-radius: 5px;
+  border-radius: var(--bde-radius-md);
   cursor: pointer;
   color: var(--bde-text-muted);
   font-size: var(--bde-space-3);

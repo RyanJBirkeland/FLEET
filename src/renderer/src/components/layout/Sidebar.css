@@ -35,7 +35,7 @@
 .sidebar-item {
   width: 36px;
   height: 36px;
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -77,7 +77,7 @@
   right: 2px;
   min-width: 16px;
   height: 16px;
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   background: var(--bde-warning);
   color: var(--bde-bg);
   font-size: 10px;
@@ -107,7 +107,7 @@
   z-index: 1000;
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   padding: 4px 0;
   min-width: 200px;
 }
@@ -139,7 +139,7 @@
   position: fixed;
   z-index: 1000;
   padding: 6px 12px;
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   background: linear-gradient(135deg, var(--bde-accent-surface), var(--bde-surface-high));
   border: 1px solid var(--bde-accent-border);
   box-shadow: none;
@@ -172,7 +172,7 @@
 /* ── Model Badge ── */
 .sidebar-model-badge {
   padding: 3px 4px;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   background: var(--bde-accent-surface);
   border: 1px solid var(--bde-accent-border);
   font-size: 7px;

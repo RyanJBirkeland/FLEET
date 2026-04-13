@@ -15,7 +15,7 @@
 .wb-spec__btn {
   background: none;
   border: 1px solid var(--bde-border);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-text-muted);
   padding: var(--bde-space-1) var(--bde-space-3);
   font-size: 12px;
@@ -73,7 +73,7 @@
   padding: var(--bde-space-3);
   background: var(--bde-overlay);
   border: 1px solid var(--bde-accent-border);
-  border-radius: 8px;
+  border-radius: var(--bde-radius-lg);
   color: var(--bde-text);
   font-size: 13px;
   font-family: var(--bde-font-code);

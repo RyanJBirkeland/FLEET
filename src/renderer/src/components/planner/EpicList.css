@@ -31,7 +31,7 @@
   color: var(--bde-text-dim);
   background: var(--bde-border);
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: var(--bde-radius-xl);
 }
 
 .planner-epic-list__import-btn {
@@ -77,7 +77,7 @@
   padding: 10px;
   background: var(--bde-accent-surface);
   border: 1px solid var(--bde-accent);
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   color: var(--bde-accent);
   font-size: 13px;
   font-weight: 600;
@@ -118,7 +118,7 @@
   top: 0;
   bottom: 0;
   width: 3px;
-  border-radius: 8px 0 0 8px;
+  border-radius: var(--bde-radius-lg) 0 0 var(--bde-radius-lg);
 }
 
 .planner-epic-item__icon {
@@ -129,7 +129,7 @@
   align-items: center;
   justify-content: center;
   border: 1px solid;
-  border-radius: 6px;
+  border-radius: var(--bde-radius-md);
   font-size: 14px;
   font-weight: 700;
 }
@@ -174,14 +174,14 @@
 .planner-epic-item__progress-track {
   height: 3px;
   background: var(--bde-border);
-  border-radius: 2px;
+  border-radius: var(--bde-radius-sm);
   overflow: hidden;
 }
 
 .planner-epic-item__progress-fill {
   height: 100%;
   transition: width 200ms ease;
-  border-radius: 2px;
+  border-radius: var(--bde-radius-sm);
 }
 
 /* Completed section toggle */

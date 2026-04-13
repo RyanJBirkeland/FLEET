@@ -627,7 +627,7 @@
   width: 100%;
   background: var(--bde-surface);
   border: 1px solid var(--bde-border);
-  border-radius: 5px;
+  border-radius: var(--bde-radius-md);
   padding: 6px var(--bde-space-2);
   color: var(--bde-text);
   font-size: var(--bde-space-3);
@@ -657,7 +657,7 @@
 
 .memory-sidebar__skeleton {
   height: 36px;
-  border-radius: 5px;
+  border-radius: var(--bde-radius-md);
 }
 
 /* ─── File row internals ─────────────────────────────────── */
