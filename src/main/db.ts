@@ -62,8 +62,13 @@ export function backupDatabase(): void {
     unlinkSync(backupPath)
   }
 
+  // VACUUM INTO doesn't support bound parameters, so we must use string interpolation.
+  // Escape single quotes for SQLite string literal safety.
+  const escapedPath = resolvedPath.replace(/'/g, "''")
+
   // DL-11: Propagate VACUUM INTO failures instead of swallowing
-  db.exec(`VACUUM INTO '${backupPath}'`)
+  const sql = `VACUUM INTO '${escapedPath}'`
+  db.exec(sql)
 
   // DL-24: Verify backup integrity - check file exists and has reasonable size
   if (!existsSync(backupPath)) {
