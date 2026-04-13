@@ -479,9 +479,6 @@
   margin-left: 2px;
   animation: cr-cursor-blink 1s linear infinite;
 }
-@keyframes cr-cursor-blink {
-  50% { opacity: 0; }
-}
 @media (prefers-reduced-motion: reduce) {
   .cr-message--streaming .cr-message__content::after { animation: none; }
 }
