@@ -1,6 +1,6 @@
 import type { SprintTask } from '../../../shared/types'
 import { PR_STATUS } from '../../../shared/constants'
-import { STATUS_METADATA } from '../../../shared/task-state-machine'
+import { STATUS_METADATA } from './task-status-ui'
 
 export interface SprintPartition {
   backlog: SprintTask[]

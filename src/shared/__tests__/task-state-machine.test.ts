@@ -1,18 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import {
   type TaskStatus,
-  type BucketKey,
   TASK_STATUSES,
   TERMINAL_STATUSES,
   FAILURE_STATUSES,
   HARD_SATISFIED_STATUSES,
   VALID_TRANSITIONS,
-  STATUS_METADATA,
   isValidTransition,
   isTerminal,
   isFailure,
   isHardSatisfied
 } from '../task-state-machine'
+import { type BucketKey, STATUS_METADATA } from '../../renderer/src/lib/task-status-ui'
 
 describe('task-state-machine', () => {
   describe('TASK_STATUSES', () => {
