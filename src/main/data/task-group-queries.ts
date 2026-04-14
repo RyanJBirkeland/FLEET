@@ -8,10 +8,15 @@ import { getDb } from '../db'
 import { mapRowsToTasks } from './sprint-queries'
 import { getErrorMessage } from '../../shared/errors'
 import type { Logger } from '../logger'
-import { createLogger } from '../logger'
 import { withDataLayerError } from './data-utils'
 
-let _logger: Logger = createLogger('task-group-queries')
+// Module-level logger — defaults to console, injectable for testing/structured logging
+let _logger: Logger = {
+  info: (m) => console.log(m),
+  warn: (m) => console.warn(m),
+  error: (m) => console.error(m),
+  debug: (m) => console.debug(m)
+}
 
 /**
  * Inject a logger. Called at app startup to route logs to the shared log file.
@@ -19,6 +24,10 @@ let _logger: Logger = createLogger('task-group-queries')
  */
 export function setTaskGroupQueriesLogger(logger: Logger): void {
   _logger = logger
+}
+
+export function getTaskGroupQueriesLogger(): Logger {
+  return _logger
 }
 
 export interface CreateGroupInput {
