@@ -131,15 +131,18 @@ export async function spawnAdhocAgent(args: {
     repoName
   })
 
-  // Shared options for all turns (v1 Options — has cwd + settingSources)
-  // Uses settingSources to inherit user's permissions from ~/.claude/settings.json
-  // instead of bypassPermissions — agents respect the user's configured guardrails
   const baseOptions = {
     model,
     cwd: worktreePath,
     env: env as Record<string, string>,
     pathToClaudeCodeExecutable: getClaudeCliPath(),
-    settingSources: ['user' as const, 'project' as const, 'local' as const]
+    // Adhoc agents receive BDE conventions via buildAgentPrompt() — loading
+    // CLAUDE.md via 'project' would double-inject conventions and cost ~5-10KB
+    // extra per turn. 'user' and 'local' kept for permission settings.
+    settingSources: [],
+    // Hard cap on spend per interactive session. User-controlled agents can
+    // rack up cost across many turns. This is a safety ceiling, not a target.
+    maxBudgetUsd: 5.0
   }
 
   // Record in agent_runs (with worktree path + branch persisted so the

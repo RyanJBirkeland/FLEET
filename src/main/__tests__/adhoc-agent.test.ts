@@ -468,7 +468,7 @@ describe('spawnAdhocAgent — prompt composer integration', () => {
     expect(call.prompt).toBe('[PREAMBLE]\n\nuser task')
   })
 
-  it('includes settingSources in SDK options', async () => {
+  it('uses empty settingSources and maxBudgetUsd cap', async () => {
     const handle = createMockQueryHandle([])
     mockQuery.mockReturnValue(handle)
 
@@ -480,7 +480,11 @@ describe('spawnAdhocAgent — prompt composer integration', () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({
-          settingSources: ['user', 'project', 'local']
+          // BDE conventions injected via buildAgentPrompt() — 'project' source
+          // would double-inject CLAUDE.md, costing ~5-10KB extra per turn.
+          settingSources: [],
+          // Safety ceiling for interactive multi-turn sessions.
+          maxBudgetUsd: 5.0
         })
       })
     )
