@@ -73,8 +73,8 @@ function extractRegisteredChannels(): Set<string> {
     .map((f) => join(handlerDir, f))
 
   // Also include top-level files that register handlers
-  const topLevelFiles = ['fs.ts', 'index.ts', 'tearoff-manager.ts'].map((f) =>
-    join(srcRoot, 'main', f)
+  const topLevelFiles = ['fs.ts', 'index.ts', 'tearoff-manager.ts', 'tearoff-handlers.ts'].map(
+    (f) => join(srcRoot, 'main', f)
   )
 
   const allFiles = [...handlerFiles, ...topLevelFiles]
