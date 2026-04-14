@@ -76,7 +76,8 @@ vi.mock('../../agent-history', () => ({
 
 vi.mock('../../agent-event-mapper', () => ({
   mapRawMessage: vi.fn().mockReturnValue([]),
-  emitAgentEvent: vi.fn()
+  emitAgentEvent: vi.fn(),
+  flushAgentEventBatcher: vi.fn()
 }))
 
 vi.mock('../../agent-system/memory/user-memory', () => ({

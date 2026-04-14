@@ -180,6 +180,7 @@ function setupDefaultMocks() {
   vi.mocked(getRepoPaths).mockReturnValue({ myrepo: '/repos/myrepo' })
   vi.mocked(claimTask).mockReturnValue({ id: 'task-1' } as ReturnType<typeof vi.fn>)
   vi.mocked(updateTask).mockReturnValue(null)
+  vi.mocked(getTask).mockReturnValue({ id: 'task-1', status: 'queued' } as any)
   vi.mocked(recoverOrphans).mockResolvedValue(0)
   vi.mocked(pruneStaleWorktrees).mockResolvedValue(0)
   vi.mocked(setupWorktree).mockResolvedValue({
@@ -610,7 +611,7 @@ describe('AgentManagerImpl — class internals', () => {
 
       let callCount = 0
       const mockRepo = {
-        getTask: vi.fn(),
+        getTask: vi.fn().mockReturnValue({ id: 'task-1', status: 'queued' }),
         updateTask: vi.fn(),
         getQueuedTasks: vi.fn(),
         getOrphanedTasks: vi.fn(),

@@ -194,6 +194,7 @@ function setupDefaultMocks(): void {
   vi.mocked(getQueuedTasks).mockReturnValue([])
   vi.mocked(claimTask).mockReturnValue(null)
   vi.mocked(updateTask).mockReturnValue(null)
+  vi.mocked(getTask).mockReturnValue(makeTask())
   vi.mocked(recoverOrphans).mockResolvedValue(0)
   vi.mocked(pruneStaleWorktrees).mockResolvedValue(0)
   vi.mocked(setupWorktree).mockResolvedValue({

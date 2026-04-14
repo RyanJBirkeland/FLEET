@@ -847,26 +847,30 @@ describe('markTaskDoneByPrNumber — audit trail atomicity (F-t3-audit-trail-3)'
 
 // updateTaskMergeableState writes an audit record
 describe('updateTaskMergeableState — audit trail (F-t3-audit-trail-1)', () => {
-  it('calls recordTaskChanges with old and new pr_mergeable_state', () => {
+  it('calls recordTaskChangesBulk with old and new pr_mergeable_state', () => {
     insertTask({ id: 'merge-audit-1', pr_number: 55 })
 
     updateTaskMergeableState(55, 'clean')
 
-    expect(mockRecordTaskChanges).toHaveBeenCalledWith(
-      'merge-audit-1',
-      expect.objectContaining({ pr_mergeable_state: null }),
-      expect.objectContaining({ pr_mergeable_state: 'clean' }),
+    expect(mockRecordTaskChangesBulk).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({
+          taskId: 'merge-audit-1',
+          oldTask: expect.objectContaining({ pr_mergeable_state: null }),
+          newPatch: expect.objectContaining({ pr_mergeable_state: 'clean' })
+        })
+      ]),
       'pr-poller',
       expect.anything() // db instance
     )
   })
 
-  it('does not call recordTaskChanges when mergeableState is null (early return)', () => {
+  it('does not call recordTaskChangesBulk when mergeableState is null (early return)', () => {
     insertTask({ id: 'merge-audit-2', pr_number: 56 })
 
     updateTaskMergeableState(56, null)
 
-    expect(mockRecordTaskChanges).not.toHaveBeenCalled()
+    expect(mockRecordTaskChangesBulk).not.toHaveBeenCalled()
   })
 })
 
@@ -903,11 +907,11 @@ describe('updateTask — transition enforcement', () => {
 
 // updateTaskMergeableState audit atomicity
 describe('updateTaskMergeableState — audit atomicity (F-t3-audit-trail-2)', () => {
-  it('rolls back pr_mergeable_state update when recordTaskChanges throws', () => {
+  it('rolls back pr_mergeable_state update when recordTaskChangesBulk throws', () => {
     insertTask({ id: 'merge-atomic-1', pr_number: 99 })
 
-    // Make the per-task audit writer throw
-    mockRecordTaskChanges.mockImplementationOnce(() => {
+    // Make the bulk audit writer throw
+    mockRecordTaskChangesBulk.mockImplementationOnce(() => {
       throw new Error('audit DB write failed')
     })
 

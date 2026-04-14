@@ -40,23 +40,31 @@ describe('synthesizer-handlers', () => {
     expect(handlers.has('synthesizer:cancel')).toBe(true)
   })
 
+  const validGenerateRequest = {
+    templateName: 'bug',
+    repo: 'myrepo',
+    repoPath: '/repos/myrepo',
+    answers: {}
+  }
+
   describe('synthesizer:generate', () => {
     it('should return streamId immediately', async () => {
       const handler = handlers.get('synthesizer:generate')!
-      const result = await handler({ sender: mockSender }, { template: 'bug', answers: {} })
+      const result = await handler({ sender: mockSender }, validGenerateRequest)
 
       expect(result).toMatchObject({ streamId: expect.stringContaining('synthesizer-gen-') })
     })
 
     it('should call synthesizeSpec with request and callback', async () => {
       const handler = handlers.get('synthesizer:generate')!
+      const req = { ...validGenerateRequest, templateName: 'feature', answers: { title: 'Test' } }
 
-      await handler({ sender: mockSender }, { template: 'feature', answers: { title: 'Test' } })
+      await handler({ sender: mockSender }, req)
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(specSynthesizer.synthesizeSpec).toHaveBeenCalledWith(
-        { template: 'feature', answers: { title: 'Test' } },
+        req,
         expect.any(Function),
         expect.stringContaining('synthesizer-gen-')
       )
@@ -64,7 +72,7 @@ describe('synthesizer-handlers', () => {
 
     it('should stream chunks to renderer', async () => {
       const handler = handlers.get('synthesizer:generate')!
-      await handler({ sender: mockSender }, { template: 'bug', answers: {} })
+      await handler({ sender: mockSender }, validGenerateRequest)
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 
@@ -79,7 +87,7 @@ describe('synthesizer-handlers', () => {
 
     it('should send completion message with full text', async () => {
       const handler = handlers.get('synthesizer:generate')!
-      await handler({ sender: mockSender }, { template: 'bug', answers: {} })
+      await handler({ sender: mockSender }, validGenerateRequest)
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 
@@ -97,7 +105,7 @@ describe('synthesizer-handlers', () => {
       vi.mocked(specSynthesizer.synthesizeSpec).mockRejectedValue(new Error('Synthesis failed'))
 
       const handler = handlers.get('synthesizer:generate')!
-      await handler({ sender: mockSender }, { template: 'bug', answers: {} })
+      await handler({ sender: mockSender }, validGenerateRequest)
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 
@@ -111,26 +119,31 @@ describe('synthesizer-handlers', () => {
     })
   })
 
+  const validReviseRequest = {
+    currentSpec: 'Old spec',
+    instruction: 'Make it better',
+    repo: 'myrepo',
+    repoPath: '/repos/myrepo'
+  }
+
   describe('synthesizer:revise', () => {
     it('should return streamId immediately', async () => {
       const handler = handlers.get('synthesizer:revise')!
-      const result = await handler(
-        { sender: mockSender },
-        { currentSpec: 'Old spec', instruction: 'Make it better' }
-      )
+      const result = await handler({ sender: mockSender }, validReviseRequest)
 
       expect(result).toMatchObject({ streamId: expect.stringContaining('synthesizer-rev-') })
     })
 
     it('should call reviseSpec with request', async () => {
       const handler = handlers.get('synthesizer:revise')!
+      const req = { ...validReviseRequest, currentSpec: 'Old', instruction: 'Improve' }
 
-      await handler({ sender: mockSender }, { currentSpec: 'Old', instruction: 'Improve' })
+      await handler({ sender: mockSender }, req)
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 
       expect(specSynthesizer.reviseSpec).toHaveBeenCalledWith(
-        { currentSpec: 'Old', instruction: 'Improve' },
+        req,
         expect.any(Function),
         expect.stringContaining('synthesizer-rev-')
       )
@@ -138,7 +151,7 @@ describe('synthesizer-handlers', () => {
 
     it('should stream revised content', async () => {
       const handler = handlers.get('synthesizer:revise')!
-      await handler({ sender: mockSender }, { currentSpec: 'Old', instruction: 'Improve' })
+      await handler({ sender: mockSender }, validReviseRequest)
 
       await new Promise((resolve) => setTimeout(resolve, 10))
 

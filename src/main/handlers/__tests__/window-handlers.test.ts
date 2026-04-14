@@ -124,15 +124,15 @@ describe('Window handlers', () => {
 
         expect(writeFileSync).toHaveBeenCalledOnce()
         const writeCall = vi.mocked(writeFileSync).mock.calls[0]
-        expect(writeCall[0]).toMatch(/^\/tmp\/bde-playground-\d+\.html$/)
+        expect(writeCall[0]).toMatch(/^\/tmp\/bde-playground-[0-9a-f]+\.html$/)
         expect(writeCall[1]).toBe(html)
         expect(writeCall[2]).toBe('utf-8')
 
         expect(shell.openPath).toHaveBeenCalledOnce()
         const openCall = vi.mocked(shell.openPath).mock.calls[0]
-        expect(openCall[0]).toMatch(/^\/tmp\/bde-playground-\d+\.html$/)
+        expect(openCall[0]).toMatch(/^\/tmp\/bde-playground-[0-9a-f]+\.html$/)
 
-        expect(result).toMatch(/^\/tmp\/bde-playground-\d+\.html$/)
+        expect(result).toMatch(/^\/tmp\/bde-playground-[0-9a-f]+\.html$/)
       })
     })
   })

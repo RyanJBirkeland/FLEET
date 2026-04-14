@@ -173,6 +173,7 @@ function setupDefaultMocks(): void {
   vi.mocked(getQueuedTasks).mockReturnValue([])
   vi.mocked(claimTask).mockReturnValue(null)
   vi.mocked(updateTask).mockReturnValue(null)
+  vi.mocked(getTask).mockReturnValue(makeTask())
   vi.mocked(recoverOrphans).mockResolvedValue(0)
   vi.mocked(pruneStaleWorktrees).mockResolvedValue(0)
   vi.mocked(setupWorktree).mockResolvedValue({
@@ -1073,6 +1074,7 @@ describe('createAgentManager', () => {
   describe('onTaskTerminal', () => {
     it('resolves dependents via resolveDependents', async () => {
       const { resolveDependents } = await import('../resolve-dependents')
+      vi.mocked(resolveDependents).mockClear()
       const logger = makeLogger()
       const mgr = createAgentManager(baseConfig, mockRepo, logger)
       await mgr.onTaskTerminal('task-1', 'done')
@@ -1087,7 +1089,7 @@ describe('createAgentManager', () => {
         expect.anything(), // epicIndex
         expect.anything(), // getGroup
         expect.anything(), // listGroupTasks
-        undefined,         // runInTransaction (not used by agent-manager)
+        expect.anything(), // runInTransaction
         expect.anything()  // onTaskTerminal
       )
     })

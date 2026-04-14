@@ -43,8 +43,6 @@ const PLAYGROUND_ALLOWED_TAGS = [
   'figure', 'figcaption', 'details', 'summary', 'dialog',
   'hr', 'sub', 'sup', 'abbr', 'address', 'cite', 'dfn', 'kbd', 'samp', 'var', 'mark',
   'time', 'progress', 'meter', 'output',
-  // Script — allowed so interactive playground JS works; DOMPurify strips unsafe attrs
-  'script', 'noscript',
 ]
 
 /**
