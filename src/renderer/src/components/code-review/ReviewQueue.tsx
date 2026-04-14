@@ -1,6 +1,7 @@
 import './ReviewQueue.css'
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
+import { useShallow } from 'zustand/react/shallow'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { EmptyState } from '../ui/EmptyState'
@@ -9,7 +10,16 @@ import { timeAgo } from '../../lib/format'
 
 export function ReviewQueue(): React.JSX.Element {
   const reduced = useReducedMotion()
-  const tasks = useSprintTasks((s) => s.tasks)
+
+  // Scoped selector: only re-renders when the review-task subset changes.
+  const reviewTasks = useSprintTasks(
+    useShallow((s) =>
+      s.tasks
+        .filter((t) => t.status === 'review')
+        .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+    )
+  )
+
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
   const selectTask = useCodeReviewStore((s) => s.selectTask)
   const selectedBatchIds = useCodeReviewStore((s) => s.selectedBatchIds)
@@ -17,11 +27,24 @@ export function ReviewQueue(): React.JSX.Element {
   const selectAllBatch = useCodeReviewStore((s) => s.selectAllBatch)
   const clearBatch = useCodeReviewStore((s) => s.clearBatch)
 
-  const reviewTasks = tasks
-    .filter((t) => t.status === 'review')
-    .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
-
   const allSelected = reviewTasks.length > 0 && reviewTasks.every((t) => selectedBatchIds.has(t.id))
+
+  // Stable refs keep the keydown handler stable so it is registered only once.
+  const reviewTasksRef = useRef(reviewTasks)
+  const selectedTaskIdRef = useRef(selectedTaskId)
+  const selectTaskRef = useRef(selectTask)
+
+  useEffect(() => {
+    reviewTasksRef.current = reviewTasks
+  }, [reviewTasks])
+
+  useEffect(() => {
+    selectedTaskIdRef.current = selectedTaskId
+  }, [selectedTaskId])
+
+  useEffect(() => {
+    selectTaskRef.current = selectTask
+  }, [selectTask])
 
   useEffect(() => {
     const handler = (e: KeyboardEvent): void => {
@@ -30,23 +53,25 @@ export function ReviewQueue(): React.JSX.Element {
       if (e.key !== 'j' && e.key !== 'k') return
 
       e.preventDefault()
-      if (reviewTasks.length === 0) return
+      const tasks = reviewTasksRef.current
+      if (tasks.length === 0) return
 
-      const currentIndex = reviewTasks.findIndex((t) => t.id === selectedTaskId)
+      const currentIndex = tasks.findIndex((t) => t.id === selectedTaskIdRef.current)
       let nextIndex: number
 
       if (e.key === 'j') {
-        nextIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, reviewTasks.length - 1)
+        nextIndex = currentIndex === -1 ? 0 : Math.min(currentIndex + 1, tasks.length - 1)
       } else {
         nextIndex = currentIndex === -1 ? 0 : Math.max(currentIndex - 1, 0)
       }
 
-      selectTask(reviewTasks[nextIndex].id)
+      selectTaskRef.current(tasks[nextIndex].id)
     }
 
     document.addEventListener('keydown', handler)
     return () => document.removeEventListener('keydown', handler)
-  }, [reviewTasks, selectedTaskId, selectTask])
+    // Empty deps: handler reads latest values via refs, registered once on mount.
+  }, [])
 
   return (
     <div className="cr-queue">

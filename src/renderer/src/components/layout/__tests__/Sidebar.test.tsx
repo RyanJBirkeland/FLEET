@@ -26,7 +26,14 @@ vi.mock('../../../stores/sprintTasks', () => ({
     ]
     const state = { tasks }
     return sel ? sel(state) : state
-  })
+  }),
+  selectReviewTaskCount: (s: any) =>
+    s.tasks.reduce((n: number, t: any) => (t.status === 'review' ? n + 1 : n), 0),
+  selectFailedTaskCount: (s: any) =>
+    s.tasks.reduce(
+      (n: number, t: any) => (t.status === 'failed' || t.status === 'error' ? n + 1 : n),
+      0
+    )
 }))
 
 vi.mock('../../../stores/sidebar', () => {

@@ -2,7 +2,7 @@
  * AgentCard — compact card showing agent status, task, model, and cost.
  * Used in the AgentList sidebar.
  */
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Clock, DollarSign, X, CheckCircle, XCircle, Loader, Ban } from 'lucide-react'
 import './AgentCard.css'
 import type { AgentMeta } from '../../../../shared/types'
@@ -11,6 +11,7 @@ import { type NeonAccent, neonVar } from '../neon/types'
 import { toast } from '../../stores/toasts'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { formatDuration } from '../../lib/format'
+import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 
 interface AgentCardProps {
   agent: AgentMeta
@@ -74,13 +75,9 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps):
   const isRunning = agent.status === 'running'
   const { confirm, confirmProps } = useConfirm()
 
-  // Live duration ticker for running agents
+  // Live duration ticker for running agents — pauses when tab is hidden, no battery drain.
   const [, setTick] = useState(0)
-  useEffect(() => {
-    if (!isRunning) return
-    const id = setInterval(() => setTick((t) => t + 1), 1000)
-    return () => clearInterval(id)
-  }, [isRunning])
+  useBackoffInterval(() => setTick((t) => t + 1), isRunning ? 1000 : null)
 
   const handleKill = async (e: React.MouseEvent): Promise<void> => {
     e.stopPropagation()

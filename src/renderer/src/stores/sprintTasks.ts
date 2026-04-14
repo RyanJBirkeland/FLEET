@@ -53,6 +53,12 @@ interface SprintTasksState {
 export const selectActiveTaskCount = (state: SprintTasksState): number =>
   state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
 
+export const selectReviewTaskCount = (state: SprintTasksState): number =>
+  state.tasks.reduce((n, t) => (t.status === 'review' ? n + 1 : n), 0)
+
+export const selectFailedTaskCount = (state: SprintTasksState): number =>
+  state.tasks.reduce((n, t) => (t.status === 'failed' || t.status === 'error' ? n + 1 : n), 0)
+
 export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   tasks: [],
   loading: true,

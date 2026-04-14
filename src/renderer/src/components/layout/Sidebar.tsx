@@ -9,7 +9,7 @@ import { useSidebarStore, getUnpinnedViews } from '../../stores/sidebar'
 import { usePanelLayoutStore, getOpenViews, type View } from '../../stores/panelLayout'
 import { VIEW_LOADERS } from './view-resolver'
 import { VIEW_REGISTRY } from '../../lib/view-registry'
-import { useSprintTasks } from '../../stores/sprintTasks'
+import { useSprintTasks, selectReviewTaskCount, selectFailedTaskCount } from '../../stores/sprintTasks'
 
 interface SidebarProps {
   model?: string
@@ -46,10 +46,8 @@ export function Sidebar({ model }: SidebarProps): React.JSX.Element {
     }))
   )
 
-  const reviewCount = useSprintTasks((s) => s.tasks.filter((t) => t.status === 'review').length)
-  const failedCount = useSprintTasks(
-    (s) => s.tasks.filter((t) => t.status === 'failed' || t.status === 'error').length
-  )
+  const reviewCount = useSprintTasks(selectReviewTaskCount)
+  const failedCount = useSprintTasks(selectFailedTaskCount)
 
   const openViews = getOpenViews(root)
   const unpinnedViews = getUnpinnedViews(pinnedViews)

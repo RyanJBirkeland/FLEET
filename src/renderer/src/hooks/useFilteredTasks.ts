@@ -18,7 +18,8 @@ interface FilteredTasksResult {
  * Encapsulates the status-filter → partition-zeroing logic.
  */
 export function useFilteredTasks(): FilteredTasksResult {
-  const tasks = useSprintTasks((s) => s.tasks)
+  // useShallow prevents re-render when the store updates but the task array contents are unchanged.
+  const tasks = useSprintTasks(useShallow((s) => s.tasks))
 
   const { statusFilter, repoFilter, tagFilter, searchQuery } = useSprintFilters(
     useShallow((s) => ({

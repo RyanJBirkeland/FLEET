@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import { useSprintTasks } from '../../stores/sprintTasks'
+import { useShallow } from 'zustand/react/shallow'
 import { useValidationChecks } from '../../hooks/useValidationChecks'
 import { useTaskFormState } from '../../hooks/useTaskFormState'
 import { useSpecQualityChecks } from '../../hooks/useSpecQualityChecks'
@@ -75,7 +76,8 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
     resetForm
   } = form
 
-  const allTasks = useSprintTasks((s) => s.tasks)
+  // Scoped to only the fields DependencyPicker needs; avoids re-render on unrelated task changes.
+  const allTasks = useSprintTasks(useShallow((s) => s.tasks))
   const structuralChecks = useTaskWorkbenchStore((s) => s.structuralChecks)
   const operationalChecks = useTaskWorkbenchStore((s) => s.operationalChecks)
 
