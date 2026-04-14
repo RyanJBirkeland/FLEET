@@ -23,6 +23,22 @@ function mockTask(overrides: Record<string, unknown> = {}) {
 }
 
 describe('resolveDependents', () => {
+  it('returns early and logs warning when called with non-terminal status', () => {
+    const index = mockIndex()
+    const getTask = vi.fn()
+    const updateTask = vi.fn()
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+
+    resolveDependents('task-1', 'queued', index, getTask, updateTask, logger as any)
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('non-terminal status "queued"')
+    )
+    expect(vi.mocked(index.getDependents)).not.toHaveBeenCalled()
+    expect(getTask).not.toHaveBeenCalled()
+    expect(updateTask).not.toHaveBeenCalled()
+  })
+
   it('does nothing when no dependents exist', () => {
     const index = mockIndex({ getDependents: vi.fn().mockReturnValue(new Set()) })
     const getTask = vi.fn()
