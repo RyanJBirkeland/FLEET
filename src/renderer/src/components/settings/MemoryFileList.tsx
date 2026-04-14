@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Brain, FileText, Search } from 'lucide-react'
+import { Brain, FileText, Search, X } from 'lucide-react'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { Button } from '../ui/Button'
 import { EmptyState } from '../ui/EmptyState'
@@ -65,6 +65,8 @@ interface MemoryFileListProps {
   searchResults: MemorySearchResult[]
   isSearching: boolean
   onSelectFile: (path: string) => void
+  onSearch: (query: string) => void
+  onClearSearch: () => void
   onLoadFiles: () => void
   onToggleActive: (path: string) => void
   onNewFileClick: () => void
@@ -86,6 +88,8 @@ export function MemoryFileList({
   searchResults,
   isSearching,
   onSelectFile,
+  onSearch,
+  onClearSearch,
   onLoadFiles,
   onToggleActive,
   onNewFileClick,
@@ -200,6 +204,28 @@ export function MemoryFileList({
           />
         </div>
       )}
+
+      <div className="memory-sidebar__search">
+        <div className="memory-sidebar__search-input-wrapper">
+          <Search size={16} className="memory-sidebar__search-icon" />
+          <input
+            className="memory-sidebar__search-input"
+            value={searchQuery}
+            onChange={(e) => onSearch(e.target.value)}
+            placeholder="Search memory files..."
+          />
+          {searchQuery && (
+            <button
+              className="memory-sidebar__search-clear"
+              onClick={onClearSearch}
+              title="Clear search"
+              aria-label="Clear search"
+            >
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
 
       <div className="memory-sidebar__list" ref={sidebarRef}>
         {searchQuery ? (

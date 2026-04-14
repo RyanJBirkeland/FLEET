@@ -1,20 +1,17 @@
 /**
- * MemorySection — file browser and editor for agent memory.
- * Lists memory files from ~/.bde/memory/ via IPC
- * (memory:listFiles, memory:readFile, memory:writeFile). Groups files
- * into pinned (MEMORY.md), daily logs, projects, and other. Keyboard-navigable.
+ * MemorySection — thin coordinator for agent memory UI.
+ * Composes MemoryFileList, MemoryFileEditor, and MemorySearch.
+ * Owns dirty-state gating before file switch and file creation flow.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Brain } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { toast } from '../../stores/toasts'
 import './MemorySection.css'
-import { Button } from '../ui/Button'
-import { EmptyState } from '../ui/EmptyState'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import * as memoryService from '../../services/memory'
 import { SettingsCard } from './SettingsCard'
 import { useMemoryFiles } from './useMemoryFiles'
 import { MemoryFileList } from './MemoryFileList'
+import { MemoryFileEditor } from './MemoryFileEditor'
 
 export function MemorySection(): React.JSX.Element {
   const {
@@ -37,7 +34,6 @@ export function MemorySection(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<memoryService.MemorySearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const editorRef = useRef<HTMLTextAreaElement>(null)
 
   const { confirm, confirmProps } = useConfirm()
 
@@ -126,20 +122,6 @@ export function MemorySection(): React.JSX.Element {
     setSearchResults([])
   }, [])
 
-  useEffect(() => {
-    function onKeyDown(e: KeyboardEvent): void {
-      // Only intercept Cmd+S when the memory editor textarea is focused
-      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
-        if (document.activeElement === editorRef.current) {
-          e.preventDefault()
-          saveFile()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
-  }, [saveFile])
-
   // Warn browser/Electron on unload when there are unsaved changes
   useEffect(() => {
     if (!isDirty) return
@@ -151,10 +133,6 @@ export function MemorySection(): React.JSX.Element {
   }, [isDirty])
 
   const activeCount = Object.keys(activeFiles).length
-  const activeTotalBytes = useMemo(
-    () => files.filter((f) => activeFiles[f.path]).reduce((sum, f) => sum + f.size, 0),
-    [files, activeFiles]
-  )
 
   return (
     <SettingsCard title="Agent Memory" subtitle="Browse and edit agent memory files" noPadding>
@@ -168,6 +146,8 @@ export function MemorySection(): React.JSX.Element {
           searchResults={searchResults}
           isSearching={isSearching}
           onSelectFile={handleSelectFile}
+          onSearch={handleSearch}
+          onClearSearch={clearSearch}
           onLoadFiles={loadFiles}
           onToggleActive={toggleActive}
           onNewFileClick={() => setNewFilePrompt(true)}
@@ -183,64 +163,18 @@ export function MemorySection(): React.JSX.Element {
           }}
         />
 
-        <div className="memory-editor">
-          {loadingContent ? (
-            <div className="memory-editor__loading">
-              <div className="bde-skeleton memory-editor__skeleton" />
-            </div>
-          ) : selectedPath ? (
-            <>
-              <div className="memory-editor__toolbar">
-                <span className="memory-editor__path">
-                  memory/{selectedPath}
-                  {isDirty && <span className="memory-editor__dirty"> &bull;</span>}
-                </span>
-                {selectedPath && (
-                  <button
-                    className={`memory-editor__agent-toggle ${activeFiles[selectedPath] ? 'memory-editor__agent-toggle--active' : ''}`}
-                    onClick={() => toggleActive(selectedPath)}
-                    title={
-                      activeFiles[selectedPath]
-                        ? 'Remove from agent knowledge'
-                        : 'Add to agent knowledge'
-                    }
-                  >
-                    <Brain size={14} />
-                    <span>
-                      {activeFiles[selectedPath] ? 'Agent Knowledge: On' : 'Agent Knowledge: Off'}
-                    </span>
-                  </button>
-                )}
-                <div className="memory-editor__actions">
-                  <Button variant="ghost" size="sm" onClick={discard} disabled={!isDirty}>
-                    Discard
-                  </Button>
-                  <Button variant="primary" size="sm" onClick={saveFile} disabled={!isDirty}>
-                    Save
-                  </Button>
-                </div>
-              </div>
-              {activeCount > 0 && (
-                <div
-                  className={`memory-editor__size-banner ${activeTotalBytes > 30720 ? 'memory-editor__size-banner--warn' : ''}`}
-                >
-                  {activeCount} file{activeCount !== 1 ? 's' : ''} active (
-                  {(activeTotalBytes / 1024).toFixed(1)} KB total)
-                  {activeTotalBytes > 30720 && ' \u2014 Large memory may slow agent responses'}
-                </div>
-              )}
-              <textarea
-                ref={editorRef}
-                className="memory-editor__textarea"
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                spellCheck={false}
-              />
-            </>
-          ) : (
-            <EmptyState title="Select a file to view" />
-          )}
-        </div>
+        <MemoryFileEditor
+          selectedPath={selectedPath}
+          content={content}
+          savedContent={savedContent}
+          loadingContent={loadingContent}
+          activeFiles={activeFiles}
+          files={files}
+          onContentChange={setContent}
+          onSaveFile={saveFile}
+          onDiscardChanges={discard}
+          onToggleActive={toggleActive}
+        />
       </div>
       <ConfirmModal {...confirmProps} />
     </SettingsCard>
