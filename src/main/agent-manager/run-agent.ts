@@ -14,7 +14,7 @@ import { getDb } from '../db'
 import { randomUUID } from 'node:crypto'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { mapRawMessage, emitAgentEvent } from '../agent-event-mapper'
+import { mapRawMessage, emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
 import type { TaskDependency } from '../../shared/types'
 import { buildAgentPrompt } from './prompt-composer'
 import { TurnTracker } from './turn-tracker'
@@ -693,6 +693,10 @@ async function finalizeAgentRun(
   // Check if watchdog already cleaned up
   if (!activeAgents.has(task.id)) {
     logger.info(`[agent-manager] Agent ${task.id} already cleaned up by watchdog`)
+    // Flush any pending agent events to SQLite before cleanup.
+    // The batcher uses a 100ms timer — without this flush, the last
+    // batch of events is broadcast to the UI but never persisted.
+    flushAgentEventBatcher()
     await capturePartialDiff(task.id, worktree.worktreePath, repo, logger)
     cleanupWorktree({
       repoPath,
