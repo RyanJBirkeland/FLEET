@@ -78,6 +78,22 @@ export interface ConsumeMessagesResult {
 }
 
 /**
+ * Logs a worktree cleanup warning with consistent format.
+ * Centralises the copy-pasted pattern across all cleanup error paths.
+ */
+function logCleanupWarning(
+  taskId: string,
+  worktreePath: string,
+  err: unknown,
+  logger: Logger
+): void {
+  const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
+  logger.warn(
+    `[agent-manager] Stale worktree for task ${taskId} at ${worktreePath} — manual cleanup needed: ${detail}`
+  )
+}
+
+/**
  * Handles OAuth token refresh after auth errors.
  */
 async function handleOAuthRefresh(logger: Logger): Promise<void> {
@@ -194,6 +210,10 @@ export async function consumeMessages(
     ) {
       await handleOAuthRefresh(logger)
     }
+    // Flush immediately: the batcher's 100ms timer may not fire before the
+    // next drain tick or process shutdown, so the stream-error event would
+    // be lost. Flushing here guarantees it reaches SQLite.
+    flushAgentEventBatcher()
     return {
       exitCode,
       lastAgentOutput,
@@ -237,9 +257,7 @@ export async function validateTaskForRun(
         logger
       })
     } catch (cleanupErr) {
-      logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
-      )
+      logCleanupWarning(task.id, worktree.worktreePath, cleanupErr, logger)
     }
     throw new Error('Task has no content')
   }
@@ -378,9 +396,7 @@ async function handleSpawnFailure(
       logger
     })
   } catch (cleanupErr) {
-    logger.warn(
-      `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr}`
-    )
+    logCleanupWarning(task.id, worktree.worktreePath, cleanupErr, logger)
   }
   throw err
 }
@@ -629,11 +645,7 @@ async function cleanupOrPreserveWorktree(
       repoPath,
       worktreePath: worktree.worktreePath,
       branch: worktree.branch
-    }).catch((err: unknown) => {
-      logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${err instanceof Error ? err.stack ?? err.message : String(err)}`
-      )
-    })
+    }).catch((err: unknown) => logCleanupWarning(task.id, worktree.worktreePath, err, logger))
   } else {
     logger.info(
       `[agent-manager] Preserving worktree for review task ${task.id} at ${worktree.worktreePath}`
@@ -684,11 +696,7 @@ async function finalizeAgentRun(
       repoPath,
       worktreePath: worktree.worktreePath,
       branch: worktree.branch
-    }).catch((cleanupErr: unknown) => {
-      logger.warn(
-        `[agent-manager] Stale worktree for task ${task.id} at ${worktree.worktreePath} — manual cleanup needed: ${cleanupErr instanceof Error ? cleanupErr.stack ?? cleanupErr.message : String(cleanupErr)}`
-      )
-    })
+    }).catch((cleanupErr: unknown) => logCleanupWarning(task.id, worktree.worktreePath, cleanupErr, logger))
     return
   }
 
@@ -697,6 +705,10 @@ async function finalizeAgentRun(
 
   // Remove from active map
   activeAgents.delete(task.id)
+
+  // Flush events before the next drain tick or cleanup — the 100ms batcher
+  // timer is not guaranteed to fire before a new task starts or shutdown.
+  flushAgentEventBatcher()
 
   await cleanupOrPreserveWorktree(task, worktree, repoPath, repo, logger)
 

@@ -6,6 +6,17 @@ import type { AgentManagerConfig } from './types'
 import type { Logger } from '../logger'
 import { resolveDependents } from './resolve-dependents'
 import { getSetting } from '../settings'
+import { getDb } from '../db'
+
+/**
+ * Wraps a synchronous function in a better-sqlite3 transaction so cascade
+ * cancellations are atomic — partial failures roll back the whole batch.
+ */
+function runInTransactionSafe(fn: () => void): void {
+  const db = getDb()
+  const tx = db.transaction(fn)
+  tx()
+}
 
 function recordTerminalMetrics(status: string, metrics: MetricsCollector): void {
   if (status === 'done' || status === 'review') {
@@ -47,7 +58,7 @@ async function resolveTerminalDependents(
       epicIndex,
       repo.getGroup,
       repo.getGroupTasks,
-      undefined,
+      runInTransactionSafe,
       onTaskTerminal
     )
   } catch (err) {

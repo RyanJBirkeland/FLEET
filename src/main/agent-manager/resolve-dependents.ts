@@ -86,13 +86,18 @@ export function resolveDependents(
       const failedTitle = failedTask?.title ?? completedTaskId
       const cancelNote = `[auto-cancel] Upstream task "${failedTitle}" failed`
       updateTask(depId, { status: 'cancelled', notes: cancelNote })
-      // Notify terminal listeners so dependents of this cancelled task are resolved
+      // Notify terminal listeners so dependents of this cancelled task are resolved.
+      // Re-throw on failure: if onTaskTerminal fails the dependency index may be
+      // stale, and continuing the recursive cascade on stale state produces
+      // incorrect results (orphaned blocked tasks). Let the caller's try/catch
+      // decide whether to abort the whole cascade or log and continue.
       try {
         onTaskTerminal?.(depId, 'cancelled')
       } catch (err) {
         ;(logger ?? console).warn(
           `[resolve-dependents] onTaskTerminal threw for ${depId}: ${err}`
         )
+        throw err
       }
       // Recursively cancel this task's blocked dependents — pass runInTransaction
       // so nested cascades are also wrapped in the outer transaction

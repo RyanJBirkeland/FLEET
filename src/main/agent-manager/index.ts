@@ -266,6 +266,17 @@ export class AgentManagerImpl implements AgentManager {
     const task = mapQueuedTask(raw, this.logger)
     if (!task) return null
 
+    // Re-fetch a fresh copy to guard against stale batch from fetchQueuedTasks.
+    // A watchdog or external write may have changed the status between the fetch
+    // and this claim attempt — verifying here prevents double-spawn races.
+    const freshTask = this.repo.getTask(task.id)
+    if (!freshTask || freshTask.status !== 'queued') {
+      this.logger.info(
+        `[agent-manager] Task ${task.id} status changed since fetch (was queued, now ${freshTask?.status ?? 'not found'}) — skipping`
+      )
+      return null
+    }
+
     const rawDeps = raw.dependsOn ?? raw.depends_on
     if (rawDeps && checkAndBlockDeps(task.id, rawDeps, taskStatusMap, this.repo, this._depIndex, this.logger)) return null
 
