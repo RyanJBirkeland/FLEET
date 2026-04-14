@@ -123,7 +123,7 @@ export const usePromptTemplatesStore = create<PromptTemplatesState>((set, get) =
       .filter((t): t is PromptTemplate => t !== undefined)
 
     set({ templates: reordered })
-    await window.api.settings.setJson(SETTINGS_KEY, toPersistedTemplates(reordered))
+    await setJsonSetting(SETTINGS_KEY, toPersistedTemplates(reordered))
   },
 
   hideBuiltIn: async (id) => {

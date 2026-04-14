@@ -1,5 +1,6 @@
 import { create } from 'zustand'
 import type { AgentCostRecord } from '../../../shared/types'
+import { getAgentCostHistory } from '../services/cost'
 
 /**
  * Usage tracking store for agent execution metrics.
@@ -28,7 +29,7 @@ export const useCostDataStore = create<CostDataState>((set, get) => ({
     if (get().isFetching) return
     set({ isFetching: true })
     try {
-      const agents = await window.api.cost.getAgentHistory()
+      const agents = await getAgentCostHistory()
       const total = agents.reduce((sum, a) => sum + (a.tokensIn ?? 0) + (a.tokensOut ?? 0), 0)
       set({ localAgents: agents, totalTokens: total })
     } catch (err) {

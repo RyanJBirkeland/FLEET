@@ -297,7 +297,7 @@ const [persistIDEState, cancelIDEPersist] = createDebouncedPersister<unknown>((s
 function flushPersistence(): void {
   cancelIDEPersist()
   if (lastToSave) {
-    window.api.settings.setJson('ide.state', lastToSave)
+    setJsonSetting('ide.state', lastToSave)
   }
 }
 

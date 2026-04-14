@@ -91,7 +91,7 @@ export const useAgentHistoryStore = create<AgentHistoryState>((set, get) => {
     },
 
     startLogPolling: (id): (() => void) => {
-      return poller.startLogPolling((fromByte) => window.api.agents.readLog({ id, fromByte }))
+      return poller.startLogPolling((fromByte) => readAgentLog({ id, fromByte }))
     },
 
     stopLogPolling: poller.stopLogPolling,
