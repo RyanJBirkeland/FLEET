@@ -16,6 +16,7 @@ import {
   buildScratchpadSection
 } from './prompt-sections'
 import type { BuildPromptInput } from './prompt-composer'
+import { PROMPT_TRUNCATION } from './prompt-constants'
 
 // ---------------------------------------------------------------------------
 // Task Class — heuristic classifier + output cap hints
@@ -164,12 +165,12 @@ export function buildPipelinePrompt(input: BuildPromptInput): string {
     // Out of Scope sections. Previous 2000-char cap was silently truncating every
     // mid-sized spec, cutting off the Files to Change / How to Test sections and
     // causing agents to skip test writing. See 2026-04-11 RCA.
-    const MAX_TASK_CONTENT_CHARS = 8000
-    const truncatedContent = truncateSpec(taskContent, MAX_TASK_CONTENT_CHARS)
-    const wasTruncated = taskContent.length > MAX_TASK_CONTENT_CHARS
+    const maxTaskChars = PROMPT_TRUNCATION.TASK_SPEC_CHARS
+    const truncatedContent = truncateSpec(taskContent, maxTaskChars)
+    const wasTruncated = taskContent.length > maxTaskChars
     prompt += truncatedContent
     if (wasTruncated) {
-      prompt += `\n\n[spec truncated at ${MAX_TASK_CONTENT_CHARS} chars — see full spec in task DB]`
+      prompt += `\n\n[spec truncated at ${maxTaskChars} chars — see full spec in task DB]`
     }
   }
 

@@ -6,6 +6,7 @@
 
 import { join } from 'node:path'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
+import { PROMPT_TRUNCATION } from './prompt-constants'
 
 // ---------------------------------------------------------------------------
 // Preambles (coding agents vs spec-drafting agents)
@@ -109,14 +110,13 @@ export function buildUpstreamContextSection(
   section += 'This task depends on the following completed tasks:\n\n'
 
   for (const upstream of upstreamContext) {
-    const cappedSpec = truncateSpec(upstream.spec, 2000)
+    const cappedSpec = truncateSpec(upstream.spec, PROMPT_TRUNCATION.UPSTREAM_SPEC_CHARS)
     section += `### ${upstream.title}\n\n${cappedSpec}\n\n`
 
     if (upstream.partial_diff) {
-      const MAX_DIFF_CHARS = 2000
-      const truncated = upstream.partial_diff.length > MAX_DIFF_CHARS
+      const truncated = upstream.partial_diff.length > PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS
       const cappedDiff = truncated
-        ? upstream.partial_diff.slice(0, MAX_DIFF_CHARS) + '\n\n[... diff truncated]'
+        ? upstream.partial_diff.slice(0, PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS) + '\n\n[... diff truncated]'
         : upstream.partial_diff
       section += `<details>\n<summary>Partial changes from upstream task</summary>\n\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</details>\n\n`
     }

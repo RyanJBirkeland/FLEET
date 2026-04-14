@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { buildAgentPrompt, type AgentType } from '../prompt-composer'
+import { PROMPT_TRUNCATION } from '../prompt-constants'
 
 // Mock getUserMemory — default returns no files
 vi.mock('../../agent-system/memory/user-memory', () => ({
@@ -1090,5 +1091,17 @@ describe('buildAgentPrompt', () => {
       expect(prompt).toContain('## User Knowledge')
       expect(prompt).toContain('authentication oauth token renewal guide')
     })
+  })
+})
+
+describe('PROMPT_TRUNCATION', () => {
+  it('exports TASK_SPEC_CHARS, UPSTREAM_SPEC_CHARS, UPSTREAM_DIFF_CHARS', () => {
+    expect(typeof PROMPT_TRUNCATION.TASK_SPEC_CHARS).toBe('number')
+    expect(typeof PROMPT_TRUNCATION.UPSTREAM_SPEC_CHARS).toBe('number')
+    expect(typeof PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS).toBe('number')
+  })
+
+  it('TASK_SPEC_CHARS is 8000', () => {
+    expect(PROMPT_TRUNCATION.TASK_SPEC_CHARS).toBe(8000)
   })
 })
