@@ -5,6 +5,25 @@
 
 Electron desktop app (electron-vite + React + TypeScript) — the Birkeland Development Environment.
 
+## THE Standard — Clean Code & Clean Architecture (RULE, NOT GUIDELINE)
+
+> "Code should read like well-written prose." — Robert C. Martin
+
+**This is the single most important rule in this codebase.** Every function, file, and name is held to this standard. We are not everywhere at this standard yet — but every commit must move toward it, never away. Violations are bugs, not style nits.
+
+**The test:** if you need a comment to explain *what* a function or variable does, it fails. Rename it, split it, or restructure it until it speaks for itself. Comments are reserved for *why* — the non-obvious business reason.
+
+**The rules (from `~/projects/ARCHITECTURE.md` §11 — read it):**
+- Functions do one thing. "And" in the description = split the function.
+- Names are vocabulary. Wrong name → wrong abstraction. No abbreviations.
+- Files are chapters. One subject per file. Max ~500 LOC.
+- Stepdown Rule: each function reads at one level of abstraction below the one above it.
+- Boy Scout Rule: every commit leaves the code cleaner than it was found. Required, not optional.
+
+**Clean Architecture is equally non-negotiable:** IPC handlers are thin wrappers — they delegate to services. Business logic lives in use cases and services, not in handlers or stores. See `~/projects/ARCHITECTURE.md` for the full dependency rule.
+
+---
+
 ## Build & Test
 
 ```bash
@@ -124,8 +143,10 @@ The rebase step is mandatory — local main can diverge from origin if another s
 
 ## Code Quality
 
-- **Clean Code principles**: functions do one thing, meaningful names, no magic numbers, small files.
-- **Clean Architecture**: respect process boundaries (main/preload/renderer), keep IPC surface minimal, shared types in `src/shared/`.
+See **THE Standard** section at the top of this file. Everything below is BDE-specific enforcement on top of that baseline.
+
+- **Clean Code (mandatory):** functions do one thing, names are vocabulary not labels, no magic numbers, files are chapters. If you need a comment to explain *what*, rewrite until you don't.
+- **Clean Architecture (mandatory):** respect process boundaries (main/preload/renderer), keep IPC surface minimal, shared types in `src/shared/`. Handlers delegate — they contain no business logic.
 - All IPC handlers must use the `safeHandle()` wrapper for error logging.
 - Prefer `execFile`/`execFileAsync` (argument arrays) over `execSync` (string interpolation) to prevent shell injection.
 - **SQLite multi-statement SQL gotcha**: the repo's security hook pattern-matches shell-style invocations on Edit operations and will block a `db` call that takes a backtick-literal argument on the same line. Workaround: assign the SQL to a `const sql = ` variable first, then pass the variable to the `db` method on the next line. See any multi-statement migration in `src/main/db.ts` for the pattern.
