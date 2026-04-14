@@ -764,7 +764,7 @@ describe('AgentManagerImpl — class internals', () => {
   // -------------------------------------------------------------------------
 
   describe('onTaskTerminal dep index rebuild', () => {
-    it('rebuilds dep index before calling resolveDependents', async () => {
+    it('marks dep index dirty after terminal so drain loop rebuilds on next tick', async () => {
       const freshTasks = [
         { id: 'task-A', status: 'done', depends_on: null },
         { id: 'task-B', status: 'blocked', depends_on: [{ id: 'task-A', type: 'hard' }] }
@@ -777,11 +777,10 @@ describe('AgentManagerImpl — class internals', () => {
       )
 
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
-      const rebuildSpy = vi.spyOn(manager._depIndex, 'rebuild')
 
       await manager.onTaskTerminal('task-A', 'done')
 
-      expect(rebuildSpy).toHaveBeenCalled()
+      expect(manager._depIndexDirty).toBe(true)
     })
   })
 
