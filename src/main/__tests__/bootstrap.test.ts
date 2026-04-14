@@ -67,6 +67,7 @@ vi.mock('../logger', () => ({
   })
 }))
 vi.mock('../data/sprint-queries')
+vi.mock('../data/sprint-maintenance-facade')
 vi.mock('../services/plugin-loader')
 vi.mock('../services/load-sampler')
 
