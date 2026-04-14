@@ -13,7 +13,7 @@ import {
 } from '../run-agent'
 import { detectHtmlWrite, tryEmitPlaygroundEvent } from '../playground-handler'
 import type {
-  RunAgentTask,
+  AgentRunClaim,
   RunAgentDeps,
   RunAgentSpawnDeps,
   RunAgentDataDeps,
@@ -114,7 +114,7 @@ vi.mock('../../agent-event-mapper', () => ({
 // Helpers
 // ---------------------------------------------------------------------------
 
-function makeTask(overrides: Partial<RunAgentTask> = {}): RunAgentTask {
+function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
   return {
     id: 'task-1',
     title: 'Test task',
@@ -775,7 +775,7 @@ describe('validateTaskForRun', () => {
     const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
-    const emptyTask: RunAgentTask = {
+    const emptyTask: AgentRunClaim = {
       id: 'task-1',
       title: '',
       prompt: null,
@@ -807,7 +807,7 @@ describe('validateTaskForRun', () => {
       updateTask: vi.fn(),
       getTask: vi.fn().mockReturnValue(null)
     } as unknown as IAgentTaskRepository
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-1',
       title: 'Do the thing',
       prompt: null,
@@ -924,7 +924,7 @@ describe('assembleRunContext', () => {
     const mockRepoLocal = {
       getTask: vi.fn().mockReturnValue(null)
     } as unknown as IAgentTaskRepository
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-1',
       title: 'Test task',
       prompt: 'Do the thing.',

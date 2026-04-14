@@ -17,7 +17,7 @@ import {
   createEpicDependencyIndex,
   type EpicDependencyIndex
 } from '../services/epic-dependency-service'
-import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
+import { runAgent as _runAgent, type RunAgentDeps, type AgentRunClaim } from './run-agent'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
 import { CircuitBreaker } from './circuit-breaker'
@@ -226,7 +226,7 @@ export class AgentManagerImpl implements AgentManager {
    * Fire-and-forget agent spawn — errors logged inside runAgent.
    */
   _spawnAgent(
-    task: RunAgentTask,
+    task: AgentRunClaim,
     worktree: { worktreePath: string; branch: string },
     repoPath: string
   ): void {

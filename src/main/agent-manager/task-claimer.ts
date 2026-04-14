@@ -1,5 +1,5 @@
 /**
- * Task claimer — maps raw DB rows to RunAgentTask, verifies fresh status,
+ * Task claimer — maps raw DB rows to AgentRunClaim, verifies fresh status,
  * checks dependency blocking, resolves repo paths, and claims the task atomically.
  *
  * Extracted from AgentManagerImpl._validateAndClaimTask and
@@ -16,7 +16,7 @@ import { mapQueuedTask, checkAndBlockDeps, type MappedTask } from './task-mapper
 import { getRepoPaths } from '../paths'
 import { setupWorktree } from './worktree'
 import { nowIso } from '../../shared/time'
-import type { RunAgentTask } from './run-agent'
+import type { AgentRunClaim } from './run-agent'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -163,7 +163,7 @@ export interface ProcessQueuedTaskDeps extends TaskClaimerDeps {
   processingTasks: Set<string>
   activeAgents: Map<string, ActiveAgent>
   spawnAgent: (
-    task: RunAgentTask,
+    task: AgentRunClaim,
     worktree: { worktreePath: string; branch: string },
     repoPath: string
   ) => void

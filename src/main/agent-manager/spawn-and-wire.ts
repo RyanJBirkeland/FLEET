@@ -8,7 +8,7 @@
 import type { ActiveAgent, AgentHandle } from './types'
 import type { Logger } from '../logger'
 import { logError } from '../logger'
-import type { RunAgentTask, RunAgentDeps } from './run-agent'
+import type { AgentRunClaim, RunAgentDeps } from './run-agent'
 import { spawnWithTimeout } from './sdk-adapter'
 import { initializeAgentTracking } from './agent-initialization'
 import { cleanupWorktree } from './worktree'
@@ -38,7 +38,7 @@ function logCleanupWarning(
  */
 export async function handleSpawnFailure(
   err: unknown,
-  task: RunAgentTask,
+  task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   deps: RunAgentDeps
@@ -87,7 +87,7 @@ export async function handleSpawnFailure(
  * Returns the active agent and turn tracker, or throws on spawn failure.
  */
 export async function spawnAndWireAgent(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   prompt: string,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,

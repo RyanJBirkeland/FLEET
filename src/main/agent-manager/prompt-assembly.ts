@@ -7,7 +7,7 @@
  */
 import type { Logger } from '../logger'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
-import type { RunAgentTask, RunAgentDeps } from './run-agent'
+import type { AgentRunClaim, RunAgentDeps } from './run-agent'
 import { cleanupWorktree } from './worktree'
 import { buildAgentPrompt } from '../lib/prompt-composer'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
@@ -38,7 +38,7 @@ function logCleanupWarning(
  * Has side effects — do NOT call this more than once per task run.
  */
 export async function validateTaskForRun(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   deps: RunAgentDeps
@@ -121,7 +121,7 @@ export function readPriorScratchpad(taskId: string): string {
  * and the built prompt. No task mutations, no callbacks.
  */
 export async function assembleRunContext(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   deps: RunAgentDeps
 ): Promise<string> {

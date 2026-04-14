@@ -19,7 +19,7 @@ vi.mock('../../env-utils', () => ({
 
 import { consumeMessages } from '../message-consumer'
 import type { ActiveAgent, AgentHandle } from '../types'
-import type { RunAgentTask } from '../run-agent'
+import type { AgentRunClaim } from '../run-agent'
 import type { TurnTracker } from '../turn-tracker'
 import { emitAgentEvent, flushAgentEventBatcher } from '../../agent-event-mapper'
 import { invalidateOAuthToken } from '../../env-utils'
@@ -50,7 +50,7 @@ function makeAgent(overrides: Partial<ActiveAgent> = {}): ActiveAgent {
   }
 }
 
-function makeTask(overrides: Partial<RunAgentTask> = {}): RunAgentTask {
+function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
   return {
     id: 'task-1',
     title: 'Test',

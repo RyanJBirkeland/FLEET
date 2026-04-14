@@ -25,7 +25,7 @@ Source: `src/main/agent-manager/`
 | `pr-operations.ts` | PR find/create operations via gh CLI — check existing, create new with retry/backoff, sanitize titles | `generatePrBody`, `sanitizeForGit`, `checkExistingPr`, `createNewPr`, `findOrCreatePR` |
 | `worktree-lifecycle.ts` | Worktree add/remove/prune and branch delete operations | `listWorktrees`, `removeWorktreeForce`, `pruneWorktrees`, `deleteBranch`, `forceDeleteBranchRef`, `addWorktree`, `cleanupWorktreeAndBranch` |
 | `index.ts` | `AgentManagerImpl` class — drain loop, watchdog, shutdown, `_validateAndClaimTask` (fresh-status guard), `onTaskTerminal` | `AgentManagerImpl`, `createAgentManager`, `AgentManager`, `AgentManagerStatus` |
-| `run-agent.ts` | Orchestrator — delegates to prompt-assembly, message-consumer, agent-telemetry, spawn-and-wire; re-exports public symbols from extracted modules for backward compat | `runAgent`, `consumeMessages`, `validateTaskForRun`, `assembleRunContext`, `fetchUpstreamContext`, `RunAgentDeps`, `RunAgentTask`, `ConsumeMessagesResult` |
+| `run-agent.ts` | Orchestrator — delegates to prompt-assembly, message-consumer, agent-telemetry, spawn-and-wire; re-exports public symbols from extracted modules for backward compat | `runAgent`, `consumeMessages`, `validateTaskForRun`, `assembleRunContext`, `fetchUpstreamContext`, `RunAgentDeps`, `AgentRunClaim`, `ConsumeMessagesResult` |
 | `turn-tracker.ts` | Per-agent token/turn tracking — writes turn records to SQLite via optional `db?: Database.Database` constructor injection (defaults to `getDb()`). | `TurnTracker` |
 | `agent-event-mapper.ts` (`src/main/`) | Maps SDK wire-protocol messages to AgentEvents and batches them to SQLite. `flushAgentEventBatcher(db?)` accepts optional db for injection. | `mapRawMessage`, `emitAgentEvent`, `flushAgentEventBatcher` |
 | `agent-event-persister.ts` (`src/main/`) | Agent event persistence and broadcast (batcher twin). `flushAgentEventBatcher(db?)` accepts optional db for injection. | `emitAgentEvent`, `flushAgentEventBatcher` |
@@ -37,7 +37,7 @@ Source: `src/main/agent-manager/`
 | `auto-merge-coordinator.ts` | Evaluates and executes automatic merges after agent completion. Best-effort — failures leave task in `review` for human action | `evaluateAutoMerge`, `AutoMergeContext` |
 | `partial-diff-capture.ts` | Captures partial diffs from failed/cancelled agents for diagnostic notes | `capturePartialDiff` |
 | `review-transition.ts` | Transitions a completed task to `review` status, preserving worktree path and branch | `transitionToReview`, `TransitionToReviewOpts` |
-| `task-mapper.ts` | Maps raw sprint task rows to `RunAgentTask` shape and evaluates hard-dependency blocking | `checkAndBlockDeps`, `mapTaskForAgent` |
+| `task-mapper.ts` | Maps raw sprint task rows to `AgentRunClaim` shape and evaluates hard-dependency blocking | `checkAndBlockDeps`, `mapTaskForAgent` |
 | `dependency-refresher.ts` | Rebuilds the in-memory dependency index from SQLite; debounced on task mutations | `refreshDependencyIndex`, `computeDepsFingerprint` |
 | `types.ts` | Shared type definitions for agent manager internals | `ActiveAgent`, `AgentHandle`, `AgentManagerConfig`, `ResolveDependentsParams` |
 | `drain-loop.ts` | Polling orchestration — precondition checks, dep-index refresh, queued-task fetching and processing | `runDrain`, `validateDrainPreconditions`, `buildTaskStatusMap`, `drainQueuedTasks`, `DrainLoopDeps` |

@@ -8,7 +8,7 @@ import { runAgent } from '../run-agent'
 import { isRateLimitMessage, getNumericField } from '../sdk-adapter'
 import { tryEmitPlaygroundEvent } from '../playground-handler'
 import { cleanupWorktree } from '../worktree'
-import type { RunAgentTask, RunAgentDeps } from '../run-agent'
+import type { AgentRunClaim, RunAgentDeps } from '../run-agent'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { ActiveAgent } from '../types'
 
@@ -174,7 +174,7 @@ describe('runAgent — playground prompt injection', () => {
 
   it('appends playground instructions when playground_enabled is true', async () => {
     setupSpawnMock()
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-pg-1',
       title: 'Build a button component',
       prompt: 'Create a styled button',
@@ -196,7 +196,7 @@ describe('runAgent — playground prompt injection', () => {
 
   it('does not append playground instructions when playground_enabled is false', async () => {
     setupSpawnMock()
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-pg-2',
       title: 'Fix backend bug',
       prompt: 'Fix the database query',
@@ -216,7 +216,7 @@ describe('runAgent — playground prompt injection', () => {
 
   it('does not append playground instructions when playground_enabled is undefined', async () => {
     setupSpawnMock()
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-pg-3',
       title: 'Refactor module',
       prompt: 'Refactor the module',
@@ -236,7 +236,7 @@ describe('runAgent — playground prompt injection', () => {
 
   it('uses spec as prompt when prompt is null and playground_enabled', async () => {
     setupSpawnMock()
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-pg-4',
       title: 'Component work',
       prompt: null,
@@ -256,7 +256,7 @@ describe('runAgent — playground prompt injection', () => {
 
   it('uses title as prompt when both prompt and spec are null', async () => {
     setupSpawnMock()
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-pg-5',
       title: 'Create landing page',
       prompt: null,
@@ -277,7 +277,7 @@ describe('runAgent — playground prompt injection', () => {
   it('marks task as error when prompt/spec/title are all empty', async () => {
     setupSpawnMock()
     const deps = createDeps()
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-pg-6',
       title: '',
       prompt: '',
@@ -304,12 +304,12 @@ describe('runAgent — playground prompt injection', () => {
 })
 
 // ---------------------------------------------------------------------------
-// RunAgentTask interface shape
+// AgentRunClaim interface shape
 // ---------------------------------------------------------------------------
 
-describe('RunAgentTask interface', () => {
+describe('AgentRunClaim interface', () => {
   it('allows playground_enabled as optional boolean', () => {
-    const taskWithPlayground: RunAgentTask = {
+    const taskWithPlayground: AgentRunClaim = {
       id: '1',
       title: 'test',
       prompt: 'test',
@@ -321,7 +321,7 @@ describe('RunAgentTask interface', () => {
     }
     expect(taskWithPlayground.playground_enabled).toBe(true)
 
-    const taskWithoutPlayground: RunAgentTask = {
+    const taskWithoutPlayground: AgentRunClaim = {
       id: '2',
       title: 'test',
       prompt: 'test',
@@ -401,7 +401,7 @@ describe('runAgent — playground-before-cleanup ordering', () => {
       return undefined
     })
 
-    const task: RunAgentTask = {
+    const task: AgentRunClaim = {
       id: 'task-order-1',
       title: 'Ordering test',
       prompt: 'Build something visual',

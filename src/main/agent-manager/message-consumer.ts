@@ -13,7 +13,7 @@ import { asSDKMessage, getNumericField, isRateLimitMessage } from './sdk-message
 import { mapRawMessage, emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
 import { detectHtmlWrite } from './playground-handler'
 import { TurnTracker } from './turn-tracker'
-import type { RunAgentTask } from './run-agent'
+import type { AgentRunClaim } from './run-agent'
 
 export interface ConsumeMessagesResult {
   exitCode: number | undefined
@@ -63,7 +63,7 @@ function trackAgentCosts(msg: unknown, agent: ActiveAgent, turnTracker: TurnTrac
 function processSDKMessage(
   msg: unknown,
   agent: ActiveAgent,
-  task: RunAgentTask,
+  task: AgentRunClaim,
   agentRunId: string,
   turnTracker: TurnTracker,
   exitCode: number | undefined,
@@ -101,7 +101,7 @@ function processSDKMessage(
 export async function consumeMessages(
   handle: AgentHandle,
   agent: ActiveAgent,
-  task: RunAgentTask,
+  task: AgentRunClaim,
   agentRunId: string,
   turnTracker: TurnTracker,
   logger: Logger

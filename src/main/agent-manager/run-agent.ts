@@ -25,7 +25,7 @@ import { spawnAndWireAgent } from './spawn-and-wire'
 
 export type { ConsumeMessagesResult }
 
-export interface RunAgentTask {
+export interface AgentRunClaim {
   id: string
   title: string
   prompt: string | null
@@ -96,7 +96,7 @@ function logCleanupWarning(
  * task status transition and terminal notification.
  */
 async function resolveAgentExit(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   exitCode: number | undefined,
   lastAgentOutput: string,
   agent: ActiveAgent,
@@ -169,7 +169,7 @@ async function resolveAgentExit(
  * otherwise captures a partial diff and removes the worktree.
  */
 async function cleanupOrPreserveWorktree(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   repo: IAgentTaskRepository,
@@ -195,7 +195,7 @@ async function cleanupOrPreserveWorktree(
  * runs resolution handlers, and cleans up resources.
  */
 async function finalizeAgentRun(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   agent: ActiveAgent,
@@ -256,7 +256,7 @@ async function finalizeAgentRun(
 }
 
 export async function runAgent(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   deps: RunAgentDeps

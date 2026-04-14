@@ -8,7 +8,7 @@
 import type { ActiveAgent, AgentHandle } from './types'
 import type { Logger } from '../logger'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
-import type { RunAgentTask } from './run-agent'
+import type { AgentRunClaim } from './run-agent'
 import { randomUUID } from 'node:crypto'
 import { createAgentRecord } from '../agent-history'
 import { emitAgentEvent } from '../agent-event-mapper'
@@ -19,7 +19,7 @@ import { TurnTracker } from './turn-tracker'
  * persists agent_run_id, fires the agent record, and emits agent:started.
  */
 export function initializeAgentTracking(
-  task: RunAgentTask,
+  task: AgentRunClaim,
   handle: AgentHandle,
   effectiveModel: string,
   worktree: { worktreePath: string; branch: string },

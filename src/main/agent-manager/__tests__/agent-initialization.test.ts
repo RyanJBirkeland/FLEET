@@ -15,7 +15,7 @@ vi.mock('../../agent-event-mapper', () => ({
 import { initializeAgentTracking } from '../agent-initialization'
 import type { AgentHandle } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
-import type { RunAgentTask } from '../run-agent'
+import type { AgentRunClaim } from '../run-agent'
 import type { TurnTracker } from '../turn-tracker'
 import { createAgentRecord } from '../../agent-history'
 import { emitAgentEvent } from '../../agent-event-mapper'
@@ -40,7 +40,7 @@ function makeHandle(): AgentHandle {
   }
 }
 
-function makeTask(overrides: Partial<RunAgentTask> = {}): RunAgentTask {
+function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
   return {
     id: 'task-1',
     title: 'Test task',

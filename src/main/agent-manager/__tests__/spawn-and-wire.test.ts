@@ -26,7 +26,7 @@ import { spawnWithTimeout } from '../sdk-adapter'
 import { initializeAgentTracking } from '../agent-initialization'
 import { emitAgentEvent } from '../../agent-event-mapper'
 import { cleanupWorktree } from '../worktree'
-import type { RunAgentDeps, RunAgentTask } from '../run-agent'
+import type { RunAgentDeps, AgentRunClaim } from '../run-agent'
 import type { ActiveAgent, AgentHandle } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 
@@ -44,7 +44,7 @@ const mockRepo: IAgentTaskRepository = {
   getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
-function makeTask(overrides: Partial<RunAgentTask> = {}): RunAgentTask {
+function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
   return {
     id: 'task-1',
     title: 'Test',

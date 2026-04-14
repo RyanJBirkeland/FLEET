@@ -24,7 +24,7 @@ vi.mock('../../paths', () => ({
 }))
 
 import { validateTaskForRun, assembleRunContext, fetchUpstreamContext, readPriorScratchpad } from '../prompt-assembly'
-import type { RunAgentDeps, RunAgentTask } from '../run-agent'
+import type { RunAgentDeps, AgentRunClaim } from '../run-agent'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { buildAgentPrompt } from '../../lib/prompt-composer'
@@ -43,7 +43,7 @@ const mockRepo: IAgentTaskRepository = {
   getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
-function makeTask(overrides: Partial<RunAgentTask> = {}): RunAgentTask {
+function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
   return {
     id: 'task-1',
     title: 'Test task',
