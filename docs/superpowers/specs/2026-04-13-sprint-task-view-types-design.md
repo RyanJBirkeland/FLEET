@@ -8,7 +8,7 @@
 
 ## Problem
 
-`SprintTask` has 46 fields across 6 semantic concerns: core identity, task spec/definition, agent execution state, PR/review state, dependency/grouping, and feature flags. Every consumer — agent manager, handlers, stores, components — imports and reasons about all 46 fields even when it only cares about 6. This creates:
+`SprintTask` has 43 fields across 6 semantic concerns: core identity, task spec/definition, agent execution state, PR/review state, dependency/grouping, and feature flags. Every consumer — agent manager, handlers, stores, components — imports and reasons about all 43 fields even when it only cares about 6. This creates:
 
 - Testing burden: mocking a full `SprintTask` requires constructing 46 fields
 - Change risk: adding a field anywhere forces consideration of all consumers
@@ -56,7 +56,7 @@ export type SprintTaskPR = SprintTaskCore & Pick<SprintTask,
 
 All four types are exported from `src/shared/types/task-types.ts` alongside `SprintTask`. Consumers import the narrowest type that covers their needs.
 
-**Coverage check:** The remaining fields not assigned to any view type — `fast_fail_count`, `retry_count` appear in both Execution (via `SprintTaskExecution`) and in `MappedTask`. Fields `sprint_id`, `cross_repo_contract` are infrequently used; they live in Core and Spec respectively. All 46 fields from `SprintTask` are covered across the four views.
+**Coverage check:** All 43 fields from `SprintTask` are covered across the four views. `fast_fail_count` and `retry_count` are in Execution. `sprint_id` is in Core; `cross_repo_contract` is in Spec. No field appears in more than one view (beyond Core, which is included in all three derived views by intersection).
 
 ### Migration Scope (This Pass)
 
@@ -66,7 +66,7 @@ Only two repository methods are narrowed in this pass — both have callers that
 
 | Method | Old return | New return | Caller + reason |
 |--------|-----------|-----------|-----------------|
-| `getQueuedTasks(limit)` | `SprintTask[]` | `SprintTaskExecution[]` | Drain loop maps queued tasks via `mapQueuedTask` — only reads id, title, prompt, spec, retry_count, fast_fail_count, repo, group_id (all in Execution or Core) |
+| `getQueuedTasks(limit)` | `SprintTask[]` | `SprintTaskSpec[]` | Drain loop maps queued tasks via `mapQueuedTask` — reads id, title, repo, prompt, spec, retry_count, fast_fail_count, notes, playground_enabled, max_runtime_ms, max_cost_usd, model, group_id (all in Spec or Core) |
 | `listTasksWithOpenPrs()` | `SprintTask[]` | `SprintTaskPR[]` | Sprint PR poller only reads id, pr_url, pr_number, pr_status, pr_mergeable_state |
 
 All other repository methods stay `SprintTask` — they serve general reads where the full shape is appropriate.
