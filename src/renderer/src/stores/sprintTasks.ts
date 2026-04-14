@@ -12,6 +12,7 @@ import {
   trackPendingOperation,
   type PendingUpdates
 } from '../lib/optimisticUpdateManager'
+import { getRepoPaths } from '../services/git'
 
 export interface CreateTicketInput {
   title: string
@@ -310,7 +311,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     }
 
     try {
-      const repoPaths = await window.api.git.getRepoPaths()
+      const repoPaths = await getRepoPaths()
       const repoPath = repoPaths[task.repo.toLowerCase()] ?? repoPaths[task.repo]
       if (!repoPath) {
         toast.error(`No repo path configured for "${task.repo}"`)

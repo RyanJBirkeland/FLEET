@@ -1,5 +1,15 @@
 import { create } from 'zustand'
 import { toast } from './toasts'
+import {
+  getRepoPaths,
+  getGitStatus,
+  getGitDiff,
+  stageFiles,
+  unstageFiles,
+  commit,
+  push,
+  getBranches,
+} from '../services/git'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -71,7 +81,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
   fetchStatus: async (cwd: string): Promise<void> => {
     set({ loading: true })
     try {
-      const result = await window.api.git.status(cwd)
+      const result = await getGitStatus(cwd)
       const files = result?.files ?? []
       const branch = result?.branch ?? ''
       const staged: GitFileEntry[] = []
@@ -106,7 +116,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     set({ selectedFile: entry, selectedStaged: isStaged, diffContent: '' })
 
     try {
-      const diff = await window.api.git.diff(cwd, path)
+      const diff = await getGitDiff(cwd, path)
       set({ diffContent: diff ?? '' })
     } catch (err) {
       console.error('Failed to fetch diff:', err)
@@ -120,7 +130,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
 
   stageFile: async (cwd: string, path: string): Promise<void> => {
     try {
-      await window.api.git.stage(cwd, [path])
+      await stageFiles(cwd, [path])
       await get().fetchStatus(cwd)
     } catch (err) {
       console.error(`Failed to stage ${path}:`, err)
@@ -130,7 +140,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
 
   unstageFile: async (cwd: string, path: string): Promise<void> => {
     try {
-      await window.api.git.unstage(cwd, [path])
+      await unstageFiles(cwd, [path])
       await get().fetchStatus(cwd)
     } catch (err) {
       console.error(`Failed to unstage ${path}:`, err)
@@ -143,7 +153,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     const paths = staged.map((f) => f.path)
     if (paths.length === 0) return
     try {
-      await window.api.git.unstage(cwd, paths)
+      await unstageFiles(cwd, paths)
       await get().fetchStatus(cwd)
     } catch (err) {
       console.error('Failed to unstage all files:', err)
@@ -160,7 +170,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     if (!commitMessage.trim() || staged.length === 0 || commitLoading) return
     set({ commitLoading: true, lastError: null, lastErrorOp: null })
     try {
-      await window.api.git.commit(cwd, commitMessage)
+      await commit(cwd, commitMessage)
       set({ commitMessage: '', commitLoading: false })
       await get().fetchStatus(cwd)
       toast.success('Committed successfully')
@@ -175,7 +185,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
     if (get().pushLoading) return
     set({ pushLoading: true, lastError: null, lastErrorOp: null })
     try {
-      await window.api.git.push(cwd)
+      await push(cwd)
       set({ pushLoading: false })
       toast.success('Pushed successfully')
     } catch (err) {
@@ -195,7 +205,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
 
   fetchBranches: async (cwd: string): Promise<void> => {
     try {
-      const result = await window.api.git.branches(cwd)
+      const result = await getBranches(cwd)
       const branches = result?.branches ?? []
       const currentBranch = result?.current ?? ''
       set({ branches, branch: currentBranch })
@@ -211,7 +221,7 @@ export const useGitTreeStore = create<GitTreeState>((set, get) => ({
 
   loadRepoPaths: async (): Promise<void> => {
     try {
-      const repoMap = await window.api.git.getRepoPaths()
+      const repoMap = await getRepoPaths()
       const repoPaths = repoMap ? Object.values(repoMap) : []
       set({ repoPaths })
       if (repoPaths.length > 0 && !get().activeRepo) {
