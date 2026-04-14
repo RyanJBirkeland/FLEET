@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { buildReviewerPrompt } from './prompt-composer-reviewer'
-import type { ReviewResult } from '../../shared/types'
+import { buildReviewerPrompt } from '../prompt-composer-reviewer'
+import type { ReviewResult } from '../../../shared/types'
 
 const reviewSeed: ReviewResult = {
   qualityScore: 92,

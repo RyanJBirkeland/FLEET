@@ -8,4 +8,4 @@ export interface AgentPersonality {
   patterns: string[] // Communication and behavior patterns
 }
 
-export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer'
+export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer' | 'reviewer'

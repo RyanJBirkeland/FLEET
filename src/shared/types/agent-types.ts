@@ -2,7 +2,7 @@
  * Agent-related types — spawning, lifecycle, events, and status.
  */
 
-export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer'
+export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthesizer' | 'reviewer'
 
 export interface AgentMeta {
   id: string
