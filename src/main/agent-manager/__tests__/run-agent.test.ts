@@ -3,9 +3,22 @@
  * watchdog race, fast-fail paths, and completion fallback.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { runAgent, validateTaskForRun, assembleRunContext, fetchUpstreamContext, readPriorScratchpad, consumeMessages } from '../run-agent'
+import {
+  runAgent,
+  validateTaskForRun,
+  assembleRunContext,
+  fetchUpstreamContext,
+  readPriorScratchpad,
+  consumeMessages
+} from '../run-agent'
 import { detectHtmlWrite, tryEmitPlaygroundEvent } from '../playground-handler'
-import type { RunAgentTask, RunAgentDeps, RunAgentSpawnDeps, RunAgentDataDeps, RunAgentEventDeps } from '../run-agent'
+import type {
+  RunAgentTask,
+  RunAgentDeps,
+  RunAgentSpawnDeps,
+  RunAgentDataDeps,
+  RunAgentEventDeps
+} from '../run-agent'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 import type { ActiveAgent } from '../types'
 import { mkdirSync, readFileSync } from 'node:fs'
@@ -34,9 +47,8 @@ vi.mock('../sdk-adapter', async (importOriginal) => {
   return {
     ...actual,
     spawnAgent,
-    spawnWithTimeout: vi.fn(
-      (_prompt: string, _cwd: string, _model: string, _logger: unknown) =>
-        spawnAgent({ prompt: _prompt, cwd: _cwd, model: _model, logger: _logger })
+    spawnWithTimeout: vi.fn((_prompt: string, _cwd: string, _model: string, _logger: unknown) =>
+      spawnAgent({ prompt: _prompt, cwd: _cwd, model: _model, logger: _logger })
     )
   }
 })
@@ -761,8 +773,13 @@ describe('validateTaskForRun', () => {
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
     const emptyTask: RunAgentTask = {
-      id: 'task-1', title: '', prompt: null, spec: null,
-      repo: 'bde', retry_count: 0, fast_fail_count: 0
+      id: 'task-1',
+      title: '',
+      prompt: null,
+      spec: null,
+      repo: 'bde',
+      retry_count: 0,
+      fast_fail_count: 0
     }
 
     await expect(
@@ -788,8 +805,13 @@ describe('validateTaskForRun', () => {
       getTask: vi.fn().mockReturnValue(null)
     } as unknown as ISprintTaskRepository
     const task: RunAgentTask = {
-      id: 'task-1', title: 'Do the thing', prompt: null, spec: null,
-      repo: 'bde', retry_count: 0, fast_fail_count: 0
+      id: 'task-1',
+      title: 'Do the thing',
+      prompt: null,
+      spec: null,
+      repo: 'bde',
+      retry_count: 0,
+      fast_fail_count: 0
     }
 
     await expect(
@@ -882,10 +904,9 @@ describe('readPriorScratchpad', () => {
     })
     const result = readPriorScratchpad('task-abc')
     expect(result).toBe('')
-    expect(mockMkdirSync).toHaveBeenCalledWith(
-      '/home/user/.bde/memory/tasks/task-abc',
-      { recursive: true }
-    )
+    expect(mockMkdirSync).toHaveBeenCalledWith('/home/user/.bde/memory/tasks/task-abc', {
+      recursive: true
+    })
   })
 
   it('returns file contents when progress.md exists', () => {
@@ -901,17 +922,26 @@ describe('assembleRunContext', () => {
       getTask: vi.fn().mockReturnValue(null)
     } as unknown as ISprintTaskRepository
     const task: RunAgentTask = {
-      id: 'task-1', title: 'Test task', prompt: 'Do the thing.',
-      spec: null, repo: 'bde', retry_count: 0, fast_fail_count: 0
+      id: 'task-1',
+      title: 'Test task',
+      prompt: 'Do the thing.',
+      spec: null,
+      repo: 'bde',
+      retry_count: 0,
+      fast_fail_count: 0
     }
 
-    const prompt = await assembleRunContext(task, { worktreePath: '/wt', branch: 'feat/x' }, {
-      activeAgents: new Map(),
-      defaultModel: 'claude-3-5-sonnet-20241022',
-      logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
-      onTaskTerminal: vi.fn(),
-      repo: mockRepoLocal
-    })
+    const prompt = await assembleRunContext(
+      task,
+      { worktreePath: '/wt', branch: 'feat/x' },
+      {
+        activeAgents: new Map(),
+        defaultModel: 'claude-3-5-sonnet-20241022',
+        logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+        onTaskTerminal: vi.fn(),
+        repo: mockRepoLocal
+      }
+    )
 
     expect(typeof prompt).toBe('string')
     expect(prompt.length).toBeGreaterThan(0)
@@ -942,21 +972,17 @@ describe('consumeMessages', () => {
     const turnTracker = new TurnTracker('run-1')
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
-    const result = await consumeMessages(
-      handle as any,
-      agent,
-      task,
-      'run-1',
-      turnTracker,
-      logger
-    )
+    const result = await consumeMessages(handle as any, agent, task, 'run-1', turnTracker, logger)
 
     expect(result.streamError).toBeInstanceOf(Error)
     expect(result.streamError?.message).toBe('Stream closed unexpectedly')
     expect(result.exitCode).toBeUndefined()
     expect(emitAgentEvent).toHaveBeenCalledWith(
       'run-1',
-      expect.objectContaining({ type: 'agent:error', message: 'Stream interrupted: Stream closed unexpectedly' })
+      expect.objectContaining({
+        type: 'agent:error',
+        message: 'Stream interrupted: Stream closed unexpectedly'
+      })
     )
   })
 })
@@ -1016,9 +1042,9 @@ describe('runAgent — stream error: structured event emission', () => {
     const deps = makeDeps()
     await runAgent(makeTask(), worktree, repoPath, deps)
 
-    const streamErrorCalls = vi.mocked(emitAgentEvent).mock.calls.filter(
-      ([, event]) => event.type === 'agent:error'
-    )
+    const streamErrorCalls = vi
+      .mocked(emitAgentEvent)
+      .mock.calls.filter(([, event]) => event.type === 'agent:error')
     expect(streamErrorCalls).toHaveLength(1)
     expect(streamErrorCalls[0][1]).toMatchObject({
       type: 'agent:error',
