@@ -200,14 +200,18 @@ export function setupCSP(): void {
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
         "font-src 'self' data:; " +
-        `connect-src 'self' ${connectSrc} http://localhost:* ws://localhost:*`
+        `connect-src 'self' ${connectSrc} http://localhost:* ws://localhost:*; ` +
+        "frame-ancestors 'none'; " +
+        "form-action 'self'"
       : "default-src 'self'; " +
         "script-src 'self'; " +
         "worker-src 'self' blob:; " +
         "style-src 'self' 'unsafe-inline'; " +
         "img-src 'self' data:; " +
         "font-src 'self' data:; " +
-        `connect-src 'self' ${connectSrc} https://api.github.com`
+        `connect-src 'self' ${connectSrc} https://api.github.com; ` +
+        "frame-ancestors 'none'; " +
+        "form-action 'self'"
 
     callback({
       responseHeaders: {
