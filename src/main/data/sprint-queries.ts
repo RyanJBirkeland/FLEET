@@ -55,6 +55,7 @@ export {
 export {
   getQueueStats,
   getOrphanedTasks,
+  clearStaleClaimedBy,
   clearSprintTaskFk,
   getHealthCheckTasks,
   getAllTaskIds,

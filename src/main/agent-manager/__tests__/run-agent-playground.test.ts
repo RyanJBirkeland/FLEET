@@ -119,6 +119,7 @@ describe('runAgent — playground prompt injection', () => {
     getQueuedTasks: vi.fn(),
     getTasksWithDependencies: vi.fn().mockResolvedValue([]),
     getOrphanedTasks: vi.fn(),
+    clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockResolvedValue(0),
     claimTask: vi.fn()
   }

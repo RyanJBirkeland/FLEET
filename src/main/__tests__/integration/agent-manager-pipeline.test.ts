@@ -209,6 +209,7 @@ function makeMockRepo(): ISprintTaskRepository {
     getQueuedTasks: (...args: [number]) => (getQueuedTasks as any)(...args),
     getTasksWithDependencies: () => (getTasksWithDependencies as any)(),
     getOrphanedTasks: (...args: [string]) => (getOrphanedTasks as any)(...args),
+    clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
     claimTask: (...args: [string, string]) => (claimTask as any)(...args)
   }

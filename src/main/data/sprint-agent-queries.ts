@@ -56,6 +56,28 @@ export function getOrphanedTasks(claimedBy: string): SprintTask[] {
   }
 }
 
+/**
+ * Clears claimed_by for all tasks held by the given executor, regardless of status.
+ * Used on startup to release stale claims from the previous process session
+ * (e.g. tasks stuck in 'review' or other non-active statuses with a leftover claim).
+ * Returns the number of rows updated.
+ */
+export function clearStaleClaimedBy(claimedBy: string): number {
+  try {
+    const result = getDb()
+      .prepare(`UPDATE sprint_tasks SET claimed_by = NULL WHERE claimed_by = ?`)
+      .run(claimedBy)
+    return result.changes
+  } catch (err) {
+    // DL-17: Standardize error message format
+    const msg = getErrorMessage(err)
+    getSprintQueriesLogger().warn(
+      `[sprint-queries] clearStaleClaimedBy failed for claimedBy=${claimedBy}: ${msg}`
+    )
+    return 0
+  }
+}
+
 export function clearSprintTaskFk(agentRunId: string): void {
   try {
     getDb()

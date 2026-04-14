@@ -86,6 +86,7 @@ vi.mock('../../data/sprint-queries', () => ({
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn(),
   getOrphanedTasks: vi.fn(),
+  clearStaleClaimedBy: vi.fn(),
   getActiveTaskCount: vi.fn(),
   getSuccessRateBySpecType: vi.fn(),
   getDailySuccessRate: vi.fn(),

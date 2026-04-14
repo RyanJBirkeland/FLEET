@@ -82,6 +82,7 @@ const mockRepo: ISprintTaskRepository = {
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn(),
   getOrphanedTasks: vi.fn(),
+  clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn(),
   claimTask: vi.fn()
 }

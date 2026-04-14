@@ -129,6 +129,7 @@ function makeMockRepo(): ISprintTaskRepository {
     getTasksWithDependencies: () => (getTasksWithDependencies as ReturnType<typeof vi.fn>)(),
     getOrphanedTasks: (...args: [string]) =>
       (getOrphanedTasks as ReturnType<typeof vi.fn>)(...args),
+    clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
     claimTask: (...args: [string, string]) => (claimTask as ReturnType<typeof vi.fn>)(...args)
   }
@@ -548,6 +549,7 @@ describe('AgentManagerImpl — class internals', () => {
         getQueuedTasks: vi.fn().mockReturnValue([]),
         getTasksWithDependencies: vi.fn().mockReturnValue(tasks),
         getOrphanedTasks: vi.fn().mockReturnValue([]),
+        clearStaleClaimedBy: vi.fn().mockReturnValue(0),
         getActiveTaskCount: vi.fn().mockReturnValue(0),
         claimTask: vi.fn()
       }
@@ -690,6 +692,7 @@ describe('AgentManagerImpl — class internals', () => {
         getQueuedTasks: vi.fn().mockReturnValue([]),
         getTasksWithDependencies: vi.fn().mockReturnValue(tasks),
         getOrphanedTasks: vi.fn().mockReturnValue([]),
+        clearStaleClaimedBy: vi.fn().mockReturnValue(0),
         getActiveTaskCount: vi.fn().mockReturnValue(0),
         claimTask: vi.fn()
       }
@@ -735,6 +738,7 @@ describe('AgentManagerImpl — class internals', () => {
           throw new Error('DB error')
         }),
         getOrphanedTasks: vi.fn(),
+        clearStaleClaimedBy: vi.fn().mockReturnValue(0),
         getActiveTaskCount: vi.fn().mockReturnValue(0),
         claimTask: vi.fn()
       }
@@ -825,6 +829,7 @@ describe('AgentManagerImpl — class internals', () => {
         getQueuedTasks: vi.fn().mockReturnValue(queuedTasks),
         getTasksWithDependencies: vi.fn().mockReturnValue([]),
         getOrphanedTasks: vi.fn().mockReturnValue([]),
+        clearStaleClaimedBy: vi.fn().mockReturnValue(0),
         getActiveTaskCount: vi.fn().mockReturnValue(0),
         claimTask: vi.fn()
       }

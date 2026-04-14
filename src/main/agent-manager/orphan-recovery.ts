@@ -1,5 +1,5 @@
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
-import { EXECUTOR_ID, MAX_RETRIES } from './types'
+import { EXECUTOR_ID } from './types'
 
 export async function recoverOrphans(
   isAgentActive: (taskId: string) => boolean,
@@ -24,27 +24,13 @@ export async function recoverOrphans(
 
     logger.warn(`[agent-manager] Orphaned task ${task.id} "${task.title}" — re-queuing`)
 
-    // Increment retry_count and check against MAX_RETRIES
-    const retryCount = (task.retry_count ?? 0) + 1
-    if (retryCount >= MAX_RETRIES) {
-      logger.warn(
-        `[agent-manager] Task ${task.id} exceeded max retries (${MAX_RETRIES}) via orphan recovery — marking as error`
-      )
-      repo.updateTask(task.id, {
-        status: 'error',
-        claimed_by: null,
-        notes: `Exceeded max retries (${MAX_RETRIES}) via orphan recovery. The agent process terminated without completing the task.`,
-        needs_review: true
-      })
-      continue
-    }
-
-    // Re-queue: clear claimed_by so drain loop or external runner can pick it up
+    // Re-queue: clear claimed_by so drain loop or external runner can pick it up.
+    // Do NOT increment retry_count — orphaning is a process crash, not a task failure.
+    // retry_count is only incremented by agent failure paths in completion.ts.
     repo.updateTask(task.id, {
       status: 'queued',
       claimed_by: null,
-      retry_count: retryCount,
-      notes: `Task was re-queued by orphan recovery (retry ${retryCount}/${MAX_RETRIES}). Agent process terminated without completing the task.`
+      notes: `Task was re-queued by orphan recovery. Agent process terminated without completing the task.`
     })
     recovered++
   }

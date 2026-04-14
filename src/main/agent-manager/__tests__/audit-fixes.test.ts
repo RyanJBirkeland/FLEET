@@ -132,6 +132,7 @@ describe('resolveFailure terminal status on DB error (AM-5)', () => {
       getQueuedTasks: vi.fn(),
       getTasksWithDependencies: vi.fn().mockReturnValue([]),
       getOrphanedTasks: vi.fn(),
+      clearStaleClaimedBy: vi.fn().mockReturnValue(0),
       getActiveTaskCount: vi.fn().mockReturnValue(0),
       claimTask: vi.fn()
     }

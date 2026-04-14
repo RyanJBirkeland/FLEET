@@ -13,6 +13,7 @@ vi.mock('../sprint-queries', () => ({
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn(),
   getOrphanedTasks: vi.fn(),
+  clearStaleClaimedBy: vi.fn(),
   getActiveTaskCount: vi.fn(),
   claimTask: vi.fn(),
   listTasks: vi.fn(),
@@ -96,6 +97,16 @@ describe('createSprintTaskRepository', () => {
 
       expect(queries.getOrphanedTasks).toHaveBeenCalledWith('executor-1')
       expect(result).toBe(mockTasks)
+    })
+
+    it('should delegate clearStaleClaimedBy to queries.clearStaleClaimedBy', () => {
+      const repo = createSprintTaskRepository()
+      vi.mocked(queries.clearStaleClaimedBy).mockReturnValue(3)
+
+      const result = repo.clearStaleClaimedBy('bde-embedded')
+
+      expect(queries.clearStaleClaimedBy).toHaveBeenCalledWith('bde-embedded')
+      expect(result).toBe(3)
     })
 
     it('should delegate getActiveTaskCount to queries.getActiveTaskCount', () => {

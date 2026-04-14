@@ -41,6 +41,7 @@ export interface IAgentTaskRepository {
     status: string
   }>
   getOrphanedTasks(claimedBy: string): SprintTask[]
+  clearStaleClaimedBy(claimedBy: string): number
   getActiveTaskCount(): number
   claimTask(id: string, claimedBy: string): SprintTask | null
   getGroup(id: string): TaskGroup | null
@@ -100,6 +101,7 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     getQueuedTasks: queries.getQueuedTasks,
     getTasksWithDependencies: queries.getTasksWithDependencies,
     getOrphanedTasks: queries.getOrphanedTasks,
+    clearStaleClaimedBy: queries.clearStaleClaimedBy,
     getActiveTaskCount: queries.getActiveTaskCount,
     claimTask: queries.claimTask,
     getGroup: groupQueries.getGroup,

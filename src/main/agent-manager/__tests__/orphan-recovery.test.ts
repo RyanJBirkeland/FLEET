@@ -23,6 +23,7 @@ const mockRepo: ISprintTaskRepository = {
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
   getOrphanedTasks: (...args: [string]) => (getOrphanedTasks as any)(...args),
+  clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn().mockReturnValue(0),
   claimTask: vi.fn()
 }
@@ -58,9 +59,7 @@ describe('recoverOrphans', () => {
     expect(updateTaskMock).toHaveBeenCalledWith('task-1', {
       status: 'queued',
       claimed_by: null,
-      retry_count: 1,
-      notes:
-        'Task was re-queued by orphan recovery (retry 1/3). Agent process terminated without completing the task.'
+      notes: 'Task was re-queued by orphan recovery. Agent process terminated without completing the task.'
     })
     expect(recovered).toBe(1)
   })

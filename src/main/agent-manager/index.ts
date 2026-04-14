@@ -549,6 +549,22 @@ export class AgentManagerImpl implements AgentManager {
     this._shuttingDown = false
     this._concurrency = makeConcurrencyState(this.config.maxConcurrent)
 
+    // Startup sweep: clear any stale claimed_by from the previous process session.
+    // This covers tasks in any status (e.g. 'review', 'queued') that were left with
+    // a non-null claimed_by when the previous process exited. Orphan recovery only
+    // re-queues active tasks — this sweep handles all other statuses so no task is
+    // claimed-forever after a restart.
+    try {
+      const cleared = this.repo.clearStaleClaimedBy(EXECUTOR_ID)
+      if (cleared > 0) {
+        this.logger.info(
+          `[agent-manager] Cleared stale claimed_by from ${cleared} task(s) on startup`
+        )
+      }
+    } catch (err) {
+      this.logger.error(`[agent-manager] Startup claimed_by sweep failed: ${err}`)
+    }
+
     // Initial orphan recovery (fire-and-forget)
     recoverOrphans((id: string) => this._activeAgents.has(id), this.repo, this.logger).catch(
       (err) => {

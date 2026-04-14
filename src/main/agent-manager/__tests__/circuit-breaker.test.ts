@@ -52,6 +52,7 @@ function makeRepo(): ISprintTaskRepository {
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
     getOrphanedTasks: vi.fn().mockReturnValue([]),
+    clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
     claimTask: vi.fn()
   }
