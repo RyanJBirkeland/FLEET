@@ -14,13 +14,7 @@ import { EmptyState } from '../ui/EmptyState'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import * as memoryService from '../../services/memory'
 import { SettingsCard } from './SettingsCard'
-
-interface MemoryFile {
-  path: string
-  name: string
-  size: number
-  modifiedAt: number
-}
+import { useMemoryFiles, type MemoryFile } from './useMemoryFiles'
 
 interface FileGroup {
   label: string
@@ -73,8 +67,8 @@ function groupFiles(files: MemoryFile[]): { pinned: MemoryFile | null; groups: F
 }
 
 export function MemorySection(): React.JSX.Element {
-  const [files, setFiles] = useState<MemoryFile[]>([])
-  const [loadingFiles, setLoadingFiles] = useState(true)
+  const { files, loadingFiles, activeFiles, loadFiles, saveFile: saveFileToService, createFile: createFileWithService, toggleActive } = useMemoryFiles()
+
   const [loadingContent, setLoadingContent] = useState(false)
   const [selectedPath, setSelectedPath] = useState<string | null>(null)
   const [content, setContent] = useState('')
@@ -85,37 +79,11 @@ export function MemorySection(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [searchResults, setSearchResults] = useState<memoryService.MemorySearchResult[]>([])
   const [isSearching, setIsSearching] = useState(false)
-  const [activeFiles, setActiveFiles] = useState<Record<string, boolean>>({})
   const editorRef = useRef<HTMLTextAreaElement>(null)
 
   const { confirm, confirmProps } = useConfirm()
 
   const isDirty = content !== savedContent
-
-  const loadFiles = useCallback(async () => {
-    try {
-      const result = await memoryService.listFiles()
-      setFiles(result)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to load memory files')
-    } finally {
-      setLoadingFiles(false)
-    }
-  }, [])
-
-  const loadActiveFiles = useCallback(async () => {
-    try {
-      const result = await memoryService.getActiveFiles()
-      setActiveFiles(result)
-    } catch {
-      // Silently fall back — active state is non-critical
-    }
-  }, [])
-
-  useEffect(() => {
-    loadFiles()
-    loadActiveFiles()
-  }, [loadFiles, loadActiveFiles])
 
   const openFile = useCallback(async (path: string) => {
     setLoadingContent(true)
@@ -152,14 +120,9 @@ export function MemorySection(): React.JSX.Element {
 
   const saveFile = useCallback(async () => {
     if (!selectedPath) return
-    try {
-      await memoryService.writeFile(selectedPath, content)
-      setSavedContent(content)
-      toast.success('File saved')
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to save file')
-    }
-  }, [selectedPath, content])
+    await saveFileToService(selectedPath, content)
+    setSavedContent(content)
+  }, [selectedPath, content, saveFileToService])
 
   const discard = useCallback(() => {
     setContent(savedContent)
@@ -168,20 +131,17 @@ export function MemorySection(): React.JSX.Element {
   const createFile = useCallback(async () => {
     const name = newFileName.trim()
     if (!name) return
-    const path = name.endsWith('.md') ? name : `${name}.md`
     setCreating(true)
     try {
-      await memoryService.writeFile(path, '')
-      setNewFilePrompt(false)
-      setNewFileName('')
-      await loadFiles()
-      await openFile(path)
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create file')
+      await createFileWithService(name, async (path) => {
+        setNewFilePrompt(false)
+        setNewFileName('')
+        await openFile(path)
+      })
     } finally {
       setCreating(false)
     }
-  }, [newFileName, loadFiles, openFile])
+  }, [newFileName, createFileWithService, openFile])
 
   const handleSearch = useCallback(async (query: string) => {
     setSearchQuery(query)
@@ -207,19 +167,6 @@ export function MemorySection(): React.JSX.Element {
     setSearchQuery('')
     setSearchResults([])
   }, [])
-
-  const toggleActive = useCallback(
-    async (path: string) => {
-      const newActive = !activeFiles[path]
-      try {
-        const updated = await memoryService.setFileActive(path, newActive)
-        setActiveFiles(updated)
-      } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Failed to toggle')
-      }
-    },
-    [activeFiles]
-  )
 
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent): void {
