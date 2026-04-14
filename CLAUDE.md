@@ -65,7 +65,11 @@ Format: `{type}: {description}`
 - Sprint task dependency management: `src/main/handlers/sprint-local.ts` (auto-blocking on create/transition)
 - Dependency resolution after completion: `src/main/agent-manager/resolve-dependents.ts`
 - Shared sanitization: `src/shared/sanitize-depends-on.ts`
-- Agent auto-commit: `src/main/agent-manager/completion.ts` (uses `git add -A` to capture new files; `.gitignore` excludes node_modules etc.)
+- Agent auto-commit: `src/main/agent-manager/completion.ts` (uses `git add -A` to capture new files; `.gitignore` excludes node_modules etc.). Failure classification in `src/main/agent-manager/failure-classifier.ts`; auto-merge policy evaluation in `src/main/agent-manager/auto-merge-policy.ts`
+- Workbench operational checks: `src/main/services/workbench-checks-service.ts` — `runOperationalChecks()` + individual check fns; `workbench:checkOperational` handler is a thin wrapper
+- Review path validators: `src/main/lib/review-paths.ts` — `validateGitRef`, `validateWorktreePath`, `validateFilePath`, `getWorktreeBase`; import from here, don't redefine inline
+- Auto-review service: `src/main/services/auto-review-service.ts` — rule evaluation for `review:checkAutoReview`; handler is a thin wrapper
+- WIP limit policy: `src/renderer/src/lib/wip-policy.ts` — `canLaunchTask(activeCount, maxConcurrent)`; business rule lives here, not inline in the store
 - Agent event mapping/emission: `src/main/agent-event-mapper.ts` (shared by adhoc + pipeline agents)
 - Worktree management: `src/main/agent-manager/worktree.ts`
 - Shutdown/lifecycle: `src/main/agent-manager/index.ts`
@@ -125,6 +129,7 @@ The rebase step is mandatory — local main can diverge from origin if another s
 - All IPC handlers must use the `safeHandle()` wrapper for error logging.
 - Prefer `execFile`/`execFileAsync` (argument arrays) over `execSync` (string interpolation) to prevent shell injection.
 - **SQLite multi-statement SQL gotcha**: the repo's security hook pattern-matches shell-style invocations on Edit operations and will block a `db` call that takes a backtick-literal argument on the same line. Workaround: assign the SQL to a `const sql = ` variable first, then pass the variable to the `db` method on the next line. See any multi-statement migration in `src/main/db.ts` for the pattern.
+- **bootstrap.test.ts gotcha**: every module imported by `bootstrap.ts` needs a matching `vi.mock(...)` in `bootstrap.test.ts` — a missing mock causes ALL tests in the file to fail with "not a function" errors, not just the assertions that use it.
 
 ## Conflict-Prone Files
 
@@ -166,8 +171,10 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Task Pipeline**: `src/renderer/src/components/sprint/SprintPipeline.tsx` — three-zone layout (PipelineBacklog | PipelineStage×5 | TaskDetailDrawer). Uses `partitionSprintTasks()` for stage mapping. Neon CSS in `sprint-pipeline-neon.css`. Task creation removed from pipeline (lives in Task Workbench only).
 - **Task Workbench**: `src/renderer/src/components/task-workbench/` — form + AI copilot + readiness checks. Neon CSS in `task-workbench-neon.css` (`.wb-*` BEM classes). Copilot uses Agent SDK streaming via `workbench:chatStream` IPC.
 - **`consumeMessages` result**: `run-agent.ts` `consumeMessages()` returns `{ exitCode, lastAgentOutput, streamError? }` — check `streamError` to detect mid-stream failures (distinct from normal exit)
+- **Sprint UI stores (split)**: `sprintUI.ts` (drawers + generatingIds + display mode), `sprintSelection.ts` (selectedTaskId, selectedTaskIds, drawerOpen, specPanelOpen), `sprintFilters.ts` (statusFilter, repoFilter, tagFilter, searchQuery). Don't add state to `sprintUI.ts` — put it in the right focused store. `selectIsGenerating(taskId)` in sprintUI; `selectIsTaskSelected(taskId)` in sprintSelection.
+- **Review actions**: `useReviewActions.ts` is a thin composition hook. Single-task actions (shipIt, mergeLocally, createPr, requestRevision, rebase, discard) in `useSingleTaskReviewActions.ts`; batch actions in `useBatchReviewActions.ts`.
 - **Computed selectors (not stored state)**: `activeTaskCount` → use `selectActiveTaskCount` from `sprintTasks` store; `latestEvents` → use `selectLatestEvent(taskId)` from `sprintEvents` store
-- **Failure pattern matching**: `classifyFailureReason` in `completion.ts` uses `FAILURE_PATTERNS` array — add entries there to handle new SDK/git error messages; don't add more if-chains
+- **Failure pattern matching**: `classifyFailureReason` in `src/main/agent-manager/failure-classifier.ts` uses `FAILURE_PATTERNS` array — add entries there to handle new SDK/git error messages; don't add more if-chains
 - **Preload broadcast pattern**: New main→renderer event channels should use `onBroadcast<T>(channel)` factory in `src/preload/index.ts` — avoids boilerplate subscription wiring
 - **Full architecture**: See `docs/architecture.md`
 
