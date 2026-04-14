@@ -21,7 +21,7 @@ export function buildCopilotPrompt(input: BuildPromptInput): string {
   prompt += buildPersonalitySection(copilotPersonality)
 
   // Inject user memory filtered to form context
-  const taskSignal = [input.formContext?.title ?? '', input.formContext?.spec ?? ''].join(' ')
+  const taskSignal = [input.formContext?.title, input.formContext?.spec].filter(Boolean).join(' ')
   const userMem = selectUserMemory(taskSignal)
   if (userMem.fileCount > 0) {
     prompt += '\n\n## User Knowledge\n'

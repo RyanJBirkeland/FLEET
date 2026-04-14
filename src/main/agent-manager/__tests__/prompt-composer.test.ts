@@ -419,7 +419,7 @@ describe('buildAgentPrompt', () => {
   })
 
   describe('user memory injection', () => {
-    it('includes User Knowledge section when getUserMemory returns files', () => {
+    it('includes User Knowledge section when selectUserMemory returns files', () => {
       mockGetUserMemory.mockReturnValueOnce({
         content: '### notes.md\n\nAlways use camelCase for variables.',
         totalBytes: 42,
@@ -433,7 +433,7 @@ describe('buildAgentPrompt', () => {
       expect(prompt).toContain('Always use camelCase for variables.')
     })
 
-    it('does not include User Knowledge section when getUserMemory returns 0 files', () => {
+    it('does not include User Knowledge section when selectUserMemory returns 0 files', () => {
       mockGetUserMemory.mockReturnValueOnce({
         content: '',
         totalBytes: 0,
@@ -1112,7 +1112,7 @@ describe('buildAgentPrompt', () => {
     })
   })
 
-  describe('selective user memory (pipeline only)', () => {
+  describe('selective user memory (filtered agent types)', () => {
     afterEach(() => {
       mockGetUserMemory.mockReturnValue({ content: '', totalBytes: 0, fileCount: 0 })
     })
