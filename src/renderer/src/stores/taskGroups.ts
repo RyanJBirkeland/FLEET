@@ -2,6 +2,11 @@ import { create } from 'zustand'
 import type { TaskGroup, SprintTask, EpicDependency } from '../../../shared/types'
 import { toast } from './toasts'
 import { createTask, updateTask } from '../services/sprint'
+import {
+  listGroups, getGroupTasks, createGroup, updateGroup, deleteGroup,
+  addTask, removeTask, queueAll, reorderTasks,
+  addDependency, removeDependency, updateDependencyCondition
+} from '../services/groups'
 
 interface TaskGroupsState {
   groups: TaskGroup[]
@@ -66,7 +71,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
   loadGroups: async (): Promise<void> => {
     set({ loading: true })
     try {
-      const result = await window.api.groups.list()
+      const result = await listGroups()
       set({ groups: Array.isArray(result) ? result : [] })
     } catch (e) {
       toast.error('Failed to load task groups — ' + (e instanceof Error ? e.message : String(e)))
@@ -88,7 +93,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
   loadGroupTasks: async (groupId: string): Promise<void> => {
     set({ loading: true })
     try {
-      const tasks = await window.api.groups.getGroupTasks(groupId)
+      const tasks = await getGroupTasks(groupId)
       set({ groupTasks: Array.isArray(tasks) ? tasks : [] })
     } catch (e) {
       toast.error('Failed to load group tasks — ' + (e instanceof Error ? e.message : String(e)))
@@ -100,7 +105,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   createGroup: async (input): Promise<TaskGroup | null> => {
     try {
-      const newGroup = await window.api.groups.create(input)
+      const newGroup = await createGroup(input)
       set((s) => ({ groups: [...s.groups, newGroup] }))
       toast.success(`Group "${newGroup.name}" created`)
       return newGroup
@@ -116,7 +121,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
       groups: s.groups.map((g) => (g.id === id ? { ...g, ...patch } : g))
     }))
     try {
-      const updated = await window.api.groups.update(id, patch)
+      const updated = await updateGroup(id, patch)
       set((s) => ({
         groups: s.groups.map((g) => (g.id === id ? updated : g))
       }))
@@ -140,7 +145,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
     }))
 
     try {
-      await window.api.groups.delete(id)
+      await deleteGroup(id)
       toast.success(`Group "${groupToDelete.name}" deleted`)
     } catch (e) {
       toast.error('Failed to delete group — ' + (e instanceof Error ? e.message : String(e)))
@@ -151,7 +156,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   addTaskToGroup: async (taskId, groupId): Promise<void> => {
     try {
-      const success = await window.api.groups.addTask(taskId, groupId)
+      const success = await addTask(taskId, groupId)
       if (success) {
         toast.success('Task added to group')
         // Reload group tasks if this group is selected
@@ -168,7 +173,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   removeTaskFromGroup: async (taskId): Promise<void> => {
     try {
-      const success = await window.api.groups.removeTask(taskId)
+      const success = await removeTask(taskId)
       if (success) {
         toast.success('Task removed from group')
         // Reload current group tasks
@@ -188,7 +193,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   queueAllTasks: async (groupId): Promise<number> => {
     try {
-      const count = await window.api.groups.queueAll(groupId)
+      const count = await queueAll(groupId)
 
       // Update group status to 'in-pipeline' after successful queuing
       if (count > 0) {
@@ -219,7 +224,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
     set({ groupTasks: reorderedTasks })
 
     try {
-      await window.api.groups.reorderTasks(groupId, orderedTaskIds)
+      await reorderTasks(groupId, orderedTaskIds)
     } catch (e) {
       toast.error('Failed to reorder tasks — ' + (e instanceof Error ? e.message : String(e)))
       // Revert by reloading
@@ -229,7 +234,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   addDependency: async (groupId, dep): Promise<void> => {
     try {
-      const updated = await window.api.groups.addDependency(groupId, dep)
+      const updated = await addDependency(groupId, dep)
       set((s) => ({
         groups: s.groups.map((g) => (g.id === groupId ? updated : g))
       }))
@@ -241,7 +246,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   removeDependency: async (groupId, upstreamId): Promise<void> => {
     try {
-      const updated = await window.api.groups.removeDependency(groupId, upstreamId)
+      const updated = await removeDependency(groupId, upstreamId)
       set((s) => ({
         groups: s.groups.map((g) => (g.id === groupId ? updated : g))
       }))
@@ -253,11 +258,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
 
   updateDependencyCondition: async (groupId, upstreamId, condition): Promise<void> => {
     try {
-      const updated = await window.api.groups.updateDependencyCondition(
-        groupId,
-        upstreamId,
-        condition
-      )
+      const updated = await updateDependencyCondition(groupId, upstreamId, condition)
       set((s) => ({
         groups: s.groups.map((g) => (g.id === groupId ? updated : g))
       }))
@@ -272,7 +273,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
   createGroupFromTemplate: async (template, repo): Promise<TaskGroup | null> => {
     try {
       // Create the group
-      const newGroup = await window.api.groups.create({
+      const newGroup = await createGroup({
         name: template.name,
         icon: template.icon,
         accent_color: template.accent_color,
@@ -293,7 +294,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
           if (task) {
             // Set spec_type via update since create doesn't support it
             await updateTask(task.id, { spec_type: taskStub.spec_type })
-            await window.api.groups.addTask(task.id, newGroup.id)
+            await addTask(task.id, newGroup.id)
           }
         } catch (taskError) {
           // Log error but continue creating other tasks

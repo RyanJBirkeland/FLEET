@@ -161,6 +161,7 @@ vi.stubGlobal('api', {
     removeTask: vi.fn().mockResolvedValue(true),
     getGroupTasks: vi.fn().mockResolvedValue([]),
     queueAll: vi.fn().mockResolvedValue(0),
+    reorderTasks: vi.fn().mockResolvedValue(undefined),
     addDependency: vi.fn().mockResolvedValue({}),
     removeDependency: vi.fn().mockResolvedValue({}),
     updateDependencyCondition: vi.fn().mockResolvedValue({})
