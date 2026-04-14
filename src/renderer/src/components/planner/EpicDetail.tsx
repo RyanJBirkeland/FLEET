@@ -1,6 +1,6 @@
-import React, { useMemo, useState, useRef, useEffect, useCallback } from 'react'
+import React, { useMemo, useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Edit2, MoreVertical, AlertTriangle, CheckCircle2 } from 'lucide-react'
+import { Edit2, AlertTriangle } from 'lucide-react'
 import type { TaskGroup, SprintTask, EpicDependency } from '../../../../shared/types'
 import { STATUS_METADATA } from '../../lib/task-status-ui'
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
@@ -9,6 +9,7 @@ import { LoadingState } from '../ui/LoadingState'
 import { toast } from '../../stores/toasts'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { EpicDependencySection } from './EpicDependencySection'
+import { EpicHeader } from './EpicHeader'
 import './EpicDetail.css'
 
 export interface EpicDetailProps {
@@ -58,63 +59,14 @@ export function EpicDetail({
   onMarkCompleted
 }: EpicDetailProps): React.JSX.Element {
   const reduced = useReducedMotion()
-  const [showOverflowMenu, setShowOverflowMenu] = useState(false)
   const [draggedTaskId, setDraggedTaskId] = useState<string | null>(null)
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null)
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingSpec, setEditingSpec] = useState('')
   const [saving, setSaving] = useState(false)
-  const menuRef = useRef<HTMLDivElement>(null)
-  const menuItemsRef = useRef<HTMLButtonElement[]>([])
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const { confirm, confirmProps } = useConfirm()
   const { prompt, promptProps } = usePrompt()
-
-  // Close menu on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent): void => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setShowOverflowMenu(false)
-      }
-    }
-    if (showOverflowMenu) {
-      document.addEventListener('mousedown', handleClickOutside)
-      // Focus the first menu item when the menu opens
-      requestAnimationFrame(() => {
-        menuItemsRef.current[0]?.focus()
-      })
-      return () => document.removeEventListener('mousedown', handleClickOutside)
-    }
-    return undefined
-  }, [showOverflowMenu])
-
-  // Keyboard navigation for overflow menu
-  const handleMenuKeyDown = useCallback((e: React.KeyboardEvent<HTMLDivElement>): void => {
-    const items = menuItemsRef.current.filter(Boolean)
-    const currentIndex = items.indexOf(document.activeElement as HTMLButtonElement)
-
-    switch (e.key) {
-      case 'ArrowDown': {
-        e.preventDefault()
-        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
-        items[next]?.focus()
-        break
-      }
-      case 'ArrowUp': {
-        e.preventDefault()
-        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
-        items[prev]?.focus()
-        break
-      }
-      case 'Escape':
-        e.preventDefault()
-        setShowOverflowMenu(false)
-        break
-      case 'Tab':
-        setShowOverflowMenu(false)
-        break
-    }
-  }, [])
 
   // Calculate status breakdown
   const counts: StatusCounts = useMemo(() => {
@@ -168,7 +120,6 @@ export function EpicDetail({
 
   // Overflow menu handlers
   const handleEdit = async (): Promise<void> => {
-    setShowOverflowMenu(false)
     if (!onEditGroup) return
     const name = await prompt({
       message: 'Epic name:',
@@ -188,7 +139,6 @@ export function EpicDetail({
   }
 
   const handleDelete = async (): Promise<void> => {
-    setShowOverflowMenu(false)
     if (!onDeleteGroup) return
     const confirmed = await confirm({
       message: `Delete epic "${group.name}"? This cannot be undone.`,
@@ -202,13 +152,11 @@ export function EpicDetail({
   }
 
   const handleToggleReady = (): void => {
-    setShowOverflowMenu(false)
     if (!onToggleReady) return
     onToggleReady()
   }
 
   const handleMarkCompleted = (): void => {
-    setShowOverflowMenu(false)
     if (!onMarkCompleted) return
     onMarkCompleted()
   }
@@ -303,158 +251,15 @@ export function EpicDetail({
   return (
     <div className="bde-panel epic-detail">
       {/* Header */}
-      <div className="epic-detail__header">
-        <div
-          className="epic-detail__icon"
-          style={{
-            background: `${group.accent_color}20`,
-            color: group.accent_color,
-            borderColor: `${group.accent_color}40`
-          }}
-        >
-          {group.icon.charAt(0).toUpperCase()}
-        </div>
-        <div className="epic-detail__header-content">
-          <h2 className="epic-detail__name">{group.name}</h2>
-          {group.goal && <p className="epic-detail__goal">{group.goal}</p>}
-        </div>
-        <div className="epic-detail__header-actions" style={{ position: 'relative' }} ref={menuRef}>
-          <button
-            type="button"
-            className="epic-detail__header-btn"
-            onClick={() => setShowOverflowMenu(!showOverflowMenu)}
-            aria-label="More options"
-            aria-expanded={showOverflowMenu}
-            aria-haspopup="menu"
-          >
-            <MoreVertical size={16} />
-          </button>
-          {showOverflowMenu && (
-            <div
-              className="epic-detail__overflow-menu"
-              role="menu"
-              onKeyDown={handleMenuKeyDown}
-              style={{
-                position: 'absolute',
-                top: '100%',
-                right: 0,
-                marginTop: '4px',
-                background: 'var(--bde-bg)',
-                border: `1px solid ${'var(--bde-accent)'}40`,
-                borderRadius: '4px',
-                minWidth: '160px',
-                zIndex: 100,
-                boxShadow: 'none'
-              }}
-            >
-              <button
-                ref={(el): void => {
-                  if (el) menuItemsRef.current[0] = el
-                }}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                className="epic-detail__overflow-item"
-                onClick={handleEdit}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--bde-text)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textAlign: 'left'
-                }}
-              >
-                <Edit2 size={14} />
-                Edit
-              </button>
-              <button
-                ref={(el): void => {
-                  if (el) menuItemsRef.current[1] = el
-                }}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                className="epic-detail__overflow-item"
-                onClick={handleToggleReady}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--bde-text)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textAlign: 'left'
-                }}
-              >
-                {isReady ? 'Mark as Draft' : 'Mark as Ready'}
-              </button>
-              {!isCompleted && (
-                <button
-                  ref={(el): void => {
-                    if (el) menuItemsRef.current[2] = el
-                  }}
-                  type="button"
-                  role="menuitem"
-                  tabIndex={-1}
-                  className="epic-detail__overflow-item"
-                  onClick={handleMarkCompleted}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '8px 12px',
-                    background: 'transparent',
-                    border: 'none',
-                    color: 'var(--bde-status-done)',
-                    cursor: 'pointer',
-                    fontSize: '13px',
-                    textAlign: 'left'
-                  }}
-                >
-                  <CheckCircle2 size={14} />
-                  Mark as Completed
-                </button>
-              )}
-              <button
-                ref={(el): void => {
-                  if (el) menuItemsRef.current[isCompleted ? 2 : 3] = el
-                }}
-                type="button"
-                role="menuitem"
-                tabIndex={-1}
-                className="epic-detail__overflow-item"
-                onClick={handleDelete}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--bde-danger)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textAlign: 'left'
-                }}
-              >
-                Delete
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <EpicHeader
+        group={group}
+        isReady={isReady}
+        isCompleted={isCompleted}
+        onEdit={handleEdit}
+        onToggleReady={handleToggleReady}
+        onMarkCompleted={handleMarkCompleted}
+        onDelete={handleDelete}
+      />
 
       {/* Progress Section */}
       <div className="epic-detail__progress">
