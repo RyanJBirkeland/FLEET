@@ -1,6 +1,19 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react'
+import React, { useState, useRef, useEffect, useCallback, CSSProperties } from 'react'
 import { Edit2, MoreVertical, CheckCircle2 } from 'lucide-react'
 import type { TaskGroup } from '../../../../shared/types'
+
+const MENU_ITEM_BASE_STYLE: CSSProperties = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: '8px',
+  width: '100%',
+  padding: '8px 12px',
+  background: 'transparent',
+  border: 'none',
+  cursor: 'pointer',
+  fontSize: '13px',
+  textAlign: 'left'
+}
 
 export interface EpicHeaderProps {
   group: TaskGroup
@@ -145,19 +158,7 @@ export function EpicHeader({
               tabIndex={-1}
               className="epic-detail__overflow-item"
               onClick={handleEditClick}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '8px 12px',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--bde-text)',
-                cursor: 'pointer',
-                fontSize: '13px',
-                textAlign: 'left'
-              }}
+              style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-text)' }}
             >
               <Edit2 size={14} />
               Edit
@@ -171,19 +172,7 @@ export function EpicHeader({
               tabIndex={-1}
               className="epic-detail__overflow-item"
               onClick={handleToggleReadyClick}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '8px 12px',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--bde-text)',
-                cursor: 'pointer',
-                fontSize: '13px',
-                textAlign: 'left'
-              }}
+              style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-text)' }}
             >
               {isReady ? 'Mark as Draft' : 'Mark as Ready'}
             </button>
@@ -197,19 +186,7 @@ export function EpicHeader({
                 tabIndex={-1}
                 className="epic-detail__overflow-item"
                 onClick={handleMarkCompletedClick}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '8px',
-                  width: '100%',
-                  padding: '8px 12px',
-                  background: 'transparent',
-                  border: 'none',
-                  color: 'var(--bde-status-done)',
-                  cursor: 'pointer',
-                  fontSize: '13px',
-                  textAlign: 'left'
-                }}
+                style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-status-done)' }}
               >
                 <CheckCircle2 size={14} />
                 Mark as Completed
@@ -224,19 +201,7 @@ export function EpicHeader({
               tabIndex={-1}
               className="epic-detail__overflow-item"
               onClick={handleDeleteClick}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px',
-                width: '100%',
-                padding: '8px 12px',
-                background: 'transparent',
-                border: 'none',
-                color: 'var(--bde-danger)',
-                cursor: 'pointer',
-                fontSize: '13px',
-                textAlign: 'left'
-              }}
+              style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-danger)' }}
             >
               Delete
             </button>
