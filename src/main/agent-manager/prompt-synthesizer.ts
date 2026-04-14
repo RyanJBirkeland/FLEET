@@ -3,7 +3,6 @@
  */
 
 import { synthesizerPersonality } from '../agent-system/personality/synthesizer-personality'
-import { getUserMemory } from '../agent-system/memory/user-memory'
 import {
   SPEC_DRAFTING_PREAMBLE,
   PLAYGROUND_INSTRUCTIONS,
@@ -67,13 +66,6 @@ export function buildSynthesizerPrompt(input: BuildPromptInput): string {
 
   // Inject spec quality requirements (the core enforcement block)
   prompt += SYNTHESIZER_SPEC_REQUIREMENTS
-
-  // Inject user memory
-  const userMem = getUserMemory()
-  if (userMem.fileCount > 0) {
-    prompt += '\n\n## User Knowledge\n'
-    prompt += userMem.content
-  }
 
   // Playground (default off for synthesizer)
   if (playgroundEnabled) {

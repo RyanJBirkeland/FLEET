@@ -4,8 +4,7 @@
 
 import { assistantPersonality } from '../agent-system/personality/assistant-personality'
 import { adhocPersonality } from '../agent-system/personality/adhoc-personality'
-import { getAllMemory, isBdeRepo } from '../agent-system/memory'
-import { getUserMemory } from '../agent-system/memory/user-memory'
+import { getAllMemory, isBdeRepo, selectUserMemory } from '../agent-system/memory'
 import { selectSkills } from '../agent-system/skills'
 import {
   CODING_AGENT_PREAMBLE,
@@ -35,8 +34,8 @@ export function buildAssistantPrompt(input: BuildPromptInput): string {
     prompt += memoryText
   }
 
-  // Inject user memory (full load for interactive agents)
-  const userMem = getUserMemory()
+  // Inject user memory filtered to task context (empty when no task provided)
+  const userMem = taskContent ? selectUserMemory(taskContent) : { content: '', totalBytes: 0, fileCount: 0 }
   if (userMem.fileCount > 0) {
     prompt += '\n\n## User Knowledge\n'
     prompt += userMem.content

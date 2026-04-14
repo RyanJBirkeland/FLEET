@@ -445,20 +445,28 @@ describe('buildAgentPrompt', () => {
       expect(prompt).not.toContain('## User Knowledge')
     })
 
-    it('injects user memory for all agent types', () => {
-      const types: AgentType[] = ['pipeline', 'assistant', 'adhoc', 'copilot', 'synthesizer']
+    it('injects user memory for pipeline, assistant, adhoc, and copilot agents when keywords match', () => {
+      // synthesizer intentionally excluded — it never loads user memory.
+      // Each agent type is given task/form content that matches the memory keywords.
+      mockGetUserMemory.mockReturnValue({
+        content: '### test.md\n\nTest content',
+        totalBytes: 20,
+        fileCount: 1
+      })
 
-      for (const agentType of types) {
-        mockGetUserMemory.mockReturnValueOnce({
-          content: '### test.md\n\nTest content',
-          totalBytes: 20,
-          fileCount: 1
-        })
+      // pipeline: uses selectUserMemory(taskContent) — keyword "test" matches
+      expect(buildAgentPrompt({ agentType: 'pipeline', taskContent: 'fix the test' })).toContain('## User Knowledge')
 
-        const prompt = buildAgentPrompt({ agentType })
-        expect(prompt).toContain('## User Knowledge')
-        expect(prompt).toContain('### test.md')
-      }
+      // assistant: uses selectUserMemory(taskContent) — keyword "test" matches
+      expect(buildAgentPrompt({ agentType: 'assistant', taskContent: 'fix the test' })).toContain('## User Knowledge')
+
+      // adhoc: same as assistant — keyword "test" matches
+      expect(buildAgentPrompt({ agentType: 'adhoc', taskContent: 'fix the test' })).toContain('## User Knowledge')
+
+      // copilot: uses selectUserMemory from formContext; empty signal returns all files
+      expect(buildAgentPrompt({ agentType: 'copilot' })).toContain('## User Knowledge')
+
+      mockGetUserMemory.mockReturnValue({ content: '', totalBytes: 0, fileCount: 0 })
     })
   })
 
@@ -1079,6 +1087,31 @@ describe('buildAgentPrompt', () => {
     })
   })
 
+  describe('user memory injection', () => {
+    beforeEach(() => {
+      mockGetUserMemory.mockReturnValue({
+        content: '### global_notes.md\n\nSome project notes here',
+        totalBytes: 100,
+        fileCount: 1
+      })
+    })
+
+    afterEach(() => {
+      mockGetUserMemory.mockReturnValue({ content: '', totalBytes: 0, fileCount: 0 })
+    })
+
+    it('synthesizer does NOT inject user memory', () => {
+      const prompt = buildAgentPrompt({ agentType: 'synthesizer', taskContent: 'create a spec' })
+      expect(prompt).not.toContain('## User Knowledge')
+      expect(prompt).not.toContain('Some project notes here')
+    })
+
+    it('pipeline uses selectUserMemory (filtered), not getUserMemory (full)', () => {
+      const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'notes related task' })
+      expect(prompt).toContain('## User Knowledge')
+    })
+  })
+
   describe('selective user memory (pipeline only)', () => {
     afterEach(() => {
       mockGetUserMemory.mockReturnValue({ content: '', totalBytes: 0, fileCount: 0 })
@@ -1115,8 +1148,19 @@ describe('buildAgentPrompt', () => {
       expect(prompt).toContain('authentication oauth token renewal guide')
     })
 
-    it('assistant agent loads all memory unconditionally via getUserMemory', () => {
-      // Same auth content, same unrelated task — but assistant uses getUserMemory (no filtering)
+    it('synthesizer does NOT inject user memory even when getUserMemory returns files', () => {
+      mockGetUserMemory.mockReturnValue({
+        content: '### notes.md\n\nauthentication oauth token renewal guide',
+        totalBytes: 100,
+        fileCount: 1
+      })
+      const prompt = buildAgentPrompt({ agentType: 'synthesizer', taskContent: 'create a spec' })
+      expect(prompt).not.toContain('## User Knowledge')
+      expect(prompt).not.toContain('authentication oauth token renewal guide')
+    })
+
+    it('assistant agent filters memory via selectUserMemory when task content is provided', () => {
+      // Same auth content, same unrelated task — assistant now uses selectUserMemory (filtered)
       mockGetUserMemory.mockReturnValue({
         content: '### auth-guide.md\n\nauthentication oauth token renewal guide',
         totalBytes: 100,
@@ -1126,9 +1170,20 @@ describe('buildAgentPrompt', () => {
         agentType: 'assistant',
         taskContent: 'fix css layout overflow problem'
       })
-      // getUserMemory is unconditional for non-pipeline agents
-      expect(prompt).toContain('## User Knowledge')
-      expect(prompt).toContain('authentication oauth token renewal guide')
+      // selectUserMemory filters out non-matching memory — no keyword overlap
+      expect(prompt).not.toContain('## User Knowledge')
+      expect(prompt).not.toContain('authentication oauth token renewal guide')
+    })
+
+    it('assistant agent with no task content gets empty user memory', () => {
+      mockGetUserMemory.mockReturnValue({
+        content: '### auth-guide.md\n\nauthentication oauth token renewal guide',
+        totalBytes: 100,
+        fileCount: 1
+      })
+      const prompt = buildAgentPrompt({ agentType: 'assistant' })
+      // No task content → empty memory result, so no User Knowledge section
+      expect(prompt).not.toContain('## User Knowledge')
     })
   })
 })
