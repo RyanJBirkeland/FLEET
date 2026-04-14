@@ -1105,3 +1105,11 @@ describe('PROMPT_TRUNCATION', () => {
     expect(PROMPT_TRUNCATION.TASK_SPEC_CHARS).toBe(8000)
   })
 })
+
+describe('buildAgentPrompt exhaustiveness', () => {
+  it('throws on unknown agent type (exhaustiveness guard)', () => {
+    expect(() => {
+      buildAgentPrompt({ agentType: 'unknown-type' as AgentType })
+    }).toThrow(/Unknown agent type/)
+  })
+})

@@ -59,6 +59,10 @@ export function buildAgentPrompt(input: BuildPromptInput): string {
     case 'reviewer':
       prompt = buildReviewerPrompt(input)
       break
+    default: {
+      const _exhaustive: never = agentType
+      throw new Error(`[prompt-composer] Unknown agent type: ${_exhaustive}`)
+    }
   }
 
   if (prompt.length < MIN_PROMPT_LENGTH) {
