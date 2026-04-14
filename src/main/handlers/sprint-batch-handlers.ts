@@ -130,14 +130,9 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
       }>
     ) => {
       const { batchImportTasks } = await import('../services/batch-import')
-      const reposConfig =
-        getSettingJson<Array<{ name: string; localPath: string }>>('repos') ?? []
+      const reposConfig = getSettingJson<Array<{ name: string; localPath: string }>>('repos') ?? []
       const configuredRepos = reposConfig.map((r) => r.name.toLowerCase())
-      return batchImportTasks(
-        tasks,
-        effectiveRepo,
-        configuredRepos.length > 0 ? configuredRepos : undefined
-      )
+      return batchImportTasks(tasks, effectiveRepo, configuredRepos)
     }
   )
 }

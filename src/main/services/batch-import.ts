@@ -47,7 +47,11 @@ export function batchImportTasks(
     }
 
     // Validate repo against configured repos if list is provided
-    if (configuredRepos && configuredRepos.length > 0) {
+    if (configuredRepos !== undefined) {
+      if (configuredRepos.length === 0) {
+        errors.push(`Task[${i}]: repo "${t.repo}" is not configured. No repos are configured.`)
+        continue
+      }
       const repoLower = t.repo.toLowerCase()
       const isConfigured = configuredRepos.some((r) => r.toLowerCase() === repoLower)
       if (!isConfigured) {
