@@ -77,7 +77,9 @@ export async function handleTaskTerminal(
 ): Promise<void> {
   const { metrics, depIndex, epicIndex, repo, config, terminalCalled, logger } = deps
 
-  // F-t4-lifecycle-5: Guard against double-invocation when watchdog and completion handler race
+  // F-t3-lifecycle-1: Guard against double-invocation when watchdog and completion handler race.
+  // terminalCalled.add() fires immediately after the guard, before any side effects, so concurrent
+  // callers see the set membership before either begins logging metrics or calling resolveDependents.
   if (terminalCalled.has(taskId)) {
     logger.warn(`[agent-manager] onTaskTerminal duplicate for ${taskId}`)
     return
@@ -92,7 +94,7 @@ export async function handleTaskTerminal(
       await resolveTerminalDependents(taskId, status, depIndex, epicIndex, repo, onTaskTerminal, logger)
     }
   } finally {
-    // Clean up after 5 seconds to prevent unbounded memory growth
-    setTimeout(() => terminalCalled.delete(taskId), 5000)
+    // F-t3-lifecycle-7: Bumped from 5000ms to 10_000ms to prevent premature eviction under load
+    setTimeout(() => terminalCalled.delete(taskId), 10_000)
   }
 }
