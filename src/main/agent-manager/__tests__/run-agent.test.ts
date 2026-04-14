@@ -961,3 +961,32 @@ describe('consumeMessages', () => {
     )
   })
 })
+
+describe('runAgent — watchdog race: flushAgentEventBatcher', () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  it('calls flushAgentEventBatcher before returning when watchdog already cleaned up', async () => {
+    const { spawnAgent } = await import('../sdk-adapter')
+    const { flushAgentEventBatcher } = await import('../../agent-event-mapper')
+
+    const activeAgents = new Map<string, ActiveAgent>()
+
+    const handle = {
+      messages: {
+        async *[Symbol.asyncIterator]() {
+          yield { exit_code: 0 }
+          // Simulate watchdog removing the agent before finalizeAgentRun checks
+          activeAgents.delete('task-1')
+        }
+      },
+      result: Promise.resolve({ exitCode: 0 })
+    }
+
+    ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(handle)
+
+    const deps = makeDeps({ activeAgents })
+    await runAgent(makeTask(), worktree, repoPath, deps)
+
+    expect(vi.mocked(flushAgentEventBatcher)).toHaveBeenCalled()
+  })
+})
