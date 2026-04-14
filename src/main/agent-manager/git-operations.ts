@@ -9,6 +9,7 @@ import { execFileAsync, sleep } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { runPostMergeDedup } from '../services/post-merge-dedup'
 import { getErrorMessage } from '../../shared/errors'
+import { validateGitRef } from '../lib/review-paths'
 
 /**
  * Test artifact patterns to exclude from agent commits.
@@ -36,6 +37,7 @@ export async function generatePrBody(
   branch: string,
   env: NodeJS.ProcessEnv
 ): Promise<string> {
+  validateGitRef(branch)
   const sections: string[] = []
 
   try {
@@ -175,10 +177,14 @@ export async function checkExistingPr(
 
 /**
  * Sanitize task title for use in git commit messages and PR titles.
- * Strips backticks, command substitution $(), and markdown links to prevent shell injection.
+ * Strips backticks, command substitution $(), markdown links, and newlines.
+ * Newline removal prevents git trailer injection (e.g. Co-Authored-By: attacker) via
+ * crafted task titles. execFileAsync array arguments already prevent shell injection;
+ * this guards against git-level metadata manipulation.
  */
 export function sanitizeForGit(title: string): string {
   return title
+    .replace(/\r?\n|\r/g, ' ')
     .replace(/`/g, "'")
     .replace(/\$\(/g, '(')
     .replace(/\[([^\]]+)\]\([^)]+\)/g, '$1')

@@ -12,3 +12,4 @@ Source: `src/main/agent-manager/`
 | `prompt-copilot.ts` | Copilot agent prompt builder (interactive spec drafting) | `buildCopilotPrompt` |
 | `prompt-composer.ts` | Central dispatcher — routes `BuildPromptInput` to per-agent builders | `buildAgentPrompt`, `BuildPromptInput`, `AgentType` |
 | `prompt-constants.ts` | Truncation limits for all prompt builders | `PROMPT_TRUNCATION` |
+| `git-operations.ts` | Shared git utilities for agent completion and code review — rebase, push, commit, PR creation | `generatePrBody`, `rebaseOntoMain`, `pushBranch`, `checkExistingPr`, `findOrCreatePR`, `createNewPr`, `sanitizeForGit`, `autoCommitIfDirty`, `executeSquashMerge`, `cleanupWorktreeAndBranch` |

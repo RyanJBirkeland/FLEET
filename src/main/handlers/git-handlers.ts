@@ -29,6 +29,7 @@ import {
 import type { GitHubFetchInit } from '../../shared/ipc-channels'
 import { createLogger } from '../logger'
 import { getSettingJson } from '../settings'
+import { validateGitRef } from '../lib/review-paths'
 
 const logger = createLogger('git-handlers')
 
@@ -239,13 +240,15 @@ export function registerGitHandlers(deps: GitHandlersDeps): void {
   )
   safeHandle('git:push', (_e, cwd: string) => gitPush(validateRepoPath(cwd)))
   safeHandle('git:branches', (_e, cwd: string) => gitBranches(validateRepoPath(cwd)))
-  safeHandle('git:checkout', (_e, cwd: string, branch: string) =>
-    gitCheckout(validateRepoPath(cwd), branch)
-  )
+  safeHandle('git:checkout', (_e, cwd: string, branch: string) => {
+    validateGitRef(branch)
+    return gitCheckout(validateRepoPath(cwd), branch)
+  })
   safeHandle('git:fetch', (_e, cwd: string) => gitFetch(validateRepoPath(cwd)))
-  safeHandle('git:pull', (_e, cwd: string, currentBranch: string) =>
-    gitPull(validateRepoPath(cwd), currentBranch)
-  )
+  safeHandle('git:pull', (_e, cwd: string, currentBranch: string) => {
+    validateGitRef(currentBranch)
+    return gitPull(validateRepoPath(cwd), currentBranch)
+  })
 
   // --- Detect GitHub remote for a directory picked by the user.
   // NOTE: validateRepoPath is intentionally NOT used here — this is called

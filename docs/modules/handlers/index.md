@@ -5,3 +5,4 @@ Source: `src/main/handlers/`
 
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
+| `git-handlers.ts` | Git and GitHub IPC handlers — source control, PR polling, GitHub API proxy | `registerGitHandlers`, `GitHandlersDeps` |

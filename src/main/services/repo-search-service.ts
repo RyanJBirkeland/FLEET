@@ -49,11 +49,13 @@ export function parseGrepOutput(stdout: string, query: string): RepoSearchResult
 
 /**
  * Searches a repository directory for the given query string using grep.
+ * Uses -F (fixed-string mode) to treat the query as a literal string rather than a regex,
+ * which prevents ReDoS from pathological user-supplied patterns.
  * Handles the grep exit-code-1 case (no matches) gracefully.
  */
 export async function searchRepo(repoPath: string, query: string): Promise<RepoSearchResult> {
   try {
-    const { stdout } = await execFileAsync('grep', ['-rn', '-i', '--', query, '.'], {
+    const { stdout } = await execFileAsync('grep', ['-rn', '-i', '-F', '--', query, '.'], {
       cwd: repoPath,
       encoding: 'utf-8',
       maxBuffer: 5 * 1024 * 1024 // 5MB
