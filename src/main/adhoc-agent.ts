@@ -4,11 +4,15 @@
  *
  * Each turn is a separate query() call. The first turn creates a session; subsequent
  * turns use `resume: sessionId` to continue the same conversation. This gives us
- * access to cwd, settingSources, and permissionMode (v1 Options) while supporting
- * multi-turn via session resumption.
+ * access to cwd and permissionMode (v1 Options) while supporting multi-turn via
+ * session resumption.
  *
- * The v2 Session API (unstable_v2_createSession) doesn't support cwd or
- * settingSources, so agents spawned with it can't find CLAUDE.md or project context.
+ * The v2 Session API (unstable_v2_createSession) doesn't support cwd, so agents
+ * spawned with it can't operate in the worktree directory. We use v1 intentionally.
+ *
+ * `settingSources` is intentionally `[]` here — BDE conventions are injected via
+ * `buildAgentPrompt()`, so loading CLAUDE.md through the settings system would
+ * double-inject the same context at ~5-10KB extra per turn.
  *
  * **Worktree isolation**: each adhoc agent runs in its own git worktree under a
  * dedicated adhoc base (`~/worktrees/bde-adhoc/`) so concurrent sessions can't
