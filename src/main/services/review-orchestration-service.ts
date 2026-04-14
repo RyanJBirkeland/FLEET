@@ -6,7 +6,9 @@ import { createLogger } from '../logger'
 import { classifyReviewAction } from './review-action-policy'
 import { executeReviewAction } from './review-action-executor'
 import { createPullRequest } from './review-pr-service'
-import { cleanupWorktree } from './review-merge-service'
+import { cleanupWorktree, parseNumstat } from './review-merge-service'
+
+export { parseNumstat }
 import { getTask, updateTask, notifySprintMutation } from './sprint-service'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'

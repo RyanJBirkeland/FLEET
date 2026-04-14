@@ -13,11 +13,11 @@ import { createLogger } from '../logger'
 import { getSettingJson } from '../settings'
 import { buildAgentEnv } from '../env-utils'
 import { execFileAsync } from '../lib/async-utils'
-import { parseNumstat } from '../services/review-merge-service'
 import { validateGitRef, validateWorktreePath, validateFilePath } from '../lib/review-paths'
 import { checkAutoReview } from '../services/auto-review-service'
 import type { AutoReviewRule } from '../../shared/types'
 import * as reviewOrchestration from '../services/review-orchestration-service'
+import { parseNumstat } from '../services/review-orchestration-service'
 
 const logger = createLogger('review-handlers')
 
