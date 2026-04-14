@@ -33,7 +33,7 @@ export async function queueAll(groupId: string): Promise<number> {
   return window.api.groups.queueAll(groupId)
 }
 
-export async function reorderTasks(groupId: string, orderedTaskIds: string[]): Promise<void> {
+export async function reorderTasks(groupId: string, orderedTaskIds: string[]): Promise<boolean> {
   return window.api.groups.reorderTasks(groupId, orderedTaskIds)
 }
 

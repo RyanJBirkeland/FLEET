@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import {
   subscribeToAgentEvents, getAgentEventHistory,
-  listAgents, readAgentLog, importAgent, getProcesses, spawnLocal, tailLog
+  listAgents, spawnLocal
 } from '../agents'
 
 describe('agents service', () => {
@@ -11,11 +11,7 @@ describe('agents service', () => {
     events.getHistory.mockResolvedValue([])
     const api = window.api.agents as unknown as Record<string, ReturnType<typeof vi.fn>>
     api.list.mockResolvedValue([])
-    api.readLog.mockResolvedValue({ lines: [], nextByte: 0 })
-    api.import.mockResolvedValue(undefined)
-    api.getProcesses.mockResolvedValue([])
-    api.spawnLocal.mockResolvedValue({ ok: true })
-    api.tailLog.mockResolvedValue(undefined)
+    api.spawnLocal.mockResolvedValue({ pid: 1, logPath: '/tmp/log', id: 'a1', interactive: false })
   })
 
   it('subscribeToAgentEvents delegates to window.api.agents.events.onEvent', () => {
@@ -35,7 +31,7 @@ describe('agents service', () => {
   })
 
   it('spawnLocal passes args', async () => {
-    const args = { repo: 'bde', prompt: 'do thing' } as Parameters<typeof window.api.agents.spawnLocal>[0]
+    const args: Parameters<typeof window.api.agents.spawnLocal>[0] = { task: 'do thing', repoPath: '/repo' }
     await spawnLocal(args)
     expect(window.api.agents.spawnLocal).toHaveBeenCalledWith(args)
   })

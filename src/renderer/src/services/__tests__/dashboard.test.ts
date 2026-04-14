@@ -5,9 +5,9 @@ describe('dashboard service', () => {
   beforeEach(() => {
     vi.mocked(window.api.dashboard?.completionsPerHour).mockResolvedValue([])
     vi.mocked(window.api.dashboard?.recentEvents).mockResolvedValue([])
-    vi.mocked(window.api.pr.getList).mockResolvedValue([])
+    vi.mocked(window.api.pr.getList).mockResolvedValue({ prs: [], checks: {} })
     vi.mocked(window.api.dashboard?.dailySuccessRate).mockResolvedValue([])
-    vi.mocked(window.api.system?.loadAverage).mockResolvedValue({ load1: 0, load5: 0, load15: 0 })
+    vi.mocked(window.api.system?.loadAverage).mockResolvedValue({ samples: [], cpuCount: 8 })
   })
 
   it('getCompletionsPerHour delegates to window.api.dashboard.completionsPerHour', async () => {

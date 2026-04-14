@@ -4,11 +4,12 @@ import { listTasks, updateTask, deleteTask, createTask, batchUpdate, generatePro
 describe('sprint service', () => {
   beforeEach(() => {
     vi.mocked(window.api.sprint.list).mockResolvedValue([])
-    vi.mocked(window.api.sprint.update).mockResolvedValue({})
+    vi.mocked(window.api.sprint.update).mockResolvedValue(null)
     vi.mocked(window.api.sprint.delete).mockResolvedValue({ ok: true })
-    vi.mocked(window.api.sprint.create).mockResolvedValue({})
-    vi.mocked(window.api.sprint.batchUpdate).mockResolvedValue([])
-    vi.mocked(window.api.sprint.generatePrompt).mockResolvedValue({ prompt: '' })
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    vi.mocked(window.api.sprint.create).mockResolvedValue({} as any)
+    vi.mocked(window.api.sprint.batchUpdate).mockResolvedValue({ results: [] })
+    vi.mocked(window.api.sprint.generatePrompt).mockResolvedValue({ taskId: '', spec: '', prompt: '' })
   })
 
   it('listTasks delegates to window.api.sprint.list', async () => {
@@ -33,13 +34,13 @@ describe('sprint service', () => {
   })
 
   it('batchUpdate delegates to window.api.sprint.batchUpdate', async () => {
-    const ops = [{ taskId: 't1', patch: { status: 'done' as const } }]
+    const ops = [{ op: 'delete' as const, id: 't1' }]
     await batchUpdate(ops)
     expect(window.api.sprint.batchUpdate).toHaveBeenCalledWith(ops)
   })
 
   it('generatePrompt delegates to window.api.sprint.generatePrompt', async () => {
-    const params = { title: 'task', description: 'do it' }
+    const params = { taskId: 't1', title: 'task', repo: 'bde', templateHint: 'feature' }
     await generatePrompt(params)
     expect(window.api.sprint.generatePrompt).toHaveBeenCalledWith(params)
   })

@@ -22,7 +22,7 @@ export async function commit(cwd: string, message: string): Promise<void> {
   return window.api.git.commit(cwd, message)
 }
 
-export async function push(cwd: string): Promise<void> {
+export async function push(cwd: string): Promise<string> {
   return window.api.git.push(cwd)
 }
 

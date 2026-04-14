@@ -18,8 +18,8 @@ describe('git service', () => {
     vi.mocked(window.api.git.stage).mockResolvedValue(undefined)
     vi.mocked(window.api.git.unstage).mockResolvedValue(undefined)
     vi.mocked(window.api.git.commit).mockResolvedValue(undefined)
-    vi.mocked(window.api.git.push).mockResolvedValue(undefined)
-    vi.mocked(window.api.git.branches).mockResolvedValue({ current: 'main', all: ['main'] })
+    vi.mocked(window.api.git.push).mockResolvedValue('')
+    vi.mocked(window.api.git.branches).mockResolvedValue({ current: 'main', branches: ['main'] })
   })
 
   it('getRepoPaths delegates to window.api.git.getRepoPaths', async () => {

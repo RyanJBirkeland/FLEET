@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import {
-  listGroups, getGroupTasks, createGroup, updateGroup, deleteGroup,
-  addTask, removeTask, queueAll, reorderTasks,
-  addDependency, removeDependency, updateDependencyCondition
-} from '../groups'
+import { listGroups, getGroupTasks, addTask, queueAll } from '../groups'
 
 describe('groups service', () => {
   beforeEach(() => {

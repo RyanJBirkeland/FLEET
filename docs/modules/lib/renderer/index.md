@@ -10,3 +10,9 @@ Source: `src/renderer/src/lib/`
 | `task-status-ui.ts` | Backward-compatible re-export shim. `STATUS_METADATA`, `BucketKey`, and `StatusMetadata` now live in `src/shared/task-statuses.ts`; this file re-exports them for renderer callers. | `STATUS_METADATA`, `BucketKey`, `StatusMetadata` |
 | `view-resolver.tsx` | Maps `View` keys to lazily-loaded React components. Moved from `components/layout/` to break the `layout↔panels` import cycle. Also exports `VIEW_LOADERS` for hover-based preloading. | `resolveView`, `VIEW_LOADERS` |
 | `services/git.ts` | Git IPC adapter — wraps `window.api.git.*` for use by stores | `getRepoPaths`, `getGitStatus`, `getGitDiff`, `stageFiles`, `unstageFiles`, `commit`, `push`, `getBranches` |
+| `services/sprint.ts` | Sprint task IPC adapter — wraps `window.api.sprint.*` | `listTasks`, `updateTask`, `deleteTask`, `createTask`, `batchUpdate`, `generatePrompt` |
+| `services/groups.ts` | Task groups IPC adapter — wraps `window.api.groups.*` | `listGroups`, `getGroupTasks`, `createGroup`, `updateGroup`, `deleteGroup`, `addTask`, `removeTask`, `queueAll`, `reorderTasks`, `addDependency`, `removeDependency`, `updateDependencyCondition` |
+| `services/settings-storage.ts` | Settings persistence IPC adapter — wraps `window.api.settings.*` | `getSetting`, `setSetting`, `getJsonSetting`, `setJsonSetting` |
+| `services/agents.ts` | Agent management IPC adapter — wraps `window.api.agents.*` | `subscribeToAgentEvents`, `getAgentEventHistory`, `listAgents`, `readAgentLog`, `importAgent`, `getProcesses`, `spawnLocal`, `tailLog` |
+| `services/dashboard.ts` | Dashboard/system/PR metrics IPC adapter — wraps `window.api.dashboard.*`, `window.api.system.*`, `window.api.pr.*` | `getCompletionsPerHour`, `getRecentEvents`, `getPrList`, `getDailySuccessRate`, `getLoadAverage` |
+| `services/cost.ts` | Cost history IPC adapter — wraps `window.api.cost.*` | `getAgentCostHistory` |
