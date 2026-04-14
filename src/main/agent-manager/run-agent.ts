@@ -221,9 +221,10 @@ async function finalizeAgentRun(
     timestamp: exitedAt
   })
 
-  // Check if watchdog already cleaned up
-  if (!activeAgents.has(task.id)) {
-    logger.info(`[agent-manager] Agent ${task.id} already cleaned up by watchdog`)
+  // Check if watchdog already cleaned up, or if a retry has already overwritten this entry.
+  // Keying by taskId means a retry's set() overwrites the previous run's entry — guard by agentRunId.
+  if (activeAgents.get(task.id)?.agentRunId !== agent.agentRunId) {
+    logger.info(`[agent-manager] Agent ${task.id} (run ${agent.agentRunId}) already cleaned up or superseded by retry`)
     // Flush any pending agent events to SQLite before cleanup.
     // The batcher uses a 100ms timer — without this flush, the last
     // batch of events is broadcast to the UI but never persisted.
@@ -240,8 +241,10 @@ async function finalizeAgentRun(
   persistAgentRunTelemetry(agentRunId, agent, exitCode, turnTracker, exitedAt, durationMs, logger)
   await resolveAgentExit(task, exitCode, lastAgentOutput, agent, exitedAt, worktree, repo, onTaskTerminal, logger)
 
-  // Remove from active map
-  activeAgents.delete(task.id)
+  // Remove from active map — guarded: a retry may have already overwritten this entry
+  if (activeAgents.get(task.id)?.agentRunId === agent.agentRunId) {
+    activeAgents.delete(task.id)
+  }
 
   // Flush events before the next drain tick or cleanup — the 100ms batcher
   // timer is not guaranteed to fire before a new task starts or shutdown.

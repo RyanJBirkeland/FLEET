@@ -51,7 +51,10 @@ export function killActiveAgent(agent: ActiveAgent, activeAgents: Map<string, Ac
   } catch (err) {
     logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
   }
-  activeAgents.delete(agent.taskId)
+  // Guard: only remove if this run's entry is still current — a retry may have overwritten it
+  if (activeAgents.get(agent.taskId)?.agentRunId === agent.agentRunId) {
+    activeAgents.delete(agent.taskId)
+  }
 }
 
 // ---------------------------------------------------------------------------
