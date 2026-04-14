@@ -4,6 +4,7 @@ import { useSprintTasks, type CreateTicketInput } from '../../stores/sprintTasks
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { useValidationChecks } from '../../hooks/useValidationChecks'
 import { useDebouncedAsync } from '../../hooks/useDebouncedAsync'
+import { useTaskFormState } from '../../hooks/useTaskFormState'
 import { SpecEditor } from './SpecEditor'
 import { ValidationChecks } from './ValidationChecks'
 import { WorkbenchActions } from './WorkbenchActions'
@@ -54,22 +55,25 @@ interface WorkbenchFormProps {
 }
 
 export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): React.JSX.Element {
-  const title = useTaskWorkbenchStore((s) => s.title)
-  const repo = useTaskWorkbenchStore((s) => s.repo)
-  const priority = useTaskWorkbenchStore((s) => s.priority)
-  const advancedOpen = useTaskWorkbenchStore((s) => s.advancedOpen)
-  const mode = useTaskWorkbenchStore((s) => s.mode)
-  const taskId = useTaskWorkbenchStore((s) => s.taskId)
-  const spec = useTaskWorkbenchStore((s) => s.spec)
-  const specType = useTaskWorkbenchStore((s) => s.specType)
-  const dependsOn = useTaskWorkbenchStore((s) => s.dependsOn)
-  const playgroundEnabled = useTaskWorkbenchStore((s) => s.playgroundEnabled)
-  const maxCostUsd = useTaskWorkbenchStore((s) => s.maxCostUsd)
-  const model = useTaskWorkbenchStore((s) => s.model)
-  const pendingGroupId = useTaskWorkbenchStore((s) => s.pendingGroupId)
-  const crossRepoContract = useTaskWorkbenchStore((s) => s.crossRepoContract)
-  const setField = useTaskWorkbenchStore((s) => s.setField)
-  const resetForm = useTaskWorkbenchStore((s) => s.resetForm)
+  const form = useTaskFormState()
+  const {
+    title,
+    repo,
+    priority,
+    advancedOpen,
+    mode,
+    taskId,
+    spec,
+    specType,
+    dependsOn,
+    playgroundEnabled,
+    maxCostUsd,
+    model,
+    pendingGroupId,
+    crossRepoContract,
+    setField,
+    resetForm
+  } = form
 
   const allTasks = useSprintTasks((s) => s.tasks)
   const updateTask = useSprintTasks((s) => s.updateTask)
