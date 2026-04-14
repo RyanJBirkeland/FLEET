@@ -134,11 +134,19 @@ function spawnViaSdk(
       pathToClaudeCodeExecutable: getClaudeCliPath(),
       ...(token ? { apiKey: token } : {}),
       abortController,
-      settingSources: ['user', 'project', 'local'],
       // Pipeline agents are autonomous (no human at stdin) and run in
       // isolated worktrees. Auto-allow all tools to prevent hanging on
       // permission prompts. Safety comes from worktree isolation + PR review.
-      canUseTool: async () => ({ behavior: 'allow' as const })
+      canUseTool: async () => ({ behavior: 'allow' as const }),
+      // Pipeline agents receive BDE conventions via the composed prompt —
+      // loading CLAUDE.md via 'project' would double-inject conventions and
+      // costs ~5-10KB extra per spawn. User hooks kept for permission settings;
+      // local overrides kept for dev convenience.
+      settingSources: ['user', 'local'],
+      // Cap turns to prevent runaway loops. 20 turns covers complex multi-file
+      // refactors. Agents that legitimately need more should use a smaller,
+      // focused spec. The watchdog provides a time ceiling independently.
+      maxTurns: 20
     }
   })
 

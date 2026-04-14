@@ -1,5 +1,35 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { withMaxOldSpaceOption, AGENT_PROCESS_MAX_OLD_SPACE_MB } from '../sdk-adapter'
+
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
+  query: vi.fn().mockReturnValue({
+    [Symbol.asyncIterator]: async function* () {
+      yield { type: 'exit_code', exit_code: 0 }
+    }
+  })
+}))
+
+import * as sdk from '@anthropic-ai/claude-agent-sdk'
+import { spawnAgent } from '../sdk-adapter'
+
+describe('pipeline agent SDK options', () => {
+  beforeEach(() => {
+    vi.mocked(sdk.query).mockClear()
+  })
+
+  it('passes maxTurns: 20 to SDK query', async () => {
+    await spawnAgent({ prompt: 'test', cwd: '/tmp', model: 'claude-sonnet-4-5' })
+    const callArgs = vi.mocked(sdk.query).mock.calls[0]?.[0]
+    expect(callArgs?.options?.maxTurns).toBe(20)
+  })
+
+  it('uses settingSources [user, local] — not project', async () => {
+    await spawnAgent({ prompt: 'test', cwd: '/tmp', model: 'claude-sonnet-4-5' })
+    const callArgs = vi.mocked(sdk.query).mock.calls[0]?.[0]
+    expect(callArgs?.options?.settingSources).toEqual(['user', 'local'])
+    expect(callArgs?.options?.settingSources).not.toContain('project')
+  })
+})
 
 describe('sdk-adapter', () => {
   describe('withMaxOldSpaceOption', () => {
