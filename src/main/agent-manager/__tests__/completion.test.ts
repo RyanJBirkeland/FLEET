@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { promisify } from 'node:util'
-import { classifyFailureReason } from '../completion'
+import { classifyFailureReason } from '../failure-classifier'
 import { sanitizeForGit } from '../git-operations'
 
 // Mock node:fs — existsSync must return true for worktree path guard

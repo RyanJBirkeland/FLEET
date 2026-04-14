@@ -5,8 +5,7 @@ import { buildAgentEnv } from '../env-utils'
 import { MAX_RETRIES, AGENT_SUMMARY_MAX_LENGTH, RETRY_BACKOFF_BASE_MS, RETRY_BACKOFF_CAP_MS } from './types'
 import type { Logger } from '../logger'
 import { broadcastCoalesced } from '../broadcast'
-import type { AgentEvent, FailureReason } from '../../shared/types'
-import type { AutoReviewRule } from '../../shared/types/task-types'
+import type { AgentEvent } from '../../shared/types'
 import { nowIso } from '../../shared/time'
 import {
   rebaseOntoMain,
@@ -15,6 +14,8 @@ import {
   executeSquashMerge
 } from './git-operations'
 import { transitionToReview } from './review-transition'
+import { classifyFailureReason } from './failure-classifier'
+import { evaluateAutoMergePolicy } from './auto-merge-policy'
 
 export interface ResolveSuccessOpts {
   taskId: string
@@ -62,38 +63,6 @@ async function detectBranch(worktreePath: string): Promise<string> {
     env
   })
   return stdout.trim()
-}
-
-
-/**
- * Get diff file statistics from git diff --numstat.
- * Returns array of {path, additions, deletions} or null if no changes.
- */
-async function getDiffFileStats(
-  worktreePath: string
-): Promise<Array<{ path: string; additions: number; deletions: number }> | null> {
-  const env = buildAgentEnv()
-  const { stdout: numstatOut } = await execFileAsync(
-    'git',
-    ['diff', '--numstat', 'origin/main...HEAD'],
-    { cwd: worktreePath, env }
-  )
-
-  if (!numstatOut.trim()) {
-    return null
-  }
-
-  return numstatOut
-    .trim()
-    .split('\n')
-    .filter(Boolean)
-    .map((line) => {
-      const parts = line.split('\t')
-      const additions = parts[0] === '-' ? 0 : parseInt(parts[0], 10)
-      const deletions = parts[1] === '-' ? 0 : parseInt(parts[1], 10)
-      const filePath = parts.slice(2).join('\t')
-      return { path: filePath, additions, deletions }
-    })
 }
 
 /**
@@ -194,68 +163,58 @@ async function hasCommitsAheadOfMain(opts: CommitCheckOpts): Promise<boolean> {
   return true
 }
 
-/**
- * Attempt auto-merge based on configured auto-review rules.
- * Evaluates rules against diff stats and executes squash merge if qualified.
- */
 async function attemptAutoMerge(opts: AutoMergeOpts): Promise<void> {
   const { taskId, title, branch, worktreePath, repo, logger, onTaskTerminal } = opts
   const { getSettingJson } = await import('../settings')
-  const rules = getSettingJson<AutoReviewRule[]>('autoReview.rules')
+  const rules = getSettingJson<import('../../shared/types/task-types').AutoReviewRule[]>('autoReview.rules')
 
   if (!rules || rules.length === 0) {
     return
   }
 
   try {
-    const files = await getDiffFileStats(worktreePath)
-    if (!files) {
+    const decision = await evaluateAutoMergePolicy(rules, worktreePath)
+
+    if (!decision.shouldMerge) {
       return
     }
 
-    const { evaluateAutoReviewRules } = await import('../services/auto-review')
-    const result = evaluateAutoReviewRules(rules, files)
+    logger.info(
+      `[completion] Task ${taskId} qualifies for auto-merge (rule: ${decision.ruleName}) — merging`
+    )
 
-    if (result && result.action === 'auto-merge') {
-      logger.info(
-        `[completion] Task ${taskId} qualifies for auto-merge (rule: ${result.rule.name}) — merging`
-      )
+    const repoConfig = await getRepoConfig(taskId, repo, logger)
+    if (!repoConfig) {
+      return
+    }
 
-      const repoConfig = await getRepoConfig(taskId, repo, logger)
-      if (!repoConfig) {
-        return
-      }
+    const mergeResult = await executeSquashMerge({
+      taskId,
+      branch,
+      worktreePath,
+      repoPath: repoConfig.localPath,
+      title,
+      logger
+    })
 
-      const mergeResult = await executeSquashMerge({
-        taskId,
-        branch,
-        worktreePath,
-        repoPath: repoConfig.localPath,
-        title,
-        logger
+    if (mergeResult === 'merged') {
+      const reviewTask = repo.getTask(taskId)
+      repo.updateTask(taskId, {
+        status: 'done',
+        completed_at: nowIso(),
+        worktree_path: null,
+        ...(reviewTask?.duration_ms !== undefined ? { duration_ms: reviewTask.duration_ms } : {})
       })
-
-      if (mergeResult === 'merged') {
-        const reviewTask = repo.getTask(taskId)
-        repo.updateTask(taskId, {
-          status: 'done',
-          completed_at: nowIso(),
-          worktree_path: null,
-          ...(reviewTask?.duration_ms !== undefined ? { duration_ms: reviewTask.duration_ms } : {})
-        })
-        logger.info(`[completion] Task ${taskId} auto-merged successfully`)
-        await onTaskTerminal(taskId, 'done')
-      } else if (mergeResult === 'dirty-main') {
-        // main has uncommitted changes — leave task in review for human action
-        logger.warn(
-          `[completion] Task ${taskId} auto-merge skipped: main repo has uncommitted changes — task remains in review`
-        )
-      } else {
-        // 'failed' — merge error, task stays in review
-        logger.error(
-          `[completion] Task ${taskId} auto-merge failed — task remains in review`
-        )
-      }
+      logger.info(`[completion] Task ${taskId} auto-merged successfully`)
+      await onTaskTerminal(taskId, 'done')
+    } else if (mergeResult === 'dirty-main') {
+      logger.warn(
+        `[completion] Task ${taskId} auto-merge skipped: main repo has uncommitted changes — task remains in review`
+      )
+    } else {
+      logger.error(
+        `[completion] Task ${taskId} auto-merge failed — task remains in review`
+      )
     }
   } catch (err) {
     logger.warn(`[completion] Auto-review check failed for task ${taskId}: ${err}`)
@@ -275,47 +234,6 @@ export async function findOrCreatePR(
 ): Promise<{ prUrl: string | null; prNumber: number | null }> {
   const env = buildAgentEnv()
   return findOrCreatePRUtil(worktreePath, branch, title, ghRepo, env, logger)
-}
-
-/** Lookup table mapping failure categories to their indicator keywords. */
-const FAILURE_PATTERNS: Array<{ type: FailureReason; keywords: string[] }> = [
-  // Auth failures — API key, token, credentials
-  {
-    type: 'auth',
-    keywords: ['invalid api key', 'authentication failed', 'unauthorized', 'token expired', 'invalid token']
-  },
-  // Timeout failures — watchdog, runtime exceeded
-  {
-    type: 'timeout',
-    keywords: ['exceeded maximum runtime', 'timeout', 'timed out', 'watchdog']
-  },
-  // Test failures — npm test, vitest, jest
-  {
-    type: 'test_failure',
-    keywords: ['npm test failed', 'test failed', 'vitest failed', 'jest failed', 'tests failed']
-  },
-  // Compilation failures — tsc, typescript, build errors
-  {
-    type: 'compilation',
-    keywords: ['compilation error', 'compilation failed', 'tsc failed', 'typescript error', 'type error', 'build failed']
-  },
-  // Spawn failures — process creation, agent spawn
-  {
-    type: 'spawn',
-    keywords: ['spawn failed', 'failed to spawn', 'enoent', 'command not found']
-  }
-]
-
-/**
- * Classify failure reason from error notes for structured filtering and auto-handling.
- * Uses FAILURE_PATTERNS lookup table to categorize failure types — update that table
- * when SDK or git error messages change rather than editing the function body.
- */
-export function classifyFailureReason(notes: string | undefined): FailureReason {
-  if (!notes) return 'unknown'
-
-  const lower = notes.toLowerCase()
-  return FAILURE_PATTERNS.find(p => p.keywords.some(k => lower.includes(k)))?.type ?? 'unknown'
 }
 
 export async function resolveSuccess(opts: ResolveSuccessOpts, logger: Logger): Promise<void> {
