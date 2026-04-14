@@ -5,7 +5,7 @@ import { buildAgentPrompt } from '../agent-manager/prompt-composer'
 import { runSdkStreaming } from '../sdk-streaming'
 import type { ReviewService } from '../services/review-service'
 import type { IReviewRepository } from '../data/review-repository'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { ChatChunk, PartnerMessage, ReviewResult } from '../../shared/types'
 import { getErrorMessage } from '../../shared/errors'
 
@@ -24,7 +24,7 @@ export async function handleAutoReview(
 }
 
 export interface ChatStreamDeps {
-  taskRepo: ISprintTaskRepository
+  taskRepo: IAgentTaskRepository
   reviewRepo: IReviewRepository
   getHeadCommitSha: (worktreePath: string) => Promise<string>
   getBranch: (worktreePath: string) => Promise<string>
@@ -115,7 +115,7 @@ export async function handleChatStream(
 
 /** Build the ChatStreamDeps bag from the registration inputs. */
 export function buildChatStreamDeps(input: {
-  taskRepo: ISprintTaskRepository
+  taskRepo: IAgentTaskRepository
   reviewRepo: IReviewRepository
   getHeadCommitSha: (worktreePath: string) => Promise<string>
   getBranch: (worktreePath: string) => Promise<string>

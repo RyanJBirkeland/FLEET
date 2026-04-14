@@ -1,9 +1,9 @@
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { EXECUTOR_ID } from './types'
 
 export async function recoverOrphans(
   isAgentActive: (taskId: string) => boolean,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: { info: (msg: string) => void; warn: (msg: string) => void }
 ): Promise<number> {
   const orphans = repo.getOrphanedTasks(EXECUTOR_ID)

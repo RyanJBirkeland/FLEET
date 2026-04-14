@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { MAX_RETRIES, AGENT_SUMMARY_MAX_LENGTH, RETRY_BACKOFF_BASE_MS, RETRY_BACKOFF_CAP_MS } from './types'
@@ -25,14 +25,14 @@ export interface ResolveSuccessContext {
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
   agentSummary?: string | null
   retryCount: number
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
 }
 
 export interface ResolveFailureContext {
   taskId: string
   retryCount: number
   notes?: string
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
 }
 
 interface CommitCheckContext {
@@ -41,7 +41,7 @@ interface CommitCheckContext {
   worktreePath: string
   agentSummary: string | null | undefined
   retryCount: number
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
   logger: Logger
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 }
@@ -51,7 +51,7 @@ interface AutoMergeContext {
   title: string
   branch: string
   worktreePath: string
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
   logger: Logger
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 }
@@ -71,7 +71,7 @@ async function detectBranch(worktreePath: string): Promise<string> {
  */
 async function getRepoConfig(
   taskId: string,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger
 ): Promise<{ name: string; localPath: string } | null> {
   const task = repo.getTask(taskId)
@@ -99,7 +99,7 @@ async function failTaskWithError(
   taskId: string,
   message: string,
   notes: string,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 ): Promise<void> {
@@ -239,7 +239,7 @@ export async function findOrCreatePR(
 async function verifyWorktreeExists(
   taskId: string,
   worktreePath: string,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 ): Promise<boolean> {
@@ -260,7 +260,7 @@ async function verifyWorktreeExists(
 async function detectAgentBranch(
   taskId: string,
   worktreePath: string,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 ): Promise<string | null> {
@@ -342,7 +342,7 @@ async function verifyCommitsExist(
   worktreePath: string,
   agentSummary: string | null | undefined,
   retryCount: number,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 ): Promise<boolean> {
@@ -364,7 +364,7 @@ async function transitionTaskToReview(
   worktreePath: string,
   title: string,
   rebaseOutcome: RebaseOutcome,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
 ): Promise<void> {

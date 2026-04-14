@@ -1,4 +1,4 @@
-import type { ISprintTaskRepository, CreateTaskInput } from '../data/sprint-task-repository'
+import type { IDashboardRepository, CreateTaskInput } from '../data/sprint-task-repository'
 import type { SprintTask, TaskDependency } from '../../shared/types'
 
 export interface BatchTaskInput {
@@ -31,7 +31,7 @@ export interface BatchImportResult {
  */
 export function batchImportTasks(
   tasks: BatchTaskInput[],
-  repo: ISprintTaskRepository,
+  repo: IDashboardRepository,
   configuredRepos?: string[]
 ): BatchImportResult {
   const created: SprintTask[] = []

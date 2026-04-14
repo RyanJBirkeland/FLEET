@@ -109,7 +109,7 @@ vi.mock('../../env-utils', () => ({
 
 import { createAgentManager } from '../index'
 import type { AgentManagerConfig, AgentHandle } from '../types'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { createAgentRecord } from '../../agent-history'
 import {
   getQueuedTasks,
@@ -182,7 +182,7 @@ function setupDefaultMocks(): void {
   })
 }
 
-function makeMockRepo(): ISprintTaskRepository {
+function makeMockRepo(): IAgentTaskRepository {
   return {
     getTask: (...args: [string]) => (getTask as any)(...args),
     updateTask: (...args: [string, Record<string, unknown>]) => (updateTask as any)(...args),

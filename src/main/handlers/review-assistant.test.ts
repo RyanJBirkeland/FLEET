@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from 'vitest'
 import { handleAutoReview, handleChatStream, buildChatStreamDeps } from './review-assistant'
 import type { ReviewService } from '../services/review-service'
 import type { IReviewRepository } from '../data/review-repository'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { ReviewResult, PartnerMessage, ChatChunk } from '../../shared/types'
 
 function fakeResult(): ReviewResult {
@@ -82,7 +82,7 @@ describe('handleChatStream', () => {
     const chunks: ChatChunk[] = []
     const sender = { send: (_ch: string, payload: ChatChunk) => chunks.push(payload) }
     const deps = {
-      taskRepo: { getTask: () => fakeTask() } as unknown as ISprintTaskRepository,
+      taskRepo: { getTask: () => fakeTask() } as unknown as IAgentTaskRepository,
       reviewRepo: {
         getCached: () => fakeResult(),
         setCached: () => {},
@@ -133,7 +133,7 @@ describe('handleChatStream', () => {
     const chunks: ChatChunk[] = []
     const sender = { send: (_c: string, p: ChatChunk) => chunks.push(p) }
     const deps = {
-      taskRepo: { getTask: () => fakeTask() } as unknown as ISprintTaskRepository,
+      taskRepo: { getTask: () => fakeTask() } as unknown as IAgentTaskRepository,
       reviewRepo: {
         getCached: () => null,
         setCached: () => {},
@@ -156,7 +156,7 @@ describe('handleChatStream', () => {
   it('throws when task is not found', async () => {
     const sender = { send: () => {} }
     const deps = {
-      taskRepo: { getTask: () => null } as unknown as ISprintTaskRepository,
+      taskRepo: { getTask: () => null } as unknown as IAgentTaskRepository,
       reviewRepo: { getCached: () => null, setCached: () => {}, invalidate: () => {} },
       getHeadCommitSha: async () => 'sha',
       getBranch: async () => 'feat/auth',

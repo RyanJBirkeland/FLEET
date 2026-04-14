@@ -19,7 +19,7 @@ import type {
   RunAgentDataDeps,
   RunAgentEventDeps
 } from '../run-agent'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { ActiveAgent } from '../types'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { buildAgentPrompt } from '../prompt-composer'
@@ -127,7 +127,7 @@ function makeTask(overrides: Partial<RunAgentTask> = {}): RunAgentTask {
   }
 }
 
-const mockRepo: ISprintTaskRepository = {
+const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
   updateTask: vi.fn().mockReturnValue(null),
   getQueuedTasks: vi.fn(),
@@ -135,7 +135,10 @@ const mockRepo: ISprintTaskRepository = {
   getOrphanedTasks: vi.fn(),
   clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn().mockReturnValue(0),
-  claimTask: vi.fn()
+  claimTask: vi.fn(),
+  getGroup: vi.fn().mockReturnValue(null),
+  getGroupTasks: vi.fn().mockReturnValue([]),
+  getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
 function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
@@ -768,7 +771,7 @@ describe('validateTaskForRun', () => {
     const mockRepoLocal = {
       updateTask: vi.fn().mockReturnValue(null),
       getTask: vi.fn().mockReturnValue(null)
-    } as unknown as ISprintTaskRepository
+    } as unknown as IAgentTaskRepository
     const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
@@ -803,7 +806,7 @@ describe('validateTaskForRun', () => {
     const mockRepoLocal = {
       updateTask: vi.fn(),
       getTask: vi.fn().mockReturnValue(null)
-    } as unknown as ISprintTaskRepository
+    } as unknown as IAgentTaskRepository
     const task: RunAgentTask = {
       id: 'task-1',
       title: 'Do the thing',
@@ -920,7 +923,7 @@ describe('assembleRunContext', () => {
   it('returns a non-empty prompt string', async () => {
     const mockRepoLocal = {
       getTask: vi.fn().mockReturnValue(null)
-    } as unknown as ISprintTaskRepository
+    } as unknown as IAgentTaskRepository
     const task: RunAgentTask = {
       id: 'task-1',
       title: 'Test task',

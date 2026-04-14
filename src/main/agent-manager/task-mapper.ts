@@ -6,7 +6,7 @@
  */
 
 import type { Logger } from '../logger'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { DependencyIndex } from '../services/dependency-service'
 import { formatBlockedNote } from '../services/dependency-service'
 
@@ -84,7 +84,7 @@ export function checkAndBlockDeps(
   taskId: string,
   rawDeps: unknown,
   taskStatusMap: Map<string, string>,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   depIndex: DependencyIndex,
   logger: Logger
 ): boolean {

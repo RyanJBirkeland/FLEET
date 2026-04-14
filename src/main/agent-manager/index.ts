@@ -28,7 +28,7 @@ import {
   type EpicDependencyIndex
 } from '../services/epic-dependency-service'
 import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { getRepoPaths } from '../paths'
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
 import { getSetting, getSettingJson } from '../settings'
@@ -142,7 +142,7 @@ export class AgentManagerImpl implements AgentManager {
 
   constructor(
     config: AgentManagerConfig,
-    readonly repo: ISprintTaskRepository,
+    readonly repo: IAgentTaskRepository,
     readonly logger: Logger = defaultLogger
   ) {
     this.config = config
@@ -858,7 +858,7 @@ export class AgentManagerImpl implements AgentManager {
 
 export function createAgentManager(
   config: AgentManagerConfig,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger = defaultLogger
 ): AgentManager {
   return new AgentManagerImpl(config, repo, logger)

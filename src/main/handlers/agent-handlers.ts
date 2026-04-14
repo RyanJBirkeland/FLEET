@@ -18,7 +18,7 @@ import { createLogger, logError } from '../logger'
 import type { SpawnLocalAgentArgs } from '../../shared/types'
 import type { AgentManager } from '../agent-manager'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IDashboardRepository } from '../data/sprint-task-repository'
 
 const log = createLogger('agent-handlers')
 
@@ -28,7 +28,7 @@ export interface PromoteToReviewResult {
   error?: string
 }
 
-export function registerAgentHandlers(am?: AgentManager, repo?: ISprintTaskRepository): void {
+export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardRepository): void {
   const effectiveRepo = repo ?? createSprintTaskRepository()
 
   safeHandle('local:getAgentProcesses', async () => {

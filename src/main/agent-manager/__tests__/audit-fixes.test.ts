@@ -6,7 +6,7 @@ import { resolveFailure } from '../completion'
 import { sanitizeForGit } from '../git-operations'
 import { handleWatchdogVerdict } from '../watchdog-handler'
 import { makeConcurrencyState } from '../concurrency'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { MAX_RETRIES } from '../types'
 import { nowIso } from '../../../shared/time'
 import { tryEmitPlaygroundEvent } from '../playground-handler'
@@ -123,7 +123,7 @@ describe('handleWatchdogVerdict claimed_by clearing (AM-4)', () => {
 
 describe('resolveFailure terminal status on DB error (AM-5)', () => {
   const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
-  let mockRepo: ISprintTaskRepository
+  let mockRepo: IAgentTaskRepository
 
   beforeEach(() => {
     mockRepo = {
@@ -134,7 +134,10 @@ describe('resolveFailure terminal status on DB error (AM-5)', () => {
       getOrphanedTasks: vi.fn(),
       clearStaleClaimedBy: vi.fn().mockReturnValue(0),
       getActiveTaskCount: vi.fn().mockReturnValue(0),
-      claimTask: vi.fn()
+      claimTask: vi.fn(),
+      getGroup: vi.fn().mockReturnValue(null),
+      getGroupTasks: vi.fn().mockReturnValue([]),
+      getGroupsWithDependencies: vi.fn().mockReturnValue([])
     }
     logger.error.mockClear()
   })

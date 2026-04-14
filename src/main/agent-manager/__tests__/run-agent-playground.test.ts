@@ -9,7 +9,7 @@ import { isRateLimitMessage, getNumericField } from '../sdk-adapter'
 import { tryEmitPlaygroundEvent } from '../playground-handler'
 import { cleanupWorktree } from '../worktree'
 import type { RunAgentTask, RunAgentDeps } from '../run-agent'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { ActiveAgent } from '../types'
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ describe('runAgent — playground prompt injection', () => {
   let spawnAgentMock: ReturnType<typeof vi.fn>
   let capturedPrompt: string | undefined
 
-  const mockRepo: ISprintTaskRepository = {
+  const mockRepo: IAgentTaskRepository = {
     getTask: vi.fn(),
     updateTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn(),
@@ -131,7 +131,10 @@ describe('runAgent — playground prompt injection', () => {
     getOrphanedTasks: vi.fn(),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockResolvedValue(0),
-    claimTask: vi.fn()
+    claimTask: vi.fn(),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
 
   const createDeps = (): RunAgentDeps => ({
@@ -336,7 +339,7 @@ describe('RunAgentTask interface', () => {
 // ---------------------------------------------------------------------------
 
 describe('runAgent — playground-before-cleanup ordering', () => {
-  const mockRepo: ISprintTaskRepository = {
+  const mockRepo: IAgentTaskRepository = {
     getTask: vi.fn(),
     updateTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn(),
@@ -344,7 +347,10 @@ describe('runAgent — playground-before-cleanup ordering', () => {
     getOrphanedTasks: vi.fn(),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockResolvedValue(0),
-    claimTask: vi.fn()
+    claimTask: vi.fn(),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
 
   const createDeps = (): RunAgentDeps => ({

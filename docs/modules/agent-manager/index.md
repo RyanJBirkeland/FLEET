@@ -23,3 +23,10 @@ Source: `src/main/agent-manager/`
 | `agent-event-persister.ts` (`src/main/`) | Agent event persistence and broadcast (batcher twin). `flushAgentEventBatcher(db?)` accepts optional db for injection. | `emitAgentEvent`, `flushAgentEventBatcher` |
 | `terminal-handler.ts` | Metrics recording and dependency resolution on task terminal events. Provides a `runInTransactionSafe` wrapper so cascade cancellations are atomic | `handleTaskTerminal`, `TerminalHandlerDeps` |
 | `resolve-dependents.ts` | Resolves blocked dependents when a task reaches terminal status. Re-throws `onTaskTerminal` errors during cascade so stale-state cascades fail loudly | `resolveDependents` |
+| `orphan-recovery.ts` | Detects tasks stuck in `active` status without a live agent and resets them to `queued` for retry | `recoverOrphans` |
+| `completion.ts` | Post-run completion logic — classifies exit, transitions task to `review` or retry, records cost/PR metadata | `handleAgentCompletion`, `RepoCompletionDeps` |
+| `partial-diff-capture.ts` | Captures partial diffs from failed/cancelled agents for diagnostic notes | `capturePartialDiff` |
+| `review-transition.ts` | Transitions a completed task to `review` status, preserving worktree path and branch | `transitionToReview`, `TransitionToReviewOpts` |
+| `task-mapper.ts` | Maps raw sprint task rows to `RunAgentTask` shape and evaluates hard-dependency blocking | `checkAndBlockDeps`, `mapTaskForAgent` |
+| `dependency-refresher.ts` | Rebuilds the in-memory dependency index from SQLite; debounced on task mutations | `refreshDependencyIndex`, `computeDepsFingerprint` |
+| `types.ts` | Shared type definitions for agent manager internals | `ActiveAgent`, `AgentHandle`, `AgentManagerConfig`, `ResolveDependentsParams` |

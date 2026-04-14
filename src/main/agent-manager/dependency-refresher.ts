@@ -1,6 +1,6 @@
 import type { DependencyIndex } from '../services/dependency-service'
 import type { TaskDependency } from '../../shared/types'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
 import { isTerminal } from '../../shared/task-state-machine'
 
@@ -39,7 +39,7 @@ export function computeDepsFingerprint(deps: TaskDependency[] | null): string {
 export function refreshDependencyIndex(
   depIndex: DependencyIndex,
   fingerprints: DepsFingerprint,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger
 ): Map<string, string> {
   try {

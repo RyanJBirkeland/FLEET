@@ -1,12 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import { instantiateWorkflow } from '../workflow-engine'
 import type { WorkflowTemplate } from '../../../shared/workflow-types'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IDashboardRepository } from '../../data/sprint-task-repository'
 import type { SprintTask } from '../../../shared/types'
 import { nowIso } from '../../../shared/time'
 
 describe('workflow-engine', () => {
-  function createMockRepo(): ISprintTaskRepository {
+  function createMockRepo(): IDashboardRepository {
     let idCounter = 1
     const mockCreateTask = vi.fn((input) => {
       if (!input.title) return null
@@ -27,24 +27,17 @@ describe('workflow-engine', () => {
 
     return {
       createTask: mockCreateTask,
-      getTask: vi.fn(),
-      updateTask: vi.fn(),
-      getQueuedTasks: vi.fn(),
-      getTasksWithDependencies: vi.fn(),
-      getOrphanedTasks: vi.fn(),
-      clearStaleClaimedBy: vi.fn().mockReturnValue(0),
-      getActiveTaskCount: vi.fn(),
-      claimTask: vi.fn(),
       listTasks: vi.fn(),
+      listTasksRecent: vi.fn(),
       deleteTask: vi.fn(),
       releaseTask: vi.fn(),
       getQueueStats: vi.fn(),
       getDoneTodayCount: vi.fn(),
-      markTaskDoneByPrNumber: vi.fn(),
-      markTaskCancelledByPrNumber: vi.fn(),
-      listTasksWithOpenPrs: vi.fn(),
-      updateTaskMergeableState: vi.fn(),
-      getHealthCheckTasks: vi.fn()
+      getHealthCheckTasks: vi.fn(),
+      getSuccessRateBySpecType: vi.fn(),
+      createReviewTaskFromAdhoc: vi.fn(),
+      getDailySuccessRate: vi.fn(),
+      getFailureReasonBreakdown: vi.fn()
     }
   }
 
@@ -199,7 +192,7 @@ describe('workflow-engine', () => {
     }
 
     // Create a mock repo that fails on the second task
-    const failingRepo: ISprintTaskRepository = {
+    const failingRepo: IDashboardRepository = {
       createTask: vi.fn((input) => {
         const callCount = (failingRepo.createTask as ReturnType<typeof vi.fn>).mock.calls.length
         if (callCount === 2) return null // Fail on second call
@@ -217,24 +210,17 @@ describe('workflow-engine', () => {
           updated_at: nowIso()
         } as SprintTask
       }),
-      getTask: vi.fn(),
-      updateTask: vi.fn(),
-      getQueuedTasks: vi.fn(),
-      getTasksWithDependencies: vi.fn(),
-      getOrphanedTasks: vi.fn(),
-      clearStaleClaimedBy: vi.fn().mockReturnValue(0),
-      getActiveTaskCount: vi.fn(),
-      claimTask: vi.fn(),
       listTasks: vi.fn(),
+      listTasksRecent: vi.fn(),
       deleteTask: vi.fn(),
       releaseTask: vi.fn(),
       getQueueStats: vi.fn(),
       getDoneTodayCount: vi.fn(),
-      markTaskDoneByPrNumber: vi.fn(),
-      markTaskCancelledByPrNumber: vi.fn(),
-      listTasksWithOpenPrs: vi.fn(),
-      updateTaskMergeableState: vi.fn(),
-      getHealthCheckTasks: vi.fn()
+      getHealthCheckTasks: vi.fn(),
+      getSuccessRateBySpecType: vi.fn(),
+      createReviewTaskFromAdhoc: vi.fn(),
+      getDailySuccessRate: vi.fn(),
+      getFailureReasonBreakdown: vi.fn()
     }
 
     const result = instantiateWorkflow(template, failingRepo)

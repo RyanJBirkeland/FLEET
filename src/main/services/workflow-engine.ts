@@ -1,5 +1,5 @@
 import type { WorkflowTemplate } from '../../shared/workflow-types'
-import type { ISprintTaskRepository, CreateTaskInput } from '../data/sprint-task-repository'
+import type { IDashboardRepository, CreateTaskInput } from '../data/sprint-task-repository'
 import type { SprintTask, TaskDependency } from '../../shared/types'
 
 export interface WorkflowResult {
@@ -9,7 +9,7 @@ export interface WorkflowResult {
 
 export function instantiateWorkflow(
   template: WorkflowTemplate,
-  repo: ISprintTaskRepository
+  repo: IDashboardRepository
 ): WorkflowResult {
   const created: SprintTask[] = []
   const errors: string[] = []

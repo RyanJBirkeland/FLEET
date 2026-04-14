@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { batchImportTasks } from '../batch-import'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IDashboardRepository } from '../../data/sprint-task-repository'
 
 describe('batchImportTasks', () => {
   it('creates tasks from JSON array and wires deps by index', () => {
@@ -17,7 +17,7 @@ describe('batchImportTasks', () => {
         createdTasks.push(task)
         return task
       })
-    } as unknown as ISprintTaskRepository
+    } as unknown as IDashboardRepository
 
     const tasks = [
       {
@@ -43,7 +43,7 @@ describe('batchImportTasks', () => {
   it('validates required fields', () => {
     const repo = {
       createTask: vi.fn()
-    } as unknown as ISprintTaskRepository
+    } as unknown as IDashboardRepository
 
     const result = batchImportTasks([{ title: '' } as never], repo)
     expect(result.errors.length).toBeGreaterThan(0)
@@ -56,7 +56,7 @@ describe('batchImportTasks', () => {
         id: `id-${Math.random()}`,
         ...input
       }))
-    } as unknown as ISprintTaskRepository
+    } as unknown as IDashboardRepository
 
     const tasks = [
       {
@@ -83,7 +83,7 @@ describe('batchImportTasks', () => {
         createdTasks.push(task)
         return task
       })
-    } as unknown as ISprintTaskRepository
+    } as unknown as IDashboardRepository
 
     const tasks = [
       {
@@ -107,7 +107,7 @@ describe('batchImportTasks', () => {
   it('returns null task on creation failure', () => {
     const repo = {
       createTask: vi.fn(() => null) // Simulate failure
-    } as unknown as ISprintTaskRepository
+    } as unknown as IDashboardRepository
 
     const tasks = [
       {
@@ -125,7 +125,7 @@ describe('batchImportTasks', () => {
   describe('repo validation against configuredRepos', () => {
     const mockRepo = {
       createTask: vi.fn().mockImplementation((input) => ({ id: 'generated-id', ...input }))
-    } as unknown as ISprintTaskRepository
+    } as unknown as IDashboardRepository
 
     beforeEach(() => vi.clearAllMocks())
 

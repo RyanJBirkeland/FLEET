@@ -50,7 +50,7 @@ vi.mock('../../env-utils', () => ({
 
 import { execFile } from 'node:child_process'
 import { updateTask, getTask } from '../../data/sprint-queries'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { resolveSuccess, resolveFailure } from '../../agent-manager/completion'
 import { resolveDependents } from '../../agent-manager/resolve-dependents'
 import { createDependencyIndex, type DependencyIndex } from '../../services/dependency-service'
@@ -79,7 +79,7 @@ function mockExecFileSequence(responses: Array<{ stdout?: string; error?: Error 
 
 const updateTaskMock = vi.mocked(updateTask)
 
-const mockRepo: ISprintTaskRepository = {
+const mockRepo: IAgentTaskRepository = {
   getTask: (...args: [string]) => (getTask as any)(...args),
   updateTask: (...args: [string, Record<string, unknown>]) => (updateTask as any)(...args),
   getQueuedTasks: vi.fn(),
@@ -87,7 +87,10 @@ const mockRepo: ISprintTaskRepository = {
   getOrphanedTasks: vi.fn(),
   clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn().mockReturnValue(0),
-  claimTask: vi.fn()
+  claimTask: vi.fn(),
+  getGroup: vi.fn().mockReturnValue(null),
+  getGroupTasks: vi.fn().mockReturnValue([]),
+  getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 const getTaskMock = vi.mocked(getTask)
 

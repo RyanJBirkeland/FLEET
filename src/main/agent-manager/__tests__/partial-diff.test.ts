@@ -5,7 +5,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { promisify } from 'node:util'
 import { capturePartialDiff, classifyDiffCaptureError } from '../partial-diff-capture'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 
 // Mock node:child_process before importing module under test
 vi.mock('node:child_process', () => {
@@ -76,7 +76,7 @@ const noopLogger = {
   error: vi.fn()
 }
 
-const mockRepo: ISprintTaskRepository = {
+const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
   updateTask: vi.fn(),
   getQueuedTasks: vi.fn(),
@@ -84,7 +84,10 @@ const mockRepo: ISprintTaskRepository = {
   getOrphanedTasks: vi.fn(),
   clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn(),
-  claimTask: vi.fn()
+  claimTask: vi.fn(),
+  getGroup: vi.fn().mockReturnValue(null),
+  getGroupTasks: vi.fn().mockReturnValue([]),
+  getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
 describe('classifyDiffCaptureError', () => {

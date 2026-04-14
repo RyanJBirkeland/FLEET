@@ -29,7 +29,7 @@ vi.mock('../../paths', () => ({
 import { AgentManagerImpl } from '../index'
 import { SPAWN_CIRCUIT_FAILURE_THRESHOLD, SPAWN_CIRCUIT_PAUSE_MS } from '../circuit-breaker'
 import type { AgentManagerConfig } from '../types'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { broadcast } from '../../broadcast'
 
 const baseConfig: AgentManagerConfig = {
@@ -45,7 +45,7 @@ function makeLogger() {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }
 
-function makeRepo(): ISprintTaskRepository {
+function makeRepo(): IAgentTaskRepository {
   return {
     getTask: vi.fn(),
     updateTask: vi.fn(),
@@ -54,7 +54,10 @@ function makeRepo(): ISprintTaskRepository {
     getOrphanedTasks: vi.fn().mockReturnValue([]),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
-    claimTask: vi.fn()
+    claimTask: vi.fn(),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
 }
 

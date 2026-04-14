@@ -91,7 +91,7 @@ vi.mock('../oauth-checker', () => ({
 
 import { AgentManagerImpl } from '../index'
 import type { AgentManagerConfig, ActiveAgent, AgentHandle } from '../types'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { getRepoPaths } from '../../paths'
 import { setupWorktree, pruneStaleWorktrees } from '../worktree'
 import { recoverOrphans } from '../orphan-recovery'
@@ -124,7 +124,7 @@ function makeLogger() {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 }
 
-function makeMockRepo(): ISprintTaskRepository {
+function makeMockRepo(): IAgentTaskRepository {
   return {
     getTask: (...args: [string]) => (getTask as ReturnType<typeof vi.fn>)(...args),
     updateTask: (...args: [string, Record<string, unknown>]) =>
@@ -135,7 +135,10 @@ function makeMockRepo(): ISprintTaskRepository {
       (getOrphanedTasks as ReturnType<typeof vi.fn>)(...args),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
-    claimTask: (...args: [string, string]) => (claimTask as ReturnType<typeof vi.fn>)(...args)
+    claimTask: (...args: [string, string]) => (claimTask as ReturnType<typeof vi.fn>)(...args),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
 }
 

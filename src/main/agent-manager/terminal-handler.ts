@@ -1,7 +1,7 @@
 import type { MetricsCollector } from './metrics'
 import type { DependencyIndex } from '../services/dependency-service'
 import type { EpicDependencyIndex } from '../services/epic-dependency-service'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { AgentManagerConfig } from './types'
 import type { Logger } from '../logger'
 import { resolveDependents } from './resolve-dependents'
@@ -31,7 +31,7 @@ async function resolveTerminalDependents(
   status: string,
   depIndex: DependencyIndex,
   epicIndex: EpicDependencyIndex,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>,
   logger: Logger
 ): Promise<void> {
@@ -70,7 +70,7 @@ export interface TerminalHandlerDeps {
   metrics: MetricsCollector
   depIndex: DependencyIndex
   epicIndex: EpicDependencyIndex
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
   config: AgentManagerConfig
   terminalCalled: Map<string, Promise<void>>
   logger: Logger

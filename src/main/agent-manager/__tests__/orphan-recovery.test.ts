@@ -11,13 +11,13 @@ vi.mock('../../agent-history', () => ({
 
 import { getOrphanedTasks, updateTask } from '../../data/sprint-queries'
 import { recoverOrphans } from '../orphan-recovery'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { SprintTask } from '../../../shared/types'
 
 const getOrphanedTasksMock = vi.mocked(getOrphanedTasks)
 const updateTaskMock = vi.mocked(updateTask)
 
-const mockRepo: ISprintTaskRepository = {
+const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
   updateTask: (...args: [string, Record<string, unknown>]) => (updateTask as any)(...args),
   getQueuedTasks: vi.fn(),
@@ -25,7 +25,10 @@ const mockRepo: ISprintTaskRepository = {
   getOrphanedTasks: (...args: [string]) => (getOrphanedTasks as any)(...args),
   clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn().mockReturnValue(0),
-  claimTask: vi.fn()
+  claimTask: vi.fn(),
+  getGroup: vi.fn().mockReturnValue(null),
+  getGroupTasks: vi.fn().mockReturnValue([]),
+  getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
 function makeTask(id: string, title = `Task ${id}`): SprintTask {

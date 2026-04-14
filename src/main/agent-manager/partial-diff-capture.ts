@@ -1,5 +1,5 @@
 import type { Logger } from '../logger'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { execFileAsync } from '../lib/async-utils'
 
 const MAX_PARTIAL_DIFF_SIZE = 50 * 1024 // 50KB
@@ -29,7 +29,7 @@ export function classifyDiffCaptureError(err: unknown): DiffCaptureErrorClass {
 export async function capturePartialDiff(
   taskId: string,
   worktreePath: string,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger
 ): Promise<void> {
   try {

@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { homedir } from 'node:os'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
 
 /**
@@ -11,7 +11,7 @@ import type { Logger } from '../logger'
 export interface ResolveDependentsParams {
   taskId: string
   terminalStatus: string
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
   logger: Logger
 }
 

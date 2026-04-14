@@ -61,7 +61,7 @@ vi.mock('../../db', () => {
 import { getDb } from '../../db'
 import { getQueuedTasks } from '../../data/sprint-queries'
 import { resolveFailure } from '../../agent-manager/completion'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 
 function insertTask(
   overrides: {
@@ -95,9 +95,9 @@ function clearTasks(): void {
   getDb().exec('DELETE FROM task_changes')
 }
 
-function makeMockRepo(): { repo: ISprintTaskRepository; updateTaskMock: ReturnType<typeof vi.fn> } {
+function makeMockRepo(): { repo: IAgentTaskRepository; updateTaskMock: ReturnType<typeof vi.fn> } {
   const updateTaskMock = vi.fn().mockReturnValue(null)
-  const repo: ISprintTaskRepository = {
+  const repo: IAgentTaskRepository = {
     getTask: vi.fn(),
     updateTask: updateTaskMock,
     getQueuedTasks: vi.fn(),
@@ -105,7 +105,10 @@ function makeMockRepo(): { repo: ISprintTaskRepository; updateTaskMock: ReturnTy
     getOrphanedTasks: vi.fn(),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn(),
-    claimTask: vi.fn()
+    claimTask: vi.fn(),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
   return { repo, updateTaskMock }
 }

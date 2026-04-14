@@ -137,7 +137,7 @@ function validateParsedReview(value: unknown, raw: string): ParsedReview {
 export type { ReviewFindings }
 
 import type { IReviewRepository } from '../data/review-repository'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
 import type { SdkStreamingOptions } from '../sdk-streaming'
 import type { ReviewResult } from '../../shared/types'
@@ -145,7 +145,7 @@ import { buildAgentPrompt } from '../agent-manager/prompt-composer'
 
 export interface ReviewServiceDeps {
   repo: IReviewRepository
-  taskRepo: ISprintTaskRepository
+  taskRepo: IAgentTaskRepository
   logger: Logger
   resolveWorktreePath: (taskId: string) => Promise<string>
   getHeadCommitSha: (worktreePath: string) => Promise<string>

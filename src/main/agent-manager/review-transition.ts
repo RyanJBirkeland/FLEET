@@ -4,7 +4,7 @@
  * Captures a diff snapshot before updating the task, so Code Review can
  * show changes even after the worktree is eventually cleaned up.
  */
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
 import { captureDiffSnapshot } from './diff-snapshot'
 import { nowIso } from '../../shared/time'
@@ -15,7 +15,7 @@ export interface TransitionToReviewOpts {
   rebaseNote: string | undefined
   rebaseBaseSha: string | undefined
   rebaseSucceeded: boolean
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
   logger: Logger
 }
 

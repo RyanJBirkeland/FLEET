@@ -33,7 +33,7 @@ import { existsSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { updateTask } from '../../data/sprint-queries'
 import { resolveSuccess, resolveFailure } from '../completion'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { MAX_RETRIES } from '../types'
 
 const execFileMock = vi.mocked(execFile)
@@ -63,7 +63,7 @@ function resetMocks() {
 
 const noopLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
-const mockRepo: ISprintTaskRepository = {
+const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
   updateTask: (...args: [string, Record<string, unknown>]) => (updateTask as any)(...args),
   getQueuedTasks: vi.fn(),
@@ -71,7 +71,10 @@ const mockRepo: ISprintTaskRepository = {
   getOrphanedTasks: vi.fn(),
   clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn().mockReturnValue(0),
-  claimTask: vi.fn()
+  claimTask: vi.fn(),
+  getGroup: vi.fn().mockReturnValue(null),
+  getGroupTasks: vi.fn().mockReturnValue([]),
+  getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
 describe('resolveSuccess', () => {

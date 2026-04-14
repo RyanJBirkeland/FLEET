@@ -131,7 +131,7 @@ vi.mock('../../env-utils', () => ({
 
 import { createAgentManager } from '../../agent-manager/index'
 import type { AgentManagerConfig, AgentHandle } from '../../agent-manager/types'
-import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import {
   getQueuedTasks,
   claimTask,
@@ -203,7 +203,7 @@ function setupDefaultMocks(): void {
   })
 }
 
-function makeMockRepo(): ISprintTaskRepository {
+function makeMockRepo(): IAgentTaskRepository {
   return {
     getTask: (...args: [string]) => (getTask as any)(...args),
     updateTask: (...args: [string, Record<string, unknown>]) => (updateTask as any)(...args),
@@ -212,7 +212,10 @@ function makeMockRepo(): ISprintTaskRepository {
     getOrphanedTasks: (...args: [string]) => (getOrphanedTasks as any)(...args),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
-    claimTask: (...args: [string, string]) => (claimTask as any)(...args)
+    claimTask: (...args: [string, string]) => (claimTask as any)(...args),
+    getGroup: vi.fn().mockReturnValue(null),
+    getGroupTasks: vi.fn().mockReturnValue([]),
+    getGroupsWithDependencies: vi.fn().mockReturnValue([])
   }
 }
 

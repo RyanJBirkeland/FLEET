@@ -32,7 +32,7 @@ import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './agent-manager/prompt-composer'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
-import type { ISprintTaskRepository } from './data/sprint-task-repository'
+import type { IDashboardRepository } from './data/sprint-task-repository'
 import { getErrorMessage } from '../shared/errors'
 import { nowIso } from '../shared/time'
 import { createLogger } from './logger'
@@ -84,7 +84,7 @@ export async function spawnAdhocAgent(args: {
   repoPath: string
   model?: string
   assistant?: boolean
-  repo: ISprintTaskRepository
+  repo: IDashboardRepository
 }): Promise<SpawnLocalAgentResult> {
   const model = args.model || 'claude-sonnet-4-5'
 

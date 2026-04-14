@@ -6,7 +6,7 @@ import { classifyExit } from './fast-fail'
 import { cleanupWorktree } from './worktree'
 import { asSDKMessage, getNumericField, isRateLimitMessage, spawnWithTimeout } from './sdk-adapter'
 import { resolveSuccess, resolveFailure } from './completion'
-import type { ISprintTaskRepository } from '../data/sprint-task-repository'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { getGhRepo, BDE_TASK_MEMORY_DIR } from '../paths'
 import { createAgentRecord, updateAgentMeta } from '../agent-history'
 import { updateAgentRunCost } from '../data/agent-queries'
@@ -53,7 +53,7 @@ export interface RunAgentSpawnDeps {
 
 /** Sprint task data access. */
 export interface RunAgentDataDeps {
-  repo: ISprintTaskRepository
+  repo: IAgentTaskRepository
   logger: Logger
 }
 
@@ -270,7 +270,7 @@ export async function validateTaskForRun(
  */
 export function fetchUpstreamContext(
   deps: TaskDependency[] | null | undefined,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger
 ): Array<{ title: string; spec: string; partial_diff?: string }> {
   const upstreamContext: Array<{ title: string; spec: string; partial_diff?: string }> = []
@@ -412,7 +412,7 @@ function initializeAgentTracking(
   worktree: { worktreePath: string; branch: string },
   prompt: string,
   activeAgents: Map<string, ActiveAgent>,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger
 ): { agent: ActiveAgent; agentRunId: string; turnTracker: TurnTracker } {
   const agentRunId = randomUUID()
@@ -565,7 +565,7 @@ async function resolveAgentExit(
   agent: ActiveAgent,
   exitedAt: number,
   worktree: { worktreePath: string; branch: string },
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>,
   logger: Logger
 ): Promise<void> {
@@ -635,7 +635,7 @@ async function cleanupOrPreserveWorktree(
   task: RunAgentTask,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
-  repo: ISprintTaskRepository,
+  repo: IAgentTaskRepository,
   logger: Logger
 ): Promise<void> {
   const currentTask = repo.getTask(task.id)
