@@ -105,7 +105,7 @@ export function runMigrations(db: Database.Database): void {
     try {
       const runSingle = db.transaction(() => {
         migration.up(db)
-        db.pragma(`user_version = ${migration.version}`)
+        db.prepare('PRAGMA user_version = ' + Number(migration.version)).run()
       })
       runSingle()
     } catch (err) {

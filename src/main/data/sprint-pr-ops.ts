@@ -1,7 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { SprintTask } from '../../shared/types'
 import { getDb } from '../db'
-import { recordTaskChanges, recordTaskChangesBulk } from './task-changes'
+import { recordTaskChangesBulk } from './task-changes'
 import { nowIso } from '../../shared/time'
 import { SPRINT_TASK_COLUMNS } from './sprint-query-constants'
 import { mapRowsToTasks } from './sprint-task-mapper'
@@ -211,15 +211,15 @@ export function updateTaskMergeableState(prNumber: number, mergeableState: strin
         prNumber
       )
 
-      for (const oldTask of affected) {
-        recordTaskChanges(
-          oldTask.id as string,
+      recordTaskChangesBulk(
+        affected.map((oldTask) => ({
+          taskId: oldTask.id as string,
           oldTask,
-          { pr_mergeable_state: mergeableState },
-          'pr-poller',
-          db
-        )
-      }
+          newPatch: { pr_mergeable_state: mergeableState }
+        })),
+        'pr-poller',
+        db
+      )
     })()
   } catch (err) {
     // DL-17: Standardize error message format
