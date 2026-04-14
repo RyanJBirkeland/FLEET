@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { withMaxOldSpaceOption, AGENT_PROCESS_MAX_OLD_SPACE_MB } from '../sdk-adapter'
 
+vi.mock('../../env-utils', () => ({
+  buildAgentEnv: vi.fn(() => ({ PATH: '/usr/local/bin' })),
+  getOAuthToken: vi.fn(() => 'mock-oauth-token'),
+  getClaudeCliPath: vi.fn(() => '/mock/path/to/claude')
+}))
+
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
   query: vi.fn().mockReturnValue({
     [Symbol.asyncIterator]: async function* () {
