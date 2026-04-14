@@ -50,7 +50,7 @@ GitHub Actions runs on every push to `main` and every PR targeting `main`:
 
 All checks are required before merge.
 
-**MANDATORY: Before EVERY commit, run ALL of these:**
+**MANDATORY: Before EVERY commit, ALL of these must pass:**
 
 ```bash
 npm run typecheck   # Zero errors required
@@ -58,7 +58,10 @@ npm test            # All tests must pass
 npm run lint        # Zero errors required (warnings OK)
 ```
 
-Do NOT commit with failing checks. Fix issues first. If you cannot fix a failure, do NOT commit — report the issue.
+**Also mandatory before every commit:**
+- Update `docs/modules/` for every source file you touched — see [§ Module Documentation](#module-documentation-mandatory-pre-commit) below.
+
+Do NOT commit with failing checks or missing module docs. Fix issues first. If you cannot fix a failure, do NOT commit — report the issue.
 
 ## Module Documentation (MANDATORY pre-commit)
 

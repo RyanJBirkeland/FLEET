@@ -1,0 +1,22 @@
+#!/bin/sh
+# Remind committers (human and agent) to update docs/modules/ for any
+# source file touched in this commit.
+#
+# This hook does not block the commit — it prints a reminder at exactly
+# the right moment so it cannot be missed.
+
+changed_src=$(git diff --cached --name-only | grep -E '^src/(main|renderer/src|shared)/' | grep -v '\.test\.' | grep -v '__tests__' || true)
+
+if [ -n "$changed_src" ]; then
+  echo ""
+  echo "┌─────────────────────────────────────────────────────────────┐"
+  echo "│  Module docs reminder                                       │"
+  echo "│                                                             │"
+  echo "│  You touched source files. Before this commit lands:        │"
+  echo "│  • Add a row to the layer index in docs/modules/            │"
+  echo "│  • If exports/behavior changed, update the detail file too  │"
+  echo "│                                                             │"
+  echo "│  See CLAUDE.md § Module Documentation for the layer map.    │"
+  echo "└─────────────────────────────────────────────────────────────┘"
+  echo ""
+fi
