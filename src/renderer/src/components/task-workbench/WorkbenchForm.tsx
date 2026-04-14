@@ -3,8 +3,8 @@ import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import { useSprintTasks, type CreateTicketInput } from '../../stores/sprintTasks'
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { useValidationChecks } from '../../hooks/useValidationChecks'
-import { useDebouncedAsync } from '../../hooks/useDebouncedAsync'
 import { useTaskFormState } from '../../hooks/useTaskFormState'
+import { useSpecQualityChecks } from '../../hooks/useSpecQualityChecks'
 import { SpecEditor } from './SpecEditor'
 import { ValidationChecks } from './ValidationChecks'
 import { WorkbenchActions } from './WorkbenchActions'
@@ -87,8 +87,8 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
   const titleRef = useRef<HTMLInputElement>(null)
 
   useValidationChecks()
+  useSpecQualityChecks({ spec, title, repo, specType })
 
-  const setSemanticChecks = useTaskWorkbenchStore((s) => s.setSemanticChecks)
   const setOperationalChecks = useTaskWorkbenchStore((s) => s.setOperationalChecks)
 
   // Shared helper to create or update a task with the given status
@@ -147,82 +147,6 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
       createTask,
       updateTask
     ]
-  )
-
-  // Debounced semantic checks (Tier 2) — runs 2s after spec stops changing
-  useDebouncedAsync(
-    async () => {
-      if (!spec.trim() || spec.length < 50) {
-        setSemanticChecks([])
-        return
-      }
-
-      try {
-        const result = await window.api.workbench.checkSpec({ title, repo, spec, specType })
-        setSemanticChecks([
-          {
-            id: 'clarity',
-            label: 'Clarity',
-            tier: 2,
-            status: result.clarity.status,
-            message: result.clarity.message,
-            fieldId: 'wb-form-spec'
-          },
-          {
-            id: 'scope',
-            label: 'Scope',
-            tier: 2,
-            status: result.scope.status,
-            message: result.scope.message,
-            fieldId: 'wb-form-spec'
-          },
-          {
-            id: 'files-exist',
-            label: 'Files',
-            tier: 2,
-            status: result.filesExist.status,
-            message: result.filesExist.message,
-            fieldId: 'wb-form-spec'
-          }
-        ])
-      } catch {
-        setSemanticChecks([
-          {
-            id: 'clarity',
-            label: 'Clarity',
-            tier: 2,
-            status: 'warn',
-            message: 'Unable to check',
-            fieldId: 'wb-form-spec'
-          },
-          {
-            id: 'scope',
-            label: 'Scope',
-            tier: 2,
-            status: 'warn',
-            message: 'Unable to check',
-            fieldId: 'wb-form-spec'
-          },
-          {
-            id: 'files-exist',
-            label: 'Files',
-            tier: 2,
-            status: 'warn',
-            message: 'Unable to check',
-            fieldId: 'wb-form-spec'
-          }
-        ])
-      }
-    },
-    [spec, title, repo, specType],
-    {
-      delayMs: 2000,
-      onStart: () => {
-        if (spec.trim() && spec.length >= 50) {
-          useTaskWorkbenchStore.setState({ semanticLoading: true })
-        }
-      }
-    }
   )
 
   useEffect(() => {
