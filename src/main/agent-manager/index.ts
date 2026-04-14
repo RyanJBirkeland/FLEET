@@ -1,6 +1,5 @@
 import type { AgentManagerConfig, ActiveAgent, SteerResult } from './types'
 import type { Logger } from '../logger'
-import { logError } from '../logger'
 import type { TaskDependency } from '../../shared/types'
 import { computeDepsFingerprint, refreshDependencyIndex } from './dependency-refresher'
 import { handleTaskTerminal } from './terminal-handler'
@@ -9,18 +8,9 @@ import {
   WATCHDOG_INTERVAL_MS,
   ORPHAN_CHECK_INTERVAL_MS,
   WORKTREE_PRUNE_INTERVAL_MS,
-  INITIAL_DRAIN_DEFER_MS,
-  NOTES_MAX_LENGTH
+  INITIAL_DRAIN_DEFER_MS
 } from './types'
-import {
-  makeConcurrencyState,
-  setMaxSlots,
-  availableSlots,
-  tryRecover,
-  type ConcurrencyState
-} from './concurrency'
-import { checkAgent } from './watchdog'
-import { setupWorktree, pruneStaleWorktrees } from './worktree'
+import { makeConcurrencyState, availableSlots, type ConcurrencyState } from './concurrency'
 import { recoverOrphans } from './orphan-recovery'
 import { createDependencyIndex } from '../services/dependency-service'
 import {
@@ -29,15 +19,23 @@ import {
 } from '../services/epic-dependency-service'
 import { runAgent as _runAgent, type RunAgentDeps, type RunAgentTask } from './run-agent'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
-import { getRepoPaths } from '../paths'
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
-import { getSetting, getSettingJson } from '../settings'
-import { flushAgentEventBatcher } from '../agent-event-mapper'
 import { CircuitBreaker } from './circuit-breaker'
 import { checkOAuthToken } from './oauth-checker'
-import { handleWatchdogVerdict } from './watchdog-handler'
-import type { WatchdogAction } from './types'
-import { mapQueuedTask, checkAndBlockDeps, type MappedTask } from './task-mapper'
+import type { MappedTask } from './task-mapper'
+
+// Extracted module imports
+import { runDrain, type DrainLoopDeps } from './drain-loop'
+import { runWatchdog, killActiveAgent, type WatchdogLoopDeps } from './watchdog-loop'
+import {
+  validateAndClaimTask,
+  prepareWorktreeForTask,
+  processQueuedTask
+} from './task-claimer'
+import { checkIsReviewTask, runPruneLoop } from './worktree-manager'
+import { pruneStaleWorktrees } from './worktree'
+import { executeShutdown } from './shutdown-coordinator'
+import { reloadConfiguration } from './config-manager'
 
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
@@ -97,7 +95,6 @@ export interface AgentManager {
 // ---------------------------------------------------------------------------
 
 import type { DependencyIndex } from '../services/dependency-service'
-import { nowIso } from '../../shared/time'
 
 export class AgentManagerImpl implements AgentManager {
   // Exposed state (testable via _ prefix)
@@ -198,14 +195,6 @@ export class AgentManagerImpl implements AgentManager {
 
   // ---- Helpers ----
 
-  private fetchQueuedTasks(limit: number): Array<Record<string, unknown>> {
-    return this.repo.getQueuedTasks(limit) as unknown as Array<Record<string, unknown>>
-  }
-
-  private claimTask(taskId: string): boolean {
-    return this.repo.claimTask(taskId, EXECUTOR_ID) !== null
-  }
-
   /**
    * Incrementally refresh the dependency index from the repository.
    * Delegates to the pure `refreshDependencyIndex` function.
@@ -233,11 +222,6 @@ export class AgentManagerImpl implements AgentManager {
     this._depIndexDirty = true
   }
 
-  private resolveRepoPath(repoSlug: string): string | null {
-    const repoPaths = getRepoPaths()
-    return repoPaths[repoSlug.toLowerCase()] ?? null
-  }
-
   /**
    * Fire-and-forget agent spawn — errors logged inside runAgent.
    */
@@ -257,124 +241,60 @@ export class AgentManagerImpl implements AgentManager {
     this._agentPromises.add(p)
   }
 
-  // ---- processQueuedTask ----
+  // ---- Task processing delegates ----
 
-  private async _validateAndClaimTask(
+  /**
+   * Validate and claim a task. Delegates to task-claimer.ts.
+   * Exposed via _ prefix for testability.
+   */
+  async _validateAndClaimTask(
     raw: Record<string, unknown>,
     taskStatusMap: Map<string, string>
   ): Promise<{ task: MappedTask; repoPath: string } | null> {
-    const task = mapQueuedTask(raw, this.logger)
-    if (!task) return null
-
-    // Re-fetch a fresh copy to guard against stale batch from fetchQueuedTasks.
-    // A watchdog or external write may have changed the status between the fetch
-    // and this claim attempt — verifying here prevents double-spawn races.
-    const freshTask = this.repo.getTask(task.id)
-    if (!freshTask || freshTask.status !== 'queued') {
-      this.logger.info(
-        `[agent-manager] Task ${task.id} status changed since fetch (was queued, now ${freshTask?.status ?? 'not found'}) — skipping`
-      )
-      return null
-    }
-
-    const rawDeps = raw.dependsOn ?? raw.depends_on
-    if (rawDeps && checkAndBlockDeps(task.id, rawDeps, taskStatusMap, this.repo, this._depIndex, this.logger)) return null
-
-    const repoPath = this.resolveRepoPath(task.repo)
-    if (!repoPath) {
-      this.logger.warn(
-        `[agent-manager] No repo path for "${task.repo}" — setting task ${task.id} to error`
-      )
-      try {
-        this.repo.updateTask(task.id, {
-          status: 'error',
-          notes: `Repo "${task.repo}" is not configured in BDE settings. Add it in Settings > Repos, then reset this task to queued.`,
-          claimed_by: null
-        })
-      } catch (err) {
-        this.logger.warn(
-          `[agent-manager] Failed to update task ${task.id} after repo resolution failure: ${err}`
-        )
-      }
-      await this.onTaskTerminal(task.id, 'error').catch((err) =>
-        this.logger.warn(`[agent-manager] onTerminal failed for ${task.id}: ${err}`)
-      )
-      return null
-    }
-
-    const claimed = this.claimTask(task.id)
-    if (!claimed) {
-      this.logger.info(`[agent-manager] Task ${task.id} already claimed — skipping`)
-      return null
-    }
-
-    return { task, repoPath }
+    return validateAndClaimTask(raw, taskStatusMap, {
+      config: this.config,
+      repo: this.repo,
+      depIndex: this._depIndex,
+      logger: this.logger,
+      onTaskTerminal: this.onTaskTerminal.bind(this)
+    })
   }
 
-  private async _prepareWorktreeForTask(
+  /**
+   * Prepare the git worktree for a task. Delegates to task-claimer.ts.
+   * Exposed via _ prefix for testability.
+   */
+  async _prepareWorktreeForTask(
     task: MappedTask,
     repoPath: string
   ): Promise<{ worktreePath: string; branch: string } | null> {
-    try {
-      return await setupWorktree({
-        repoPath,
-        worktreeBase: this.config.worktreeBase,
-        taskId: task.id,
-        title: task.title,
-        groupId: task.group_id ?? undefined,
-        logger: this.logger
-      })
-    } catch (err) {
-      logError(this.logger, `[agent-manager] setupWorktree failed for task ${task.id}`, err)
-      const errMsg = err instanceof Error ? err.message : String(err)
-      const fullNote = `Worktree setup failed: ${errMsg}`
-      const notes =
-        fullNote.length > NOTES_MAX_LENGTH
-          ? '...' + fullNote.slice(-(NOTES_MAX_LENGTH - 3))
-          : fullNote
-      this.repo.updateTask(task.id, {
-        status: 'error',
-        completed_at: nowIso(),
-        notes,
-        claimed_by: null
-      })
-      await this.onTaskTerminal(task.id, 'error').catch((err) =>
-        this.logger.warn(`[agent-manager] onTerminal failed for ${task.id}: ${err}`)
-      )
-      return null
-    }
+    return prepareWorktreeForTask(task, repoPath, {
+      config: this.config,
+      repo: this.repo,
+      depIndex: this._depIndex,
+      logger: this.logger,
+      onTaskTerminal: this.onTaskTerminal.bind(this)
+    })
   }
 
+  /**
+   * Full pipeline for one queued task row. Delegates to task-claimer.ts.
+   * Exposed via _ prefix for testability.
+   */
   async _processQueuedTask(
     raw: Record<string, unknown>,
     taskStatusMap: Map<string, string>
   ): Promise<void> {
-    const taskId = raw.id as string
-    if (this._processingTasks.has(taskId)) return
-    this._processingTasks.add(taskId)
-    try {
-      const claimed = await this._validateAndClaimTask(raw, taskStatusMap)
-      if (!claimed) return
-
-      const { task, repoPath } = claimed
-
-      try {
-        const freshTasks = this.repo.getTasksWithDependencies()
-        taskStatusMap.clear()
-        for (const t of freshTasks) {
-          taskStatusMap.set(t.id, t.status)
-        }
-      } catch {
-        // non-fatal: stale map is better than aborting the drain
-      }
-
-      const wt = await this._prepareWorktreeForTask(task, repoPath)
-      if (!wt) return
-
-      this._spawnAgent(task, wt, repoPath)
-    } finally {
-      this._processingTasks.delete(taskId)
-    }
+    return processQueuedTask(raw, taskStatusMap, {
+      config: this.config,
+      repo: this.repo,
+      depIndex: this._depIndex,
+      logger: this.logger,
+      onTaskTerminal: this.onTaskTerminal.bind(this),
+      processingTasks: this._processingTasks,
+      activeAgents: this._activeAgents,
+      spawnAgent: this._spawnAgent.bind(this)
+    })
   }
 
   // ---- static helpers ----
@@ -388,12 +308,10 @@ export class AgentManagerImpl implements AgentManager {
     return computeDepsFingerprint(deps)
   }
 
-  // ---- drainLoop helpers ----
+  // ---- Drain loop delegates ----
 
   /**
-   * Guard checks before running a drain tick.
-   * Returns false (and logs as needed) if the drain should be skipped.
-   *
+   * Guard checks before running a drain tick. Delegates to drain-loop.ts.
    * Exposed via _ prefix for testability.
    */
   async _validateDrainPreconditions(): Promise<boolean> {
@@ -415,22 +333,18 @@ export class AgentManagerImpl implements AgentManager {
   }
 
   /**
-   * Fetch queued tasks (up to `available` slots) and process each one.
-   * Stops early if `_shuttingDown` is set or slots are exhausted mid-loop.
-   * Errors from individual tasks are logged but do not stop the loop.
-   *
+   * Fetch queued tasks and process each one. Delegates to drain-loop.ts.
    * Exposed via _ prefix for testability.
    */
   async _drainQueuedTasks(
     available: number,
     taskStatusMap: Map<string, string>
   ): Promise<void> {
+    const queued = this.repo.getQueuedTasks(available) as unknown as Array<Record<string, unknown>>
     this.logger.info(`[agent-manager] Fetching queued tasks (limit=${available})...`)
-    const queued = this.fetchQueuedTasks(available)
     this.logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
     for (const raw of queued) {
       if (this._shuttingDown) break
-      // Re-check slots before each task — an earlier iteration may have filled a slot
       if (availableSlots(this._concurrency, this._activeAgents.size) <= 0) {
         this.logger.info('[agent-manager] No slots available — stopping drain iteration')
         break
@@ -445,117 +359,57 @@ export class AgentManagerImpl implements AgentManager {
     }
   }
 
-  // ---- drainLoop ----
-
+  /**
+   * Execute one full drain tick. Delegates to drain-loop.ts.
+   * Exposed via _ prefix for testability.
+   */
   async _drainLoop(): Promise<void> {
-    // Note: concurrency guard is handled by caller via _drainInFlight check
-    this.logger.info(
-      `[agent-manager] Drain loop starting (shuttingDown=${this._shuttingDown}, slots=${availableSlots(this._concurrency, this._activeAgents.size)})`
-    )
-    if (!(await this._validateDrainPreconditions())) return
-
-    this._metrics.increment('drainLoopCount')
-    const drainStart = Date.now()
-
-    // Full rebuild on dirty flag (terminal event fired since last tick);
-    // otherwise incremental refresh.
-    let taskStatusMap: Map<string, string>
-    if (this._depIndexDirty) {
-      const allTasks = this.repo.getTasksWithDependencies()
-      this._depIndex.rebuild(allTasks)
-      this._lastTaskDeps.clear()
-      for (const task of allTasks) {
-        const deps = task.depends_on ?? null
-        this._lastTaskDeps.set(task.id, { deps, hash: computeDepsFingerprint(deps) })
-      }
-      taskStatusMap = new Map(allTasks.map((task) => [task.id, task.status]))
-      this._depIndexDirty = false
-    } else {
-      taskStatusMap = this._refreshDependencyIndex()
+    // Capture circuit breaker state at drain start — the open timestamp only
+    // changes when recordFailure() is called, which happens on spawn failures.
+    // Reading it once here is safe for this drain tick's precondition log.
+    const circuitBreaker = this._circuitBreaker
+    const drainDeps: DrainLoopDeps = {
+      config: this.config,
+      repo: this.repo,
+      depIndex: this._depIndex,
+      metrics: this._metrics,
+      logger: this.logger,
+      isShuttingDown: () => this._shuttingDown,
+      isCircuitOpen: (now?: number) => circuitBreaker.isOpen(now),
+      circuitOpenUntil: circuitBreaker.openUntilTimestamp,
+      activeAgents: this._activeAgents,
+      getConcurrency: () => this._concurrency,
+      lastTaskDeps: this._lastTaskDeps,
+      isDepIndexDirty: () => this._depIndexDirty,
+      setDepIndexDirty: (dirty) => { this._depIndexDirty = dirty },
+      setConcurrency: (state) => { this._concurrency = state },
+      processQueuedTask: (raw, map) => this._processQueuedTask(raw, map)
     }
-
-    const available = availableSlots(this._concurrency, this._activeAgents.size)
-    if (available <= 0) return
-
-    try {
-      await this._drainQueuedTasks(available, taskStatusMap)
-    } catch (err) {
-      this.logger.error(`[agent-manager] Drain loop error: ${err}`)
-    }
-
-    this._metrics.setLastDrainDuration(Date.now() - drainStart)
-    this._concurrency = tryRecover(this._concurrency, Date.now())
+    return runDrain(drainDeps)
   }
 
-  // ---- watchdogLoop ----
+  // ---- Watchdog delegates ----
 
   /**
-   * Abort an active agent's handle and send SIGKILL to its subprocess if available,
-   * then remove it from the active agents map.
-   * SDK may not expose process — revisit when SDK exposes subprocess handle.
+   * Execute one watchdog tick. Delegates to watchdog-loop.ts.
+   * Exposed via _ prefix for testability.
    */
-  private killActiveAgent(agent: ActiveAgent): void {
-    try {
-      agent.handle.abort()
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const proc = (agent.handle as any).process
-      if (proc && typeof proc.kill === 'function') {
-        proc.kill('SIGKILL')
-      }
-    } catch (err) {
-      this.logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
-    }
-    // Delete agent — activeCount is derived from activeAgents.size
-    this._activeAgents.delete(agent.taskId)
-  }
-
   _watchdogLoop(): void {
-    // Collect agents to kill before iterating to avoid mutating Map during iteration
-    const agentsToKill: Array<{ agent: ActiveAgent; verdict: WatchdogAction }> = []
-    for (const agent of this._activeAgents.values()) {
-      if (this._processingTasks.has(agent.taskId)) continue
-      const verdict = checkAgent(agent, Date.now(), this.config)
-      if (verdict !== 'ok') {
-        agentsToKill.push({ agent, verdict })
-      }
+    const watchdogDeps: WatchdogLoopDeps = {
+      config: this.config,
+      repo: this.repo,
+      metrics: this._metrics,
+      logger: this.logger,
+      activeAgents: this._activeAgents,
+      processingTasks: this._processingTasks,
+      getConcurrency: () => this._concurrency,
+      setConcurrency: (state) => { this._concurrency = state },
+      onTaskTerminal: this.onTaskTerminal.bind(this)
     }
-
-    // Process kills
-    for (const { agent, verdict } of agentsToKill) {
-      this.logger.warn(`[agent-manager] Watchdog killing task ${agent.taskId}: ${verdict}`)
-      this._metrics.recordWatchdogVerdict(verdict)
-      if (verdict === 'rate-limit-loop') {
-        this._metrics.increment('retriesQueued')
-      }
-
-      this.killActiveAgent(agent)
-
-      // Get verdict decision, then apply side effects
-      const now = nowIso()
-      const maxRuntimeMs = agent.maxRuntimeMs ?? this.config.maxRuntimeMs
-      const result = handleWatchdogVerdict(verdict, this._concurrency, now, maxRuntimeMs)
-      this._concurrency = result.concurrency
-
-      if (result.taskUpdate) {
-        try {
-          this.repo.updateTask(agent.taskId, result.taskUpdate)
-        } catch (err) {
-          this.logger.warn(
-            `[agent-manager] Failed to update task ${agent.taskId} after ${verdict}: ${err}`
-          )
-        }
-      }
-      if (result.shouldNotifyTerminal && result.terminalStatus) {
-        this.onTaskTerminal(agent.taskId, result.terminalStatus).catch((err) =>
-          this.logger.warn(
-            `[agent-manager] Failed onTerminal for task ${agent.taskId} after ${verdict}: ${err}`
-          )
-        )
-      }
-    }
+    runWatchdog(watchdogDeps)
   }
 
-  // ---- orphanLoop ----
+  // ---- Orphan loop ----
 
   private async _orphanLoop(): Promise<void> {
     try {
@@ -565,25 +419,17 @@ export class AgentManagerImpl implements AgentManager {
     }
   }
 
-  // ---- pruneLoop ----
-
-  private _isReviewTask(taskId: string): boolean {
-    try {
-      const task = this.repo.getTask(taskId)
-      return task?.status === 'review'
-    } catch {
-      return false
-    }
-  }
+  // ---- Prune loop delegate ----
 
   private async _pruneLoop(): Promise<void> {
     try {
-      await pruneStaleWorktrees(
-        this.config.worktreeBase,
-        (id: string) => this._activeAgents.has(id),
-        this.logger,
-        (id: string) => this._isReviewTask(id)
-      )
+      await runPruneLoop({
+        worktreeBase: this.config.worktreeBase,
+        repo: this.repo,
+        logger: this.logger,
+        isActiveAgent: (id) => this._activeAgents.has(id),
+        isReviewTask: (id) => checkIsReviewTask(id, this.repo)
+      })
     } catch (err) {
       this.logger.error(`[agent-manager] Worktree prune error: ${err}`)
     }
@@ -640,12 +486,14 @@ export class AgentManagerImpl implements AgentManager {
       this.logger.error(`[agent-manager] Failed to build dependency index: ${err}`)
     }
 
-    // Initial worktree prune (fire-and-forget)
+    // Initial worktree prune (fire-and-forget) — called directly so the caller
+    // can attach the "Initial worktree prune error" message; the periodic
+    // _pruneLoop() uses a separate message.
     pruneStaleWorktrees(
       this.config.worktreeBase,
       (id: string) => this._activeAgents.has(id),
       this.logger,
-      (id: string) => this._isReviewTask(id)
+      (id: string) => checkIsReviewTask(id, this.repo)
     ).catch((err) => {
       this.logger.error(`[agent-manager] Initial worktree prune error: ${err}`)
     })
@@ -710,50 +558,17 @@ export class AgentManagerImpl implements AgentManager {
       this.pruneTimer = null
     }
 
-    // Wait for any in-flight drain to complete before aborting agents
-    if (this._drainInFlight) {
-      await this._drainInFlight.catch((err) => {
-        logError(this.logger, '[agent-manager] Drain in-flight failed during shutdown', err)
-      })
-      this._drainInFlight = null
-    }
-
-    // Abort all active agents
-    for (const agent of this._activeAgents.values()) {
-      try {
-        agent.handle.abort()
-      } catch (err) {
-        this.logger.warn(
-          `[agent-manager] Failed to abort agent ${agent.taskId} during shutdown: ${err}`
-        )
-      }
-    }
-
-    // Wait for all agent promises to settle (with timeout)
-    if (this._agentPromises.size > 0) {
-      const allSettled = Promise.allSettled([...this._agentPromises])
-      const timeout = new Promise<void>((r) => setTimeout(r, timeoutMs))
-      await Promise.race([allSettled, timeout])
-    }
-
-    // Re-queue any tasks that are still active after agent shutdown
-    for (const agent of this._activeAgents.values()) {
-      try {
-        this.repo.updateTask(agent.taskId, {
-          status: 'queued',
-          claimed_by: null,
-          started_at: null,
-          notes: 'Task was re-queued due to BDE shutdown while agent was running.'
-        })
-        this.logger.info(`[agent-manager] Re-queued task ${agent.taskId} during shutdown`)
-      } catch (err) {
-        this.logger.warn(`[agent-manager] Failed to re-queue task ${agent.taskId}: ${err}`)
-      }
-    }
-    this._activeAgents.clear()
-
-    // Flush any pending agent events to SQLite before shutdown
-    flushAgentEventBatcher()
+    await executeShutdown(
+      {
+        repo: this.repo,
+        logger: this.logger,
+        activeAgents: this._activeAgents,
+        agentPromises: this._agentPromises,
+        drainInFlight: this._drainInFlight
+      },
+      timeoutMs
+    )
+    this._drainInFlight = null
 
     this._running = false
     this.logger.info('[agent-manager] Stopped')
@@ -794,48 +609,12 @@ export class AgentManagerImpl implements AgentManager {
   }
 
   reloadConfig(): { updated: string[]; requiresRestart: string[] } {
-    const updated: string[] = []
-    const requiresRestart: string[] = []
-
-    const newMaxConcurrent = getSettingJson<number>('agentManager.maxConcurrent')
-    if (typeof newMaxConcurrent === 'number' && newMaxConcurrent !== this.config.maxConcurrent) {
-      this.config.maxConcurrent = newMaxConcurrent
-      // Update the cap in place — preserving activeCount so in-flight agents
-      // are still accounted for. If lowered below activeCount, availableSlots
-      // returns 0 until enough agents drain. If raised, new slots are
-      // immediately available. See `setMaxSlots` for the contract.
-      setMaxSlots(this._concurrency, newMaxConcurrent)
-      updated.push('maxConcurrent')
-    }
-
-    const newMaxRuntimeMs = getSettingJson<number>('agentManager.maxRuntimeMs')
-    if (typeof newMaxRuntimeMs === 'number' && newMaxRuntimeMs !== this.config.maxRuntimeMs) {
-      this.config.maxRuntimeMs = newMaxRuntimeMs
-      updated.push('maxRuntimeMs')
-    }
-
-    const newDefaultModel = getSetting('agentManager.defaultModel')
-    if (newDefaultModel && newDefaultModel !== this.config.defaultModel) {
-      this.config.defaultModel = newDefaultModel
-      // Also update runAgentDeps.defaultModel so newly spawned agents see it.
-      this.runAgentDeps.defaultModel = newDefaultModel
-      updated.push('defaultModel')
-    }
-
-    const newWorktreeBase = getSetting('agentManager.worktreeBase')
-    if (newWorktreeBase && newWorktreeBase !== this.config.worktreeBase) {
-      requiresRestart.push('worktreeBase')
-    }
-
-    if (updated.length > 0) {
-      this.logger.info(`[agent-manager] Hot-reloaded config fields: ${updated.join(', ')}`)
-    }
-    if (requiresRestart.length > 0) {
-      this.logger.info(
-        `[agent-manager] Config fields changed that require restart: ${requiresRestart.join(', ')}`
-      )
-    }
-    return { updated, requiresRestart }
+    return reloadConfiguration({
+      config: this.config,
+      concurrency: this._concurrency,
+      runAgentDeps: this.runAgentDeps,
+      logger: this.logger
+    })
   }
 
   killAgent(taskId: string): { killed: boolean; error?: string } {
@@ -863,3 +642,6 @@ export function createAgentManager(
 ): AgentManager {
   return new AgentManagerImpl(config, repo, logger)
 }
+
+// Re-export killActiveAgent for callers that need to kill agents directly
+export { killActiveAgent }
