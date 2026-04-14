@@ -213,7 +213,11 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     try {
       await window.api.sprint.delete(taskId)
       set((s) => ({
-        tasks: s.tasks.filter((t) => t.id !== taskId)
+        tasks: s.tasks.filter((t) => t.id !== taskId),
+        pendingUpdates: Object.fromEntries(
+          Object.entries(s.pendingUpdates).filter(([id]) => id !== taskId)
+        ),
+        pendingCreates: s.pendingCreates.filter((id) => id !== taskId)
       }))
       toast.success('Task deleted')
     } catch (e) {
@@ -395,7 +399,11 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       // Remove successfully deleted tasks from state
       const deletedIds = new Set(result.results.filter((r) => r.ok).map((r) => r.id))
       set((s) => ({
-        tasks: s.tasks.filter((t) => !deletedIds.has(t.id))
+        tasks: s.tasks.filter((t) => !deletedIds.has(t.id)),
+        pendingUpdates: Object.fromEntries(
+          Object.entries(s.pendingUpdates).filter(([id]) => !deletedIds.has(id))
+        ),
+        pendingCreates: s.pendingCreates.filter((id) => !deletedIds.has(id))
       }))
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to delete tasks')
