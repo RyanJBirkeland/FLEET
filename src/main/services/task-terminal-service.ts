@@ -8,6 +8,8 @@ import { createEpicDependencyIndex, type EpicDependencyIndex } from './epic-depe
 import type { SprintTask, TaskDependency, TaskGroup, EpicDependency } from '../../shared/types'
 import { broadcast } from '../broadcast'
 import { getErrorMessage } from '../../shared/errors'
+import { refreshDependencyIndex, type DepsFingerprint } from '../agent-manager/dependency-refresher'
+import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 
 type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_id'> & {
   depends_on: TaskDependency[] | null
@@ -16,7 +18,11 @@ type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_i
 export interface TaskTerminalServiceDeps {
   getTask: (id: string) => TaskSlice | null
   updateTask: (id: string, patch: Record<string, unknown>) => unknown
-  getTasksWithDependencies: () => Array<{ id: string; depends_on: TaskDependency[] | null }>
+  getTasksWithDependencies: () => Array<{
+    id: string
+    depends_on: TaskDependency[] | null
+    status: string
+  }>
   getGroup: (id: string) => TaskGroup | null
   getGroupsWithDependencies: () => Array<{ id: string; depends_on: EpicDependency[] | null }>
   listGroupTasks: (groupId: string) => SprintTask[]
@@ -57,10 +63,18 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
   const depIndex: DependencyIndex = createDependencyIndex()
   const epicIndex: EpicDependencyIndex = createEpicDependencyIndex()
   const resolver = new BatchedTaskResolver()
+  const fingerprints: DepsFingerprint = new Map()
 
   function rebuildIndex(): void {
-    const tasks = deps.getTasksWithDependencies()
-    depIndex.rebuild(tasks)
+    // Use incremental refresher for task dependencies (same as agent-manager drain loop)
+    // to avoid stale index issues when tasks are created after last refresh.
+    const repo = { getTasksWithDependencies: deps.getTasksWithDependencies } as Pick<
+      IAgentTaskRepository,
+      'getTasksWithDependencies'
+    >
+    refreshDependencyIndex(depIndex, fingerprints, repo as IAgentTaskRepository, deps.logger)
+
+    // Epic dependencies still use full rebuild
     const groups = deps.getGroupsWithDependencies()
     epicIndex.rebuild(groups)
   }

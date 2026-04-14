@@ -96,7 +96,8 @@ describe('createTaskTerminalService', () => {
 
     vi.runAllTimers()
 
-    expect(deps.logger.error).toHaveBeenCalledWith(expect.stringContaining('db boom'))
+    // refreshDependencyIndex catches errors and logs with warn (not error)
+    expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('db boom'))
   })
 
   it('debounces multiple concurrent terminal events into one resolution pass', () => {
