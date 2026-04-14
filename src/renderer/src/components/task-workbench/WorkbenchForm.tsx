@@ -1,10 +1,10 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
-import { useSprintTasks, type CreateTicketInput } from '../../stores/sprintTasks'
-import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
+import { useSprintTasks } from '../../stores/sprintTasks'
 import { useValidationChecks } from '../../hooks/useValidationChecks'
 import { useTaskFormState } from '../../hooks/useTaskFormState'
 import { useSpecQualityChecks } from '../../hooks/useSpecQualityChecks'
+import { useTaskCreation } from '../../hooks/useTaskCreation'
 import { SpecEditor } from './SpecEditor'
 import { ValidationChecks } from './ValidationChecks'
 import { WorkbenchActions } from './WorkbenchActions'
@@ -76,8 +76,6 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
   } = form
 
   const allTasks = useSprintTasks((s) => s.tasks)
-  const updateTask = useSprintTasks((s) => s.updateTask)
-  const { createTask } = useSprintTaskActions()
 
   const [submitting, setSubmitting] = useState(false)
   const [generating, setGenerating] = useState(false)
@@ -89,65 +87,23 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
   useValidationChecks()
   useSpecQualityChecks({ spec, title, repo, specType })
 
-  const setOperationalChecks = useTaskWorkbenchStore((s) => s.setOperationalChecks)
-
-  // Shared helper to create or update a task with the given status
-  const createOrUpdateTask = useCallback(
-    async (targetStatus: 'backlog' | 'queued') => {
-      const specType = useTaskWorkbenchStore.getState().specType
-      if (mode === 'edit' && taskId) {
-        await updateTask(taskId, {
-          title,
-          repo,
-          priority,
-          spec,
-          depends_on: dependsOn.length > 0 ? dependsOn : null,
-          playground_enabled: playgroundEnabled || undefined,
-          max_cost_usd: maxCostUsd ?? undefined,
-          model: model || undefined,
-          status: targetStatus,
-          spec_type: specType ?? undefined,
-          cross_repo_contract: crossRepoContract || undefined
-        })
-      } else {
-        const input: CreateTicketInput = {
-          title,
-          repo,
-          prompt: title,
-          spec,
-          priority,
-          depends_on: dependsOn.length > 0 ? dependsOn : undefined,
-          playground_enabled: playgroundEnabled || undefined,
-          max_cost_usd: maxCostUsd ?? undefined,
-          model: model || undefined,
-          spec_type: specType ?? undefined,
-          group_id: pendingGroupId ?? undefined,
-          cross_repo_contract: crossRepoContract || undefined
-        }
-        const createdId = await createTask(input)
-        // createTask hardcodes status=backlog. If queuing, promote to queued.
-        if (targetStatus === 'queued' && createdId) {
-          await updateTask(createdId, { status: 'queued' })
-        }
-      }
-    },
-    [
-      mode,
-      taskId,
+  const { save, saveConfirmed } = useTaskCreation({
+    mode,
+    taskId,
+    formData: {
       title,
       repo,
       priority,
       spec,
+      specType,
       dependsOn,
       playgroundEnabled,
       maxCostUsd,
       model,
       pendingGroupId,
-      crossRepoContract,
-      createTask,
-      updateTask
-    ]
-  )
+      crossRepoContract
+    }
+  })
 
   useEffect(() => {
     const t = setTimeout(() => titleRef.current?.focus(), 100)
@@ -158,82 +114,16 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
     async (action: 'backlog' | 'queue') => {
       setSubmitting(true)
       try {
-        // Run operational checks for queue
-        if (action === 'queue') {
-          useTaskWorkbenchStore.setState({ operationalLoading: true })
-          const opResult = await window.api.workbench.checkOperational({ repo })
-          const opChecks = [
-            {
-              id: 'auth',
-              label: 'Auth',
-              tier: 3 as const,
-              status: opResult.auth.status,
-              message: opResult.auth.message
-            },
-            {
-              id: 'repo-path',
-              label: 'Repo Path',
-              tier: 3 as const,
-              status: opResult.repoPath.status,
-              message: opResult.repoPath.message,
-              fieldId: 'wb-form-repo'
-            },
-            {
-              id: 'git-clean',
-              label: 'Git Clean',
-              tier: 3 as const,
-              status: opResult.gitClean.status,
-              message: opResult.gitClean.message,
-              fieldId: 'wb-form-repo'
-            },
-            {
-              id: 'no-conflict',
-              label: 'No Conflict',
-              tier: 3 as const,
-              status: opResult.noConflict.status,
-              message: opResult.noConflict.message,
-              fieldId: 'wb-form-repo'
-            },
-            {
-              id: 'slots',
-              label: 'Agent Slots',
-              tier: 3 as const,
-              status: opResult.slotsAvailable.status,
-              message: opResult.slotsAvailable.message
-            }
-          ]
-          setOperationalChecks(opChecks)
-
-          // Block if any operational check fails
-          if (opChecks.some((c) => c.status === 'fail')) {
-            useTaskWorkbenchStore.setState({ checksExpanded: true })
-            setSubmitting(false)
-            return
-          }
-
-          // Collect ALL warnings: operational + advisory structural/semantic
-          const allStructural = useTaskWorkbenchStore.getState().structuralChecks
-          const allSemantic = useTaskWorkbenchStore.getState().semanticChecks
-          const advisoryWarnings = [...allStructural, ...allSemantic].filter(
-            (c) => c.status === 'warn'
-          )
-          const opWarnings = opChecks.filter((c) => c.status === 'warn')
-          const allWarnings = [...advisoryWarnings, ...opWarnings]
-          if (allWarnings.length > 0) {
-            const lines = allWarnings.map((c) => `• ${c.label}: ${c.message}`)
-            setQueueConfirmMessage(
-              `The following checks have warnings:\n\n${lines.join('\n')}\n\nQueue anyway?`
-            )
-            useTaskWorkbenchStore.setState({ checksExpanded: true })
-            setShowQueueConfirm(true)
-            setSubmitting(false)
-            return
-          }
+        const result = await save(action === 'queue' ? 'queued' : 'backlog')
+        if (result.outcome === 'blocked') {
+          return
         }
-
-        // Proceed with create/update — resetForm clears the saved draft too,
-        // so the next create-mode session starts blank.
-        await createOrUpdateTask(action === 'queue' ? 'queued' : 'backlog')
+        if (result.outcome === 'confirm') {
+          setQueueConfirmMessage(result.confirmMessage ?? 'Some checks have warnings. Queue anyway?')
+          setShowQueueConfirm(true)
+          return
+        }
+        // outcome === 'ok'
         resetForm()
         toast.success(mode === 'edit' && taskId ? 'Task updated' : 'Task created')
       } catch (e) {
@@ -243,19 +133,19 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
         setSubmitting(false)
       }
     },
-    [createOrUpdateTask, resetForm, setOperationalChecks, repo, mode, taskId]
+    [save, resetForm, mode, taskId]
   )
 
   const handleConfirmedQueue = useCallback(async () => {
     setShowQueueConfirm(false)
     setSubmitting(true)
     try {
-      await createOrUpdateTask('queued')
+      await saveConfirmed('queued')
       resetForm()
     } finally {
       setSubmitting(false)
     }
-  }, [createOrUpdateTask, resetForm])
+  }, [saveConfirmed, resetForm])
 
   const handleGenerate = useCallback(async () => {
     if (!title.trim()) {
