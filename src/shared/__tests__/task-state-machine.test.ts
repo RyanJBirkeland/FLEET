@@ -11,7 +11,7 @@ import {
   isFailure,
   isHardSatisfied
 } from '../task-state-machine'
-import { type BucketKey, STATUS_METADATA } from '../../renderer/src/lib/task-status-ui'
+import { type BucketKey, STATUS_METADATA } from '../task-statuses'
 
 describe('task-state-machine', () => {
   describe('TASK_STATUSES', () => {

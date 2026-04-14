@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Edit2 } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
+import { TERMINAL_STATUSES } from '../../../../shared/task-statuses'
 import { STATUS_METADATA } from '../../lib/task-status-ui'
 import { LoadingState } from '../ui/LoadingState'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
@@ -21,8 +22,6 @@ export interface TaskListProps {
   onReorderTasks?: (orderedTaskIds: string[]) => void
   onSpecChange: (spec: string) => void
 }
-
-const TERMINAL_STATUSES = new Set(['done', 'cancelled', 'failed', 'error'])
 
 export function TaskList({
   tasks,

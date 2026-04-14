@@ -1,4 +1,4 @@
-import { TASK_STATUS } from './constants'
+import type { TaskStatus } from './task-state-machine'
 
 // SSE event types
 export type TaskUpdateEvent = {
@@ -24,7 +24,7 @@ export type CreateTaskRequest = {
   spec?: string
 }
 export type UpdateTaskRequest = {
-  status?: (typeof TASK_STATUS)[keyof typeof TASK_STATUS]
+  status?: TaskStatus
   pr_url?: string
   pr_number?: number
 }
