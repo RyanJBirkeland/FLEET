@@ -32,7 +32,7 @@ fi
 # The EXIT trap kills all background jobs when the hook finishes (success or
 # failure). Without it, orphaned background jobs from a failed hook run can
 # race with node-gyp on retries, corrupting the build directory.
-cleanup() { kill $(jobs -p) 2>/dev/null; true; }
+cleanup() { kill $(jobs -p) 2>/dev/null || true; }
 trap cleanup EXIT
 
 current_branch=$(git symbolic-ref --short HEAD 2>/dev/null || echo "")
