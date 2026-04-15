@@ -33,7 +33,7 @@ export function withMaxOldSpaceOption(existing: string | undefined, maxOldSpaceM
 }
 
 export function spawnViaCli(
-  opts: { prompt: string; cwd: string; model: string },
+  opts: { prompt: string; cwd: string; model: string; maxBudgetUsd?: number },
   env: NodeJS.ProcessEnv,
   token: string | null,
   _logger?: unknown
@@ -48,6 +48,13 @@ export function spawnViaCli(
   env = {
     ...env,
     NODE_OPTIONS: withMaxOldSpaceOption(env.NODE_OPTIONS, AGENT_PROCESS_MAX_OLD_SPACE_MB)
+  }
+
+  // Pass budget constraint via env var — the exact CLI flag name (--max-cost vs --budget)
+  // is not verified against the binary here, so we use the env approach as a safe fallback.
+  // TODO: verify --max-cost flag name against claude CLI and switch to args if confirmed.
+  if (opts.maxBudgetUsd !== undefined) {
+    env = { ...env, CLAUDE_MAX_COST_USD: String(opts.maxBudgetUsd) }
   }
 
   const child = spawn(

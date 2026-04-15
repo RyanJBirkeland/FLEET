@@ -88,18 +88,26 @@ export async function validateDrainPreconditions(deps: DrainLoopDeps): Promise<b
  */
 export function buildTaskStatusMap(deps: DrainLoopDeps): Map<string, string> {
   if (deps.isDepIndexDirty()) {
-    const allTasks = deps.repo.getTasksWithDependencies()
-    deps.depIndex.rebuild(allTasks)
-    deps.lastTaskDeps.clear()
-    for (const task of allTasks) {
-      const taskDeps = task.depends_on ?? null
-      deps.lastTaskDeps.set(task.id, {
-        deps: taskDeps,
-        hash: computeDepsFingerprint(taskDeps)
-      })
+    try {
+      const allTasks = deps.repo.getTasksWithDependencies()
+      deps.depIndex.rebuild(allTasks)
+      deps.lastTaskDeps.clear()
+      for (const task of allTasks) {
+        const taskDeps = task.depends_on ?? null
+        deps.lastTaskDeps.set(task.id, {
+          deps: taskDeps,
+          hash: computeDepsFingerprint(taskDeps)
+        })
+      }
+      deps.setDepIndexDirty(false)
+      return new Map(allTasks.map((task) => [task.id, task.status]))
+    } catch (err) {
+      deps.logger.error(`[agent-manager] Dep-index full rebuild failed — falling back to incremental refresh: ${err}`)
+      // Clear dirty flag so we don't retry the full rebuild on every tick while the
+      // repo is unavailable. The incremental refresher below will re-set it dirty
+      // when tasks change again.
+      deps.setDepIndexDirty(false)
     }
-    deps.setDepIndexDirty(false)
-    return new Map(allTasks.map((task) => [task.id, task.status]))
   }
   return refreshDependencyIndex(deps.depIndex, deps.lastTaskDeps, deps.repo, deps.logger)
 }

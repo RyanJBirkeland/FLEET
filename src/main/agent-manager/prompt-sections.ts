@@ -103,6 +103,16 @@ export function truncateSpec(spec: string, maxChars: number): string {
 }
 
 /**
+ * Escapes the closing tag sequence `</` that could break XML boundary tag containment.
+ * Full XML entity encoding is intentionally avoided — it would corrupt diff content
+ * (e.g. `<` in diff hunks becoming `&lt;`). Only `</` → `<\/` is needed to prevent
+ * a prior agent's output from injecting content outside its boundary tag.
+ */
+export function escapeXmlContent(content: string): string {
+  return content.replace(/<\//g, '<\\/')
+}
+
+/**
  * Formats upstream task context (dependencies) into a standard prompt section.
  * Used by pipeline, assistant, copilot, and synthesizer agents.
  */
@@ -117,14 +127,16 @@ export function buildUpstreamContextSection(
   section += 'This task depends on the following completed tasks:\n\n'
 
   for (const upstream of upstreamContext) {
-    const cappedSpec = truncateSpec(upstream.spec, PROMPT_TRUNCATION.UPSTREAM_SPEC_CHARS)
+    const cappedSpec = escapeXmlContent(truncateSpec(upstream.spec, PROMPT_TRUNCATION.UPSTREAM_SPEC_CHARS))
     section += `### ${upstream.title}\n\n<upstream_spec>\n${cappedSpec}\n</upstream_spec>\n\n`
 
     if (upstream.partial_diff) {
       const truncated = upstream.partial_diff.length > PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS
-      const cappedDiff = truncated
-        ? upstream.partial_diff.slice(0, PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS) + '\n\n[... diff truncated]'
-        : upstream.partial_diff
+      const cappedDiff = escapeXmlContent(
+        truncated
+          ? upstream.partial_diff.slice(0, PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS) + '\n\n[... diff truncated]'
+          : upstream.partial_diff
+      )
       section += `<details>\n<summary>Partial changes from upstream task</summary>\n\n<upstream_diff>\n\`\`\`diff\n${cappedDiff}\n\`\`\`\n</upstream_diff>\n</details>\n\n`
     }
   }
@@ -165,7 +177,7 @@ export function buildRetryContext(retryCount: number, previousNotes?: string): s
   const attemptNum = retryCount + 1
   const maxAttempts = MAX_RETRIES_FOR_DISPLAY + 1
   const notesText = previousNotes
-    ? `Previous attempt failed:\n<failure_notes>\n${truncateSpec(previousNotes, PROMPT_TRUNCATION.RETRY_NOTES_CHARS)}\n</failure_notes>`
+    ? `Previous attempt failed:\n<failure_notes>\n${escapeXmlContent(truncateSpec(previousNotes, PROMPT_TRUNCATION.RETRY_NOTES_CHARS))}\n</failure_notes>`
     : 'No failure notes from previous attempt.'
   return `\n\n## Retry Context\nThis is attempt ${attemptNum} of ${maxAttempts}. ${notesText}\nDo not repeat your prior approach — analyze the failure and try something different.\nIf the failure was a test/typecheck error, fix that specific error first.`
 }

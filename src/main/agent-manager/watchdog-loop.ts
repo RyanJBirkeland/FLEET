@@ -42,11 +42,12 @@ export interface WatchdogLoopDeps {
 // ---------------------------------------------------------------------------
 
 /**
- * Abort an active agent's handle and send SIGKILL to its subprocess if available,
- * then remove it from the active agents map.
+ * Abort an active agent's OS handle and send SIGKILL to its subprocess if available.
+ * Does NOT remove the agent from the active-agents map — callers are responsible for
+ * map removal after the DB write succeeds (or after deciding to remove on DB failure).
  * SDK may not expose process — revisit when SDK exposes subprocess handle.
  */
-export function killActiveAgent(agent: ActiveAgent, activeAgents: Map<string, ActiveAgent>, logger: Logger): void {
+export function abortAgent(agent: ActiveAgent, logger: Logger): void {
   try {
     agent.handle.abort()
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -57,10 +58,26 @@ export function killActiveAgent(agent: ActiveAgent, activeAgents: Map<string, Ac
   } catch (err) {
     logger.warn(`[agent-manager] Failed to abort agent ${agent.taskId}: ${err}`)
   }
+}
+
+/**
+ * Remove an agent from the active-agents map if it is still current.
+ * Guards against removing a newer retry that has overwritten the same task slot.
+ */
+export function removeAgentFromMap(agent: ActiveAgent, activeAgents: Map<string, ActiveAgent>): void {
   // Guard: only remove if this run's entry is still current — a retry may have overwritten it
   if (activeAgents.get(agent.taskId)?.agentRunId === agent.agentRunId) {
     activeAgents.delete(agent.taskId)
   }
+}
+
+/**
+ * Abort an active agent's handle and remove it from the active agents map.
+ * Kept for backward compatibility with callers that need the combined operation.
+ */
+export function killActiveAgent(agent: ActiveAgent, activeAgents: Map<string, ActiveAgent>, logger: Logger): void {
+  abortAgent(agent, logger)
+  removeAgentFromMap(agent, activeAgents)
 }
 
 // ---------------------------------------------------------------------------
@@ -91,7 +108,8 @@ export function runWatchdog(deps: WatchdogLoopDeps): void {
       deps.metrics.increment('retriesQueued')
     }
 
-    killActiveAgent(agent, deps.activeAgents, deps.logger)
+    // Step 1: Kill the OS process — does NOT yet remove from map.
+    abortAgent(agent, deps.logger)
     cleanupWorktreeIfNotInReview(agent, deps)
 
     const now = nowIso()
@@ -99,6 +117,10 @@ export function runWatchdog(deps: WatchdogLoopDeps): void {
     const result = handleWatchdogVerdict(verdict, deps.getConcurrency(), now, maxRuntimeMs)
     deps.setConcurrency(result.concurrency)
 
+    // Step 2: Persist the status change to DB before removing from map.
+    // If the DB write fails the agent is still gone from the process level,
+    // so we remove from the map anyway — but the task stays in `active` in DB
+    // until orphan-recovery resets it on the next startup.
     if (result.taskUpdate) {
       try {
         deps.repo.updateTask(agent.taskId, result.taskUpdate)
@@ -108,6 +130,13 @@ export function runWatchdog(deps: WatchdogLoopDeps): void {
         )
       }
     }
+
+    // Step 3: Remove from map only after DB write attempt so the watchdog does
+    // not re-kill the same agent on the next tick before the status lands.
+    removeAgentFromMap(agent, deps.activeAgents)
+
+    // Step 4: Notify terminal handler after map removal so downstream logic
+    // (dep resolution, metrics) sees a consistent state.
     if (result.shouldNotifyTerminal && result.terminalStatus) {
       deps.onTaskTerminal(agent.taskId, result.terminalStatus).catch((err) =>
         deps.logger.warn(

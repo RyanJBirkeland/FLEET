@@ -43,7 +43,12 @@ export async function spawnAgent(opts: {
     // SDK not available — use CLI fallback
   }
 
-  return spawnViaCli(opts, env, token, opts.logger)
+  return spawnViaCli(
+    { prompt: opts.prompt, cwd: opts.cwd, model: opts.model, maxBudgetUsd: opts.maxBudgetUsd },
+    env,
+    token,
+    opts.logger
+  )
 }
 
 /**
