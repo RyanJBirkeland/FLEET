@@ -80,6 +80,16 @@ vi.mock('../../settings', () => ({
   })
 }))
 
+// Mock review-paths validateGitRef
+vi.mock('../../lib/review-paths', () => ({
+  validateGitRef: vi.fn((ref: string) => {
+    const SAFE_REF_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9/_.-]{0,198}$/
+    if (!ref || !SAFE_REF_PATTERN.test(ref)) {
+      throw new Error(`Invalid git ref: "${ref}". Must match pattern [a-zA-Z0-9/_.-], max 200 chars.`)
+    }
+  })
+}))
+
 import { registerGitHandlers } from '../git-handlers'
 import { safeHandle } from '../../ipc-utils'
 import { getRepoPaths, gitStatus, gitDiffFile, gitCommit, gitFetch, gitPull } from '../../git'
@@ -639,5 +649,101 @@ describe('git:pull handler', () => {
       success: false,
       error: 'git pull failed in /Users/test/projects/BDE: network error'
     })
+  })
+
+  it('rejects invalid branch name with leading dash', () => {
+    const handler = captureHandler('git:pull')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', '--malicious')
+    }).toThrow(/Invalid git ref/)
+
+    expect(gitPull).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid branch name with shell metacharacters', () => {
+    const handler = captureHandler('git:pull')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', 'branch;rm -rf /')
+    }).toThrow(/Invalid git ref/)
+
+    expect(gitPull).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid branch name with command substitution', () => {
+    const handler = captureHandler('git:pull')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', 'branch$(whoami)')
+    }).toThrow(/Invalid git ref/)
+
+    expect(gitPull).not.toHaveBeenCalled()
+  })
+
+  it('rejects invalid branch name with path traversal', () => {
+    const handler = captureHandler('git:pull')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', '../../../etc/passwd')
+    }).toThrow(/Invalid git ref/)
+
+    expect(gitPull).not.toHaveBeenCalled()
+  })
+
+  it('rejects empty branch name', () => {
+    const handler = captureHandler('git:pull')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', '')
+    }).toThrow(/Invalid git ref/)
+
+    expect(gitPull).not.toHaveBeenCalled()
+  })
+})
+
+describe('git:checkout handler', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('rejects invalid branch name with leading dash', () => {
+    const handler = captureHandler('git:checkout')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', '--malicious')
+    }).toThrow(/Invalid git ref/)
+  })
+
+  it('rejects invalid branch name with shell metacharacters', () => {
+    const handler = captureHandler('git:checkout')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', 'branch;rm -rf /')
+    }).toThrow(/Invalid git ref/)
+  })
+
+  it('rejects invalid branch name with command substitution', () => {
+    const handler = captureHandler('git:checkout')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', 'branch$(whoami)')
+    }).toThrow(/Invalid git ref/)
+  })
+
+  it('rejects invalid branch name with path traversal', () => {
+    const handler = captureHandler('git:checkout')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', '../../../etc/passwd')
+    }).toThrow(/Invalid git ref/)
+  })
+
+  it('rejects empty branch name', () => {
+    const handler = captureHandler('git:checkout')
+
+    expect(() => {
+      handler(mockEvent, '/Users/test/projects/BDE', '')
+    }).toThrow(/Invalid git ref/)
   })
 })
