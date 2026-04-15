@@ -18,7 +18,8 @@ vi.mock('electron', () => ({
 
 // Mock broadcast
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 // Mock webhook-service
@@ -110,7 +111,8 @@ vi.mock('node:fs', async (importOriginal) => {
 // Mock data/event-queries (used lazily in agent:history)
 vi.mock('../../data/event-queries', () => ({
   getEventHistory: vi.fn(),
-  appendEvent: vi.fn()
+  appendEvent: vi.fn(),
+  insertEventBatch: vi.fn()
 }))
 
 // Mock db (used lazily in agent:history)

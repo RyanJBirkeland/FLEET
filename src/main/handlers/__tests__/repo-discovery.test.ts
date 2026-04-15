@@ -32,7 +32,8 @@ vi.mock('../../ipc-utils', () => ({
 }))
 
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 import { scanLocalRepos, listGithubRepos, cloneRepo } from '../repo-discovery'

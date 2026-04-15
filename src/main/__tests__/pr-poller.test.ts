@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 // Mock dependencies before importing
-vi.mock('../broadcast', () => ({ broadcast: vi.fn() }))
+vi.mock('../broadcast', () => ({ broadcast: vi.fn(), broadcastCoalesced: vi.fn() }))
 vi.mock('../config', () => ({
   getGitHubToken: vi.fn()
 }))

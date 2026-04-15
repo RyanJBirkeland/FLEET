@@ -51,7 +51,8 @@ vi.mock('../adhoc-agent', () => ({
 }))
 
 vi.mock('../data/event-queries', () => ({
-  getEventHistory: vi.fn().mockReturnValue([])
+  getEventHistory: vi.fn().mockReturnValue([]),
+  insertEventBatch: vi.fn()
 }))
 
 vi.mock('../git', () => ({

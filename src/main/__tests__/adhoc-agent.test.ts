@@ -10,7 +10,8 @@ vi.mock('../agent-history', () => ({
   updateAgentMeta: vi.fn()
 }))
 vi.mock('../data/event-queries', () => ({
-  appendEvent: vi.fn()
+  appendEvent: vi.fn(),
+  insertEventBatch: vi.fn()
 }))
 vi.mock('../data/agent-queries', () => ({
   insertAgentRunTurn: vi.fn()
@@ -19,7 +20,8 @@ vi.mock('../db', () => ({
   getDb: vi.fn(() => ({}))
 }))
 vi.mock('../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 vi.mock('node:fs', async (importOriginal) => {
   const actual = await importOriginal<typeof import('node:fs')>()

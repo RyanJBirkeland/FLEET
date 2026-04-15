@@ -16,7 +16,8 @@ vi.mock('node:child_process', () => {
 
 // Mock broadcast (required by run-agent imports)
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 // Mock agent-history (required by run-agent imports)

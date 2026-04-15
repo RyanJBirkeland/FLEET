@@ -3,7 +3,7 @@
  * Verifies that service wrappers delegate to sprint-queries
  * and fire mutation notifications on success.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import type { SprintTask, CreateTaskInput, QueueStats } from '../../../shared/types'
 
 // Mock electron (for BrowserWindow used by broadcast)
@@ -15,7 +15,8 @@ vi.mock('electron', () => ({
 
 // Mock broadcast
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 // Mock webhook-service
@@ -114,7 +115,12 @@ import { broadcast } from '../../broadcast'
 
 describe('sprint-service', () => {
   beforeEach(() => {
+    vi.useFakeTimers()
     vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
   })
 
   describe('getTask', () => {
@@ -155,6 +161,7 @@ describe('sprint-service', () => {
       const result = createTask(input as CreateTaskInput)
       expect(result).toEqual(created)
       expect(_createTask).toHaveBeenCalledWith(input)
+      vi.runAllTimers()
       expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
 
@@ -174,6 +181,7 @@ describe('sprint-service', () => {
       const result = updateTask('1', { title: 'Updated' })
       expect(result).toEqual(updated)
       expect(_updateTask).toHaveBeenCalledWith('1', { title: 'Updated' })
+      vi.runAllTimers()
       expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // updated)
     })
 
@@ -192,6 +200,7 @@ describe('sprint-service', () => {
 
       deleteTask('1')
       expect(_deleteTask).toHaveBeenCalledWith('1')
+      vi.runAllTimers()
       expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
 
@@ -210,7 +219,8 @@ describe('sprint-service', () => {
 
       const result = claimTask('1', 'agent-1')
       expect(result).toEqual(claimed)
-      expect(_claimTask).toHaveBeenCalledWith('1', 'agent-1')
+      expect(_claimTask).toHaveBeenCalledWith('1', 'agent-1', undefined)
+      vi.runAllTimers()
       expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // claimed)
     })
 
@@ -230,6 +240,7 @@ describe('sprint-service', () => {
       const result = releaseTask('1', 'agent-1')
       expect(result).toEqual(released)
       expect(_releaseTask).toHaveBeenCalledWith('1', 'agent-1')
+      vi.runAllTimers()
       expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // released)
     })
 

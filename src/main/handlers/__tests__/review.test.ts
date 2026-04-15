@@ -76,7 +76,8 @@ vi.mock('electron', () => ({
 
 // Mock broadcast
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 // Mock webhook-service

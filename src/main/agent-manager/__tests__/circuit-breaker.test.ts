@@ -17,7 +17,8 @@ vi.mock('../../data/sprint-queries', () => ({
 }))
 
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 vi.mock('../../paths', () => ({

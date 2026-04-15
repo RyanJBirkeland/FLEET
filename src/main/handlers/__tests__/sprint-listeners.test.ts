@@ -3,7 +3,8 @@ import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
 
 const mockBroadcast = vi.fn()
 vi.mock('../../broadcast', () => ({
-  broadcast: (...args: unknown[]) => mockBroadcast(...args)
+  broadcast: (...args: unknown[]) => mockBroadcast(...args),
+  broadcastCoalesced: vi.fn()
 }))
 
 const mockLogError = vi.fn()

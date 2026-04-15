@@ -92,7 +92,8 @@ vi.mock('../../services/dependency-service', async (importOriginal) => {
 
 // Mock broadcast
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 // Mock webhook-service

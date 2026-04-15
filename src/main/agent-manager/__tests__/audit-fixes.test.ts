@@ -16,7 +16,8 @@ import { tryEmitPlaygroundEvent } from '../playground-handler'
 // ---------------------------------------------------------------------------
 
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 vi.mock('node:fs/promises', () => ({

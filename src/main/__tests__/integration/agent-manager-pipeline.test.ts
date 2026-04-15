@@ -84,11 +84,13 @@ vi.mock('../../agent-manager/orphan-recovery', () => ({
 }))
 
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 vi.mock('../../data/event-queries', () => ({
-  appendEvent: vi.fn()
+  appendEvent: vi.fn(),
+  insertEventBatch: vi.fn()
 }))
 
 vi.mock('../../db', () => ({

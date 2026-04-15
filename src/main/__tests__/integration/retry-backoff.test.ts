@@ -7,7 +7,8 @@ import Database from 'better-sqlite3'
 
 // Mock broadcast to prevent Electron import
 vi.mock('../../broadcast', () => ({
-  broadcast: vi.fn()
+  broadcast: vi.fn(),
+  broadcastCoalesced: vi.fn()
 }))
 
 vi.mock('../../db', () => {
