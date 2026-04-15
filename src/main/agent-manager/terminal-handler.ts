@@ -2,6 +2,7 @@ import type { MetricsCollector } from './metrics'
 import type { DependencyIndex } from '../services/dependency-service'
 import type { EpicDependencyIndex } from '../services/epic-dependency-service'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import { NOTES_MAX_LENGTH } from './types'
 import type { AgentManagerConfig } from './types'
 import type { Logger } from '../logger'
 import { createLogger } from '../logger'
@@ -72,7 +73,17 @@ async function resolveTerminalDependents(
       onTaskTerminal
     )
   } catch (err) {
-    logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${err}`)
+    const errMsg = err instanceof Error ? err.message : String(err)
+    logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${errMsg}`)
+    const note = `Dependency resolution failed: ${errMsg}. Downstream tasks may remain blocked — check and manually re-queue them.`
+    const truncated = note.length > NOTES_MAX_LENGTH
+      ? '...' + note.slice(-(NOTES_MAX_LENGTH - 3))
+      : note
+    try {
+      repo.updateTask(taskId, { notes: truncated })
+    } catch (updateErr) {
+      logger.error(`[agent-manager] Failed to surface dep-resolution failure for ${taskId}: ${updateErr}`)
+    }
   }
 }
 
