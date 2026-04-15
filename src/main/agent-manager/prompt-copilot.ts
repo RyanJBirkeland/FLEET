@@ -64,7 +64,7 @@ export function buildCopilotPrompt(input: BuildPromptInput): string {
   if (input.formContext) {
     const { title, repo, spec } = input.formContext
     prompt += '\n\n## Task Context\n\n'
-    prompt += `Title:\n<task_title>\n${title}\n</task_title>\nRepo: ${repo}\n`
+    prompt += `Title:\n<task_title>\n${title}\n</task_title>\nRepo: <repo>${repo}</repo>\n`
     if (spec) {
       prompt += `\nSpec draft:\n<spec_draft>\n${spec}\n</spec_draft>\n`
     } else {

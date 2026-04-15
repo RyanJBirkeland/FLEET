@@ -181,10 +181,15 @@ export class SizeWarningsValidator implements ISpecValidator {
     const issues: SpecIssue[] = []
 
     if (spec.wordCount > WORD_LIMIT) {
+      // Hard block at 1000 words — specs this long cause 100% agent timeout.
+      // Advisory warning between 500–1000 words so users can still queue if they accept the risk.
+      const isHardBlock = spec.wordCount > 1000
       issues.push({
         code: 'SPEC_TOO_LONG',
-        severity: 'warning',
-        message: `Spec is ~${spec.wordCount} words; target under ${WORD_LIMIT}`,
+        severity: isHardBlock ? 'error' : 'warning',
+        message: isHardBlock
+          ? `Spec is ~${spec.wordCount} words — must be under 1000 (agents reliably time out above this limit)`
+          : `Spec is ~${spec.wordCount} words; target under ${WORD_LIMIT} for best results`,
       })
     }
 

@@ -160,8 +160,10 @@ async function resolveAgentExit(
       )
     } catch (err) {
       logger.warn(`[agent-manager] resolveSuccess failed for task ${task.id}: ${err}`)
+      // Pass lastAgentOutput so the retry agent knows what failed and doesn't blindly repeat
+      const failureNotes = [lastAgentOutput, String(err)].filter(Boolean).join('\n---\n')
       const isTerminal = resolveFailure(
-        { taskId: task.id, retryCount: task.retry_count ?? 0, repo },
+        { taskId: task.id, retryCount: task.retry_count ?? 0, notes: failureNotes || undefined, repo },
         logger
       )
       if (isTerminal) {

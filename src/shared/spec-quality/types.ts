@@ -12,6 +12,7 @@ export type IssueCode =
   | 'TOO_MANY_STEPS'
   | 'SPEC_TOO_LONG'
   | 'STEP_REQUIRES_DESIGN_DECISION'
+  | 'PRESCRIPTIVENESS_CHECK_FAILED'
 
 export interface SpecIssue {
   code: IssueCode

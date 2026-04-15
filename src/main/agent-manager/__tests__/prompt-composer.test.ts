@@ -978,10 +978,11 @@ describe('buildAgentPrompt', () => {
       })
       expect(prompt).toContain('## Prior Attempt Context')
       expect(prompt).toContain('I tried approach A but hit error XYZ')
-      // Prior context must appear before the task spec
+      // Prior context must appear after the task spec so the agent reads the spec first,
+      // then understands what the previous attempt tried relative to that spec.
       const priorIdx = prompt.indexOf('## Prior Attempt Context')
       const specIdx = prompt.indexOf('## Task Specification')
-      expect(priorIdx).toBeLessThan(specIdx)
+      expect(priorIdx).toBeGreaterThan(specIdx)
     })
 
     it('does not inject ## Prior Attempt Context when priorScratchpad is empty or absent', () => {
@@ -1406,8 +1407,9 @@ describe('consistency fixes', () => {
     expect(pipelinePrompt).toContain('<cross_repo_contract>')
     expect(assistantPrompt).toContain('<cross_repo_contract>')
     const extractContract = (p: string) => {
-      const start = p.indexOf('<cross_repo_contract>')
-      const end = p.indexOf('</cross_repo_contract>') + '</cross_repo_contract>'.length
+      // Use lastIndexOf to skip the occurrence in the preamble's data-vs-instructions list
+      const start = p.lastIndexOf('<cross_repo_contract>')
+      const end = p.lastIndexOf('</cross_repo_contract>') + '</cross_repo_contract>'.length
       return p.slice(start, end)
     }
     expect(extractContract(pipelinePrompt)).toBe(extractContract(assistantPrompt))

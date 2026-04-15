@@ -86,15 +86,23 @@ export class PrescriptivenessValidator implements IAsyncSpecValidator {
         return [
           {
             code: 'STEP_REQUIRES_DESIGN_DECISION',
-            severity: 'warning',
-            message: `Spec may require design decisions: ${response.reason}`,
+            severity: 'error',
+            message: `Spec requires design decisions that will cause agent thrash: ${response.reason}. Rewrite Implementation Steps as concrete directives, not open-ended investigations.`,
           },
         ]
       }
       return []
     } catch (err) {
-      console.warn('[PrescriptivenessValidator] AI check failed, skipping:', err)
-      return []
+      console.warn('[PrescriptivenessValidator] AI check failed:', err)
+      // Conservative fallback: surface a warning so the user knows the check didn't run,
+      // rather than silently passing a spec that may contain exploration language.
+      return [
+        {
+          code: 'PRESCRIPTIVENESS_CHECK_FAILED',
+          severity: 'warning',
+          message: 'Could not validate implementation step clarity — review manually before queuing',
+        },
+      ]
     }
   }
 }

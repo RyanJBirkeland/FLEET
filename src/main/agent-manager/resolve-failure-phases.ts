@@ -27,12 +27,26 @@ export function calculateRetryBackoff(retryCount: number): number {
   return Math.min(RETRY_BACKOFF_CAP_MS, RETRY_BACKOFF_BASE_MS * Math.pow(2, retryCount))
 }
 
+// Keep the last N chars of failure notes — root causes are at the tail (end of stack traces).
+const NOTES_TAIL_CHARS = 1500
+
+/**
+ * Truncates failure notes to the last NOTES_TAIL_CHARS characters so the retry agent sees
+ * the actual error (which is always at the tail of a stack trace) rather than preamble.
+ */
+function truncateNotesTail(notes: string | undefined): string | undefined {
+  if (!notes) return undefined
+  return notes.length > NOTES_TAIL_CHARS ? '...' + notes.slice(-NOTES_TAIL_CHARS) : notes
+}
+
 /**
  * Resolve a task failure: requeue with backoff (non-terminal) or mark failed (terminal).
  * Returns true if the task is in a terminal failed state, false if requeued for retry.
  */
 export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): boolean {
-  const { taskId, retryCount, notes, repo } = opts
+  const { taskId, retryCount, repo } = opts
+  // Tail-truncate before writing to DB so stack trace root causes are preserved.
+  const notes = truncateNotesTail(opts.notes)
 
   // Classify failure reason for structured filtering
   const failureReason = classifyFailureReason(notes)

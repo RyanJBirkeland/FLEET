@@ -68,6 +68,14 @@ const PIPELINE_SETUP_RULE = `\n\n## Pipeline Worktree Setup\nYour worktree has N
 
 const CONTEXT_EFFICIENCY_HINT = `\n\n## Context Efficiency\nEach tool result stays in the conversation for the rest of this run, accumulating cost on every subsequent turn. Start narrow:\n- Read with \`offset\`/\`limit\` when you know the relevant section — not the whole file\n- Cap exploratory greps: \`grep -m 20\` or \`| head -20\`\n- Use \`Glob\` or \`grep -l\` to locate files before reading their contents\n- Read one representative file per pattern. Expand only if that read left an unanswered question.`
 
+const PUSH_FAILURE_GUIDANCE = `\n\n## When git push Fails
+
+The pre-push hook runs the full test suite automatically. If \`git push\` exits non-zero:
+1. Read the error — it names the specific test file or check that failed
+2. Fix that failure locally (\`npx vitest run <failing-file>\` or \`npm run typecheck\` to debug)
+3. Commit the fix: \`git add <files> && git commit -m "fix: resolve pre-push hook failure"\`
+4. Push again — do NOT retry the push without fixing the failure first`
+
 const PIPELINE_JUDGMENT_RULES = `\n\n## Judging Test Failures and Push Completion
 
 ### Rules for judging test failures
@@ -84,7 +92,7 @@ You only run targeted tests (\`npx vitest run <your-test-file>\`), not the full 
 - Do NOT tail bash output files, sleep-and-recheck logs, or poll stdout caches to detect push completion. Those files can be stale, truncated, or overwritten, and have caused agents to hang for minutes on pushes that had already succeeded.
 - If \`git push\` appears to be still running when you check, wait 5 seconds and re-run \`git ls-remote\` — not the output file.`
 
-const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npx vitest run <your-test-file>\` passes for each test file you created or modified (skip if no test files touched)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\nDo NOT run \`npm test\` — the pre-push hook runs the full suite. Only run the specific test files you touched.\nDo NOT exit without verifying all five.`
+const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npx vitest run <your-test-file>\` passes for each test file you created or modified (skip if no test files touched)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\n6. \`docs/modules/\` updated for every source file you created or modified — add a row to the layer \`index.md\`; update the \`<module>.md\` detail file if exports or observable behavior changed\nDo NOT run \`npm test\` — the pre-push hook runs the full suite. Only run the specific test files you touched.\nDo NOT exit without verifying all six.`
 
 export function buildPipelinePrompt(input: BuildPromptInput): string {
   const {
@@ -137,19 +145,19 @@ export function buildPipelinePrompt(input: BuildPromptInput): string {
     prompt += PLAYGROUND_INSTRUCTIONS
   }
 
-  // Prior attempt context
-  if (priorScratchpad) {
-    prompt += '\n\n## Prior Attempt Context\n\n'
-    prompt += truncateSpec(priorScratchpad, PROMPT_TRUNCATION.PRIOR_SCRATCHPAD_CHARS)
-  }
-
-  // Scratchpad instructions
+  // Scratchpad instructions (setup — must come before task spec so agent knows to check it first)
   if (taskId) {
     prompt += buildScratchpadSection(taskId)
   }
 
   // Classify once — used for both the output-budget hint and judgment-rules gating
   const taskClass: TaskClass = taskContent ? classifyTask(taskContent) : 'generate'
+
+  // Upstream context first so the agent understands the API surface before reading its own spec
+  prompt += buildUpstreamContextSection(upstreamContext)
+
+  // Cross-repo contract (adjacent to upstream context — both shape what APIs are available)
+  prompt += buildCrossRepoContractSection(crossRepoContract)
 
   // Output budget hint
   if (taskContent) {
@@ -168,13 +176,13 @@ export function buildPipelinePrompt(input: BuildPromptInput): string {
     prompt += '\n</user_spec>'
   }
 
-  // Cross-repo contract
-  prompt += buildCrossRepoContractSection(crossRepoContract)
+  // Prior attempt scratchpad (after spec so the agent can cross-reference what it tried vs what's asked)
+  if (priorScratchpad) {
+    prompt += '\n\n## Prior Attempt Context\n\n'
+    prompt += truncateSpec(priorScratchpad, PROMPT_TRUNCATION.PRIOR_SCRATCHPAD_CHARS)
+  }
 
-  // Upstream task context
-  prompt += buildUpstreamContextSection(upstreamContext)
-
-  // Retry context
+  // Retry context (after spec and scratchpad — failure notes are most useful with full task context in mind)
   if (retryCount && retryCount > 0) {
     prompt += buildRetryContext(retryCount, previousNotes)
   }
@@ -189,19 +197,23 @@ Before your final push, verify:
 - [ ] Commit messages explain WHY, not just WHAT
 - [ ] Preload .d.ts updated if IPC channels changed`
 
-  // Pipeline-only operational sections
+  // Definition of Done directly after self-review so it's read before operational boilerplate
+  prompt += DEFINITION_OF_DONE
+
+  // Operational sections (setup, efficiency, push mechanics)
   prompt += PIPELINE_SETUP_RULE
   prompt += CONTEXT_EFFICIENCY_HINT
-  // Only inject test/push judgment rules for tasks that involve code changes with tests.
-  // Doc, audit, and generation tasks don't need flake-handling or push-verification guidance.
+  // Test failure / push mechanics judgment rules only relevant for code-changing tasks.
+  // Doc, audit, and generation tasks don't trigger test regressions or need flake guidance.
   if (taskClass === 'fix' || taskClass === 'refactor') {
     prompt += PIPELINE_JUDGMENT_RULES
   }
+  // Pre-push hook failure guidance applies to all tasks that push code.
+  prompt += PUSH_FAILURE_GUIDANCE
   if (maxRuntimeMs && maxRuntimeMs > 0) {
     prompt += buildTimeLimitSection(maxRuntimeMs)
   }
   prompt += IDLE_TIMEOUT_WARNING
-  prompt += DEFINITION_OF_DONE
 
   return prompt
 }
