@@ -50,6 +50,7 @@ export type FailureReason =
   | 'test_failure'
   | 'compilation'
   | 'spawn'
+  | 'no_commits'
   | 'unknown'
 
 export interface SprintTask {

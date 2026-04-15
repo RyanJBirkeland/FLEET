@@ -47,3 +47,4 @@ Source: `src/main/agent-manager/`
 | `shutdown-coordinator.ts` | Graceful shutdown — waits for drain, aborts agents, re-queues active tasks, flushes event batcher | `executeShutdown`, `ShutdownCoordinatorDeps` |
 | `config-manager.ts` | Hot-reload settings — updates maxConcurrent, maxRuntimeMs, defaultModel in place; flags worktreeBase as restart-required | `reloadConfiguration`, `ConfigManagerDeps` |
 | `wip-tracker.ts` | Thin facade over ConcurrencyState for readable slot queries | `createConcurrencyState`, `getAvailableSlots`, `updateMaxSlots` |
+| `failure-classifier.ts` | Maps agent error notes to a `FailureReason` via a keyword-based pattern registry. Patterns cover auth, timeout, test_failure, compilation, spawn, no_commits, and unknown. | `classifyFailureReason`, `registerFailurePattern`, `FailurePattern` |

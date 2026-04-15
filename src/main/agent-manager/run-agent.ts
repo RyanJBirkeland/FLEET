@@ -113,6 +113,7 @@ async function resolveAgentExit(
     try {
       repo.updateTask(task.id, {
         status: 'error',
+        failure_reason: 'spawn',
         completed_at: now,
         notes:
           "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/agent-manager.log for details. To retry: reset task status to 'queued' and clear claimed_by.",
