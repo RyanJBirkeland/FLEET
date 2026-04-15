@@ -4,6 +4,23 @@ import Database from 'better-sqlite3'
 // Use in-memory DB for tests
 let db: Database.Database
 
+const { mockEncryptString, mockDecryptString } = vi.hoisted(() => ({
+  mockEncryptString: vi.fn((v: string) => Buffer.from(v + '_enc')),
+  mockDecryptString: vi.fn((buf: Buffer) => buf.toString().replace('_enc', ''))
+}))
+
+vi.mock('electron', () => ({
+  safeStorage: {
+    isEncryptionAvailable: vi.fn(() => true),
+    encryptString: mockEncryptString,
+    decryptString: mockDecryptString
+  }
+}))
+
+vi.mock('../logger', () => ({
+  createLogger: () => ({ warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() })
+}))
+
 vi.mock('../db', () => ({
   getDb: () => db
 }))
@@ -78,6 +95,58 @@ describe('settings.ts', () => {
       ]
       setSettingJson('repos', repos)
       expect(getSettingJson('repos')).toEqual(repos)
+    })
+  })
+
+  describe('sensitive key encryption', () => {
+    it('setSetting encrypts github.token before storage', () => {
+      setSetting('github.token', 'ghp_abc123')
+      const raw = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get('github.token') as { value: string } | undefined
+      expect(raw?.value.startsWith('ENC:')).toBe(true)
+    })
+
+    it('getSetting decrypts github.token on read', () => {
+      setSetting('github.token', 'ghp_secrettoken')
+      const result = getSetting('github.token')
+      expect(result).toBe('ghp_secrettoken')
+    })
+
+    it('non-sensitive keys are stored and returned as plaintext', () => {
+      setSetting('agent.eventRetentionDays', '30')
+      const raw = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get('agent.eventRetentionDays') as { value: string } | undefined
+      expect(raw?.value).toBe('30')
+      expect(getSetting('agent.eventRetentionDays')).toBe('30')
+    })
+
+    it('getSetting lazy-migrates plaintext sensitive values to encrypted', () => {
+      // Simulate legacy plaintext stored directly in DB (bypassing setSetting)
+      db.prepare(
+        `INSERT INTO settings (key, value, updated_at)
+         VALUES ('github.token', 'ghp_legacy_plaintext', strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+         ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`
+      ).run()
+
+      // First read triggers migration
+      const result = getSetting('github.token')
+      expect(result).toBe('ghp_legacy_plaintext')
+
+      // Value should now be encrypted in DB
+      const raw = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get('github.token') as { value: string } | undefined
+      expect(raw?.value.startsWith('ENC:')).toBe(true)
+    })
+
+    it('setSetting encrypts supabase.serviceKey before storage', () => {
+      setSetting('supabase.serviceKey', 'service_role_key_abc')
+      const raw = db
+        .prepare('SELECT value FROM settings WHERE key = ?')
+        .get('supabase.serviceKey') as { value: string } | undefined
+      expect(raw?.value.startsWith('ENC:')).toBe(true)
     })
   })
 })

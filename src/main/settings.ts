@@ -7,13 +7,25 @@ import {
   getSettingJson as _getSettingJson,
   setSettingJson as _setSettingJson
 } from './data/settings-queries'
+import { SENSITIVE_SETTING_KEYS, encryptSetting, decryptSetting } from './secure-storage'
 
 export function getSetting(key: string, db?: Database.Database): string | null {
-  return _getSetting(db ?? getDb(), key)
+  const raw = _getSetting(db ?? getDb(), key)
+  if (raw === null) return null
+  if (SENSITIVE_SETTING_KEYS.has(key)) {
+    const plaintext = decryptSetting(raw)
+    // Lazy migration: re-encrypt any legacy plaintext values found in the DB
+    if (!raw.startsWith('ENC:')) {
+      _setSetting(db ?? getDb(), key, encryptSetting(plaintext))
+    }
+    return plaintext
+  }
+  return raw
 }
 
 export function setSetting(key: string, value: string, db?: Database.Database): void {
-  _setSetting(db ?? getDb(), key, value)
+  const stored = SENSITIVE_SETTING_KEYS.has(key) ? encryptSetting(value) : value
+  _setSetting(db ?? getDb(), key, stored)
 }
 
 export function deleteSetting(key: string, db?: Database.Database): void {
