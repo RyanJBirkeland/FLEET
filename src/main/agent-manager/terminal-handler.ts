@@ -23,7 +23,7 @@ function runInTransactionSafe(fn: () => void): void {
   } catch (err) {
     // Log with module context before propagating — the outer caller's catch
     // has the taskId but not the transaction scope.
-    logger.error(`[terminal-handler] SQLite transaction failed: ${err}`)
+    logger.error(`SQLite transaction failed: ${err}`)
     throw err
   }
 }

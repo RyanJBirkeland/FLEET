@@ -117,7 +117,10 @@ function safePoll(): void {
 
 export function startPrPoller(): void {
   // Guard against double-start — clear any existing interval first.
-  if (timer) clearInterval(timer)
+  if (timer) {
+    clearInterval(timer)
+    timer = null
+  }
   // Reset backoff state so a previous error backoff doesn't delay the
   // first poll after a settings change or app restart.
   errorCount = 0
