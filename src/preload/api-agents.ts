@@ -65,8 +65,6 @@ export const agentManager = {
 
 export const agentEvents = {
   onEvent: (callback: (payload: BroadcastChannels['agent:event']) => void): (() => void) => {
-    const handler = (_e: IpcRendererEvent, payload: BroadcastChannels['agent:event']): void =>
-      callback(payload)
     const batchHandler = (
       _e: IpcRendererEvent,
       payloads: BroadcastChannels['agent:event:batch']
@@ -75,10 +73,8 @@ export const agentEvents = {
         callback(p)
       }
     }
-    ipcRenderer.on('agent:event', handler)
     ipcRenderer.on('agent:event:batch', batchHandler)
     return () => {
-      ipcRenderer.removeListener('agent:event', handler)
       ipcRenderer.removeListener('agent:event:batch', batchHandler)
     }
   },

@@ -32,6 +32,16 @@ const listeners: Set<SprintMutationListener> = new Set()
 // Initialize webhook service
 const webhookService = createWebhookService({ getWebhooks, logger })
 
+let externalChangeTimer: ReturnType<typeof setTimeout> | null = null
+
+function scheduleExternalChangeBroadcast(): void {
+  if (externalChangeTimer !== null) clearTimeout(externalChangeTimer)
+  externalChangeTimer = setTimeout(() => {
+    externalChangeTimer = null
+    broadcast('sprint:externalChange')
+  }, 200)
+}
+
 /**
  * Register a listener for sprint task mutations.
  * Returns an unsubscribe function.
@@ -57,8 +67,9 @@ export function notifySprintMutation(type: SprintMutationEvent['type'], task: Sp
     }
   }
 
-  // Push to renderer windows so Dashboard/SprintCenter refresh immediately
-  broadcast('sprint:externalChange')
+  // Push to renderer windows so Dashboard/SprintCenter refresh — debounced to
+  // collapse rapid bursts (e.g. batch creates/updates) into a single round-trip
+  scheduleExternalChangeBroadcast()
 
   // Fire webhooks for external integrations
   try {

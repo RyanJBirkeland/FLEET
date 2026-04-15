@@ -3,7 +3,7 @@
  * Used by both adhoc-agent.ts (user-spawned) and run-agent.ts (AgentManager pipeline).
  */
 import type Database from 'better-sqlite3'
-import { broadcast } from './broadcast'
+import { broadcastCoalesced } from './broadcast'
 import { insertEventBatch, type EventBatchItem } from './data/event-queries'
 import { getDb } from './db'
 import { createLogger } from './logger'
@@ -168,6 +168,6 @@ export function emitAgentEvent(agentId: string, event: AgentEvent): void {
     _flushTimer = setTimeout(scheduledFlush, BATCH_INTERVAL_MS)
   }
 
-  // Broadcast immediately (live tail UX)
-  broadcast('agent:event', { agentId, event })
+  // Broadcast via coalesced batch channel (live tail UX via agent:event:batch)
+  broadcastCoalesced('agent:event', { agentId, event })
 }

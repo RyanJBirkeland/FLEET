@@ -3,16 +3,16 @@
  *
  * Tests the batched SQLite write behavior — events are queued and flushed
  * either when the batch reaches 50 events or after 100ms timeout.
- * Broadcasts happen immediately for live tail UX.
+ * Broadcasts happen via broadcastCoalesced (agent:event:batch channel).
  */
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
-const broadcastMock = vi.fn()
+const broadcastCoalescedMock = vi.fn()
 const insertEventBatchMock = vi.fn()
 const getDbMock = vi.fn(() => ({}) as unknown)
 
 vi.mock('../broadcast', () => ({
-  broadcast: (...args: unknown[]) => broadcastMock(...args)
+  broadcastCoalesced: (...args: unknown[]) => broadcastCoalescedMock(...args)
 }))
 
 vi.mock('../data/event-queries', () => ({
@@ -26,7 +26,7 @@ vi.mock('../db', () => ({
 beforeEach(() => {
   vi.useFakeTimers()
   vi.resetModules() // Reset module state between tests
-  broadcastMock.mockReset()
+  broadcastCoalescedMock.mockReset()
   insertEventBatchMock.mockReset()
 })
 
@@ -41,9 +41,9 @@ describe('emitAgentEvent batching', () => {
 
     emitAgentEvent('agent-1', { type: 'agent:text', text: 'hello', timestamp: 123 })
 
-    // Broadcast should fire immediately
-    expect(broadcastMock).toHaveBeenCalledTimes(1)
-    expect(broadcastMock).toHaveBeenCalledWith('agent:event', {
+    // Broadcast should be queued via broadcastCoalesced immediately
+    expect(broadcastCoalescedMock).toHaveBeenCalledTimes(1)
+    expect(broadcastCoalescedMock).toHaveBeenCalledWith('agent:event', {
       agentId: 'agent-1',
       event: { type: 'agent:text', text: 'hello', timestamp: 123 }
     })
@@ -118,7 +118,7 @@ describe('emitAgentEvent batching', () => {
     expect(() => flushAgentEventBatcher()).not.toThrow()
 
     expect(insertEventBatchMock).toHaveBeenCalled()
-    expect(broadcastMock).toHaveBeenCalled()
+    expect(broadcastCoalescedMock).toHaveBeenCalled()
   })
 
   it('does not flush when queue is empty', async () => {

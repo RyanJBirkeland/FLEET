@@ -16,3 +16,4 @@ Source: `src/main/services/`
 | `review-response-parser.ts` | Parses and validates raw reviewer model output into a typed `ParsedReview` shape | `parseReviewResponse`, `MalformedReviewError`, `ParsedReview` |
 | `batch-import.ts` | Validates and bulk-creates sprint tasks from an import payload | `batchImportTasks`, `BatchImportResult` |
 | `workflow-engine.ts` | Instantiates a workflow template as a set of linked sprint tasks | `instantiateWorkflow` |
+| `sprint-mutation-broadcaster.ts` | Notification orchestration for sprint task mutations — in-process listeners, debounced `sprint:externalChange` IPC broadcast (200ms), and webhook dispatch | `notifySprintMutation`, `onSprintMutation`, `SprintMutationEvent`, `SprintMutationListener` |
