@@ -60,7 +60,7 @@ describe('checkOAuthToken', () => {
     const logger = makeLogger()
     expect(await checkOAuthToken(logger)).toBe(false)
     expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('Cannot read OAuth token file')
+      expect.stringContaining('OAuth token expired or missing')
     )
   })
 
@@ -78,7 +78,7 @@ describe('checkOAuthToken', () => {
     vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(false)
     const logger = makeLogger()
     expect(await checkOAuthToken(logger)).toBe(false)
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('keychain refresh failed'))
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('OAuth token expired or missing'))
   })
 
   it('returns false when token file is empty', async () => {

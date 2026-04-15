@@ -72,7 +72,7 @@ export async function checkOAuthToken(logger: Logger): Promise<boolean> {
         return true
       } else {
         logger.warn(
-          '[oauth-checker] OAuth token file missing/empty and keychain refresh failed — skipping drain cycle'
+          '[oauth-checker] OAuth token expired or missing — skipping drain. Run: claude login'
         )
         _oauthCheckResult = false
         _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
@@ -101,7 +101,7 @@ export async function checkOAuthToken(logger: Logger): Promise<boolean> {
     _oauthCheckExpiry = Date.now() + OAUTH_CHECK_CACHE_TTL_MS
     return true
   } catch {
-    logger.warn('[oauth-checker] Cannot read OAuth token file — skipping drain cycle')
+    logger.warn('[oauth-checker] OAuth token expired or missing — skipping drain. Run: claude login')
     _oauthCheckResult = false
     _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
     return false
