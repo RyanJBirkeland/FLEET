@@ -123,7 +123,9 @@ vi.stubGlobal('api', {
 
   // Auth
   auth: {
-    status: vi.fn().mockResolvedValue({ authenticated: false })
+    status: vi
+      .fn()
+      .mockResolvedValue({ cliFound: true, tokenFound: true, tokenExpired: false })
   },
 
   // Spec Synthesizer

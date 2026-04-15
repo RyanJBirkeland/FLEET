@@ -75,7 +75,7 @@ export function GitStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Eleme
             Back
           </Button>
         )}
-        <Button variant="primary" onClick={onNext}>
+        <Button variant="primary" onClick={onNext} disabled={checking || !gitAvailable}>
           Next
           <ArrowRight size={16} />
         </Button>

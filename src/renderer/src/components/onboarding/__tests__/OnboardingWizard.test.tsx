@@ -20,11 +20,17 @@ describe('OnboardingWizard', () => {
     await user.click(screen.getByRole('button', { name: /next/i }))
     expect(screen.getByText(/claude authentication/i)).toBeInTheDocument()
 
-    // Navigate to step 3
+    // Navigate to step 3 — wait for auth check to resolve before clicking
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+    )
     await user.click(screen.getByRole('button', { name: /next/i }))
     expect(screen.getByRole('heading', { name: /git setup/i })).toBeInTheDocument()
 
-    // Navigate to step 4 (GitHub CLI)
+    // Navigate to step 4 (GitHub CLI) — wait for git check to resolve
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+    )
     await user.click(screen.getByRole('button', { name: /next/i }))
     await waitFor(() =>
       expect(screen.getByRole('heading', { name: /github cli/i })).toBeInTheDocument()
@@ -48,10 +54,20 @@ describe('OnboardingWizard', () => {
     const user = userEvent.setup()
     render(<OnboardingWizard onComplete={onComplete} />)
 
-    // Click Next for steps 1-3 (Welcome → Auth → Git)
-    for (let i = 0; i < 3; i++) {
-      await user.click(screen.getByRole('button', { name: /next/i }))
-    }
+    // Step 1 (Welcome): click Next immediately
+    await user.click(screen.getByRole('button', { name: /next/i }))
+
+    // Step 2 (Auth): wait for check to resolve, then click Next
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+    )
+    await user.click(screen.getByRole('button', { name: /next/i }))
+
+    // Step 3 (Git): wait for check to resolve, then click Next
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+    )
+    await user.click(screen.getByRole('button', { name: /next/i }))
 
     // Step 4 (GitHub CLI): wait for check to resolve then click Next
     await waitFor(() =>
@@ -130,8 +146,17 @@ describe('OnboardingWizard', () => {
       render(<OnboardingWizard onComplete={vi.fn()} />)
 
       // Walk to step 5 (Repositories) — Welcome → Auth → Git → GitHub CLI → Repo
+      // Step 1 (Welcome)
       await user.click(screen.getByRole('button', { name: /next/i }))
+      // Step 2 (Auth): wait for check to resolve
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+      )
       await user.click(screen.getByRole('button', { name: /next/i }))
+      // Step 3 (Git): wait for check to resolve
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: /next/i })).not.toBeDisabled()
+      )
       await user.click(screen.getByRole('button', { name: /next/i }))
       // GhStep: wait for check to resolve, then advance
       await waitFor(() =>

@@ -105,7 +105,7 @@ export function AuthStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
             Back
           </Button>
         )}
-        <Button variant="primary" onClick={onNext}>
+        <Button variant="primary" onClick={onNext} disabled={checking || !isReady}>
           Next
           <ArrowRight size={16} />
         </Button>
