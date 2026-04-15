@@ -43,6 +43,15 @@ import {
   restoreTearoffWindows
 } from './tearoff-manager'
 
+// Enforce minimum Node.js version before any app logic
+const [nodeMajor] = process.versions.node.split('.').map(Number)
+if (nodeMajor < 22) {
+  process.stderr.write(
+    `[BDE] Node.js v22+ required (found ${process.versions.node}). Please upgrade.\n`
+  )
+  process.exit(1)
+}
+
 const logger = createLogger('main')
 
 const ALLOWED_EXTERNAL_SCHEMES = ['https:', 'http:', 'mailto:']
