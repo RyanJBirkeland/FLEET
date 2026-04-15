@@ -10,7 +10,21 @@ export function registerFailurePattern(entry: FailurePattern): void {
 
 registerFailurePattern({
   type: 'auth',
-  keywords: ['invalid api key', 'authentication failed', 'unauthorized', 'token expired', 'invalid token']
+  keywords: [
+    'invalid api key',
+    'authentication failed',
+    'unauthorized',
+    'token expired',
+    'invalid token',
+    'invalid_api_key',
+    'token_expired',
+    'invalid_token',
+    'authentication_failed'
+  ]
+})
+registerFailurePattern({
+  type: 'no_commits',
+  keywords: ['no commits', 'produced no commits', 'no output captured', 'agent produced no commits']
 })
 registerFailurePattern({
   type: 'timeout',
