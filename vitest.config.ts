@@ -1,4 +1,10 @@
+import os from 'node:os'
 import { defineConfig } from 'vitest/config'
+
+// Cap the thread pool so concurrent pipeline agents don't saturate the CPU.
+// Default is cpuCount which causes 32+ threads on an 8-core machine with 4 agents.
+// Math.ceil(cores / 3) gives 3 threads on an 8-core — enough headroom for parallel pushes.
+const maxThreads = Math.max(1, Math.ceil(os.cpus().length / 3))
 
 export default defineConfig({
   define: {
@@ -10,6 +16,8 @@ export default defineConfig({
     },
     environment: 'jsdom',
     globals: true,
+    maxWorkers: maxThreads,
+    minWorkers: 1,
     setupFiles: ['./src/renderer/src/test-setup.ts'],
     exclude: [
       'src/main/**/*.test.ts',

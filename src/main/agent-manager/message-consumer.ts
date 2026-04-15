@@ -104,11 +104,13 @@ export async function consumeMessages(
   task: AgentRunClaim,
   agentRunId: string,
   turnTracker: TurnTracker,
-  logger: Logger
+  logger: Logger,
+  maxTurns: number
 ): Promise<ConsumeMessagesResult> {
   let exitCode: number | undefined
   let lastAgentOutput = ''
   const pendingPlaygroundPaths: string[] = []
+  let turnCount = 0
 
   try {
     for await (const msg of handle.messages) {
@@ -125,6 +127,26 @@ export async function consumeMessages(
       lastAgentOutput = result.lastAgentOutput
       if (result.detectedHtmlPath) {
         pendingPlaygroundPaths.push(result.detectedHtmlPath)
+      }
+
+      // Hard turn limit: abort if agent exceeds maxTurns (SDK soft limit may not enforce)
+      const m = asSDKMessage(msg)
+      if (m?.type === 'assistant') {
+        turnCount++
+        if (turnCount > maxTurns) {
+          logger.warn(
+            `[agent-manager] maxTurns (${maxTurns}) reached for task ${task.id} — aborting`
+          )
+          handle.abort()
+          const turnsError = new Error('max_turns_exceeded')
+          emitAgentEvent(agentRunId, {
+            type: 'agent:error',
+            message: turnsError.message,
+            timestamp: Date.now()
+          })
+          flushAgentEventBatcher()
+          return { exitCode, lastAgentOutput, streamError: turnsError, pendingPlaygroundPaths }
+        }
       }
 
       // Per-turn budget check: abort immediately if cost exceeds limit

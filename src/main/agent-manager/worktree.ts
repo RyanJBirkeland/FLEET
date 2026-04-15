@@ -1,4 +1,4 @@
-import { mkdirSync, existsSync, readdirSync, rmSync } from 'node:fs'
+import { mkdirSync, existsSync, readdirSync, rmSync, symlinkSync } from 'node:fs'
 import path from 'node:path'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
@@ -210,6 +210,21 @@ export async function setupWorktree(
 
       // Create fresh worktree + branch
       await addWorktree(repoPath, branch, worktreePath, env)
+
+      // Symlink node_modules from the main checkout so agents skip npm install.
+      // Saves ~75s per task. better-sqlite3 ABI is not a concern for renderer
+      // tests (agents no longer run test:main). If the symlink already exists
+      // (e.g. from a stale worktree path collision), skip silently.
+      const worktreeNodeModules = path.join(worktreePath, 'node_modules')
+      const repoNodeModules = path.join(repoPath, 'node_modules')
+      if (!existsSync(worktreeNodeModules) && existsSync(repoNodeModules)) {
+        try {
+          symlinkSync(repoNodeModules, worktreeNodeModules)
+          log.info(`[worktree] Symlinked node_modules for task ${taskId}`)
+        } catch (symlinkErr) {
+          log.warn(`[worktree] Failed to symlink node_modules (agents will npm install): ${symlinkErr}`)
+        }
+      }
     } catch (err) {
       // Clean up on failure
       try {

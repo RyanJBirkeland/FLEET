@@ -268,7 +268,7 @@ describe('sprint:create handler', () => {
   })
 
   it('creates a task and fires mutation notification', async () => {
-    const validSpec = `${'x'.repeat(60)}\n## Problem\nBroken\n## Solution\nFix it`
+    const validSpec = `${'x'.repeat(60)}\n## Overview\nContext\n## Files to Change\n- src/foo.ts\n## Implementation Steps\n1. Do it\n## How to Test\nRun tests`
     const input = { title: 'New task', repo: 'BDE', status: 'queued', spec: validSpec }
     const created = { id: 'abc', ...input }
     vi.mocked(_createTask).mockReturnValue(created as any)
@@ -602,6 +602,36 @@ describe('sprint:create spec validation', () => {
     await expect(handler(mockEvent, { title: '', repo: 'bde', spec: validSpec })).rejects.toThrow(
       /title is required/
     )
+  })
+
+  it('rejects queued task spec missing required sections', async () => {
+    const specMissingRequired = `${'x'.repeat(60)}\n## Overview\nSomething\n## Implementation Steps\nDo it\n## How to Test\nRun tests`
+    const handler = captureHandler('sprint:create')
+
+    await expect(
+      handler(mockEvent, { title: 'Task', repo: 'bde', status: 'queued', spec: specMissingRequired })
+    ).rejects.toThrow(/Missing required section/)
+  })
+
+  it('accepts backlog task with spec missing required sections', async () => {
+    const specMissingRequired = `${'x'.repeat(60)}\n## Overview\nSomething\n## Implementation Steps\nDo it\n## How to Test\nRun tests`
+    vi.mocked(_createTask).mockReturnValue({
+      id: 'new-1',
+      title: 'Task',
+      repo: 'bde',
+      status: 'backlog',
+      spec: specMissingRequired
+    } as any)
+
+    const handler = captureHandler('sprint:create')
+    const result = await handler(mockEvent, {
+      title: 'Task',
+      repo: 'bde',
+      status: 'backlog',
+      spec: specMissingRequired
+    })
+
+    expect(result.id).toBe('new-1')
   })
 })
 

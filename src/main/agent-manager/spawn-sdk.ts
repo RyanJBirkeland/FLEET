@@ -10,6 +10,12 @@ import { randomUUID } from 'node:crypto'
 import { getClaudeCliPath } from '../env-utils'
 import { getSessionId } from './sdk-message-protocol'
 
+/**
+ * Hard turn limit enforced both by the SDK and by the message consumer.
+ * Agents that need more turns should use a smaller, more focused spec.
+ */
+export const MAX_TURNS = 20
+
 export function spawnViaSdk(
   sdk: typeof import('@anthropic-ai/claude-agent-sdk'),
   opts: { prompt: string; cwd: string; model: string; maxBudgetUsd?: number },
@@ -40,7 +46,7 @@ export function spawnViaSdk(
       // Cap turns to prevent runaway loops. 20 turns covers complex multi-file
       // refactors. Agents that legitimately need more should use a smaller,
       // focused spec. The watchdog provides a time ceiling independently.
-      maxTurns: 20,
+      maxTurns: MAX_TURNS,
       // Pipeline agents are autonomous with no human at stdin. Cap spend per spawn
       // to prevent runaway cost on loops. Default 2.0 USD covers complex multi-file
       // refactors. Override via task.max_cost_usd for long-running tasks.

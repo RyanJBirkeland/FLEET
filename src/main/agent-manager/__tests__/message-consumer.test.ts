@@ -101,7 +101,7 @@ describe('consumeMessages', () => {
   it('returns exitCode from exit_code message', async () => {
     const handle = makeHandle([{ type: 'exit_code', exit_code: 0 }])
     const agent = makeAgent()
-    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger())
+    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 20)
     expect(result.exitCode).toBe(0)
     expect(result.streamError).toBeUndefined()
     expect(result.pendingPlaygroundPaths).toEqual([])
@@ -110,7 +110,7 @@ describe('consumeMessages', () => {
   it('returns undefined exitCode when no exit_code message', async () => {
     const handle = makeHandle([{ type: 'assistant', text: 'hello' }])
     const agent = makeAgent()
-    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger())
+    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 20)
     expect(result.exitCode).toBeUndefined()
   })
 
@@ -174,7 +174,59 @@ describe('consumeMessages', () => {
   it('updates lastAgentOutput from assistant text messages', async () => {
     const handle = makeHandle([{ type: 'assistant', text: 'I have completed the task.' }])
     const agent = makeAgent()
-    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger())
+    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 20)
     expect(result.lastAgentOutput).toBe('I have completed the task.')
+  })
+
+  it('aborts when cost exceeds maxCostUsd mid-stream', async () => {
+    const handle = makeHandle([
+      { type: 'assistant', text: 'Turn 1', cost_usd: 0.5 },
+      { type: 'assistant', text: 'Turn 2', cost_usd: 1.5 },
+      { type: 'assistant', text: 'Turn 3', cost_usd: 2.1 }
+    ])
+    const agent = makeAgent({ maxCostUsd: 2.0 })
+    const logger = makeLogger()
+    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), logger)
+    expect(handle.abort).toHaveBeenCalled()
+    expect(result.streamError).toBeInstanceOf(Error)
+    expect(result.streamError?.message).toContain('Cost budget $2.00 exceeded')
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Cost budget $2.00 exceeded ($2.10 spent)'))
+    expect(emitAgentEvent).toHaveBeenCalledWith('run-1', expect.objectContaining({
+      type: 'agent:error',
+      message: expect.stringContaining('Cost budget $2.00 exceeded')
+    }))
+    expect(flushAgentEventBatcher).toHaveBeenCalled()
+  })
+
+  it('does not abort when maxCostUsd is null', async () => {
+    const handle = makeHandle([
+      { type: 'assistant', text: 'Turn 1', cost_usd: 0.5 },
+      { type: 'assistant', text: 'Turn 2', cost_usd: 10.0 }
+    ])
+    const agent = makeAgent({ maxCostUsd: null })
+    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 20)
+    expect(handle.abort).not.toHaveBeenCalled()
+    expect(result.streamError).toBeUndefined()
+    expect(agent.costUsd).toBe(10.0)
+  })
+
+  it('aborts with max_turns_exceeded when turn count exceeds maxTurns', async () => {
+    const messages = Array.from({ length: 22 }, (_, i) => ({
+      type: 'assistant',
+      text: `Turn ${i + 1}`
+    }))
+    const handle = makeHandle(messages)
+    const agent = makeAgent({ maxCostUsd: null })
+    const logger = makeLogger()
+    const result = await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), logger, 20)
+    expect(handle.abort).toHaveBeenCalled()
+    expect(result.streamError).toBeInstanceOf(Error)
+    expect(result.streamError?.message).toBe('max_turns_exceeded')
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('maxTurns (20) reached'))
+    expect(emitAgentEvent).toHaveBeenCalledWith('run-1', expect.objectContaining({
+      type: 'agent:error',
+      message: 'max_turns_exceeded'
+    }))
+    expect(flushAgentEventBatcher).toHaveBeenCalled()
   })
 })

@@ -28,7 +28,7 @@ registerFailurePattern({
 })
 registerFailurePattern({
   type: 'timeout',
-  keywords: ['exceeded maximum runtime', 'timeout', 'timed out', 'watchdog']
+  keywords: ['exceeded maximum runtime', 'timeout', 'timed out', 'watchdog', 'max_turns_exceeded']
 })
 registerFailurePattern({
   type: 'test_failure',

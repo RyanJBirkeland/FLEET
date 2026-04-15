@@ -6,10 +6,10 @@ Source: `src/main/agent-manager/`
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
 | `sdk-message-protocol.ts` | SDK wire protocol type guards and field accessors | `SDKWireMessage`, `asSDKMessage`, `getNumericField`, `getSessionId`, `isRateLimitMessage` |
-| `spawn-sdk.ts` | SDK-based agent spawn — session ID extraction, abort wiring, steer stub | `spawnViaSdk` |
+| `spawn-sdk.ts` | SDK-based agent spawn — session ID extraction, abort wiring, steer stub. Exports `MAX_TURNS = 20` used by both SDK config and message consumer. | `spawnViaSdk`, `MAX_TURNS` |
 | `spawn-cli.ts` | CLI fallback spawn — stream-json protocol, V8 heap cap, stdin steer | `spawnViaCli`, `withMaxOldSpaceOption`, `AGENT_PROCESS_MAX_OLD_SPACE_MB` |
 | `prompt-assembly.ts` | Task validation + prompt context prep — upstream context, scratchpad, prompt build | `validateTaskForRun`, `assembleRunContext`, `fetchUpstreamContext`, `readPriorScratchpad` |
-| `message-consumer.ts` | SDK message stream iteration, OAuth refresh on auth error, playground path accumulation. Per-turn budget enforcement: aborts and emits `agent:error` if `agent.costUsd >= agent.maxCostUsd` after each message. | `consumeMessages`, `ConsumeMessagesResult` |
+| `message-consumer.ts` | SDK message stream iteration, OAuth refresh on auth error, playground path accumulation. Hard turn limit via `maxTurns` param (aborts with `max_turns_exceeded`); per-turn budget enforcement aborts if `agent.costUsd >= agent.maxCostUsd`. | `consumeMessages`, `ConsumeMessagesResult` |
 | `agent-telemetry.ts` | Cost/token tracking from SDK messages, SQL persistence of run telemetry | `trackAgentCosts`, `persistAgentRunTelemetry` |
 | `agent-initialization.ts` | Agent record creation, stderr wiring, activeAgents registration, agent:started event. `createAgentRecord` failure is logged at `error` level (fire-and-forget: function is synchronous; untracked run is surfaced loudly so operators can investigate) | `initializeAgentTracking` |
 | `spawn-and-wire.ts` | Spawn orchestration and error recovery — calls spawnWithTimeout then initializeAgentTracking | `spawnAndWireAgent`, `handleSpawnFailure` |

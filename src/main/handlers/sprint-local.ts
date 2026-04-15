@@ -17,6 +17,8 @@ import {
   type GeneratePromptResponse
 } from './sprint-spec'
 import { validateTaskCreation } from '../services/task-validation'
+import { SpecParser } from '../services/spec-quality/spec-parser'
+import { RequiredSectionsValidator } from '../services/spec-quality/validators/sync-validators'
 import {
   getTask,
   updateTask,
@@ -63,6 +65,18 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps, repo?: ISprin
     if (!validation.valid) {
       throw new Error(`Spec quality checks failed: ${validation.errors.join('; ')}`)
     }
+
+    // Server-side required sections check — synchronous, only enforced for queued tasks
+    if (validation.task.status === 'queued' && validation.task.spec) {
+      const parsed = new SpecParser().parse(validation.task.spec)
+      const sectionErrors = new RequiredSectionsValidator()
+        .validate(parsed)
+        .filter((issue) => issue.severity === 'error')
+      if (sectionErrors.length > 0) {
+        throw new Error(`Spec quality checks failed: ${sectionErrors[0].message}`)
+      }
+    }
+
     // createTask (service) handles notifySprintMutation internally
     const row = createTask(validation.task)
     if (!row) throw new Error('Failed to create task')
