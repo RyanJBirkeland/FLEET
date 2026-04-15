@@ -121,6 +121,8 @@ export function ReviewActionsBar({ variant, children }: ReviewActionsBarProps): 
                 className="rab__btn rab__btn--ship"
                 onClick={shipIt}
                 disabled={!!actionInFlight || !ghConfigured}
+                aria-busy={actionInFlight === 'shipIt'}
+                aria-label={actionInFlight === 'shipIt' ? 'Shipping changes, please wait…' : 'Ship It'}
                 title={!ghConfigured ? 'Configure GitHub in Settings → Connections' : undefined}
               >
                 {actionInFlight === 'shipIt' ? (
