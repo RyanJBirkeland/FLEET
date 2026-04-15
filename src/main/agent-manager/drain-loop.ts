@@ -8,6 +8,7 @@
 
 import type { Logger } from '../logger'
 import type { AgentManagerConfig, ActiveAgent } from './types'
+import { NOTES_MAX_LENGTH } from './types'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { DependencyIndex } from '../services/dependency-service'
 import type { MetricsCollector } from './metrics'
@@ -24,6 +25,8 @@ import { getConfiguredRepos } from '../paths'
 // ---------------------------------------------------------------------------
 // Deps interface
 // ---------------------------------------------------------------------------
+
+export const DRAIN_QUARANTINE_THRESHOLD = 3
 
 export interface DrainLoopDeps {
   config: AgentManagerConfig
@@ -47,6 +50,10 @@ export interface DrainLoopDeps {
     raw: Record<string, unknown>,
     taskStatusMap: Map<string, string>
   ) => Promise<void>
+  /** Counts consecutive drain-loop failures per task. Lives on AgentManagerImpl, passed in to persist across ticks. */
+  drainFailureCounts: Map<string, number>
+  /** Called when a task is quarantined after repeated failures so dependency resolution runs. */
+  onTaskTerminal: (taskId: string, status: string) => Promise<void>
 }
 
 // ---------------------------------------------------------------------------
@@ -144,12 +151,35 @@ export async function drainQueuedTasks(
       deps.logger.info('[agent-manager] No slots available — stopping drain iteration')
       break
     }
+    const taskId = String((raw as Record<string, unknown>).id ?? '')
     try {
       await deps.processQueuedTask(raw, taskStatusMap)
+      // Clear failure count on successful processing — task is no longer churning.
+      if (taskId) deps.drainFailureCounts.delete(taskId)
     } catch (err) {
-      deps.logger.error(
-        `[agent-manager] Failed to process task ${(raw as Record<string, unknown>).id}: ${err}`
-      )
+      deps.logger.error(`[agent-manager] Failed to process task ${taskId}: ${err}`)
+      if (!taskId) continue
+      const count = (deps.drainFailureCounts.get(taskId) ?? 0) + 1
+      deps.drainFailureCounts.set(taskId, count)
+      if (count >= DRAIN_QUARANTINE_THRESHOLD) {
+        deps.drainFailureCounts.delete(taskId)
+        deps.logger.error(
+          `[agent-manager] Task ${taskId} failed ${count} consecutive times — quarantining to prevent drain churn`
+        )
+        const errMsg = err instanceof Error ? err.message : String(err)
+        const note = `Task processing failed ${count} consecutive times in the drain loop: ${errMsg}. Check ~/.bde/bde.log for details.`
+        const truncated = note.length > NOTES_MAX_LENGTH
+          ? '...' + note.slice(-(NOTES_MAX_LENGTH - 3))
+          : note
+        try {
+          deps.repo.updateTask(taskId, { status: 'error', notes: truncated, claimed_by: null })
+          await deps.onTaskTerminal(taskId, 'error').catch((termErr) =>
+            deps.logger.warn(`[agent-manager] onTerminal failed for quarantined task ${taskId}: ${termErr}`)
+          )
+        } catch (quarantineErr) {
+          deps.logger.error(`[agent-manager] Failed to quarantine task ${taskId}: ${quarantineErr}`)
+        }
+      }
     }
   }
 }

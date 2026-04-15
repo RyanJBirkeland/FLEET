@@ -87,6 +87,8 @@ function makeDeps(overrides: Partial<DrainLoopDeps> = {}): DrainLoopDeps {
     setDepIndexDirty: vi.fn(),
     setConcurrency: vi.fn(),
     processQueuedTask: vi.fn().mockResolvedValue(undefined),
+    drainFailureCounts: new Map<string, number>(),
+    onTaskTerminal: vi.fn().mockResolvedValue(undefined),
     ...overrides
   }
 }

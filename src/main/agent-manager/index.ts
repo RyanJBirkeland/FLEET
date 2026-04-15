@@ -130,6 +130,10 @@ export class AgentManagerImpl implements AgentManager {
   // loop to prevent over-claiming slots during the async spawn window.
   _pendingSpawns = 0
 
+  // Tracks consecutive drain-loop processing failures per task. Passed to DrainLoopDeps
+  // each tick so counts persist across ticks. Cleared on success or quarantine.
+  readonly _drainFailureCounts = new Map<string, number>()
+
   // Private timers
   private pollTimer: ReturnType<typeof setInterval> | null = null
   private watchdogTimer: ReturnType<typeof setInterval> | null = null
@@ -376,7 +380,9 @@ export class AgentManagerImpl implements AgentManager {
       isDepIndexDirty: () => this._depIndexDirty,
       setDepIndexDirty: (dirty) => { this._depIndexDirty = dirty },
       setConcurrency: (state) => { this._concurrency = state },
-      processQueuedTask: (raw, map) => this._processQueuedTask(raw, map)
+      processQueuedTask: (raw, map) => this._processQueuedTask(raw, map),
+      drainFailureCounts: this._drainFailureCounts,
+      onTaskTerminal: this.onTaskTerminal.bind(this)
     }
     return runDrain(drainDeps)
   }
