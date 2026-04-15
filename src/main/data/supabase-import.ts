@@ -10,8 +10,7 @@
 
 import type Database from 'better-sqlite3'
 import { createLogger } from '../logger'
-import { getSetting, deleteSetting } from './settings-queries'
-import { SETTING_SUPABASE_URL, SETTING_SUPABASE_KEY } from '../settings'
+import { getSetting, deleteSetting, SETTING_SUPABASE_URL, SETTING_SUPABASE_KEY } from '../settings'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 
@@ -63,8 +62,8 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
     }
     // Read credentials atomically with the count check
     return {
-      url: getSetting(db, SETTING_SUPABASE_URL),
-      key: getSetting(db, SETTING_SUPABASE_KEY)
+      url: getSetting(SETTING_SUPABASE_URL, db),
+      key: getSetting(SETTING_SUPABASE_KEY, db)
     }
   })()
 
@@ -204,8 +203,8 @@ export async function importSprintTasksFromSupabase(db: Database.Database): Prom
 
     // DL-6: Delete credentials after successful import to prevent plaintext storage
     try {
-      deleteSetting(db, SETTING_SUPABASE_URL)
-      deleteSetting(db, SETTING_SUPABASE_KEY)
+      deleteSetting(SETTING_SUPABASE_URL, db)
+      deleteSetting(SETTING_SUPABASE_KEY, db)
       logger.info('Supabase credentials deleted after successful import')
     } catch (err) {
       logger.warn(`Failed to delete Supabase credentials: ${getErrorMessage(err)}`)

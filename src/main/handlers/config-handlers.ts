@@ -41,9 +41,17 @@ export function registerConfigHandlers(): void {
     if (validate) validate(value)
     setSetting(key, value)
   })
-  safeHandle('settings:getJson', (_e, key: string) => getSettingJson(key))
+  safeHandle('settings:getJson', (_e, key: string) => {
+    if (SENSITIVE_SETTING_KEYS.has(key)) return null
+    return getSettingJson(key)
+  })
   safeHandle('settings:setJson', (_e, key: string, value: unknown) => setSettingJson(key, value))
-  safeHandle('settings:delete', (_e, key: string) => deleteSetting(key))
+  safeHandle('settings:delete', (_e, key: string) => {
+    if (SENSITIVE_SETTING_KEYS.has(key)) {
+      throw new Error(`Cannot delete sensitive setting "${key}" via this channel`)
+    }
+    deleteSetting(key)
+  })
 
   // Settings profiles
   safeHandle('settings:saveProfile', (_e, name: string) => {
