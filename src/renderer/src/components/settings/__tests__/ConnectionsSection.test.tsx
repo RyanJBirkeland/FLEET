@@ -17,9 +17,11 @@ const mockAuthStatus = vi.fn().mockResolvedValue({
 
 beforeEach(() => {
   vi.mocked(window.api.settings.get).mockResolvedValue(null)
+  vi.mocked(window.api.settings.hasSecret).mockResolvedValue(false)
   vi.mocked(window.api.settings.set).mockResolvedValue(undefined)
   ;(window.api.auth as unknown as Record<string, unknown>).status = mockAuthStatus
   vi.clearAllMocks()
+  vi.mocked(window.api.settings.hasSecret).mockResolvedValue(false)
   ;(window.api.auth as unknown as Record<string, unknown>).status = mockAuthStatus
 })
 
@@ -60,10 +62,7 @@ describe('ConnectionsSection', () => {
       linkNext: null
     })
     // Pre-existing token so Test button is enabled
-    vi.mocked(window.api.settings.get).mockImplementation((key: string) => {
-      if (key === 'github.token') return Promise.resolve('ghp_existing')
-      return Promise.resolve(null)
-    })
+    vi.mocked(window.api.settings.hasSecret).mockResolvedValue(true)
 
     const user = userEvent.setup()
     render(<ConnectionsSection />)
@@ -89,10 +88,7 @@ describe('ConnectionsSection', () => {
       body: {},
       linkNext: null
     })
-    vi.mocked(window.api.settings.get).mockImplementation((key: string) => {
-      if (key === 'github.token') return Promise.resolve('ghp_bad_token')
-      return Promise.resolve(null)
-    })
+    vi.mocked(window.api.settings.hasSecret).mockResolvedValue(true)
 
     const user = userEvent.setup()
     render(<ConnectionsSection />)

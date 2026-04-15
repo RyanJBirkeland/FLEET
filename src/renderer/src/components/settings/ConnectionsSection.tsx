@@ -68,8 +68,8 @@ export function ConnectionsSection(): React.JSX.Element {
   const [ghTestResult, setGhTestResult] = useState<'success' | 'error' | null>(null)
 
   useEffect(() => {
-    window.api.settings.get('github.token').then((v) => {
-      setHasExistingGhToken(!!v)
+    window.api.settings.hasSecret('github.token').then((exists) => {
+      setHasExistingGhToken(exists)
     })
   }, [])
 

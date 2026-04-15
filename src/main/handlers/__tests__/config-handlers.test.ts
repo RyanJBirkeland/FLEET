@@ -27,7 +27,7 @@ vi.mock('../../ipc-utils', () => ({
 }))
 
 vi.mock('../../secure-storage', () => ({
-  SENSITIVE_SETTING_KEYS: new Set(['github.token', 'anthropic.apiKey'])
+  SENSITIVE_SETTING_KEYS: new Set(['github.token', 'supabase.serviceKey'])
 }))
 
 import { registerConfigHandlers } from '../config-handlers'

@@ -244,6 +244,7 @@ vi.stubGlobal('api', {
   // Settings
   settings: {
     get: vi.fn().mockResolvedValue(null),
+    hasSecret: vi.fn().mockResolvedValue(false),
     set: vi.fn().mockResolvedValue(undefined),
     getJson: vi.fn().mockResolvedValue(null),
     setJson: vi.fn().mockResolvedValue(undefined),
