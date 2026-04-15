@@ -33,8 +33,9 @@ import { existsSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { updateTask } from '../../data/sprint-queries'
 import { resolveSuccess, resolveFailure } from '../completion'
+import { calculateRetryBackoff } from '../resolve-failure-phases'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
-import { MAX_RETRIES } from '../types'
+import { MAX_RETRIES, RETRY_BACKOFF_BASE_MS, RETRY_BACKOFF_CAP_MS } from '../types'
 
 const execFileMock = vi.mocked(execFile)
 const updateTaskMock = vi.mocked(updateTask)
@@ -766,6 +767,32 @@ describe('resolveFailure', () => {
 
     // AM-5 fix: should return true (terminal) even though DB update failed
     expect(result).toBe(true)
+  })
+})
+
+describe('calculateRetryBackoff', () => {
+  it('returns base delay for first retry (retryCount=0)', () => {
+    expect(calculateRetryBackoff(0)).toBe(RETRY_BACKOFF_BASE_MS)
+  })
+
+  it('doubles delay for second retry (retryCount=1)', () => {
+    expect(calculateRetryBackoff(1)).toBe(RETRY_BACKOFF_BASE_MS * 2)
+  })
+
+  it('quadruples delay for third retry (retryCount=2)', () => {
+    expect(calculateRetryBackoff(2)).toBe(RETRY_BACKOFF_BASE_MS * 4)
+  })
+
+  it('caps delay at RETRY_BACKOFF_CAP_MS for high retry counts', () => {
+    // retryCount=10 would be 30000 * 2^10 = 30,720,000ms without cap
+    expect(calculateRetryBackoff(10)).toBe(RETRY_BACKOFF_CAP_MS)
+  })
+
+  it('respects cap when exactly at threshold', () => {
+    // Find retryCount where exponential exactly equals cap
+    // 30000 * 2^n = 300000 → 2^n = 10 → n ≈ 3.32
+    // So at retryCount=4: 30000 * 16 = 480000 > 300000 (capped)
+    expect(calculateRetryBackoff(4)).toBe(RETRY_BACKOFF_CAP_MS)
   })
 })
 
