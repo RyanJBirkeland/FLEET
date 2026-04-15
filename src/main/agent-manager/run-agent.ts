@@ -285,10 +285,10 @@ export async function runAgent(
   // Phase 2: Spawn and wire agent
   let agent: ActiveAgent, agentRunId: string, turnTracker: TurnTracker
   try {
-    const result = await spawnAndWireAgent(task, prompt, worktree, repoPath, effectiveModel, deps)
-    agent = result.agent
-    agentRunId = result.agentRunId
-    turnTracker = result.turnTracker
+    const spawnResult = await spawnAndWireAgent(task, prompt, worktree, repoPath, effectiveModel, deps)
+    agent = spawnResult.agent
+    agentRunId = spawnResult.agentRunId
+    turnTracker = spawnResult.turnTracker
   } catch {
     return // Early exit — spawn failed and cleaned up
   }

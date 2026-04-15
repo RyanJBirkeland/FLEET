@@ -158,10 +158,10 @@ export function detectCycle(
       visited.add(current)
       const deps = getDepsForTask(current)
       if (!deps) return null
-      for (const d of deps) {
-        path.push(d.id)
-        const result = dfs(d.id)
-        if (result) return result
+      for (const dependency of deps) {
+        path.push(dependency.id)
+        const cycleFound = dfs(dependency.id)
+        if (cycleFound) return cycleFound
         path.pop()
       }
       return null
