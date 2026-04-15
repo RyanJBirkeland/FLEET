@@ -6,6 +6,7 @@
  */
 
 import type { BuildPromptInput } from '../lib/prompt-composer'
+import { escapeXmlContent } from './prompt-sections'
 
 // ---------------------------------------------------------------------------
 // Reviewer Preamble
@@ -34,14 +35,14 @@ You are the BDE Code Review Partner running a one-shot structured review pass. Y
 Branch: \`${branch}\`
 
 <review_context>
-${taskContent}
+${escapeXmlContent(taskContent)}
 </review_context>
 
 ## Diff
 
 <review_diff>
 \`\`\`diff
-${diff}
+${escapeXmlContent(diff)}
 \`\`\`
 </review_diff>
 
@@ -87,7 +88,7 @@ Opening: ${reviewSeed.openingMessage}
     : ''
 
   const history = messages
-    .map((m) => `**${m.role}:** <chat_message>\n${m.content}\n</chat_message>`)
+    .map((m) => `**${m.role}:** <chat_message>\n${escapeXmlContent(m.content)}\n</chat_message>`)
     .join('\n\n')
 
   return `${REVIEWER_PREAMBLE}
@@ -101,7 +102,7 @@ Cite specific file paths and line numbers where possible. Be concrete and brief.
 Branch: \`${branch}\`
 
 <review_context>
-${taskContent}
+${escapeXmlContent(taskContent)}
 </review_context>
 
 ${seedBlock}
@@ -110,7 +111,7 @@ ${seedBlock}
 
 <review_diff>
 \`\`\`diff
-${diff}
+${escapeXmlContent(diff)}
 \`\`\`
 </review_diff>
 
