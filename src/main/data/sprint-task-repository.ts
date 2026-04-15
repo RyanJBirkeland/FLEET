@@ -43,7 +43,7 @@ export interface IAgentTaskRepository {
   getOrphanedTasks(claimedBy: string): SprintTask[]
   clearStaleClaimedBy(claimedBy: string): number
   getActiveTaskCount(): number
-  claimTask(id: string, claimedBy: string): SprintTask | null
+  claimTask(id: string, claimedBy: string, maxActive?: number): SprintTask | null
   getGroup(id: string): TaskGroup | null
   getGroupTasks(groupId: string): SprintTask[]
   getGroupsWithDependencies(): Array<{ id: string; depends_on: EpicDependency[] | null }>
@@ -103,7 +103,7 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     getOrphanedTasks: queries.getOrphanedTasks,
     clearStaleClaimedBy: queries.clearStaleClaimedBy,
     getActiveTaskCount: queries.getActiveTaskCount,
-    claimTask: queries.claimTask,
+    claimTask: (id, claimedBy, maxActive) => queries.claimTask(id, claimedBy, maxActive),
     getGroup: groupQueries.getGroup,
     getGroupTasks: groupQueries.getGroupTasks,
     getGroupsWithDependencies: groupQueries.getGroupsWithDependencies,

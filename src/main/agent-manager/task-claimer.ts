@@ -102,7 +102,7 @@ export async function validateAndClaimTask(
     return null
   }
 
-  const claimed = deps.repo.claimTask(task.id, EXECUTOR_ID) !== null
+  const claimed = deps.repo.claimTask(task.id, EXECUTOR_ID, deps.config.maxConcurrent) !== null
   if (!claimed) {
     deps.logger.info(`[agent-manager] Task ${task.id} already claimed — skipping`)
     return null

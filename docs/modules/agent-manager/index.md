@@ -42,7 +42,7 @@ Source: `src/main/agent-manager/`
 | `types.ts` | Shared type definitions for agent manager internals | `ActiveAgent`, `AgentHandle`, `AgentManagerConfig`, `ResolveDependentsParams` |
 | `drain-loop.ts` | Polling orchestration — precondition checks, dep-index refresh, queued-task fetching and processing | `runDrain`, `validateDrainPreconditions`, `buildTaskStatusMap`, `drainQueuedTasks`, `DrainLoopDeps` |
 | `watchdog-loop.ts` | Agent health checks — idle/timeout/rate-limit/cost verdicts, kill helper | `runWatchdog`, `killActiveAgent`, `WatchdogLoopDeps` |
-| `task-claimer.ts` | Task claim pipeline — fresh-status guard, dep blocking, repo path resolution, worktree setup, agent spawn | `validateAndClaimTask`, `prepareWorktreeForTask`, `processQueuedTask`, `resolveRepoPath` |
+| `task-claimer.ts` | Task claim pipeline — fresh-status guard, dep blocking, repo path resolution, worktree setup, agent spawn. Passes `config.maxConcurrent` to `claimTask` for atomic DB-level WIP enforcement. | `validateAndClaimTask`, `prepareWorktreeForTask`, `processQueuedTask`, `resolveRepoPath` |
 | `worktree-manager.ts` | Worktree prune pass and review-status check helper | `runPruneLoop`, `checkIsReviewTask`, `WorktreeManagerDeps` |
 | `shutdown-coordinator.ts` | Graceful shutdown — waits for drain, aborts agents, re-queues active tasks, flushes event batcher | `executeShutdown`, `ShutdownCoordinatorDeps` |
 | `config-manager.ts` | Hot-reload settings — updates maxConcurrent, maxRuntimeMs, defaultModel in place; flags worktreeBase as restart-required | `reloadConfiguration`, `ConfigManagerDeps` |
