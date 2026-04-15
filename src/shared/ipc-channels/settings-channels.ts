@@ -65,3 +65,11 @@ export interface AuthChannels {
     result: { cliFound: boolean; tokenFound: boolean; tokenExpired: boolean; expiresAt?: string }
   }
 }
+
+/** Onboarding prerequisite checks */
+export interface OnboardingChannels {
+  'onboarding:checkGhCli': {
+    args: []
+    result: { available: boolean; version?: string }
+  }
+}

@@ -5,6 +5,7 @@ Source: `src/main/lib/`
 
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
+| `env-utils.ts` | Environment setup — PATH augmentation, OAuth token management with symlink/size guards, agent environment building | `ensureExtraPathsOnProcessEnv`, `buildAgentEnv`, `getOAuthToken`, `invalidateOAuthToken`, `buildAgentEnvWithAuth`, `refreshOAuthTokenFromKeychain` |
 | `async-utils.ts` | Promisified `execFile` and `sleep` | `execFileAsync`, `sleep` |
 | `patch-validation.ts` | Validates and filters patch content before applying | `validateAndFilterPatch` |
 | `review-paths.ts` | Path validators for review git refs, worktree paths, and file paths | `validateGitRef`, `validateWorktreePath`, `validateFilePath`, `getWorktreeBase` |

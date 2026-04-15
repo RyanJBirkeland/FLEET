@@ -68,6 +68,7 @@ import {
   refreshPrList,
   onExternalSprintChange,
   authStatus,
+  onboarding,
   templates,
   terminal,
   dashboard,
@@ -164,6 +165,9 @@ const api = {
   auth: {
     status: authStatus
   },
+
+  // Onboarding
+  onboarding,
 
   // Spec Synthesizer
   synthesizer: {

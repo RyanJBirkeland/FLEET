@@ -123,7 +123,9 @@ vi.stubGlobal('api', {
 
   // Auth
   auth: {
-    status: vi.fn().mockResolvedValue({ authenticated: false })
+    status: vi
+      .fn()
+      .mockResolvedValue({ cliFound: true, tokenFound: true, tokenExpired: false })
   },
 
   // Spec Synthesizer
@@ -314,5 +316,10 @@ vi.stubGlobal('api', {
     listGithub: vi.fn().mockResolvedValue([]),
     clone: vi.fn().mockResolvedValue(undefined),
     onCloneProgress: vi.fn().mockReturnValue(() => {})
+  },
+
+  // Onboarding prerequisite checks
+  onboarding: {
+    checkGhCli: vi.fn().mockResolvedValue({ available: true, version: '2.40.0' })
   }
 })

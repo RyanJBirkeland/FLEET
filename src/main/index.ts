@@ -43,7 +43,18 @@ import {
   restoreTearoffWindows
 } from './tearoff-manager'
 
+// Enforce minimum Node.js version before any app logic
+const [nodeMajor] = process.versions.node.split('.').map(Number)
+if (nodeMajor < 22) {
+  process.stderr.write(
+    `[BDE] Node.js v22+ required (found ${process.versions.node}). Please upgrade.\n`
+  )
+  process.exit(1)
+}
+
 const logger = createLogger('main')
+
+const ALLOWED_EXTERNAL_SCHEMES = ['https:', 'http:', 'mailto:']
 
 process.on('uncaughtException', (err) => {
   logError(logger, 'Uncaught exception', err)
@@ -76,7 +87,14 @@ function createWindow(): void {
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const parsed = new URL(details.url)
+      if (ALLOWED_EXTERNAL_SCHEMES.includes(parsed.protocol)) {
+        shell.openExternal(details.url).catch(() => {})
+      }
+    } catch {
+      // Malformed URL — deny silently
+    }
     return { action: 'deny' }
   })
 

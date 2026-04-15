@@ -120,6 +120,12 @@ export const onExternalSprintChange = onBroadcast<BroadcastChannels['sprint:exte
 export const authStatus = (): Promise<IpcChannelMap['auth:status']['result']> =>
   typedInvoke('auth:status')
 
+// Onboarding checks
+export const onboarding = {
+  checkGhCli: (): Promise<IpcChannelMap['onboarding:checkGhCli']['result']> =>
+    typedInvoke('onboarding:checkGhCli')
+}
+
 // Template CRUD
 export const templates = {
   list: () => typedInvoke('templates:list'),

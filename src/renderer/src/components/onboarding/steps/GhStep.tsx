@@ -1,4 +1,4 @@
-import { ArrowRight, ArrowLeft, GitBranch, Check, X } from 'lucide-react'
+import { ArrowRight, ArrowLeft, Github, Check, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { Button } from '../../ui/Button'
 
@@ -10,60 +10,68 @@ interface StepProps {
   isLast: boolean
 }
 
-export function GitStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Element {
-  const [gitAvailable, setGitAvailable] = useState<boolean | null>(null)
+export function GhStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Element {
+  const [ghAvailable, setGhAvailable] = useState<boolean | null>(null)
+  const [ghVersion, setGhVersion] = useState<string | undefined>(undefined)
   const [checking, setChecking] = useState(true)
 
-  const checkGit = async (): Promise<void> => {
+  const checkGh = async (): Promise<void> => {
     setChecking(true)
     try {
-      // Try to call a git command via IPC
-      await window.api.git.getRepoPaths()
-      setGitAvailable(true)
+      const result = await window.api.onboarding.checkGhCli()
+      setGhAvailable(result.available)
+      setGhVersion(result.version)
     } catch {
-      setGitAvailable(false)
+      setGhAvailable(false)
     }
     setChecking(false)
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    void checkGit()
+    void checkGh()
   }, [])
 
   return (
     <div className="onboarding-step">
       <div className="onboarding-step__icon">
-        <GitBranch size={48} />
+        <Github size={48} />
       </div>
 
-      <h1 className="onboarding-step__title">Git Setup</h1>
+      <h1 className="onboarding-step__title">GitHub CLI</h1>
 
       <p className="onboarding-step__description">
-        BDE agents work in isolated git worktrees. Make sure git is installed and accessible.
+        BDE uses the GitHub CLI to create pull requests and interact with GitHub repositories.
       </p>
 
       <div className="onboarding-step__checks">
         <div className="onboarding-step__check">
           {checking ? (
             <div className="onboarding-step__check-icon">⏳</div>
-          ) : gitAvailable ? (
+          ) : ghAvailable ? (
             <Check size={20} className="onboarding-step__check-icon--success" />
           ) : (
             <X size={20} className="onboarding-step__check-icon--error" />
           )}
-          <span>Git is available on PATH</span>
+          <span>
+            {ghAvailable && ghVersion ? `gh CLI is available (${ghVersion})` : 'gh CLI is available on PATH'}
+          </span>
         </div>
       </div>
 
-      {!checking && !gitAvailable && (
+      {!checking && !ghAvailable && (
         <div className="onboarding-step__help">
-          <p>Install git and ensure it&apos;s in your system PATH</p>
+          <p>
+            gh CLI is required for creating pull requests.{' '}
+            <a href="https://cli.github.com" target="_blank" rel="noreferrer">
+              Install from cli.github.com
+            </a>
+          </p>
         </div>
       )}
 
       {!checking && (
-        <Button variant="ghost" onClick={checkGit}>
+        <Button variant="ghost" onClick={checkGh}>
           Check Again
         </Button>
       )}
@@ -75,7 +83,7 @@ export function GitStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Eleme
             Back
           </Button>
         )}
-        <Button variant="primary" onClick={onNext} disabled={checking || !gitAvailable}>
+        <Button variant="primary" onClick={onNext} disabled={checking || !ghAvailable}>
           Next
           <ArrowRight size={16} />
         </Button>

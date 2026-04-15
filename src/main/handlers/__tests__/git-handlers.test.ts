@@ -80,14 +80,15 @@ vi.mock('../../settings', () => ({
   })
 }))
 
-// Mock review-paths validateGitRef
+// Mock review-paths validateGitRef and validateFilePath
 vi.mock('../../lib/review-paths', () => ({
   validateGitRef: vi.fn((ref: string) => {
     const SAFE_REF_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9/_.-]{0,198}$/
     if (!ref || !SAFE_REF_PATTERN.test(ref)) {
       throw new Error(`Invalid git ref: "${ref}". Must match pattern [a-zA-Z0-9/_.-], max 200 chars.`)
     }
-  })
+  }),
+  validateFilePath: vi.fn()
 }))
 
 import { registerGitHandlers } from '../git-handlers'

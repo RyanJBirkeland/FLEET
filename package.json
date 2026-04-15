@@ -2,6 +2,9 @@
   "name": "bde",
   "productName": "BDE",
   "version": "0.1.0",
+  "engines": {
+    "node": ">=22.0.0"
+  },
   "description": "Birkeland Development Environment",
   "main": "./out/main/index.js",
   "scripts": {

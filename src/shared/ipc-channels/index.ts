@@ -107,7 +107,12 @@ export type {
 } from './git-channels'
 
 // Settings channels
-export type { SettingsChannels, ClaudeConfigChannels, AuthChannels } from './settings-channels'
+export type {
+  SettingsChannels,
+  ClaudeConfigChannels,
+  AuthChannels,
+  OnboardingChannels
+} from './settings-channels'
 
 // UI channels
 export type {
@@ -165,4 +170,5 @@ export type IpcChannelMap = import('./settings-channels').SettingsChannels &
   import('./sprint-channels').GroupChannels &
   import('./sprint-channels').PlannerChannels &
   import('./system-channels').SystemChannels &
-  import('./system-channels').RepoDiscoveryChannels
+  import('./system-channels').RepoDiscoveryChannels &
+  import('./settings-channels').OnboardingChannels
