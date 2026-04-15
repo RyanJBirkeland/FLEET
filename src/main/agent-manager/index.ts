@@ -230,7 +230,7 @@ export class AgentManagerImpl implements AgentManager {
     task: AgentRunClaim,
     worktree: { worktreePath: string; branch: string },
     repoPath: string
-  ): void {
+  ): Promise<void> {
     this._metrics.increment('agentsSpawned')
     const p = _runAgent(task, worktree, repoPath, this.runAgentDeps)
       .catch((err) => {
@@ -240,6 +240,7 @@ export class AgentManagerImpl implements AgentManager {
         this._agentPromises.delete(p)
       })
     this._agentPromises.add(p)
+    return Promise.resolve()
   }
 
   // ---- Task processing delegates ----
@@ -384,11 +385,11 @@ export class AgentManagerImpl implements AgentManager {
       getConcurrency: () => this._concurrency,
       setConcurrency: (state) => { this._concurrency = state },
       onTaskTerminal: this.onTaskTerminal.bind(this),
-      cleanupAgentWorktree: (agent) => {
+      cleanupAgentWorktree: async (agent) => {
         const task = this.repo.getTask(agent.taskId)
         const repoPath = task ? resolveRepoPath(task.repo) : null
-        if (!repoPath) return Promise.resolve()
-        return cleanupWorktree({
+        if (!repoPath) return
+        await cleanupWorktree({
           repoPath,
           worktreePath: agent.worktreePath,
           branch: agent.branch,

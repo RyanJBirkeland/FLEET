@@ -166,7 +166,7 @@ export interface ProcessQueuedTaskDeps extends TaskClaimerDeps {
     task: AgentRunClaim,
     worktree: { worktreePath: string; branch: string },
     repoPath: string
-  ) => void
+  ) => Promise<void>
 }
 
 /**
@@ -205,7 +205,7 @@ export async function processQueuedTask(
     const wt = await prepareWorktreeForTask(task, repoPath, deps)
     if (!wt) return
 
-    deps.spawnAgent(task, wt, repoPath)
+    await deps.spawnAgent(task, wt, repoPath)
   } finally {
     deps.processingTasks.delete(taskId)
   }

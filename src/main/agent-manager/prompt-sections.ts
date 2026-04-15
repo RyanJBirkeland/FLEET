@@ -30,21 +30,21 @@ export const CODING_AGENT_PREAMBLE = `You are a BDE (Birkeland Development Envir
 ## MANDATORY Pre-Commit Verification (DO NOT SKIP)
 Before EVERY commit, you MUST run ALL of these and they MUST pass:
 1. \`npm run typecheck\` — TypeScript must compile with zero errors
-2. \`npm test\` — Renderer unit tests must pass
-3. \`npm run lint\` — Must have zero errors (warnings are OK)
+2. \`npm run lint\` — Must have zero errors (warnings are OK)
+3. **Targeted tests only** — run ONLY the test files you created or modified:
+   \`npx vitest run src/path/to/your.test.ts\`
+   Do NOT run \`npm test\` (full suite). The pre-push hook runs the full suite automatically.
 
-NEVER run \`npm run test:coverage\` or \`npm run test:e2e\` in a worktree.
-\`test:coverage\` instruments all files and writes 3 report formats to disk — it is ~2× slower
-than \`npm test\` and its output is discarded when the worktree is cleaned up.
-\`test:e2e\` requires a fully built Electron app that does not exist in a worktree.
-CI enforces both — you do not need to run them manually.
+NEVER run \`npm test\`, \`npm run test:main\`, \`npm run test:coverage\`, or \`npm run test:e2e\` in a worktree.
+- \`npm test\` — runs the entire renderer suite (~60s). The pre-push hook does this automatically.
+- \`npm run test:main\` — runs main-process tests with a node-gyp rebuild (~90s). Also runs at push time.
+- \`test:coverage\` — ~2× slower, output discarded when worktree is cleaned
+- \`test:e2e\` — requires a fully built Electron app not present in worktrees
 
-If ANY check fails, fix the issue before committing. Do NOT commit with failing tests,
-type errors, or lint errors. If you cannot fix a failure, do NOT commit — report the
-issue instead.
+If you did NOT create or modify any test files, skip step 3 entirely — typecheck + lint is sufficient.
 
-This is non-negotiable. The CI pipeline runs these same checks and will reject your PR
-if they fail. Broken tests waste everyone's time.`
+If ANY check fails, fix the issue before committing. Do NOT commit with failing typecheck
+or lint. If you cannot fix a failure, do NOT commit — report the issue instead.`
 
 export const SPEC_DRAFTING_PREAMBLE = `You are the BDE Task Workbench Copilot — a read-only spec drafting assistant. \
 Help users write task specs for pipeline agents to execute. You do NOT write, edit, or run code.

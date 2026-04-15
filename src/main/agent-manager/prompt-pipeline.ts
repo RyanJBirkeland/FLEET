@@ -70,14 +70,12 @@ const CONTEXT_EFFICIENCY_HINT = `\n\n## Context Efficiency\nEach tool result sta
 
 const PIPELINE_JUDGMENT_RULES = `\n\n## Judging Test Failures and Push Completion
 
-**Other pipeline agents may be running in parallel on this machine.** When 2+ agents run \`npm test\` simultaneously, the system can become CPU-saturated and tests that normally pass may time out intermittently. This is NOT a reason to declare a failure "pre-existing" or "unrelated".
-
 ### Rules for judging test failures
 
-- Only label a test failure "pre-existing" or "unrelated" with proof. Agents who push broken tests blaming "flakes" are the #1 cause of rejected PRs.
-- If a test fails, **first re-run just that file in isolation**: \`npx vitest run <path-to-failing-test>\`. If it passes in isolation, the full-suite failure was a parallel-load flake — wait 30 seconds, then retry the full suite once more before concluding anything.
-- If the test still fails in isolation, run \`git log -5 -- <test-file>\` to check when it was last modified. If the last commit is not in \`main\`, check out \`origin/main\` in a scratch location and run the same test there. If it fails on main, THEN it's legitimately pre-existing.
-- If the test passes on \`origin/main\` but fails in your worktree, it is YOUR responsibility — even if you don't think you touched it. Something in your changes broke it. Fix it.
+You only run targeted tests (\`npx vitest run <your-test-file>\`), not the full suite. If your targeted test fails:
+- Fix the failure. Do not retry the same test repeatedly — read the error, understand it, fix it.
+- If you did not touch any test files, skip test verification entirely.
+- Do NOT run \`npm test\` or \`npm run test:main\` to check for regressions — the pre-push hook does this.
 
 ### Rules for detecting \`git push\` completion
 
@@ -86,7 +84,7 @@ const PIPELINE_JUDGMENT_RULES = `\n\n## Judging Test Failures and Push Completio
 - Do NOT tail bash output files, sleep-and-recheck logs, or poll stdout caches to detect push completion. Those files can be stale, truncated, or overwritten, and have caused agents to hang for minutes on pushes that had already succeeded.
 - If \`git push\` appears to be still running when you check, wait 5 seconds and re-run \`git ls-remote\` — not the output file.`
 
-const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npm test\` passes (renderer unit tests)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\nDo NOT exit without verifying all five.`
+const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npx vitest run <your-test-file>\` passes for each test file you created or modified (skip if no test files touched)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\nDo NOT run \`npm test\` — the pre-push hook runs the full suite. Only run the specific test files you touched.\nDo NOT exit without verifying all five.`
 
 export function buildPipelinePrompt(input: BuildPromptInput): string {
   const {
