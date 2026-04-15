@@ -3,7 +3,7 @@
  * Consolidates PATH augmentation and OAuth token loading that was
  * previously duplicated across adhoc-agent.ts, workbench.ts, and sdk-adapter.ts.
  */
-import { readFileSync, existsSync, writeFileSync, statSync } from 'node:fs'
+import { readFileSync, existsSync, writeFileSync, lstatSync } from 'node:fs'
 import { execFile as execFileCb } from 'node:child_process'
 import { promisify } from 'node:util'
 import { createRequire } from 'node:module'
@@ -88,9 +88,10 @@ export function buildAgentEnv(): Record<string, string | undefined> {
 
 let _cachedOAuthToken: string | null = null
 let _tokenLoadedAt = 0
-const TOKEN_TTL_MS = 5 * 60 * 1000 // 5 minutes — re-read from disk frequently for pipeline runs
+const TOKEN_TTL_MS = 30 * 1000 // 30 seconds — short enough to respect token rotation
+const MAX_TOKEN_BYTES = 64 * 1024 // 64 KB — any valid token is well under this
 
-/** Reads OAuth token from ~/.bde/oauth-token. Cached for 5 minutes. */
+/** Reads OAuth token from ~/.bde/oauth-token. Cached for 30 seconds to respect token rotation. */
 export function getOAuthToken(): string | null {
   const now = Date.now()
   if (_tokenLoadedAt > 0 && now - _tokenLoadedAt < TOKEN_TTL_MS) return _cachedOAuthToken
@@ -98,9 +99,19 @@ export function getOAuthToken(): string | null {
   const tokenPath = join(homedir(), '.bde', 'oauth-token')
   try {
     if (existsSync(tokenPath)) {
-      // DL-7: Verify token file has restrictive permissions (user-only read/write)
-      const stats = statSync(tokenPath)
-      const mode = stats.mode & 0o777
+      // Use lstatSync (not statSync) to detect symlinks before following them.
+      const lstats = lstatSync(tokenPath)
+      if (lstats.isSymbolicLink()) {
+        console.warn('[env-utils] OAuth token file is a symlink — rejecting for security')
+        _cachedOAuthToken = null
+        return _cachedOAuthToken
+      }
+      if (lstats.size > MAX_TOKEN_BYTES) {
+        console.warn('[env-utils] OAuth token file exceeds maximum size — rejecting')
+        _cachedOAuthToken = null
+        return _cachedOAuthToken
+      }
+      const mode = lstats.mode & 0o777
       if (mode !== 0o600) {
         console.warn(
           `[env-utils] OAuth token file has insecure permissions: ${mode.toString(8)}. Expected: 600`
