@@ -17,7 +17,7 @@ import { registerSprintRetryHandler } from './sprint-retry-handler'
 import { registerCostHandlers } from './cost-handlers'
 import { registerFsHandlers } from '../fs'
 import { registerTemplateHandlers } from './template-handlers'
-import { registerAuthHandlers } from './auth-handlers'
+import { registerAuthHandlers, registerOnboardingHandlers } from './auth-handlers'
 import { registerAgentManagerHandlers } from './agent-manager-handlers'
 import { registerWorkbenchHandlers } from './workbench'
 import { registerMemorySearchHandler } from './memory-search'
@@ -85,6 +85,7 @@ export function registerAllHandlers(deps: AppHandlerDeps): void {
   registerIdeFsHandlers()
   registerMemorySearchHandler()
   registerAuthHandlers()
+  registerOnboardingHandlers()
   registerDashboardHandlers()
   registerTearoffHandlers()
   registerClaudeConfigHandlers()

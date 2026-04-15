@@ -187,6 +187,11 @@ declare global {
         status: () => Promise<IpcResult<'auth:status'>>
       }
 
+      // Onboarding
+      onboarding: {
+        checkGhCli: () => Promise<IpcResult<'onboarding:checkGhCli'>>
+      }
+
       // Spec Synthesizer
       synthesizer: {
         generate: (
