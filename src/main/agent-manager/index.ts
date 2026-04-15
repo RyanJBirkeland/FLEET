@@ -517,7 +517,6 @@ export class AgentManagerImpl implements AgentManager {
   private _scheduleInitialDrain(): void {
     setTimeout(() => {
       this._drainInFlight = (async () => {
-        // Wait for orphan recovery to complete before draining
         try {
           await recoverOrphans((id: string) => this._activeAgents.has(id), this.repo, this.logger)
         } catch (err) {
