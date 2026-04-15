@@ -9,7 +9,7 @@ import { usePanelLayoutStore } from '../stores/panelLayout'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useBackoffInterval } from '../hooks/useBackoffInterval'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION } from '../lib/motion'
-import { POLL_LOAD_AVERAGE } from '../lib/constants'
+import { POLL_DASHBOARD_INTERVAL, POLL_LOAD_AVERAGE } from '../lib/constants'
 import { StatusBar, NeonCard } from '../components/neon'
 import { neonVar } from '../components/neon/types'
 import { partitionSprintTasks } from '../lib/partitionSprintTasks'
@@ -114,6 +114,12 @@ export default function DashboardView(): React.JSX.Element {
       lastFetchedAt: s.lastFetchedAt
     }))
   )
+
+  // Dashboard data polling — 60s backoff interval
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
+  useBackoffInterval(fetchDashboardData, POLL_DASHBOARD_INTERVAL)
 
   // Load average polling — 5s backoff interval
   const fetchLoad = useDashboardDataStore((s) => s.fetchLoad)

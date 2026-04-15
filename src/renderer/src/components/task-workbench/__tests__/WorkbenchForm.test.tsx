@@ -158,21 +158,21 @@ describe('WorkbenchForm', () => {
 
   it('toggles advanced options when "Advanced" clicked', () => {
     render(<WorkbenchForm onSendCopilotMessage={mockOnSendCopilotMessage} />)
-    expect(screen.queryByText('Priority')).not.toBeInTheDocument()
+    // Priority is always visible (moved out of Advanced section)
+    expect(screen.getByText('Priority')).toBeInTheDocument()
+    // Dev Playground is inside Advanced (collapsed by default)
+    expect(screen.queryByText('Dev Playground')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByText(/Advanced/))
-    expect(screen.getByText('Priority')).toBeInTheDocument()
     expect(screen.getByText('Dev Playground')).toBeInTheDocument()
   })
 
-  it('shows priority select in advanced options', () => {
-    useTaskWorkbenchStore.setState({ advancedOpen: true })
+  it('shows priority select always (not gated by advanced)', () => {
     render(<WorkbenchForm onSendCopilotMessage={mockOnSendCopilotMessage} />)
     expect(screen.getByText('P3 Medium')).toBeInTheDocument()
   })
 
-  it('updates priority from advanced options', () => {
-    useTaskWorkbenchStore.setState({ advancedOpen: true })
+  it('updates priority from form', () => {
     render(<WorkbenchForm onSendCopilotMessage={mockOnSendCopilotMessage} />)
     const prioritySelect = screen.getByDisplayValue('P3 Medium')
     fireEvent.change(prioritySelect, { target: { value: '1' } })

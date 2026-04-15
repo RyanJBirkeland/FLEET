@@ -122,7 +122,7 @@ describe('SpecEditor', () => {
     fireEvent.click(button)
 
     const spec = useTaskWorkbenchStore.getState().spec
-    expect(spec).toContain("## What's Being Refactored")
+    expect(spec).toContain('## What is Being Refactored')
     expect(spec).toContain('## Target State')
     expect(spec).toContain('## Files to Change')
     expect(spec).toContain('## Out of Scope')
@@ -138,7 +138,7 @@ describe('SpecEditor', () => {
     expect(spec).toContain('## What to Test')
     expect(spec).toContain('## Test Strategy')
     expect(spec).toContain('## Files to Create')
-    expect(spec).toContain('## Coverage Target')
+    expect(spec).toContain('## Coverage Thresholds')
   })
 
   it('shows confirmation dialog when overwriting existing spec', async () => {

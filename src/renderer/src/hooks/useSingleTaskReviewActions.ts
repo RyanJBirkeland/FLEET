@@ -75,6 +75,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
         toast.success('Merged & pushed!')
         const nextTaskId = getNextReviewTaskId(task.id, tasks)
         selectTask(nextTaskId)
+        if (!nextTaskId) toast.info('Review queue empty')
         loadData()
       } else {
         toast.error(`Ship It failed: ${result.error || 'unknown error'}`, 10000)
@@ -105,9 +106,13 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
         toast.success('Changes merged locally')
         const nextTaskId = getNextReviewTaskId(task.id, tasks)
         selectTask(nextTaskId)
+        if (!nextTaskId) toast.info('Review queue empty')
         loadData()
       } else {
-        toast.error(`Merge failed: ${result.error || 'conflicts detected'}`)
+        const conflictInfo = result.conflicts?.length
+          ? `\n\nConflicting files:\n${result.conflicts.slice(0, 5).join('\n')}${result.conflicts.length > 5 ? `\n...and ${result.conflicts.length - 5} more` : ''}`
+          : ''
+        toast.error(`Merge failed: ${result.error || 'conflicts detected'}${conflictInfo}`, 10000)
       }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Merge failed')
@@ -132,9 +137,13 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
         title: task.title,
         body: task.spec || task.prompt || ''
       })
-      toast.success(`PR created: ${result.prUrl}`)
+      toast.info(`PR created`, {
+        action: 'Open PR',
+        onAction: () => window.open(result.prUrl, '_blank')
+      })
       const nextTaskId = getNextReviewTaskId(task.id, tasks)
       selectTask(nextTaskId)
+      if (!nextTaskId) toast.info('Review queue empty')
       loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to create PR')
@@ -164,11 +173,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
           attempt
         }
       ]
-      try {
-        await window.api.sprint.update(task.id, { revision_feedback: nextEntries })
-      } catch (err) {
-        console.warn('[review] Failed to persist revision feedback (audit trail only):', err)
-      }
+      await window.api.sprint.update(task.id, { revision_feedback: nextEntries })
       await window.api.review.requestRevision({
         taskId: task.id,
         feedback,
@@ -177,6 +182,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       toast.success('Task re-queued with revision feedback')
       const nextTaskId = getNextReviewTaskId(task.id, tasks)
       selectTask(nextTaskId)
+      if (!nextTaskId) toast.info('Review queue empty')
       loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to request revision')
@@ -220,6 +226,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       toast.success('Changes discarded')
       const nextTaskId = getNextReviewTaskId(task.id, tasks)
       selectTask(nextTaskId)
+      if (!nextTaskId) toast.info('Review queue empty')
       loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to discard')

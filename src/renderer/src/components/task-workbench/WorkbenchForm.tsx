@@ -236,6 +236,34 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
         </FormField>
       </div>
 
+      <div className="wb-form__field--row">
+        <FormField
+          label="Priority"
+          htmlFor="wb-form-priority"
+          className="wb-form__field wb-form__field--flex"
+        >
+          <select
+            id="wb-form-priority"
+            value={priority}
+            onChange={(e) => setField('priority', Number(e.target.value))}
+            className="wb-form__select"
+          >
+            {PRIORITY_OPTIONS.map((p) => (
+              <option key={p.value} value={p.value}>
+                {p.label}
+              </option>
+            ))}
+          </select>
+        </FormField>
+      </div>
+
+      <DependencyPicker
+        dependencies={dependsOn ?? []}
+        availableTasks={allTasks}
+        onChange={(deps) => setField('dependsOn', deps)}
+        currentTaskId={taskId ?? undefined}
+      />
+
       <div>
         <button
           onClick={() => setField('advancedOpen', !advancedOpen)}
@@ -243,31 +271,12 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
           aria-expanded={advancedOpen}
           aria-controls="wb-form-advanced"
         >
-          {advancedOpen ? '\u25be' : '\u25b8'} Advanced (priority, dependencies, cost, model,
-          playground)
+          {advancedOpen ? '\u25be' : '\u25b8'} Advanced (cost, model, playground)
         </button>
         {advancedOpen && (
           <div id="wb-form-advanced">
             <GlassPanel accent="purple" blur="sm" className="wb-form__advanced">
               <div className="wb-form__field--row">
-                <FormField
-                  label="Priority"
-                  htmlFor="wb-form-priority"
-                  className="wb-form__field wb-form__field--flex"
-                >
-                  <select
-                    id="wb-form-priority"
-                    value={priority}
-                    onChange={(e) => setField('priority', Number(e.target.value))}
-                    className="wb-form__select"
-                  >
-                    {PRIORITY_OPTIONS.map((p) => (
-                      <option key={p.value} value={p.value}>
-                        {p.label}
-                      </option>
-                    ))}
-                  </select>
-                </FormField>
                 <FormField
                   label="Model"
                   htmlFor="wb-form-model"
@@ -352,12 +361,6 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                   </div>
                 )}
               </div>
-              <DependencyPicker
-                dependencies={dependsOn ?? []}
-                availableTasks={allTasks}
-                onChange={(deps) => setField('dependsOn', deps)}
-                currentTaskId={taskId ?? undefined}
-              />
             </GlassPanel>
           </div>
         )}

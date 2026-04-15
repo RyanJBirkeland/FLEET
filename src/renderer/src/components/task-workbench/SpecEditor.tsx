@@ -1,33 +1,18 @@
 import { useCallback, useMemo } from 'react'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import type { SpecType } from '../../../../shared/spec-validation'
+import { DEFAULT_TASK_TEMPLATES } from '../../../../shared/constants'
 import { useConfirm } from '../ui/ConfirmModal'
 import { ConfirmModal } from '../ui/ConfirmModal'
 import { analyzeSpec } from './spec-quality'
 import './SpecEditor.css'
 
-const SPEC_TEMPLATES: Record<string, { label: string; spec: string; specType: SpecType }> = {
-  feature: {
-    label: 'Feature',
-    specType: 'feature',
-    spec: '## Problem\n\n## Solution\n\n## Files to Change\n\n## Out of Scope\n'
-  },
-  bugfix: {
-    label: 'Bug Fix',
-    specType: 'bugfix',
-    spec: '## Bug Description\n\n## Root Cause\n\n## Fix\n\n## Files to Change\n\n## How to Test\n'
-  },
-  refactor: {
-    label: 'Refactor',
-    specType: 'refactor',
-    spec: "## What's Being Refactored\n\n## Target State\n\n## Files to Change\n\n## Out of Scope\n"
-  },
-  test: {
-    label: 'Test',
-    specType: 'test',
-    spec: '## What to Test\n\n## Test Strategy\n\n## Files to Create\n\n## Coverage Target\n'
-  }
-}
+const SPEC_TEMPLATES: Array<{ label: string; spec: string; specType: SpecType }> = [
+  { label: 'Feature', specType: 'feature', spec: DEFAULT_TASK_TEMPLATES[1].promptPrefix },
+  { label: 'Bug Fix', specType: 'bugfix', spec: DEFAULT_TASK_TEMPLATES[0].promptPrefix },
+  { label: 'Refactor', specType: 'refactor', spec: DEFAULT_TASK_TEMPLATES[3].promptPrefix },
+  { label: 'Test', specType: 'test', spec: DEFAULT_TASK_TEMPLATES[4].promptPrefix }
+]
 
 interface SpecEditorProps {
   onRequestGenerate: () => void
@@ -97,9 +82,9 @@ export function SpecEditor({
         >
           {generating ? 'Generating...' : 'Generate Spec'}
         </button>
-        {Object.entries(SPEC_TEMPLATES).map(([key, tmpl]) => (
+        {SPEC_TEMPLATES.map((tmpl) => (
           <button
-            key={key}
+            key={tmpl.label}
             onClick={() => handleTemplateClick(tmpl.spec, tmpl.specType)}
             className="wb-spec__btn"
             aria-label={`Insert ${tmpl.label} template`}
