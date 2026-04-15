@@ -79,7 +79,7 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
     epicIndex.rebuild(groups)
   }
 
-  function scheduleResolution(taskId: string, status: string): void {
+  function scheduleDependencyResolution(taskId: string, status: string): void {
     // DESIGN: Batched resolution via setTimeout(0) for bulk PR merges.
     // When multiple PRs merge simultaneously (e.g., sprint PR poller tick),
     // we rebuild the dependency index once and process all resolutions together.
@@ -128,7 +128,7 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
 
   function onStatusTerminal(taskId: string, status: string): void {
     if (!TERMINAL_STATUSES.has(status)) return
-    scheduleResolution(taskId, status)
+    scheduleDependencyResolution(taskId, status)
   }
 
   return { onStatusTerminal }

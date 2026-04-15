@@ -213,22 +213,22 @@ export function updateTask(id: string, patch: Record<string, unknown>, db?: Data
         const values: unknown[] = []
         const auditPatch: Record<string, unknown> = {}
 
-        for (const [key, value] of changedEntries) {
+        for (const [fieldName, newValue] of changedEntries) {
           // Whitelist Map replaces regex for defense-in-depth
-          const colName = COLUMN_MAP.get(key)
+          const colName = COLUMN_MAP.get(fieldName)
           if (!colName) {
-            throw new Error(`Invalid column name: ${key}`)
+            throw new Error(`Invalid column name: ${fieldName}`)
           }
           setClauses.push(`${colName} = ?`)
-          const serialized = serializeFieldForStorage(key, value)
+          const serialized = serializeFieldForStorage(fieldName, newValue)
           values.push(serialized)
           // For audit, store the sanitized form for depends_on/tags but original for others
-          if (key === 'depends_on') {
-            auditPatch[key] = sanitizeDependsOn(value)
-          } else if (key === 'tags') {
-            auditPatch[key] = sanitizeTags(value)
+          if (fieldName === 'depends_on') {
+            auditPatch[fieldName] = sanitizeDependsOn(newValue)
+          } else if (fieldName === 'tags') {
+            auditPatch[fieldName] = sanitizeTags(newValue)
           } else {
-            auditPatch[key] = value
+            auditPatch[fieldName] = newValue
           }
         }
 

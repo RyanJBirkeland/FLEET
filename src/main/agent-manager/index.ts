@@ -244,14 +244,14 @@ export class AgentManagerImpl implements AgentManager {
   ): Promise<void> {
     this._metrics.increment('agentsSpawned')
     this._pendingSpawns++
-    const p = _runAgent(task, worktree, repoPath, this.runAgentDeps)
+    const agentPromise = _runAgent(task, worktree, repoPath, this.runAgentDeps)
       .catch((err) => {
         this.logger.error(`[agent-manager] runAgent failed for task ${task.id}: ${err}`)
       })
       .finally(() => {
-        this._agentPromises.delete(p)
+        this._agentPromises.delete(agentPromise)
       })
-    this._agentPromises.add(p)
+    this._agentPromises.add(agentPromise)
     return Promise.resolve()
   }
 
