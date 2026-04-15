@@ -36,11 +36,18 @@ export function BatchActionsToolbar({
 }: BatchActionsToolbarProps): React.JSX.Element {
   return (
     <>
-      <span className="cr-topbar__batch-count">{selectedCount} tasks selected</span>
+      <span
+        className="cr-topbar__batch-count"
+        aria-live="polite"
+        aria-atomic="true"
+      >
+        {selectedCount} tasks selected
+      </span>
       <button
         className="cr-topbar__btn cr-topbar__btn--primary"
         onClick={onMergeAll}
         disabled={!!batchActionInFlight}
+        aria-label={`Merge all ${selectedCount} selected tasks locally`}
       >
         <ActionIcon inFlight={batchActionInFlight} actionKey="batchMerge" icon={<GitMerge size={14} />} />{' '}
         Merge All
@@ -49,6 +56,7 @@ export function BatchActionsToolbar({
         className="cr-topbar__btn cr-topbar__btn--ship"
         onClick={onShipAll}
         disabled={!!batchActionInFlight || !ghConfigured}
+        aria-label={`Ship all ${selectedCount} selected tasks as pull requests`}
       >
         <ActionIcon inFlight={batchActionInFlight} actionKey="batchShip" icon={<Rocket size={14} />} />{' '}
         Ship All
@@ -57,6 +65,7 @@ export function BatchActionsToolbar({
         className="cr-topbar__btn cr-topbar__btn--secondary"
         onClick={onCreatePrs}
         disabled={!!batchActionInFlight || !ghConfigured}
+        aria-label={`Create pull requests for all ${selectedCount} selected tasks`}
       >
         <ActionIcon inFlight={batchActionInFlight} actionKey="batchPr" icon={<GitPullRequest size={14} />} />{' '}
         Create PRs
@@ -65,6 +74,7 @@ export function BatchActionsToolbar({
         className="cr-topbar__btn cr-topbar__btn--ghost"
         onClick={onDiscard}
         disabled={!!batchActionInFlight}
+        aria-label={`Discard all ${selectedCount} selected tasks`}
       >
         <ActionIcon inFlight={batchActionInFlight} actionKey="batchDiscard" icon={<Trash2 size={14} />} />{' '}
         Discard All

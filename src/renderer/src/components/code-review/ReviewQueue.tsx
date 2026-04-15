@@ -79,6 +79,7 @@ export function ReviewQueue(): React.JSX.Element {
         <label className="cr-queue__select-all">
           <input
             type="checkbox"
+            aria-label={`Select all ${reviewTasks.length} review tasks`}
             checked={allSelected}
             onChange={() => {
               if (allSelected) clearBatch()
@@ -88,6 +89,14 @@ export function ReviewQueue(): React.JSX.Element {
         </label>
         <span className="cr-queue__title text-gradient-aurora">Review Queue</span>
         <span className="cr-queue__count">{reviewTasks.length}</span>
+        {/* Screen reader announcement for batch selection changes */}
+        <span
+          aria-live="polite"
+          aria-atomic="true"
+          className="sr-only"
+        >
+          {selectedBatchIds.size > 0 ? `${selectedBatchIds.size} tasks selected` : ''}
+        </span>
       </div>
       <motion.div
         className="cr-queue__list"
