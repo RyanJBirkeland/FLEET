@@ -1,6 +1,7 @@
 import type Database from 'better-sqlite3'
 import type { SprintTask } from '../../shared/types'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import { validateTransition } from '../../shared/task-state-machine'
 import { getDb } from '../db'
 import { recordTaskChangesBulk } from './task-changes'
 import { nowIso } from '../../shared/time'
@@ -27,7 +28,20 @@ function transitionTasksByPrNumber(
     )
     .all(prNumber, 'active') as Array<Record<string, unknown>>
 
-  const affectedIds = affected.map((r) => r.id as string)
+  // Filter to only tasks whose transition is valid per the state machine.
+  // Skipped tasks are logged as warnings rather than silently dropped.
+  const eligible = affected.filter((row) => {
+    const currentStatus = row.status as string
+    const validation = validateTransition(currentStatus, targetStatus)
+    if (!validation.ok) {
+      getSprintQueriesLogger().warn(
+        `[sprint-pr-ops] transitionTasksByPrNumber: skipping task ${row.id as string}: ${validation.reason}`
+      )
+    }
+    return validation.ok
+  })
+
+  const affectedIds = eligible.map((r) => r.id as string)
 
   if (affectedIds.length > 0) {
     const completedAt = nowIso()
@@ -35,7 +49,7 @@ function transitionTasksByPrNumber(
     // Bulk audit trail — throw on failure so the wrapping transaction
     // rolls back the status UPDATE — both must succeed atomically.
     recordTaskChangesBulk(
-      affected.map((oldTask) => ({
+      eligible.map((oldTask) => ({
         taskId: oldTask.id as string,
         oldTask,
         newPatch: { status: targetStatus, completed_at: completedAt }
@@ -44,9 +58,9 @@ function transitionTasksByPrNumber(
       db
     )
 
-    db.prepare(
-      'UPDATE sprint_tasks SET status = ?, completed_at = ? WHERE pr_number = ? AND status = ?'
-    ).run(targetStatus, completedAt, prNumber, 'active')
+    const placeholders = affectedIds.map(() => '?').join(', ')
+    const sql = `UPDATE sprint_tasks SET status = ?, completed_at = ? WHERE id IN (${placeholders})`
+    db.prepare(sql).run(targetStatus, completedAt, ...affectedIds)
   }
 
   return affectedIds

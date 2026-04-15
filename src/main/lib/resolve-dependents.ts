@@ -75,9 +75,15 @@ export function resolveDependents(
       }
     }
 
-    // Check if this task has a hard dependency on the failed task
+    // Check if this task has a hard dependency on the failed task.
+    // A dep should cascade-cancel if:
+    //   - It has an explicit `condition: 'on_success'` (only unblocks on success, so failure = cancel), OR
+    //   - It has no condition set and uses the legacy `type: 'hard'` fallback (backward compat).
+    // A dep with `condition: 'always'` must NOT cascade-cancel — it unblocks regardless of outcome.
     const hasHardDepOnFailed = task.depends_on.some(
-      (dep) => dep.id === completedTaskId && dep.type === 'hard'
+      (dep) =>
+        dep.id === completedTaskId &&
+        (dep.condition === 'on_success' || (!dep.condition && dep.type === 'hard'))
     )
 
     // If cascade cancel is enabled and this task has a hard dep on the failed task, cancel it

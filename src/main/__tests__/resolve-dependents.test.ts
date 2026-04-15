@@ -295,6 +295,64 @@ describe('cascade cancellation atomicity', () => {
     expect(rollbackCalled.value).toBe(true)
   })
 
+  it('does not cascade cancel when dep has condition "always"', () => {
+    // condition: 'always' = unblock on any terminal outcome, failure must NOT cascade-cancel
+    const index = mockIndex({
+      getDependents: vi.fn().mockReturnValue(new Set(['task-1'])),
+      areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: true, blockedBy: [] })
+    })
+    const task = mockTask({
+      id: 'task-1',
+      status: 'blocked',
+      depends_on: [{ id: 'dep-1', type: 'hard', condition: 'always' }]
+    })
+    const getTask = vi.fn().mockReturnValue(task)
+    const updateTask = vi.fn()
+
+    resolveDependents(
+      'dep-1',
+      'failed',
+      index,
+      getTask,
+      updateTask,
+      undefined,
+      () => 'cancel'
+    )
+
+    expect(updateTask).not.toHaveBeenCalledWith('task-1', expect.objectContaining({ status: 'cancelled' }))
+  })
+
+  it('cascade cancels when dep has condition "on_success" and upstream fails', () => {
+    // condition: 'on_success' = only unblocks on done; failure should cascade-cancel
+    const index = mockIndex({
+      getDependents: vi.fn().mockReturnValue(new Set(['task-1'])),
+      areDependenciesSatisfied: vi.fn().mockReturnValue({ satisfied: false, blockedBy: ['dep-1'] })
+    })
+    const failedTask = mockTask({ id: 'dep-1', title: 'Dep Task', status: 'failed', depends_on: [] })
+    const task = mockTask({
+      id: 'task-1',
+      status: 'blocked',
+      depends_on: [{ id: 'dep-1', type: 'soft', condition: 'on_success' }]
+    })
+    const getTask = vi.fn().mockImplementation((id: string) => {
+      if (id === 'dep-1') return failedTask
+      return task
+    })
+    const updateTask = vi.fn()
+
+    resolveDependents(
+      'dep-1',
+      'failed',
+      index,
+      getTask,
+      updateTask,
+      undefined,
+      () => 'cancel'
+    )
+
+    expect(updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({ status: 'cancelled' }))
+  })
+
   it('calls onTaskTerminal for each cascade-cancelled dependent', () => {
     // Dependency chain: A (fails) → B (hard) → C (hard)
     // When A fails with cascade=cancel, both B and C should be cancelled

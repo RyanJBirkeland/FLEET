@@ -8,6 +8,7 @@ import { SPRINT_TASK_COLUMNS } from './sprint-query-constants'
 import { mapRowToTask, mapRowsToTasks } from './sprint-task-mapper'
 import { getSprintQueriesLogger } from './sprint-query-logger'
 import { withDataLayerError } from './data-utils'
+import { validateTransition } from '../../shared/task-state-machine'
 
 /** Module-private: read one task by id within an open transaction. */
 function fetchTask(id: string, db: Database.Database): SprintTask | null {
@@ -46,6 +47,14 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number, db?
           // DL-13 & DL-18: Record audit trail before update (pass conn for consistency)
           const oldTask = fetchTask(id, conn)
           if (!oldTask) return null
+
+          const claimValidation = validateTransition(oldTask.status, 'active')
+          if (!claimValidation.ok) {
+            getSprintQueriesLogger().warn(
+              `[sprint-queue-ops] claimTask(id=${id}): ${claimValidation.reason}`
+            )
+            return null
+          }
 
           const updated = conn
             .prepare(
@@ -86,6 +95,14 @@ export function releaseTask(id: string, claimedBy: string, db?: Database.Databas
       return conn.transaction(() => {
         const oldTask = fetchTask(id, conn)
         if (!oldTask) return null
+
+        const releaseValidation = validateTransition(oldTask.status, 'queued')
+        if (!releaseValidation.ok) {
+          getSprintQueriesLogger().warn(
+            `[sprint-queue-ops] releaseTask(id=${id}): ${releaseValidation.reason}`
+          )
+          return null
+        }
 
         const result = conn
           .prepare(

@@ -486,6 +486,40 @@ describe('resolveDependents', () => {
       })
     })
 
+    it('does not cascade cancel when dep has condition "always" (unblocks regardless of outcome)', () => {
+      // condition: 'always' means the dep unblocks on ANY terminal status, so failure should not cascade-cancel
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [{ id: 'A', type: 'hard', condition: 'always' }] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      // Should NOT cascade-cancel — condition 'always' unblocks on failure too
+      expect(updateTask).not.toHaveBeenCalledWith('B', expect.objectContaining({ status: 'cancelled' }))
+    })
+
+    it('cascade cancels when dep has condition "on_success" and upstream fails', () => {
+      // condition: 'on_success' means only unblocks when upstream is done; failure should cascade-cancel
+      const index = makeIndex({ A: ['B'] })
+      const tasks: Record<string, MockTask> = {
+        A: { id: 'A', status: 'failed', title: 'Task A', depends_on: null },
+        B: { id: 'B', status: 'blocked', depends_on: [{ id: 'A', type: 'soft', condition: 'on_success' }] }
+      }
+      const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
+      const getSetting = vi.fn().mockReturnValue('cancel')
+
+      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+
+      expect(updateTask).toHaveBeenCalledWith('B', {
+        status: 'cancelled',
+        notes: '[auto-cancel] Upstream task "Task A" failed'
+      })
+    })
+
     it('uses task ID as fallback when title is missing', () => {
       const index = makeIndex({ A: ['B'] })
       const tasks: Record<string, MockTask> = {
