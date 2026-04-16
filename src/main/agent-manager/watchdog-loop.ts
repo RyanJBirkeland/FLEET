@@ -91,7 +91,7 @@ export function killActiveAgent(agent: ActiveAgent, activeAgents: Map<string, Ac
  * notification). Agents currently being processed by the drain loop are
  * skipped to avoid double-transition races.
  */
-export function runWatchdog(deps: WatchdogLoopDeps): void {
+export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
   const agentsToKill: Array<{ agent: ActiveAgent; verdict: WatchdogAction }> = []
 
   for (const agent of deps.activeAgents.values()) {
@@ -120,7 +120,7 @@ export function runWatchdog(deps: WatchdogLoopDeps): void {
 
     // Step 2: Flush buffered agent events before the DB write — the 100ms batcher
     // timer is not guaranteed to fire before the watchdog kill lands.
-    flushAgentEventBatcher()
+    await flushAgentEventBatcher()
 
     // Step 3: Persist the status change to DB before removing from map.
     // If the DB write fails the agent is still gone from the process level,
@@ -143,6 +143,7 @@ export function runWatchdog(deps: WatchdogLoopDeps): void {
     // Step 5: Notify terminal handler after map removal so downstream logic
     // (dep resolution, metrics) sees a consistent state.
     if (result.shouldNotifyTerminal && result.terminalStatus) {
+      await flushAgentEventBatcher()
       deps.onTaskTerminal(agent.taskId, result.terminalStatus).catch((err) =>
         deps.logger.warn(
           `[agent-manager] Failed onTerminal for task ${agent.taskId} after ${verdict}: ${err}`

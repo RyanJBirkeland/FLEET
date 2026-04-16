@@ -393,7 +393,7 @@ export class AgentManagerImpl implements AgentManager {
    * Execute one watchdog tick. Delegates to watchdog-loop.ts.
    * Exposed via _ prefix for testability.
    */
-  _watchdogLoop(): void {
+  async _watchdogLoop(): Promise<void> {
     const watchdogDeps: WatchdogLoopDeps = {
       config: this.config,
       repo: this.repo,
@@ -416,7 +416,7 @@ export class AgentManagerImpl implements AgentManager {
         })
       }
     }
-    runWatchdog(watchdogDeps)
+    await runWatchdog(watchdogDeps)
   }
 
   // ---- Orphan loop ----

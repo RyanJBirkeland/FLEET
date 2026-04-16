@@ -122,25 +122,25 @@ describe('runWatchdog', () => {
     vi.clearAllMocks()
   })
 
-  it('does nothing when no agents are active', () => {
+  it('does nothing when no agents are active', async () => {
     const deps = makeDeps()
     vi.mocked(checkAgent).mockReturnValue('ok')
-    runWatchdog(deps)
+    await runWatchdog(deps)
     expect(deps.repo.updateTask).not.toHaveBeenCalled()
   })
 
-  it('skips agents that are in processingTasks', () => {
+  it('skips agents that are in processingTasks', async () => {
     const agent = makeAgent('task-1')
     const deps = makeDeps({
       activeAgents: new Map([['task-1', agent]]),
       processingTasks: new Set(['task-1'])
     })
     vi.mocked(checkAgent).mockReturnValue('idle')
-    runWatchdog(deps)
+    await runWatchdog(deps)
     expect(deps.repo.updateTask).not.toHaveBeenCalled()
   })
 
-  it('kills agent and updates task when verdict is not ok', () => {
+  it('kills agent and updates task when verdict is not ok', async () => {
     const agent = makeAgent('task-1')
     const concurrency = makeConcurrencyState(2)
     const deps = makeDeps({
@@ -155,14 +155,14 @@ describe('runWatchdog', () => {
       terminalStatus: 'error'
     })
 
-    runWatchdog(deps)
+    await runWatchdog(deps)
 
     expect(agent.handle.abort).toHaveBeenCalled()
     expect(deps.repo.updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({ status: 'error' }))
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'error')
   })
 
-  it('records rate-limit-loop verdict and increments retriesQueued', () => {
+  it('records rate-limit-loop verdict and increments retriesQueued', async () => {
     const agent = makeAgent('task-1')
     const concurrency = makeConcurrencyState(2)
     const deps = makeDeps({
@@ -177,13 +177,13 @@ describe('runWatchdog', () => {
       terminalStatus: undefined
     })
 
-    runWatchdog(deps)
+    await runWatchdog(deps)
 
     expect(deps.metrics.recordWatchdogVerdict).toHaveBeenCalledWith('rate-limit-loop')
     expect(deps.metrics.increment).toHaveBeenCalledWith('retriesQueued')
   })
 
-  it('does not call onTaskTerminal when shouldNotifyTerminal is false', () => {
+  it('does not call onTaskTerminal when shouldNotifyTerminal is false', async () => {
     const agent = makeAgent('task-1')
     const concurrency = makeConcurrencyState(2)
     const deps = makeDeps({
@@ -198,12 +198,12 @@ describe('runWatchdog', () => {
       terminalStatus: undefined
     })
 
-    runWatchdog(deps)
+    await runWatchdog(deps)
 
     expect(deps.onTaskTerminal).not.toHaveBeenCalled()
   })
 
-  it('flushes agent events before updating task status', () => {
+  it('flushes agent events before updating task status', async () => {
     const agent = makeAgent('task-1')
     const concurrency = makeConcurrencyState(2)
     const repo = makeRepo()
@@ -223,12 +223,38 @@ describe('runWatchdog', () => {
       terminalStatus: 'error'
     })
 
-    runWatchdog(deps)
+    await runWatchdog(deps)
 
     expect(callOrder.indexOf('flush')).toBeLessThan(callOrder.indexOf('updateTask'))
   })
 
-  it('logs a warning when updateTask throws', () => {
+  it('flushes agent events before calling onTaskTerminal', async () => {
+    const agent = makeAgent('task-1')
+    const concurrency = makeConcurrencyState(2)
+    const callOrder: string[] = []
+    vi.mocked(flushAgentEventBatcher).mockImplementation(() => callOrder.push('flush'))
+    const onTaskTerminal = vi.fn().mockImplementation(() => { callOrder.push('onTaskTerminal'); return Promise.resolve() })
+    const deps = makeDeps({
+      activeAgents: new Map([['task-1', agent]]),
+      getConcurrency: () => concurrency,
+      onTaskTerminal
+    })
+    vi.mocked(checkAgent).mockReturnValue('idle')
+    vi.mocked(handleWatchdogVerdict).mockReturnValue({
+      taskUpdate: { status: 'error', completed_at: '2026-01-01T00:00:00.000Z', claimed_by: null, notes: 'idle', needs_review: true },
+      concurrency,
+      shouldNotifyTerminal: true,
+      terminalStatus: 'error'
+    })
+
+    await runWatchdog(deps)
+
+    const lastFlushIndex = callOrder.lastIndexOf('flush')
+    const onTaskTerminalIndex = callOrder.indexOf('onTaskTerminal')
+    expect(lastFlushIndex).toBeLessThan(onTaskTerminalIndex)
+  })
+
+  it('logs a warning when updateTask throws', async () => {
     const agent = makeAgent('task-1')
     const concurrency = makeConcurrencyState(2)
     const repo = makeRepo()
@@ -248,7 +274,7 @@ describe('runWatchdog', () => {
       terminalStatus: undefined
     })
 
-    expect(() => runWatchdog(deps)).not.toThrow()
+    await expect(runWatchdog(deps)).resolves.not.toThrow()
     expect(deps.logger.warn).toHaveBeenCalledWith(expect.stringContaining('Failed to update task'))
   })
 })
