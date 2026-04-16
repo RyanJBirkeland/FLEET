@@ -142,12 +142,27 @@ export async function prepareWorktreeForTask(
       fullNote.length > NOTES_MAX_LENGTH
         ? '...' + fullNote.slice(-(NOTES_MAX_LENGTH - 3))
         : fullNote
-    deps.repo.updateTask(task.id, {
-      status: 'error',
-      completed_at: nowIso(),
-      notes,
-      claimed_by: null
-    })
+    try {
+      deps.repo.updateTask(task.id, {
+        status: 'error',
+        completed_at: nowIso(),
+        notes,
+        claimed_by: null
+      })
+    } catch (updateErr) {
+      // If setting error status fails (e.g. DB full), at least release the claim
+      // so the drain loop does not leave the task stuck active with claimed_by set.
+      deps.logger.error(
+        `[task-claimer] Failed to set task ${task.id} to error status: ${updateErr}`
+      )
+      try {
+        deps.repo.updateTask(task.id, { claimed_by: null })
+      } catch (releaseErr) {
+        deps.logger.error(
+          `[task-claimer] Failed to release claim for task ${task.id}: ${releaseErr}`
+        )
+      }
+    }
     await deps.onTaskTerminal(task.id, 'error').catch((err) =>
       deps.logger.warn(`[agent-manager] onTerminal failed for ${task.id}: ${err}`)
     )
