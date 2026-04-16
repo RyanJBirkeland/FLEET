@@ -34,7 +34,7 @@ export interface CreateTicketInput {
 }
 
 /** How long (ms) to protect an optimistic update from being overwritten by poll data. */
-const PENDING_UPDATE_TTL = 2000
+const PENDING_UPDATE_TTL = 5000
 
 interface SprintTasksState {
   // --- Data ---

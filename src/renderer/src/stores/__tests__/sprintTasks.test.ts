@@ -525,8 +525,8 @@ describe('sprintTasks store', () => {
 
     it('expires pending update TTL and accepts incoming data', async () => {
       const optimistic = makeTask('t1', { status: 'active' })
-      // Timestamp older than PENDING_UPDATE_TTL (2000ms)
-      const oldTs = Date.now() - 3000
+      // Timestamp older than PENDING_UPDATE_TTL (5000ms)
+      const oldTs = Date.now() - 6000
       const pendingUpdates: Record<string, { ts: number; fields: string[] }> = {
         t1: { ts: oldTs, fields: ['status'] }
       }
@@ -639,10 +639,10 @@ describe('sprintTasks store', () => {
 
     it('overwrites all fields after TTL expires', () => {
       const task = makeTask('t1', { status: 'active', notes: 'local notes' })
-      // Set a timestamp older than PENDING_UPDATE_TTL (2000ms)
+      // Set a timestamp older than PENDING_UPDATE_TTL (5000ms)
       useSprintTasks.setState({
         tasks: [task],
-        pendingUpdates: { t1: { ts: Date.now() - 3000, fields: ['status'] } },
+        pendingUpdates: { t1: { ts: Date.now() - 6000, fields: ['status'] } },
         pendingCreates: []
       })
 
