@@ -125,6 +125,7 @@ import {
 import { mapQueuedTask, checkAndBlockDeps } from '../task-mapper'
 import { createDependencyIndex } from '../../services/dependency-service'
 import { runAgent } from '../run-agent'
+import { broadcast } from '../../broadcast'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -1021,6 +1022,117 @@ describe('AgentManagerImpl — class internals', () => {
 
       // Both failures should be counted by the circuit breaker
       expect(manager._consecutiveSpawnFailures).toBe(2)
+    })
+  })
+
+  // -------------------------------------------------------------------------
+  // Consecutive drain error threshold
+  // -------------------------------------------------------------------------
+
+  describe('consecutive drain error threshold', () => {
+    it('initialises _consecutiveDrainErrors to 0', () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      expect(manager._consecutiveDrainErrors).toBe(0)
+    })
+
+    it('increments _consecutiveDrainErrors when _drainLoop rejects', async () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      vi.spyOn(manager, '_drainLoop').mockRejectedValue(new Error('db failure'))
+
+      vi.useFakeTimers()
+      manager.start()
+      // Skip initial drain defer (5s), then advance past one poll tick (600s)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(baseConfig.pollIntervalMs + 1_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      vi.useRealTimers()
+
+      expect(manager._consecutiveDrainErrors).toBeGreaterThanOrEqual(1)
+
+      await manager.stop(0)
+    })
+
+    it('resets _consecutiveDrainErrors to 0 after a successful drain', async () => {
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      // Pre-set the counter to simulate prior failures
+      manager._consecutiveDrainErrors = 2
+
+      vi.spyOn(manager, '_drainLoop').mockResolvedValue(undefined)
+
+      vi.useFakeTimers()
+      manager.start()
+      // Skip initial drain defer (5s), then advance past one poll tick
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(baseConfig.pollIntervalMs + 1_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      vi.useRealTimers()
+
+      expect(manager._consecutiveDrainErrors).toBe(0)
+
+      await manager.stop(0)
+    })
+
+    it('broadcasts manager:warning after 3 consecutive drain failures', async () => {
+      vi.mocked(broadcast).mockClear()
+
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      vi.spyOn(manager, '_drainLoop').mockRejectedValue(new Error('persistent failure'))
+
+      vi.useFakeTimers()
+      manager.start()
+      // Skip initial drain defer
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      // Advance 3 poll ticks to trigger 3 consecutive drain failures
+      for (let tick = 0; tick < 3; tick++) {
+        await vi.advanceTimersByTimeAsync(baseConfig.pollIntervalMs + 1_000)
+        for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      }
+      vi.useRealTimers()
+
+      expect(broadcast).toHaveBeenCalledWith('manager:warning', {
+        message: expect.stringContaining('Agent queue is not processing')
+      })
+
+      await manager.stop(0)
+    })
+
+    it('does not broadcast manager:warning after only 2 consecutive drain failures', async () => {
+      vi.mocked(broadcast).mockClear()
+
+      const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
+      let drainCallCount = 0
+      vi.spyOn(manager, '_drainLoop').mockImplementation(() => {
+        drainCallCount++
+        if (drainCallCount <= 2) return Promise.reject(new Error('transient'))
+        return Promise.resolve()
+      })
+
+      vi.useFakeTimers()
+      manager.start()
+      // Skip initial drain defer
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      await vi.advanceTimersByTimeAsync(6_000)
+      for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      // Advance exactly 2 poll ticks
+      for (let tick = 0; tick < 2; tick++) {
+        await vi.advanceTimersByTimeAsync(baseConfig.pollIntervalMs + 1_000)
+        for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
+      }
+      vi.useRealTimers()
+
+      // After 2 failures, should NOT have broadcast yet
+      const warningCalls = vi
+        .mocked(broadcast)
+        .mock.calls.filter(([ch]) => ch === 'manager:warning')
+      expect(warningCalls).toHaveLength(0)
+
+      await manager.stop(0)
     })
   })
 })

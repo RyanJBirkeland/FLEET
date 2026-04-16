@@ -43,6 +43,7 @@ import { reloadConfiguration } from './config-manager'
 // ---------------------------------------------------------------------------
 
 import { createLogger } from '../logger'
+import { broadcast } from '../broadcast'
 
 const defaultLogger: Logger = createLogger('agent-manager')
 
@@ -133,6 +134,10 @@ export class AgentManagerImpl implements AgentManager {
   // Tracks consecutive drain-loop processing failures per task. Passed to DrainLoopDeps
   // each tick so counts persist across ticks. Cleared on success or quarantine.
   readonly _drainFailureCounts = new Map<string, number>()
+
+  // Tracks consecutive drain-tick-level errors (the drain loop itself threw).
+  // Reset on any successful tick. Emits manager:warning after 3 consecutive failures.
+  _consecutiveDrainErrors = 0
 
   // Private timers
   private pollTimer: ReturnType<typeof setInterval> | null = null
@@ -535,7 +540,22 @@ export class AgentManagerImpl implements AgentManager {
     this.pollTimer = setInterval(() => {
       if (this._drainInFlight) return // skip if previous drain still running
       this._drainInFlight = this._drainLoop()
-        .catch((err) => this.logger.warn(`[agent-manager] Drain loop error: ${err}`))
+        .then(() => {
+          this._consecutiveDrainErrors = 0
+        })
+        .catch((err) => {
+          this._consecutiveDrainErrors++
+          this.logger.warn(
+            `[agent-manager] Drain loop error (${this._consecutiveDrainErrors}): ${err}`
+          )
+          if (this._consecutiveDrainErrors >= 3) {
+            broadcast('manager:warning', {
+              message:
+                'Agent queue is not processing — check logs for details. Drain errors: ' +
+                this._consecutiveDrainErrors
+            })
+          }
+        })
         .finally(() => {
           this._drainInFlight = null
         })
