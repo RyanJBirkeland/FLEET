@@ -7,7 +7,7 @@ vi.mock('../../agent-event-mapper', () => ({
 }))
 
 vi.mock('../playground-handler', () => ({
-  detectHtmlWrite: vi.fn().mockReturnValue(null)
+  detectPlaygroundWrite: vi.fn().mockReturnValue(null)
 }))
 
 vi.mock('../../env-utils', () => ({
@@ -23,7 +23,7 @@ import type { AgentRunClaim } from '../run-agent'
 import type { TurnTracker } from '../turn-tracker'
 import { emitAgentEvent, flushAgentEventBatcher } from '../../agent-event-mapper'
 import { invalidateOAuthToken } from '../../env-utils'
-import { detectHtmlWrite } from '../playground-handler'
+import { detectPlaygroundWrite } from '../playground-handler'
 
 function makeTurnTracker(): TurnTracker {
   return {
@@ -156,15 +156,15 @@ describe('consumeMessages', () => {
   })
 
   it('accumulates playground paths when playground_enabled', async () => {
-    vi.mocked(detectHtmlWrite).mockReturnValueOnce('/worktree/output.html')
+    vi.mocked(detectPlaygroundWrite).mockReturnValueOnce({ path: '/worktree/output.html', contentType: 'html' })
     const handle = makeHandle([{ type: 'tool_result', tool_name: 'write_file' }])
     const agent = makeAgent()
     const result = await consumeMessages(handle, agent, makeTask({ playground_enabled: true }), 'run-1', makeTurnTracker(), makeLogger())
-    expect(result.pendingPlaygroundPaths).toContain('/worktree/output.html')
+    expect(result.pendingPlaygroundPaths).toContainEqual({ path: '/worktree/output.html', contentType: 'html' })
   })
 
   it('does not accumulate playground paths when playground disabled', async () => {
-    vi.mocked(detectHtmlWrite).mockReturnValueOnce('/worktree/output.html')
+    vi.mocked(detectPlaygroundWrite).mockReturnValueOnce({ path: '/worktree/output.html', contentType: 'html' })
     const handle = makeHandle([{ type: 'tool_result', tool_name: 'write_file' }])
     const agent = makeAgent()
     const result = await consumeMessages(handle, agent, makeTask({ playground_enabled: false }), 'run-1', makeTurnTracker(), makeLogger())

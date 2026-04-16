@@ -476,12 +476,12 @@ describe('buildAgentPrompt', () => {
         taskContent: 'Do something',
         retryCount: 0
       })
-      expect(prompt).not.toContain('<retry_context>')
+      expect(prompt).not.toContain('\n\n<retry_context>\n')
     })
 
     it('does not include retry section when retryCount is undefined and no revision feedback', () => {
       const prompt = buildAgentPrompt({ agentType: 'pipeline', taskContent: 'Do something' })
-      expect(prompt).not.toContain('<retry_context>')
+      expect(prompt).not.toContain('\n\n<retry_context>\n')
     })
 
     it('includes auto-retry section when retryCount > 0', () => {

@@ -6,6 +6,13 @@ export type AgentType = 'pipeline' | 'assistant' | 'adhoc' | 'copilot' | 'synthe
 
 export type PlaygroundContentType = 'html' | 'svg' | 'markdown' | 'json'
 
+export const PLAYGROUND_CONTENT_TYPE_LABELS: Record<PlaygroundContentType, string> = {
+  html: 'HTML',
+  svg: 'SVG',
+  markdown: 'Markdown',
+  json: 'JSON'
+}
+
 export interface AgentMeta {
   id: string
   pid: number | null

@@ -30,6 +30,7 @@ export type {
   AgentProvider,
   PlaygroundContentType
 } from './agent-types'
+export { PLAYGROUND_CONTENT_TYPE_LABELS } from './agent-types'
 
 // Task types
 export type {
