@@ -12,39 +12,36 @@ export const SAMPLE_FIRST_TASK: {
   spec: string
   specType: SpecType
 } = {
-  title: 'Add an entry-point comment to the project',
-  repo: 'bde',
+  title: 'Add a README section describing how to run the project',
+  repo: '',
   specType: 'feature',
   spec: `## Problem
 
-New contributors opening this repository don't have an obvious "start here"
-pointer — the main entry file lacks a top-of-file comment explaining what the
-process does and where execution begins.
+New contributors to this repository don't have a clear "how to run this" reference in the README.
 
 ## Solution
 
-Add a short, friendly block comment at the top of the project's main entry
-file that:
+Add a \`## Getting Started\` section to \`README.md\` that describes:
 
-- Names the process ("main process", "renderer", "CLI entry", etc.)
-- Describes in 1-2 sentences what it does
-- Mentions the first function or block that runs at startup
+- Prerequisites (language runtime, package manager)
+- How to install dependencies
+- How to run the project locally
+- How to run the tests
 
-Keep it under 10 lines. Do not change any runtime behavior.
+Keep it under 20 lines. Use code blocks for commands.
 
 ## Files to Change
 
-- \`src/main/index.ts\`
+- \`README.md\` — add the Getting Started section
 
 ## How to Test
 
-- Run \`npm run typecheck\` — must still pass.
-- Run \`npm test\` — no test changes expected.
-- Visually confirm the comment appears at the very top of the file.
+- Read the section and verify the commands are accurate for this project.
+- Run the documented commands yourself to confirm they work.
 
 ## Out of Scope
 
-- Refactoring or renaming anything in the file.
-- Adding comments to other files.
+- Changing any source code.
+- Adding documentation beyond the Getting Started section.
 `
 }
