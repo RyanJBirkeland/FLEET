@@ -76,9 +76,14 @@ export function backupDatabase(): void {
   // Escape single quotes for SQLite string literal safety.
   const escapedPath = resolvedPath.replace(/'/g, "''")
 
+  // Flush WAL to main DB before backup so the snapshot is consistent.
+  // Without this, concurrent writes between the checkpoint and VACUUM INTO
+  // can produce a backup that contains a partial WAL state.
+  db.pragma('wal_checkpoint(TRUNCATE)')
+
   // DL-11: Propagate VACUUM INTO failures instead of swallowing
-  const sql = `VACUUM INTO '${escapedPath}'`
-  db.exec(sql)
+  const vacuumSql = `VACUUM INTO '${escapedPath}'`
+  db.exec(vacuumSql)
 
   // DL-24: Verify backup integrity - check file exists and has reasonable size
   if (!existsSync(backupPath)) {
@@ -86,10 +91,11 @@ export function backupDatabase(): void {
   }
   const backupSize = statSync(backupPath).size
   const originalSize = statSync(DB_PATH).size
-  // Backup should be at least 10% of original size (VACUUM compresses)
-  if (backupSize < originalSize * 0.1) {
-    console.warn(
-      `[db] Backup may be incomplete: ${backupSize} bytes (original: ${originalSize} bytes)`
+  // Backup should be at least 50% of original size — a smaller result indicates
+  // data loss, not just VACUUM compression (which is typically modest).
+  if (backupSize < originalSize * 0.5) {
+    console.error(
+      `[db] Backup appears incomplete: ${backupSize} bytes vs original ${originalSize} bytes`
     )
   }
 }
