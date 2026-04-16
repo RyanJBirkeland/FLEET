@@ -64,8 +64,8 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     label: 'Source Control',
     description: 'Stage, commit, and push changes across repositories',
     icon: GitCommitHorizontal,
-    shortcut: '⌘6',
-    shortcutKey: '6',
+    shortcut: '',
+    shortcutKey: '',
     hidden: true
   },
   settings: {
@@ -100,6 +100,8 @@ export const VIEW_SHORTCUTS: Record<View, string> = Object.fromEntries(
   Object.entries(VIEW_REGISTRY).map(([view, meta]) => [view, meta.shortcut])
 ) as Record<View, string>
 
-export const VIEW_SHORTCUT_MAP: Record<string, View> = Object.fromEntries(
-  Object.entries(VIEW_REGISTRY).map(([view, meta]) => [meta.shortcutKey, view as View])
-) as Record<string, View>
+export const VIEW_SHORTCUT_MAP: Partial<Record<string, View>> = Object.fromEntries(
+  Object.entries(VIEW_REGISTRY)
+    .filter(([, meta]) => !meta.hidden)
+    .map(([view, meta]) => [meta.shortcutKey, view as View])
+)

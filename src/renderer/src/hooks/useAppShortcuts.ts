@@ -90,11 +90,6 @@ export function useAppShortcuts({
         setView('code-review')
         return
       }
-      if (combo === bindings['view.git']) {
-        e.preventDefault()
-        setView('git')
-        return
-      }
       if (combo === bindings['view.settings']) {
         e.preventDefault()
         setView('settings')
