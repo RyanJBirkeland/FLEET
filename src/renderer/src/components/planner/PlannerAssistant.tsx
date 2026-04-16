@@ -56,7 +56,6 @@ const ACTION_REGEX = /\[ACTION:(\w[\w-]*)\]([\s\S]*?)\[\/ACTION\]/g
 
 const VALID_ACTION_TYPES = new Set<string>(['create-task', 'create-epic', 'update-spec'])
 
-// Fix 4: module-level constant — not reconstructed on every render
 const ACTION_TYPE_LABELS: Record<ActionType, string> = {
   'create-task': 'New Task',
   'create-epic': 'New Epic',
@@ -69,7 +68,6 @@ export function parseActionMarkers(text: string): ParseResult {
   let cleanText = text
 
   cleanText = cleanText.replace(ACTION_REGEX, (_, type, jsonStr) => {
-    // Fix 6: validate action type before casting
     if (!VALID_ACTION_TYPES.has(type)) return ''
     try {
       const payload = JSON.parse(jsonStr.trim()) as ActionPayload
@@ -97,7 +95,6 @@ interface ActionCardProps {
   onOpenWorkbench: () => void
   onClose: () => void
   epic: TaskGroup
-  // Fix 2: receive the configured repo so create-task uses a valid repo
   firstRepo: string
 }
 
@@ -121,10 +118,9 @@ function ActionCard({
   const handleCreate = async (): Promise<void> => {
     try {
       if (action.type === 'create-task') {
-        await (window.api.sprint.create as (input: Record<string, unknown>) => Promise<unknown>)({
+        await window.api.sprint.create({
           title: action.payload.title ?? 'Untitled Task',
           spec: action.payload.spec ?? '',
-          // Fix 2: use the configured repo, not an empty string
           repo: firstRepo,
           priority: 0,
           playground_enabled: false,
@@ -140,9 +136,9 @@ function ActionCard({
           await window.api.sprint.update(action.payload.taskId, { spec: action.payload.spec ?? '' })
         }
       }
-      onCardStateChange(key, { dismissed: false, confirmed: '✓ Done' })
+      const confirmText = action.type === 'create-task' ? '✓ Added to backlog' : '✓ Done'
+      onCardStateChange(key, { dismissed: false, confirmed: confirmText })
     } catch (err) {
-      // Fix 3: log errors so failures surface in DevTools
       console.error('PlannerAssistant: action creation failed', err)
       onCardStateChange(key, { dismissed: false, confirmed: '✗ Failed' })
     }
@@ -171,7 +167,6 @@ function ActionCard({
     <div
       className={`planner-assistant__action-card${state.confirmed ? ' planner-assistant__action-card--dismissed' : ''}`}
     >
-      {/* Fix 4: use module-level ACTION_TYPE_LABELS instead of per-render object */}
       <div className="planner-assistant__action-card-type">{ACTION_TYPE_LABELS[action.type]}</div>
       <div className="planner-assistant__action-card-title">
         {action.payload.title ?? action.payload.name ?? action.payload.taskId ?? '—'}
@@ -223,9 +218,7 @@ function PlannerAssistantInner({
   const [cardStates, setCardStates] = useState<Record<string, ActionCardState>>({})
 
   const messagesEndRef = useRef<HTMLDivElement>(null)
-  // Fix 5: textareaRef used for auto-focus on open
   const textareaRef = useRef<HTMLTextAreaElement>(null)
-  // Fix 1: track active unsubscribe function so we can clean up on unmount
   const unsubRef = useRef<(() => void) | null>(null)
 
   const repos = useRepoOptions()
@@ -252,14 +245,12 @@ function PlannerAssistantInner({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  // Fix 1: cleanup subscription on unmount
   useEffect(() => {
     return () => {
       unsubRef.current?.()
     }
   }, [])
 
-  // Fix 5: auto-focus textarea when the drawer opens
   useEffect(() => {
     textareaRef.current?.focus()
   }, [])
@@ -292,7 +283,6 @@ function PlannerAssistantInner({
 
     let buffer = ''
 
-    // Fix 1: clean up any in-flight subscription before registering a new one
     unsubRef.current?.()
     const unsub = window.api.workbench.onChatChunk((data) => {
       if (data.done) {
@@ -303,7 +293,6 @@ function PlannerAssistantInner({
           )
         )
         setIsStreaming(false)
-        // Fix 1: clear the ref and unsubscribe immediately when the stream ends
         unsubRef.current = null
         unsub()
         return
@@ -323,7 +312,6 @@ function PlannerAssistantInner({
         formContext: { title: epic.name, repo: firstRepo, spec: epicContext },
       })
     } catch (err) {
-      // Fix 3: log errors so failures surface in DevTools
       console.error('PlannerAssistant: chat stream failed', err)
       setMessages((prev) =>
         prev.map((m) =>
@@ -333,7 +321,6 @@ function PlannerAssistantInner({
         )
       )
       setIsStreaming(false)
-      // Fix 1: clean up subscription on error
       unsubRef.current = null
       unsub()
     }

@@ -35,6 +35,7 @@ export interface SprintChannels {
         status?: string
         template_name?: string
         playground_enabled?: boolean
+        group_id?: string | null
       }
     ]
     result: SprintTask
