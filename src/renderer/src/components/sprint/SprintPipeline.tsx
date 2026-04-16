@@ -68,7 +68,7 @@ export function SprintPipeline(): React.JSX.Element {
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
   const setView = usePanelLayoutStore((s) => s.setView)
   const reduced = useReducedMotion()
-  const openWorkbench = useCallback(() => setView('task-workbench'), [setView])
+  const openWorkbench = useCallback(() => setView('planner'), [setView])
 
   // --- Extracted hooks ---
   const {
@@ -124,7 +124,7 @@ export function SprintPipeline(): React.JSX.Element {
 
   // SP-7: Wire setConflictDrawerOpen to actual function (wrapped to match Dispatch<SetStateAction> signature)
   useSprintKeyboardShortcuts({
-    openWorkbench: () => setView('task-workbench'),
+    openWorkbench: () => setView('planner'),
     setConflictDrawerOpen: (value) => {
       setConflictDrawerOpen(typeof value === 'function' ? value(conflictDrawerOpen) : value)
     }
@@ -386,7 +386,7 @@ export function SprintPipeline(): React.JSX.Element {
               onOpenSpec={() => setSpecPanelOpen(true)}
               onEdit={() => {
                 loadTaskInWorkbench(selectedTask)
-                setView('task-workbench')
+                setView('planner')
               }}
               onViewAgents={() => setView('agents')}
               onUnblock={handleUnblock}

@@ -2,10 +2,10 @@ import { useEffect, useState, useMemo, useCallback } from 'react'
 import { motion } from 'framer-motion'
 import { useTaskGroups } from '../stores/taskGroups'
 import { useTaskWorkbenchStore } from '../stores/taskWorkbench'
-import { usePanelLayoutStore } from '../stores/panelLayout'
 import { EpicList } from '../components/planner/EpicList'
 import { EpicDetail } from '../components/planner/EpicDetail'
 import { CreateEpicModal } from '../components/planner/CreateEpicModal'
+import { WorkbenchPanel } from '../components/planner/WorkbenchPanel'
 import { toast } from '../stores/toasts'
 import { useConfirm, ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -33,6 +33,7 @@ export default function PlannerView(): React.JSX.Element {
 
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
+  const [workbenchOpen, setWorkbenchOpen] = useState(false)
   const { confirm, confirmProps } = useConfirm()
 
   // Load groups on mount
@@ -62,11 +63,9 @@ export default function PlannerView(): React.JSX.Element {
 
   const handleAddTask = useCallback((): void => {
     const workbenchStore = useTaskWorkbenchStore.getState()
-    const panelStore = usePanelLayoutStore.getState()
-
     workbenchStore.resetForm()
     workbenchStore.setField('pendingGroupId', selectedGroupId)
-    panelStore.setView('task-workbench')
+    setWorkbenchOpen(true)
   }, [selectedGroupId])
 
   const handleEditTask = useCallback(
@@ -74,7 +73,7 @@ export default function PlannerView(): React.JSX.Element {
       const task = groupTasks.find((t) => t.id === taskId)
       if (task) {
         useTaskWorkbenchStore.getState().loadTask(task)
-        usePanelLayoutStore.getState().setView('task-workbench')
+        setWorkbenchOpen(true)
       }
     },
     [groupTasks]
@@ -200,6 +199,7 @@ export default function PlannerView(): React.JSX.Element {
         </div>
 
         <CreateEpicModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
+        <WorkbenchPanel open={workbenchOpen} onClose={() => setWorkbenchOpen(false)} />
         <ConfirmModal {...confirmProps} />
       </motion.div>
     </ErrorBoundary>

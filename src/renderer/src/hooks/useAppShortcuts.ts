@@ -102,7 +102,7 @@ export function useAppShortcuts({
       }
       if (combo === bindings['view.taskWorkbench']) {
         e.preventDefault()
-        setView('task-workbench')
+        setView('planner')
         return
       }
       if (combo === bindings['view.planner']) {

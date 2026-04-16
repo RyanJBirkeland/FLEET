@@ -130,23 +130,6 @@ export const FEATURE_GUIDES: Record<View, FeatureGuide> = {
     usage:
       'Configure BDE here. Most settings persist to SQLite. Agent Manager changes require app restart.'
   },
-  'task-workbench': {
-    view: 'task-workbench',
-    label: VIEW_REGISTRY['task-workbench'].label,
-    icon: VIEW_REGISTRY['task-workbench'].icon,
-    shortcut: VIEW_REGISTRY['task-workbench'].shortcut,
-    description:
-      'Planning and spec creation interface. Draft task specs with AI copilot, configure dependencies, and run readiness checks.',
-    features: [
-      'Copilot chat assistant for drafting specs (text-only, 100-message cap)',
-      'Readiness checks validating spec quality before queuing',
-      'Task dependency configuration with hard and soft edges',
-      'Dev Playground toggle for HTML rendering during execution',
-      'Spec types: structured markdown (with headings) or freeform prompt'
-    ],
-    usage:
-      'Create tasks here. Use copilot for spec drafting or synthesizer for codebase-aware generation.'
-  },
   planner: {
     view: 'planner',
     label: VIEW_REGISTRY.planner.label,
@@ -173,7 +156,6 @@ export const FEATURE_GUIDE_ORDER: View[] = [
   'sprint',
   'code-review',
   'git',
-  'task-workbench',
   'planner',
   'settings'
 ]

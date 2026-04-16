@@ -25,8 +25,8 @@ vi.mock('../../../lib/view-resolver', () => ({
       settings: 'Settings',
       'code-review': 'CodeReview',
       dashboard: 'Dashboard',
-      'task-workbench': 'TaskWorkbench',
-      git: 'Git'
+      git: 'Git',
+      planner: 'Planner'
     }
     return <div>{labels[viewKey] ?? viewKey}</div>
   }

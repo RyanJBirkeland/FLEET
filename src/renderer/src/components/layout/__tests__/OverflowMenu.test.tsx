@@ -26,7 +26,7 @@ describe('OverflowMenu', () => {
   }
 
   const defaultProps = {
-    unpinnedViews: ['git', 'task-workbench'] as View[],
+    unpinnedViews: ['git', 'planner'] as View[],
     anchorRect: mockAnchorRect,
     onPin: vi.fn(),
     onActivate: vi.fn(),
@@ -63,14 +63,14 @@ describe('OverflowMenu', () => {
     render(<OverflowMenu {...defaultProps} />)
 
     expect(screen.getByText('Source Control')).toBeInTheDocument()
-    expect(screen.getByText('Task Workbench')).toBeInTheDocument()
+    expect(screen.getByText('Task Planner')).toBeInTheDocument()
   })
 
   it('renders view items with their labels', () => {
     render(<OverflowMenu {...defaultProps} />)
     // Check that view labels are rendered, which implies icons are present
     expect(screen.getByText('Source Control')).toBeInTheDocument()
-    expect(screen.getByText('Task Workbench')).toBeInTheDocument()
+    expect(screen.getByText('Task Planner')).toBeInTheDocument()
   })
 
   it('renders pin buttons for each view', () => {
@@ -260,7 +260,7 @@ describe('OverflowMenu', () => {
         'code-review',
         'git',
         'settings',
-        'task-workbench'
+        'planner'
       ]
       render(<OverflowMenu {...defaultProps} unpinnedViews={allViews} />)
 
@@ -271,7 +271,7 @@ describe('OverflowMenu', () => {
       expect(screen.getByText('Code Review')).toBeInTheDocument()
       expect(screen.getByText('Source Control')).toBeInTheDocument()
       expect(screen.getByText('Settings')).toBeInTheDocument()
-      expect(screen.getByText('Task Workbench')).toBeInTheDocument()
+      expect(screen.getByText('Task Planner')).toBeInTheDocument()
     })
   })
 

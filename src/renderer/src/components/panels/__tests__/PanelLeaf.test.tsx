@@ -259,30 +259,11 @@ describe('PanelLeaf', () => {
     expect(await screen.findByTestId('code-review-view')).toBeInTheDocument()
   })
 
-  it('shows dirty indicator when task-workbench is active and dirty', () => {
+  it('does not show dirty indicator for planner view', () => {
     mockFocusedPanelId = 'panel-other'
-    mockWorkbenchIsDirty = true
     const node = makeLeaf({
       panelId: 'panel-1',
-      tabs: [{ viewKey: 'task-workbench', label: 'Task Workbench' }]
-    })
-    const { container } = render(<PanelLeaf node={node} />)
-
-    const slimLabel = container.querySelector('.panel-label-slim')
-    expect(slimLabel).toBeInTheDocument()
-    expect(slimLabel).toHaveTextContent('Task Workbench')
-
-    const dirtyDot = container.querySelector('.panel-label-dirty-dot')
-    expect(dirtyDot).toBeInTheDocument()
-    expect(dirtyDot).toHaveTextContent('•')
-  })
-
-  it('does not show dirty indicator when task-workbench is clean', () => {
-    mockFocusedPanelId = 'panel-other'
-    mockWorkbenchIsDirty = false
-    const node = makeLeaf({
-      panelId: 'panel-1',
-      tabs: [{ viewKey: 'task-workbench', label: 'Task Workbench' }]
+      tabs: [{ viewKey: 'planner', label: 'Task Planner' }]
     })
     const { container } = render(<PanelLeaf node={node} />)
 

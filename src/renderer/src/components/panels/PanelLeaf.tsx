@@ -3,7 +3,6 @@ import { PanelLeafNode, View, DropZone, usePanelLayoutStore } from '../../stores
 import { ErrorBoundary } from '../ui/ErrorBoundary'
 import { PanelDropOverlay } from './PanelDropOverlay'
 import { resolveView } from '../../lib/view-resolver'
-import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
 import './PanelLeaf.css'
 
 // ---------------------------------------------------------------------------
@@ -37,11 +36,9 @@ export function PanelLeaf({ node }: PanelLeafProps): React.ReactElement {
   const focusPanel = usePanelLayoutStore((s) => s.focusPanel)
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragOver, setIsDragOver] = useState(false)
-  const workbenchIsDirty = useTaskWorkbenchStore((s) => s.isDirty())
 
   const isFocused = focusedPanelId === node.panelId
-  const activeTab = node.tabs[node.activeTab]
-  const showDirtyIndicator = activeTab?.viewKey === 'task-workbench' && workbenchIsDirty
+  const showDirtyIndicator = false
 
   function handlePanelClick(): void {
     focusPanel(node.panelId)

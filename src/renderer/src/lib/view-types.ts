@@ -10,7 +10,6 @@ export type View =
   | 'code-review'
   | 'git'
   | 'settings'
-  | 'task-workbench'
   | 'planner'
 
 export type DropZone = 'top' | 'bottom' | 'left' | 'right' | 'center'

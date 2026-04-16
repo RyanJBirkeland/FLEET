@@ -9,7 +9,6 @@ const IDEView = lazy(() => import('../views/IDEView'))
 const SprintView = lazy(() => import('../views/SprintView'))
 const SettingsView = lazy(() => import('../views/SettingsView'))
 const CodeReviewView = lazy(() => import('../views/CodeReviewView'))
-const TaskWorkbenchView = lazy(() => import('../views/TaskWorkbenchView'))
 const GitTreeView = lazy(() => import('../views/GitTreeView'))
 const PlannerView = lazy(() => import('../views/PlannerView'))
 
@@ -22,7 +21,6 @@ export const VIEW_LOADERS: Partial<Record<View, () => Promise<unknown>>> = {
   sprint: () => import('../views/SprintView'),
   settings: () => import('../views/SettingsView'),
   'code-review': () => import('../views/CodeReviewView'),
-  'task-workbench': () => import('../views/TaskWorkbenchView'),
   git: () => import('../views/GitTreeView'),
   ide: () => import('../views/IDEView'),
   planner: () => import('../views/PlannerView'),
@@ -43,8 +41,6 @@ export function resolveView(viewKey: View): React.ReactNode {
       return <SettingsView />
     case 'code-review':
       return <CodeReviewView />
-    case 'task-workbench':
-      return <TaskWorkbenchView />
     case 'git':
       return <GitTreeView />
     case 'planner':

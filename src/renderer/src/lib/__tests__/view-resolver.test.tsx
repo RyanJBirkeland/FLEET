@@ -11,9 +11,6 @@ vi.mock('../../views/SettingsView', () => ({ default: () => <div data-testid="se
 vi.mock('../../views/CodeReviewView', () => ({
   default: () => <div data-testid="code-review" />
 }))
-vi.mock('../../views/TaskWorkbenchView', () => ({
-  default: () => <div data-testid="task-workbench" />
-}))
 vi.mock('../../views/GitTreeView', () => ({ default: () => <div data-testid="git" /> }))
 vi.mock('../../views/PlannerView', () => ({ default: () => <div data-testid="planner" /> }))
 
@@ -28,7 +25,6 @@ describe('resolveView', () => {
     'sprint',
     'settings',
     'code-review',
-    'task-workbench',
     'git',
     'planner'
   ]
@@ -39,7 +35,7 @@ describe('resolveView', () => {
     expect(node).not.toBeNull()
   })
 
-  it('returns all 9 view types', () => {
+  it('returns all 8 view types', () => {
     for (const key of viewKeys) {
       const result = resolveView(key)
       expect(result).toBeTruthy()

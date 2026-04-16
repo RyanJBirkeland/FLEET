@@ -298,7 +298,7 @@ describe('DashboardView', () => {
     )
     render(<DashboardView />)
     fireEvent.click(screen.getByText('Create First Task'))
-    expect(usePanelLayoutStore.getState().activeView).toBe('task-workbench')
+    expect(usePanelLayoutStore.getState().activeView).toBe('planner')
   })
 
   // ---------- Branch coverage: fires strip ----------

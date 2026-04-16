@@ -11,8 +11,8 @@ All views listed below are wrapped in `<ErrorBoundary name="ViewName">` so a ren
 | `IDEView.tsx` | Monaco editor + file explorer sidebar + integrated terminal. Multi-tab interface with dirty-state tracking. ErrorBoundary protected. | `IDEView` (default) |
 | `GitTreeView.tsx` | Source control: staging, committing, and pushing across configured repositories. Polls git status every 30s. ErrorBoundary protected. | `GitTreeView` (default) |
 | `CodeReviewView.tsx` | Human-in-the-loop review interface: diff inspection, commit history, conversation log, and action buttons (merge, PR, revise, discard). ErrorBoundary protected. | `CodeReviewView` (default) |
-| `PlannerView.tsx` | Multi-task workflow planning: epic management with task grouping, dependency management, and batch queuing. ErrorBoundary protected. | `PlannerView` (default) |
+| `PlannerView.tsx` | Multi-task workflow planning: epic management with task grouping, dependency management, and batch queuing. Opens `WorkbenchPanel` slide-over for task creation/editing. ErrorBoundary protected. | `PlannerView` (default) |
 | `SprintView.tsx` | Sprint pipeline execution monitor: three-zone layout (backlog, stages, task detail). | `SprintView` (default) |
 | `AgentsView.tsx` | Adhoc and assistant agent sessions: spawn, chat, and monitor multi-turn agent conversations. | `AgentsView` (default) |
-| `TaskWorkbenchView.tsx` | Task spec drafting with AI copilot, validation checks, and dev playground toggle. | `TaskWorkbenchView` (default) |
-| `SettingsView.tsx` | App configuration organized into 9 tabs (connections, repos, templates, agent, agent manager, cost, memory, appearance, about). | `SettingsView` (default) |
+| `TaskWorkbenchView.tsx` | File kept on disk but removed from `VIEW_REGISTRY` and `View` union — no longer navigable. Task creation now lives in `WorkbenchPanel` inside `PlannerView`. | `TaskWorkbenchView` (default) |
+| `SettingsView.tsx` | App configuration organized into 7 tabs (connections, repositories, agents, templates, memory, appearance, about). | `SettingsView` (default) |

@@ -638,7 +638,7 @@ describe('SprintPipeline - additional scenarios', () => {
     expect(mocks.mockSetSpecPanelOpen).toHaveBeenCalledWith(true)
   })
 
-  it('calls setView("task-workbench") when drawer onEdit is triggered', async () => {
+  it('calls setView("planner") when drawer onEdit is triggered', async () => {
     const task = makeTask({ id: 'edit-task', status: 'queued' })
     Object.assign(mocks.storeState, { tasks: [task] })
     Object.assign(mocks.selectionState, { selectedTaskId: 'edit-task', drawerOpen: true })
@@ -647,7 +647,7 @@ describe('SprintPipeline - additional scenarios', () => {
     const { fireEvent: fe } = await import('@testing-library/react')
     render(<SprintPipeline />)
     fe.click(screen.getByTestId('drawer-edit'))
-    expect(mocks.mockSetView).toHaveBeenCalledWith('task-workbench')
+    expect(mocks.mockSetView).toHaveBeenCalledWith('planner')
   })
 
   it('calls setDrawerOpen(false) and setSelectedTaskId(null) when drawer is closed', async () => {

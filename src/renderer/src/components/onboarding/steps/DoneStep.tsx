@@ -27,7 +27,7 @@ export function DoneStep({ onBack, onComplete, isFirst }: StepProps): React.JSX.
     })
     onComplete()
     // Defer navigation so the wizard unmounts first
-    setTimeout(() => setView('task-workbench'), 0)
+    setTimeout(() => setView('planner'), 0)
   }
 
   return (

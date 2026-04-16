@@ -11,7 +11,6 @@ const ALL_VIEWS: View[] = [
   'code-review',
   'git',
   'settings',
-  'task-workbench',
   'planner'
 ]
 

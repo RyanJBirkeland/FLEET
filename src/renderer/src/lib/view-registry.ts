@@ -2,7 +2,6 @@ import {
   LayoutDashboard,
   Terminal,
   SquareTerminal,
-  ClipboardList,
   GitPullRequest,
   Settings,
   GitCommitHorizontal,
@@ -73,13 +72,6 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     icon: Settings,
     shortcut: '⌘7',
     shortcutKey: '7'
-  },
-  'task-workbench': {
-    label: 'Task Workbench',
-    description: 'Draft task specs with AI copilot assistance',
-    icon: ClipboardList,
-    shortcut: '⌘9',
-    shortcutKey: '9'
   },
   planner: {
     label: 'Task Planner',

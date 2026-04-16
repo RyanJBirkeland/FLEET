@@ -270,7 +270,7 @@ export default function DashboardView(): React.JSX.Element {
                   </p>
                   <button
                     className="dashboard-onboarding__cta"
-                    onClick={() => setView('task-workbench')}
+                    onClick={() => setView('planner')}
                   >
                     <Plus size={14} /> Create First Task
                   </button>
@@ -291,7 +291,7 @@ export default function DashboardView(): React.JSX.Element {
                   stats={stats}
                   tokens24h={tokens24h}
                   onFilterClick={handleRailFilter}
-                  onNewTaskClick={() => setView('task-workbench')}
+                  onNewTaskClick={() => setView('planner')}
                 />
 
                 <CenterColumn
