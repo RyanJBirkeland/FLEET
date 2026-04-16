@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { mkdirSync, existsSync, chmodSync, statSync, unlinkSync } from 'fs'
 import path from 'path'
-import { BDE_DIR as DB_DIR, BDE_DB_PATH as DB_PATH } from './paths'
+import { BDE_DIR as DB_DIR, BDE_DB_PATH as DB_PATH, BDE_TASK_MEMORY_DIR } from './paths'
 import { getErrorMessage } from '../shared/errors'
 import { loadMigrations, type Migration } from './migrations/loader'
 
@@ -10,6 +10,7 @@ let _db: Database.Database | null = null
 export function getDb(): Database.Database {
   if (!_db) {
     mkdirSync(DB_DIR, { recursive: true, mode: 0o700 })
+    mkdirSync(BDE_TASK_MEMORY_DIR, { recursive: true })
     // Enforce restrictive permissions on the .bde directory on every startup.
     // mkdirSync mode is only respected on creation — chmod fixes existing installs
     // that were created without the mode parameter.

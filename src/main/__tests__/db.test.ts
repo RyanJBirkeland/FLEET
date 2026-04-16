@@ -17,7 +17,8 @@ vi.mock('../paths', async (importOriginal) => {
   return {
     ...original,
     BDE_DIR: testDir,
-    BDE_DB_PATH: pathJoin(testDir, 'bde.db')
+    BDE_DB_PATH: pathJoin(testDir, 'bde.db'),
+    BDE_TASK_MEMORY_DIR: pathJoin(testDir, 'memory', 'tasks')
   }
 })
 
@@ -336,5 +337,25 @@ describe('backupDatabase', () => {
     const { backupDatabase } = await import('../db')
     backupDatabase()
     expect(existsSync(BACKUP_TEST_DB_PATH + '.backup')).toBe(true)
+  })
+})
+
+describe('getDb', () => {
+  const TASK_MEMORY_TEST_DIR = join(tmpdir(), 'bde-db-backup-test', 'memory', 'tasks')
+
+  beforeEach(() => {
+    mkdirSync(BACKUP_TEST_DIR, { recursive: true })
+  })
+
+  afterEach(async () => {
+    const { closeDb } = await import('../db')
+    closeDb()
+    rmSync(BACKUP_TEST_DIR, { recursive: true, force: true })
+  })
+
+  it('creates the task memory directory at startup', async () => {
+    const { getDb } = await import('../db')
+    getDb()
+    expect(existsSync(TASK_MEMORY_TEST_DIR)).toBe(true)
   })
 })
