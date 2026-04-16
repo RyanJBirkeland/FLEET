@@ -3,7 +3,7 @@
  */
 
 import { pipelinePersonality } from '../agent-system/personality/pipeline-personality'
-import { getAllMemory, selectUserMemory } from '../agent-system/memory'
+import { selectUserMemory } from '../agent-system/memory'
 import {
   CODING_AGENT_PREAMBLE,
   PLAYGROUND_INSTRUCTIONS,
@@ -103,7 +103,6 @@ export function buildPipelinePrompt(input: BuildPromptInput): string {
     maxRuntimeMs,
     upstreamContext,
     crossRepoContract,
-    repoName,
     taskId,
     priorScratchpad
   } = input
@@ -112,13 +111,6 @@ export function buildPipelinePrompt(input: BuildPromptInput): string {
 
   // Inject personality
   prompt += buildPersonalitySection(pipelinePersonality)
-
-  // Inject memory (BDE-specific modules only for BDE repo)
-  const memoryText = getAllMemory({ repoName: repoName ?? undefined })
-  if (memoryText.trim()) {
-    prompt += '\n\n## BDE Conventions\n'
-    prompt += memoryText
-  }
 
   // Inject user memory (selective pre-loading for pipeline agents)
   const userMem = selectUserMemory(taskContent ?? '')

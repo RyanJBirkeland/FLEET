@@ -4,7 +4,7 @@
 
 import { assistantPersonality } from '../agent-system/personality/assistant-personality'
 import { adhocPersonality } from '../agent-system/personality/adhoc-personality'
-import { getAllMemory, selectUserMemory } from '../agent-system/memory'
+import { selectUserMemory } from '../agent-system/memory'
 import { selectSkills } from '../agent-system/skills'
 import {
   CODING_AGENT_PREAMBLE,
@@ -19,8 +19,7 @@ import { PROMPT_TRUNCATION } from './prompt-constants'
 import type { BuildPromptInput } from '../lib/prompt-composer'
 
 export function buildAssistantPrompt(input: BuildPromptInput): string {
-  const { taskContent, branch, playgroundEnabled, upstreamContext, crossRepoContract, repoName } =
-    input
+  const { taskContent, branch, playgroundEnabled, upstreamContext, crossRepoContract } = input
 
   let prompt = CODING_AGENT_PREAMBLE
 
@@ -31,13 +30,6 @@ export function buildAssistantPrompt(input: BuildPromptInput): string {
   // Response format guidance (assistant only)
   if (input.agentType === 'assistant') {
     prompt += '\n\n## Response Format\n\nAnswer the direct question first. Show code or examples second. Explain trade-offs only if relevant. Keep explanations under 200 words unless the user asks for depth.'
-  }
-
-  // Inject memory
-  const memoryText = getAllMemory({ repoName: repoName ?? undefined })
-  if (memoryText.trim()) {
-    prompt += '\n\n## BDE Conventions\n'
-    prompt += memoryText
   }
 
   // Inject user memory filtered to task context (empty when no task provided)

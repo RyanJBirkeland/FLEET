@@ -56,7 +56,6 @@ describe('buildAgentPrompt', () => {
 
     it('does NOT hardcode a test count in the preamble', () => {
       // The preamble must not include a brittle "currently N+ tests" string
-      // (drifts as tests are added/removed; violates testing-patterns memory module).
       const prompt = buildAgentPrompt({ agentType: 'pipeline' })
       expect(prompt).not.toMatch(/\d{3,}\+?\s*tests/)
     })
