@@ -56,5 +56,8 @@ async function fetchPrStatusRest(pr: PrStatusInput): Promise<PrStatusResult> {
 }
 
 export async function pollPrStatuses(prs: PrStatusInput[]): Promise<PrStatusResult[]> {
-  return Promise.all(prs.map(fetchPrStatusRest))
+  const settled = await Promise.allSettled(prs.map(fetchPrStatusRest))
+  return settled
+    .filter((r): r is PromiseFulfilledResult<PrStatusResult> => r.status === 'fulfilled')
+    .map((r) => r.value)
 }

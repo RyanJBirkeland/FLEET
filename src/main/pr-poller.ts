@@ -73,7 +73,13 @@ async function poll(): Promise<void> {
   if (!token) return
 
   const repos = getGitHubRepos()
-  const results = await Promise.all(repos.map((r) => fetchOpenPrs(r.owner, r.repo, token)))
+  const settled = await Promise.allSettled(repos.map((r) => fetchOpenPrs(r.owner, r.repo, token)))
+  const results = settled
+    .filter((r): r is PromiseFulfilledResult<OpenPr[]> => r.status === 'fulfilled')
+    .map((r) => r.value)
+  settled
+    .filter((r): r is PromiseRejectedResult => r.status === 'rejected')
+    .forEach((r) => logger.warn(`[pr-poller] Repo fetch failed: ${r.reason}`))
   const prs = results
     .flat()
     .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
@@ -85,7 +91,7 @@ async function poll(): Promise<void> {
     const summary = await fetchCheckRuns(repoConfig.owner, repoConfig.repo, pr.head.sha, token)
     checks[`${pr.repo}-${pr.number}`] = summary
   })
-  await Promise.all(checkPromises)
+  await Promise.allSettled(checkPromises)
 
   latestPayload = { prs, checks }
   broadcastPrList(latestPayload)
