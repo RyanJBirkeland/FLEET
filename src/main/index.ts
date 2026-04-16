@@ -145,6 +145,7 @@ app.whenReady().then(() => {
     getGroupsWithDependencies: () => repo.getGroupsWithDependencies(),
     listGroupTasks: (groupId) => repo.getGroupTasks(groupId),
     getSetting,
+    runInTransaction: (fn) => getDb().transaction(fn)(),
     logger: createLogger('task-terminal')
   })
   const dialogService = createElectronDialogService()

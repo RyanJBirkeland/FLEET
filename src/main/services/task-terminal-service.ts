@@ -27,8 +27,6 @@ export interface TaskTerminalServiceDeps {
   getGroupsWithDependencies: () => Array<{ id: string; depends_on: EpicDependency[] | null }>
   listGroupTasks: (groupId: string) => SprintTask[]
   getSetting?: (key: string) => string | null
-  // TODO F-t1-datalay-4: pass a db.transaction wrapper here to enable cascade atomicity.
-  // When provided, the entire cascade cancellation loop is wrapped in a single SQLite transaction.
   runInTransaction?: (fn: () => void) => void
   logger: {
     info: (msg: string) => void

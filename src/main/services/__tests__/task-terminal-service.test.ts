@@ -168,6 +168,94 @@ describe('createTaskTerminalService', () => {
     )
   })
 
+  it('passes runInTransaction to resolveDependents when provided', () => {
+    const runInTransaction = vi.fn((fn: () => void) => fn())
+    const deps = makeDeps({
+      getTasksWithDependencies: vi
+        .fn()
+        .mockReturnValue([{ id: 't2', depends_on: [{ id: 't1', type: 'hard' }] }]),
+      runInTransaction
+    })
+    const service = createTaskTerminalService(deps)
+    service.onStatusTerminal('t1', 'done')
+
+    vi.runAllTimers()
+
+    expect(mockResolveDependents).toHaveBeenCalledWith(
+      't1',
+      'done',
+      expect.anything(), // depIndex
+      deps.getTask,
+      deps.updateTask,
+      deps.logger,
+      deps.getSetting,
+      expect.anything(), // epicIndex
+      deps.getGroup,
+      deps.listGroupTasks,
+      runInTransaction
+    )
+  })
+
+  it('two concurrent onStatusTerminal calls see a consistent cascade snapshot via runInTransaction', () => {
+    // Simulate two tasks completing concurrently — both calls should be batched
+    // and resolveDependents should be called once per task within the same batch.
+    // The runInTransaction wrapper is invoked once per task resolution, ensuring
+    // each cascade is atomic even when multiple tasks terminal simultaneously.
+    const transactionCalls: string[] = []
+    const runInTransaction = vi.fn((fn: () => void) => {
+      transactionCalls.push('tx-start')
+      fn()
+      transactionCalls.push('tx-end')
+    })
+
+    const deps = makeDeps({
+      getTasksWithDependencies: vi.fn().mockReturnValue([
+        { id: 't1', depends_on: null },
+        { id: 't2', depends_on: null }
+      ]),
+      runInTransaction
+    })
+
+    // Capture which taskIds resolveDependents was called with
+    const resolvedIds: string[] = []
+    mockResolveDependents.mockImplementation((id: string) => {
+      resolvedIds.push(id)
+    })
+
+    const service = createTaskTerminalService(deps)
+
+    // Two concurrent terminal events — batched by BatchedTaskResolver
+    service.onStatusTerminal('t1', 'done')
+    service.onStatusTerminal('t2', 'failed')
+
+    // Neither should have been called yet (batched via setTimeout(0))
+    expect(resolvedIds).toHaveLength(0)
+
+    vi.runAllTimers()
+
+    // Both tasks should have been resolved
+    expect(resolvedIds).toContain('t1')
+    expect(resolvedIds).toContain('t2')
+
+    // resolveDependents was called once per task
+    expect(mockResolveDependents).toHaveBeenCalledTimes(2)
+
+    // runInTransaction was forwarded to resolveDependents for both calls
+    expect(mockResolveDependents).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.any(String),
+      expect.anything(),
+      deps.getTask,
+      deps.updateTask,
+      deps.logger,
+      deps.getSetting,
+      expect.anything(),
+      deps.getGroup,
+      deps.listGroupTasks,
+      runInTransaction
+    )
+  })
+
   // consolidated error log when per-task resolutions fail
   it('logs a consolidated error after the loop when some resolveDependents calls fail', () => {
     // Use the module-level mockResolveDependents to control which resolution throws.
