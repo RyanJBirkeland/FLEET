@@ -11,9 +11,12 @@ export interface FloatingAgentMessage {
 interface FloatingAgentState {
   isOpen: boolean
   sessionId: string | null
+  /** Process-local agent run ID — not persisted, always null after app restart. */
   agentId: string | null
   messages: FloatingAgentMessage[]
   streamingMessageId: string | null
+  /** True while an agent response is in flight. Not persisted. */
+  isSending: boolean
   /** Rough token estimate — 1 token ≈ 4 chars */
   estimatedTokens: number
   lastActivityAt: number | null
@@ -25,7 +28,8 @@ interface FloatingAgentState {
   appendAssistantChunk: (chunk: string) => void
   resetSession: () => void
   setSessionId: (id: string) => void
-  setAgentId: (id: string) => void
+  setAgentId: (id: string | null) => void
+  setIsSending: (sending: boolean) => void
   trimIfNeeded: () => void
 }
 
@@ -44,6 +48,7 @@ export const useFloatingAgentStore = create<FloatingAgentState>()(
       agentId: null,
       messages: [],
       streamingMessageId: null,
+      isSending: false,
       estimatedTokens: 0,
       lastActivityAt: null,
 
@@ -96,6 +101,7 @@ export const useFloatingAgentStore = create<FloatingAgentState>()(
         }),
       setSessionId: (id) => set({ sessionId: id }),
       setAgentId: (id) => set({ agentId: id }),
+      setIsSending: (sending) => set({ isSending: sending }),
       resetSession: () =>
         set({
           sessionId: null,
@@ -103,7 +109,8 @@ export const useFloatingAgentStore = create<FloatingAgentState>()(
           messages: [],
           estimatedTokens: 0,
           lastActivityAt: null,
-          streamingMessageId: null
+          streamingMessageId: null,
+          isSending: false
         }),
       trimIfNeeded: () => {
         const { messages, estimatedTokens } = get()
@@ -117,9 +124,10 @@ export const useFloatingAgentStore = create<FloatingAgentState>()(
     }),
     {
       name: 'bde:floating-agent',
+      // agentId is process-local (agent run ID dies with the process — never reload it)
+      // isSending is ephemeral UI state — never reload it
       partialize: (s) => ({
         sessionId: s.sessionId,
-        agentId: s.agentId,
         messages: s.messages,
         estimatedTokens: s.estimatedTokens,
         lastActivityAt: s.lastActivityAt
