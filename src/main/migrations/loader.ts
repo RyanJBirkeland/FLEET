@@ -86,3 +86,33 @@ export function loadMigrations(): Migration[] {
 
   return migrations
 }
+
+/**
+ * Filters and validates migrations pending application for the given database version.
+ *
+ * Unlike the full-sequence check in loadMigrations(), this operates on only the
+ * pending slice (versions > currentVersion). A developer who creates v41 and v43
+ * while skipping v42 would pass the full-sequence check if v42 was never committed,
+ * but this guard catches the gap before any pending migration runs.
+ */
+export function getPendingMigrations(
+  migrations: Migration[],
+  currentVersion: number
+): Migration[] {
+  const pending = migrations
+    .filter((m) => m.version > currentVersion)
+    .sort((a, b) => a.version - b.version)
+
+  if (pending.length > 1) {
+    for (let i = 1; i < pending.length; i++) {
+      if (pending[i].version !== pending[i - 1].version + 1) {
+        throw new Error(
+          `Migration version gap detected: v${pending[i - 1].version} → v${pending[i].version}. ` +
+            `Missing v${pending[i - 1].version + 1}`
+        )
+      }
+    }
+  }
+
+  return pending
+}
