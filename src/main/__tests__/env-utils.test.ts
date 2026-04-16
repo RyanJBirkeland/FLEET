@@ -7,7 +7,8 @@ vi.mock('node:fs', async () => {
     readFileSync: vi.fn(),
     existsSync: vi.fn(),
     writeFileSync: vi.fn(),
-    statSync: vi.fn().mockReturnValue({ mode: 0o100600 })
+    statSync: vi.fn().mockReturnValue({ mode: 0o100600 }),
+    lstatSync: vi.fn().mockReturnValue({ mode: 0o100600, isSymbolicLink: () => false, size: 100 })
   }
 })
 
@@ -23,13 +24,32 @@ import {
   buildAgentEnv,
   _resetEnvCache
 } from '../env-utils'
-import { readFileSync, existsSync, writeFileSync } from 'node:fs'
+import { readFileSync, existsSync, writeFileSync, lstatSync } from 'node:fs'
 import { execFile } from 'node:child_process'
 
 describe('OAuth token cache', () => {
   beforeEach(() => {
     invalidateOAuthToken()
     vi.mocked(existsSync).mockReturnValue(true)
+    vi.mocked(lstatSync).mockReturnValue({
+      mode: 0o100600,
+      isSymbolicLink: () => false,
+      size: 100
+    } as any)
+  })
+
+  it('returns null when token file has world-readable permissions', () => {
+    vi.mocked(lstatSync).mockReturnValue({
+      mode: 0o100644,
+      isSymbolicLink: () => false,
+      size: 100
+    } as any)
+    vi.mocked(readFileSync).mockReturnValue('some-token')
+
+    const result = getOAuthToken()
+
+    expect(result).toBeNull()
+    expect(vi.mocked(readFileSync)).not.toHaveBeenCalled()
   })
 
   it('invalidateOAuthToken forces next call to re-read from disk', () => {

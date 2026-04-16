@@ -10,6 +10,9 @@ import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { homedir, userInfo } from 'node:os'
 import { getErrorMessage } from '../shared/errors'
+import { createLogger } from './logger'
+
+const logger = createLogger('env-utils')
 
 const customPaths = process.env.BDE_EXTRA_PATHS?.split(':').filter(Boolean) ?? []
 const EXTRA_PATHS = [...customPaths, '/usr/local/bin', '/opt/homebrew/bin', `${homedir()}/.local/bin`]
@@ -114,9 +117,11 @@ export function getOAuthToken(): string | null {
       }
       const mode = lstats.mode & 0o777
       if (mode !== 0o600) {
-        console.warn(
-          `[env-utils] OAuth token file has insecure permissions: ${mode.toString(8)}. Expected: 600`
+        logger.error(
+          `[env-utils] OAuth token rejected: insecure permissions ${mode.toString(8)}. ` +
+            `Run: chmod 600 ${tokenPath}`
         )
+        return null
       }
       _cachedOAuthToken = readFileSync(tokenPath, 'utf8').trim()
     } else {
