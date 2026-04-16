@@ -314,3 +314,38 @@ describe('buildAgentEnv', () => {
     }
   })
 })
+
+describe('BDE_EXTRA_PATHS', () => {
+  const originalExtra = process.env.BDE_EXTRA_PATHS
+
+  afterEach(() => {
+    if (originalExtra !== undefined) {
+      process.env.BDE_EXTRA_PATHS = originalExtra
+    } else {
+      delete process.env.BDE_EXTRA_PATHS
+    }
+    vi.resetModules()
+  })
+
+  it('includes BDE_EXTRA_PATHS entries in the PATH returned by buildAgentEnv', async () => {
+    process.env.BDE_EXTRA_PATHS = '/my/custom/bin'
+    vi.resetModules()
+
+    const { buildAgentEnv: freshBuildAgentEnv } = await import('../env-utils')
+    const env = freshBuildAgentEnv()
+
+    expect(env.PATH).toContain('/my/custom/bin')
+  })
+
+  it('does not insert an empty segment when BDE_EXTRA_PATHS is empty', async () => {
+    process.env.BDE_EXTRA_PATHS = ''
+    vi.resetModules()
+
+    const { buildAgentEnv: freshBuildAgentEnv } = await import('../env-utils')
+    const env = freshBuildAgentEnv()
+
+    // An empty segment would appear as a leading colon or "::" in the path
+    expect(env.PATH).not.toMatch(/(^:|::|:\s*:)/)
+    expect(env.PATH?.split(':').every(Boolean)).toBe(true)
+  })
+})

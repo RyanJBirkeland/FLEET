@@ -11,7 +11,7 @@ import { dirname, join } from 'node:path'
 import { homedir, userInfo } from 'node:os'
 import { getErrorMessage } from '../shared/errors'
 
-const customPaths = process.env.BDE_EXTRA_PATHS?.split(':') ?? []
+const customPaths = process.env.BDE_EXTRA_PATHS?.split(':').filter(Boolean) ?? []
 const EXTRA_PATHS = [...customPaths, '/usr/local/bin', '/opt/homebrew/bin', `${homedir()}/.local/bin`]
 
 let _cachedEnv: Record<string, string | undefined> | null = null
