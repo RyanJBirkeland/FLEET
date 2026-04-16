@@ -1,4 +1,4 @@
-import { app, shell, BrowserWindow } from 'electron'
+import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
@@ -127,7 +127,17 @@ app.on('before-quit', () => {
 app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.bde')
 
-  initializeDatabase()
+  try {
+    initializeDatabase()
+  } catch (err) {
+    dialog.showErrorBox(
+      'Database Migration Failed',
+      `BDE could not upgrade its database:\n\n${err instanceof Error ? err.message : String(err)}\n\n` +
+      `Check ~/.bde/bde.log for details.\n` +
+      `To recover: back up ~/.bde/bde.db, then delete it to start fresh.`
+    )
+    app.exit(1)
+  }
 
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
