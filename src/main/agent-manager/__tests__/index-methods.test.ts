@@ -990,5 +990,37 @@ describe('AgentManagerImpl — class internals', () => {
 
       expect(manager._pendingSpawns).toBe(0)
     })
+
+    it('records a circuit breaker failure when runAgent throws before onSpawnFailure is reached', async () => {
+      // Simulate runAgent throwing from an unexpected path (e.g. before spawnAndWireAgent),
+      // bypassing the handleSpawnFailure callback that normally calls onSpawnFailure().
+      vi.mocked(runAgent).mockRejectedValue(new Error('unexpected pre-spawn crash'))
+
+      const repo = makeMockRepo()
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      expect(manager._consecutiveSpawnFailures).toBe(0)
+
+      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      await Promise.allSettled(Array.from(manager._agentPromises))
+
+      // Circuit breaker must record the failure even though onSpawnFailure was never called
+      expect(manager._consecutiveSpawnFailures).toBe(1)
+    })
+
+    it('accumulates circuit breaker failures across multiple unexpected spawn crashes', async () => {
+      vi.mocked(runAgent).mockRejectedValue(new Error('crash'))
+
+      const repo = makeMockRepo()
+      const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
+
+      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      manager._spawnAgent({ ...makeSpawnTask(), id: 'task-spawn-2' }, mockWorktree, mockRepoPath)
+
+      await Promise.allSettled(Array.from(manager._agentPromises))
+
+      // Both failures should be counted by the circuit breaker
+      expect(manager._consecutiveSpawnFailures).toBe(2)
+    })
   })
 })

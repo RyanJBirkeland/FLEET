@@ -257,6 +257,11 @@ export class AgentManagerImpl implements AgentManager {
     const agentPromise = _runAgent(task, worktree, repoPath, this.runAgentDeps)
       .catch((err) => {
         this.logger.error(`[agent-manager] runAgent failed for task ${task.id}: ${err}`)
+        // Record the failure so the circuit breaker can open after repeated crashes.
+        // handleSpawnFailure calls onSpawnFailure() when spawnWithTimeout throws, but
+        // if runAgent throws before or after spawnAndWireAgent (e.g. unexpected error),
+        // the circuit breaker would never see the failure without this guard.
+        this._circuitBreaker.recordFailure()
         // Release the claim so the task does not remain stuck 'active'.
         // validateTaskForRun and handleSpawnFailure already do this on their
         // own code paths — this catch handles any remaining gap (e.g. an
