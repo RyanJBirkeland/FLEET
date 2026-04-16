@@ -517,7 +517,11 @@ export class AgentManagerImpl implements AgentManager {
           this._drainInFlight = null
         })
     }, this.config.pollIntervalMs)
-    this.watchdogTimer = setInterval(() => this._watchdogLoop(), WATCHDOG_INTERVAL_MS)
+    this.watchdogTimer = setInterval(() => {
+      this._watchdogLoop().catch((err) =>
+        this.logger.warn(`[agent-manager] Watchdog loop error: ${err}`)
+      )
+    }, WATCHDOG_INTERVAL_MS)
     this.orphanTimer = setInterval(() => {
       this._orphanLoop().catch((err) =>
         this.logger.warn(`[agent-manager] Orphan loop error: ${err}`)

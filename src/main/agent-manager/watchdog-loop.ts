@@ -118,9 +118,9 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
     const result = handleWatchdogVerdict(verdict, deps.getConcurrency(), now, maxRuntimeMs)
     deps.setConcurrency(result.concurrency)
 
-    // Step 2: Flush buffered agent events before the DB write — the 100ms batcher
+    // Step 2: Flush buffered agent events before the DB write — the batcher
     // timer is not guaranteed to fire before the watchdog kill lands.
-    await flushAgentEventBatcher()
+    flushAgentEventBatcher()
 
     // Step 3: Persist the status change to DB before removing from map.
     // If the DB write fails the agent is still gone from the process level,
@@ -143,7 +143,7 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
     // Step 5: Notify terminal handler after map removal so downstream logic
     // (dep resolution, metrics) sees a consistent state.
     if (result.shouldNotifyTerminal && result.terminalStatus) {
-      await flushAgentEventBatcher()
+      flushAgentEventBatcher()
       deps.onTaskTerminal(agent.taskId, result.terminalStatus).catch((err) =>
         deps.logger.warn(
           `[agent-manager] Failed onTerminal for task ${agent.taskId} after ${verdict}: ${err}`
