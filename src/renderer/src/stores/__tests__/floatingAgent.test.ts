@@ -7,6 +7,7 @@ const RESET_STATE = {
   agentId: null,
   messages: [],
   streamingMessageId: null,
+  isSending: false,
   estimatedTokens: 0,
   lastActivityAt: null,
 }
@@ -80,13 +81,14 @@ describe('addMessage', () => {
 })
 
 describe('resetSession', () => {
-  it('clears sessionId, messages, tokens, and activityAt', () => {
+  it('clears sessionId, agentId, messages, tokens, activityAt, and isSending', () => {
     useFloatingAgentStore.setState({
       sessionId: 'ses-1',
       agentId: 'agent-1',
       messages: [{ id: 'm1', role: 'user', content: 'hi', timestamp: 0 }],
       estimatedTokens: 100,
       lastActivityAt: 12345,
+      isSending: true,
     })
     useFloatingAgentStore.getState().resetSession()
     const state = useFloatingAgentStore.getState()
@@ -95,6 +97,7 @@ describe('resetSession', () => {
     expect(state.messages).toHaveLength(0)
     expect(state.estimatedTokens).toBe(0)
     expect(state.lastActivityAt).toBeNull()
+    expect(state.isSending).toBe(false)
   })
 })
 
@@ -154,7 +157,7 @@ describe('appendAssistantChunk', () => {
   })
 })
 
-describe('setSessionId / setAgentId', () => {
+describe('setSessionId / setAgentId / setIsSending', () => {
   it('sets sessionId', () => {
     useFloatingAgentStore.getState().setSessionId('ses-abc')
     expect(useFloatingAgentStore.getState().sessionId).toBe('ses-abc')
@@ -163,5 +166,18 @@ describe('setSessionId / setAgentId', () => {
   it('sets agentId', () => {
     useFloatingAgentStore.getState().setAgentId('agent-xyz')
     expect(useFloatingAgentStore.getState().agentId).toBe('agent-xyz')
+  })
+
+  it('clears agentId with null', () => {
+    useFloatingAgentStore.setState({ agentId: 'agent-old' })
+    useFloatingAgentStore.getState().setAgentId(null)
+    expect(useFloatingAgentStore.getState().agentId).toBeNull()
+  })
+
+  it('sets isSending', () => {
+    useFloatingAgentStore.getState().setIsSending(true)
+    expect(useFloatingAgentStore.getState().isSending).toBe(true)
+    useFloatingAgentStore.getState().setIsSending(false)
+    expect(useFloatingAgentStore.getState().isSending).toBe(false)
   })
 })

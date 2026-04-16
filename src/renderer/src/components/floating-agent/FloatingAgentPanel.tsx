@@ -7,12 +7,9 @@ interface Props {
   onClose: () => void
 }
 
-const PLACEHOLDER_REPO = 'bde'
-
 export function FloatingAgentPanel({ onClose }: Props): React.JSX.Element {
-  const { messages, estimatedTokens, sessionId, agentId } = useFloatingAgentStore()
+  const { messages, estimatedTokens, agentId, isSending } = useFloatingAgentStore()
   const [input, setInput] = useState('')
-  const [sending, setSending] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const tokenPct = Math.min(100, Math.round((estimatedTokens / 50_000) * 100))
 
@@ -32,54 +29,64 @@ export function FloatingAgentPanel({ onClose }: Props): React.JSX.Element {
         }
         if (event.type === 'agent:completed' || event.type === 'agent:error') {
           useFloatingAgentStore.setState({ streamingMessageId: null })
-          setSending(false)
+          useFloatingAgentStore.getState().setIsSending(false)
         }
       }
     )
     return unsubscribe
   }, [agentId])
 
+  const spawnNewSession = async (text: string): Promise<void> => {
+    const store = useFloatingAgentStore.getState()
+
+    const repoPaths = await window.api.git.getRepoPaths()
+    const repoPath = Object.values(repoPaths)[0]
+
+    if (!repoPath) {
+      store.addMessage({
+        role: 'assistant',
+        content:
+          'Please configure a repository in Settings → Repositories before using the BDE Advisor.'
+      })
+      store.setIsSending(false)
+      return
+    }
+
+    const sessionId = `bde-floating-${crypto.randomUUID()}`
+    store.setSessionId(sessionId)
+
+    const result = await window.api.agents.spawnLocal({ task: text, repoPath, assistant: true })
+    store.setAgentId(result.id)
+    // isSending cleared by agent:completed / agent:error event
+  }
+
   const handleSend = async (): Promise<void> => {
-    if (!input.trim() || sending) return
+    if (!input.trim() || isSending) return
     const text = input.trim()
     setInput('')
-    setSending(true)
 
     const store = useFloatingAgentStore.getState()
+    store.setIsSending(true)
     store.addMessage({ role: 'user', content: text })
 
     try {
       if (store.agentId) {
-        // Resume existing session via steer
         const result = await window.api.agents.steer(store.agentId, text)
         if (!result.ok) {
-          store.addMessage({ role: 'assistant', content: 'Failed to reach agent. Try again.' })
-          setSending(false)
+          // Agent process is gone — clear the stale ID and spawn fresh
+          store.setAgentId(null)
+          await spawnNewSession(text)
         }
+        // isSending cleared by event listener on agent:completed
       } else {
-        // Spawn a new adhoc session
-        const sessionId = `bde-floating-${crypto.randomUUID()}`
-        store.setSessionId(sessionId)
-
-        const repoPaths = await window.api.git.getRepoPaths()
-        const repoPath =
-          Object.values(repoPaths)[0] ??
-          `/Users/${window.process?.env?.USER ?? 'user'}/projects/${PLACEHOLDER_REPO}`
-
-        const result = await window.api.agents.spawnLocal({
-          task: text,
-          repoPath,
-          assistant: true
-        })
-        store.setAgentId(result.id)
-        // setSending will be cleared by agent:completed event
+        await spawnNewSession(text)
       }
     } catch (err) {
       store.addMessage({
         role: 'assistant',
         content: `Error: ${err instanceof Error ? err.message : 'Failed to reach agent'}`
       })
-      setSending(false)
+      store.setIsSending(false)
     }
   }
 
@@ -92,32 +99,25 @@ export function FloatingAgentPanel({ onClose }: Props): React.JSX.Element {
 
   const handleNewChat = (): void => {
     useFloatingAgentStore.getState().resetSession()
-    setSending(false)
   }
 
-  // ⌘. resets the session while panel is open
+  // ⌘. resets the session while the panel is mounted
   useEffect(() => {
     const handleKey = (e: KeyboardEvent): void => {
-      if (e.metaKey && e.key === '.') {
-        handleNewChat()
-      }
+      if (e.metaKey && e.key === '.') handleNewChat()
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
   }, [])
 
   return (
-    <div
-      className="fa-panel"
-      role="complementary"
-      aria-label="BDE Advisor"
-      data-session={sessionId ?? undefined}
-    >
+    <div className="fa-panel" role="complementary" aria-label="BDE Advisor">
       <div className="fa-panel__header">
         <span className="fa-panel__title">BDE Advisor</span>
         <div className="fa-panel__header-right">
           <span
             className="fa-panel__token-bar"
+            aria-hidden="true"
             title={`~${estimatedTokens.toLocaleString()} / 50,000 tokens`}
           >
             <span className="fa-panel__token-fill" style={{ width: `${tokenPct}%` }} />
@@ -156,16 +156,16 @@ export function FloatingAgentPanel({ onClose }: Props): React.JSX.Element {
           onKeyDown={handleKeyDown}
           placeholder="Ask BDE Advisor..."
           rows={2}
-          disabled={sending}
+          disabled={isSending}
           aria-label="Message BDE Advisor"
         />
         <button
           className="fa-panel__send"
           onClick={() => void handleSend()}
-          disabled={sending || !input.trim()}
+          disabled={isSending || !input.trim()}
           aria-label="Send message"
         >
-          {sending ? '…' : '↑'}
+          {isSending ? '…' : '↑'}
         </button>
       </div>
     </div>
