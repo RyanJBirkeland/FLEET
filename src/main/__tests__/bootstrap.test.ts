@@ -70,6 +70,19 @@ vi.mock('../data/sprint-queries')
 vi.mock('../data/sprint-maintenance-facade')
 vi.mock('../services/plugin-loader')
 vi.mock('../services/load-sampler')
+vi.mock('../data/settings-queries', () => ({
+  getSetting: vi.fn(() => null),
+  setSetting: vi.fn(),
+  deleteSetting: vi.fn(),
+  getSettingJson: vi.fn(() => null),
+  setSettingJson: vi.fn()
+}))
+vi.mock('../secure-storage', () => ({
+  SENSITIVE_SETTING_KEYS: new Set(['github.token', 'supabase.serviceKey']),
+  encryptSetting: vi.fn((v: string) => 'ENC:' + v),
+  decryptSetting: vi.fn((v: string) => v),
+  isEncryptionAvailable: vi.fn(() => true)
+}))
 
 const mockWindow = {
   webContents: {

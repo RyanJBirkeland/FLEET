@@ -8,15 +8,23 @@ import {
   setSettingJson as _setSettingJson
 } from './data/settings-queries'
 import { SENSITIVE_SETTING_KEYS, encryptSetting, decryptSetting } from './secure-storage'
+import { createLogger } from './logger'
+
+const logger = createLogger('settings')
 
 export function getSetting(key: string, db?: Database.Database): string | null {
   const raw = _getSetting(db ?? getDb(), key)
   if (raw === null) return null
   if (SENSITIVE_SETTING_KEYS.has(key)) {
     const plaintext = decryptSetting(raw)
-    // Lazy migration: re-encrypt any legacy plaintext values found in the DB
+    // Lazy migration: re-encrypt any legacy plaintext values found in the DB.
+    // Skip silently if encryption is unavailable — we cannot upgrade now.
     if (!raw.startsWith('ENC:')) {
-      _setSetting(db ?? getDb(), key, encryptSetting(plaintext))
+      try {
+        _setSetting(db ?? getDb(), key, encryptSetting(plaintext))
+      } catch (err) {
+        logger.warn(`Skipping lazy re-encryption of "${key}": ${err instanceof Error ? err.message : String(err)}`)
+      }
     }
     return plaintext
   }
