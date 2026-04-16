@@ -81,7 +81,18 @@ BDE spawns five types of AI agents, each with different capabilities and context
 - **Copilot**: Text-only spec drafting helper in Task Workbench. ~500 word limit. Cannot use tools, open URLs, or explore code. Helps users refine task specs through conversation
 - **Synthesizer**: Generates structured specs from codebase context + user answers. Receives file tree and relevant code snippets. Outputs markdown with `## heading` sections. Single-turn (`maxTurns: 1`)
 
-All agent types inherit project knowledge from CLAUDE.md (and this file) via SDK `settingSources: ['user', 'project', 'local']`. Prompts are composed by `buildAgentPrompt()` in `src/main/agent-manager/prompt-composer.ts`.
+Each agent type uses a specific `settingSources` value when spawning via the SDK:
+
+| Agent type | `settingSources` | Rationale |
+|---|---|---|
+| Pipeline | `['user', 'local']` | `'project'` excluded — BDE conventions are injected via the composed prompt to avoid double-injecting CLAUDE.md |
+| Adhoc / Assistant | `[]` | Conventions injected via explicit prompt context |
+| Copilot / Synthesizer | `[]` | Conventions injected via explicit prompt context |
+
+Prompts are composed by `buildAgentPrompt()` in `src/main/agent-manager/prompt-composer.ts`.
+
+- **Bundled conventions**: Core conventions (IPC patterns, testing rules, architecture) are bundled in source code (`src/main/agent-system/memory/`) — they do NOT require CLAUDE.md to exist at spawn time.
+- **User memory portability**: User memory (`~/.bde/memory/`) is per-machine and is not synced across machines. On a new machine, agents will not have access to memory files created on the original machine.
 
 ### Agent Manager
 
