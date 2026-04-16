@@ -4,7 +4,8 @@ import {
   initializeDatabase,
   startBackgroundServices,
   setupCleanupTasks,
-  warnPlaintextSensitiveSettings
+  warnPlaintextSensitiveSettings,
+  emitStartupWarnings
 } from '../bootstrap'
 
 const mockLogger = vi.hoisted(() => ({
@@ -19,6 +20,8 @@ import * as taskChanges from '../data/task-changes'
 import * as sprintMaintenanceFacade from '../data/sprint-maintenance-facade'
 import * as pluginLoader from '../services/plugin-loader'
 import * as loadSampler from '../services/load-sampler'
+import * as broadcastModule from '../broadcast'
+import * as supabaseImport from '../data/supabase-import'
 
 vi.mock('fs', async () => {
   const actual = await vi.importActual('fs')
@@ -72,6 +75,9 @@ vi.mock('../logger', () => ({
 }))
 vi.mock('../data/sprint-queries')
 vi.mock('../data/sprint-maintenance-facade')
+vi.mock('../broadcast', () => ({
+  broadcast: vi.fn()
+}))
 vi.mock('../services/plugin-loader')
 vi.mock('../services/load-sampler')
 vi.mock('../data/settings-queries', () => ({
@@ -221,6 +227,44 @@ describe('bootstrap', () => {
       })
 
       expect(() => setupCleanupTasks()).not.toThrow()
+    })
+  })
+
+  describe('emitStartupWarnings', () => {
+    it('should not broadcast when there are no startup errors', () => {
+      emitStartupWarnings()
+
+      expect(broadcastModule.broadcast).not.toHaveBeenCalled()
+    })
+
+    it('should broadcast manager:warning for non-trivial Supabase import errors', async () => {
+      vi.mocked(supabaseImport.importSprintTasksFromSupabase).mockRejectedValueOnce(
+        new Error('EACCES: permission denied, open /var/db/sprint.db')
+      )
+
+      initializeDatabase()
+      // Flush the rejected promise microtask queue without advancing timers
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(broadcastModule.broadcast).toHaveBeenCalledWith('manager:warning', {
+        message: expect.stringContaining('Supabase import failed')
+      })
+    })
+
+    it('should not broadcast for trivial errors like missing credentials', async () => {
+      vi.mocked(supabaseImport.importSprintTasksFromSupabase).mockRejectedValueOnce(
+        new Error('credentials not configured — skipping import')
+      )
+
+      initializeDatabase()
+      await Promise.resolve()
+      await Promise.resolve()
+
+      expect(broadcastModule.broadcast).not.toHaveBeenCalledWith(
+        'manager:warning',
+        expect.anything()
+      )
     })
   })
 })

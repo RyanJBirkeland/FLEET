@@ -8,7 +8,8 @@ import {
   startBackgroundServices,
   startPrPollers,
   setupCleanupTasks,
-  setupCSP
+  setupCSP,
+  emitStartupWarnings
 } from './bootstrap'
 import icon from '../../resources/icon.png?asset'
 import { registerAllHandlers, type AppHandlerDeps } from './handlers/registry'
@@ -84,6 +85,7 @@ function createWindow(): void {
 
   mainWindow.on('ready-to-show', () => {
     mainWindow.show()
+    emitStartupWarnings()
   })
 
   mainWindow.webContents.setWindowOpenHandler((details) => {

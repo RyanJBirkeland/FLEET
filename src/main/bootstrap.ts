@@ -22,10 +22,49 @@ import type { DialogService } from './dialog-service'
 import { BACKUP_INTERVAL_MS, PRUNE_CHANGES_DAYS } from './constants'
 import { getSetting as _getRawSetting } from './data/settings-queries'
 import { SENSITIVE_SETTING_KEYS, ENCRYPTED_PREFIX } from './secure-storage'
+import { broadcast } from './broadcast'
 
 const logger = createLogger('bootstrap')
 
 export const DEBOUNCE_MS = 500
+
+/**
+ * Non-trivial errors that occurred during async startup operations.
+ * Populated by fire-and-forget tasks whose failures are otherwise invisible to the user.
+ * Cleared after emission so repeated calls to emitStartupWarnings are safe.
+ */
+const startupErrors: string[] = []
+
+/**
+ * Returns true for errors that indicate a genuine problem (filesystem, permissions, etc.)
+ * rather than expected conditions like missing credentials on a fresh install.
+ */
+function isNonTrivialError(message: string): boolean {
+  const trivialPatterns = [
+    'credentials not configured',
+    'credentials missing',
+    'no credentials',
+    'not configured',
+    'already has',
+    'skipping',
+    'no rows',
+  ]
+  const lowered = message.toLowerCase()
+  return !trivialPatterns.some((pattern) => lowered.includes(pattern))
+}
+
+/**
+ * Broadcasts any accumulated startup errors to the renderer via manager:warning.
+ * Safe to call multiple times — clears the array after emission.
+ * Should be called once the main window is ready to receive IPC events.
+ */
+export function emitStartupWarnings(): void {
+  if (startupErrors.length === 0) return
+  for (const message of startupErrors) {
+    broadcast('manager:warning', { message })
+  }
+  startupErrors.length = 0
+}
 
 export function startDbWatcher(): () => void {
   const dbPath = BDE_DB_PATH
@@ -97,7 +136,11 @@ export function initializeDatabase(): void {
   import('./claude-settings-bootstrap')
     .then((m) => m.ensureClaudeSettings())
     .catch((err) => {
-      logger.warn(`Failed to ensure Claude settings: ${getErrorMessage(err)}`)
+      const message = `Failed to ensure Claude settings: ${getErrorMessage(err)}`
+      logger.warn(message)
+      if (isNonTrivialError(message)) {
+        startupErrors.push(message)
+      }
     })
 
   // Run backup on startup and every 24 hours
@@ -106,9 +149,15 @@ export function initializeDatabase(): void {
   app.on('will-quit', () => clearInterval(backupInterval))
 
   // One-time async import from Supabase (no-op if local table already has rows or credentials missing)
-  importSprintTasksFromSupabase(getDb()).catch((err) =>
-    logger.warn(`Supabase import skipped: ${getErrorMessage(err)}`)
-  )
+  importSprintTasksFromSupabase(getDb()).catch((err) => {
+    const message = `Supabase import failed: ${getErrorMessage(err)}`
+    logger.warn(message)
+    if (isNonTrivialError(message)) {
+      // This may resolve after the window is ready — emit directly rather than relying on
+      // emitStartupWarnings() which is called at window load time.
+      broadcast('manager:warning', { message })
+    }
+  })
 }
 
 /**
