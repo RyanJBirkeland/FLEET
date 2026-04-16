@@ -1190,7 +1190,7 @@ describe('createAgentManager', () => {
       expect(mgr._depIndexDirty).toBe(true)
     })
 
-    it('concurrent terminal completions both set _depIndexDirty before drain tick can read stale index', async () => {
+    it('two concurrent terminals for different tasks both set dirty flag synchronously', async () => {
       // Scenario: two tasks complete concurrently. A drain tick must not see a
       // stale dep index between the two completions — the dirty flag must be
       // raised synchronously when each terminal event fires.
