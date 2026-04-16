@@ -21,6 +21,7 @@ export interface ViewMetadata {
   icon: LucideIcon
   shortcut: string // Display format (e.g., '⌘1')
   shortcutKey: string // Key for keyboard handler (e.g., '1')
+  hidden?: true
 }
 
 export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
@@ -64,21 +65,22 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     description: 'Stage, commit, and push changes across repositories',
     icon: GitCommitHorizontal,
     shortcut: '⌘6',
-    shortcutKey: '6'
+    shortcutKey: '6',
+    hidden: true
   },
   settings: {
     label: 'Settings',
     description: 'Configure connections, repositories, and preferences',
     icon: Settings,
-    shortcut: '⌘7',
-    shortcutKey: '7'
+    shortcut: '⌘6',
+    shortcutKey: '6'
   },
   planner: {
     label: 'Task Planner',
     description: 'Plan and structure multi-task workflows',
     icon: Hexagon,
-    shortcut: '⌘8',
-    shortcutKey: '8'
+    shortcut: '⌘7',
+    shortcutKey: '7'
   }
 }
 

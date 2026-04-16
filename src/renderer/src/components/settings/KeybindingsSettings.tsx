@@ -23,7 +23,6 @@ const ACTION_ORDER: ActionId[] = [
   'view.ide',
   'view.sprint',
   'view.codeReview',
-  'view.git',
   'view.settings',
   'view.taskWorkbench',
   'view.planner',

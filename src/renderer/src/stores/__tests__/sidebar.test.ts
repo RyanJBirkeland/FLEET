@@ -24,7 +24,6 @@ describe('sidebar store', () => {
         'ide',
         'sprint',
         'code-review',
-        'git',
         'settings',
         'planner'
       ]
@@ -34,7 +33,7 @@ describe('sidebar store', () => {
   it('starts with all views pinned', async () => {
     const { useSidebarStore } = await import('../sidebar')
     const state = useSidebarStore.getState()
-    expect(state.pinnedViews).toHaveLength(8)
+    expect(state.pinnedViews).toHaveLength(7)
     expect(state.pinnedViews).toContain('dashboard')
     expect(state.pinnedViews).toContain('planner')
   })
@@ -44,7 +43,7 @@ describe('sidebar store', () => {
     useSidebarStore.getState().unpinView('settings')
     const state = useSidebarStore.getState()
     expect(state.pinnedViews).not.toContain('settings')
-    expect(state.pinnedViews).toHaveLength(7)
+    expect(state.pinnedViews).toHaveLength(6)
   })
 
   it('pins a view back', async () => {
@@ -175,7 +174,7 @@ describe('getUnpinnedViews', () => {
     expect(unpinned).not.toContain('ide')
     expect(unpinned).toContain('sprint')
     expect(unpinned).toContain('code-review')
-    expect(unpinned).toContain('git')
+    expect(unpinned).not.toContain('git')
     expect(unpinned).toContain('settings')
     expect(unpinned).toContain('planner')
   })
@@ -188,7 +187,6 @@ describe('getUnpinnedViews', () => {
       'ide',
       'sprint',
       'code-review',
-      'git',
       'settings',
       'planner'
     ]
@@ -201,6 +199,6 @@ describe('getUnpinnedViews', () => {
     const { getUnpinnedViews } = await import('../sidebar')
     const unpinned = getUnpinnedViews([])
 
-    expect(unpinned).toHaveLength(8)
+    expect(unpinned).toHaveLength(7)
   })
 })
