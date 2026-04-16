@@ -11,6 +11,7 @@
   padding: var(--bde-space-5);
   border-bottom: 1px solid var(--bde-border);
   background: var(--bde-surface);
+  position: relative;
 }
 
 .epic-detail__icon {
@@ -360,4 +361,37 @@
 .epic-detail__queue-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Progress stripe */
+.epic-detail__header-stripe {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--bde-accent-dim);
+  overflow: hidden;
+}
+
+.epic-detail__header-stripe-fill {
+  height: 100%;
+  background: var(--bde-accent);
+  transition: width 200ms ease;
+}
+
+/* Ask AI button */
+.epic-detail__header-btn--ai {
+  background: var(--bde-accent-dim);
+  border: 1px solid var(--bde-accent-border);
+  color: var(--bde-accent-text);
+  padding: 3px 10px;
+  border-radius: 4px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.epic-detail__header-btn--ai:hover {
+  opacity: 0.85;
 }
