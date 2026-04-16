@@ -159,7 +159,7 @@ vi.mock('../../db', () => ({
 
 // Mock git (getRepoPaths used by sprint:create repo-existence check)
 vi.mock('../../git', () => ({
-  getRepoPaths: vi.fn(() => ({ BDE: '/Users/ryan/projects/BDE' }))
+  getRepoPaths: vi.fn(() => ({ bde: '/Users/ryan/projects/BDE' }))
 }))
 
 // Mock agent-queries and agent-history (used by sprint:readLog)
@@ -212,7 +212,7 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
   return {
     id: 'task-001',
     title: 'Fix login bug',
-    repo: 'BDE',
+    repo: 'bde',
     prompt: 'Fix the login bug in auth module',
     priority: 0,
     status: 'backlog',
@@ -264,19 +264,19 @@ describe('Sprint IPC handlers — integration', () => {
 
       const result = await invoke('sprint:create', {
         title: 'Fix login bug',
-        repo: 'BDE',
+        repo: 'bde',
         status: 'backlog'
       })
 
       expect(result).toEqual(created)
       expect(mockCreateTask).toHaveBeenCalledOnce()
       expect(mockCreateTask).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Fix login bug', repo: 'BDE' })
+        expect.objectContaining({ title: 'Fix login bug', repo: 'bde' })
       )
     })
 
     it('rejects creation when title is missing', async () => {
-      await expect(invoke('sprint:create', { title: '', repo: 'BDE' })).rejects.toThrow(
+      await expect(invoke('sprint:create', { title: '', repo: 'bde' })).rejects.toThrow(
         'Spec quality checks failed'
       )
     })
@@ -297,7 +297,7 @@ describe('Sprint IPC handlers — integration', () => {
 
       const result = await invoke('sprint:create', {
         title: 'Fix login bug',
-        repo: 'BDE',
+        repo: 'bde',
         status: 'backlog',
         model: 'claude-haiku-3-5'
       })
@@ -437,7 +437,7 @@ describe('Sprint IPC handlers — integration', () => {
 
       const result = await invoke('sprint:create', {
         title: 'Depends on another',
-        repo: 'BDE',
+        repo: 'bde',
         spec: validSpec,
         status: 'queued',
         depends_on: [{ id: 'dep-task-1', type: 'hard' }]
@@ -472,7 +472,7 @@ describe('Sprint IPC handlers — integration', () => {
 
       const result = await invoke('sprint:create', {
         title: 'Depends on done task',
-        repo: 'BDE',
+        repo: 'bde',
         spec: validSpec,
         status: 'queued',
         depends_on: [{ id: 'dep-task-1', type: 'hard' }]
@@ -499,7 +499,7 @@ describe('Sprint IPC handlers — integration', () => {
         throw new Error('Insert failed: duplicate key')
       })
 
-      await expect(invoke('sprint:create', { title: 'Dup task', repo: 'BDE' })).rejects.toThrow(
+      await expect(invoke('sprint:create', { title: 'Dup task', repo: 'bde' })).rejects.toThrow(
         'Insert failed: duplicate key'
       )
     })
