@@ -125,22 +125,32 @@ describe('modelBadgeLabel', () => {
 })
 
 describe('repoBadgeVariant', () => {
-  it('returns "info" for BDE (case-insensitive)', () => {
-    expect(repoBadgeVariant('BDE')).toBe('info')
-    expect(repoBadgeVariant('bde')).toBe('info')
+  const mockRepos = [
+    { label: 'alpha', owner: 'acme', color: '#FF0000' },
+    { label: 'beta', owner: 'acme', color: '#00FF00' },
+    { label: 'gamma', owner: 'acme', color: '#0000FF' },
+    { label: 'delta', owner: 'acme', color: '#FFFFFF' }
+  ]
+
+  it('returns "info" for the first repo (index 0)', () => {
+    expect(repoBadgeVariant('alpha', mockRepos)).toBe('info')
+    expect(repoBadgeVariant('Alpha', mockRepos)).toBe('info')
   })
 
-  it('returns "warning" for feast', () => {
-    expect(repoBadgeVariant('feast')).toBe('warning')
-    expect(repoBadgeVariant('Feast')).toBe('warning')
+  it('returns "warning" for the second repo (index 1)', () => {
+    expect(repoBadgeVariant('beta', mockRepos)).toBe('warning')
   })
 
-  it('returns "success" for life-os', () => {
-    expect(repoBadgeVariant('life-os')).toBe('success')
+  it('returns "success" for the third repo (index 2)', () => {
+    expect(repoBadgeVariant('gamma', mockRepos)).toBe('success')
+  })
+
+  it('cycles back to "info" for the fourth repo (index 3)', () => {
+    expect(repoBadgeVariant('delta', mockRepos)).toBe('info')
   })
 
   it('returns "default" for unknown repos', () => {
-    expect(repoBadgeVariant('other')).toBe('default')
+    expect(repoBadgeVariant('other', mockRepos)).toBe('default')
   })
 })
 

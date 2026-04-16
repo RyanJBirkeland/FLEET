@@ -109,14 +109,18 @@ export function formatTime(ts: number | string): string {
 }
 
 /**
- * Badge variant for a repo name: BDE → info, feast → warning, life-os → success.
+ * Badge variant for a repo name. Derives variant from the repo's position in the configured
+ * repos list (index-based cycle: 0→info, 1→warning, 2→success, 3+→info, ...).
+ * Falls back to 'default' for unknown repos.
  */
-export function repoBadgeVariant(repo: string): 'info' | 'warning' | 'success' | 'default' {
-  const lower = repo.toLowerCase()
-  if (lower === 'bde') return 'info'
-  if (lower === 'feast') return 'warning'
-  if (lower === 'life-os') return 'success'
-  return 'default'
+export function repoBadgeVariant(
+  repoName: string,
+  repos: RepoOption[]
+): 'default' | 'info' | 'warning' | 'success' {
+  const VARIANTS = ['info', 'warning', 'success'] as const
+  const idx = repos.findIndex((r) => r.label.toLowerCase() === repoName.toLowerCase())
+  if (idx === -1) return 'default'
+  return VARIANTS[idx % VARIANTS.length]
 }
 
 /**

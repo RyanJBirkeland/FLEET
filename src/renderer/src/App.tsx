@@ -247,7 +247,7 @@ function App(): React.JSX.Element {
         <QuickCreateBar
           open={quickCreateOpen}
           onClose={() => setQuickCreateOpen(false)}
-          defaultRepo="bde"
+          defaultRepo=""
         />
         <CommandPalette open={paletteOpen} onClose={closePalette} />
         <AnimatePresence>
