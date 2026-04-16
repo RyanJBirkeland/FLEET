@@ -34,9 +34,9 @@ export interface ShutdownCoordinatorDeps {
  * Graceful shutdown sequence:
  * 1. Wait for any in-flight drain to complete.
  * 2. Abort all active agents.
- * 3. Wait up to `timeoutMs` for all agent promises to settle.
- * 4. Re-queue tasks that are still active after the timeout.
- * 5. Flush pending agent events to SQLite.
+ * 3. Flush pending agent events to SQLite before awaiting promises.
+ * 4. Wait up to `timeoutMs` for all agent promises to settle.
+ * 5. Re-queue tasks that are still active after the timeout.
  */
 export async function executeShutdown(
   deps: ShutdownCoordinatorDeps,
@@ -60,6 +60,11 @@ export async function executeShutdown(
     }
   }
 
+  // Flush pending agent events before awaiting promise settlement — ensures events
+  // written synchronously before this point are captured rather than lost if a
+  // promise settles after the flush window.
+  flushAgentEventBatcher()
+
   // Wait for all agent promises to settle (with timeout)
   if (deps.agentPromises.size > 0) {
     const allSettled = Promise.allSettled([...deps.agentPromises])
@@ -82,7 +87,4 @@ export async function executeShutdown(
     }
   }
   deps.activeAgents.clear()
-
-  // Flush any pending agent events to SQLite before shutdown completes
-  flushAgentEventBatcher()
 }
