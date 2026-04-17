@@ -178,6 +178,7 @@ export function QuickOpenPalette({
             className="quick-open-palette__input"
             type="text"
             placeholder="Search files..."
+            aria-label="Search files"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}

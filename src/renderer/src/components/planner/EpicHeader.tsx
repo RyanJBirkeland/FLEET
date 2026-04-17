@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback, CSSProperties } from 'react'
 import { Edit2, MoreVertical, CheckCircle2 } from 'lucide-react'
 import type { TaskGroup } from '../../../../shared/types'
-import { withAlpha } from '../../lib/utils'
 
 const MENU_ITEM_BASE_STYLE: CSSProperties = {
   display: 'flex',
