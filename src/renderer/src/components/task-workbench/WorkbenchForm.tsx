@@ -304,12 +304,14 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                   type="number"
                   step="0.01"
                   min="0"
+                  max="50"
                   value={maxCostUsd ?? ''}
                   onChange={(e) =>
                     setField('maxCostUsd', e.target.value ? Number(e.target.value) : null)
                   }
                   placeholder="No limit"
-                  className="wb-form__input"
+                  className={`wb-form__input${maxCostUsd && maxCostUsd > 50 ? ' wb-form__input--invalid' : ''}`}
+                  aria-invalid={maxCostUsd !== null && maxCostUsd !== undefined && maxCostUsd > 50}
                 />
               </FormField>
               <div className="wb-form__checkbox-row">
@@ -347,9 +349,8 @@ export function WorkbenchForm({ onSendCopilotMessage }: WorkbenchFormProps): Rea
                       value={crossRepoContract ?? ''}
                       onChange={(e) => setField('crossRepoContract', e.target.value)}
                       placeholder="e.g. SprintTask type definition, API endpoint contracts, shared types..."
-                      className="wb-form__textarea"
+                      className="wb-form__textarea wb-form__textarea--code"
                       rows={8}
-                      style={{ fontFamily: 'monospace', fontSize: '0.9em' }}
                     />
                     <div
                       style={{

@@ -73,6 +73,19 @@
   outline-offset: 2px;
 }
 
+.wb-form__input--invalid {
+  border-color: var(--bde-danger);
+}
+
+.wb-form__input--invalid:focus-visible {
+  outline-color: var(--bde-danger);
+}
+
+.wb-form__textarea--code {
+  font-family: var(--bde-font-code);
+  font-size: var(--bde-size-sm);
+}
+
 .wb-form__select {
   padding: 10px var(--bde-space-3);
   background: var(--bde-overlay);
