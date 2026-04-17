@@ -166,7 +166,7 @@
   letter-spacing: 0.05em;
   white-space: nowrap;
   padding: 1px 6px;
-  border-radius: 10px;
+  border-radius: var(--bde-radius-full);
   background: color-mix(in srgb, currentColor 12%, transparent);
 }
 
