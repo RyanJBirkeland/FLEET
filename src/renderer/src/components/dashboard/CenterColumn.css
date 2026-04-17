@@ -77,6 +77,11 @@
   transform: scale(0.97);
 }
 
+.dashboard-briefing__button--primary:focus-visible {
+  box-shadow: 0 0 0 2px var(--bde-accent);
+  outline: none;
+}
+
 .dashboard-briefing__button--secondary {
   background: transparent;
   border: 1px solid var(--bde-text-dim);
@@ -90,6 +95,11 @@
 
 .dashboard-briefing__button--secondary:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.dashboard-briefing__button--secondary:focus-visible {
+  box-shadow: 0 0 0 2px var(--bde-accent);
+  outline: none;
 }
 
 .dashboard-briefing__tasks {
