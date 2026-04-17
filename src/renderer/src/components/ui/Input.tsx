@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import type { HTMLInputTypeAttribute, ReactNode } from 'react'
 
 type InputProps = {
   value: string
@@ -9,6 +9,11 @@ type InputProps = {
   disabled?: boolean
   className?: string
   'aria-label'?: string
+  type?: HTMLInputTypeAttribute
+  invalid?: boolean
+  error?: string
+  required?: boolean
+  'aria-describedby'?: string
 }
 
 export function Input({
@@ -19,30 +24,42 @@ export function Input({
   suffix,
   disabled = false,
   className,
-  'aria-label': ariaLabel
+  'aria-label': ariaLabel,
+  type = 'text',
+  invalid = false,
+  error,
+  required = false,
+  'aria-describedby': ariaDescribedby
 }: InputProps): React.JSX.Element {
   const classes = [
     'bde-input',
     prefix && 'bde-input--has-prefix',
     suffix && 'bde-input--has-suffix',
+    invalid && 'bde-input--invalid',
     className
   ]
     .filter(Boolean)
     .join(' ')
 
   return (
-    <div className={classes}>
-      {prefix && <span className="bde-input__prefix">{prefix}</span>}
-      <input
-        className="bde-input__field"
-        type="text"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-        aria-label={ariaLabel}
-      />
-      {suffix && <span className="bde-input__suffix">{suffix}</span>}
-    </div>
+    <>
+      <div className={classes}>
+        {prefix && <span className="bde-input__prefix">{prefix}</span>}
+        <input
+          className="bde-input__field"
+          type={type}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder={placeholder}
+          disabled={disabled}
+          aria-label={ariaLabel}
+          aria-invalid={invalid}
+          aria-required={required}
+          aria-describedby={ariaDescribedby}
+        />
+        {suffix && <span className="bde-input__suffix">{suffix}</span>}
+      </div>
+      {error && <span className="bde-input__error">{error}</span>}
+    </>
   )
 }
