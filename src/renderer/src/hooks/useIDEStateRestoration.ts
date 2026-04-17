@@ -22,17 +22,21 @@ export function useIDEStateRestoration(): void {
 
         // Skip rootPath if it no longer exists on this machine (e.g., migrated from another machine).
         // A missing rootPath is benign — user can re-open a folder.
+        //
+        // We validate + set the IDE root via `fs.watchDir` (which throws on
+        // missing / inaccessible paths) *before* any `fs.stat` call — every
+        // `fs.stat` handler short-circuits with "No IDE root path set — call
+        // fs:watchDir first" until the root has been registered.
         if (state.rootPath) {
-          const rootStat = await window.api.fs.stat(state.rootPath)
-          if (!rootStat) {
+          try {
+            await window.api.fs.watchDir(state.rootPath)
+          } catch {
             state.rootPath = undefined
             state.openTabs = undefined
             state.activeFilePath = undefined
             state.expandedDirs = undefined
           }
         }
-
-        if (state.rootPath) await window.api.fs.watchDir(state.rootPath)
         useIDEStore.setState({
           rootPath: state.rootPath ?? null,
           sidebarCollapsed: state.sidebarCollapsed ?? false,
