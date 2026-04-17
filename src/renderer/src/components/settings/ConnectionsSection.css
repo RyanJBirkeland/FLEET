@@ -48,6 +48,11 @@
   background: var(--bde-surface);
 }
 
+.settings-secret-input__toggle:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
+}
+
 .settings-fieldset-bare {
   border: none;
   padding: 0;
