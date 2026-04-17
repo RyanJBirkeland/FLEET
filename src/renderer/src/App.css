@@ -71,7 +71,8 @@
   border: 1px solid var(--bde-border);
   border-radius: var(--bde-radius-lg);
   padding: 24px;
-  min-width: 520px;
+  width: 520px;
+  max-width: min(520px, calc(100vw - 32px));
   box-shadow: 0 16px 48px var(--bde-overlay);
   animation: bde-scale-fade-in 150ms ease;
 }

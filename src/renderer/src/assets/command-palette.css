@@ -13,6 +13,7 @@
 
 .command-palette {
   width: 560px;
+  max-width: min(560px, calc(100vw - 32px));
   max-height: 400px;
   background: var(--bde-surface-high, var(--bde-surface));
   border: 1px solid var(--bde-border);
