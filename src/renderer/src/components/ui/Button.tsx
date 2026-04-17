@@ -39,8 +39,6 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(function Button
     `bde-btn--${variant}`,
     `bde-btn--${size}`,
     loading && 'bde-btn--loading',
-    variant === 'primary' && 'btn-primary',
-    variant === 'ghost' && 'btn-glass',
     className
   ]
     .filter(Boolean)

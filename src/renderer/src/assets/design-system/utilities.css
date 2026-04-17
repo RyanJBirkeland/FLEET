@@ -281,56 +281,6 @@
   user-select: none;
 }
 
-/* ── 8.4 Primary Button ──────────────────────────────── */
-
-.btn-primary {
-  background: var(--gradient-aurora);
-  color: var(--bde-btn-primary-text);
-  font-family: var(--bde-font-ui);
-  font-size: 13px;
-  font-weight: 600;
-  padding: var(--bde-space-2) var(--bde-space-5);
-  border-radius: 10px;
-  border: none;
-  cursor: pointer;
-  transition: all 0.15s ease-out;
-}
-
-.btn-primary:hover:not(:disabled) {
-  filter: brightness(1.1);
-}
-
-.btn-primary:active {
-  filter: brightness(0.95);
-  transform: scale(0.98);
-}
-
-/* ── 8.5 Ghost / Glass Button ────────────────────────── */
-
-.btn-glass {
-  background: var(--bde-glass-bg);
-  color: var(--bde-text-muted);
-  font-family: var(--bde-font-ui);
-  font-size: 13px;
-  font-weight: 500;
-  padding: var(--bde-space-2) var(--bde-space-4);
-  border-radius: 8px;
-  border: 1px solid var(--bde-border);
-  cursor: pointer;
-  transition: all 0.15s ease-out;
-}
-
-.btn-glass:hover:not(:disabled) {
-  background: var(--bde-glass-bg-hover);
-  border-color: var(--bde-border-hover);
-  color: var(--bde-text);
-}
-
-.btn-glass:active {
-  background: var(--bde-glass-bg-active);
-  transform: scale(0.98);
-}
-
 /* ── 10. Reduced Motion ─────────────────────────────── */
 
 @media (prefers-reduced-motion: reduce) {
