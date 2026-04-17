@@ -2,6 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import { Edit2 } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { STATUS_METADATA } from '../../lib/task-status-ui'
+import { Textarea } from '../ui/Textarea'
 
 export interface TaskRowProps {
   task: SprintTask
@@ -122,25 +123,17 @@ export function TaskRow({
             padding: '8px'
           }}
         >
-          <textarea
+          <Textarea
             ref={textareaRef}
             value={editingSpec}
-            onChange={(e) => onSpecChange(e.target.value)}
+            onChange={onSpecChange}
             onKeyDown={handleSpecKeyDown}
             placeholder="Enter task spec..."
             disabled={saving}
-            style={{
-              width: '100%',
-              minHeight: '120px',
-              padding: '8px',
-              background: 'var(--bde-bg)',
-              border: `1px solid ${'var(--bde-accent)'}40`,
-              borderRadius: '4px',
-              color: 'var(--bde-text)',
-              fontFamily: 'monospace',
-              fontSize: '13px',
-              resize: 'vertical'
-            }}
+            aria-label="Task spec"
+            variant="code"
+            resize="vertical"
+            className="planner-task-row__spec-editor"
           />
           <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
             <button

@@ -1,5 +1,15 @@
 /* EpicDetail — epic detail panel */
 
+.planner-task-row__spec-editor {
+  width: 100%;
+  min-height: 120px;
+  padding: var(--bde-space-2);
+  background: var(--bde-bg);
+  border: 1px solid var(--bde-accent-border);
+  border-radius: var(--bde-radius-sm);
+  color: var(--bde-text);
+}
+
 .epic-detail {
   background: var(--bde-bg);
 }
