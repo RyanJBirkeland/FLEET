@@ -8,7 +8,7 @@ import { insertEventBatch, type EventBatchItem } from './data/event-queries'
 import { getDb } from './db'
 import { createLogger } from './logger'
 import type { AgentEvent } from '../shared/types'
-import { TOOL_RESULT_SUMMARY_MAX_CHARS } from './constants'
+import { TOOL_RESULT_SUMMARY_MAX_CHARS, TOOL_RESULT_OUTPUT_MAX_CHARS } from './constants'
 
 const logger = createLogger('agent-event-mapper')
 
@@ -53,6 +53,10 @@ export function mapRawMessage(raw: unknown): AgentEvent[] {
     // SDK end-of-turn signal — not a tool result. Skip it.
   } else if (msgType === 'tool_result') {
     const content = msg.content ?? msg.output
+    const cappedOutput =
+      typeof content === 'string' && content.length > TOOL_RESULT_OUTPUT_MAX_CHARS
+        ? content.slice(0, TOOL_RESULT_OUTPUT_MAX_CHARS) + ' [truncated]'
+        : content
     events.push({
       type: 'agent:tool_result',
       tool:
@@ -61,7 +65,7 @@ export function mapRawMessage(raw: unknown): AgentEvent[] {
         'unknown',
       success: msg.is_error !== true,
       summary: typeof content === 'string' ? content.slice(0, TOOL_RESULT_SUMMARY_MAX_CHARS) : '',
-      output: content,
+      output: cappedOutput,
       timestamp: now
     })
   } else if (

@@ -8,7 +8,7 @@ Source: `src/renderer/src/hooks/`
 | `useFilteredTasks.ts` | Derives filtered and partitioned task subsets from sprint store + UI filter state. Uses `useShallow` to prevent re-renders when task array contents are unchanged. | `useFilteredTasks` |
 | `useIDEFileOperations.ts` | Manages IDE file I/O: loads file content on tab switch, exposes save/change/close/open-folder/open-file handlers. Encapsulates the saving-in-progress guard ref. | `useIDEFileOperations` |
 | `useIDEKeyboard.ts` | Registers IDE keyboard shortcuts (Cmd+S/W/O/B/J/P, terminal shortcuts) while the IDE view is active. | `useIDEKeyboard` |
-| `useIDEStateRestoration.ts` | On mount, reads `ide.state` from settings and restores rootPath, open tabs, active tab, and display preferences to the IDE store. | `useIDEStateRestoration` |
+| `useIDEStateRestoration.ts` | On mount, reads `ide.state` from settings and restores rootPath, open tabs, active tab, and display preferences to the IDE store. Validates paths with `fs.stat` before restoring — stale paths from another machine are silently skipped rather than left as broken state. | `useIDEStateRestoration` |
 | `useIDEUnsavedGuard.ts` | Registers a `beforeunload` handler that blocks page unload when any open IDE tab has unsaved changes. | `useIDEUnsavedGuard` |
 | `useSprintPipelineState.ts` | Centralises all store subscriptions for SprintPipeline. Returns tasks, selection, UI overlay state, and derived values. | `useSprintPipelineState` |
 | `useAgentViewLifecycle.ts` | Registers the five view-lifecycle effects for AgentsView: event listener init, history fetch, event history load, spawn-modal listener, scratchpad banner check. | `useAgentViewLifecycle` |

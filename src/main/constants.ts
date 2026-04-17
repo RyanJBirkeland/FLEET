@@ -11,6 +11,9 @@ export const PRUNE_CHANGES_DAYS = 30
 /** Max chars for tool_result summary in agent events */
 export const TOOL_RESULT_SUMMARY_MAX_CHARS = 200
 
+/** Max chars for tool_result output stored in agent_events (prevents unbounded SQLite rows) */
+export const TOOL_RESULT_OUTPUT_MAX_CHARS = 50_000
+
 /** Stuck-task threshold for health check (1 hour) */
 export const STUCK_TASK_THRESHOLD_MS = 3_600_000
 
