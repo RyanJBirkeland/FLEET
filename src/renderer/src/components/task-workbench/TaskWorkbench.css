@@ -72,8 +72,8 @@
   width: 12px;
   height: 12px;
   background: var(--glass-surface);
-  border-top: 1px solid var(--bde-accent, #22d3ee);
-  border-left: 1px solid var(--bde-accent, #22d3ee);
+  border-top: 1px solid var(--bde-accent);
+  border-left: 1px solid var(--bde-accent);
   transform: rotate(45deg);
 }
 
@@ -101,7 +101,7 @@
   margin: 0 0 6px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--bde-accent, #22d3ee);
+  color: var(--bde-accent);
 }
 
 .wb-copilot-popover__body {
@@ -113,9 +113,9 @@
 
 .wb-copilot-popover__cta {
   background: var(--bde-accent-surface);
-  border: 1px solid var(--bde-accent, #22d3ee);
+  border: 1px solid var(--bde-accent);
   border-radius: var(--bde-radius-md);
-  color: var(--bde-accent, #22d3ee);
+  color: var(--bde-accent);
   padding: 5px 14px;
   font-size: 12px;
   font-weight: 600;
@@ -129,7 +129,7 @@
 }
 
 .wb-copilot-popover__cta:focus-visible {
-  outline: 2px solid var(--bde-accent, #22d3ee);
+  outline: 2px solid var(--bde-accent);
   outline-offset: 2px;
 }
 
