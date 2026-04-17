@@ -1,20 +1,8 @@
-import React, { useState, useRef, useEffect, useCallback, CSSProperties } from 'react'
+import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { Edit2, MoreVertical, CheckCircle2 } from 'lucide-react'
 import type { TaskGroup } from '../../../../shared/types'
 import { withAlpha } from '../../lib/utils'
-
-const MENU_ITEM_BASE_STYLE: CSSProperties = {
-  display: 'flex',
-  alignItems: 'center',
-  gap: '8px',
-  width: '100%',
-  padding: '8px 12px',
-  background: 'transparent',
-  border: 'none',
-  cursor: 'pointer',
-  fontSize: '13px',
-  textAlign: 'left'
-}
+import './EpicHeader.css'
 
 export interface EpicHeaderProps {
   group: TaskGroup
@@ -173,9 +161,8 @@ export function EpicHeader({
               type="button"
               role="menuitem"
               tabIndex={-1}
-              className="epic-detail__overflow-item"
+              className="epic-detail__overflow-item epic-menu__item epic-menu__item--default"
               onClick={handleEditClick}
-              style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-text)' }}
             >
               <Edit2 size={14} />
               Edit
@@ -187,9 +174,8 @@ export function EpicHeader({
               type="button"
               role="menuitem"
               tabIndex={-1}
-              className="epic-detail__overflow-item"
+              className="epic-detail__overflow-item epic-menu__item epic-menu__item--default"
               onClick={handleToggleReadyClick}
-              style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-text)' }}
             >
               {isReady ? 'Mark as Draft' : 'Mark as Ready'}
             </button>
@@ -201,9 +187,8 @@ export function EpicHeader({
                 type="button"
                 role="menuitem"
                 tabIndex={-1}
-                className="epic-detail__overflow-item"
+                className="epic-detail__overflow-item epic-menu__item epic-menu__item--success"
                 onClick={handleMarkCompletedClick}
-                style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-status-done)' }}
               >
                 <CheckCircle2 size={14} />
                 Mark as Completed
@@ -216,9 +201,8 @@ export function EpicHeader({
               type="button"
               role="menuitem"
               tabIndex={-1}
-              className="epic-detail__overflow-item"
+              className="epic-detail__overflow-item epic-menu__item epic-menu__item--danger"
               onClick={handleDeleteClick}
-              style={{ ...MENU_ITEM_BASE_STYLE, color: 'var(--bde-danger)' }}
             >
               Delete
             </button>
