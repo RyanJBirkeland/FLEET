@@ -47,3 +47,14 @@ export const PROMPT_TRUNCATION = {
   ASSISTANT_TASK_CHARS: 5000,
   REVISION_FEEDBACK_CHARS: 2000,
 } as const
+
+/**
+ * Maximum number of retries for the `no_commits` failure class.
+ *
+ * An agent that exits without committing (either because it misunderstood the
+ * spec or got stuck in an exploration loop) is not a transient failure — more
+ * retries rarely change the outcome. Cap to 3 attempts and then transition the
+ * task to `failed` so a human can inspect `~/.bde/bde.log` and decide whether
+ * to re-queue, revise the spec, or cancel.
+ */
+export const MAX_NO_COMMITS_RETRIES = 3

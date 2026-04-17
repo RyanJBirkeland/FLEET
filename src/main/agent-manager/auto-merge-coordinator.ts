@@ -11,6 +11,7 @@ import type { Logger } from '../logger'
 import { nowIso } from '../../shared/time'
 import { evaluateAutoMergePolicy } from './auto-merge-policy'
 import { executeSquashMerge } from '../lib/git-operations'
+import { getDb } from '../db'
 
 export interface AutoMergeContext {
   taskId: string
@@ -83,13 +84,7 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
     })
 
     if (mergeResult === 'merged') {
-      const reviewTask = repo.getTask(taskId)
-      repo.updateTask(taskId, {
-        status: 'done',
-        completed_at: nowIso(),
-        worktree_path: null,
-        ...(reviewTask?.duration_ms !== undefined ? { duration_ms: reviewTask.duration_ms } : {})
-      })
+      finalizeAutoMergeStatus(taskId, repo, logger)
       logger.info(`[completion] Task ${taskId} auto-merged successfully`)
       await onTaskTerminal(taskId, 'done')
     } else if (mergeResult === 'dirty-main') {
@@ -105,5 +100,50 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
     // Auto-merge is best-effort: a failure here leaves the task in 'review' for human action,
     // which is always the safe fallback. Do not re-throw — the task state is already consistent.
     logger.error(`[completion] Auto-merge check failed for task ${taskId}: ${err}`)
+  }
+}
+
+/**
+ * Atomically mark a task `done` after its branch has been squash-merged to main.
+ *
+ * The squash-merge itself is a filesystem operation and cannot be rolled back by
+ * SQLite; atomicity is bounded to the DB side. We wrap every DB write that
+ * accompanies the status transition in a single better-sqlite3 transaction so a
+ * crash between updates cannot leave the task in a half-transitioned state
+ * (e.g. status updated but audit trail missing, or vice versa).
+ *
+ * The audit trail (task_changes) is recorded automatically by `repo.updateTask`
+ * via its internal `recordTaskChanges` call, so both writes land under the same
+ * transaction scope.
+ *
+ * If the DB write fails after the merge has already landed on main, we log a
+ * loud banner so the on-call operator knows exactly which task needs manual
+ * status reconciliation.
+ */
+function finalizeAutoMergeStatus(
+  taskId: string,
+  repo: IAgentTaskRepository,
+  logger: Logger
+): void {
+  const db = getDb()
+  const reviewTask = repo.getTask(taskId)
+  const statusPatch: Record<string, unknown> = {
+    status: 'done',
+    completed_at: nowIso(),
+    worktree_path: null,
+    ...(reviewTask?.duration_ms !== undefined ? { duration_ms: reviewTask.duration_ms } : {})
+  }
+
+  const persistStatus = db.transaction(() => {
+    repo.updateTask(taskId, statusPatch)
+  })
+
+  try {
+    persistStatus()
+  } catch (err) {
+    logger.error(
+      `[auto-merge] COMMIT LANDED ON MAIN but status update failed — task ${taskId} may need manual status reconciliation: ${err}`
+    )
+    throw err
   }
 }

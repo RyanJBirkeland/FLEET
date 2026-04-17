@@ -17,6 +17,7 @@ import { getRepoPaths } from '../paths'
 import { setupWorktree } from './worktree'
 import { nowIso } from '../../shared/time'
 import type { AgentRunClaim } from './run-agent'
+import { taskHasMatchingCommitOnMain } from './already-done-check'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -102,6 +103,10 @@ export async function validateAndClaimTask(
     return null
   }
 
+  if (await skipIfAlreadyOnMain(task, raw, repoPath, deps)) {
+    return null
+  }
+
   const claimed = deps.repo.claimTask(task.id, EXECUTOR_ID, deps.config.maxConcurrent) !== null
   if (!claimed) {
     deps.logger.info(`[agent-manager] Task ${task.id} already claimed — skipping`)
@@ -109,6 +114,49 @@ export async function validateAndClaimTask(
   }
 
   return { task, repoPath }
+}
+
+/**
+ * Pre-claim guard: if a commit on origin/main already fingerprints this task,
+ * the work is done. Transition to `done` via the terminal pipeline so
+ * dependency resolution still fires, and skip the spawn.
+ *
+ * Returns true when the task should be skipped (already-done), false otherwise.
+ */
+async function skipIfAlreadyOnMain(
+  task: MappedTask,
+  raw: Record<string, unknown>,
+  repoPath: string,
+  deps: TaskClaimerDeps
+): Promise<boolean> {
+  const agentRunId = typeof raw.agent_run_id === 'string' ? raw.agent_run_id : null
+  const match = await taskHasMatchingCommitOnMain(
+    { id: task.id, title: task.title, agent_run_id: agentRunId },
+    repoPath,
+    deps.logger
+  )
+  if (!match) return false
+
+  const autoCompleteNote = `auto-completed: matching commit found on main at ${match.sha} (matched on ${match.matchedOn})`
+  deps.logger.info(`[agent-manager] Task ${task.id} ${autoCompleteNote} — skipping spawn`)
+
+  try {
+    deps.repo.updateTask(task.id, {
+      status: 'done',
+      completed_at: nowIso(),
+      claimed_by: null,
+      notes: autoCompleteNote
+    })
+  } catch (err) {
+    deps.logger.warn(
+      `[agent-manager] Failed to mark task ${task.id} done after already-on-main match: ${err}`
+    )
+  }
+
+  await deps.onTaskTerminal(task.id, 'done').catch((err) =>
+    deps.logger.warn(`[agent-manager] onTerminal failed for already-done task ${task.id}: ${err}`)
+  )
+  return true
 }
 
 // ---------------------------------------------------------------------------

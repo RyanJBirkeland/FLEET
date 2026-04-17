@@ -15,6 +15,7 @@ import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { MAX_RETRIES, AGENT_SUMMARY_MAX_LENGTH } from './types'
+import { MAX_NO_COMMITS_RETRIES } from './prompt-constants'
 import type { Logger } from '../logger'
 import { broadcastCoalesced } from '../broadcast'
 import type { AgentEvent } from '../../shared/types'
@@ -282,6 +283,12 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
       const summaryNote = agentSummary
         ? `Agent produced no commits. Last output: ${agentSummary.slice(0, AGENT_SUMMARY_MAX_LENGTH)}`
         : 'Agent produced no commits (no output captured)'
+
+      if (retryCount >= MAX_NO_COMMITS_RETRIES) {
+        await failTaskExhaustedNoCommits(taskId, branch, repo, logger, onTaskTerminal)
+        return false
+      }
+
       const isTerminal = resolveFailure({ taskId, retryCount, notes: summaryNote, repo }, logger)
       if (isTerminal) {
         logger.warn(
@@ -333,4 +340,50 @@ export async function transitionTaskToReview(
   // The task enters 'review' status to await human inspection — this is NOT a terminal state.
   // The worktree must stay alive so the Code Review Station can show diffs and allow merge/discard.
   // onTaskTerminal is intentionally NOT called here; it fires only when the human takes a final action.
+}
+
+/**
+ * Terminal-fail a task that has hit the no_commits retry cap.
+ *
+ * Distinct from the generic `resolveFailure` path because:
+ *   1. `failure_reason` is set to the specific sentinel `no-commits-exhausted`
+ *      so dashboards and filters can distinguish "agent gave up" from other
+ *      retry exhaustions (test failures, timeouts, etc.).
+ *   2. The notes string points the operator at the logs instead of truncating
+ *      the last stack trace — there is no exception here, just silence.
+ */
+async function failTaskExhaustedNoCommits(
+  taskId: string,
+  branch: string,
+  repo: IAgentTaskRepository,
+  logger: Logger,
+  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+): Promise<void> {
+  logger.warn(
+    `[completion] Task ${taskId}: no commits on branch ${branch} after ${MAX_NO_COMMITS_RETRIES} attempts — marking failed`
+  )
+
+  const task = repo.getTask(taskId)
+  const durationMs =
+    task?.started_at !== undefined && task.started_at !== null
+      ? Date.now() - new Date(task.started_at).getTime()
+      : undefined
+
+  try {
+    repo.updateTask(taskId, {
+      status: 'failed',
+      completed_at: nowIso(),
+      claimed_by: null,
+      needs_review: true,
+      failure_reason: 'no-commits-exhausted',
+      notes: `Agent exited without commits ${MAX_NO_COMMITS_RETRIES} times; marked failed. Investigate logs at ~/.bde/bde.log`,
+      ...(durationMs !== undefined ? { duration_ms: durationMs } : {})
+    })
+  } catch (err) {
+    logger.error(
+      `[completion] Failed to mark task ${taskId} no-commits-exhausted: ${err}`
+    )
+  }
+
+  await onTaskTerminal(taskId, 'failed')
 }
