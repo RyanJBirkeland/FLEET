@@ -44,6 +44,10 @@
   background: var(--bde-hover);
   color: var(--bde-text);
 }
+.ide-editor-tab:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: -2px;
+}
 .ide-editor-tab--active {
   color: var(--bde-text);
   background: var(--bde-bg);
@@ -84,6 +88,10 @@
 .ide-editor-tab__close:hover {
   color: var(--bde-text);
   background: var(--bde-hover-strong);
+}
+.ide-editor-tab__close:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: -2px;
 }
 
 /* Neon Theme Overrides */
