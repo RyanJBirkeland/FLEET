@@ -88,6 +88,11 @@
   transform: scale(0.97);
 }
 
+.sprint-pipeline__export-option:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
+}
+
 .sprint-pipeline__export-option:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -123,6 +128,15 @@
   background: transparent;
   cursor: pointer;
   transition: background 150ms ease;
+}
+
+.sprint-pipeline__badge:hover {
+  background: var(--bg-hover);
+}
+
+.sprint-pipeline__badge:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
 }
 
 .sprint-pipeline__badge--danger {
