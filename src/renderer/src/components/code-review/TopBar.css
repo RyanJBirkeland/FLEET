@@ -59,6 +59,7 @@
 }
 
 .cr-topbar__task-title {
+  min-width: 0;
   max-width: 320px;
   white-space: nowrap;
   overflow: hidden;
