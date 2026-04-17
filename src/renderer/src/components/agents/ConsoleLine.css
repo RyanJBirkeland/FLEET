@@ -87,6 +87,7 @@
 
 .console-line__tool-summary {
   padding-left: var(--bde-space-6);
+  word-break: break-word;
 }
 
 /* ── Markdown Rendering in Agent Text ── */
