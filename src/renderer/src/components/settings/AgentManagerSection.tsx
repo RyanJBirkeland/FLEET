@@ -180,12 +180,19 @@ export function AgentManagerSection(): React.JSX.Element {
             className="settings-field__input"
             type="number"
             min={1}
+            max={120}
             value={maxRuntimeMinutes}
+            aria-invalid={maxRuntimeMinutes > 120}
             onChange={(e) => {
               setMaxRuntimeMinutes(Number(e.target.value))
               markDirty()
             }}
           />
+          {maxRuntimeMinutes > 60 && (
+            <span className="settings-field__hint" role="note">
+              Long watchdog values may oversaturate system resources
+            </span>
+          )}
         </label>
 
         <label className="settings-field">
