@@ -136,7 +136,18 @@ export function ReviewActionsBar({ variant, children }: ReviewActionsBarProps): 
                 <button
                   className="rab__btn rab__btn--primary"
                   onClick={mergeLocally}
-                  disabled={!!actionInFlight}
+                  disabled={
+                    !!actionInFlight ||
+                    freshness.status === 'stale' ||
+                    freshness.status === 'conflict'
+                  }
+                  title={
+                    freshness.status === 'stale'
+                      ? 'Branch is stale — rebase required before merging'
+                      : freshness.status === 'conflict'
+                        ? 'Branch has conflicts — rebase required before merging'
+                        : undefined
+                  }
                 >
                   {actionInFlight === 'merge' ? (
                     <Loader2 size={14} className="spin" />

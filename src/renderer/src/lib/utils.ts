@@ -7,3 +7,12 @@ export function cwdToRepoLabel(cwd: string | null): string {
   const parts = cwd.split(/[/\\]/).filter(Boolean)
   return parts[parts.length - 1] ?? cwd
 }
+
+/**
+ * CSS color-mix() helper: blend `color` at `opacity` percent with transparent.
+ * Works with any CSS color format (hex, rgb, hsl, named). Replaces the brittle
+ * hex-only `${color}20` string-concatenation alpha hack.
+ */
+export function withAlpha(color: string, opacity: number): string {
+  return `color-mix(in srgb, ${color} ${opacity}%, transparent)`
+}
