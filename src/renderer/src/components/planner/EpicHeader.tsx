@@ -19,6 +19,9 @@ export interface EpicHeaderProps {
   group: TaskGroup
   isReady: boolean
   isCompleted: boolean
+  doneCount: number
+  totalCount: number
+  onOpenAssistant: () => void
   onEdit: () => Promise<void>
   onToggleReady: () => void
   onMarkCompleted: () => void
@@ -29,6 +32,9 @@ export function EpicHeader({
   group,
   isReady,
   isCompleted,
+  doneCount,
+  totalCount,
+  onOpenAssistant,
   onEdit,
   onToggleReady,
   onMarkCompleted,
@@ -121,6 +127,16 @@ export function EpicHeader({
         {group.goal && <p className="epic-detail__goal">{group.goal}</p>}
       </div>
       <div className="epic-detail__header-actions" style={{ position: 'relative' }} ref={menuRef}>
+        {totalCount > 0 && (
+          <button
+            type="button"
+            className="epic-detail__header-btn epic-detail__header-btn--ai"
+            onClick={onOpenAssistant}
+            aria-label="Ask AI"
+          >
+            ✦ Ask AI
+          </button>
+        )}
         <button
           type="button"
           className="epic-detail__header-btn"
@@ -208,6 +224,14 @@ export function EpicHeader({
           </div>
         )}
       </div>
+      {totalCount > 0 && (
+        <div className="epic-detail__header-stripe">
+          <div
+            className="epic-detail__header-stripe-fill"
+            style={{ width: `${Math.round((doneCount / totalCount) * 100)}%` }}
+          />
+        </div>
+      )}
     </div>
   )
 }

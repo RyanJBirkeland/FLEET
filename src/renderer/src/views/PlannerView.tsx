@@ -6,6 +6,7 @@ import { EpicList } from '../components/planner/EpicList'
 import { EpicDetail } from '../components/planner/EpicDetail'
 import { CreateEpicModal } from '../components/planner/CreateEpicModal'
 import { WorkbenchPanel } from '../components/planner/WorkbenchPanel'
+import { PlannerAssistant } from '../components/planner/PlannerAssistant'
 import { toast } from '../stores/toasts'
 import { useConfirm, ConfirmModal } from '../components/ui/ConfirmModal'
 import { EmptyState } from '../components/ui/EmptyState'
@@ -34,6 +35,7 @@ export default function PlannerView(): React.JSX.Element {
   const [searchQuery, setSearchQuery] = useState('')
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [workbenchOpen, setWorkbenchOpen] = useState(false)
+  const [assistantOpen, setAssistantOpen] = useState(false)
   const { confirm, confirmProps } = useConfirm()
 
   // Load groups on mount
@@ -192,8 +194,16 @@ export default function PlannerView(): React.JSX.Element {
                 onToggleReady={handleToggleReady}
                 onReorderTasks={handleReorderTasks}
                 onMarkCompleted={handleMarkCompleted}
+                onOpenAssistant={() => setAssistantOpen(true)}
               />
             )}
+            <PlannerAssistant
+              open={assistantOpen && selectedGroup != null}
+              onClose={() => setAssistantOpen(false)}
+              epic={selectedGroup}
+              tasks={groupTasks}
+              onOpenWorkbench={() => setWorkbenchOpen(true)}
+            />
             {!selectedGroup && !loading && <EmptyState message="Select an epic to view details" />}
           </div>
         </div>

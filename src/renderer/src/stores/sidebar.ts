@@ -9,7 +9,6 @@ const ALL_VIEWS: View[] = [
   'ide',
   'sprint',
   'code-review',
-  'git',
   'settings',
   'planner'
 ]

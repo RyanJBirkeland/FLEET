@@ -14,6 +14,7 @@ export const sprint = {
     status?: string
     template_name?: string
     playground_enabled?: boolean
+    group_id?: string | null
   }) => typedInvoke('sprint:create', task),
   createWorkflow: (template: WorkflowTemplate) => typedInvoke('sprint:createWorkflow', template),
   claimTask: (taskId: string) => typedInvoke('sprint:claimTask', taskId),

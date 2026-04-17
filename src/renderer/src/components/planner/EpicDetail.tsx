@@ -28,6 +28,7 @@ export interface EpicDetailProps {
   onToggleReady?: () => void
   onReorderTasks?: (orderedTaskIds: string[]) => void
   onMarkCompleted?: () => void
+  onOpenAssistant: () => void
 }
 
 export function EpicDetail({
@@ -45,7 +46,8 @@ export function EpicDetail({
   onDeleteGroup,
   onToggleReady,
   onReorderTasks,
-  onMarkCompleted
+  onMarkCompleted,
+  onOpenAssistant
 }: EpicDetailProps): React.JSX.Element {
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null)
   const [editingSpec, setEditingSpec] = useState('')
@@ -62,6 +64,9 @@ export function EpicDetail({
   const tasksReadyToQueue = useMemo(() => {
     return tasks.filter((t) => t.status === 'backlog' && t.spec && t.spec.trim() !== '').length
   }, [tasks])
+
+  const doneCount = tasks.filter((t) => t.status === 'done').length
+  const totalCount = tasks.length
 
   const isCompleted = group.status === 'completed'
   const queueDisabled = tasksNeedingSpecs > 0
@@ -145,6 +150,9 @@ export function EpicDetail({
         group={group}
         isReady={isReady}
         isCompleted={isCompleted}
+        doneCount={doneCount}
+        totalCount={totalCount}
+        onOpenAssistant={onOpenAssistant}
         onEdit={handleEdit}
         onToggleReady={handleToggleReady}
         onMarkCompleted={handleMarkCompleted}

@@ -110,7 +110,8 @@ describe('EpicDetail', () => {
     onUpdateDependencyCondition: vi.fn().mockResolvedValue(undefined),
     onQueueAll: vi.fn(),
     onAddTask: vi.fn(),
-    onEditTask: vi.fn()
+    onEditTask: vi.fn(),
+    onOpenAssistant: vi.fn()
   }
 
   it('should render epic header with icon, name, and goal', () => {

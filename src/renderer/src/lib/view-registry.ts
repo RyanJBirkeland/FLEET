@@ -21,6 +21,7 @@ export interface ViewMetadata {
   icon: LucideIcon
   shortcut: string // Display format (e.g., '⌘1')
   shortcutKey: string // Key for keyboard handler (e.g., '1')
+  hidden?: true
 }
 
 export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
@@ -63,22 +64,23 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     label: 'Source Control',
     description: 'Stage, commit, and push changes across repositories',
     icon: GitCommitHorizontal,
-    shortcut: '⌘6',
-    shortcutKey: '6'
+    shortcut: '',
+    shortcutKey: '',
+    hidden: true
   },
   settings: {
     label: 'Settings',
     description: 'Configure connections, repositories, and preferences',
     icon: Settings,
-    shortcut: '⌘7',
-    shortcutKey: '7'
+    shortcut: '⌘6',
+    shortcutKey: '6'
   },
   planner: {
     label: 'Task Planner',
     description: 'Plan and structure multi-task workflows',
     icon: Hexagon,
-    shortcut: '⌘8',
-    shortcutKey: '8'
+    shortcut: '⌘7',
+    shortcutKey: '7'
   }
 }
 
@@ -98,6 +100,8 @@ export const VIEW_SHORTCUTS: Record<View, string> = Object.fromEntries(
   Object.entries(VIEW_REGISTRY).map(([view, meta]) => [view, meta.shortcut])
 ) as Record<View, string>
 
-export const VIEW_SHORTCUT_MAP: Record<string, View> = Object.fromEntries(
-  Object.entries(VIEW_REGISTRY).map(([view, meta]) => [meta.shortcutKey, view as View])
-) as Record<string, View>
+export const VIEW_SHORTCUT_MAP: Partial<Record<string, View>> = Object.fromEntries(
+  Object.entries(VIEW_REGISTRY)
+    .filter(([, meta]) => !meta.hidden)
+    .map(([view, meta]) => [meta.shortcutKey, view as View])
+)
