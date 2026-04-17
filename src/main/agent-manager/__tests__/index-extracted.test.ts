@@ -1,36 +1,22 @@
 /**
  * Tests for extracted pure functions from index.ts:
- * - checkOAuthToken: OAuth token file validation
+ * - checkOAuthToken: thin boolean adapter over CredentialService (delegation
+ *   tested here; success/failure branches covered by credential-service.test.ts)
  * - handleWatchdogVerdict: verdict → task status update + backpressure
  * - taskStatusMap refresh after claim (F-t1-perf-snapshot)
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
-vi.mock('node:fs/promises', async () => {
-  const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
-  return { ...actual, readFile: vi.fn(), stat: vi.fn() }
-})
-
-vi.mock('../../env-utils', () => ({
-  refreshOAuthTokenFromKeychain: vi.fn(),
-  invalidateOAuthToken: vi.fn()
+vi.mock('../../services/credential-service', () => ({
+  getDefaultCredentialService: vi.fn()
 }))
 
-import { readFile, stat } from 'node:fs/promises'
-import {
-  checkOAuthToken,
-  invalidateCheckOAuthTokenCache,
-  OAUTH_CHECK_CACHE_TTL_MS,
-  OAUTH_CHECK_FAIL_CACHE_TTL_MS
-} from '../oauth-checker'
+import { checkOAuthToken } from '../oauth-checker'
+import { getDefaultCredentialService } from '../../services/credential-service'
 import { handleWatchdogVerdict } from '../watchdog-handler'
 import { makeConcurrencyState, type ConcurrencyState } from '../concurrency'
 import type { WatchdogAction } from '../types'
-import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../../env-utils'
 import type { Logger } from '../types'
-
-const readFileMock = vi.mocked(readFile)
-const statMock = vi.mocked(stat)
 
 function makeLogger(): Logger & {
   info: ReturnType<typeof vi.fn>
@@ -40,133 +26,47 @@ function makeLogger(): Logger & {
   return { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 }
 
+function mockCredentialResult(result: {
+  status: 'ok' | 'missing' | 'expired' | 'keychain-locked' | 'cli-missing'
+  actionable?: string
+}): void {
+  vi.mocked(getDefaultCredentialService).mockReturnValue({
+    getCredential: vi.fn().mockResolvedValue({
+      kind: 'claude',
+      token: result.status === 'ok' ? 'test-token' : null,
+      expiresAt: null,
+      cliFound: true,
+      ...result
+    }),
+    refreshCredential: vi.fn(),
+    invalidateCache: vi.fn()
+  })
+}
+
 describe('checkOAuthToken', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    invalidateCheckOAuthTokenCache()
-    // Default: token file is recent (1 minute old) — no age-based refresh
-    statMock.mockResolvedValue({ mtimeMs: Date.now() - 60_000 } as Awaited<ReturnType<typeof stat>>)
   })
 
-  it('returns true when token file has valid content (>= 20 chars)', async () => {
-    readFileMock.mockResolvedValue('a-valid-oauth-token-that-is-long-enough')
+  it('returns true when the credential service reports ok', async () => {
+    mockCredentialResult({ status: 'ok' })
     const logger = makeLogger()
     expect(await checkOAuthToken(logger)).toBe(true)
     expect(logger.warn).not.toHaveBeenCalled()
   })
 
-  it('returns false and logs warning when token file cannot be read', async () => {
-    readFileMock.mockRejectedValue(new Error('ENOENT'))
+  it('returns false and surfaces the actionable message on missing credential', async () => {
+    mockCredentialResult({ status: 'missing', actionable: 'Run: claude login' })
     const logger = makeLogger()
     expect(await checkOAuthToken(logger)).toBe(false)
-    expect(logger.warn).toHaveBeenCalledWith(
-      expect.stringContaining('OAuth token expired or missing')
-    )
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Run: claude login'))
   })
 
-  it('attempts keychain refresh when token is too short and succeeds', async () => {
-    readFileMock.mockResolvedValue('short')
-    vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(true)
-    const logger = makeLogger()
-    expect(await checkOAuthToken(logger)).toBe(true)
-    expect(refreshOAuthTokenFromKeychain).toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('OAuth token auto-refreshed'))
-  })
-
-  it('returns false when token is too short and keychain refresh fails', async () => {
-    readFileMock.mockResolvedValue('short')
-    vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(false)
+  it('returns false on expired credential', async () => {
+    mockCredentialResult({ status: 'expired', actionable: 'Run: claude login to refresh' })
     const logger = makeLogger()
     expect(await checkOAuthToken(logger)).toBe(false)
-    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('OAuth token expired or missing'))
-  })
-
-  it('returns false when token file is empty', async () => {
-    readFileMock.mockResolvedValue('')
-    vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(false)
-    expect(await checkOAuthToken(makeLogger())).toBe(false)
-  })
-
-  it('trims whitespace from token before checking length', async () => {
-    readFileMock.mockResolvedValue('                    ')
-    vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(false)
-    expect(await checkOAuthToken(makeLogger())).toBe(false)
-  })
-
-  it('proactively refreshes when token file is older than 45 minutes', async () => {
-    readFileMock.mockResolvedValue('a-valid-oauth-token-that-is-long-enough')
-    statMock.mockResolvedValue({ mtimeMs: Date.now() - 46 * 60_000 } as Awaited<
-      ReturnType<typeof stat>
-    >)
-    vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(true)
-    const logger = makeLogger()
-    expect(await checkOAuthToken(logger)).toBe(true)
-    expect(refreshOAuthTokenFromKeychain).toHaveBeenCalled()
-    expect(invalidateOAuthToken).toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('proactively refreshed'))
-  })
-
-  it('does not proactively refresh when token file is recent (< 45 minutes)', async () => {
-    readFileMock.mockResolvedValue('a-valid-oauth-token-that-is-long-enough')
-    statMock.mockResolvedValue({ mtimeMs: Date.now() - 10 * 60_000 } as Awaited<
-      ReturnType<typeof stat>
-    >)
-    const logger = makeLogger()
-    expect(await checkOAuthToken(logger)).toBe(true)
-    expect(refreshOAuthTokenFromKeychain).not.toHaveBeenCalled()
-  })
-
-  it('continues with existing token when stat fails during age check', async () => {
-    readFileMock.mockResolvedValue('a-valid-oauth-token-that-is-long-enough')
-    statMock.mockRejectedValue(new Error('stat failed'))
-    const logger = makeLogger()
-    expect(await checkOAuthToken(logger)).toBe(true)
-    expect(logger.warn).not.toHaveBeenCalled()
-  })
-
-  it('reads token file only once when called N times within TTL (F-t1-sysprof-5)', async () => {
-    readFileMock.mockResolvedValue('a-valid-oauth-token-that-is-long-enough')
-
-    for (let i = 0; i < 10; i++) {
-      expect(await checkOAuthToken(makeLogger())).toBe(true)
-    }
-
-    // Only the first call should have hit the filesystem
-    expect(readFileMock).toHaveBeenCalledTimes(1)
-  })
-
-  it('re-checks after success TTL expires (F-t1-sysprof-5)', async () => {
-    vi.useFakeTimers()
-    try {
-      readFileMock.mockResolvedValue('a-valid-oauth-token-that-is-long-enough')
-      await checkOAuthToken(makeLogger())
-      expect(readFileMock).toHaveBeenCalledTimes(1)
-
-      // Advance past the success TTL
-      vi.advanceTimersByTime(OAUTH_CHECK_CACHE_TTL_MS + 1)
-
-      await checkOAuthToken(makeLogger())
-      expect(readFileMock).toHaveBeenCalledTimes(2)
-    } finally {
-      vi.useRealTimers()
-    }
-  })
-
-  it('re-checks after failure TTL expires (F-t1-sysprof-5)', async () => {
-    vi.useFakeTimers()
-    try {
-      readFileMock.mockRejectedValue(new Error('ENOENT'))
-      await checkOAuthToken(makeLogger())
-      expect(readFileMock).toHaveBeenCalledTimes(1)
-
-      // Advance past the failure TTL (shorter: 30s)
-      vi.advanceTimersByTime(OAUTH_CHECK_FAIL_CACHE_TTL_MS + 1)
-
-      await checkOAuthToken(makeLogger())
-      expect(readFileMock).toHaveBeenCalledTimes(2)
-    } finally {
-      vi.useRealTimers()
-    }
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('expired'))
   })
 })
 

@@ -108,6 +108,27 @@ describe('OnboardingWizard', () => {
     expect(stepIndicators).toHaveLength(6)
   })
 
+  it('surfaces dialog + progressbar semantics for assistive tech', () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />)
+
+    const dialog = screen.getByRole('dialog')
+    expect(dialog).toHaveAttribute('aria-modal', 'true')
+    expect(dialog).toHaveAttribute('aria-label', expect.stringMatching(/setup wizard/i))
+
+    const progressbar = screen.getByRole('progressbar')
+    expect(progressbar).toHaveAttribute('aria-valuemin', '1')
+    expect(progressbar).toHaveAttribute('aria-valuemax', '6')
+    expect(progressbar).toHaveAttribute('aria-valuenow', '1')
+    expect(progressbar.getAttribute('aria-valuetext')).toMatch(/Step 1 of 6: Welcome/i)
+  })
+
+  it('marks the current step with aria-current="step"', () => {
+    render(<OnboardingWizard onComplete={vi.fn()} />)
+    const indicators = screen.getAllByTestId(/step-indicator-\d/)
+    expect(indicators[0]).toHaveAttribute('aria-current', 'step')
+    expect(indicators[1]).not.toHaveAttribute('aria-current')
+  })
+
   describe('inline-add-repo happy path', () => {
     beforeEach(() => {
       // Reset and rebuild settings.getJson so the first call (initial check)

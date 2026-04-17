@@ -113,6 +113,20 @@ export async function ensureSubscriptionAuth(
   delete process.env['ANTHROPIC_API_KEY']
   delete process.env['ANTHROPIC_AUTH_TOKEN']
 
+  // When no custom store is passed, delegate to the shared credential service
+  // so we produce the canonical CREDENTIAL_GUIDANCE message. Direct-store
+  // callers (tests) keep the local path for backwards compatibility.
+  if (store === defaultCredentialStore) {
+    const { getDefaultCredentialService } = await import('./services/credential-service')
+    const { createLogger } = await import('./logger')
+    const service = getDefaultCredentialService(createLogger('auth-guard'))
+    const result = await service.getCredential('claude')
+    if (result.status !== 'ok') {
+      throw new Error(result.actionable ?? `Claude credential unavailable (${result.status})`)
+    }
+    return
+  }
+
   const status = await checkAuthStatus(store)
 
   if (!status.tokenFound) {

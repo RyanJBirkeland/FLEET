@@ -1,109 +1,31 @@
 /**
- * OAuth token validation with caching to avoid filesystem reads on every
- * drain tick (F-t1-sysprof-5).
+ * OAuth token validation for the drain loop.
  *
- * Extracted from index.ts to reduce file size and isolate OAuth concerns.
+ * Thin wrapper around {@link getDefaultCredentialService} — returns a boolean
+ * fit for a precondition check. The service owns the caching (5 min success,
+ * 30 s failure) and proactive Keychain refresh; this file just adapts its
+ * discriminated-return shape to the boolean the drain loop needs.
+ *
+ * The TTL constants stay exported for tests that assert cache windows — the
+ * service uses the same values internally.
  */
-
-import { readFile, stat } from 'node:fs/promises'
-import { join as joinPath } from 'node:path'
-import { homedir as home } from 'node:os'
-import { refreshOAuthTokenFromKeychain, invalidateOAuthToken } from '../env-utils'
+import { getDefaultCredentialService } from '../services/credential-service'
 import type { Logger } from '../logger'
 
-/**
- * How long to cache a successful token check (ms).
- * Short enough to still run the 45-min proactive refresh on cache expiry.
- */
 export const OAUTH_CHECK_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
-
-/**
- * How long to cache a failed token check (ms).
- * Short enough to recover quickly if the user fixes the token.
- */
 export const OAUTH_CHECK_FAIL_CACHE_TTL_MS = 30_000 // 30 seconds
 
-let _oauthCheckResult: boolean | null = null
-let _oauthCheckExpiry = 0
-
-/**
- * Invalidate the OAuth token check cache.
- * Call after a forced refresh so the next drain cycle re-validates.
- */
 export function invalidateCheckOAuthTokenCache(): void {
-  _oauthCheckResult = null
-  _oauthCheckExpiry = 0
+  // Delegated invalidation — drops the service's Claude cache entry.
+  getDefaultCredentialService(console as unknown as Logger).invalidateCache('claude')
 }
 
-/**
- * Check whether the OAuth token file exists and contains a valid token.
- * Returns true if the drain loop should proceed, false if it should skip.
- * Results are cached for OAUTH_CHECK_CACHE_TTL_MS to avoid a file read on
- * every drain tick (drain runs every ~5s; token validity changes at most once
- * per hour).
- */
 export async function checkOAuthToken(logger: Logger): Promise<boolean> {
-  const now = Date.now()
-  if (_oauthCheckResult !== null && now < _oauthCheckExpiry) {
-    return _oauthCheckResult
-  }
-  try {
-    const tokenPath = joinPath(home(), '.bde', 'oauth-token')
-    // Read with a size guard: reject files larger than 64KB before allocating
-    // the full buffer — a multi-gigabyte crafted file would otherwise cause
-    // memory exhaustion on every drain tick.
-    const MAX_TOKEN_FILE_BYTES = 64 * 1024
-    const tokenStats = await stat(tokenPath).catch(() => null)
-    if (tokenStats && tokenStats.size > MAX_TOKEN_FILE_BYTES) {
-      logger.warn(
-        `[oauth-checker] OAuth token file exceeds max size (${tokenStats.size} bytes) — skipping drain cycle`
-      )
-      _oauthCheckResult = false
-      _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
-      return false
-    }
-    const token = (await readFile(tokenPath, 'utf-8')).trim()
-    if (!token || token.length < 20) {
-      const refreshed = await refreshOAuthTokenFromKeychain()
-      if (refreshed) {
-        logger.info('[oauth-checker] OAuth token auto-refreshed from Keychain')
-        _oauthCheckResult = true
-        _oauthCheckExpiry = Date.now() + OAUTH_CHECK_CACHE_TTL_MS
-        return true
-      } else {
-        logger.warn(
-          '[oauth-checker] OAuth token expired or missing — skipping drain. Run: claude login'
-        )
-        _oauthCheckResult = false
-        _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
-        return false
-      }
-    }
-
-    // Proactively refresh if token file is older than 45 minutes
-    // (Claude OAuth tokens expire after ~1 hour)
-    try {
-      const stats = await stat(tokenPath)
-      const ageMs = Date.now() - stats.mtimeMs
-      if (ageMs > 45 * 60 * 1000) {
-        logger.info('[oauth-checker] Token file older than 45min — proactively refreshing')
-        const refreshed = await refreshOAuthTokenFromKeychain()
-        if (refreshed) {
-          invalidateOAuthToken()
-          logger.info('[oauth-checker] OAuth token proactively refreshed from Keychain')
-        }
-      }
-    } catch {
-      /* stat failed — continue with existing token */
-    }
-
-    _oauthCheckResult = true
-    _oauthCheckExpiry = Date.now() + OAUTH_CHECK_CACHE_TTL_MS
-    return true
-  } catch {
-    logger.warn('[oauth-checker] OAuth token expired or missing — skipping drain. Run: claude login')
-    _oauthCheckResult = false
-    _oauthCheckExpiry = Date.now() + OAUTH_CHECK_FAIL_CACHE_TTL_MS
-    return false
-  }
+  const service = getDefaultCredentialService(logger)
+  const result = await service.getCredential('claude')
+  if (result.status === 'ok') return true
+  logger.warn(
+    `[oauth-checker] Claude credential unavailable (${result.status}) — skipping drain. ${result.actionable ?? ''}`.trim()
+  )
+  return false
 }

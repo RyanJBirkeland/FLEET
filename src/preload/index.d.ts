@@ -1,4 +1,3 @@
-import { ElectronAPI } from '@electron-toolkit/preload'
 import type {
   AgentMeta,
   PrListPayload,
@@ -26,7 +25,6 @@ type IpcArgs<K extends keyof IpcChannelMap> = IpcChannelMap[K]['args']
 
 declare global {
   interface Window {
-    electron: ElectronAPI
     api: {
       // Settings CRUD
       settings: {
