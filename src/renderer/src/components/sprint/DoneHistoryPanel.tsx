@@ -1,6 +1,8 @@
 import { useEffect, useRef } from 'react'
+import { CheckCircle } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
+import { EmptyState } from '../ui/EmptyState'
 
 interface DoneHistoryPanelProps {
   tasks: SprintTask[]
@@ -61,7 +63,13 @@ export function DoneHistoryPanel({
               </span>
             </button>
           ))}
-          {tasks.length === 0 && <div className="done-history__empty">No completed tasks yet</div>}
+          {tasks.length === 0 && (
+            <EmptyState
+              icon={<CheckCircle />}
+              title="No completed tasks yet"
+              description="Tasks that reach done appear here."
+            />
+          )}
         </div>
       </div>
     </div>
