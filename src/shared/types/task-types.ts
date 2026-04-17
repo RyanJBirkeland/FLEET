@@ -51,6 +51,8 @@ export type FailureReason =
   | 'compilation'
   | 'spawn'
   | 'no_commits'
+  | 'no-commits-exhausted'
+  | 'tip-mismatch'
   | 'unknown'
 
 export interface SprintTask {

@@ -14,33 +14,33 @@ export function FileTree({ dirPath, onOpenFile }: FileTreeProps): React.JSX.Elem
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
-  const loadEntries = useCallback(() => {
-    setIsLoading(true)
-    window.api.fs
-      .readDir(dirPath)
-      .then((raw) => {
-        setEntries(
-          raw
-            .filter((e) => !HIDDEN_DIRS.has(e.name))
-            .sort((a, b) => {
-              if (a.type === b.type) return a.name.localeCompare(b.name)
-              return a.type === 'directory' ? -1 : 1
-            })
-        )
-        setError(null)
-        setIsLoading(false)
-      })
-      .catch(() => {
-        setError('Failed to read directory')
-        setIsLoading(false)
-      })
+  const loadEntries = useCallback(async () => {
+    try {
+      const raw = await window.api.fs.readDir(dirPath)
+      setEntries(
+        raw
+          .filter((e) => !HIDDEN_DIRS.has(e.name))
+          .sort((a, b) => {
+            if (a.type === b.type) return a.name.localeCompare(b.name)
+            return a.type === 'directory' ? -1 : 1
+          })
+      )
+      setError(null)
+    } catch {
+      setError('Failed to read directory')
+    } finally {
+      setIsLoading(false)
+    }
   }, [dirPath])
 
   useEffect(() => {
-    loadEntries()
+    void loadEntries()
   }, [loadEntries])
   useEffect(() => {
-    const unsubscribe = window.api.fs.onDirChanged(() => loadEntries())
+    const unsubscribe = window.api.fs.onDirChanged(() => {
+      setIsLoading(true)
+      void loadEntries()
+    })
     return unsubscribe
   }, [loadEntries])
 
