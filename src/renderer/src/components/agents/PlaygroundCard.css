@@ -1,5 +1,16 @@
 /* ── Playground Card Components ── */
 .playground-card {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-3);
+  width: 100%;
+  max-width: 500px;
+  padding: var(--bde-space-3);
+  border-radius: var(--bde-radius-md);
+  cursor: pointer;
+  transition: var(--bde-transition-fast);
+  font-family: var(--bde-font-ui);
+  text-align: left;
   background: var(--bde-surface-high);
   border: 1px solid var(--bde-accent-border);
 }
@@ -10,6 +21,13 @@
 }
 
 .playground-card__icon-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--bde-radius-sm);
+  flex-shrink: 0;
   background: var(--bde-accent-surface);
 }
 
@@ -17,15 +35,47 @@
   color: var(--bde-accent);
 }
 
+.playground-card__content {
+  flex: 1;
+  min-width: 0;
+}
+
+.playground-card__filename-row {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  overflow: hidden;
+}
+
 .playground-card__filename {
+  font-family: var(--bde-font-code);
+  font-size: var(--bde-size-sm);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   color: var(--bde-text);
 }
 
+.playground-card__content-type-badge {
+  font-size: var(--bde-size-xs);
+  flex-shrink: 0;
+}
+
 .playground-card__filesize {
+  font-size: var(--bde-size-xs);
+  margin-top: var(--bde-space-1);
   color: var(--bde-text-muted);
 }
 
 .playground-card__preview-hint {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-1);
+  padding: var(--bde-space-1) var(--bde-space-2);
+  border-radius: var(--bde-radius-sm);
+  font-size: var(--bde-size-xs);
+  flex-shrink: 0;
   background: var(--bde-border);
   color: var(--bde-text-muted);
 }
