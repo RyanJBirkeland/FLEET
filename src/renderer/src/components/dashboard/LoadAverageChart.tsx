@@ -33,9 +33,9 @@ function trendOf(load1: number, load5: number): Trend {
 }
 
 function severityColor(sev: Severity): string {
-  if (sev === 'green') return '#4ade80'
-  if (sev === 'amber') return '#fbbf24'
-  return '#f87171'
+  if (sev === 'green') return 'var(--bde-success)'
+  if (sev === 'amber') return 'var(--bde-warning)'
+  return 'var(--bde-danger)'
 }
 
 const LINE1_COLOR = 'var(--bde-danger)'
@@ -100,7 +100,7 @@ export function LoadAverageChart({
         position: 'relative',
         fontFamily: 'ui-monospace, Menlo, monospace',
         fontSize: 10,
-        color: '#94a3b8'
+        color: 'var(--bde-text-muted)'
       }}
     >
       <div
@@ -119,11 +119,11 @@ export function LoadAverageChart({
           >
             {latest.load1.toFixed(2)}
           </strong>
-          <span style={{ color: '#64748b', marginLeft: 6 }}>1-min</span>
+          <span style={{ color: 'var(--bde-text-dim)', marginLeft: 6 }}>1-min</span>
         </div>
         <div style={{ textAlign: 'right' }}>
           <div style={{ color: trendColor, fontSize: 10 }}>{trendLabel}</div>
-          <div style={{ color: '#64748b', fontSize: 9 }}>
+          <div style={{ color: 'var(--bde-text-dim)', fontSize: 9 }}>
             {latest.load5.toFixed(2)} · {latest.load15.toFixed(2)} (5m · 15m)
           </div>
         </div>
@@ -135,13 +135,13 @@ export function LoadAverageChart({
         style={{ display: 'block' }}
       >
         {/* axes */}
-        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={height - PAD.bottom} stroke="#1e293b" />
+        <line x1={PAD.left} y1={PAD.top} x2={PAD.left} y2={height - PAD.bottom} stroke="var(--bde-border)" />
         <line
           x1={PAD.left}
           y1={height - PAD.bottom}
           x2={SVG_W - PAD.right}
           y2={height - PAD.bottom}
-          stroke="#1e293b"
+          stroke="var(--bde-border)"
         />
         {/* gridlines */}
         <line
@@ -149,7 +149,7 @@ export function LoadAverageChart({
           y1={yOf(yMax)}
           x2={SVG_W - PAD.right}
           y2={yOf(yMax)}
-          stroke="#1e293b"
+          stroke="var(--bde-border)"
           strokeDasharray="2 3"
         />
         <line
@@ -157,7 +157,7 @@ export function LoadAverageChart({
           y1={yOf(yMax / 2)}
           x2={SVG_W - PAD.right}
           y2={yOf(yMax / 2)}
-          stroke="#1e293b"
+          stroke="var(--bde-border)"
           strokeDasharray="2 3"
         />
         {/* Y tick labels */}
@@ -166,12 +166,12 @@ export function LoadAverageChart({
           y={yOf(yMax) + 3}
           textAnchor="end"
           fontSize="9"
-          fill="#64748b"
+          fill="var(--bde-text-dim)"
           data-testid="y-max-value"
         >
           {yMax}
         </text>
-        <text x={PAD.left - 6} y={yOf(yMax / 2) + 3} textAnchor="end" fontSize="9" fill="#64748b">
+        <text x={PAD.left - 6} y={yOf(yMax / 2) + 3} textAnchor="end" fontSize="9" fill="var(--bde-text-dim)">
           {yMax / 2}
         </text>
         <text
@@ -179,7 +179,7 @@ export function LoadAverageChart({
           y={height - PAD.bottom + 3}
           textAnchor="end"
           fontSize="9"
-          fill="#64748b"
+          fill="var(--bde-text-dim)"
         >
           0
         </text>
@@ -228,7 +228,7 @@ export function LoadAverageChart({
           fill="none"
         />
         {/* X-axis labels: -10m, -5m, now */}
-        <text x={PAD.left} y={height - 4} textAnchor="start" fontSize="9" fill="#64748b">
+        <text x={PAD.left} y={height - 4} textAnchor="start" fontSize="9" fill="var(--bde-text-dim)">
           -10m
         </text>
         <text
@@ -236,15 +236,15 @@ export function LoadAverageChart({
           y={height - 4}
           textAnchor="middle"
           fontSize="9"
-          fill="#64748b"
+          fill="var(--bde-text-dim)"
         >
           -5m
         </text>
-        <text x={SVG_W - PAD.right} y={height - 4} textAnchor="end" fontSize="9" fill="#64748b">
+        <text x={SVG_W - PAD.right} y={height - 4} textAnchor="end" fontSize="9" fill="var(--bde-text-dim)">
           now
         </text>
       </svg>
-      <div style={{ marginTop: 6, fontSize: 9, color: '#64748b' }}>
+      <div style={{ marginTop: 6, fontSize: 9, color: 'var(--bde-text-dim)' }}>
         <span style={{ color: LINE1_COLOR }}>▪ 1-min</span>
         {'   '}
         <span style={{ color: LINE5_COLOR }}>▪ 5-min</span>

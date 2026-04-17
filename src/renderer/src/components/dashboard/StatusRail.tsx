@@ -37,14 +37,14 @@ interface Tile {
 }
 
 const tileBase: React.CSSProperties = {
-  background: '#0f172a',
+  background: 'var(--bde-bg)',
   border: '1px solid #1e293b',
   borderRadius: 5,
   padding: '10px 8px',
   textAlign: 'center',
   cursor: 'pointer',
   width: '100%',
-  color: '#94a3b8',
+  color: 'var(--bde-text-muted)',
   fontFamily: 'ui-monospace, Menlo, monospace',
   fontSize: 10
 }
@@ -111,7 +111,7 @@ export function StatusRail({
           >
             <div
               style={{
-                color: t.accent === 'active' ? '#38bdf8' : '#f1f5f9',
+                color: t.accent === 'active' ? 'var(--bde-accent)' : 'var(--bde-text)',
                 fontSize: 16,
                 fontWeight: 700,
                 lineHeight: 1
@@ -122,7 +122,7 @@ export function StatusRail({
             <div
               style={{
                 fontSize: 8,
-                color: '#64748b',
+                color: 'var(--bde-text-dim)',
                 letterSpacing: '0.08em',
                 marginTop: 3,
                 textTransform: 'uppercase'
@@ -145,7 +145,7 @@ export function StatusRail({
         style={{
           background: 'rgba(56, 189, 248, 0.12)',
           border: '1px dashed #38bdf8',
-          color: '#38bdf8',
+          color: 'var(--bde-accent)',
           padding: 8,
           borderRadius: 5,
           fontSize: 10,

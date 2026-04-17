@@ -178,7 +178,7 @@ export function ThroughputChart({ data, height = 140 }: ThroughputChartProps): R
           >
             {yMax}
           </text>
-          <text x={PAD.left - 6} y={y(yMax / 2) + 3} textAnchor="end" fontSize="9" fill="#64748b">
+          <text x={PAD.left - 6} y={y(yMax / 2) + 3} textAnchor="end" fontSize="9" fill="var(--bde-text-dim)">
             {yMax / 2}
           </text>
           <text

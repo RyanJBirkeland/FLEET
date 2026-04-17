@@ -122,7 +122,7 @@ export function CenterColumn({
           ) : loadData ? (
             <LoadAverageChart samples={loadData.samples} cpuCount={loadData.cpuCount} />
           ) : (
-            <div style={{ color: '#64748b', fontSize: 10, padding: 12 }}>Loading...</div>
+            <div style={{ color: 'var(--bde-text-dim)', fontSize: 10, padding: 12 }}>Loading...</div>
           )}
         </NeonCard>
       </div>
@@ -138,10 +138,10 @@ export function CenterColumn({
           }}
         >
           <div style={{ display: 'flex', flexDirection: 'column' }}>
-            <strong style={{ color: '#f1f5f9', fontSize: 14, fontWeight: 700 }}>
+            <strong style={{ color: 'var(--bde-text)', fontSize: 14, fontWeight: 700 }}>
               {tokenAvg ?? '—'}
             </strong>
-            <span style={{ color: '#64748b', fontSize: 9 }}>last 20 runs</span>
+            <span style={{ color: 'var(--bde-text-dim)', fontSize: 9 }}>last 20 runs</span>
           </div>
           <div style={{ flex: 1, maxWidth: 160 }}>
             <MiniChart data={tokenTrendData} height={28} />
