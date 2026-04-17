@@ -1,7 +1,7 @@
 /**
  * Bootstrap utilities extracted from index.ts — DB initialization, watchers, CSP, and periodic tasks.
  */
-import { watch, type FSWatcher } from 'fs'
+import { watch, existsSync, type FSWatcher } from 'fs'
 import { app, BrowserWindow, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { BDE_DB_PATH } from './paths'
@@ -21,6 +21,7 @@ import type { TaskTerminalService } from './services/task-terminal-service'
 import type { DialogService } from './dialog-service'
 import { BACKUP_INTERVAL_MS, PRUNE_CHANGES_DAYS } from './constants'
 import { getSetting as _getRawSetting } from './data/settings-queries'
+import { getConfiguredRepos } from './paths'
 import { SENSITIVE_SETTING_KEYS, ENCRYPTED_PREFIX } from './secure-storage'
 import { broadcast } from './broadcast'
 
@@ -124,6 +125,22 @@ export function warnPlaintextSensitiveSettings(): void {
 }
 
 /**
+ * Check each configured repo's localPath and queue a startup warning for any that don't exist.
+ * Runs at startup so users see an actionable toast if paths differ on a new machine.
+ */
+export function validateRepoPaths(): void {
+  const repos = getConfiguredRepos()
+  for (const repo of repos) {
+    if (repo.localPath && !existsSync(repo.localPath)) {
+      startupErrors.push(
+        `Repository "${repo.name}" path not found: ${repo.localPath}. ` +
+          'Update the path in Settings → Repositories.'
+      )
+    }
+  }
+}
+
+/**
  * Initialize database and run one-time migrations/imports.
  */
 export function initializeDatabase(): void {
@@ -131,6 +148,9 @@ export function initializeDatabase(): void {
 
   // Warn about any sensitive settings that were stored as plaintext before encryption was enforced
   warnPlaintextSensitiveSettings()
+
+  // Warn about configured repos whose local paths don't exist on this machine
+  validateRepoPaths()
 
   // Ensure Claude Code has sensible default permissions for BDE agents
   import('./claude-settings-bootstrap')

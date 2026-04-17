@@ -809,12 +809,13 @@ describe('IDEView', () => {
         expandedDirs: { '/saved/project/src': true }
       })
       const mockWatchDir = vi.fn().mockResolvedValue(undefined)
+      const mockStat = vi.fn().mockResolvedValue({ size: 0 }) // path exists
 
       Object.defineProperty(window, 'api', {
         value: {
           ...window.api,
           settings: { getJson: mockGetJson },
-          fs: { ...window.api.fs, watchDir: mockWatchDir }
+          fs: { ...window.api.fs, watchDir: mockWatchDir, stat: mockStat }
         },
         writable: true,
         configurable: true
@@ -861,12 +862,13 @@ describe('IDEView', () => {
       }
       const mockGetJson = vi.fn().mockResolvedValue(savedState)
       const mockWatchDir = vi.fn().mockResolvedValue(undefined)
+      const mockStat = vi.fn().mockResolvedValue({ size: 0 }) // all paths exist
 
       Object.defineProperty(window, 'api', {
         value: {
           ...window.api,
           settings: { getJson: mockGetJson },
-          fs: { ...window.api.fs, watchDir: mockWatchDir }
+          fs: { ...window.api.fs, watchDir: mockWatchDir, stat: mockStat }
         },
         writable: true,
         configurable: true

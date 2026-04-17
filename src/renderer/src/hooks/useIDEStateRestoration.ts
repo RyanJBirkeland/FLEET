@@ -19,7 +19,19 @@ export function useIDEStateRestoration(): void {
           wordWrapEnabled?: boolean
           fontSize?: number
         }
-        // Set watchDir FIRST so ideRootPath is ready before any readFile calls
+
+        // Skip rootPath if it no longer exists on this machine (e.g., migrated from another machine).
+        // A missing rootPath is benign — user can re-open a folder.
+        if (state.rootPath) {
+          const rootStat = await window.api.fs.stat(state.rootPath)
+          if (!rootStat) {
+            state.rootPath = undefined
+            state.openTabs = undefined
+            state.activeFilePath = undefined
+            state.expandedDirs = undefined
+          }
+        }
+
         if (state.rootPath) await window.api.fs.watchDir(state.rootPath)
         useIDEStore.setState({
           rootPath: state.rootPath ?? null,
@@ -31,8 +43,18 @@ export function useIDEStateRestoration(): void {
           wordWrapEnabled: state.wordWrapEnabled ?? false,
           fontSize: state.fontSize ?? 13
         })
+
         if (state.openTabs) {
-          for (const tab of state.openTabs) {
+          // Filter out any tabs whose paths don't exist on this machine
+          const tabChecks = await Promise.all(
+            state.openTabs.map(async (tab) => {
+              const stat = await window.api.fs.stat(tab.filePath)
+              return stat ? tab : null
+            })
+          )
+          const validTabs = tabChecks.filter((t): t is { filePath: string } => t !== null)
+
+          for (const tab of validTabs) {
             useIDEStore.getState().openTab(tab.filePath)
           }
           if (state.activeFilePath) {
