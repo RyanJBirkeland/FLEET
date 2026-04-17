@@ -68,6 +68,20 @@ export interface AgentHandle {
   steer(message: string): Promise<SteerResult>
   /** Optional callback invoked with each line of stderr output. */
   onStderr?: (line: string) => void
+  /**
+   * Populated by `spawnAgent` to record which backend actually ran this
+   * session: `'claude'` for the built-in SDK/CLI path, `'local'` when
+   * routed through the rbt-coding-agent framework. Persisted to agent_runs
+   * + agent_events so the UI can display the real backend rather than a
+   * hardcoded default.
+   */
+  readonly backend?: 'claude' | 'local'
+  /**
+   * The model string actually passed to the underlying backend, which may
+   * differ from the caller-supplied value when the backend-selector
+   * overrides per-agent-type settings.
+   */
+  readonly resolvedModel?: string
 }
 
 export interface ActiveAgent {

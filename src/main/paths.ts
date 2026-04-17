@@ -101,10 +101,30 @@ export interface RepoConfig {
   githubOwner?: string
   githubRepo?: string
   color?: string
+  /**
+   * Selects the pipeline prompt preamble:
+   * - `'bde'` (default): full BDE-monorepo preamble — `npm run typecheck`,
+   *   `docs/modules/` update rule, pre-push hook guidance.
+   * - `'minimal'`: short preamble for non-BDE targets where the TypeScript /
+   *   Node-monorepo guidance is noise (or actively harmful — see M8 dogfood
+   *   findings). Keeps the spec + success criteria; drops the boilerplate.
+   */
+  promptProfile?: 'bde' | 'minimal'
 }
 
 export function getConfiguredRepos(): RepoConfig[] {
   return getSettingJson<RepoConfig[]>('repos') ?? []
+}
+
+/**
+ * Look up the prompt profile for a configured repo. Returns `'bde'` (the
+ * backward-compatible default) when the repo isn't configured or has no
+ * explicit profile — existing BDE workflows keep the full preamble.
+ */
+export function getRepoPromptProfile(repoName: string | null | undefined): 'bde' | 'minimal' {
+  if (!repoName) return 'bde'
+  const repo = getConfiguredRepos().find((r) => r.name.toLowerCase() === repoName.toLowerCase())
+  return repo?.promptProfile ?? 'bde'
 }
 
 export function getRepoPaths(): Record<string, string> {

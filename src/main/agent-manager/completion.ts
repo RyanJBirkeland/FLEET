@@ -31,6 +31,7 @@ import {
   listChangedFiles,
   formatAdvisory,
 } from './test-touch-check'
+import { detectNoOpRun } from './noop-detection'
 
 export type { ResolveFailureContext } from './resolve-failure-phases'
 
@@ -115,12 +116,50 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
   })
   if (!hasCommits) return
 
+  const isNoOp = await detectNoOpAndFailIfSo(taskId, branch, worktreePath, retryCount, repo, logger, onTaskTerminal)
+  if (isNoOp) return
+
   const tipVerified = await verifyBranchTipOrFail(taskId, branch, repoPath, repo, logger, onTaskTerminal)
   if (!tipVerified) return
 
   await annotateIfTestsUntouched(taskId, branch, worktreePath, repoPath, repo, logger)
 
   await transitionTaskToReview(taskId, branch, worktreePath, title, rebaseOutcome, repo, logger, onTaskTerminal, evaluateAutoMerge)
+}
+
+/**
+ * Post-commit guard: if the agent's diff contains only Aider scratch
+ * artefacts (`.aider*` files and a `.gitignore` whose only entries are
+ * `.aider*` patterns), treat this as a no-op run and fail the task rather
+ * than transitioning to `review`. Observed during M8 dogfood when a
+ * token-limit wall caused Aider to exit cleanly without modifying source.
+ *
+ * Returns `true` when the task was failed (caller should stop); `false`
+ * when the diff contains legitimate work and the success path continues.
+ */
+async function detectNoOpAndFailIfSo(
+  taskId: string,
+  branch: string,
+  worktreePath: string,
+  retryCount: number,
+  repo: IAgentTaskRepository,
+  logger: Logger,
+  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+): Promise<boolean> {
+  const env = buildAgentEnv()
+  const changedFiles = await listChangedFiles(branch, worktreePath, env, { logger })
+  if (!detectNoOpRun(changedFiles, worktreePath)) return false
+
+  const notes =
+    'Agent exited cleanly but produced only scratch files (e.g. .aider* or Aider auto-gitignore). ' +
+    'This is typically a token-limit or prompt-mismatch failure — the backend process ran but the ' +
+    'model made no edits to source files.'
+  logger.warn(
+    `[completion] task ${taskId}: detected no-op run on branch ${branch} — failing instead of transitioning to review`
+  )
+  const isTerminal = resolveFailurePhase({ taskId, retryCount, notes, repo }, logger)
+  await onTaskTerminal(taskId, isTerminal ? 'failed' : 'queued')
+  return true
 }
 
 /**

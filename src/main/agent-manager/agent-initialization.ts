@@ -34,11 +34,14 @@ export function initializeAgentTracking(
     emitAgentEvent(agentRunId, { type: 'agent:stderr', text: line, timestamp: Date.now() })
   }
 
+  const recordedModel = handle.resolvedModel ?? effectiveModel
+  const recordedBin = handle.backend === 'local' ? 'rbt-coding-agent' : 'claude'
+
   const agent: ActiveAgent = {
     taskId: task.id,
     agentRunId,
     handle,
-    model: effectiveModel,
+    model: recordedModel,
     startedAt: Date.now(),
     lastOutputAt: Date.now(),
     rateLimitCount: 0,
@@ -62,8 +65,8 @@ export function initializeAgentTracking(
   createAgentRecord({
     id: agentRunId,
     pid: null,
-    bin: 'claude',
-    model: effectiveModel,
+    bin: recordedBin,
+    model: recordedModel,
     repo: task.repo,
     repoPath: worktree.worktreePath,
     task: prompt,
@@ -93,7 +96,7 @@ export function initializeAgentTracking(
 
   emitAgentEvent(agentRunId, {
     type: 'agent:started',
-    model: effectiveModel,
+    model: recordedModel,
     timestamp: Date.now()
   })
 

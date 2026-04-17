@@ -24,7 +24,13 @@ registerFailurePattern({
 })
 registerFailurePattern({
   type: 'no_commits',
-  keywords: ['no commits', 'produced no commits', 'no output captured', 'agent produced no commits']
+  keywords: [
+    'no commits',
+    'produced no commits',
+    'no output captured',
+    'agent produced no commits',
+    'produced only scratch files'
+  ]
 })
 registerFailurePattern({
   type: 'timeout',

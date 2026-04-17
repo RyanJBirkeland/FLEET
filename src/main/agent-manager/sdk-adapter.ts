@@ -92,13 +92,14 @@ export async function spawnAgent(opts: {
 
   if (resolved.backend === 'local') {
     try {
-      return await spawnLocalAgent({
+      const handle = await spawnLocalAgent({
         prompt: opts.prompt,
         cwd: opts.cwd,
         model: resolved.model,
         endpoint: settings.localEndpoint,
         logger: opts.logger
       })
+      return annotateHandle(handle, 'local', resolved.model)
     } catch (err) {
       opts.logger?.warn(
         `[agent-manager] local backend for ${agentType} failed; falling back to Claude: ${(err as Error).message}`
@@ -108,7 +109,16 @@ export async function spawnAgent(opts: {
   }
 
   const modelForClaude = resolved.backend === 'claude' ? resolved.model : opts.model
-  return spawnClaudeAgent({ ...opts, model: modelForClaude })
+  const claudeHandle = await spawnClaudeAgent({ ...opts, model: modelForClaude })
+  return annotateHandle(claudeHandle, 'claude', modelForClaude)
+}
+
+function annotateHandle(
+  handle: AgentHandle,
+  backend: 'claude' | 'local',
+  resolvedModel: string
+): AgentHandle {
+  return Object.assign(handle, { backend, resolvedModel })
 }
 
 async function spawnClaudeAgent(opts: {

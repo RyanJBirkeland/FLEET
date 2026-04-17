@@ -17,6 +17,21 @@ import {
 } from './prompt-sections'
 import type { BuildPromptInput } from '../lib/prompt-composer'
 import { PROMPT_TRUNCATION } from './prompt-constants'
+import { getConfiguredRepos } from '../paths'
+
+type PipelinePromptProfile = 'bde' | 'minimal'
+
+function getRepoPromptProfile(repoName: string | null | undefined): PipelinePromptProfile {
+  if (!repoName) return 'bde'
+  try {
+    const repo = getConfiguredRepos().find(
+      (r) => r.name.toLowerCase() === repoName.toLowerCase()
+    )
+    return repo?.promptProfile ?? 'bde'
+  } catch {
+    return 'bde'
+  }
+}
 
 // ---------------------------------------------------------------------------
 // Task Class — heuristic classifier + output cap hints
@@ -112,7 +127,39 @@ You only run targeted tests (\`npx vitest run <your-test-file>\`), not the full 
 
 const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npx vitest run <your-test-file>\` passes for each test file you created or modified (skip if no test files touched)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\n6. \`docs/modules/\` updated for every source file you created or modified — add a row to the layer \`index.md\`; update the \`<module>.md\` detail file if exports or observable behavior changed\nDo NOT run \`npm test\` — the pre-push hook runs the full suite. Only run the specific test files you touched.\nDo NOT exit without verifying all six.`
 
+const MINIMAL_PIPELINE_PREAMBLE = `You are an autonomous coding agent working in a git worktree. Follow the task specification below exactly.
+
+## Rules
+- Read each file you need to edit before modifying it.
+- Only modify files explicitly named in the spec's "Files to Change" section.
+- Use the EXACT names, symbols, and strings the spec specifies. Do not paraphrase.
+- Commit every change with a meaningful conventional-commit subject (e.g. \`fix: off-by-one in paginate\`).
+- Match the surrounding code style of each file you touch.
+- Exit once every item in the spec's success criteria holds.
+`
+
+function buildMinimalPipelinePrompt(input: BuildPromptInput): string {
+  const { taskContent, branch, taskId } = input
+  let prompt = MINIMAL_PIPELINE_PREAMBLE
+
+  if (branch) prompt += buildBranchAppendix(branch)
+  if (taskId) prompt += buildScratchpadSection(taskId)
+
+  if (taskContent) {
+    prompt += '\n\n## Task Specification\n\n'
+    const truncated = truncateSpec(taskContent, PROMPT_TRUNCATION.TASK_SPEC_CHARS)
+    prompt += `<user_spec>\n${truncated}\n</user_spec>`
+  }
+
+  return prompt
+}
+
 export function buildPipelinePrompt(input: BuildPromptInput): string {
+  const profile = getRepoPromptProfile(input.repoName)
+  if (profile === 'minimal') {
+    return buildMinimalPipelinePrompt(input)
+  }
+
   const {
     taskContent,
     branch,
