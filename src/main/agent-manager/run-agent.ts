@@ -8,7 +8,10 @@ import type { ActiveAgent } from './types'
 import type { Logger } from '../logger'
 import { classifyExit } from './fast-fail'
 import { cleanupWorktree } from './worktree'
-import { resolveSuccess, resolveFailure } from './completion'
+import { resolveSuccess, resolveFailure, deleteAgentBranchBeforeRetry } from './completion'
+import { getMainRepoPorcelainStatus } from '../lib/main-repo-guards'
+import { execFileAsync } from '../lib/async-utils'
+import { buildAgentEnv } from '../env-utils'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { getGhRepo } from '../paths'
 import { emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
@@ -83,6 +86,51 @@ export { consumeMessages } from './message-consumer'
 const CLEANUP_RETRY_DELAYS_MS = [100, 500, 2000]
 
 /**
+ * Pre-spawn tripwire: logs the porcelain state of both the main repo and the
+ * worktree. If the main repo is dirty at this moment, refuses to spawn — the
+ * whole point of worktree isolation is that the main repo is NEVER touched
+ * by an agent. A dirty main at this boundary means a prior operation leaked.
+ */
+async function assertPreSpawnRepoState(
+  taskId: string,
+  repoPath: string,
+  worktreePath: string,
+  logger: Logger
+): Promise<void> {
+  const env = buildAgentEnv()
+
+  let mainStatus = ''
+  try {
+    mainStatus = await getMainRepoPorcelainStatus(repoPath, env)
+  } catch (err) {
+    logger.warn(`[run-agent] pre-spawn main-repo status check failed for task ${taskId}: ${err}`)
+  }
+  logger.info(
+    `[run-agent] pre-spawn main-repo status: ${mainStatus ? 'non-empty' : 'empty'}${mainStatus ? `\n${mainStatus}` : ''}`
+  )
+
+  let worktreeStatus = ''
+  try {
+    const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+      cwd: worktreePath,
+      env
+    })
+    worktreeStatus = stdout.trim()
+  } catch (err) {
+    logger.warn(`[run-agent] pre-spawn worktree status check failed for task ${taskId}: ${err}`)
+  }
+  logger.info(
+    `[run-agent] pre-spawn worktree status: ${worktreeStatus ? 'non-empty' : 'empty'}${worktreeStatus ? `\n${worktreeStatus}` : ''}`
+  )
+
+  if (mainStatus) {
+    throw new Error(
+      `Main repo dirty at pre-spawn boundary for task ${taskId} — refusing to spawn. Dirty paths:\n${mainStatus}`
+    )
+  }
+}
+
+/**
  * Attempts worktree cleanup up to 4 times (1 initial + 3 retries with backoff).
  * On persistent failure: logs a warning and surfaces the error to the task's
  * `notes` field so the user sees it in the Task Pipeline view.
@@ -140,6 +188,7 @@ async function resolveAgentExit(
   agent: ActiveAgent,
   exitedAt: number,
   worktree: { worktreePath: string; branch: string },
+  repoPath: string,
   repo: IAgentTaskRepository,
   onTaskTerminal: (taskId: string, status: string) => Promise<void>,
   logger: Logger
@@ -175,6 +224,10 @@ async function resolveAgentExit(
     } catch (err) {
       logger.error(`[agent-manager] Failed to requeue fast-fail task ${task.id}: ${err}`)
     }
+    // Fast-fail-requeue means the next drain tick will recreate the worktree.
+    // Proactively delete the agent branch so the new worktree starts from a
+    // clean ref rather than inheriting a stale tip from the failed attempt.
+    await deleteAgentBranchBeforeRetry(repoPath, worktree.branch, logger)
     // Notify terminal listeners even on requeue so blocked dependents are unblocked.
     // A fast-fail-requeue ends the current agent run — dependents should not remain
     // blocked indefinitely waiting for a run that already ended.
@@ -191,7 +244,8 @@ async function resolveAgentExit(
           onTaskTerminal,
           agentSummary: lastAgentOutput || null,
           retryCount: task.retry_count ?? 0,
-          repo
+          repo,
+          repoPath
         },
         logger
       )
@@ -205,6 +259,10 @@ async function resolveAgentExit(
       )
       if (isTerminal) {
         await onTaskTerminal(task.id, 'failed')
+      } else {
+        // Non-terminal: task was requeued. Delete the branch so the next drain
+        // tick's worktree setup starts from a clean slate.
+        await deleteAgentBranchBeforeRetry(repoPath, worktree.branch, logger)
       }
     }
   }
@@ -277,7 +335,7 @@ async function finalizeAgentRun(
   }
 
   persistAgentRunTelemetry(agentRunId, agent, exitCode, turnTracker, exitedAt, durationMs, logger)
-  await resolveAgentExit(task, exitCode, lastAgentOutput, agent, exitedAt, worktree, repo, onTaskTerminal, logger)
+  await resolveAgentExit(task, exitCode, lastAgentOutput, agent, exitedAt, worktree, repoPath, repo, onTaskTerminal, logger)
 
   // Remove from active map — guarded: a retry may have already overwritten this entry
   if (activeAgents.get(task.id)?.agentRunId === agent.agentRunId) {
@@ -309,6 +367,30 @@ export async function runAgent(
     prompt = await assembleRunContext(task, worktree, deps)
   } catch {
     return // Early exit — validation failed and cleaned up
+  }
+
+  // Pre-spawn tripwire — logs main/worktree porcelain status and fails fast
+  // if the main repo is dirty. This is the boundary where an agent-edit leak
+  // would first become visible.
+  try {
+    await assertPreSpawnRepoState(task.id, repoPath, worktree.worktreePath, logger)
+  } catch (err) {
+    const errMsg = err instanceof Error ? err.message : String(err)
+    logger.error(`[run-agent] ${errMsg}`)
+    try {
+      deps.repo.updateTask(task.id, {
+        status: 'error',
+        completed_at: nowIso(),
+        notes: errMsg,
+        claimed_by: null
+      })
+    } catch (updateErr) {
+      logger.error(`[run-agent] Failed to persist pre-spawn failure for task ${task.id}: ${updateErr}`)
+    }
+    await deps.onTaskTerminal(task.id, 'error').catch((terminalErr) =>
+      logger.warn(`[run-agent] onTaskTerminal failed for ${task.id}: ${terminalErr}`)
+    )
+    return
   }
 
   // Phase 2: Spawn and wire agent

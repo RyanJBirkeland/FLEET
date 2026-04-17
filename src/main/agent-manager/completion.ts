@@ -11,6 +11,7 @@
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
 import { buildAgentEnv } from '../env-utils'
+import { execFileAsync } from '../lib/async-utils'
 import { findOrCreatePR as findOrCreatePRUtil } from '../lib/git-operations'
 import {
   verifyWorktreeExists,
@@ -19,9 +20,12 @@ import {
   performRebaseOntoMain,
   hasCommitsAheadOfMain,
   transitionTaskToReview,
+  assertBranchTipMatches,
+  BranchTipMismatchError,
 } from './resolve-success-phases'
 import { resolveFailure as resolveFailurePhase } from './resolve-failure-phases'
 import { evaluateAutoMerge } from './auto-merge-coordinator'
+import { nowIso } from '../../shared/time'
 import {
   detectUntouchedTests,
   listChangedFiles,
@@ -40,10 +44,10 @@ export interface ResolveSuccessContext {
   retryCount: number
   repo: IAgentTaskRepository
   /**
-   * Absolute path to the MAIN repo checkout (not the worktree). Used by the
-   * untouched-test advisory to look up test files alongside changed source.
-   * When omitted (legacy callers, tests), the advisory falls back to the
-   * worktree path.
+   * Absolute path to the MAIN repo checkout (not the worktree). Required for
+   * branch-tip verification — the tip check reads the branch ref via git log
+   * in the main repo. When omitted (legacy callers, tests), branch-tip
+   * verification is skipped.
    */
   repoPath?: string
 }
@@ -61,6 +65,28 @@ export async function findOrCreatePR(
 ): Promise<{ prUrl: string | null; prNumber: number | null }> {
   const env = buildAgentEnv()
   return findOrCreatePRUtil(worktreePath, branch, title, ghRepo, env, logger)
+}
+
+/**
+ * Deletes the agent branch in the main repo before the drain loop recreates
+ * the worktree on a retry. Swallows errors when the branch doesn't exist —
+ * this is defense against a stale branch ref surviving between attempts.
+ */
+export async function deleteAgentBranchBeforeRetry(
+  repoPath: string,
+  agentBranch: string,
+  logger: Logger
+): Promise<void> {
+  const env = buildAgentEnv()
+  try {
+    await execFileAsync('git', ['branch', '-D', agentBranch], { cwd: repoPath, env })
+    logger.info(`[completion] deleted agent branch before retry: ${agentBranch}`)
+  } catch (err) {
+    // Branch may not exist (first-time retry, already cleaned, etc.) — non-fatal.
+    logger.info(
+      `[completion] branch delete before retry skipped for ${agentBranch}: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
 }
 
 export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger): Promise<void> {
@@ -88,6 +114,9 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
     resolveFailure: resolveFailurePhase,
   })
   if (!hasCommits) return
+
+  const tipVerified = await verifyBranchTipOrFail(taskId, branch, repoPath, repo, logger, onTaskTerminal)
+  if (!tipVerified) return
 
   await annotateIfTestsUntouched(taskId, branch, worktreePath, repoPath, repo, logger)
 
@@ -146,6 +175,67 @@ function appendAdvisoryNote(
     logger.info(`[completion] Annotated task ${taskId} with test-touch advisory: ${advisory}`)
   } catch (err) {
     logger.warn(`[completion] Failed to persist test-touch advisory for ${taskId}: ${err}`)
+  }
+}
+
+/**
+ * Pre-transition check: the branch tip commit must reference this task.
+ * Routes tip-mismatch to `failed` status so the mismatched branch never
+ * gets promoted to review. Returns true when the tip is verified (or the
+ * check is skipped because no repoPath was supplied — legacy callers).
+ */
+async function verifyBranchTipOrFail(
+  taskId: string,
+  branch: string,
+  repoPath: string | undefined,
+  repo: IAgentTaskRepository,
+  logger: Logger,
+  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+): Promise<boolean> {
+  if (!repoPath) return true
+
+  const task = repo.getTask(taskId)
+  if (!task) {
+    logger.error(`[completion] Task ${taskId} vanished during tip verification — failing`)
+    return false
+  }
+
+  try {
+    await assertBranchTipMatches(
+      { id: task.id, title: task.title, agent_run_id: task.agent_run_id },
+      branch,
+      repoPath
+    )
+    return true
+  } catch (err) {
+    if (err instanceof BranchTipMismatchError) {
+      const expectedSummary = err.expectedTokens.join(', ')
+      const failureNotes =
+        `Branch tip on ${branch} does not reference this task. ` +
+        `Expected one of: [${expectedSummary}]. Actual subject: "${err.actualSubject}". ` +
+        `This usually means a stale branch or a cross-task leak — task will not be promoted to review.`
+      logger.error(`[completion] ${failureNotes}`)
+      try {
+        repo.updateTask(taskId, {
+          status: 'failed',
+          completed_at: nowIso(),
+          claimed_by: null,
+          needs_review: true,
+          failure_reason: 'tip-mismatch',
+          notes: failureNotes
+        })
+      } catch (updateErr) {
+        logger.error(`[completion] Failed to persist tip-mismatch status for task ${taskId}: ${updateErr}`)
+      }
+      await onTaskTerminal(taskId, 'failed')
+      return false
+    }
+    // Non-mismatch error (git missing, branch vanished, etc.) — log and let
+    // the task transition to review anyway so the human can diagnose.
+    logger.warn(
+      `[completion] Branch-tip verification skipped for task ${taskId} due to error: ${err instanceof Error ? err.message : String(err)}`
+    )
+    return true
   }
 }
 

@@ -6,12 +6,42 @@
  */
 import type { AgentHandle } from './types'
 import type { Logger } from '../logger'
-import { dirname } from 'node:path'
-import { SPAWN_TIMEOUT_MS } from './types'
+import { dirname, resolve as resolvePath } from 'node:path'
+import { homedir } from 'node:os'
+import { DEFAULT_CONFIG, SPAWN_TIMEOUT_MS } from './types'
 import { buildAgentEnv, getOAuthToken } from '../env-utils'
 import { resolveNodeExecutable } from './resolve-node'
 import { spawnViaSdk, type PipelineSpawnTuning } from './spawn-sdk'
 import { spawnViaCli } from './spawn-cli'
+
+/**
+ * Pipeline agents must only spawn with a `cwd` inside a BDE-managed worktree
+ * base. Any other cwd — the main repo, /tmp, or the user's home — means the
+ * agent would write directly to a location that should be isolated from the
+ * main checkout. This is the last-chance check before the SDK / CLI actually
+ * starts the process.
+ *
+ * The allowlist covers the default worktree base AND the uppercase
+ * `~/worktrees/BDE/` path used by the current BDE layout.
+ */
+const ALLOWED_WORKTREE_BASES: readonly string[] = [
+  DEFAULT_CONFIG.worktreeBase,
+  `${homedir()}/worktrees/BDE`
+]
+
+function isInsideAllowedWorktreeBase(cwd: string): boolean {
+  const resolved = resolvePath(cwd)
+  return ALLOWED_WORKTREE_BASES.some((base) => resolved.startsWith(resolvePath(base) + '/'))
+}
+
+function assertCwdIsInsideWorktreeBase(cwd: string): void {
+  if (!isInsideAllowedWorktreeBase(cwd)) {
+    throw new Error(
+      `Refusing to spawn agent: cwd "${cwd}" is not inside any allowed worktree base (${ALLOWED_WORKTREE_BASES.join(', ')}). ` +
+        `Pipeline agents must only run inside isolated worktrees.`
+    )
+  }
+}
 
 // Re-export protocol helpers so existing imports don't break
 export type { SDKWireMessage } from './sdk-message-protocol'
@@ -37,6 +67,14 @@ export async function spawnAgent(opts: {
    */
   pipelineTuning?: PipelineSpawnTuning
 }): Promise<AgentHandle> {
+  // Worktree-base cwd assertion applies only to pipeline agents — adhoc,
+  // assistant, copilot, and synthesizer agents run in the user's repo or
+  // freeform directories and are gated elsewhere. Pipeline agents are the
+  // ones that can leak edits into the main repo if misrouted.
+  if (opts.pipelineTuning) {
+    assertCwdIsInsideWorktreeBase(opts.cwd)
+  }
+
   const env = { ...buildAgentEnv() }
   prependResolvedNodeDirToPath(env, opts.logger)
 

@@ -62,11 +62,26 @@ vi.mock('../../lib/prompt-composer', () => ({
 
 vi.mock('../completion', () => ({
   resolveSuccess: vi.fn().mockResolvedValue(undefined),
-  resolveFailure: vi.fn().mockReturnValue(false)
+  resolveFailure: vi.fn().mockReturnValue(false),
+  deleteAgentBranchBeforeRetry: vi.fn().mockResolvedValue(undefined)
 }))
 
+vi.mock('../../lib/main-repo-guards', () => ({
+  assertRepoCleanOrAbort: vi.fn().mockResolvedValue(undefined),
+  getMainRepoPorcelainStatus: vi.fn().mockResolvedValue('')
+}))
+
+vi.mock('../../lib/async-utils', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/async-utils')>()
+  return {
+    ...actual,
+    execFileAsync: vi.fn().mockResolvedValue({ stdout: '', stderr: '' })
+  }
+})
+
 vi.mock('../../data/sprint-queries', () => ({
-  updateTask: vi.fn().mockReturnValue(undefined)
+  updateTask: vi.fn().mockReturnValue(undefined),
+  forceUpdateTask: vi.fn().mockReturnValue(undefined)
 }))
 
 vi.mock('../../paths', () => ({
@@ -104,7 +119,8 @@ vi.mock('node:fs/promises', () => ({
 
 vi.mock('../../env-utils', () => ({
   invalidateOAuthToken: vi.fn(),
-  refreshOAuthTokenFromKeychain: vi.fn().mockResolvedValue(false)
+  refreshOAuthTokenFromKeychain: vi.fn().mockResolvedValue(false),
+  buildAgentEnv: vi.fn().mockReturnValue({})
 }))
 
 vi.mock('../../services/credential-service', () => ({

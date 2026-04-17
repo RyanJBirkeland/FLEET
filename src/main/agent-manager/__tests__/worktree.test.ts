@@ -9,6 +9,12 @@ vi.mock('node:child_process', () => {
   return { execFile }
 })
 
+// Mock main-repo-guards so the pre/post-ffMergeMain checks don't shell out
+vi.mock('../../lib/main-repo-guards', () => ({
+  assertRepoCleanOrAbort: vi.fn().mockResolvedValue(undefined),
+  getMainRepoPorcelainStatus: vi.fn().mockResolvedValue('')
+}))
+
 import { execFile } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
 import { branchNameForTask, setupWorktree, cleanupWorktree, pruneStaleWorktrees } from '../worktree'

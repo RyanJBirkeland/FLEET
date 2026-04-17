@@ -2,6 +2,7 @@ import { mkdirSync, existsSync, readdirSync, rmSync, symlinkSync } from 'node:fs
 import path from 'node:path'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
+import { assertRepoCleanOrAbort } from '../lib/main-repo-guards'
 import { BRANCH_SLUG_MAX_LENGTH, GIT_FETCH_TIMEOUT_MS, GIT_FF_MERGE_TIMEOUT_MS } from './types'
 import type { Logger } from '../logger'
 import {
@@ -202,11 +203,19 @@ export async function setupWorktree(
 
       // Fast-forward local main to match origin so the new worktree branches
       // off the latest commit. Non-destructive — only succeeds for true ff.
+      //
+      // Guards: ffMergeMain is the first writer against the MAIN repo's working
+      // tree in the whole worktree-setup flow. A timeout or race here can leave
+      // `.git/MERGE_HEAD` and modified files in the main checkout, which is the
+      // root cause of the agent-edit-leak bug. Assert cleanliness before and
+      // after, and on any post-condition breach abort + refuse to proceed.
+      await assertRepoCleanOrAbort(repoPath, env, log, 'pre-ffMergeMain')
       try {
         await ffMergeMain(repoPath, env, log, GIT_FF_MERGE_TIMEOUT_MS)
       } catch (err) {
         log.warn(`[worktree] Failed to ff-merge origin/main (proceeding anyway): ${err}`)
       }
+      await assertRepoCleanOrAbort(repoPath, env, log, 'post-ffMergeMain')
 
       // Create fresh worktree + branch
       await addWorktree(repoPath, branch, worktreePath, env)

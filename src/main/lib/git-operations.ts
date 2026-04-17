@@ -11,6 +11,7 @@ import { runPostMergeDedup } from './post-merge-dedup'
 import { getErrorMessage } from '../../shared/errors'
 import { sanitizeForGit } from '../agent-manager/pr-operations'
 import { cleanupWorktreeAndBranch } from '../agent-manager/worktree-lifecycle'
+import { getMainRepoPorcelainStatus } from './main-repo-guards'
 
 // Re-export PR operations for backward compatibility
 export {
@@ -225,53 +226,85 @@ export interface SquashMergeOpts {
  * Returns 'merged' on success, 'dirty-main' if main has uncommitted changes, 'failed' on merge error.
  * Task state updates are the caller's responsibility.
  */
+/**
+ * Best-effort rollback pair used when a merge or commit inside
+ * executeSquashMerge fails mid-sequence. Any stray MERGE_HEAD or staged
+ * modification left in the main repo is the exact failure mode that lets
+ * agent edits leak into the main working tree, so we always try both steps
+ * regardless of which step failed.
+ */
+async function abortAndReset(
+  repoPath: string,
+  env: Record<string, string | undefined>
+): Promise<void> {
+  try {
+    await execFileAsync('git', ['merge', '--abort'], { cwd: repoPath, env })
+  } catch {
+    /* best-effort */
+  }
+  try {
+    await execFileAsync('git', ['reset', '--hard', 'HEAD'], { cwd: repoPath, env })
+  } catch {
+    /* best-effort */
+  }
+}
+
 export async function executeSquashMerge(
   opts: SquashMergeOpts
 ): Promise<'merged' | 'dirty-main' | 'failed'> {
   const { taskId, branch, worktreePath, repoPath, title, logger } = opts
   const env = buildAgentEnv()
-  const { stdout: statusOut } = await execFileAsync('git', ['status', '--porcelain'], {
-    cwd: repoPath,
-    env
-  })
-  if (statusOut.trim()) {
-    logger.warn(
-      `[completion] Skipping auto-merge: main repo has uncommitted changes`
-    )
+  const preStatus = await getMainRepoPorcelainStatus(repoPath, env)
+  if (preStatus) {
+    logger.warn(`[completion] Skipping auto-merge: main repo has uncommitted changes`)
     return 'dirty-main'
   }
 
   try {
-    await execFileAsync('git', ['merge', '--squash', branch], {
+    await execFileAsync('git', ['merge', '--squash', '--no-commit', branch], {
       cwd: repoPath,
       env
     })
+  } catch (mergeErr) {
+    logger.error(`[completion] Auto-merge squash failed: ${mergeErr} — rolling back main repo`)
+    await abortAndReset(repoPath, env)
+    return 'failed'
+  }
+
+  try {
     await execFileAsync('git', ['commit', '-m', `${sanitizeForGit(title)} (#${taskId})`], {
       cwd: repoPath,
       env
     })
-
-    try {
-      await runPostMergeDedup(repoPath)
-    } catch {
-      // Non-fatal
-    }
-
-    await cleanupWorktreeAndBranch(worktreePath, branch, repoPath, logger)
-
-    return 'merged'
-  } catch (mergeErr) {
-    logger.error(
-      `[completion] Auto-merge failed: ${mergeErr} — task remains in review`
-    )
-    try {
-      await execFileAsync('git', ['merge', '--abort'], {
-        cwd: repoPath,
-        env
-      })
-    } catch {
-      /* best-effort */
-    }
+  } catch (commitErr) {
+    logger.error(`[completion] Auto-merge commit failed: ${commitErr} — rolling back main repo`)
+    await abortAndReset(repoPath, env)
     return 'failed'
   }
+
+  // Commit succeeded — verify the main repo is clean. A dirty main here means
+  // residual untracked/unstaged files that should not have survived the commit,
+  // which is worth logging but not worth rolling back: the merge commit itself
+  // is a valid history and backing it out would just create a different kind of
+  // mess. Surface it loudly so an operator can investigate.
+  try {
+    const postStatus = await getMainRepoPorcelainStatus(repoPath, env)
+    if (postStatus) {
+      logger.error(
+        `[completion] Main repo dirty after successful auto-merge commit — inspect manually:\n${postStatus}`
+      )
+    }
+  } catch (statusErr) {
+    logger.warn(`[completion] Post-commit status check failed: ${statusErr}`)
+  }
+
+  try {
+    await runPostMergeDedup(repoPath)
+  } catch {
+    // Non-fatal
+  }
+
+  await cleanupWorktreeAndBranch(worktreePath, branch, repoPath, logger)
+
+  return 'merged'
 }

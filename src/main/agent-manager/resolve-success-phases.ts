@@ -29,6 +29,87 @@ export interface RebaseOutcome {
 }
 
 /**
+ * Thrown when the agent's branch tip commit does not reference the expected
+ * task identifiers. Signals that some other process — or a stale branch —
+ * produced the tip, not the agent we just ran. Caller must transition the
+ * task to `failed` rather than `review`.
+ */
+export class BranchTipMismatchError extends Error {
+  constructor(
+    public readonly expectedTokens: string[],
+    public readonly actualSubject: string
+  ) {
+    super(
+      `Branch tip mismatch — expected one of [${expectedTokens.join(', ')}] in subject, got: ${actualSubject}`
+    )
+    this.name = 'BranchTipMismatchError'
+  }
+}
+
+/**
+ * Extracts a `(T-N)` token (e.g. `(T-42)`) from a task title, if present.
+ * BDE convention: sprint task titles often carry a `(T-N)` suffix so that
+ * commit messages written by the agent can reference the task number.
+ */
+function extractTaskNumberToken(title: string): string | null {
+  const match = /\(T-\d+\)/i.exec(title)
+  return match ? match[0] : null
+}
+
+/**
+ * Builds the set of identifiers the branch tip commit MUST reference for the
+ * agent's work to be accepted. Any one of these appearing in the commit body
+ * or trailers is sufficient.
+ */
+function buildExpectedTipTokens(task: {
+  id: string
+  title: string
+  agent_run_id?: string | null
+}): string[] {
+  const tokens: string[] = []
+  if (task.agent_run_id) tokens.push(task.agent_run_id)
+  const numberToken = extractTaskNumberToken(task.title)
+  if (numberToken) tokens.push(numberToken)
+  // Task title substring — first meaningful phrase, trimmed to keep the
+  // match permissive without matching noise.
+  const titleHead = task.title.replace(/\(T-\d+\)/gi, '').trim().slice(0, 40)
+  if (titleHead) tokens.push(titleHead)
+  tokens.push(task.id)
+  return tokens
+}
+
+/**
+ * Reads the branch tip commit message (subject + body) and verifies it
+ * references the task's expected identifiers. Throws BranchTipMismatchError
+ * if no identifier is present — defense against a stale branch tip or a
+ * cross-task leak that survived worktree setup.
+ */
+export async function assertBranchTipMatches(
+  task: { id: string; title: string; agent_run_id?: string | null },
+  agentBranch: string,
+  repoPath: string
+): Promise<void> {
+  const env = buildAgentEnv()
+  // Reads FROM the main repo — the branch ref lives there even when the
+  // worktree is elsewhere. Using the same cwd keeps the check consistent
+  // with how branches are actually created by git worktree add.
+  const { stdout: subjectOut } = await execFileAsync(
+    'git',
+    ['log', '-1', '--format=%B', agentBranch],
+    { cwd: repoPath, env }
+  )
+  const commitMessage = subjectOut.trim()
+  const expectedTokens = buildExpectedTipTokens(task)
+  const hasMatch = expectedTokens.some((token) =>
+    commitMessage.toLowerCase().includes(token.toLowerCase())
+  )
+  if (!hasMatch) {
+    const firstLine = commitMessage.split('\n')[0] ?? ''
+    throw new BranchTipMismatchError(expectedTokens, firstLine)
+  }
+}
+
+/**
  * Fail task with error status, emit agent event, and call terminal callback.
  * Consolidates error handling pattern used in resolveSuccess guards.
  */
