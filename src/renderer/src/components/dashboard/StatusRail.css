@@ -61,6 +61,11 @@
   background: var(--bde-border);
 }
 
+.dashboard-attention-item:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
+}
+
 .dashboard-attention-review-section {
   display: flex;
   flex-direction: column;
@@ -87,6 +92,11 @@
 
 .dashboard-review-cta:active:not(:disabled) {
   transform: scale(0.97);
+}
+
+.dashboard-review-cta:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
 }
 
 /* Spec Type Success Rate */
