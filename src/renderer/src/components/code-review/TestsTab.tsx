@@ -8,6 +8,7 @@ import { useCodeReviewStore } from '../../stores/codeReview'
 import { useAgentEventsStore } from '../../stores/agentEvents'
 import { extractTestRuns } from '../../lib/extract-test-runs'
 import { EmptyState } from '../ui/EmptyState'
+import './TestsTab.css'
 
 export function TestsTab(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
@@ -38,12 +39,9 @@ export function TestsTab(): React.JSX.Element {
 
   if (!agentEvents) {
     return (
-      <div
-        className="cr-tests"
-        style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 12 }}
-      >
-        <div className="bde-skeleton" style={{ height: 28 }} />
-        <div className="bde-skeleton" style={{ height: 140 }} />
+      <div className="cr-tests cr-tests__loading">
+        <div className="bde-skeleton" />
+        <div className="bde-skeleton" />
       </div>
     )
   }
@@ -58,72 +56,24 @@ export function TestsTab(): React.JSX.Element {
   }
 
   const last = runs[runs.length - 1]
+  const statusClass = last.success ? 'cr-tests__status' : 'cr-tests__status cr-tests__status--failed'
 
   return (
-    <div className="cr-tests" data-testid="cr-tests-tab" style={{ padding: 12 }}>
-      <div
-        className="cr-tests__header"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 8
-        }}
-      >
-        <div
-          style={{
-            fontFamily: 'var(--bde-font-mono, monospace)',
-            fontSize: 12,
-            color: 'var(--bde-text, rgba(255,255,255,0.85))'
-          }}
-          data-testid="cr-tests-command"
-        >
+    <div className="cr-tests" data-testid="cr-tests-tab">
+      <div className="cr-tests__header">
+        <div className="cr-tests__command" data-testid="cr-tests-command">
           $ {last.command}
         </div>
-        <div
-          data-testid="cr-tests-status"
-          style={{
-            fontSize: 11,
-            padding: '2px 8px',
-            borderRadius: 4,
-            color: last.success ? 'var(--bde-accent)' : 'var(--bde-danger)',
-            border: `1px solid ${last.success ? 'var(--bde-accent-border)' : 'var(--bde-danger-border)'}`,
-            textTransform: 'uppercase',
-            fontWeight: 600
-          }}
-        >
+        <div data-testid="cr-tests-status" className={statusClass}>
           {last.success ? 'Passed' : 'Failed'}
         </div>
       </div>
       {runs.length > 1 && (
-        <div
-          style={{
-            fontSize: 10,
-            opacity: 0.6,
-            marginBottom: 8
-          }}
-        >
+        <div className="cr-tests__hint">
           Showing latest of {runs.length} test runs in this session.
         </div>
       )}
-      <pre
-        className="cr-tests__output"
-        data-testid="cr-tests-output"
-        style={{
-          margin: 0,
-          padding: 12,
-          background: 'var(--bde-surface-raised, rgba(0,0,0,0.3))',
-          border: '1px solid var(--bde-border, rgba(255,255,255,0.08))',
-          borderRadius: 6,
-          fontSize: 12,
-          fontFamily: 'var(--bde-font-mono, monospace)',
-          whiteSpace: 'pre-wrap',
-          wordBreak: 'break-word',
-          maxHeight: 600,
-          overflow: 'auto',
-          color: 'var(--bde-text, rgba(255,255,255,0.85))'
-        }}
-      >
+      <pre className="cr-tests__output" data-testid="cr-tests-output">
         {last.output || '(no output captured)'}
       </pre>
     </div>

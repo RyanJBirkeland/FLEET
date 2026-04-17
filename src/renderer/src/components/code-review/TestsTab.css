@@ -1,0 +1,68 @@
+/* ── TestsTab: test run output display ── */
+
+.cr-tests {
+  padding: var(--bde-space-3);
+}
+
+.cr-tests__loading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--bde-space-2);
+}
+
+.cr-tests__loading .bde-skeleton:first-child {
+  height: 28px;
+}
+
+.cr-tests__loading .bde-skeleton:last-child {
+  height: 140px;
+}
+
+.cr-tests__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--bde-space-2);
+}
+
+.cr-tests__command {
+  font-family: var(--bde-font-code);
+  font-size: var(--bde-size-sm);
+  color: var(--bde-text);
+}
+
+.cr-tests__status {
+  font-size: var(--bde-size-xs);
+  padding: 2px var(--bde-space-2);
+  border-radius: var(--bde-radius-sm);
+  text-transform: uppercase;
+  font-weight: 600;
+  border: 1px solid var(--bde-accent-border);
+  color: var(--bde-accent);
+}
+
+.cr-tests__status--failed {
+  color: var(--bde-danger);
+  border-color: var(--bde-danger-border);
+}
+
+.cr-tests__hint {
+  font-size: var(--bde-size-2xs);
+  opacity: 0.6;
+  margin-bottom: var(--bde-space-2);
+}
+
+.cr-tests__output {
+  margin: 0;
+  padding: var(--bde-space-3);
+  background: var(--bde-surface-raised);
+  border: 1px solid var(--bde-border);
+  border-radius: var(--bde-radius-md);
+  font-size: var(--bde-size-sm);
+  font-family: var(--bde-font-code);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 600px;
+  overflow: auto;
+  color: var(--bde-text);
+}
