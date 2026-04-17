@@ -39,6 +39,11 @@
   background: var(--bde-surface-high);
 }
 
+.panel-tab:focus-visible {
+  outline: 2px solid var(--bde-accent);
+  outline-offset: -2px;
+}
+
 .panel-tab__close {
   display: flex;
   align-items: center;
