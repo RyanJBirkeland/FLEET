@@ -2,8 +2,9 @@ import './FileTreePanel.css'
 import { useState } from 'react'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { useReviewPartnerStore } from '../../stores/reviewPartner'
-import { Plus, Minus, Edit2, ChevronRight } from 'lucide-react'
+import { Plus, Minus, Edit2, ChevronRight, FileX } from 'lucide-react'
 import { AIFileStatusBadge, type FileReviewStatus } from './AIFileStatusBadge'
+import { EmptyState } from '../ui/EmptyState'
 
 export function FileTreePanel(): React.JSX.Element {
   const diffFiles = useCodeReviewStore((s) => s.diffFiles)
@@ -43,7 +44,7 @@ export function FileTreePanel(): React.JSX.Element {
       )}
       <header className="cr-filetree__header">
         <span className="cr-filetree__label">Files</span>
-        <span className="cr-filetree__count">{diffFiles.length}</span>
+        <span className="cr-filetree__count">{diffFiles?.length ?? 0}</span>
         {isExpanded && (
           <button
             className="cr-filetree__collapse-btn"
@@ -55,24 +56,42 @@ export function FileTreePanel(): React.JSX.Element {
         )}
       </header>
       <div className="cr-filetree__list">
-        {diffFiles.map((file) => {
-          const isSelected = file.path === selectedDiffFile
-          return (
-            <button
-              key={file.path}
-              className={`cr-filetree__row${isSelected ? ' cr-filetree__row--selected' : ''}`}
-              onClick={() => setSelectedDiffFile(file.path)}
-              data-testid={`filetree-row-${file.path}`}
-            >
-              {statusIcon(file.status)}
-              <span className="cr-filetree__filename">{file.path}</span>
-              <AIFileStatusBadge status={statusForPath(file.path)} />
-              <span className="cr-filetree__stats">
-                +{file.additions} −{file.deletions}
-              </span>
-            </button>
-          )
-        })}
+        {!diffFiles ? (
+          // Loading skeleton
+          <>
+            {[1, 2, 3, 4, 5].map((n) => (
+              <div key={n} className="cr-filetree__row cr-filetree__row--skeleton">
+                <div className="cr-filetree__skeleton-icon" />
+                <div className="cr-filetree__skeleton-filename" />
+                <div className="cr-filetree__skeleton-badge" />
+                <div className="cr-filetree__skeleton-stats" />
+              </div>
+            ))}
+          </>
+        ) : diffFiles.length === 0 ? (
+          // Empty state
+          <EmptyState icon={<FileX size={48} />} title="No files changed" />
+        ) : (
+          // Normal state
+          diffFiles.map((file) => {
+            const isSelected = file.path === selectedDiffFile
+            return (
+              <button
+                key={file.path}
+                className={`cr-filetree__row${isSelected ? ' cr-filetree__row--selected' : ''}`}
+                onClick={() => setSelectedDiffFile(file.path)}
+                data-testid={`filetree-row-${file.path}`}
+              >
+                {statusIcon(file.status)}
+                <span className="cr-filetree__filename">{file.path}</span>
+                <AIFileStatusBadge status={statusForPath(file.path)} />
+                <span className="cr-filetree__stats">
+                  +{file.additions} −{file.deletions}
+                </span>
+              </button>
+            )
+          })
+        )}
       </div>
     </aside>
   )
