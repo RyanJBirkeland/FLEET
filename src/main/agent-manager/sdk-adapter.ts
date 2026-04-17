@@ -6,8 +6,10 @@
  */
 import type { AgentHandle } from './types'
 import type { Logger } from '../logger'
+import { dirname } from 'node:path'
 import { SPAWN_TIMEOUT_MS } from './types'
 import { buildAgentEnv, getOAuthToken } from '../env-utils'
+import { resolveNodeExecutable } from './resolve-node'
 import { spawnViaSdk } from './spawn-sdk'
 import { spawnViaCli } from './spawn-cli'
 
@@ -31,6 +33,7 @@ export async function spawnAgent(opts: {
   logger?: Logger
 }): Promise<AgentHandle> {
   const env = { ...buildAgentEnv() }
+  prependResolvedNodeDirToPath(env, opts.logger)
 
   // Get OAuth token for SDK auth (not passed via env)
   const token = getOAuthToken()
@@ -72,4 +75,29 @@ export async function spawnWithTimeout(
     spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd }),
     timeoutPromise
   ]).finally(() => clearTimeout(timer!))
+}
+
+/**
+ * Ensures the SDK's internal `spawn('node', …)` call can find a usable node.
+ *
+ * Packaged macOS `.app` bundles launched from Finder/Spotlight inherit only
+ * `/etc/paths`, which omits fnm/nvm install locations. If the user's node is
+ * not already on PATH, we prepend the directory holding the resolved node
+ * binary so the SDK's shebang lookup succeeds.
+ */
+function prependResolvedNodeDirToPath(
+  env: Record<string, string | undefined>,
+  logger: Logger | undefined
+): void {
+  const resolvedNode = resolveNodeExecutable()
+  if (!resolvedNode) {
+    ;(logger ?? console).warn(
+      '[agent-manager] No node binary found at known locations — falling back to PATH lookup'
+    )
+    return
+  }
+  const nodeDir = dirname(resolvedNode)
+  const existingPath = env.PATH ?? ''
+  if (existingPath.split(':').includes(nodeDir)) return
+  env.PATH = existingPath ? `${nodeDir}:${existingPath}` : nodeDir
 }

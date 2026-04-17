@@ -48,6 +48,7 @@ Source: `src/main/agent-manager/`
 | `config-manager.ts` | Hot-reload settings — updates maxConcurrent, maxRuntimeMs, defaultModel in place; flags worktreeBase as restart-required | `reloadConfiguration`, `ConfigManagerDeps` |
 | `wip-tracker.ts` | Thin facade over ConcurrencyState for readable slot queries | `createConcurrencyState`, `getAvailableSlots`, `updateMaxSlots` |
 | `failure-classifier.ts` | Maps agent error notes to a `FailureReason` via a keyword-based pattern registry. Patterns cover auth, timeout, test_failure, compilation, spawn, no_commits, and unknown. | `classifyFailureReason`, `registerFailurePattern`, `FailurePattern` |
+| `resolve-node.ts` | Resolves an absolute path to a usable `node` binary for packaged `.app` bundles whose PATH lacks fnm/nvm/Homebrew install locations. Probes Electron's bundled node, fnm default alias, highest nvm version, then Homebrew — used by `sdk-adapter.ts` to augment PATH before the SDK spawns its cli.js. | `resolveNodeExecutable` |
 
 ## Agent Personality System
 

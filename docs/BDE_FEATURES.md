@@ -213,3 +213,12 @@ Application configuration organized into 9 tabs. Most settings persisted to SQLi
 - **About**: Version info, log file locations, GitHub link
 - **Keyboard navigation**: Arrow Left/Right, Home/End to cycle tabs
 - Related: Agent Manager
+
+## Packaging
+
+Notes for users running the packaged `BDE.app` bundle on macOS.
+
+- **Node auto-detection**: The agent manager probes well-known install locations for `node` (fnm default alias, highest nvm version, Homebrew at `/opt/homebrew/bin` or `/usr/local/bin`) and prepends the matching directory to the PATH passed to the Claude Agent SDK. This fixes "Claude Code executable not found" errors when the `.app` is launched from Finder/Spotlight, which inherits only `/etc/paths` and excludes fnm/nvm locations
+- **PATH fallback**: If no node is found at the probed locations, BDE falls back to the ambient PATH lookup — the SDK's own `spawn('node', …)` resolution still applies
+- **Shell-launched workaround**: Users hitting SDK spawn errors can bypass the issue by launching via `npm run dev` from a terminal, which inherits the full shell PATH
+- Related: Agent Manager
