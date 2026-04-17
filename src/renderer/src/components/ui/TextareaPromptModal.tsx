@@ -108,7 +108,7 @@ export function TextareaPromptModal({
               value={value}
               onChange={(e) => setValue(e.target.value)}
               placeholder={placeholder}
-              aria-label={message}
+              aria-labelledby="textarea-prompt-modal-message"
               rows={6}
             />
             <div className="prompt-modal__hint">Press Cmd+Enter to confirm, Escape to cancel</div>
