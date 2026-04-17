@@ -171,7 +171,15 @@ export function WebhooksSection(): React.JSX.Element {
     })
   }, [])
 
-  if (!loaded) return <div className="settings-cards-list" />
+  if (!loaded) {
+    return (
+      <div className="bde-loading-skeleton">
+        <div className="bde-loading-skeleton__row" />
+        <div className="bde-loading-skeleton__row" />
+        <div className="bde-loading-skeleton__row" />
+      </div>
+    )
+  }
 
   return (
     <div className="settings-cards-list">

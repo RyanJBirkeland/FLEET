@@ -226,6 +226,7 @@ export function RepositoriesSection(): React.JSX.Element {
                 <input
                   className="settings-field__input"
                   placeholder="Name"
+                  aria-label="Repository name (e.g. bde)"
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                 />
@@ -233,6 +234,7 @@ export function RepositoriesSection(): React.JSX.Element {
                   <input
                     className="settings-field__input"
                     placeholder="Local path"
+                    aria-label="Local path"
                     value={newPath}
                     onChange={(e) => setNewPath(e.target.value)}
                   />
@@ -251,12 +253,14 @@ export function RepositoriesSection(): React.JSX.Element {
                 <input
                   className="settings-field__input"
                   placeholder="GitHub owner (optional)"
+                  aria-label="GitHub owner"
                   value={newOwner}
                   onChange={(e) => setNewOwner(e.target.value)}
                 />
                 <input
                   className="settings-field__input"
                   placeholder="GitHub repo (optional)"
+                  aria-label="GitHub repo"
                   value={newRepo}
                   onChange={(e) => setNewRepo(e.target.value)}
                 />

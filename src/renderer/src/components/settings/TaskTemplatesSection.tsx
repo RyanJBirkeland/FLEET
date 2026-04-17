@@ -80,7 +80,15 @@ export function TaskTemplatesSection(): React.JSX.Element {
     [templates]
   )
 
-  if (!loaded) return <div className="settings-cards-list" />
+  if (!loaded) {
+    return (
+      <div className="bde-loading-skeleton">
+        <div className="bde-loading-skeleton__row" />
+        <div className="bde-loading-skeleton__row" />
+        <div className="bde-loading-skeleton__row" />
+      </div>
+    )
+  }
 
   return (
     <div className="settings-cards-list">
@@ -113,6 +121,7 @@ export function TaskTemplatesSection(): React.JSX.Element {
             <input
               className="settings-field__input"
               placeholder="Template name"
+              aria-label="Template name"
               value={t.name}
               disabled={!!t.isBuiltIn}
               onChange={(e) => handleNameChange(i, e.target.value)}
@@ -120,6 +129,7 @@ export function TaskTemplatesSection(): React.JSX.Element {
             <textarea
               className="settings-field__input settings-template-row__prefix"
               placeholder="Prompt prefix..."
+              aria-label="Prompt prefix"
               value={t.promptPrefix}
               onChange={(e) => handlePrefixChange(i, e.target.value)}
               rows={3}
