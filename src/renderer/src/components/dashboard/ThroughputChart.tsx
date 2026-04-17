@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import type { CompletionBucket } from '../../../../shared/ipc-channels'
 import { neonVar } from '../neon/types'
 import './ThroughputChart.css'
@@ -56,6 +56,22 @@ function buildScaffold(data: CompletionBucket[]): HourSlot[] {
 
 export function ThroughputChart({ data, height = 140 }: ThroughputChartProps): React.JSX.Element {
   const [hoverIdx, setHoverIdx] = useState<number | null>(null)
+  const [isNarrow, setIsNarrow] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = containerRef.current
+    if (!el) return
+
+    const observer = new ResizeObserver((entries) => {
+      const width = entries[0]?.contentRect.width ?? 0
+      setIsNarrow(width < 300)
+    })
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [])
+
   const slots = useMemo(() => buildScaffold(data), [data])
   const totals = useMemo(() => slots.map((s) => s.successCount + s.failedCount), [slots])
   const peak = Math.max(...totals, 0)
@@ -75,6 +91,7 @@ export function ThroughputChart({ data, height = 140 }: ThroughputChartProps): R
 
   return (
     <div
+      ref={containerRef}
       style={{
         position: 'relative',
         fontFamily: 'ui-monospace, Menlo, monospace',
@@ -91,7 +108,7 @@ export function ThroughputChart({ data, height = 140 }: ThroughputChartProps): R
         }}
       >
         <div>
-          <strong style={{ color: 'var(--bde-text)', fontSize: 20, fontWeight: 700 }}>
+          <strong style={{ color: 'var(--bde-text)', fontSize: isNarrow ? 24 : 20, fontWeight: 700 }}>
             {lastHour}
           </strong>
           <span style={{ color: 'var(--bde-text-dim)', marginLeft: 6 }}> last hour</span>
