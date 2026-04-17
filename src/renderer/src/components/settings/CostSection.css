@@ -207,6 +207,7 @@
   width: 100%;
   border-collapse: collapse;
   font-size: var(--bde-size-md);
+  table-layout: fixed;
 }
 
 .cost-table th {
