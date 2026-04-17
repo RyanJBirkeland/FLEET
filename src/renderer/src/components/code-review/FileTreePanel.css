@@ -123,6 +123,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: var(--bde-size-sm);
+  min-width: 0;
 }
 
 .cr-filetree__stats {

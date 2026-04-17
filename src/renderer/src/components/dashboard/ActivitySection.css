@@ -54,6 +54,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  min-width: 0;
 }
 
 .dashboard-completion-meta {
@@ -118,6 +119,7 @@
   text-overflow: ellipsis;
   white-space: nowrap;
   flex: 1;
+  min-width: 0;
 }
 
 .dashboard-failure-breakdown-count {
