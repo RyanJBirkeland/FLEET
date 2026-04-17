@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, CSSProperties } from 'react'
 import { Edit2, MoreVertical, CheckCircle2 } from 'lucide-react'
 import type { TaskGroup } from '../../../../shared/types'
+import { withAlpha } from '../../lib/utils'
 
 const MENU_ITEM_BASE_STYLE: CSSProperties = {
   display: 'flex',
@@ -115,9 +116,9 @@ export function EpicHeader({
       <div
         className="epic-detail__icon"
         style={{
-          background: `${group.accent_color}20`,
+          background: withAlpha(group.accent_color, 12.5),
           color: group.accent_color,
-          borderColor: `${group.accent_color}40`
+          borderColor: withAlpha(group.accent_color, 25)
         }}
       >
         {group.icon.charAt(0).toUpperCase()}
