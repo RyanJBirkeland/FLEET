@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import type { LoadSample } from '../../../../shared/ipc-channels'
+import './LoadAverageChart.css'
 
 interface LoadAverageChartProps {
   samples: LoadSample[]
@@ -58,24 +59,8 @@ export function LoadAverageChart({
 
   if (samples.length < 2 || !latest) {
     return (
-      <div
-        style={{
-          fontFamily: 'ui-monospace, Menlo, monospace',
-          fontSize: 10,
-          color: '#94a3b8'
-        }}
-      >
-        <div
-          style={{
-            height,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            color: '#64748b',
-            border: '1px dashed #1e293b',
-            borderRadius: 4
-          }}
-        >
+      <div className="load-average-chart__empty">
+        <div className="load-average-chart__empty-placeholder" style={{ height }}>
           Collecting samples...
         </div>
       </div>

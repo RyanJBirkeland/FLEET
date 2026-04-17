@@ -1,0 +1,61 @@
+.load-average-chart {
+  position: relative;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.load-average-chart__empty {
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 10px;
+  color: #94a3b8;
+}
+
+.load-average-chart__empty-placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  border: 1px dashed #1e293b;
+  border-radius: 4px;
+}
+
+.load-average-chart__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-bottom: 6px;
+}
+
+.load-average-chart__value {
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.load-average-chart__label {
+  color: #64748b;
+  margin-left: 6px;
+}
+
+.load-average-chart__trend-container {
+  text-align: right;
+}
+
+.load-average-chart__trend {
+  font-size: 10px;
+}
+
+.load-average-chart__secondary {
+  color: #64748b;
+  font-size: 9px;
+}
+
+.load-average-chart__svg {
+  display: block;
+}
+
+.load-average-chart__legend {
+  margin-top: 6px;
+  font-size: 9px;
+  color: #64748b;
+}
