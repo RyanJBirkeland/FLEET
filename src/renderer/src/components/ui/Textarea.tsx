@@ -8,33 +8,57 @@ type TextareaProps = {
   disabled?: boolean
   className?: string
   'aria-label'?: string
+  maxHeight?: number
+  resize?: 'none' | 'vertical'
+  variant?: 'default' | 'code'
 }
 
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(function Textarea(
-  { value, onChange, onKeyDown, placeholder, disabled = false, className, 'aria-label': ariaLabel },
+  {
+    value,
+    onChange,
+    onKeyDown,
+    placeholder,
+    disabled = false,
+    className,
+    'aria-label': ariaLabel,
+    maxHeight,
+    resize = 'none',
+    variant = 'default'
+  },
   forwardedRef
 ) {
   const innerRef = useRef<HTMLTextAreaElement>(null)
 
   useImperativeHandle(forwardedRef, () => innerRef.current as HTMLTextAreaElement)
 
-  const resize = useCallback(() => {
+  const autoResize = useCallback(() => {
     const el = innerRef.current
     if (!el) return
     el.style.height = 'auto'
-    el.style.height = `${el.scrollHeight}px`
-  }, [])
+    const next = maxHeight ? Math.min(el.scrollHeight, maxHeight) : el.scrollHeight
+    el.style.height = `${next}px`
+  }, [maxHeight])
 
   useEffect(() => {
-    resize()
-  }, [value, resize])
+    autoResize()
+  }, [value, autoResize])
 
-  const classes = ['bde-textarea', className].filter(Boolean).join(' ')
+  const classes = [
+    'bde-textarea',
+    variant === 'code' && 'bde-textarea--code',
+    className
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  const style = resize === 'vertical' ? { resize: 'vertical' as const } : undefined
 
   return (
     <textarea
       ref={innerRef}
       className={classes}
+      style={style}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       onKeyDown={onKeyDown}
