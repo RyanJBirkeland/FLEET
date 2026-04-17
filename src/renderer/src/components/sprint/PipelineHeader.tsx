@@ -87,18 +87,14 @@ export function PipelineHeader({
       <h1 className="sprint-pipeline__title text-gradient-aurora">Task Pipeline</h1>
       <div className="sprint-pipeline__stats">
         {stats.map((stat) => (
-          <span
+          <button
             key={stat.label}
+            type="button"
             className={`sprint-pipeline__stat sprint-pipeline__stat--${stat.label} sprint-pipeline__stat--clickable`}
             onClick={() => onFilterClick(stat.filter)}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') onFilterClick(stat.filter)
-            }}
           >
             <b className="sprint-pipeline__stat-count">{stat.count}</b> {stat.label}
-          </span>
+          </button>
         ))}
         {wipSlots !== null && (
           <span className="sprint-pipeline__wip-badge" title="Agent slots active / maximum">

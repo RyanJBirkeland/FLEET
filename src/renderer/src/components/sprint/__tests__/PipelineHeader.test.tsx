@@ -109,7 +109,7 @@ describe('PipelineHeader', () => {
         dagOpen={false}
       />
     )
-    const activeElement = screen.getByText('active').closest('[role="button"]') as HTMLElement
+    const activeElement = screen.getByText('active').closest('button') as HTMLElement
     fireEvent.click(activeElement)
     expect(mockFilterClick).toHaveBeenCalledWith('in-progress')
   })
@@ -128,8 +128,8 @@ describe('PipelineHeader', () => {
         dagOpen={false}
       />
     )
-    const queuedElement = screen.getByText('queued').closest('[role="button"]') as HTMLElement
-    fireEvent.keyDown(queuedElement, { key: 'Enter' })
+    const queuedElement = screen.getByText('queued').closest('button') as HTMLElement
+    fireEvent.click(queuedElement)
     expect(mockFilterClick).toHaveBeenCalledWith('todo')
   })
 
@@ -147,8 +147,8 @@ describe('PipelineHeader', () => {
         dagOpen={false}
       />
     )
-    const blockedElement = screen.getByText('blocked').closest('[role="button"]') as HTMLElement
-    fireEvent.keyDown(blockedElement, { key: ' ' })
+    const blockedElement = screen.getByText('blocked').closest('button') as HTMLElement
+    fireEvent.click(blockedElement)
     expect(mockFilterClick).toHaveBeenCalledWith('blocked')
   })
 
