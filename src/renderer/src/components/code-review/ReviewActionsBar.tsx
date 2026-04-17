@@ -158,6 +158,8 @@ export function ReviewActionsBar({ variant, children }: ReviewActionsBarProps): 
                 </button>
                 <select
                   className="rab__strategy bde-select"
+                  aria-label="Merge strategy"
+                  title="Squash: single commit. Merge: preserve branch history. Rebase: linear history."
                   value={mergeStrategy}
                   onChange={(e) =>
                     setMergeStrategy(e.target.value as 'squash' | 'merge' | 'rebase')
