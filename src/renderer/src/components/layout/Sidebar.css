@@ -141,6 +141,8 @@
 
 /* ── Sidebar Tooltip ── */
 .sidebar-tooltip {
+  max-width: calc(100vw - 96px);
+  overflow-wrap: anywhere;
   position: fixed;
   z-index: var(--z-tooltip);
   padding: 6px 12px;
@@ -193,6 +195,8 @@
 
 @media (prefers-reduced-motion: reduce) {
   .sidebar-tooltip {
+  max-width: calc(100vw - 96px);
+  overflow-wrap: anywhere;
     animation: none;
   }
 }

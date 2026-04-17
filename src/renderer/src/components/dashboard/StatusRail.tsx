@@ -36,12 +36,6 @@ interface Tile {
   accent?: 'active' | 'default'
 }
 
-const tileBase: React.CSSProperties = {
-  width: '100%',
-  textAlign: 'center',
-  cursor: 'pointer'
-}
-
 export function StatusRail({
   stats,
   tokens24h,
@@ -97,10 +91,6 @@ export function StatusRail({
             disabled={!clickable}
             onClick={() => {
               if (t.filter) onFilterClick(t.filter)
-            }}
-            style={{
-              ...tileBase,
-              cursor: clickable ? 'pointer' : 'default'
             }}
           >
             <div
