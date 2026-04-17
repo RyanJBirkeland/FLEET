@@ -35,6 +35,10 @@
   flex: 1;
 }
 
+.gt-toolbar-control {
+  height: 28px;
+}
+
 .git-tree-view__repo-select {
   background-color: var(--bde-surface-high);
   border: 1px solid var(--bde-border);
