@@ -21,13 +21,13 @@
 .fa-fab:hover,
 .fa-fab--active {
   background: var(--bde-surface-3);
-  color: var(--bde-neon-cyan, #00e5ff);
-  border-color: var(--bde-neon-cyan, #00e5ff);
-  box-shadow: 0 0 12px color-mix(in srgb, var(--bde-neon-cyan, #00e5ff) 40%, transparent);
+  color: var(--bde-accent);
+  border-color: var(--bde-accent);
+  box-shadow: 0 0 12px color-mix(in srgb, var(--bde-accent) 40%, transparent);
 }
 
 .fa-fab:focus-visible {
-  outline: 2px solid var(--bde-neon-cyan, #00e5ff);
+  outline: 2px solid var(--bde-accent);
   outline-offset: 2px;
 }
 
@@ -86,7 +86,7 @@
 .fa-panel__token-fill {
   display: block;
   height: 100%;
-  background: var(--bde-neon-cyan, #00e5ff);
+  background: var(--bde-accent);
   border-radius: 2px;
   transition: width 0.3s;
 }
@@ -110,7 +110,7 @@
 
 .fa-panel__close:focus-visible,
 .fa-panel__new-chat:focus-visible {
-  outline: 2px solid var(--bde-neon-cyan, #00e5ff);
+  outline: 2px solid var(--bde-accent);
   outline-offset: 2px;
 }
 
@@ -191,7 +191,7 @@
 
 .fa-panel__input:focus-visible {
   outline: none;
-  border-color: var(--bde-neon-cyan, #00e5ff);
+  border-color: var(--bde-accent);
 }
 
 .fa-panel__send {
@@ -208,7 +208,7 @@
 }
 
 .fa-panel__send:not(:disabled):hover {
-  background: var(--bde-neon-cyan, #00e5ff);
+  background: var(--bde-accent);
   color: var(--bde-bg, #0a0a0a);
   border-color: transparent;
 }
@@ -219,6 +219,6 @@
 }
 
 .fa-panel__send:focus-visible {
-  outline: 2px solid var(--bde-neon-cyan, #00e5ff);
+  outline: 2px solid var(--bde-accent);
   outline-offset: 2px;
 }

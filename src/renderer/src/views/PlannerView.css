@@ -57,7 +57,7 @@
 
 .planner-header__search-input:focus-visible {
   border-color: var(--bde-accent);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .planner-header__search-input::placeholder {

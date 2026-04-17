@@ -145,7 +145,7 @@
   height: 4px;
   border-radius: 50%;
   background: var(--bde-accent);
-  box-shadow: transparent;
+  box-shadow: none;
   flex-shrink: 0;
 }
 

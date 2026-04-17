@@ -50,7 +50,7 @@
 
 .wb-spec__btn--primary:hover:not(:disabled) {
   background: var(--bde-accent-surface);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .wb-spec__btn--primary:active:not(:disabled) {
@@ -91,7 +91,7 @@
 
 .wb-spec__textarea:focus-visible {
   border-color: var(--bde-accent);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .wb-spec__textarea:focus-visible {

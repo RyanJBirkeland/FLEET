@@ -100,7 +100,7 @@
 }
 
 .wb-deps__type--soft:hover {
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .wb-deps__type:focus-visible {

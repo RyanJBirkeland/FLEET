@@ -175,7 +175,7 @@ export function AuthStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
             <code
               style={{
                 padding: '4px 10px',
-                background: 'var(--bde-color-surface-alt, rgba(0,0,0,0.08))',
+                background: 'var(--bde-surface, rgba(0,0,0,0.08))',
                 borderRadius: '4px',
                 fontFamily: 'monospace',
                 fontSize: 'var(--bde-size-sm)'
@@ -206,7 +206,7 @@ export function AuthStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
             <code
               style={{
                 padding: '4px 10px',
-                background: 'var(--bde-color-surface-alt, rgba(0,0,0,0.08))',
+                background: 'var(--bde-surface, rgba(0,0,0,0.08))',
                 borderRadius: '4px',
                 fontFamily: 'monospace',
                 fontSize: 'var(--bde-size-sm)'

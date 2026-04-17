@@ -65,7 +65,7 @@
 
 .wb-form__input:focus-visible {
   border-color: var(--bde-accent);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .wb-form__input:focus-visible {
@@ -104,7 +104,7 @@
 
 .wb-form__select:focus-visible {
   border-color: var(--bde-accent);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .wb-form__select:focus-visible {

@@ -32,7 +32,7 @@
 
 .wb__copilot-toggle button:hover:not(:disabled) {
   background: var(--bde-accent-surface);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 /* ── Copilot discovery popover ── */
@@ -125,7 +125,7 @@
 
 .wb-copilot-popover__cta:hover {
   background: var(--bde-accent-surface);
-  box-shadow: transparent);
+  box-shadow: none;
 }
 
 .wb-copilot-popover__cta:focus-visible {

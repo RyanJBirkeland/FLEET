@@ -262,7 +262,7 @@ export function ConnectionsSection(): React.JSX.Element {
             marginTop: 'var(--bde-space-3)',
             padding: 'var(--bde-space-2)',
             borderRadius: '4px',
-            background: 'var(--bde-color-surface-alt, rgba(0,0,0,0.04))',
+            background: 'var(--bde-surface, rgba(0,0,0,0.04))',
             cursor: 'pointer'
           }}
         >
@@ -279,7 +279,7 @@ export function ConnectionsSection(): React.JSX.Element {
               id="github-opt-out-description"
               style={{
                 fontSize: 'var(--bde-size-xs)',
-                color: 'var(--bde-color-text-muted)',
+                color: 'var(--bde-text-muted)',
                 marginTop: '2px'
               }}
             >

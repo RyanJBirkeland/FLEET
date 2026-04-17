@@ -109,5 +109,5 @@
   background: var(--bde-accent-surface);
   border-left: 2px solid var(--bde-accent);
   padding-left: 10px;
-  box-shadow: transparent;
+  box-shadow: none;
 }

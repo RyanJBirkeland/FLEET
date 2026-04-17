@@ -87,7 +87,7 @@ export function DoneStep({ onBack, onComplete, isFirst }: StepProps): React.JSX.
         >
           <label
             htmlFor="onboarding-done-repo-select"
-            style={{ fontSize: 'var(--bde-size-xs)', color: 'var(--bde-color-text-muted)' }}
+            style={{ fontSize: 'var(--bde-size-xs)', color: 'var(--bde-text-muted)' }}
           >
             Start in repository
           </label>
@@ -98,8 +98,8 @@ export function DoneStep({ onBack, onComplete, isFirst }: StepProps): React.JSX.
             style={{
               padding: '6px 10px',
               borderRadius: '4px',
-              border: '1px solid var(--bde-color-border)',
-              background: 'var(--bde-color-surface)'
+              border: '1px solid var(--bde-border)',
+              background: 'var(--bde-surface)'
             }}
           >
             {repoOptions.map((opt) => (

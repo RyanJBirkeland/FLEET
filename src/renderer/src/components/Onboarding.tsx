@@ -235,7 +235,7 @@ export function Onboarding({ onReady }: OnboardingProps): React.JSX.Element {
               style={{
                 margin: 'var(--bde-space-1) 0 0 0',
                 fontSize: 'var(--bde-size-xs)',
-                color: 'var(--bde-color-text-muted)'
+                color: 'var(--bde-text-muted)'
               }}
             >
               After running the command, click <strong>Re-check</strong> below to verify.
@@ -250,7 +250,7 @@ export function Onboarding({ onReady }: OnboardingProps): React.JSX.Element {
             style={{
               margin: 'var(--bde-space-3) 0 0 0',
               fontSize: 'var(--bde-size-xs)',
-              color: 'var(--bde-color-warning, #ff9f43)'
+              color: 'var(--bde-warning, #ff9f43)'
             }}
           >
             Continuing skips: {failedChecks.join(', ')}. Agents and related features will fail until

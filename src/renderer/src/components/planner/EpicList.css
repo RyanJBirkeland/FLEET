@@ -95,7 +95,7 @@
 
 .planner-epic-list__new-button:hover:not(:disabled) {
   background: var(--bde-accent-surface);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .planner-epic-list__new-button:active:not(:disabled) {

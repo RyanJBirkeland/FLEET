@@ -30,7 +30,7 @@
 
 .console-header__status-dot--failed {
   background: var(--bde-danger);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .console-header__status-dot--cancelled {

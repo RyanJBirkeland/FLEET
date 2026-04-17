@@ -267,7 +267,7 @@
 
 .epic-detail__add-task-row:hover {
   background: var(--bde-accent-surface);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 /* Completed Tasks Section */
@@ -365,7 +365,7 @@
 
 .epic-detail__queue-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: transparent;
+  box-shadow: none;
 }
 
 .epic-detail__queue-btn:disabled {

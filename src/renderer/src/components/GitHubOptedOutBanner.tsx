@@ -37,14 +37,14 @@ export function GitHubOptedOutBanner(): React.JSX.Element | null {
         gap: 'var(--bde-space-2)',
         padding: '6px 12px',
         margin: '0 0 var(--bde-space-2) 0',
-        background: 'var(--bde-color-warning-surface, rgba(255,159,67,0.1))',
-        border: '1px solid var(--bde-color-warning, #ff9f43)',
+        background: 'var(--bde-warning-surface, rgba(255,159,67,0.1))',
+        border: '1px solid var(--bde-warning, #ff9f43)',
         borderRadius: '4px',
-        color: 'var(--bde-color-text)',
+        color: 'var(--bde-text)',
         fontSize: 'var(--bde-size-xs)'
       }}
     >
-      <AlertTriangle size={14} color="var(--bde-color-warning, #ff9f43)" />
+      <AlertTriangle size={14} color="var(--bde-warning, #ff9f43)" />
       <span style={{ flex: 1 }}>
         GitHub disabled — PR actions unavailable. Enable in Onboarding or run{' '}
         <code>gh auth login</code>, then unset{' '}
@@ -67,7 +67,7 @@ export function GitHubOptedOutBanner(): React.JSX.Element | null {
           padding: '2px',
           display: 'flex',
           alignItems: 'center',
-          color: 'var(--bde-color-text-muted)'
+          color: 'var(--bde-text-muted)'
         }}
       >
         <X size={14} />
