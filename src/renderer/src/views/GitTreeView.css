@@ -111,7 +111,7 @@
 .git-tree-view__error-retry {
   padding: var(--bde-space-1) var(--bde-space-3);
   background: var(--bde-error);
-  color: white;
+  color: var(--bde-btn-primary-text);
   border: none;
   border-radius: var(--bde-radius-sm);
   font-size: var(--bde-size-sm);
