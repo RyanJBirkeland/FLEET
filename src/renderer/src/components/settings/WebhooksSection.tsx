@@ -184,7 +184,11 @@ export function WebhooksSection(): React.JSX.Element {
   return (
     <div className="settings-cards-list">
       {webhooks.length === 0 && (
-        <span className="settings-repos__empty">No webhooks configured</span>
+        <SettingsCard title="Webhooks" subtitle="No webhooks configured">
+          <p className="settings-empty-state">
+            Add a webhook to receive task event notifications at an external URL.
+          </p>
+        </SettingsCard>
       )}
 
       {webhooks.map((webhook) => (
