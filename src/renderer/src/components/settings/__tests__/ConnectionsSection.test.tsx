@@ -44,8 +44,7 @@ describe('ConnectionsSection', () => {
 
   it('renders GitHub credential form', async () => {
     render(<ConnectionsSection />)
-    // "GitHub" appears twice now: card title and About section link
-    expect(screen.getAllByText('GitHub').length).toBeGreaterThanOrEqual(1)
+    expect(screen.getByText('GitHub')).toBeInTheDocument()
     expect(screen.getByText('Personal Access Token')).toBeInTheDocument()
   })
 
