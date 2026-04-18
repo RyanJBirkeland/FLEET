@@ -17,15 +17,17 @@
 
 .stg-content {
   flex: 1;
-  padding: var(--bde-space-5) var(--bde-space-6);
+  padding: var(--bde-space-5) clamp(var(--bde-space-4), 4vw, var(--bde-space-8));
   overflow-y: auto;
   min-width: 0;
 }
 
 .stg-content__inner {
-  max-width: 560px;
+  width: 100%;
+  max-width: min(960px, 100%);
+  margin: 0 auto;
 }
 
 .stg-content__inner--wide {
-  max-width: 100%;
+  max-width: none;
 }
