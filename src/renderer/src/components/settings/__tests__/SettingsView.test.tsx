@@ -67,4 +67,18 @@ describe('SettingsView', () => {
     await user.click(repoLinks[0])
     expect(screen.getByText('Add Repository')).toBeInTheDocument()
   })
+
+  it('renders the Models sidebar entry', () => {
+    render(<SettingsView />)
+    expect(screen.getAllByText('Models').length).toBeGreaterThanOrEqual(1)
+  })
+
+  it('switches to Models section on sidebar click', async () => {
+    const user = userEvent.setup()
+    render(<SettingsView />)
+    const modelsLinks = screen.getAllByText('Models')
+    await user.click(modelsLinks[0])
+    expect(screen.getByText('Local backend')).toBeInTheDocument()
+    expect(screen.getByText('Active routing')).toBeInTheDocument()
+  })
 })

@@ -4,7 +4,7 @@
  */
 import './SettingsView.css'
 import { motion } from 'framer-motion'
-import { Palette, Link, GitBranch, FileText, Cpu, Brain, Info } from 'lucide-react'
+import { Palette, Link, GitBranch, FileText, Cpu, Brain, Info, Network } from 'lucide-react'
 import { SettingsSidebar } from '../components/settings/SettingsSidebar'
 import type { SettingsSection } from '../components/settings/SettingsSidebar'
 import { SettingsPageHeader } from '../components/settings/SettingsPageHeader'
@@ -13,6 +13,7 @@ import { ConnectionsSection } from '../components/settings/ConnectionsSection'
 import { RepositoriesSection } from '../components/settings/RepositoriesSection'
 import { TaskTemplatesSection } from '../components/settings/TaskTemplatesSection'
 import { AgentManagerSection } from '../components/settings/AgentManagerSection'
+import { ModelsSection } from '../components/settings/ModelsSection'
 import { MemorySection } from '../components/settings/MemorySection'
 import { AboutSection } from '../components/settings/AboutSection'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
@@ -24,6 +25,7 @@ const SECTIONS: SettingsSection[] = [
   { id: 'repositories', label: 'Repositories', icon: GitBranch, category: 'Projects' },
   { id: 'templates', label: 'Templates', icon: FileText, category: 'Projects' },
   { id: 'agents', label: 'Agents', icon: Cpu, category: 'Pipeline' },
+  { id: 'models', label: 'Models', icon: Network, category: 'Pipeline' },
   { id: 'memory', label: 'Memory', icon: Brain, category: 'App' },
   { id: 'appearance', label: 'Appearance & Shortcuts', icon: Palette, category: 'App' },
   { id: 'about', label: 'About & Usage', icon: Info, category: 'App' }
@@ -34,6 +36,7 @@ const SECTION_MAP: Record<string, () => React.JSX.Element> = {
   repositories: RepositoriesSection,
   templates: TaskTemplatesSection,
   agents: AgentManagerSection,
+  models: ModelsSection,
   memory: MemorySection,
   appearance: AppearanceSection,
   about: AboutSection
@@ -50,6 +53,11 @@ const SECTION_META: Record<string, { title: string; subtitle: string; wide: bool
   agents: {
     title: 'Agents',
     subtitle: 'Pipeline execution settings and agent permissions',
+    wide: false
+  },
+  models: {
+    title: 'Models',
+    subtitle: 'Route each agent type to Claude or a local model',
     wide: false
   },
   memory: { title: 'Memory', subtitle: 'Agent memory files', wide: true },
