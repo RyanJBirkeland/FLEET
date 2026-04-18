@@ -59,10 +59,10 @@ describe('Config handlers', () => {
     vi.clearAllMocks()
   })
 
-  it('registers all 12 settings channels', () => {
+  it('registers all 14 settings + mcp channels', () => {
     registerConfigHandlers()
 
-    expect(safeHandle).toHaveBeenCalledTimes(12)
+    expect(safeHandle).toHaveBeenCalledTimes(14)
     expect(safeHandle).toHaveBeenCalledWith('settings:get', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:hasSecret', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:set', expect.any(Function))
@@ -75,6 +75,8 @@ describe('Config handlers', () => {
     expect(safeHandle).toHaveBeenCalledWith('settings:listProfiles', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:deleteProfile', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:getEncryptionStatus', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('mcp:getToken', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('mcp:regenerateToken', expect.any(Function))
   })
 
   describe('handler functions', () => {
