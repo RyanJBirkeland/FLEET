@@ -84,6 +84,52 @@ function fakeDeps(overrides: Partial<TaskToolsDeps> = {}): TaskToolsDeps {
   }
 }
 
+describe('tasks.* write tools', () => {
+  it('tasks.create delegates to createTaskWithValidation', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    const res = await call('tasks.create', { title: 't', repo: 'bde' })
+    expect(deps.createTaskWithValidation).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 't', repo: 'bde' }),
+      expect.any(Object)
+    )
+    expect(JSON.parse(res.content[0].text).id).toBe('t1')
+  })
+
+  it('tasks.create rejects forbidden fields', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    // claimed_by is system-managed; zod strips unknown keys on .parse, so
+    // a forbidden field that survives is a schema bug. Assert the schema
+    // strips it by ensuring the delegate was not asked to set it.
+    await call('tasks.create', { title: 't', repo: 'bde', claimed_by: 'x' } as any)
+    const call0 = (deps.createTaskWithValidation as any).mock.calls[0][0]
+    expect(call0.claimed_by).toBeUndefined()
+  })
+
+  it('tasks.update throws when updateTask returns null', async () => {
+    const deps = fakeDeps({
+      updateTask: vi.fn(() => null)
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await expect(
+      call('tasks.update', { id: 't1', patch: { priority: 5 } })
+    ).rejects.toThrow(/not found/)
+  })
+
+  it('tasks.cancel routes through cancelTask (which triggers onStatusTerminal)', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    const res = await call('tasks.cancel', { id: 't1', reason: 'no longer needed' })
+    expect(deps.cancelTask).toHaveBeenCalledWith('t1', 'no longer needed')
+    expect(JSON.parse(res.content[0].text).status).toBe('cancelled')
+  })
+})
+
 describe('tasks.* read tools', () => {
   it('tasks.list filters by status and returns JSON text', async () => {
     const deps = fakeDeps()

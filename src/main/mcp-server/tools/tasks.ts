@@ -13,8 +13,6 @@ import {
   TaskUpdateSchema
 } from '../schemas'
 
-// T11 will register write tools using these schemas.
-void [TaskCreateSchema, TaskUpdateSchema, TaskCancelSchema]
 
 export interface TaskToolsDeps {
   listTasks: (status?: string) => SprintTask[]
@@ -85,11 +83,42 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
     }
   )
 
-  // tasks.create, tasks.update, tasks.cancel registered in Task 11.
-  registerTaskWriteTools(server, deps)
+    registerTaskWriteTools(server, deps)
 }
 
-// Placeholder so the file typechecks between task 10 and task 11.
-function registerTaskWriteTools(_server: McpServer, _deps: TaskToolsDeps): void {
-  // Implemented in Task 11.
+function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
+  server.tool(
+    'tasks.create',
+    'Create a new sprint task. Runs the same validation as the in-app Task Workbench.',
+    TaskCreateSchema.shape,
+    async (rawArgs) => {
+      const input = TaskCreateSchema.parse(rawArgs) as CreateTaskInput
+      const row = deps.createTaskWithValidation(input, { logger: deps.logger })
+      return json(row)
+    }
+  )
+
+  server.tool(
+    'tasks.update',
+    'Update an existing task. Status transitions are validated; forbidden fields are stripped.',
+    TaskUpdateSchema.shape,
+    async (rawArgs) => {
+      const { id, patch } = TaskUpdateSchema.parse(rawArgs)
+      const row = deps.updateTask(id, patch)
+      if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+      return json(row)
+    }
+  )
+
+  server.tool(
+    'tasks.cancel',
+    'Cancel a task. Runs through the terminal-status path so dependents are re-evaluated.',
+    TaskCancelSchema.shape,
+    async (rawArgs) => {
+      const { id, reason } = TaskCancelSchema.parse(rawArgs)
+      const row = deps.cancelTask(id, reason)
+      if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+      return json(row)
+    }
+  )
 }
