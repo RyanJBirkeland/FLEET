@@ -173,6 +173,33 @@ Git workflow interface for staging, committing, and pushing across configured re
 - **Auto-refresh**: Polls git status every 30s while the view is visible
 - Related: IDE, Code Review Station
 
+### Local MCP Server
+
+Opt-in HTTP server that exposes BDE's task and epic CRUD to local MCP-speaking agents (Claude Code, Claude Desktop, Cursor). Runs inside the Electron main process; all mutations go through the same services the UI uses, so validation, dependency auto-blocking, status-transition checks, audit trail, and renderer broadcast are preserved.
+
+- **Transport**: MCP Streamable HTTP at `http://127.0.0.1:<port>/mcp`. Default port `18792`.
+- **Auth**: bearer token stored in `~/.bde/mcp-token` (mode `0600`). Set `Authorization: Bearer <token>` on every request.
+- **Enable**: Settings → Connections → Local MCP Server → toggle "Enable MCP server".
+- **Tools**:
+  - `tasks.list` / `tasks.get` / `tasks.create` / `tasks.update` / `tasks.cancel` / `tasks.history`
+  - `epics.list` / `epics.get` / `epics.create` / `epics.update` / `epics.delete` / `epics.addTask` / `epics.removeTask` / `epics.setDependencies`
+  - `meta.repos` / `meta.taskStatuses` / `meta.dependencyConditions`
+- **Out of scope**: agent orchestration (claim/cancel/retry) and review-station actions. Local-only — binds to `127.0.0.1`.
+- **Example Claude Code config**:
+
+  ```json
+  {
+    "mcpServers": {
+      "bde": {
+        "url": "http://127.0.0.1:18792/mcp",
+        "headers": { "Authorization": "Bearer <paste-from-settings>" }
+      }
+    }
+  }
+  ```
+
+Related: Task Workbench, Sprint Pipeline, Task Dependencies.
+
 ## App Shell
 
 ### Dashboard
