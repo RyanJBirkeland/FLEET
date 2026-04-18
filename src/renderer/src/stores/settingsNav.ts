@@ -9,6 +9,7 @@ export type SettingsSectionId =
   | 'connections'
   | 'repositories'
   | 'agents'
+  | 'models'
   | 'templates'
   | 'memory'
   | 'appearance'
