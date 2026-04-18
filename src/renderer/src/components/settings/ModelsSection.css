@@ -1,0 +1,84 @@
+/* ModelsSection — segmented control for backend toggle. */
+.models-seg {
+  display: inline-flex;
+  border: 1px solid var(--bde-border);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.models-seg__btn {
+  padding: 4px 12px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--bde-text-2);
+  border: none;
+  cursor: pointer;
+}
+
+.models-seg__btn[aria-checked='true'] {
+  background: var(--bde-accent);
+  color: var(--bde-text-1);
+}
+
+.models-seg__btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.models-row {
+  padding: 10px 0;
+  border-top: 1px solid var(--bde-border-subtle, var(--bde-border));
+}
+
+.models-row:first-child {
+  border-top: none;
+}
+
+.models-row[aria-disabled='true'] {
+  opacity: 0.55;
+}
+
+.models-row__label {
+  font-weight: 600;
+  font-size: 13px;
+  margin-bottom: 2px;
+}
+
+.models-row__desc {
+  font-size: 11px;
+  color: var(--bde-text-2);
+  margin-bottom: 8px;
+}
+
+.models-row__controls {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.models-row__controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.models-status {
+  font-size: 11px;
+  margin-top: 6px;
+}
+
+.models-status--ok {
+  color: var(--bde-success, #3ccf6a);
+}
+
+.models-status--err {
+  color: var(--bde-danger, #e06060);
+}
+
+.models-save-row {
+  display: flex;
+  justify-content: flex-end;
+  padding: 12px 0;
+}
