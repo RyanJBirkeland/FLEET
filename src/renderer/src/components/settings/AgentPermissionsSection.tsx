@@ -3,6 +3,7 @@
  * Reads/writes ~/.claude/settings.json via IPC. Includes a consent banner,
  * preset configurations, tool checkboxes, and a custom deny-rule editor.
  */
+import './AgentPermissionsSection.css'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toast } from '../../stores/toasts'
 import { Button } from '../ui/Button'
