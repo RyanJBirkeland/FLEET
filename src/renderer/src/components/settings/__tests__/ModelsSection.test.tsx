@@ -201,3 +201,77 @@ describe('ModelsSection — save orchestration', () => {
     })
   })
 })
+
+describe('ModelsSection — test connection', () => {
+  it('shows success state after a reachable endpoint returns', async () => {
+    const user = userEvent.setup()
+    vi.mocked(window.api.agents.testLocalEndpoint).mockResolvedValue({
+      ok: true,
+      latencyMs: 18,
+      modelCount: 4
+    })
+
+    render(<ModelsSection />)
+    await user.click(screen.getByRole('button', { name: /test connection/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/Reachable — 4 models loaded/i)).toBeInTheDocument()
+    })
+  })
+
+  it('shows error state when the endpoint is unreachable', async () => {
+    const user = userEvent.setup()
+    vi.mocked(window.api.agents.testLocalEndpoint).mockResolvedValue({
+      ok: false,
+      error: 'ECONNREFUSED'
+    })
+
+    render(<ModelsSection />)
+    await user.click(screen.getByRole('button', { name: /test connection/i }))
+
+    await waitFor(() => {
+      expect(screen.getByText(/ECONNREFUSED/i)).toBeInTheDocument()
+    })
+  })
+
+  it('disables the Test button while the check is in flight', async () => {
+    const user = userEvent.setup()
+    let resolve: (v: { ok: true; latencyMs: number; modelCount: number }) => void = () => {}
+    const pending = new Promise<{ ok: true; latencyMs: number; modelCount: number }>(
+      (r) => (resolve = r)
+    )
+    vi.mocked(window.api.agents.testLocalEndpoint).mockReturnValue(pending)
+
+    render(<ModelsSection />)
+    const btn = screen.getByRole('button', { name: /test connection/i })
+    await user.click(btn)
+
+    await waitFor(() => {
+      expect(btn).toBeDisabled()
+    })
+
+    resolve({ ok: true, latencyMs: 1, modelCount: 1 })
+  })
+
+  it('clears any stale result when the endpoint is edited', async () => {
+    const user = userEvent.setup()
+    vi.mocked(window.api.agents.testLocalEndpoint).mockResolvedValue({
+      ok: true,
+      latencyMs: 5,
+      modelCount: 2
+    })
+
+    render(<ModelsSection />)
+    await user.click(screen.getByRole('button', { name: /test connection/i }))
+    await waitFor(() => {
+      expect(screen.getByText(/Reachable — 2 models loaded/i)).toBeInTheDocument()
+    })
+
+    const endpoint = screen.getByPlaceholderText('http://localhost:1234/v1') as HTMLInputElement
+    await user.type(endpoint, 'X')
+
+    await waitFor(() => {
+      expect(screen.queryByText(/Reachable — 2 models loaded/i)).toBeNull()
+    })
+  })
+})

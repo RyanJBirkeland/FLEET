@@ -9,10 +9,16 @@
  * Saves the entire BackendSettings object in one atomic setJson call.
  */
 import './ModelsSection.css'
-import { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { SettingsCard } from './SettingsCard'
 import { Button } from '../ui/Button'
 import { toast } from '../../stores/toasts'
+
+type TestConnState =
+  | { kind: 'idle' }
+  | { kind: 'pending' }
+  | { kind: 'ok'; modelCount: number; latencyMs: number }
+  | { kind: 'fail'; error: string }
 
 const DEFAULT_LOCAL_ENDPOINT = 'http://localhost:1234/v1'
 const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-5'
@@ -81,6 +87,17 @@ export function ModelsSection(): React.JSX.Element {
   const [settings, setSettings] = useState<BackendSettings>(defaultBackendSettings)
   const [dirty, setDirty] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [testConn, setTestConn] = useState<TestConnState>({ kind: 'idle' })
+
+  const handleTestConnection = useCallback(async (): Promise<void> => {
+    setTestConn({ kind: 'pending' })
+    const result = await window.api.agents.testLocalEndpoint(settings.localEndpoint)
+    if (result.ok) {
+      setTestConn({ kind: 'ok', modelCount: result.modelCount, latencyMs: result.latencyMs })
+    } else {
+      setTestConn({ kind: 'fail', error: result.error })
+    }
+  }, [settings.localEndpoint])
 
   useEffect(() => {
     async function load(): Promise<void> {
@@ -104,6 +121,7 @@ export function ModelsSection(): React.JSX.Element {
 
   function updateEndpoint(next: string): void {
     updateSettings({ ...settings, localEndpoint: next })
+    setTestConn({ kind: 'idle' })
   }
 
   const handleSave = useCallback(async (): Promise<void> => {
@@ -135,6 +153,19 @@ export function ModelsSection(): React.JSX.Element {
             placeholder={DEFAULT_LOCAL_ENDPOINT}
           />
         </label>
+        <div className="models-row__controls" style={{ marginTop: '8px' }}>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={handleTestConnection}
+            disabled={testConn.kind === 'pending'}
+            loading={testConn.kind === 'pending'}
+          >
+            Test connection
+          </Button>
+          <TestConnIndicator state={testConn} />
+        </div>
       </SettingsCard>
 
       <SettingsCard title="Active routing" subtitle="Types wired through spawnAgent today.">
@@ -177,6 +208,29 @@ export function ModelsSection(): React.JSX.Element {
         </Button>
       </div>
     </div>
+  )
+}
+
+function TestConnIndicator({ state }: { state: TestConnState }): React.JSX.Element | null {
+  if (state.kind === 'idle') return null
+  if (state.kind === 'pending') {
+    return (
+      <span className="models-status" aria-live="polite">
+        Testing…
+      </span>
+    )
+  }
+  if (state.kind === 'ok') {
+    return (
+      <span className="models-status models-status--ok" aria-live="polite">
+        ✓ Reachable — {state.modelCount} models loaded ({state.latencyMs} ms)
+      </span>
+    )
+  }
+  return (
+    <span className="models-status models-status--err" aria-live="polite">
+      ✕ {state.error}
+    </span>
   )
 }
 
