@@ -14,6 +14,9 @@ import { SettingsCard } from './SettingsCard'
 
 const DEFAULT_LOCAL_ENDPOINT = 'http://localhost:1234/v1'
 const DEFAULT_CLAUDE_MODEL = 'claude-sonnet-4-5'
+const DEFAULT_LOCAL_MODEL = ''
+const LOCAL_MODEL_PLACEHOLDER = 'openai/qwen/qwen3.6-35b-a3b'
+const CLAUDE_MODELS = ['claude-sonnet-4-5', 'claude-opus-4-7', 'claude-haiku-4-5'] as const
 
 type AgentTypeId =
   | 'pipeline'
@@ -22,6 +25,8 @@ type AgentTypeId =
   | 'assistant'
   | 'adhoc'
   | 'reviewer'
+
+type BackendKind = 'claude' | 'local'
 
 interface AgentTypeMeta {
   id: AgentTypeId
@@ -42,7 +47,7 @@ const NOT_YET_ROUTED_TYPES: AgentTypeMeta[] = [
 ]
 
 interface AgentBackendConfig {
-  backend: 'claude' | 'local'
+  backend: BackendKind
   model: string
 }
 
@@ -84,6 +89,10 @@ export function ModelsSection(): React.JSX.Element {
     void load()
   }, [])
 
+  function updateRow(id: AgentTypeId, next: AgentBackendConfig): void {
+    setSettings((s) => ({ ...s, [id]: next }))
+  }
+
   return (
     <div className="settings-cards-list">
       <SettingsCard
@@ -106,7 +115,13 @@ export function ModelsSection(): React.JSX.Element {
 
       <SettingsCard title="Active routing" subtitle="Types wired through spawnAgent today.">
         {ACTIVE_TYPES.map((type) => (
-          <AgentTypeRow key={type.id} type={type} disabled={false} />
+          <AgentTypeRow
+            key={type.id}
+            type={type}
+            value={settings[type.id]}
+            onChange={(next) => updateRow(type.id, next)}
+            disabled={false}
+          />
         ))}
       </SettingsCard>
 
@@ -115,7 +130,13 @@ export function ModelsSection(): React.JSX.Element {
         subtitle="Configuration preserved for when each type is wired through spawnAgent."
       >
         {NOT_YET_ROUTED_TYPES.map((type) => (
-          <AgentTypeRow key={type.id} type={type} disabled={true} />
+          <AgentTypeRow
+            key={type.id}
+            type={type}
+            value={settings[type.id]}
+            onChange={(next) => updateRow(type.id, next)}
+            disabled={true}
+          />
         ))}
       </SettingsCard>
     </div>
@@ -124,10 +145,20 @@ export function ModelsSection(): React.JSX.Element {
 
 interface AgentTypeRowProps {
   type: AgentTypeMeta
+  value: AgentBackendConfig
+  onChange: (next: AgentBackendConfig) => void
   disabled: boolean
 }
 
-function AgentTypeRow({ type, disabled }: AgentTypeRowProps): React.JSX.Element {
+function AgentTypeRow({ type, value, onChange, disabled }: AgentTypeRowProps): React.JSX.Element {
+  function toggleBackend(next: BackendKind): void {
+    if (next === value.backend) return
+    onChange({
+      backend: next,
+      model: next === 'claude' ? DEFAULT_CLAUDE_MODEL : DEFAULT_LOCAL_MODEL
+    })
+  }
+
   return (
     <div
       className="models-row"
@@ -137,6 +168,94 @@ function AgentTypeRow({ type, disabled }: AgentTypeRowProps): React.JSX.Element 
       <div className="models-row__label">{type.label}</div>
       <div className="models-row__desc">{type.description}</div>
       {disabled && <div className="models-row__desc">Not yet routed.</div>}
+      <div className="models-row__controls">
+        <BackendToggle
+          value={value.backend}
+          onChange={toggleBackend}
+          disabled={disabled}
+          rowId={type.id}
+        />
+        <ModelPicker
+          backend={value.backend}
+          model={value.model}
+          onChange={(model) => onChange({ ...value, model })}
+          disabled={disabled}
+        />
+      </div>
     </div>
+  )
+}
+
+interface BackendToggleProps {
+  value: BackendKind
+  onChange: (next: BackendKind) => void
+  disabled: boolean
+  rowId: string
+}
+
+function BackendToggle({ value, onChange, disabled, rowId }: BackendToggleProps): React.JSX.Element {
+  return (
+    <div role="radiogroup" aria-label={`${rowId} backend`} className="models-seg">
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === 'claude'}
+        data-value="claude"
+        disabled={disabled}
+        onClick={() => onChange('claude')}
+        className="models-seg__btn"
+      >
+        Claude
+      </button>
+      <button
+        type="button"
+        role="radio"
+        aria-checked={value === 'local'}
+        data-value="local"
+        disabled={disabled}
+        onClick={() => onChange('local')}
+        className="models-seg__btn"
+      >
+        Local
+      </button>
+    </div>
+  )
+}
+
+interface ModelPickerProps {
+  backend: BackendKind
+  model: string
+  onChange: (next: string) => void
+  disabled: boolean
+}
+
+function ModelPicker({ backend, model, onChange, disabled }: ModelPickerProps): React.JSX.Element {
+  if (backend === 'claude') {
+    return (
+      <select
+        className="settings-field__input"
+        value={model || DEFAULT_CLAUDE_MODEL}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        aria-label="Claude model"
+      >
+        {CLAUDE_MODELS.map((id) => (
+          <option key={id} value={id}>
+            {id}
+          </option>
+        ))}
+      </select>
+    )
+  }
+  return (
+    <input
+      className="settings-field__input"
+      type="text"
+      value={model}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={disabled}
+      placeholder={LOCAL_MODEL_PLACEHOLDER}
+      aria-label="Local model"
+    />
   )
 }

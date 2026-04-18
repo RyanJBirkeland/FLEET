@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 
 vi.mock('../../../stores/toasts', () => ({
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() }
@@ -74,5 +75,77 @@ describe('ModelsSection — agent type rows', () => {
     render(<ModelsSection />)
     expect(screen.getByText('Active routing')).toBeInTheDocument()
     expect(screen.getByText('Not yet routed')).toBeInTheDocument()
+  })
+})
+
+describe('ModelsSection — backend toggle + model picker', () => {
+  it('renders a Claude/Local segmented control on the Pipeline row', () => {
+    render(<ModelsSection />)
+    const pipelineRow = screen.getByTestId('models-row-pipeline')
+    const claudeBtn = pipelineRow.querySelector('button[role="radio"][data-value="claude"]')
+    const localBtn = pipelineRow.querySelector('button[role="radio"][data-value="local"]')
+    expect(claudeBtn).toBeInTheDocument()
+    expect(localBtn).toBeInTheDocument()
+  })
+
+  it('renders a Claude model select with the three known IDs by default', () => {
+    render(<ModelsSection />)
+    const pipelineRow = screen.getByTestId('models-row-pipeline')
+    const select = pipelineRow.querySelector('select') as HTMLSelectElement
+    expect(select).toBeInTheDocument()
+    const options = Array.from(select.options).map((o) => o.value)
+    expect(options).toEqual([
+      'claude-sonnet-4-5',
+      'claude-opus-4-7',
+      'claude-haiku-4-5'
+    ])
+  })
+
+  it('switches to a free-text input when Local is selected and resets model to empty', async () => {
+    const user = userEvent.setup()
+    render(<ModelsSection />)
+    const pipelineRow = screen.getByTestId('models-row-pipeline')
+    const localBtn = pipelineRow.querySelector(
+      'button[role="radio"][data-value="local"]'
+    ) as HTMLButtonElement
+    await user.click(localBtn)
+
+    await waitFor(() => {
+      const input = pipelineRow.querySelector(
+        'input[placeholder="openai/qwen/qwen3.6-35b-a3b"]'
+      ) as HTMLInputElement
+      expect(input).toBeInTheDocument()
+      expect(input.value).toBe('')
+    })
+  })
+
+  it('switches back to Claude resets model to claude-sonnet-4-5', async () => {
+    const user = userEvent.setup()
+    render(<ModelsSection />)
+    const pipelineRow = screen.getByTestId('models-row-pipeline')
+
+    const localBtn = pipelineRow.querySelector(
+      'button[role="radio"][data-value="local"]'
+    ) as HTMLButtonElement
+    await user.click(localBtn)
+
+    const claudeBtn = pipelineRow.querySelector(
+      'button[role="radio"][data-value="claude"]'
+    ) as HTMLButtonElement
+    await user.click(claudeBtn)
+
+    await waitFor(() => {
+      const select = pipelineRow.querySelector('select') as HTMLSelectElement
+      expect(select.value).toBe('claude-sonnet-4-5')
+    })
+  })
+
+  it('disables all controls on a Not-yet-routed row', () => {
+    render(<ModelsSection />)
+    const synthRow = screen.getByTestId('models-row-synthesizer')
+    const buttons = synthRow.querySelectorAll('button[role="radio"]')
+    buttons.forEach((btn) => expect(btn).toBeDisabled())
+    const select = synthRow.querySelector('select') as HTMLSelectElement | null
+    if (select) expect(select).toBeDisabled()
   })
 })
