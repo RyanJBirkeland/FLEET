@@ -153,3 +153,24 @@
 .settings-field__input[aria-invalid='true'] {
   border-color: var(--bde-danger);
 }
+
+/* ── Inline checkbox field variant ── */
+
+.settings-field--inline {
+  display: flex;
+  align-items: center;
+  gap: var(--bde-space-2);
+  margin-bottom: var(--bde-space-3);
+}
+
+.settings-field--inline .settings-field__label {
+  margin-bottom: 0;
+}
+
+/* ── Empty state inside a SettingsCard ── */
+
+.settings-empty-state {
+  color: var(--bde-text-muted);
+  margin: 0;
+  font-size: var(--bde-size-sm);
+}

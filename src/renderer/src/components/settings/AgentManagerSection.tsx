@@ -195,7 +195,7 @@ export function AgentManagerSection(): React.JSX.Element {
           )}
         </label>
 
-        <label className="settings-field">
+        <label className="settings-field settings-field--inline">
           <span className="settings-field__label">Auto-start</span>
           <input
             type="checkbox"
