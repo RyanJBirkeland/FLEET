@@ -12,7 +12,7 @@ You write specs. BDE queues them, spawns Claude Code sessions, monitors progress
 
 <br/>
 
-![BDE Dashboard — pipeline health, status counters, cost tracking, and live activity feed](docs/screenshots/dashboard-dark.png)
+![BDE Dashboard — pipeline health, status counters, cost tracking, and live activity feed](docs/screenshots/dashboard.png)
 
 _Dashboard: 6 active Claude Code sessions, 21 queued, 225 completed — all visible at a glance._
 
@@ -202,14 +202,19 @@ Every Claude Code session's token usage and cost are logged to `cost_events`. Th
 
 ### Dashboard
 
-Aggregated metrics at a glance: active/queued/blocked task counts, hourly completion charts, cost-per-run trends, success rate, and recent activity feed. Dark and light themes supported.
+Aggregated metrics at a glance: active/queued/blocked task counts, throughput over the last 24h, success-rate trend, system load, and a live activity feed. Dark and light themes supported.
 
 <p align="center">
-<img src="docs/screenshots/dashboard-dark.png" width="49%" alt="Dashboard — dark neon theme" />
-<img src="docs/screenshots/dashboard-light.png" width="49%" alt="Dashboard — light theme" />
+<img src="docs/screenshots/dashboard.png" width="90%" alt="Dashboard — overview of pipeline health, throughput, success rate, system load, and recent activity" />
 </p>
 
-_Left: dark neon theme. Right: light theme. Same data, same layout — pick what works for you._
+### Task Planner
+
+Group related tasks into epics with cross-epic dependencies, then send the whole batch to the pipeline with one click.
+
+<p align="center">
+<img src="docs/screenshots/task-planner.png" width="90%" alt="Task Planner — epics list on the left, epic detail with tasks and depends-on in the center" />
+</p>
 
 ---
 
