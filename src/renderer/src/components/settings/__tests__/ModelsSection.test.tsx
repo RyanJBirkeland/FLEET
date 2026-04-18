@@ -46,3 +46,33 @@ describe('ModelsSection — scaffold', () => {
     })
   })
 })
+
+describe('ModelsSection — agent type rows', () => {
+  it('renders all six agent-type labels', () => {
+    render(<ModelsSection />)
+    expect(screen.getByText('Pipeline')).toBeInTheDocument()
+    expect(screen.getByText('Synthesizer')).toBeInTheDocument()
+    expect(screen.getByText('Copilot')).toBeInTheDocument()
+    expect(screen.getByText('Assistant')).toBeInTheDocument()
+    expect(screen.getByText('Adhoc')).toBeInTheDocument()
+    expect(screen.getByText('Reviewer')).toBeInTheDocument()
+  })
+
+  it('marks the Pipeline row as active and the others as not-yet-routed', () => {
+    render(<ModelsSection />)
+    const pipelineRow = screen.getByTestId('models-row-pipeline')
+    expect(pipelineRow).not.toHaveAttribute('aria-disabled', 'true')
+
+    const synthRow = screen.getByTestId('models-row-synthesizer')
+    expect(synthRow).toHaveAttribute('aria-disabled', 'true')
+
+    const notRoutedNotes = screen.getAllByText(/Not yet routed/i)
+    expect(notRoutedNotes.length).toBeGreaterThanOrEqual(5)
+  })
+
+  it('renders card headings for Active routing and Not yet routed', () => {
+    render(<ModelsSection />)
+    expect(screen.getByText('Active routing')).toBeInTheDocument()
+    expect(screen.getByText('Not yet routed')).toBeInTheDocument()
+  })
+})
