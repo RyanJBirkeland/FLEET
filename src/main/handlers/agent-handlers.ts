@@ -25,6 +25,47 @@ export interface PromoteToReviewResult {
   error?: string
 }
 
+export async function testLocalEndpoint(
+  endpoint: string
+): Promise<
+  | { ok: true; latencyMs: number; modelCount: number }
+  | { ok: false; error: string }
+> {
+  const started = Date.now()
+  try {
+    const trimmed = endpoint.replace(/\/$/, '')
+    const response = await fetch(`${trimmed}/models`, {
+      signal: AbortSignal.timeout(2000)
+    })
+    if (!response.ok) {
+      return { ok: false, error: `HTTP ${response.status}` }
+    }
+    const body = (await response.json()) as unknown
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      !Array.isArray((body as { data?: unknown }).data)
+    ) {
+      return { ok: false, error: 'Unexpected response shape — no data array' }
+    }
+    return {
+      ok: true,
+      latencyMs: Date.now() - started,
+      modelCount: (body as { data: unknown[] }).data.length
+    }
+  } catch (err) {
+    if (err instanceof DOMException && err.name === 'AbortError') {
+      return { ok: false, error: 'timeout after 2s' }
+    }
+    const cause = (err as { cause?: { code?: string } })?.cause
+    if (cause?.code) {
+      return { ok: false, error: cause.code }
+    }
+    const message = err instanceof Error ? err.message : String(err)
+    return { ok: false, error: message }
+  }
+}
+
 export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardRepository): void {
   const effectiveRepo = repo ?? createSprintTaskRepository()
 
@@ -131,6 +172,10 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
         return { ok: false, error: msg }
       }
     }
+  )
+
+  safeHandle('agents:testLocalEndpoint', (_e, args: { endpoint: string }) =>
+    testLocalEndpoint(args.endpoint)
   )
 
   safeHandle('agent:latestCacheTokens', async (_e, runId: string) => {
