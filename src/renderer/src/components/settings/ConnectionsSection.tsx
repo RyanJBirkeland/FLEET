@@ -10,6 +10,7 @@ import { Badge } from '../ui/Badge'
 import { CredentialForm, type CredentialField } from './CredentialForm'
 import { SettingsCard } from './SettingsCard'
 import { WebhooksSection } from './WebhooksSection'
+import { LocalMcpServerSection } from './LocalMcpServerSection'
 
 // --- Encryption Status types ---
 interface EncryptionStatus {
@@ -271,6 +272,8 @@ export function ConnectionsSection(): React.JSX.Element {
       </SettingsCard>
 
       <WebhooksSection />
+
+      <LocalMcpServerSection />
     </section>
   )
 }

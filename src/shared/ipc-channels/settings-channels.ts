@@ -81,3 +81,15 @@ export interface OnboardingChannels {
     result: { available: boolean; authenticated: boolean; version?: string }
   }
 }
+
+/** MCP server token management */
+export interface McpChannels {
+  'mcp:getToken': {
+    args: []
+    result: string
+  }
+  'mcp:regenerateToken': {
+    args: []
+    result: string
+  }
+}

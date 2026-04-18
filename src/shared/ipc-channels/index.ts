@@ -111,7 +111,8 @@ export type {
   SettingsChannels,
   ClaudeConfigChannels,
   AuthChannels,
-  OnboardingChannels
+  OnboardingChannels,
+  McpChannels
 } from './settings-channels'
 
 // UI channels
@@ -171,4 +172,5 @@ export type IpcChannelMap = import('./settings-channels').SettingsChannels &
   import('./sprint-channels').PlannerChannels &
   import('./system-channels').SystemChannels &
   import('./system-channels').RepoDiscoveryChannels &
-  import('./settings-channels').OnboardingChannels
+  import('./settings-channels').OnboardingChannels &
+  import('./settings-channels').McpChannels

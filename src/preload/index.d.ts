@@ -525,6 +525,12 @@ declare global {
         clone: (owner: string, repo: string, destDir: string) => Promise<void>
         onCloneProgress: (cb: (data: CloneProgressEvent) => void) => () => void
       }
+
+      // MCP server management
+      mcp: {
+        getToken: () => Promise<string>
+        regenerateToken: () => Promise<string>
+      }
     }
   }
 }

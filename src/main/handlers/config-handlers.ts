@@ -10,6 +10,7 @@ import {
   deleteProfile
 } from '../services/settings-profiles'
 import { validateWorktreeBase } from '../paths'
+import { emitSettingChanged } from '../mcp-server/settings-events'
 
 /** Setting keys that require path safety validation before writing. */
 const PATH_VALIDATORS: Record<string, (value: string) => void> = {
@@ -41,17 +42,22 @@ export function registerConfigHandlers(): void {
     const validate = PATH_VALIDATORS[key]
     if (validate) validate(value)
     setSetting(key, value)
+    emitSettingChanged({ key, value })
   })
   safeHandle('settings:getJson', (_e, key: string) => {
     if (SENSITIVE_SETTING_KEYS.has(key)) return null
     return getSettingJson(key)
   })
-  safeHandle('settings:setJson', (_e, key: string, value: unknown) => setSettingJson(key, value))
+  safeHandle('settings:setJson', (_e, key: string, value: unknown) => {
+    setSettingJson(key, value)
+    emitSettingChanged({ key, value: typeof value === 'string' ? value : JSON.stringify(value) })
+  })
   safeHandle('settings:delete', (_e, key: string) => {
     if (SENSITIVE_SETTING_KEYS.has(key)) {
       throw new Error(`Cannot delete sensitive setting "${key}" via this channel`)
     }
     deleteSetting(key)
+    emitSettingChanged({ key, value: null })
   })
 
   // Settings profiles
@@ -79,5 +85,23 @@ export function registerConfigHandlers(): void {
       available,
       reason: available ? undefined : 'System keychain unavailable'
     }
+  })
+
+  safeHandle('mcp:getToken', async () => {
+    const { readOrCreateToken } = await import('../mcp-server/token-store')
+    return readOrCreateToken()
+  })
+
+  safeHandle('mcp:regenerateToken', async () => {
+    const { regenerateToken } = await import('../mcp-server/token-store')
+    const token = await regenerateToken()
+    const enabled = getSetting('mcp.enabled') === 'true'
+    if (enabled) {
+      setSetting('mcp.enabled', 'false')
+      emitSettingChanged({ key: 'mcp.enabled', value: 'false' })
+      setSetting('mcp.enabled', 'true')
+      emitSettingChanged({ key: 'mcp.enabled', value: 'true' })
+    }
+    return token
   })
 }

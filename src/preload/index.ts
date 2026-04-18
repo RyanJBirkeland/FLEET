@@ -232,7 +232,13 @@ const api = {
   review,
 
   // Repository discovery
-  repoDiscovery
+  repoDiscovery,
+
+  // MCP server management
+  mcp: {
+    getToken: (): Promise<string> => ipcRenderer.invoke('mcp:getToken'),
+    regenerateToken: (): Promise<string> => ipcRenderer.invoke('mcp:regenerateToken')
+  }
 }
 
 if (process.contextIsolated) {

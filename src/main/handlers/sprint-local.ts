@@ -3,7 +3,6 @@ import { isValidAgentId, isValidTaskId } from '../lib/validation'
 import { getDb } from '../db'
 import { readFile } from 'fs/promises'
 import { createLogger } from '../logger'
-import { getRepoPaths } from '../git'
 import type { DialogService } from '../dialog-service'
 import type { TaskTemplate, ClaimedTask } from '../../shared/types'
 import type { WorkflowTemplate } from '../../shared/workflow-types'
@@ -18,20 +17,17 @@ import {
   type GeneratePromptRequest,
   type GeneratePromptResponse
 } from './sprint-spec'
-import { validateTaskCreation } from '../services/task-validation'
-import { SpecParser } from '../services/spec-quality/spec-parser'
-import { RequiredSectionsValidator } from '../services/spec-quality/validators/sync-validators'
 import {
   getTask,
   updateTask,
   forceUpdateTask,
-  createTask,
   deleteTask,
   getHealthCheckTasks,
   flagStuckTasks,
   listTasks,
   listTasksRecent,
   getSuccessRateBySpecType,
+  createTaskWithValidation,
   type CreateTaskInput
 } from '../services/sprint-service'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
@@ -42,7 +38,6 @@ import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { instantiateWorkflow } from '../services/workflow-engine'
 import { prepareQueueTransition, prepareUnblockTransition } from '../services/task-state-service'
-import { listGroups } from '../data/task-group-queries'
 
 const logger = createLogger('sprint-local')
 
@@ -60,37 +55,7 @@ export function registerSprintLocalHandlers(deps: SprintLocalDeps, repo?: ISprin
   })
 
   safeHandle('sprint:create', async (_e, task: CreateTaskInput) => {
-    const validation = validateTaskCreation(task, {
-      logger: { warn: (...args: unknown[]) => logger.warn(String(args[0])) },
-      listTasks,
-      listGroups
-    })
-    if (!validation.valid) {
-      throw new Error(`Spec quality checks failed: ${validation.errors.join('; ')}`)
-    }
-
-    // Server-side required sections check — synchronous, only enforced for queued tasks
-    if (validation.task.status === 'queued' && validation.task.spec) {
-      const parsed = new SpecParser().parse(validation.task.spec)
-      const sectionErrors = new RequiredSectionsValidator()
-        .validate(parsed)
-        .filter((issue) => issue.severity === 'error')
-      if (sectionErrors.length > 0) {
-        throw new Error(`Spec quality checks failed: ${sectionErrors[0].message}`)
-      }
-    }
-
-    const repoPaths = getRepoPaths()
-    if (!repoPaths[validation.task.repo]) {
-      throw new Error(
-        `Repo "${validation.task.repo}" is not configured. Add it in Settings > Repositories, then try again.`
-      )
-    }
-
-    // createTask (service) handles notifySprintMutation internally
-    const row = createTask(validation.task)
-    if (!row) throw new Error('Failed to create task')
-    return row
+    return createTaskWithValidation(task, { logger })
   })
 
   safeHandle('sprint:createWorkflow', async (_e, template: WorkflowTemplate) => {

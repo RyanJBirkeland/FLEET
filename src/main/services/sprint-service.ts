@@ -11,6 +11,12 @@
 import * as mutations from './sprint-mutations'
 import * as broadcaster from './sprint-mutation-broadcaster'
 import type { SprintTask } from '../../shared/types'
+import { validateTaskCreation } from './task-validation'
+import { SpecParser } from './spec-quality/spec-parser'
+import { RequiredSectionsValidator } from './spec-quality/validators/sync-validators'
+import { getRepoPaths } from '../git'
+import { listGroups } from '../data/task-group-queries'
+import type { Logger } from '../logger'
 
 export type {
   CreateTaskInput,
@@ -90,5 +96,45 @@ export function createReviewTaskFromAdhoc(input: {
 }): SprintTask | null {
   const row = mutations.createReviewTaskFromAdhoc(input)
   if (row) broadcaster.notifySprintMutation('created', row)
+  return row
+}
+
+export interface CreateTaskWithValidationDeps {
+  logger: Logger
+}
+
+/** Shared task-creation entry point for the sprint:create IPC handler and the MCP server. */
+export function createTaskWithValidation(
+  input: mutations.CreateTaskInput,
+  deps: CreateTaskWithValidationDeps
+): SprintTask {
+  const validation = validateTaskCreation(input, {
+    logger: { warn: (msg) => deps.logger.warn(msg as string) },
+    listTasks: mutations.listTasks,
+    listGroups
+  })
+  if (!validation.valid) {
+    throw new Error(`Spec quality checks failed: ${validation.errors.join('; ')}`)
+  }
+
+  if (validation.task.status === 'queued' && validation.task.spec) {
+    const parsed = new SpecParser().parse(validation.task.spec)
+    const sectionErrors = new RequiredSectionsValidator()
+      .validate(parsed)
+      .filter((issue) => issue.severity === 'error')
+    if (sectionErrors.length > 0) {
+      throw new Error(`Spec quality checks failed: ${sectionErrors[0].message}`)
+    }
+  }
+
+  const repoPaths = getRepoPaths()
+  if (!repoPaths[validation.task.repo]) {
+    throw new Error(
+      `Repo "${validation.task.repo}" is not configured. Add it in Settings > Repositories, then try again.`
+    )
+  }
+
+  const row = createTask(validation.task)
+  if (!row) throw new Error('Failed to create task')
   return row
 }
