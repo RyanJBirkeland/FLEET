@@ -166,6 +166,7 @@ Format: `{type}: {description}`
 - Repo search service: `src/main/services/repo-search-service.ts` — `searchRepo()` + `parseGrepOutput()`, used by `workbench:researchRepo` handler
 - Dependency index refresh: `src/main/agent-manager/dependency-refresher.ts` — `refreshDependencyIndex()`, `computeDepsFingerprint()`
 - Terminal status handler: `src/main/agent-manager/terminal-handler.ts` — `handleTaskTerminal()` (metrics + dep resolution + cleanup timer)
+- MCP server: `src/main/mcp-server/` — opt-in local MCP server for external agents; toggle via `mcp.enabled` setting. Token in `~/.bde/mcp-token`.
 
 ## PR Rules
 
@@ -251,6 +252,7 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **Computed selectors (not stored state)**: `activeTaskCount` → use `selectActiveTaskCount` from `sprintTasks` store; `latestEvents` → use `selectLatestEvent(taskId)` from `sprintEvents` store
 - **Failure pattern matching**: `classifyFailureReason` in `src/main/agent-manager/failure-classifier.ts` uses `FAILURE_PATTERNS` array — add entries there to handle new SDK/git error messages; don't add more if-chains
 - **Preload broadcast pattern**: New main→renderer event channels should use `onBroadcast<T>(channel)` factory in `src/preload/index.ts` — avoids boilerplate subscription wiring
+- **MCP server**: `src/main/mcp-server/` — Streamable HTTP on `127.0.0.1:<port>` (default 18792). All mutations route through `sprint-service` / `EpicGroupService`.
 - **Full architecture**: See `docs/architecture.md`
 
 ## Packaging
