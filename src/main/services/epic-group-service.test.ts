@@ -84,4 +84,16 @@ describe('createEpicGroupService', () => {
     const svc = createEpicGroupService(queries)
     expect(() => svc.updateEpic('missing', { name: 'y' })).toThrow(/not found/)
   })
+
+  it('throws on removeDependency when queries return null', () => {
+    queries.removeGroupDependency.mockReturnValue(null)
+    const svc = createEpicGroupService(queries)
+    expect(() => svc.removeDependency('g1', 'upstream')).toThrow(/Failed to remove dependency/)
+  })
+
+  it('throws on updateDependencyCondition when queries return null', () => {
+    queries.updateGroupDependencyCondition.mockReturnValue(null)
+    const svc = createEpicGroupService(queries)
+    expect(() => svc.updateDependencyCondition('g1', 'upstream', 'on_success')).toThrow(/Failed to update dependency condition/)
+  })
 })

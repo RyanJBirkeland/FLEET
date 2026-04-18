@@ -124,6 +124,7 @@ export function createEpicGroupService(
       rebuildIndex()
     },
 
+    // task membership does not affect the epic dependency graph — no rebuild needed
     addTask(epicId, taskId) {
       const ok = queries.addTaskToGroup(taskId, epicId)
       if (!ok) throw new Error(`Failed to add task ${taskId} to group ${epicId}`)
