@@ -86,4 +86,22 @@ export function registerConfigHandlers(): void {
       reason: available ? undefined : 'System keychain unavailable'
     }
   })
+
+  safeHandle('mcp:getToken', async () => {
+    const { readOrCreateToken } = await import('../mcp-server/token-store')
+    return readOrCreateToken()
+  })
+
+  safeHandle('mcp:regenerateToken', async () => {
+    const { regenerateToken } = await import('../mcp-server/token-store')
+    const token = await regenerateToken()
+    const enabled = getSetting('mcp.enabled') === 'true'
+    if (enabled) {
+      setSetting('mcp.enabled', 'false')
+      emitSettingChanged({ key: 'mcp.enabled', value: 'false' })
+      setSetting('mcp.enabled', 'true')
+      emitSettingChanged({ key: 'mcp.enabled', value: 'true' })
+    }
+    return token
+  })
 }

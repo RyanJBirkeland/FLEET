@@ -333,5 +333,11 @@ vi.stubGlobal('api', {
   // Onboarding prerequisite checks
   onboarding: {
     checkGhCli: vi.fn().mockResolvedValue({ available: true, authenticated: true, version: '2.40.0' })
+  },
+
+  // MCP server management
+  mcp: {
+    getToken: vi.fn().mockResolvedValue('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2'),
+    regenerateToken: vi.fn().mockResolvedValue('a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2c3d4e5f6a1b2')
   }
 })
