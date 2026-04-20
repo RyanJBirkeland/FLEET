@@ -8,7 +8,6 @@ import type { AgentHandle } from './types'
 import type { Logger } from '../logger'
 import type { AgentType } from '../agent-system/personality/types'
 import { dirname, resolve as resolvePath } from 'node:path'
-import { homedir } from 'node:os'
 import { DEFAULT_CONFIG, SPAWN_TIMEOUT_MS } from './types'
 import { buildAgentEnv, getOAuthToken } from '../env-utils'
 import { resolveNodeExecutable } from './resolve-node'
@@ -24,23 +23,19 @@ import { spawnLocalAgent } from './local-adapter'
  * main checkout. This is the last-chance check before the SDK / CLI actually
  * starts the process.
  *
- * The allowlist covers the default worktree base AND the uppercase
- * `~/worktrees/BDE/` path used by the current BDE layout.
+ * The allowlist is derived from the caller's `AgentManagerConfig.worktreeBase`
+ * (threaded through spawnAgent's options) so users who override the worktree
+ * base in Settings are not rejected by a module-scope default snapshot.
  */
-const ALLOWED_WORKTREE_BASES: readonly string[] = [
-  DEFAULT_CONFIG.worktreeBase,
-  `${homedir()}/worktrees/BDE`
-]
-
-function isInsideAllowedWorktreeBase(cwd: string): boolean {
+function isInsideAllowedWorktreeBase(cwd: string, worktreeBase: string): boolean {
   const resolved = resolvePath(cwd)
-  return ALLOWED_WORKTREE_BASES.some((base) => resolved.startsWith(resolvePath(base) + '/'))
+  return resolved.startsWith(resolvePath(worktreeBase) + '/')
 }
 
-function assertCwdIsInsideWorktreeBase(cwd: string): void {
-  if (!isInsideAllowedWorktreeBase(cwd)) {
+function assertCwdIsInsideWorktreeBase(cwd: string, worktreeBase: string): void {
+  if (!isInsideAllowedWorktreeBase(cwd, worktreeBase)) {
     throw new Error(
-      `Refusing to spawn agent: cwd "${cwd}" is not inside any allowed worktree base (${ALLOWED_WORKTREE_BASES.join(', ')}). ` +
+      `Refusing to spawn agent: cwd "${cwd}" is not inside the configured worktree base (${worktreeBase}). ` +
         `Pipeline agents must only run inside isolated worktrees.`
     )
   }
@@ -77,13 +72,20 @@ export async function spawnAgent(opts: {
    * and synthesizer agents use their own spawn paths and never set this.
    */
   pipelineTuning?: PipelineSpawnTuning
+  /**
+   * Configured worktree base for the pipeline cwd allowlist check. Required
+   * when `pipelineTuning` is set; ignored otherwise. Default retained for
+   * call sites that don't have access to live config (smoke tests, etc.).
+   */
+  worktreeBase?: string
 }): Promise<AgentHandle> {
   // Worktree-base cwd assertion applies only to pipeline agents — adhoc,
   // assistant, copilot, and synthesizer agents run in the user's repo or
   // freeform directories and are gated elsewhere. Pipeline agents are the
   // ones that can leak edits into the main repo if misrouted.
   if (opts.pipelineTuning) {
-    assertCwdIsInsideWorktreeBase(opts.cwd)
+    const base = opts.worktreeBase ?? DEFAULT_CONFIG.worktreeBase
+    assertCwdIsInsideWorktreeBase(opts.cwd, base)
   }
 
   const agentType: AgentType = opts.agentType ?? 'pipeline'
@@ -160,7 +162,8 @@ export async function spawnWithTimeout(
   model: string,
   logger: Logger,
   maxBudgetUsd?: number,
-  pipelineTuning?: PipelineSpawnTuning
+  pipelineTuning?: PipelineSpawnTuning,
+  worktreeBase?: string
 ): Promise<AgentHandle> {
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -170,7 +173,7 @@ export async function spawnWithTimeout(
     )
   })
   return await Promise.race([
-    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning }),
+    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase }),
     timeoutPromise
   ]).finally(() => clearTimeout(timer!))
 }

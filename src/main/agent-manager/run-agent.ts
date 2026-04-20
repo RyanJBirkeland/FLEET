@@ -55,6 +55,12 @@ export interface RunAgentSpawnDeps {
   defaultModel: string
   logger: Logger
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  /**
+   * Configured worktree base — used by spawnAgent's cwd allowlist check so
+   * pipeline agents that run inside a user-configured worktreeBase aren't
+   * rejected by a module-scope snapshot of DEFAULT_CONFIG.
+   */
+  worktreeBase: string
   /** Optional — called when agent process successfully spawns. */
   onSpawnSuccess?: () => void
   /** Optional — called when spawnAgent throws. */

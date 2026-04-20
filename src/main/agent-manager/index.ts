@@ -174,6 +174,7 @@ export class AgentManagerImpl implements AgentManager {
       logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       repo,
+      worktreeBase: config.worktreeBase,
       onSpawnSuccess: () => {
         this._circuitBreaker.recordSuccess()
       },
