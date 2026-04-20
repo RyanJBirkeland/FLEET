@@ -7,14 +7,17 @@ import {
   ERR_ABORTED
 } from '../renderer-load-retry'
 
-// Mock the logger module
+// Shared mock logger — returned for every createLogger() call so the source's
+// module-scope logger and the test's logger reference are the same instance.
+const mockLogger = vi.hoisted(() => ({
+  warn: vi.fn(),
+  error: vi.fn(),
+  info: vi.fn(),
+  debug: vi.fn()
+}))
+
 vi.mock('../logger', () => ({
-  createLogger: () => ({
-    warn: vi.fn(),
-    error: vi.fn(),
-    info: vi.fn(),
-    debug: vi.fn()
-  })
+  createLogger: () => mockLogger
 }))
 
 type DidFailLoadCallback = (
@@ -148,10 +151,8 @@ describe('attachRendererLoadRetry', () => {
     expect(loadURLSpy).toHaveBeenCalledTimes(3) // Now 3
   })
 
-  it('logs budget exhaustion after max retries and stops scheduling', async () => {
-    // Import logger to get access to the mock
-    const { createLogger } = await import('../logger')
-    const logger = createLogger('test')
+  it('logs budget exhaustion after max retries and stops scheduling', () => {
+    const logger = mockLogger
 
     // Trigger MAX_RENDERER_LOAD_RETRIES failures (3)
     for (let i = 0; i < MAX_RENDERER_LOAD_RETRIES; i++) {
