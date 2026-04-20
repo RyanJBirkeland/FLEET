@@ -255,38 +255,52 @@ app.on('before-quit', () => {
   closeDb()
 })
 
-app.whenReady().then(() => {
-  electronApp.setAppUserModelId('com.bde')
-
+/**
+ * Applies pending database migrations. On failure, surfaces an actionable
+ * dialog and exits — we cannot continue past a broken schema.
+ */
+function initDatabaseOrExit(): void {
   try {
     initializeDatabase()
   } catch (err) {
     dialog.showErrorBox(
       'Database Migration Failed',
       `BDE could not upgrade its database:\n\n${err instanceof Error ? err.message : String(err)}\n\n` +
-      `Check ~/.bde/bde.log for details.\n` +
-      `To recover: back up ~/.bde/bde.db, then delete it to start fresh.`
+        `Check ~/.bde/bde.log for details.\n` +
+        `To recover: back up ~/.bde/bde.db, then delete it to start fresh.`
     )
     app.exit(1)
   }
+}
 
+interface CoreStartupServices {
+  repo: ReturnType<typeof createSprintTaskRepository>
+  epicGroupService: ReturnType<typeof createEpicGroupService>
+  terminalService: ReturnType<typeof createTaskTerminalService>
+  terminalDeps: {
+    onStatusTerminal: ReturnType<typeof createTaskTerminalService>['onStatusTerminal']
+    dialog: ReturnType<typeof createElectronDialogService>
+  }
+}
+
+/**
+ * Wires the repo, EpicGroupService, TaskTerminalService, and the pollers
+ * that every other startup stage depends on. Runs the DB watcher, the
+ * background service init, the PR pollers, and the periodic cleanup
+ * scheduler — the low-level infrastructure that sits behind everything.
+ */
+function initCoreServices(): CoreStartupServices {
   const stopDbWatcher = startDbWatcher()
   app.on('will-quit', stopDbWatcher)
-
   startBackgroundServices()
 
-  // Hoist repo construction so it's available to BOTH the terminal service
-  // (always) and the agent manager (when autoStart).
   const repo = createSprintTaskRepository()
 
   // The epic dependency graph has one owner — EpicGroupService, constructed
   // at the composition root and injected to every consumer (task-terminal-
-  // service, agent manager, MCP server, IPC handlers). Terminal resolution
-  // and the agent manager both read from it instead of maintaining their
-  // own copies.
+  // service, agent manager, MCP server, IPC handlers).
   const epicGroupService = createEpicGroupService()
 
-  // --- Task terminal service (unified dependency resolution) ---
   const terminalService = createTaskTerminalService({
     getTask,
     updateTask,
@@ -307,7 +321,19 @@ app.whenReady().then(() => {
   startPrPollers(terminalDeps)
   setupCleanupTasks()
 
-  // --- Agent Manager initialization ---
+  return { repo, epicGroupService, terminalService, terminalDeps }
+}
+
+/**
+ * Starts the agent manager (when autoStart is enabled), the read-only
+ * status server, and the opt-in MCP server. Wires the setting-change
+ * listener so `mcp.enabled` / `mcp.port` toggles hot-swap the server
+ * without a restart.
+ *
+ * Returns the AgentManager handle for downstream registerAllHandlers
+ * consumption, or undefined when autoStart is disabled.
+ */
+function wireAgentManagerAndMcp(core: CoreStartupServices): ReturnType<typeof createAgentManager> | undefined {
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
     worktreeBase: getSetting('agentManager.worktreeBase') ?? join(homedir(), 'worktrees', 'bde'),
@@ -318,90 +344,86 @@ app.whenReady().then(() => {
   }
 
   const autoStart = getSettingJson<boolean>('agentManager.autoStart') ?? true
+  if (!autoStart) return undefined
 
-  // Start agent manager immediately — auth is checked inside the drain loop
-  let agentManager: ReturnType<typeof createAgentManager> | undefined
-  if (autoStart) {
-    getOAuthToken()
+  getOAuthToken()
 
-    // Wire data modules to use the same structured file logger as the agent manager
-    const logger = createLogger('agent-manager')
-    setSprintQueriesLogger(logger)
-    setTaskGroupQueriesLogger(createLogger('task-group-queries'))
-    setSettingsQueriesLogger(createLogger('settings-queries'))
+  const amLogger = createLogger('agent-manager')
+  setSprintQueriesLogger(amLogger)
+  setTaskGroupQueriesLogger(createLogger('task-group-queries'))
+  setSettingsQueriesLogger(createLogger('settings-queries'))
 
-    const am = createAgentManager(
-      { ...amConfig, onStatusTerminal: terminalService.onStatusTerminal },
-      repo,
-      logger,
-      epicGroupService
+  const agentManager = createAgentManager(
+    { ...amConfig, onStatusTerminal: core.terminalService.onStatusTerminal },
+    core.repo,
+    amLogger,
+    core.epicGroupService
+  )
+  agentManager.start()
+  app.on('will-quit', () => agentManager.stop(10_000))
+
+  const statusServer = createStatusServer(agentManager, core.repo)
+  statusServer.start().catch((err) => {
+    createLogger('startup').error(`Failed to start status server: ${err}`)
+  })
+  app.on('will-quit', () => statusServer.stop())
+
+  let mcp: McpServerHandle | null = null
+
+  async function startMcpServer(): Promise<void> {
+    if (mcp) return
+    const port = getMcpPort()
+    const handle = createMcpServer(
+      { epicService: core.epicGroupService, onStatusTerminal: core.terminalService.onStatusTerminal },
+      { port }
     )
-    am.start()
-    app.on('will-quit', () => am.stop(10_000))
-
-    // Start status server (read-only monitoring endpoint)
-    const statusServer = createStatusServer(am, repo)
-    statusServer.start().catch((err) => {
-      createLogger('startup').error(`Failed to start status server: ${err}`)
-    })
-    app.on('will-quit', () => statusServer.stop())
-
-    // MCP server (opt-in; controlled by mcp.enabled setting)
-    let mcp: McpServerHandle | null = null
-
-    async function startMcpServer(): Promise<void> {
-      if (mcp) return
-      const port = getMcpPort()
-      const handle = createMcpServer(
-        { epicService: epicGroupService, onStatusTerminal: terminalService.onStatusTerminal },
-        { port }
-      )
-      try {
-        await handle.start()
-        mcp = handle
-      } catch (err) {
-        createLogger('startup').error(`Failed to start MCP server: ${err}`)
-      }
+    try {
+      await handle.start()
+      mcp = handle
+    } catch (err) {
+      createLogger('startup').error(`Failed to start MCP server: ${err}`)
     }
-
-    async function stopMcpServer(): Promise<void> {
-      if (!mcp) return
-      await mcp.stop()
-      mcp = null
-    }
-
-    if (getMcpEnabled()) {
-      startMcpServer().catch(() => {})
-    }
-
-    onSettingChanged(({ key, value }) => {
-      if (key === 'mcp.enabled') {
-        if (value === 'true') {
-          startMcpServer().catch(() => {})
-        } else {
-          stopMcpServer().catch(() => {})
-        }
-        return
-      }
-      if (key === 'mcp.port' && mcp !== null) {
-        stopMcpServer()
-          .then(() => startMcpServer())
-          .catch(() => {})
-      }
-    })
-
-    app.on('will-quit', () => {
-      stopMcpServer().catch(() => {})
-    })
-
-    agentManager = am
   }
 
-  app.on('browser-window-created', (_, window) => {
-    optimizer.watchWindowShortcuts(window)
+  async function stopMcpServer(): Promise<void> {
+    if (!mcp) return
+    await mcp.stop()
+    mcp = null
+  }
+
+  if (getMcpEnabled()) {
+    startMcpServer().catch(() => {})
+  }
+
+  onSettingChanged(({ key, value }) => {
+    if (key === 'mcp.enabled') {
+      if (value === 'true') startMcpServer().catch(() => {})
+      else stopMcpServer().catch(() => {})
+      return
+    }
+    if (key === 'mcp.port' && mcp !== null) {
+      stopMcpServer()
+        .then(() => startMcpServer())
+        .catch(() => {})
+    }
   })
 
-  // AI Review Partner setup
+  app.on('will-quit', () => {
+    stopMcpServer().catch(() => {})
+  })
+
+  return agentManager
+}
+
+/**
+ * Builds the AI Review Partner pieces: the review repository, the git
+ * adapter closures (resolveWorktreePath, getHeadCommitSha, getBranch,
+ * getDiff), the ReviewService, and the chat-stream deps the IPC
+ * handlers need.
+ */
+function buildReviewWiring(
+  repo: ReturnType<typeof createSprintTaskRepository>
+): { reviewService: ReturnType<typeof createReviewService>; reviewChatStreamDeps: ReturnType<typeof buildChatStreamDeps> } {
   const reviewDb = getDb()
   const reviewRepo = createReviewRepository(reviewDb)
   const reviewServiceLogger = createLogger('review-service')
@@ -459,14 +481,28 @@ app.whenReady().then(() => {
     activeStreams: reviewActiveStreams
   })
 
-  // Register all IPC handlers
+  return { reviewService, reviewChatStreamDeps }
+}
+
+app.whenReady().then(() => {
+  electronApp.setAppUserModelId('com.bde')
+
+  initDatabaseOrExit()
+  const core = initCoreServices()
+  const agentManager = wireAgentManagerAndMcp(core)
+  const review = buildReviewWiring(core.repo)
+
+  app.on('browser-window-created', (_, window) => {
+    optimizer.watchWindowShortcuts(window)
+  })
+
   const handlerDeps: AppHandlerDeps = {
     agentManager,
-    terminalDeps,
-    reviewService,
-    reviewChatStreamDeps,
-    repo,
-    epicGroupService
+    terminalDeps: core.terminalDeps,
+    reviewService: review.reviewService,
+    reviewChatStreamDeps: review.reviewChatStreamDeps,
+    repo: core.repo,
+    epicGroupService: core.epicGroupService
   }
   registerAllHandlers(handlerDeps)
 
