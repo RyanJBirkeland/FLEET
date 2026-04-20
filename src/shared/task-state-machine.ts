@@ -28,8 +28,11 @@ export type TaskStatus =
 
 /**
  * All task statuses in a principled order (lifecycle progression).
+ *
+ * Typed as a readonly tuple of literals (no widening annotation) so
+ * consumers like Zod can preserve the 9-literal union via `z.enum(...)`.
  */
-export const TASK_STATUSES: readonly TaskStatus[] = [
+export const TASK_STATUSES = [
   'backlog',
   'queued',
   'blocked',
@@ -39,7 +42,7 @@ export const TASK_STATUSES: readonly TaskStatus[] = [
   'cancelled',
   'failed',
   'error'
-] as const
+] as const satisfies readonly TaskStatus[]
 
 /**
  * Terminal statuses — task has reached end of lifecycle.

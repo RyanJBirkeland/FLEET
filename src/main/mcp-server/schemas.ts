@@ -3,7 +3,7 @@ import { TASK_STATUSES } from '../../shared/task-state-machine'
 
 // --- Task schemas -----------------------------------------------------------
 
-export const TaskStatusSchema = z.enum([...TASK_STATUSES] as [string, ...string[]])
+export const TaskStatusSchema = z.enum(TASK_STATUSES)
 
 export const TaskDependencySchema = z.object({
   id: z.string().min(1),
