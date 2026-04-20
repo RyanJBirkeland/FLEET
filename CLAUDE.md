@@ -286,6 +286,7 @@ npm run package      # Alias for build:mac
 - Status transitions validated by `isValidTransition()` in `src/shared/task-transitions.ts`, currently enforced at the data layer in `updateTask()` (note: this mixes business policy with data access; future refactoring may move validation to a service layer)
 - Pipeline agent prompts include retry context, time limits, idle warnings, and scope enforcement — see `prompt-composer.ts`
 - Spec templates with required sections in `src/shared/constants.ts` — Bug Fix, Feature, Refactor, Test Coverage
+- Data-mutating migrations (any `UPDATE`/`DELETE` or CHECK-constraint change) require a dedicated test in `src/main/migrations/__tests__/vNNN.test.ts` modeled on `v049.test.ts` / `v038.test.ts`. The aggregate `runMigrations` smoke test proves the chain completes but not that each individual migration handles a partially-applied prior state.
 
 ## Pipeline Agent Spec Guidelines
 
