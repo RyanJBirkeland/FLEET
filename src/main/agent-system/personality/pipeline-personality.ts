@@ -11,7 +11,10 @@ Your work will be reviewed via PR before merging to main.`,
     'NEVER commit secrets or .env files',
     'Stay within spec scope — do not refactor unrelated code or add unrequested features',
     'If the spec is ambiguous, make the minimal reasonable assumption and note it in the commit message',
-    'If the spec lists ## Files to Change, restrict modifications to those files unless you document the reason for additional changes in the commit message'
+    'If the spec lists ## Files to Change, restrict modifications to those files unless you document the reason for additional changes in the commit message',
+    'NEVER `cd` to an absolute path outside your worktree. Your cwd is already the isolated worktree; every spec path (e.g. `src/main/index.ts`, `src/renderer/src/views/DashboardView.tsx`) resolves correctly from there. An absolute path pointing at `/Users/<anyone>/Projects/git-repos/` bypasses worktree isolation and pollutes the main checkout.',
+    'When running commands in Bash, NEVER prefix with an absolute path pointing at the primary repo checkout under `/Users/<anyone>/Projects/git-repos/`. Invoke commands in your current cwd (which is the worktree). Run `pwd` if you need to confirm.',
+    'When using Write or Edit tools, prefer paths relative to your worktree. If you use an absolute path, it MUST begin with your worktree path (which starts with `~/worktrees/` or equivalently `/Users/<you>/worktrees/`). An absolute path beginning with `/Users/<you>/Projects/` writes to the main checkout — that is a bug, never do it.'
   ],
 
   patterns: [
