@@ -8,7 +8,6 @@ Read-only meta tools that expose BDE enums and configuration to MCP clients with
 
 ## Public API
 - `registerMetaTools(server, deps)` — Registers three MCP tools: `meta.repos`, `meta.taskStatuses`, `meta.dependencyConditions`
-- `defaultGetRepos()` — Default repo provider function that reads from BDE settings
 - `MetaToolsDeps` — Dependency injection interface for providing repos list
 
 ## Tools
@@ -18,5 +17,4 @@ Read-only meta tools that expose BDE enums and configuration to MCP clients with
 
 ## Key Dependencies
 - `task-state-machine.ts` — Exports `TASK_STATUSES` and `VALID_TRANSITIONS`
-- `settings.ts` — `getSettingJson()` for reading repos from SQLite
 - `paths.ts` — `RepoConfig` type definition
