@@ -99,6 +99,43 @@ export function createReviewTaskFromAdhoc(input: {
   return row
 }
 
+export interface CancelTaskDeps {
+  /** Fires task-terminal resolution so dependents unblock. */
+  onStatusTerminal: (taskId: string, status: string) => Promise<void> | void
+  logger: Logger
+  /**
+   * Optional override for the underlying update call (tests inject a spy).
+   * Defaults to this module's `updateTask` which wraps the broadcaster.
+   */
+  updateTask?: (id: string, patch: Record<string, unknown>) => SprintTask | null
+}
+
+/**
+ * Cancel a task — sets status to 'cancelled' with an optional reason in
+ * notes, then awaits the terminal-status handler so dependents unblock.
+ *
+ * Consolidates the update-then-terminal two-step so the MCP server and
+ * future IPC paths don't re-implement it in drift-prone closures.
+ */
+export async function cancelTask(
+  id: string,
+  opts: { reason?: string },
+  deps: CancelTaskDeps
+): Promise<SprintTask | null> {
+  const patch: Record<string, unknown> = { status: 'cancelled' }
+  if (opts.reason) patch.notes = opts.reason
+  const doUpdate = deps.updateTask ?? updateTask
+  const row = doUpdate(id, patch)
+  if (row) {
+    try {
+      await deps.onStatusTerminal(id, 'cancelled')
+    } catch (err) {
+      deps.logger.error(`onStatusTerminal after cancel ${id}: ${err}`)
+    }
+  }
+  return row
+}
+
 export interface CreateTaskWithValidationDeps {
   logger: Logger
 }

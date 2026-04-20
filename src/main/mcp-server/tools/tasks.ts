@@ -19,7 +19,7 @@ export interface TaskToolsDeps {
   getTask: (id: string) => SprintTask | null
   createTaskWithValidation: (input: CreateTaskInput, deps: CreateTaskWithValidationDeps) => SprintTask
   updateTask: (id: string, patch: Record<string, unknown>) => SprintTask | null
-  cancelTask: (id: string, reason?: string) => SprintTask | null
+  cancelTask: (id: string, reason?: string) => Promise<SprintTask | null> | SprintTask | null
   /** Mirrors the data-layer signature: (taskId, limit?). Offset is applied in the tool handler via slice. */
   getTaskChanges: (id: string, limit?: number) => TaskChange[]
   logger: CreateTaskWithValidationDeps['logger']
@@ -116,7 +116,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
     TaskCancelSchema.shape,
     async (rawArgs) => {
       const { id, reason } = TaskCancelSchema.parse(rawArgs)
-      const row = deps.cancelTask(id, reason)
+      const row = await deps.cancelTask(id, reason)
       if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
       return json(row)
     }

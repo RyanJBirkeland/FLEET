@@ -3,6 +3,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { broadcast } from '../broadcast'
 import { createLogger } from '../logger'
 import {
+  cancelTask,
   createTaskWithValidation,
   getTask,
   listTasks,
@@ -51,17 +52,8 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
       getTask,
       createTaskWithValidation,
       updateTask,
-      cancelTask: (id, reason) => {
-        const patch: Record<string, unknown> = { status: 'cancelled' }
-        if (reason) patch.notes = reason
-        const row = updateTask(id, patch)
-        if (row) {
-          Promise.resolve(deps.onStatusTerminal(id, 'cancelled')).catch((err) =>
-            logger.error(`onStatusTerminal after cancel ${id}: ${err}`)
-          )
-        }
-        return row
-      },
+      cancelTask: (id, reason) =>
+        cancelTask(id, { reason }, { onStatusTerminal: deps.onStatusTerminal, logger }),
       getTaskChanges: (id, limit) => getTaskChanges(id, limit),
       logger
     })
