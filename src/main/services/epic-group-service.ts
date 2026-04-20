@@ -25,6 +25,16 @@ import {
   updateGroupDependencyCondition as defaultUpdateGroupDependencyCondition
 } from '../data/task-group-queries'
 import { createEpicDependencyIndex, detectEpicCycle } from './epic-dependency-service'
+import { getDb } from '../db'
+
+/**
+ * Run a function inside a single SQLite transaction — rolls back on throw.
+ * Default uses the shared bde.db connection; tests may inject a trivial
+ * pass-through wrapper.
+ */
+export type RunInTransaction = <T>(fn: () => T) => T
+
+const defaultRunInTransaction: RunInTransaction = (fn) => getDb().transaction(fn)()
 
 export interface EpicGroupQueries {
   createGroup: (input: CreateGroupInput) => TaskGroup | null
@@ -64,6 +74,13 @@ export interface EpicGroupService extends EpicDepsReader {
     upstreamId: string,
     condition: EpicDependency['condition']
   ) => TaskGroup
+  /**
+   * Atomically replace an epic's upstream dependencies with `nextDeps`.
+   * Cycle detection runs against the proposed target state before any
+   * mutation; mutations are wrapped in a single SQLite transaction so a
+   * mid-sequence failure rolls back to the original state.
+   */
+  setDependencies: (epicId: string, nextDeps: readonly EpicDependency[]) => TaskGroup
 }
 
 const defaultQueries: EpicGroupQueries = {
@@ -83,7 +100,8 @@ const defaultQueries: EpicGroupQueries = {
 }
 
 export function createEpicGroupService(
-  queries: EpicGroupQueries = defaultQueries
+  queries: EpicGroupQueries = defaultQueries,
+  runInTransaction: RunInTransaction = defaultRunInTransaction
 ): EpicGroupService {
   const index = createEpicDependencyIndex()
 
@@ -171,6 +189,51 @@ export function createEpicGroupService(
       if (!updated) throw new Error(`Failed to update dependency condition in group ${epicId}`)
       rebuildIndex()
       return updated
+    },
+
+    setDependencies(epicId, nextDeps) {
+      const group = queries.getGroup(epicId)
+      if (!group) throw new Error(`Task group not found: ${epicId}`)
+
+      // Cycle detection runs against the proposed target state, not the
+      // current DB — otherwise a diff-then-apply sequence could pass the
+      // check after the first mutation and then cycle with the second.
+      assertNoCycle(epicId, [...nextDeps])
+
+      const current = group.depends_on ?? []
+      const currentById = new Map(current.map((d) => [d.id, d]))
+      const nextById = new Map(nextDeps.map((d) => [d.id, d]))
+
+      const toRemove = current.filter((d) => !nextById.has(d.id))
+      const toAdd = nextDeps.filter((d) => !currentById.has(d.id))
+      const toUpdate = nextDeps.filter((d) => {
+        const existing = currentById.get(d.id)
+        return existing && existing.condition !== d.condition
+      })
+
+      // All mutations share the same getDb() connection, so wrapping them
+      // in a single transaction gives us atomic rollback on any failure.
+      runInTransaction(() => {
+        for (const dep of toRemove) {
+          const ok = queries.removeGroupDependency(epicId, dep.id)
+          if (!ok) throw new Error(`Failed to remove dep ${dep.id} from ${epicId}`)
+        }
+        for (const dep of toAdd) {
+          const ok = queries.addGroupDependency(epicId, dep)
+          if (!ok) throw new Error(`Failed to add dep ${dep.id} to ${epicId}`)
+        }
+        for (const dep of toUpdate) {
+          const ok = queries.updateGroupDependencyCondition(epicId, dep.id, dep.condition)
+          if (!ok) {
+            throw new Error(`Failed to update condition for dep ${dep.id} on ${epicId}`)
+          }
+        }
+      })
+
+      rebuildIndex()
+      const refreshed = queries.getGroup(epicId)
+      if (!refreshed) throw new Error(`Task group ${epicId} vanished after setDependencies`)
+      return refreshed
     }
   }
 }

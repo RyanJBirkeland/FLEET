@@ -1,6 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { EpicGroupService } from '../../services/epic-group-service'
-import type { EpicDependency } from '../../../shared/types'
 import { McpDomainError, McpErrorCode } from '../errors'
 import {
   EpicAddTaskSchema,
@@ -114,26 +113,16 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     EpicSetDependenciesSchema.shape,
     async (rawArgs) => {
       const { id, dependencies } = EpicSetDependenciesSchema.parse(rawArgs)
-      const epic = svc.getEpic(id)
-      if (!epic) throw new McpDomainError(`Epic ${id} not found`, McpErrorCode.NotFound, { id })
-
-      const current: EpicDependency[] = epic.depends_on ?? []
-      const currentIds = new Set(current.map((d) => d.id))
-      const nextIds = new Set(dependencies.map((d) => d.id))
-
-      for (const dep of current) {
-        if (!nextIds.has(dep.id)) svc.removeDependency(id, dep.id)
-      }
-      for (const dep of dependencies) {
-        if (!currentIds.has(dep.id)) {
-          svc.addDependency(id, dep)
-        } else {
-          svc.updateDependencyCondition(id, dep.id, dep.condition)
+      try {
+        const updated = svc.setDependencies(id, dependencies)
+        return json(updated)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        if (/not found/i.test(message)) {
+          throw new McpDomainError(message, McpErrorCode.NotFound, { id })
         }
+        throw err
       }
-
-      const updated = svc.getEpic(id)
-      return json(updated)
     }
   )
 }

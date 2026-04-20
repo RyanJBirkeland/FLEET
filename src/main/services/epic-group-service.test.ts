@@ -121,4 +121,93 @@ describe('createEpicGroupService', () => {
     )
     expect(result.satisfied).toBe(true)
   })
+
+  describe('setDependencies (atomic)', () => {
+    // Trivial transaction wrapper — just runs the fn. Real impl wraps in SQLite
+    // transaction; we only care about call sequence + rollback semantics here.
+    const runInTx = <T,>(fn: () => T): T => fn()
+
+    it('applies the full diff: adds, removes, and updates conditions in one call', () => {
+      queries.getGroup.mockReturnValue(
+        fakeGroup({
+          id: 'g1',
+          depends_on: [
+            { id: 'a', condition: 'on_success' },
+            { id: 'b', condition: 'on_success' }
+          ]
+        })
+      )
+      const svc = createEpicGroupService(queries, runInTx)
+
+      svc.setDependencies('g1', [
+        { id: 'a', condition: 'always' }, // update condition
+        { id: 'c', condition: 'on_success' } // add
+        // b removed
+      ])
+
+      expect(queries.removeGroupDependency).toHaveBeenCalledWith('g1', 'b')
+      expect(queries.addGroupDependency).toHaveBeenCalledWith('g1', {
+        id: 'c',
+        condition: 'on_success'
+      })
+      expect(queries.updateGroupDependencyCondition).toHaveBeenCalledWith('g1', 'a', 'always')
+    })
+
+    it('rejects a cycle before mutating anything', () => {
+      // child depends on parent in the current DB state.
+      // Attempting to set child's deps to include its descendant should cycle.
+      queries.getGroup.mockImplementation((id: string) => {
+        if (id === 'child') return fakeGroup({ id: 'child', depends_on: null })
+        if (id === 'parent')
+          return fakeGroup({
+            id: 'parent',
+            depends_on: [{ id: 'child', condition: 'on_success' }]
+          })
+        return null
+      })
+      const svc = createEpicGroupService(queries, runInTx)
+
+      expect(() =>
+        svc.setDependencies('child', [{ id: 'parent', condition: 'on_success' }])
+      ).toThrow(/cycle/i)
+
+      expect(queries.addGroupDependency).not.toHaveBeenCalled()
+      expect(queries.removeGroupDependency).not.toHaveBeenCalled()
+      expect(queries.updateGroupDependencyCondition).not.toHaveBeenCalled()
+    })
+
+    it('throws when a mid-sequence mutation fails and propagates the transaction rollback', () => {
+      queries.getGroup.mockReturnValue(
+        fakeGroup({
+          id: 'g1',
+          depends_on: [{ id: 'a', condition: 'on_success' }]
+        })
+      )
+      // First addGroupDependency succeeds (for 'b'); second one fails.
+      let addCallCount = 0
+      queries.addGroupDependency.mockImplementation((id, dep) => {
+        addCallCount++
+        if (addCallCount === 1) return fakeGroup({ id, depends_on: [dep] })
+        return null
+      })
+
+      const svc = createEpicGroupService(queries, runInTx)
+
+      expect(() =>
+        svc.setDependencies('g1', [
+          { id: 'a', condition: 'on_success' },
+          { id: 'b', condition: 'on_success' },
+          { id: 'c', condition: 'on_success' }
+        ])
+      ).toThrow(/Failed to add dep c/)
+    })
+
+    it('throws when the epic does not exist', () => {
+      queries.getGroup.mockReturnValue(null)
+      const svc = createEpicGroupService(queries, runInTx)
+
+      expect(() => svc.setDependencies('missing', [])).toThrow(/not found/i)
+      expect(queries.addGroupDependency).not.toHaveBeenCalled()
+    })
+  })
 })

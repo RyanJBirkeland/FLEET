@@ -43,7 +43,8 @@ function fakeDeps(over: Partial<EpicToolsDeps> = {}): EpicToolsDeps {
     queueAllTasks: vi.fn(() => 0),
     addDependency: vi.fn((id, dep) => fakeGroup({ id, depends_on: [dep] })),
     removeDependency: vi.fn((id) => fakeGroup({ id })),
-    updateDependencyCondition: vi.fn((id) => fakeGroup({ id }))
+    updateDependencyCondition: vi.fn((id) => fakeGroup({ id })),
+    setDependencies: vi.fn((id, deps) => fakeGroup({ id, depends_on: [...deps] }))
   }
   return { epicService: svc as any, ...over }
 }
@@ -85,21 +86,32 @@ describe('epics.* tools', () => {
     expect(JSON.parse(res.content[0].text).id).toBe('new')
   })
 
-  it('epics.setDependencies replaces the deps by computing diff', async () => {
+  it('epics.setDependencies delegates to service.setDependencies (atomic)', async () => {
     const deps = fakeDeps()
-    ;(deps.epicService.getEpic as any).mockReturnValue(
-      fakeGroup({ depends_on: [{ id: 'old', condition: 'on_success' }] })
-    )
     const { server, call } = mockServer()
     registerEpicTools(server, deps)
     await call('epics.setDependencies', {
       id: 'g1',
       dependencies: [{ id: 'new', condition: 'always' }]
     })
-    expect(deps.epicService.removeDependency).toHaveBeenCalledWith('g1', 'old')
-    expect(deps.epicService.addDependency).toHaveBeenCalledWith('g1', {
-      id: 'new',
-      condition: 'always'
+    expect(deps.epicService.setDependencies).toHaveBeenCalledWith('g1', [
+      { id: 'new', condition: 'always' }
+    ])
+    // Handler must delegate atomically — it must NOT re-implement the diff
+    // loop against addDependency/removeDependency itself.
+    expect(deps.epicService.removeDependency).not.toHaveBeenCalled()
+    expect(deps.epicService.addDependency).not.toHaveBeenCalled()
+  })
+
+  it('epics.setDependencies translates "not found" into McpDomainError NotFound', async () => {
+    const deps = fakeDeps()
+    ;(deps.epicService.setDependencies as any).mockImplementation(() => {
+      throw new Error('Task group not found: missing')
     })
+    const { server, call } = mockServer()
+    registerEpicTools(server, deps)
+    await expect(
+      call('epics.setDependencies', { id: 'missing', dependencies: [] })
+    ).rejects.toThrow(/not found/i)
   })
 })
