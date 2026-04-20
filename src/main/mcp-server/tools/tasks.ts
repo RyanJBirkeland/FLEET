@@ -92,7 +92,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
     'Create a new sprint task. Runs the same validation as the in-app Task Workbench.',
     TaskCreateSchema.shape,
     async (rawArgs) => {
-      const input = TaskCreateSchema.parse(rawArgs) as CreateTaskInput
+      const input: CreateTaskInput = TaskCreateSchema.parse(rawArgs)
       const row = deps.createTaskWithValidation(input, { logger: deps.logger })
       return json(row)
     }

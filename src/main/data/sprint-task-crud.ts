@@ -95,8 +95,8 @@ export function createTask(input: CreateTaskInput, db?: Database.Database): Spri
 
       const result = conn
         .prepare(
-          `INSERT INTO sprint_tasks (title, repo, prompt, spec, notes, priority, status, template_name, depends_on, playground_enabled, model, tags, group_id, cross_repo_contract)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+          `INSERT INTO sprint_tasks (title, repo, prompt, spec, spec_type, notes, priority, status, template_name, depends_on, playground_enabled, max_runtime_ms, model, tags, group_id, cross_repo_contract)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
            RETURNING *`
         )
         .get(
@@ -104,12 +104,14 @@ export function createTask(input: CreateTaskInput, db?: Database.Database): Spri
           input.repo,
           input.prompt ?? input.spec ?? input.title,
           input.spec ?? null,
+          input.spec_type ?? null,
           input.notes ?? null,
           input.priority ?? 0,
           input.status ?? 'backlog',
           input.template_name ?? null,
           dependsOn ? JSON.stringify(dependsOn) : null,
           input.playground_enabled ? 1 : 0,
+          input.max_runtime_ms ?? null,
           input.model ?? null,
           tags ? JSON.stringify(tags) : null,
           input.group_id ?? null,

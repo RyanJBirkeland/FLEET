@@ -109,6 +109,35 @@ describe('tasks.* write tools', () => {
     expect(call0.claimed_by).toBeUndefined()
   })
 
+  it('tasks.create forwards every CreateTaskInput field to the delegate', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    const fullInput = {
+      title: 'Full-coverage task',
+      repo: 'bde',
+      status: 'queued',
+      prompt: 'build it',
+      spec: '## Problem\nx\n## Solution\ny\n## Files to Change\n- a.ts\n',
+      spec_type: 'feature',
+      notes: 'additional context',
+      priority: 5,
+      tags: ['foo', 'bar'],
+      depends_on: [{ id: 'dep-1', type: 'hard' as const }],
+      playground_enabled: true,
+      max_runtime_ms: 600_000,
+      template_name: 'Feature',
+      model: 'claude-sonnet-4-5',
+      cross_repo_contract: 'needs api change in other-repo',
+      group_id: 'epic-1'
+    }
+    await call('tasks.create', fullInput)
+    const call0 = (deps.createTaskWithValidation as any).mock.calls[0][0]
+    for (const [key, value] of Object.entries(fullInput)) {
+      expect(call0[key]).toEqual(value)
+    }
+  })
+
   it('tasks.update throws when updateTask returns null', async () => {
     const deps = fakeDeps({
       updateTask: vi.fn(() => null)

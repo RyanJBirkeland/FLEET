@@ -69,11 +69,13 @@ export interface CreateTaskInput {
   prompt?: string
   notes?: string
   spec?: string
+  spec_type?: 'feature' | 'bug-fix' | 'refactor' | 'test-coverage' | 'freeform' | 'prompt'
   priority?: number
   status?: string
   template_name?: string
   depends_on?: Array<{ id: string; type: 'hard' | 'soft' }> | null
   playground_enabled?: boolean
+  max_runtime_ms?: number
   model?: string
   tags?: string[] | null
   group_id?: string | null
