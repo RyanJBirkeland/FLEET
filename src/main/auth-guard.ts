@@ -3,6 +3,7 @@ import { existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { z } from 'zod'
+import { getOAuthToken } from './env-utils'
 
 function execFileAsync(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
@@ -47,6 +48,19 @@ export type KeychainPayload = z.infer<typeof KeychainPayloadSchema>
 
 export interface CredentialStore {
   readToken(): Promise<KeychainPayload | null>
+  /**
+   * Reads the file-based OAuth token at `~/.bde/oauth-token`. Used as a
+   * fallback when the Keychain lookup returns null — which happens for
+   * unsigned/newly-installed bundles whose code identity isn't on the
+   * keychain entry's ACL. The file is written by the agent manager's
+   * Keychain-refresh path and is what the runtime uses to authenticate
+   * spawns, so its presence is sufficient proof of authentication even
+   * when the UI can't reach the Keychain directly.
+   *
+   * Returns the raw access token string, or null if the file is missing
+   * or fails validation (insecure permissions, symlink, etc.).
+   */
+  readFileToken(): string | null
   detectCli(): boolean
 }
 
@@ -96,6 +110,10 @@ export class MacOSCredentialStore implements CredentialStore {
     // Fallback: check common paths directly in case `which` itself is unavailable
     return CLI_FALLBACK_PATHS.some((dir) => existsSync(join(dir, 'claude')))
   }
+
+  readFileToken(): string | null {
+    return getOAuthToken()
+  }
 }
 
 const defaultCredentialStore = new MacOSCredentialStore()
@@ -108,9 +126,19 @@ export async function checkAuthStatus(
   const cliFound = store.detectCli()
   const payload = await store.readToken()
 
-  const oauth = payload?.claudeAiOauth
+  if (payload === null) {
+    // Keychain read failed entirely — typical for unsigned/newly-installed
+    // bundles whose code identity isn't on the keychain entry's ACL. Fall
+    // back to the file-based OAuth token the runtime uses for agent spawns;
+    // if it exists and validates, the user IS authenticated. We can't see
+    // expiry metadata from the raw file, so report the token as unexpired
+    // and let the SDK produce a 401 at spawn time if it's actually stale.
+    return fileFallbackStatus(store, cliFound)
+  }
+
+  const oauth = payload.claudeAiOauth
   if (!oauth?.accessToken) {
-    return { cliFound, tokenFound: false, tokenExpired: false }
+    return fileFallbackStatus(store, cliFound)
   }
 
   if (!oauth.expiresAt) {
@@ -124,6 +152,14 @@ export async function checkAuthStatus(
   const tokenExpired = new Date() >= expiresAt
 
   return { cliFound, tokenFound: true, tokenExpired, expiresAt }
+}
+
+function fileFallbackStatus(store: CredentialStore, cliFound: boolean): AuthStatus {
+  const fileToken = store.readFileToken()
+  if (fileToken) {
+    return { cliFound, tokenFound: true, tokenExpired: false }
+  }
+  return { cliFound, tokenFound: false, tokenExpired: false }
 }
 
 export async function ensureSubscriptionAuth(

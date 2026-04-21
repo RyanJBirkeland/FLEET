@@ -10,6 +10,12 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn().mockReturnValue(false)
 }))
 
+// env-utils pulls in the logger, which touches the filesystem at module load.
+// Mock the single export auth-guard consumes so this test stays hermetic.
+vi.mock('../../env-utils', () => ({
+  getOAuthToken: vi.fn().mockReturnValue(null)
+}))
+
 import { checkAuthStatus, ensureSubscriptionAuth } from '../../auth-guard'
 import type { CredentialStore } from '../../auth-guard'
 
@@ -20,6 +26,7 @@ import type { CredentialStore } from '../../auth-guard'
 function makeKeychainStore(payload: Record<string, unknown>, cliFound = true): CredentialStore {
   return {
     readToken: async () => payload as ReturnType<typeof JSON.parse>,
+    readFileToken: () => null,
     detectCli: () => cliFound
   }
 }
@@ -28,6 +35,7 @@ function makeKeychainStore(payload: Record<string, unknown>, cliFound = true): C
 function makeFailingStore(cliFound = true): CredentialStore {
   return {
     readToken: async () => null,
+    readFileToken: () => null,
     detectCli: () => cliFound
   }
 }

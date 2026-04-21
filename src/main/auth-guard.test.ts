@@ -10,6 +10,13 @@ vi.mock('node:fs', () => ({
   existsSync: vi.fn()
 }))
 
+// env-utils imports the logger (which touches the filesystem at module load
+// to ensure ~/.bde exists). Mock the only export auth-guard consumes — the
+// file-based OAuth token reader — so the test stays hermetic.
+vi.mock('./env-utils', () => ({
+  getOAuthToken: vi.fn().mockReturnValue(null)
+}))
+
 import { execFile, spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { checkAuthStatus, ensureSubscriptionAuth, MacOSCredentialStore } from './auth-guard'
@@ -52,17 +59,24 @@ function makeKeychainJson(overrides: Partial<{ accessToken: string; expiresAt: s
 
 // Build an injected CredentialStore from a keychain JSON string.
 // Using injected stores avoids the module-level rate-limit cache on MacOSCredentialStore.
-function makeStore(keychainJson: string, cliFound = true): CredentialStore {
+function makeStore(
+  keychainJson: string,
+  cliFound = true,
+  fileToken: string | null = null
+): CredentialStore {
   return {
     readToken: async () => JSON.parse(keychainJson) as ReturnType<typeof JSON.parse>,
+    readFileToken: () => fileToken,
     detectCli: () => cliFound
   }
 }
 
-// Build an injected CredentialStore that returns null (token not found)
-function makeFailingStore(): CredentialStore {
+// Build an injected CredentialStore that returns null from Keychain.
+// `fileToken` simulates the `~/.bde/oauth-token` fallback.
+function makeFailingStore(fileToken: string | null = null): CredentialStore {
   return {
     readToken: async () => null,
+    readFileToken: () => fileToken,
     detectCli: () => true
   }
 }
@@ -138,6 +152,7 @@ describe('auth-guard', () => {
     it('returns tokenFound: false when JSON has no claudeAiOauth', async () => {
       const store: CredentialStore = {
         readToken: async () => ({ someOtherKey: {} }) as never,
+        readFileToken: () => null,
         detectCli: () => true
       }
 
@@ -150,6 +165,7 @@ describe('auth-guard', () => {
     it('returns tokenFound: false when claudeAiOauth has no accessToken', async () => {
       const store: CredentialStore = {
         readToken: async () => ({ claudeAiOauth: { expiresAt: '9999999999999' } }),
+        readFileToken: () => null,
         detectCli: () => true
       }
 
@@ -161,10 +177,67 @@ describe('auth-guard', () => {
     it('reports tokenExpired when expiresAt is missing', async () => {
       const store: CredentialStore = {
         readToken: async () => ({ claudeAiOauth: { accessToken: 'tok' } }),
+        readFileToken: () => null,
         detectCli: () => true
       }
       const status = await checkAuthStatus(store)
       expect(status.tokenExpired).toBe(true)
+    })
+
+    describe('file-based fallback', () => {
+      it('returns tokenFound: true when keychain returns null but file token exists', async () => {
+        // Pins the fix for unsigned/newly-installed bundles whose code identity
+        // isn't on the keychain ACL: the UI falls back to the same file token
+        // the agent manager uses at spawn time, so onboarding can progress.
+        const store = makeFailingStore('sk-ant-oat01-from-disk-fallback')
+
+        const status = await checkAuthStatus(store)
+
+        expect(status.tokenFound).toBe(true)
+        expect(status.tokenExpired).toBe(false)
+        expect(status.expiresAt).toBeUndefined()
+      })
+
+      it('returns tokenFound: false when keychain null AND file token absent', async () => {
+        const store = makeFailingStore(null)
+
+        const status = await checkAuthStatus(store)
+
+        expect(status.tokenFound).toBe(false)
+        expect(status.tokenExpired).toBe(false)
+      })
+
+      it('falls back to file token when keychain payload has no accessToken', async () => {
+        // Keychain returns a payload but with missing accessToken (malformed
+        // entry, partial write, etc.). File token is still a valid fallback.
+        const store: CredentialStore = {
+          readToken: async () => ({ claudeAiOauth: { expiresAt: '9999999999999' } }),
+          readFileToken: () => 'sk-ant-oat01-from-disk-fallback',
+          detectCli: () => true
+        }
+
+        const status = await checkAuthStatus(store)
+
+        expect(status.tokenFound).toBe(true)
+        expect(status.tokenExpired).toBe(false)
+      })
+
+      it('prefers keychain data when both keychain and file are available', async () => {
+        // Happy path for signed/authorized apps: keychain wins because it
+        // carries expiry metadata the file doesn't have.
+        const futureMs = Date.now() + 3600_000
+        const store = makeStore(
+          makeKeychainJson({ expiresAt: String(futureMs) }),
+          true,
+          'sk-ant-oat01-ignored-because-keychain-wins'
+        )
+
+        const status = await checkAuthStatus(store)
+
+        expect(status.tokenFound).toBe(true)
+        expect(status.tokenExpired).toBe(false)
+        expect(status.expiresAt?.getTime()).toBe(futureMs)
+      })
     })
   })
 
