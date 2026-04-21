@@ -70,10 +70,15 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
 
   async function cancelTaskForMcp(
     id: string,
-    reason?: string
+    reason?: string,
+    options?: { caller?: string }
   ): ReturnType<typeof cancelTask> {
     try {
-      return await cancelTask(id, { reason }, { onStatusTerminal: deps.onStatusTerminal, logger })
+      return await cancelTask(
+        id,
+        { reason, caller: options?.caller },
+        { onStatusTerminal: deps.onStatusTerminal, logger }
+      )
     } catch (err) {
       throw translateCancelError(err)
     }

@@ -65,8 +65,18 @@ export interface TaskCommandPort {
     deps: CreateTaskWithValidationDeps,
     opts?: CreateTaskWithValidationOpts
   ) => SprintTask
-  updateTask: (id: string, patch: TaskPatch) => SprintTask | null
-  cancelTask: (id: string, reason?: string) => Promise<SprintTask | null> | SprintTask | null
+  /**
+   * `caller` is recorded in the `task_changes` audit trail as the
+   * `changed_by` value. The MCP adapter passes `'mcp'` (or
+   * `'mcp:<client-name>'` when the SDK exposes client info) so audit
+   * rows can distinguish MCP-originated edits from IPC-originated ones.
+   */
+  updateTask: (id: string, patch: TaskPatch, options?: { caller?: string }) => SprintTask | null
+  cancelTask: (
+    id: string,
+    reason?: string,
+    options?: { caller?: string }
+  ) => Promise<SprintTask | null> | SprintTask | null
   /**
    * Fired when `tasks.update` drives a task into a terminal status from a
    * non-terminal one. Routes to `TaskTerminalService.onStatusTerminal` so
@@ -119,6 +129,15 @@ export interface TaskToolsDeps
  */
 const TASK_LIST_DEFAULT_LIMIT = 100
 const TASK_LIST_DEFAULT_OFFSET = 0
+
+/**
+ * Attribution label the MCP adapter passes through to the audit trail
+ * for every write. Rendered in `task_changes.changed_by` so operators
+ * can distinguish MCP-originated edits from IPC-originated ones without
+ * reverse-engineering the log. Extend to `mcp:<client-name>` once the
+ * SDK exposes a clean hook — the constant is the single source of truth.
+ */
+export const MCP_CALLER = 'mcp'
 
 export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void {
   server.tool(
@@ -204,7 +223,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
           const { id, patch } = parseToolArgs(TaskUpdateSchema, rawArgs)
           const current = deps.getTask(id)
           const effectivePatch = buildEffectiveUpdatePatch(patch, current)
-          const row = deps.updateTask(id, effectivePatch)
+          const row = deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
           if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
           await fireTerminalHookIfNeeded(deps, current, row)
           return jsonContent(row)
@@ -221,7 +240,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
       safeToolResponse(
         async () => {
           const { id, reason } = parseToolArgs(TaskCancelSchema, rawArgs)
-          const row = await deps.cancelTask(id, reason)
+          const row = await deps.cancelTask(id, reason, { caller: MCP_CALLER })
           if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
           return jsonContent(row)
         },
