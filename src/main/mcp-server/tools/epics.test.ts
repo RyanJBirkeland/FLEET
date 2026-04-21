@@ -1,8 +1,13 @@
 import { describe, it, expect, vi } from 'vitest'
 import { registerEpicTools, type EpicToolsDeps } from './epics'
+import { EpicCycleError, EpicNotFoundError } from '../../services/epic-group-service'
 import type { TaskGroup } from '../../../shared/types'
 
-type ToolHandler = (args: unknown) => Promise<{ content: Array<{ type: 'text'; text: string }> }>
+type ToolResult = {
+  isError?: boolean
+  content: Array<{ type: 'text'; text: string }>
+}
+type ToolHandler = (args: unknown) => Promise<ToolResult>
 
 function mockServer() {
   const handlers = new Map<string, ToolHandler>()
@@ -12,8 +17,13 @@ function mockServer() {
         handlers.set(name, h)
       }
     } as any,
-    call: (name: string, args: unknown) => handlers.get(name)!(args)
+    call: (name: string, args: unknown): Promise<ToolResult> => handlers.get(name)!(args)
   }
+}
+
+function parseErrorBody(res: ToolResult): { code: number; message: string; data?: unknown } {
+  expect(res.isError).toBe(true)
+  return JSON.parse(res.content[0].text)
 }
 
 const fakeGroup = (overrides: Partial<TaskGroup> = {}): TaskGroup => ({
@@ -57,12 +67,16 @@ describe('epics.* tools', () => {
     expect(Array.isArray(JSON.parse(res.content[0].text))).toBe(true)
   })
 
-  it('epics.get returns -32001 when missing', async () => {
+  it('epics.get returns structured NotFound payload when missing', async () => {
     const deps = fakeDeps()
     ;(deps.epicService.getEpic as any).mockReturnValue(null)
     const { server, call } = mockServer()
     registerEpicTools(server, deps)
-    await expect(call('epics.get', { id: 'missing' })).rejects.toThrow(/not found/)
+    const res = await call('epics.get', { id: 'missing' })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32001)
+    expect(body.message).toMatch(/not found/)
+    expect(body.data).toMatchObject({ id: 'missing' })
   })
 
   it('epics.get includes tasks when includeTasks is true', async () => {
@@ -103,15 +117,43 @@ describe('epics.* tools', () => {
     expect(deps.epicService.addDependency).not.toHaveBeenCalled()
   })
 
-  it('epics.setDependencies translates "not found" into McpDomainError NotFound', async () => {
+  it('epics.setDependencies returns structured NotFound payload when EpicNotFoundError is thrown', async () => {
     const deps = fakeDeps()
     ;(deps.epicService.setDependencies as any).mockImplementation(() => {
-      throw new Error('Task group not found: missing')
+      throw new EpicNotFoundError('missing')
     })
     const { server, call } = mockServer()
     registerEpicTools(server, deps)
-    await expect(
-      call('epics.setDependencies', { id: 'missing', dependencies: [] })
-    ).rejects.toThrow(/not found/i)
+    const res = await call('epics.setDependencies', { id: 'missing', dependencies: [] })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32001)
+    expect(body.message).toMatch(/not found/i)
+    expect(body.data).toMatchObject({ id: 'missing' })
+  })
+
+  it('epics.setDependencies returns structured Cycle payload when EpicCycleError is thrown', async () => {
+    const deps = fakeDeps()
+    ;(deps.epicService.setDependencies as any).mockImplementation(() => {
+      throw new EpicCycleError('g1', 'g1 -> g2 -> g1')
+    })
+    const { server, call } = mockServer()
+    registerEpicTools(server, deps)
+    const res = await call('epics.setDependencies', { id: 'g1', dependencies: [] })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32003)
+    expect(body.message).toMatch(/cycle/i)
+    expect(body.data).toMatchObject({ id: 'g1' })
+  })
+
+  it('epics.setDependencies propagates unknown throws unchanged', async () => {
+    const deps = fakeDeps()
+    ;(deps.epicService.setDependencies as any).mockImplementation(() => {
+      throw new Error('something broke')
+    })
+    const { server, call } = mockServer()
+    registerEpicTools(server, deps)
+    await expect(call('epics.setDependencies', { id: 'g1', dependencies: [] })).rejects.toThrow(
+      /something broke/
+    )
   })
 })

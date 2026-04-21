@@ -1,28 +1,33 @@
 import { describe, it, expect, vi } from 'vitest'
 import { registerTaskTools, type TaskToolsDeps } from './tasks'
+import { TaskValidationError } from '../../services/sprint-service'
 import type { SprintTask } from '../../../shared/types'
 
-type ToolHandler = (args: unknown) => Promise<{ content: Array<{ type: 'text'; text: string }> }>
+type ToolResult = {
+  isError?: boolean
+  content: Array<{ type: 'text'; text: string }>
+}
+type ToolHandler = (args: unknown) => Promise<ToolResult>
 
 function mockServer() {
   const handlers = new Map<string, ToolHandler>()
   return {
     server: {
-      tool: (
-        name: string,
-        _desc: string,
-        _schema: unknown,
-        handler: ToolHandler
-      ) => {
+      tool: (name: string, _desc: string, _schema: unknown, handler: ToolHandler) => {
         handlers.set(name, handler)
       }
     } as any,
-    call: (name: string, args: unknown) => {
+    call: (name: string, args: unknown): Promise<ToolResult> => {
       const h = handlers.get(name)
       if (!h) throw new Error(`no handler for ${name}`)
       return h(args)
     }
   }
+}
+
+function parseErrorBody(res: ToolResult): { code: number; message: string; data?: unknown } {
+  expect(res.isError).toBe(true)
+  return JSON.parse(res.content[0].text)
 }
 
 const baseTask: SprintTask = {
@@ -70,7 +75,10 @@ const baseTask: SprintTask = {
   duration_ms: null
 }
 
-const fakeTask = (overrides: Partial<SprintTask> = {}): SprintTask => ({ ...baseTask, ...overrides })
+const fakeTask = (overrides: Partial<SprintTask> = {}): SprintTask => ({
+  ...baseTask,
+  ...overrides
+})
 
 function fakeDeps(overrides: Partial<TaskToolsDeps> = {}): TaskToolsDeps {
   return {
@@ -80,6 +88,7 @@ function fakeDeps(overrides: Partial<TaskToolsDeps> = {}): TaskToolsDeps {
     updateTask: vi.fn(() => fakeTask()),
     cancelTask: vi.fn(() => fakeTask({ status: 'cancelled' })),
     getTaskChanges: vi.fn(() => []),
+    onStatusTerminal: vi.fn(() => Promise.resolve()),
     logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
     ...overrides
   }
@@ -162,15 +171,17 @@ describe('tasks.* write tools', () => {
     expect(opts?.skipReadinessCheck).toBeUndefined()
   })
 
-  it('tasks.update throws when updateTask returns null', async () => {
+  it('tasks.update returns structured NotFound when updateTask returns null', async () => {
     const deps = fakeDeps({
       updateTask: vi.fn(() => null)
     })
     const { server, call } = mockServer()
     registerTaskTools(server, deps)
-    await expect(
-      call('tasks.update', { id: 't1', patch: { priority: 5 } })
-    ).rejects.toThrow(/not found/)
+    const res = await call('tasks.update', { id: 't1', patch: { priority: 5 } })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32001)
+    expect(body.message).toMatch(/not found/)
+    expect(body.data).toMatchObject({ id: 't1' })
   })
 
   it('tasks.update resets terminal-state fields when transitioning from terminal to queued', async () => {
@@ -244,6 +255,79 @@ describe('tasks.* write tools', () => {
     expect(deps.cancelTask).toHaveBeenCalledWith('t1', 'no longer needed')
     expect(JSON.parse(res.content[0].text).status).toBe('cancelled')
   })
+
+  it('tasks.update fires onStatusTerminal when entering a terminal status from non-terminal', async () => {
+    const deps = fakeDeps({
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' })),
+      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'done' }))
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.update', { id: 't1', patch: { status: 'done' } })
+    expect(deps.onStatusTerminal).toHaveBeenCalledTimes(1)
+    expect(deps.onStatusTerminal).toHaveBeenCalledWith('t1', 'done')
+  })
+
+  it('tasks.update does NOT fire onStatusTerminal on the revival path (terminal → queued)', async () => {
+    const deps = fakeDeps({
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'failed' })),
+      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'queued' }))
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.update', { id: 't1', patch: { status: 'queued' } })
+    expect(deps.onStatusTerminal).not.toHaveBeenCalled()
+  })
+
+  it('tasks.update does NOT fire onStatusTerminal when already terminal (idempotent retry)', async () => {
+    const deps = fakeDeps({
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'failed' })),
+      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'error' }))
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.update', { id: 't1', patch: { status: 'error' } })
+    expect(deps.onStatusTerminal).not.toHaveBeenCalled()
+  })
+
+  it('tasks.update does NOT fire onStatusTerminal for non-terminal transitions', async () => {
+    const deps = fakeDeps({
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' })),
+      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'review' }))
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.update', { id: 't1', patch: { status: 'review' } })
+    expect(deps.onStatusTerminal).not.toHaveBeenCalled()
+  })
+
+  it('tasks.create returns ValidationFailed payload when TaskValidationError is thrown', async () => {
+    const deps = fakeDeps({
+      createTaskWithValidation: vi.fn(() => {
+        throw new TaskValidationError('spec-structural', 'Spec missing required headings')
+      })
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    const res = await call('tasks.create', { title: 't', repo: 'bde' })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32005)
+    expect(body.message).toMatch(/Spec missing required headings/)
+    expect(body.data).toMatchObject({ code: 'spec-structural' })
+  })
+
+  it('tasks.create propagates unknown throws unchanged', async () => {
+    const deps = fakeDeps({
+      createTaskWithValidation: vi.fn(() => {
+        throw new Error('database offline')
+      })
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await expect(call('tasks.create', { title: 't', repo: 'bde' })).rejects.toThrow(
+      /database offline/
+    )
+  })
 })
 
 describe('tasks.* read tools', () => {
@@ -257,11 +341,26 @@ describe('tasks.* read tools', () => {
     expect(deps.listTasks).toHaveBeenCalled()
   })
 
-  it('tasks.get returns -32001 when task missing', async () => {
+  it('tasks.get returns structured NotFound payload when task missing', async () => {
     const deps = fakeDeps({ getTask: vi.fn(() => null) })
     const { server, call } = mockServer()
     registerTaskTools(server, deps)
-    await expect(call('tasks.get', { id: 'missing' })).rejects.toThrow(/not found/)
+    const res = await call('tasks.get', { id: 'missing' })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32001)
+    expect(body.message).toMatch(/not found/)
+    expect(body.data).toMatchObject({ id: 'missing' })
+  })
+
+  it('tasks.create returns structured InvalidParams payload on zod validation failure', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    // Missing required `title` — schema enforces a minimum length.
+    const res = await call('tasks.create', { title: '', repo: 'bde' })
+    const body = parseErrorBody(res)
+    expect(body.code).toBe(-32602)
+    expect(body.message).toMatch(/title/i)
   })
 
   it('tasks.history returns the change rows as JSON', async () => {

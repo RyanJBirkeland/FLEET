@@ -55,6 +55,7 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
       cancelTask: (id, reason) =>
         cancelTask(id, { reason }, { onStatusTerminal: deps.onStatusTerminal, logger }),
       getTaskChanges: (id, limit) => getTaskChanges(id, limit),
+      onStatusTerminal: deps.onStatusTerminal,
       logger
     })
 
