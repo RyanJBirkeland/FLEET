@@ -241,4 +241,41 @@ describe('classifyFailureReason', () => {
       expect(['timeout', 'auth']).toContain(result)
     })
   })
+
+  describe('environmental failures', () => {
+    it('classifies main-repo-dirty as environmental', () => {
+      expect(
+        classifyFailureReason(
+          'setupWorktree failed: Main repo has uncommitted changes (pre-ffMergeMain) — refusing to proceed. Dirty paths: ?? docs/'
+        )
+      ).toBe('environmental')
+    })
+
+    it('classifies missing repo configuration as environmental', () => {
+      expect(
+        classifyFailureReason('Repo "bde" is not configured in BDE settings')
+      ).toBe('environmental')
+    })
+
+    it('classifies credential-unavailable as environmental', () => {
+      expect(
+        classifyFailureReason('Claude credential unavailable (needs-login)')
+      ).toBe('environmental')
+    })
+
+    it('classifies git network errors as environmental', () => {
+      expect(
+        classifyFailureReason('fatal: unable to access https://github.com/: Could not resolve host')
+      ).toBe('environmental')
+    })
+
+    it('leaves unambiguous spec-level failures classified correctly (not environmental)', () => {
+      expect(classifyFailureReason('npm test failed')).toBe('test_failure')
+      expect(classifyFailureReason('TypeScript error: cannot find name')).toBe('compilation')
+    })
+
+    it('falls through to unknown for unmatched strings', () => {
+      expect(classifyFailureReason('some unrelated message')).toBe('unknown')
+    })
+  })
 })

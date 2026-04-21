@@ -14,6 +14,24 @@ import { execFileAsync } from './async-utils'
 import type { Logger } from '../logger'
 
 /**
+ * Parse `git status --porcelain=v1` output and decide whether the worktree
+ * should be considered dirty for the main-repo-guard check. Returns false
+ * (not-dirty) only when every dirty path is a markdown file under docs/ —
+ * audit/doc commits in-progress should not scorch pipeline tasks.
+ */
+export function isRepoDirtyForGuard(porcelainOutput: string): boolean {
+  const lines = porcelainOutput.split('\n').filter((l) => l.length > 0)
+  if (lines.length === 0) return false
+  for (const line of lines) {
+    // Porcelain v1 format: 2 status chars, 1 space, path. Untracked looks like "?? path".
+    const path = line.slice(3)
+    const isDocsMarkdown = /^docs\/.*\.md$/.test(path)
+    if (!isDocsMarkdown) return true
+  }
+  return false
+}
+
+/**
  * Runs `git status --porcelain` in `repoPath` and returns the raw output
  * (empty string when the working tree is clean).
  */
@@ -73,6 +91,9 @@ async function bestEffortCheckoutHead(
  *
  * `phase` is a human-readable label included in the error message so callers
  * can tell pre- from post-operation breaches apart in logs.
+ *
+ * Special case: if all dirty paths are markdown files under docs/, the guard
+ * does not block — docs-only changes are expected during audit periods.
  */
 export async function assertRepoCleanOrAbort(
   repoPath: string,
@@ -91,7 +112,7 @@ export async function assertRepoCleanOrAbort(
   }
 
   const porcelain = await getMainRepoPorcelainStatus(repoPath, env)
-  if (porcelain) {
+  if (porcelain && isRepoDirtyForGuard(porcelain)) {
     logger.error(
       `[main-repo-guard] Main repo dirty in ${repoPath} (${phase}):\n${porcelain}`
     )

@@ -47,6 +47,8 @@ export interface IAgentTaskRepository {
   getGroup(id: string): TaskGroup | null
   getGroupTasks(groupId: string): SprintTask[]
   getGroupsWithDependencies(): Array<{ id: string; depends_on: EpicDependency[] | null }>
+  /** Used by the drain loop to report queue depth in drain-paused broadcasts. */
+  getQueueStats(): QueueStats
 }
 
 /**

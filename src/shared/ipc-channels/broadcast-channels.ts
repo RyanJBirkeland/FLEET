@@ -1,6 +1,21 @@
 import type { AgentEvent, ChatChunk, PrListPayload, SprintTask } from '../types'
 
 /**
+ * Emitted when the drain loop pauses after classifying a per-task failure as
+ * environmental (main-repo dirty, auth missing, network). The pause protects
+ * the queue from a cascade where every subsequent task hits the same issue
+ * and is burnt to `error` status.
+ */
+export interface AgentManagerDrainPausedEvent {
+  /** Human-readable reason ('Main repo dirty', 'Auth missing', etc.). */
+  reason: string
+  /** Unix ms when the drain will auto-resume. */
+  pausedUntil: number
+  /** Number of queued tasks at the moment the pause began. */
+  affectedTaskCount: number
+}
+
+/**
  * Type-safe broadcast channel registry.
  * Maps channel names to payload types for push events sent from main → renderer.
  */
@@ -19,6 +34,7 @@ export interface BroadcastChannels {
     consecutiveFailures: number
     openUntil: number
   }
+  'agentManager:drainPaused': AgentManagerDrainPausedEvent
 
   // Manager warnings (e.g. Keychain repeated failures)
   'manager:warning': { message: string }

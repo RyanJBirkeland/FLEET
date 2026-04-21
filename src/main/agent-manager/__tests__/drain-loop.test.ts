@@ -48,7 +48,17 @@ function makeRepo(): IAgentTaskRepository {
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
     releaseTask: vi.fn(),
-    listActiveAgentRuns: vi.fn().mockReturnValue([])
+    listActiveAgentRuns: vi.fn().mockReturnValue([]),
+    getQueueStats: vi.fn().mockReturnValue({
+      queued: 0,
+      blocked: 0,
+      active: 0,
+      review: 0,
+      done: 0,
+      failed: 0,
+      cancelled: 0,
+      error: 0
+    })
   } as unknown as IAgentTaskRepository
 }
 
@@ -89,6 +99,8 @@ function makeDeps(overrides: Partial<DrainLoopDeps> = {}): DrainLoopDeps {
     processQueuedTask: vi.fn().mockResolvedValue(undefined),
     drainFailureCounts: new Map<string, number>(),
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
+    emitDrainPaused: vi.fn(),
+    drainPausedUntil: undefined,
     ...overrides
   }
 }
@@ -248,5 +260,107 @@ describe('runDrain', () => {
     const deps = makeDeps()
     await runDrain(deps)
     expect(deps.metrics.setLastDrainDuration).toHaveBeenCalledWith(expect.any(Number))
+  })
+
+  it('short-circuits when drainPausedUntil is in the future', async () => {
+    const deps = makeDeps({ drainPausedUntil: Date.now() + 60_000 })
+    await runDrain(deps)
+    expect(deps.metrics.increment).not.toHaveBeenCalled()
+    expect(deps.processQueuedTask).not.toHaveBeenCalled()
+  })
+})
+
+describe('drain-loop: environmental failure pauses drain', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function envErrorRepo(): IAgentTaskRepository {
+    const repo = makeRepo()
+    vi.mocked(repo.getQueuedTasks).mockReturnValue([{ id: 'task-env' }] as any)
+    vi.mocked(repo.getQueueStats).mockReturnValue({
+      queued: 7,
+      blocked: 0,
+      active: 0,
+      review: 0,
+      done: 0,
+      failed: 0,
+      cancelled: 0,
+      error: 0
+    } as any)
+    return repo
+  }
+
+  it('does not transition the task to error on environmental failure', async () => {
+    const repo = envErrorRepo()
+    const emitDrainPaused = vi.fn()
+    const processQueuedTask = vi
+      .fn()
+      .mockRejectedValue(new Error('Main repo has uncommitted changes (pre-ffMergeMain)'))
+    const deps = makeDeps({ repo, processQueuedTask, emitDrainPaused })
+
+    await drainQueuedTasks(1, new Map(), deps)
+
+    const updateCalls = vi.mocked(repo.updateTask).mock.calls
+    expect(updateCalls.length).toBe(1)
+    const [updatedId, patch] = updateCalls[0]
+    expect(updatedId).toBe('task-env')
+    expect(patch.status).toBe('queued')
+    expect(patch.status).not.toBe('error')
+    expect(patch.failure_reason).toBe('environmental')
+    expect(patch.claimed_by).toBeNull()
+    expect(emitDrainPaused).toHaveBeenCalledTimes(1)
+    const event = emitDrainPaused.mock.calls[0][0]
+    expect(event.reason).toMatch(/main repo/i)
+    expect(event.affectedTaskCount).toBe(7)
+    expect(event.pausedUntil).toBeGreaterThan(Date.now())
+  })
+
+  it('populates failure_reason but keeps status queued', async () => {
+    const repo = envErrorRepo()
+    const processQueuedTask = vi
+      .fn()
+      .mockRejectedValue(new Error('credential unavailable for bde repo'))
+    const deps = makeDeps({ repo, processQueuedTask })
+
+    await drainQueuedTasks(1, new Map(), deps)
+
+    const [, patch] = vi.mocked(repo.updateTask).mock.calls[0]
+    expect(patch.status).toBe('queued')
+    expect(patch.failure_reason).toBe('environmental')
+    expect(patch.notes).toMatch(/credential unavailable/i)
+  })
+
+  it('still errors the task on spec-level (non-environmental) failure', async () => {
+    const repo = makeRepo()
+    vi.mocked(repo.getQueuedTasks).mockReturnValue([{ id: 'task-spec' }] as any)
+    vi.mocked(repo.getTask).mockReturnValue({ id: 'task-spec', status: 'active' } as any)
+    const emitDrainPaused = vi.fn()
+    const processQueuedTask = vi.fn().mockRejectedValue(new Error('TypeError: foo is not a function'))
+    // Pre-set failure count so the third failure trips the quarantine threshold in a single drain.
+    const drainFailureCounts = new Map<string, number>([['task-spec', 2]])
+    const deps = makeDeps({ repo, processQueuedTask, emitDrainPaused, drainFailureCounts })
+
+    await drainQueuedTasks(1, new Map(), deps)
+
+    const updateCalls = vi.mocked(repo.updateTask).mock.calls
+    expect(updateCalls.length).toBe(1)
+    const [, patch] = updateCalls[0]
+    expect(patch.status).toBe('error')
+    expect(emitDrainPaused).not.toHaveBeenCalled()
+  })
+
+  it('does not pause when the failure classifier returns a non-environmental category', async () => {
+    const repo = makeRepo()
+    vi.mocked(repo.getQueuedTasks).mockReturnValue([{ id: 'task-spec' }] as any)
+    const emitDrainPaused = vi.fn()
+    const processQueuedTask = vi.fn().mockRejectedValue(new Error('Syntax error in spec'))
+    const deps = makeDeps({ repo, processQueuedTask, emitDrainPaused })
+
+    await drainQueuedTasks(1, new Map(), deps)
+
+    expect(emitDrainPaused).not.toHaveBeenCalled()
+    // First spec-level failure shouldn't update the task (count < threshold).
+    expect(vi.mocked(repo.updateTask)).not.toHaveBeenCalled()
   })
 })

@@ -68,6 +68,9 @@ export const agentManager = {
   onWarning: onBroadcast<BroadcastChannels['manager:warning']>('manager:warning'),
   onCircuitBreakerOpen: onBroadcast<BroadcastChannels['agent-manager:circuit-breaker-open']>(
     'agent-manager:circuit-breaker-open'
+  ),
+  onDrainPaused: onBroadcast<BroadcastChannels['agentManager:drainPaused']>(
+    'agentManager:drainPaused'
   )
 }
 

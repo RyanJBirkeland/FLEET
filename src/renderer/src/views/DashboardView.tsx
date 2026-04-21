@@ -8,6 +8,7 @@ import { useSprintFilters, type StatusFilter } from '../stores/sprintFilters'
 import { usePanelLayoutStore } from '../stores/panelLayout'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useBackoffInterval } from '../hooks/useBackoffInterval'
+import { useDrainStatus } from '../hooks/useDrainStatus'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION } from '../lib/motion'
 import { POLL_DASHBOARD_INTERVAL, POLL_LOAD_AVERAGE } from '../lib/constants'
 import { StatusBar, NeonCard } from '../components/neon'
@@ -214,6 +215,8 @@ export default function DashboardView(): React.JSX.Element {
 
   const errorCount = useMemo(() => Object.values(cardErrors).filter(Boolean).length, [cardErrors])
 
+  const drainStatus = useDrainStatus()
+
   // successTrendData now comes from useDashboardDataStore above
 
   const transition = reduced ? REDUCED_TRANSITION : SPRINGS.snappy
@@ -246,6 +249,18 @@ export default function DashboardView(): React.JSX.Element {
               </span>
             )}
           </StatusBar>
+
+          {drainStatus && (
+            <div
+              role="alert"
+              className="bde-warning-banner"
+              style={{ marginTop: 'var(--bde-space-2)' }}
+            >
+              <strong>Drain loop paused:</strong>&nbsp;{drainStatus.reason} (
+              {drainStatus.affectedTaskCount} queued; resumes at{' '}
+              {new Date(drainStatus.pausedUntil).toLocaleTimeString()})
+            </div>
+          )}
 
           {/* Morning briefing card */}
           {showBriefing && briefingTasks.length > 0 && (

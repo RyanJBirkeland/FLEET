@@ -15,8 +15,10 @@ import type {
 } from '../shared/ipc-channels'
 import type { ReviewResult, PartnerMessage, ChatChunk } from '../shared/types'
 import type { AgentEvent } from '../shared/types'
+import type { AgentManagerDrainPausedEvent } from '../shared/ipc-channels/broadcast-channels'
 
 export type { AgentMeta, SpawnLocalAgentArgs, SpawnLocalAgentResult, SprintTask }
+export type { AgentManagerDrainPausedEvent }
 
 /** Helper — extracts the result type for a typed IPC channel. */
 type IpcResult<K extends keyof IpcChannelMap> = IpcChannelMap[K]['result']
@@ -348,6 +350,7 @@ declare global {
         onCircuitBreakerOpen: (
           cb: (payload: { consecutiveFailures: number; openUntil: number }) => void
         ) => () => void
+        onDrainPaused: (cb: (event: AgentManagerDrainPausedEvent) => void) => () => void
       }
 
       // Cost analytics

@@ -137,6 +137,11 @@ export class AgentManagerImpl implements AgentManager {
   // each tick so counts persist across ticks. Cleared on success or quarantine.
   readonly _drainFailureCounts = new Map<string, number>()
 
+  // Unix-ms until which the drain loop should skip its tick. Set when the
+  // drain catches an environmental failure (main-repo dirty, auth missing,
+  // network). Task 5 broadcasts the pause to the renderer.
+  _drainPausedUntil: number | undefined
+
   // Tracks consecutive drain-tick-level errors (the drain loop itself threw).
   // Reset on any successful tick. Emits manager:warning after 3 consecutive failures.
   _consecutiveDrainErrors = 0
@@ -414,7 +419,12 @@ export class AgentManagerImpl implements AgentManager {
       setConcurrency: (state) => { this._concurrency = state },
       processQueuedTask: (raw, map) => this._processQueuedTask(raw, map),
       drainFailureCounts: this._drainFailureCounts,
-      onTaskTerminal: this.onTaskTerminal.bind(this)
+      onTaskTerminal: this.onTaskTerminal.bind(this),
+      drainPausedUntil: this._drainPausedUntil,
+      emitDrainPaused: (event) => {
+        this._drainPausedUntil = event.pausedUntil
+        broadcast('agentManager:drainPaused', event)
+      }
     }
     return runDrain(drainDeps)
   }

@@ -8,7 +8,7 @@
 
 import type { Logger } from '../logger'
 import type { AgentManagerConfig, ActiveAgent } from './types'
-import { NOTES_MAX_LENGTH } from './types'
+import { NOTES_MAX_LENGTH, DRAIN_PAUSE_ON_ENV_ERROR_MS } from './types'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { DependencyIndex } from '../services/dependency-service'
 import type { MetricsCollector } from './metrics'
@@ -22,6 +22,8 @@ import {
 } from './dependency-refresher'
 import { getConfiguredRepos } from '../paths'
 import type { SprintTask } from '../../shared/types/task-types'
+import { classifyFailureReason } from './failure-classifier'
+import type { AgentManagerDrainPausedEvent } from '../../shared/ipc-channels/broadcast-channels'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -55,6 +57,10 @@ export interface DrainLoopDeps {
   drainFailureCounts: Map<string, number>
   /** Called when a task is quarantined after repeated failures so dependency resolution runs. */
   onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  /** Called when drain pauses because of an environmental failure. */
+  emitDrainPaused: (event: AgentManagerDrainPausedEvent) => void
+  /** Unix-ms; when set and > Date.now(), the drain tick short-circuits. */
+  drainPausedUntil: number | undefined
 }
 
 // ---------------------------------------------------------------------------
@@ -160,31 +166,93 @@ export async function drainQueuedTasks(
     } catch (err) {
       deps.logger.error(`[agent-manager] Failed to process task ${taskId}: ${err}`)
       if (!taskId) continue
-      const count = (deps.drainFailureCounts.get(taskId) ?? 0) + 1
-      deps.drainFailureCounts.set(taskId, count)
-      if (count >= DRAIN_QUARANTINE_THRESHOLD) {
-        deps.logger.error(
-          `[agent-manager] Task ${taskId} failed ${count} consecutive times — quarantining to prevent drain churn`
-        )
-        const errMsg = err instanceof Error ? err.message : String(err)
-        const note = `Task processing failed ${count} consecutive times in the drain loop: ${errMsg}. Check ~/.bde/bde.log for details.`
-        const truncated = note.length > NOTES_MAX_LENGTH
-          ? note.slice(0, NOTES_MAX_LENGTH - 3) + '...'
-          : note
-        try {
-          const currentTask = deps.repo.getTask(taskId)
-          const quarantineStatus: 'cancelled' | 'error' =
-            currentTask?.status === 'queued' ? 'cancelled' : 'error'
-          deps.repo.updateTask(taskId, { status: quarantineStatus, notes: truncated, claimed_by: null })
-          deps.drainFailureCounts.delete(taskId)
-          await deps.onTaskTerminal(taskId, quarantineStatus).catch((termErr) =>
-            deps.logger.warn(`[agent-manager] onTerminal failed for quarantined task ${taskId}: ${termErr}`)
-          )
-        } catch (quarantineErr) {
-          deps.logger.error(`[agent-manager] Failed to quarantine task ${taskId}: ${quarantineErr}`)
-        }
-      }
+      if (handleEnvironmentalFailure(taskId, err, deps)) return
+      handleSpecLevelFailure(taskId, err, deps)
     }
+  }
+}
+
+/**
+ * Classify a per-task error as environmental (main-repo dirty, auth missing,
+ * network). When it is, leave the task queued so it can retry after the user
+ * fixes the environment, emit a pause event, and tell the caller to stop
+ * iterating the drain so the remaining queued tasks don't burn to `error`.
+ *
+ * Returns `true` when the failure was environmental (caller should `return`).
+ */
+function handleEnvironmentalFailure(
+  taskId: string,
+  err: unknown,
+  deps: DrainLoopDeps
+): boolean {
+  const message = err instanceof Error ? (err.stack ?? err.message) : String(err)
+  if (classifyFailureReason(message) !== 'environmental') return false
+
+  const reason = message.split('\n')[0].slice(0, 200)
+  try {
+    deps.repo.updateTask(taskId, {
+      status: 'queued',
+      failure_reason: 'environmental',
+      claimed_by: null,
+      notes: reason
+    })
+  } catch (writeErr) {
+    deps.logger.warn(
+      `[drain-loop] failed to annotate queued task ${taskId} with environmental failure: ${writeErr}`
+    )
+  }
+
+  const pausedUntil = Date.now() + DRAIN_PAUSE_ON_ENV_ERROR_MS
+  const affectedTaskCount = readQueueDepth(deps)
+  deps.emitDrainPaused({ reason, pausedUntil, affectedTaskCount })
+  deps.logger.warn(
+    `[drain-loop] environmental failure — pausing drain until ${new Date(pausedUntil).toISOString()}: ${reason}`
+  )
+  return true
+}
+
+function readQueueDepth(deps: DrainLoopDeps): number {
+  try {
+    return deps.repo.getQueueStats().queued ?? 0
+  } catch {
+    return 0
+  }
+}
+
+/**
+ * Original spec-level failure path — counts consecutive failures and quarantines
+ * the task after `DRAIN_QUARANTINE_THRESHOLD` churns. Unchanged from pre-pause
+ * behavior; only lifted out so the catch block can branch on classification.
+ */
+function handleSpecLevelFailure(taskId: string, err: unknown, deps: DrainLoopDeps): void {
+  const count = (deps.drainFailureCounts.get(taskId) ?? 0) + 1
+  deps.drainFailureCounts.set(taskId, count)
+  if (count < DRAIN_QUARANTINE_THRESHOLD) return
+
+  deps.logger.error(
+    `[agent-manager] Task ${taskId} failed ${count} consecutive times — quarantining to prevent drain churn`
+  )
+  const errMsg = err instanceof Error ? err.message : String(err)
+  const note = `Task processing failed ${count} consecutive times in the drain loop: ${errMsg}. Check ~/.bde/bde.log for details.`
+  const truncated =
+    note.length > NOTES_MAX_LENGTH ? note.slice(0, NOTES_MAX_LENGTH - 3) + '...' : note
+  try {
+    const currentTask = deps.repo.getTask(taskId)
+    const quarantineStatus: 'cancelled' | 'error' =
+      currentTask?.status === 'queued' ? 'cancelled' : 'error'
+    deps.repo.updateTask(taskId, {
+      status: quarantineStatus,
+      notes: truncated,
+      claimed_by: null
+    })
+    deps.drainFailureCounts.delete(taskId)
+    deps.onTaskTerminal(taskId, quarantineStatus).catch((termErr) =>
+      deps.logger.warn(
+        `[agent-manager] onTerminal failed for quarantined task ${taskId}: ${termErr}`
+      )
+    )
+  } catch (quarantineErr) {
+    deps.logger.error(`[agent-manager] Failed to quarantine task ${taskId}: ${quarantineErr}`)
   }
 }
 
@@ -203,6 +271,13 @@ export async function runDrain(deps: DrainLoopDeps): Promise<void> {
   deps.logger.info(
     `[agent-manager] Drain loop starting (shuttingDown=${deps.isShuttingDown()}, slots=${availableSlots(deps.getConcurrency(), deps.activeAgents.size)})`
   )
+
+  if (deps.drainPausedUntil && Date.now() < deps.drainPausedUntil) {
+    deps.logger.info(
+      `[drain-loop] skipping tick — paused until ${new Date(deps.drainPausedUntil).toISOString()}`
+    )
+    return
+  }
 
   if (!(await validateDrainPreconditions(deps))) return
 

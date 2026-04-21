@@ -56,6 +56,14 @@ export const LAST_OUTPUT_MAX_LENGTH = 500
 export const AGENT_SUMMARY_MAX_LENGTH = 300
 export const NOTES_MAX_LENGTH = 500
 
+/**
+ * How long the drain loop pauses after an environmental failure
+ * (main-repo dirty, auth missing, network). A pause buys the user
+ * time to fix the environment without the scheduler burning every
+ * queued task to `error` status.
+ */
+export const DRAIN_PAUSE_ON_ENV_ERROR_MS = 30_000
+
 export interface SteerResult {
   delivered: boolean
   error?: string
