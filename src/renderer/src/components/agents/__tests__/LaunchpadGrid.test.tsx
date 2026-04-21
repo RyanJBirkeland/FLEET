@@ -51,11 +51,7 @@ describe('LaunchpadGrid', () => {
     render(<LaunchpadGrid {...defaultProps} />)
     const input = screen.getByPlaceholderText('What would you like to work on?')
     await user.type(input, 'Do something custom{Enter}')
-    expect(onCustomPrompt).toHaveBeenCalledWith(
-      'Do something custom',
-      expect.any(String),
-      expect.any(String)
-    )
+    expect(onCustomPrompt).toHaveBeenCalledWith('Do something custom', expect.any(String))
   })
 
   it('Shift+Enter does NOT submit', async () => {
@@ -71,7 +67,6 @@ describe('LaunchpadGrid', () => {
     fireEvent.click(screen.getByText('Clean Code'))
     expect(onSelectTemplate).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'builtin-clean-code' }),
-      expect.any(String),
       expect.any(String)
     )
   })
@@ -91,12 +86,13 @@ describe('LaunchpadGrid', () => {
     expect(screen.queryByText(/Recent/i)).not.toBeInTheDocument()
   })
 
-  it('disables the model pills (routing is controlled via Settings → Models)', () => {
+  it('disables the model pills and renders none as active (routing lives in Settings → Models)', () => {
     render(<LaunchpadGrid {...defaultProps} />)
     for (const label of ['Haiku', 'Sonnet', 'Opus']) {
       const pill = screen.getByRole('button', { name: label })
       expect(pill).toBeDisabled()
       expect(pill).toHaveAttribute('title', expect.stringMatching(/Settings.*Models/i))
+      expect(pill.className).not.toMatch(/--active/)
     }
   })
 })

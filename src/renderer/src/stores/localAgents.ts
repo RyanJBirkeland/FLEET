@@ -19,7 +19,6 @@ export interface SpawnedAgent {
   logPath: string
   task: string
   repoPath: string
-  model: string
   spawnedAt: number
   interactive: boolean
 }
@@ -34,17 +33,14 @@ interface LocalAgentsState extends LogPollerState {
   fetchProcesses: () => Promise<void>
   setCollapsed: (collapsed: boolean) => void
   /**
-   * `model` is a display-only hint attached to the local spawned-agent record.
-   * It is NOT forwarded through IPC — the main process resolves the actual
-   * runtime model from `agents.backendConfig` via `resolveAgentRuntime`. The
-   * field survives here purely so the spawned-agent list can label a row;
-   * picking a different value does not change which model the agent runs on.
-   * Change the routing in Settings → Models instead.
+   * The runtime model is resolved in the main process from
+   * `agents.backendConfig` via `resolveAgentRuntime`. Callers do not — and
+   * cannot — influence which model the agent runs on from here; change the
+   * routing in Settings → Models instead.
    */
   spawnAgent: (args: {
     task: string
     repoPath: string
-    model?: string
     assistant?: boolean
   }) => Promise<{ pid: number; logPath: string; id: string }>
   selectLocalAgent: (pid: number | null) => void
@@ -83,9 +79,6 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
         spawnAgent: async (args) => {
           set({ isSpawning: true })
           try {
-            // Main process resolves the model from agents.backendConfig; the
-            // caller's `model` is kept only as a display hint on the local
-            // record and is NOT forwarded through IPC.
             const result = await spawnLocal({
               task: args.task,
               repoPath: args.repoPath,
@@ -100,7 +93,6 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
                   logPath: result.logPath,
                   task: args.task,
                   repoPath: args.repoPath,
-                  model: args.model ?? 'sonnet',
                   spawnedAt: Date.now(),
                   interactive: result.interactive ?? false
                 }

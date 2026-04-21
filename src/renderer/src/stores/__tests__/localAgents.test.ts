@@ -71,15 +71,13 @@ describe('localAgents store', () => {
 
     const result = await useLocalAgentsStore.getState().spawnAgent({
       task: 'write tests',
-      repoPath: '/tmp/repo',
-      model: 'opus'
+      repoPath: '/tmp/repo'
     })
 
     expect(result.pid).toBe(999)
     expect(result.id).toBe('spawn-1')
-    // The store no longer forwards `model` through IPC — the main process
-    // resolves it from agents.backendConfig. The caller's `model` is kept
-    // only as a local display hint on the spawnedAgent record.
+    // The store does not forward any model hint — the main process resolves
+    // the runtime model from agents.backendConfig.
     expect(window.api.agents.spawnLocal).toHaveBeenCalledWith({
       task: 'write tests',
       repoPath: '/tmp/repo',
@@ -89,24 +87,7 @@ describe('localAgents store', () => {
     const state = useLocalAgentsStore.getState()
     expect(state.spawnedAgents).toHaveLength(1)
     expect(state.spawnedAgents[0].task).toBe('write tests')
-    expect(state.spawnedAgents[0].model).toBe('opus')
     expect(state.spawnedAgents[0].interactive).toBe(true)
-  })
-
-  it('spawnAgent defaults model to sonnet when not provided', async () => {
-    vi.mocked(window.api.agents.spawnLocal).mockResolvedValue({
-      pid: 888,
-      logPath: '/tmp/log',
-      id: 'spawn-2',
-      interactive: false
-    })
-
-    await useLocalAgentsStore.getState().spawnAgent({
-      task: 'fix bug',
-      repoPath: '/tmp/repo'
-    })
-
-    expect(useLocalAgentsStore.getState().spawnedAgents[0].model).toBe('sonnet')
   })
 
   it('log polling accumulates content and advances logNextByte', async () => {

@@ -8,13 +8,12 @@ import { Play, ChevronDown } from 'lucide-react'
 
 interface LaunchpadGridProps {
   templates: PromptTemplate[]
-  onSelectTemplate: (template: PromptTemplate, repo: string, model: string) => void
-  onCustomPrompt: (prompt: string, repo: string, model: string) => void
+  onSelectTemplate: (template: PromptTemplate, repo: string) => void
+  onCustomPrompt: (prompt: string, repo: string) => void
   spawning: boolean
 }
 
 const MODEL_PICKER_DISABLED_TOOLTIP = 'Change the adhoc/assistant model in Settings → Models.'
-const DISPLAY_MODEL_HINT = 'sonnet'
 
 const ACCENT_VARS: Record<
   NeonAccent,
@@ -76,11 +75,6 @@ export function LaunchpadGrid({
   const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false)
   const repoDropdownRef = useRef<HTMLDivElement>(null)
 
-  // The model is routed from Settings → Models, not from this picker. The
-  // display hint lets the spawned agent record which pill was visually
-  // "active" at launch time without influencing runtime routing.
-  const model = DISPLAY_MODEL_HINT
-
   // Derive effective repo: use selected repo if set, otherwise first available
   const effectiveRepo = repo || (repos.length > 0 ? repos[0].label : '')
 
@@ -88,17 +82,17 @@ export function LaunchpadGrid({
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
         e.preventDefault()
-        onCustomPrompt(prompt.trim(), effectiveRepo, model)
+        onCustomPrompt(prompt.trim(), effectiveRepo)
       }
     },
-    [prompt, effectiveRepo, model, onCustomPrompt]
+    [prompt, effectiveRepo, onCustomPrompt]
   )
 
   const handleSubmit = useCallback(() => {
     if (prompt.trim()) {
-      onCustomPrompt(prompt.trim(), effectiveRepo, model)
+      onCustomPrompt(prompt.trim(), effectiveRepo)
     }
-  }, [prompt, effectiveRepo, model, onCustomPrompt])
+  }, [prompt, effectiveRepo, onCustomPrompt])
 
   const toggleRepoDropdown = useCallback(() => {
     setIsRepoDropdownOpen((prev) => !prev)
@@ -178,7 +172,7 @@ export function LaunchpadGrid({
                   '--tile-hover-border': vars.hover
                 } as React.CSSProperties
               }
-              onClick={() => onSelectTemplate(t, effectiveRepo, model)}
+              onClick={() => onSelectTemplate(t, effectiveRepo)}
             >
               <div className="launchpad__tile-icon">{t.icon}</div>
               <div className="launchpad__tile-name">{t.name}</div>
@@ -242,7 +236,7 @@ export function LaunchpadGrid({
         <div
           className="launchpad__model-pills"
           title={MODEL_PICKER_DISABLED_TOOLTIP}
-          aria-label="Active model (display only)"
+          aria-label="Available model tiers (configure in Settings → Models)"
         >
           {CLAUDE_MODELS.map((m) => (
             <button
@@ -250,7 +244,7 @@ export function LaunchpadGrid({
               type="button"
               disabled
               title={MODEL_PICKER_DISABLED_TOOLTIP}
-              className={`launchpad__model-pill ${model === m.id ? 'launchpad__model-pill--active' : ''}`}
+              className="launchpad__model-pill"
             >
               {m.label}
             </button>

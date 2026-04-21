@@ -341,12 +341,6 @@
   outline: none;
 }
 
-.launchpad__model-pill--active {
-  border-color: var(--bde-accent-border);
-  color: var(--bde-accent);
-  background: var(--bde-accent-surface);
-}
-
 /* ── Defaults Row ── */
 .launchpad__defaults-row {
   display: flex;
