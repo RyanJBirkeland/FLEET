@@ -435,6 +435,28 @@ describe('updateTask', () => {
     )
   })
 
+  it('records the supplied caller attribution in the audit trail', () => {
+    const created = createTask({ title: 'Attr', repo: 'bde' })!
+    mockRecordTaskChanges.mockClear()
+
+    updateTask(created.id, { title: 'Attributed' }, { caller: 'mcp' })
+
+    expect(mockRecordTaskChanges).toHaveBeenCalledTimes(1)
+    const callArgs = mockRecordTaskChanges.mock.calls[0]
+    expect(callArgs[3]).toBe('mcp')
+  })
+
+  it('falls back to "unknown" when no caller attribution is supplied', () => {
+    const created = createTask({ title: 'NoAttr', repo: 'bde' })!
+    mockRecordTaskChanges.mockClear()
+
+    updateTask(created.id, { title: 'Still no caller' })
+
+    expect(mockRecordTaskChanges).toHaveBeenCalledTimes(1)
+    const callArgs = mockRecordTaskChanges.mock.calls[0]
+    expect(callArgs[3]).toBe('unknown')
+  })
+
   // no-op updates short-circuit to avoid write amplification
   it('skips SQL update and audit row when patch fields all match current values', () => {
     const created = createTask({ title: 'No-op test', repo: 'bde', priority: 5 })!

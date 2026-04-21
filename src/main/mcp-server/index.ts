@@ -1,7 +1,7 @@
 import http from 'node:http'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { broadcast } from '../broadcast'
-import { createLogger } from '../logger'
+import { createLogger, logError } from '../logger'
 import {
   TaskTransitionError,
   cancelTask,
@@ -70,10 +70,15 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
 
   async function cancelTaskForMcp(
     id: string,
-    reason?: string
+    reason?: string,
+    options?: { caller?: string }
   ): ReturnType<typeof cancelTask> {
     try {
-      return await cancelTask(id, { reason }, { onStatusTerminal: deps.onStatusTerminal, logger })
+      return await cancelTask(
+        id,
+        { reason, caller: options?.caller },
+        { onStatusTerminal: deps.onStatusTerminal, logger }
+      )
     } catch (err) {
       throw translateCancelError(err)
     }
@@ -93,13 +98,8 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
           })
         })
         httpServer.on('error', (err) => {
-          const errno = (err as NodeJS.ErrnoException).code
-          const msg =
-            errno === 'EADDRINUSE'
-              ? `MCP server could not bind to port ${config.port} — already in use.`
-              : `MCP server failed to start: ${err}`
-          logger.error(msg)
-          broadcast('manager:warning', { message: msg })
+          logError(logger, `MCP server listen(${config.port})`, err)
+          broadcast('manager:warning', { message: summarizeListenError(err, config.port) })
           reject(err)
         })
         httpServer.listen(config.port, '127.0.0.1', () => {
@@ -135,6 +135,22 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
 function formatRequestError(err: unknown): string {
   if (err instanceof Error) return err.stack ?? err.message
   return String(err)
+}
+
+/**
+ * Build a user-safe summary of an HTTP listener error for the renderer
+ * `manager:warning` broadcast. Full detail (including stack) is written
+ * to `~/.bde/bde.log` via `logError`; the broadcast body gets the minimum
+ * needed for an operator to act. Raw error messages and stack frames are
+ * withheld to avoid leaking filesystem paths or internal error shapes
+ * through a renderer surface.
+ */
+export function summarizeListenError(err: unknown, configuredPort: number): string {
+  const code = (err as NodeJS.ErrnoException | null)?.code
+  if (code === 'EADDRINUSE') {
+    return `MCP server could not bind to port ${configuredPort} — already in use.`
+  }
+  return 'MCP server failed to start. See ~/.bde/bde.log for details.'
 }
 
 /**

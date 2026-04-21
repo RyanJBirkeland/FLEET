@@ -63,8 +63,19 @@ describe('createSprintTaskRepository', () => {
 
       const result = repo.updateTask('1', patch)
 
-      expect(queries.updateTask).toHaveBeenCalledWith('1', patch)
+      expect(queries.updateTask).toHaveBeenCalledWith('1', patch, undefined)
       expect(result).toBe(mockTask)
+    })
+
+    it('should forward the optional caller attribution to queries.updateTask', () => {
+      const repo = createSprintTaskRepository()
+      const mockTask = { id: '1' }
+      const patch = { status: 'done' }
+      vi.mocked(queries.updateTask).mockReturnValue(mockTask as any)
+
+      repo.updateTask('1', patch, { caller: 'mcp' })
+
+      expect(queries.updateTask).toHaveBeenCalledWith('1', patch, { caller: 'mcp' })
     })
 
     it('should delegate forceUpdateTask to queries.forceUpdateTask', () => {

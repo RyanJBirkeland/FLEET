@@ -319,13 +319,25 @@ describe('tasks.* write tools', () => {
     expect(nonRevivalPatch).toEqual({ status: 'active' })
   })
 
-  it('tasks.cancel routes through cancelTask (which triggers onStatusTerminal)', async () => {
+  it('tasks.cancel routes through cancelTask (which triggers onStatusTerminal) with caller attribution', async () => {
     const deps = fakeDeps()
     const { server, call } = mockServer()
     registerTaskTools(server, deps)
     const res = await call('tasks.cancel', { id: 't1', reason: 'no longer needed' })
-    expect(deps.cancelTask).toHaveBeenCalledWith('t1', 'no longer needed')
+    expect(deps.cancelTask).toHaveBeenCalledWith('t1', 'no longer needed', { caller: 'mcp' })
     expect(JSON.parse(res.content[0].text).status).toBe('cancelled')
+  })
+
+  it('tasks.update forwards the MCP caller attribution to updateTask', async () => {
+    const deps = fakeDeps({
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' })),
+      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'active', priority: 9 }))
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.update', { id: 't1', patch: { priority: 9 } })
+    const options = (deps.updateTask as any).mock.calls[0][2]
+    expect(options).toEqual({ caller: 'mcp' })
   })
 
   it('tasks.cancel returns structured NotFound when cancelTask returns null', async () => {
