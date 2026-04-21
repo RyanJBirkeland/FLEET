@@ -1,14 +1,15 @@
 /**
- * Per-agent-type backend selection.
+ * Per-agent-type runtime resolution.
  *
- * BDE can route each agent type to either its built-in Claude SDK path or
- * to the `rbt-coding-agent` framework as a local backend. M8 wires only the
- * Pipeline path through `spawnAgent`, but the settings schema is per-agent-
- * type from day one so future consolidation is a pure settings change.
+ * Every agent type — Pipeline, Synthesizer, Copilot, Assistant, Adhoc, Reviewer —
+ * resolves its model (and, for Pipeline, its backend) from the user's stored
+ * `agents.backendConfig` record. The Local backend is wired through today only
+ * for Pipeline; the other types run on Claude regardless of the stored
+ * `backend` field.
  *
- * Settings live in BDE's SQLite-backed JSON store under
- * `SETTING_BACKEND_CONFIG`. A missing value resolves to `DEFAULT_SETTINGS`
- * (every type on `claude` — zero behaviour change for existing users).
+ * Settings live in BDE's SQLite-backed JSON store under `SETTING_BACKEND_CONFIG`.
+ * A missing value resolves to `DEFAULT_SETTINGS` (every type on `claude` with
+ * the shared default model — zero behaviour change for existing users).
  */
 import type { AgentType } from '../agent-system/personality/types'
 import type { BackendKind, AgentBackendConfig, BackendSettings } from '../../shared/types/backend-settings'
@@ -41,7 +42,7 @@ export function saveBackendSettings(next: BackendSettings): void {
   setSettingJson<BackendSettings>(SETTING_BACKEND_CONFIG, next)
 }
 
-export function resolveBackend(
+export function resolveAgentRuntime(
   agentType: AgentType,
   settings: BackendSettings = loadBackendSettings()
 ): AgentBackendConfig {

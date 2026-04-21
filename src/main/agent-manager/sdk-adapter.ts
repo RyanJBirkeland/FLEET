@@ -13,7 +13,7 @@ import { buildAgentEnv, getOAuthToken } from '../env-utils'
 import { resolveNodeExecutable } from './resolve-node'
 import { spawnViaSdk, type PipelineSpawnTuning } from './spawn-sdk'
 import { spawnViaCli } from './spawn-cli'
-import { loadBackendSettings, resolveBackend } from './backend-selector'
+import { loadBackendSettings, resolveAgentRuntime } from './backend-selector'
 import { spawnLocalAgent } from './local-adapter'
 
 /**
@@ -90,7 +90,7 @@ export async function spawnAgent(opts: {
 
   const agentType: AgentType = opts.agentType ?? 'pipeline'
   const settings = loadBackendSettings()
-  const resolved = resolveBackend(agentType, settings)
+  const resolved = resolveAgentRuntime(agentType, settings)
 
   if (resolved.backend === 'local') {
     try {

@@ -2,6 +2,7 @@
  * Spec generation service — AI-powered task spec creation.
  */
 import { runSdkStreaming, type SdkStreamingOptions } from '../sdk-streaming'
+import { resolveAgentRuntime } from '../agent-manager/backend-selector'
 import { buildQuickSpecPrompt, getTemplateScaffold } from './spec-template-service'
 
 /** Active streaming handles, keyed by streamId. */
@@ -12,8 +13,8 @@ const activeStreams = new Map<string, { close: () => void }>()
  */
 async function runSdkPrint(
   prompt: string,
-  timeoutMs = 120_000,
-  options?: SdkStreamingOptions
+  timeoutMs: number,
+  options: SdkStreamingOptions
 ): Promise<string> {
   return runSdkStreaming(prompt, () => {}, activeStreams, `print-${Date.now()}`, timeoutMs, options)
 }
@@ -39,8 +40,9 @@ export async function generateSpec(input: {
   templateHint: string
 }): Promise<string> {
   const prompt = buildSpecGenerationPrompt(input)
+  const { model } = resolveAgentRuntime('synthesizer')
   try {
-    const result = await runSdkPrint(prompt)
+    const result = await runSdkPrint(prompt, 120_000, { model })
     return result || `# ${input.title}\n\n(No spec generated)`
   } catch (err) {
     return `# ${input.title}\n\nError generating spec: ${(err as Error).message}`

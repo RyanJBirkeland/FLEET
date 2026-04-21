@@ -33,14 +33,14 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps): React.J
   const visibleTemplates = templates.filter((t) => !t.hidden)
 
   const handleSpawn = useCallback(
-    async (prompt: string, repo: string, model: string) => {
+    async (prompt: string, repo: string) => {
       const repoPath = repoPaths[repo.toLowerCase()]
       if (!repoPath) {
         toast.error(`Repo path not found for "${repo}"`)
         return
       }
       try {
-        await spawnAgent({ task: prompt, repoPath, model, assistant: true })
+        await spawnAgent({ task: prompt, repoPath, assistant: true })
         fetchProcesses()
         toast.success('Session started')
         onAgentSpawned()
@@ -53,9 +53,9 @@ export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps): React.J
   )
 
   const handleTemplateSpawn = useCallback(
-    (template: PromptTemplate, repo: string, model: string) => {
+    (template: PromptTemplate, repo: string) => {
       const prompt = assemblePrompt(template, {})
-      handleSpawn(prompt, repo, model)
+      handleSpawn(prompt, repo)
     },
     [handleSpawn]
   )

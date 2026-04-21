@@ -19,7 +19,6 @@ export interface SpawnedAgent {
   logPath: string
   task: string
   repoPath: string
-  model: string
   spawnedAt: number
   interactive: boolean
 }
@@ -33,10 +32,15 @@ interface LocalAgentsState extends LogPollerState {
 
   fetchProcesses: () => Promise<void>
   setCollapsed: (collapsed: boolean) => void
+  /**
+   * The runtime model is resolved in the main process from
+   * `agents.backendConfig` via `resolveAgentRuntime`. Callers do not — and
+   * cannot — influence which model the agent runs on from here; change the
+   * routing in Settings → Models instead.
+   */
   spawnAgent: (args: {
     task: string
     repoPath: string
-    model?: string
     assistant?: boolean
   }) => Promise<{ pid: number; logPath: string; id: string }>
   selectLocalAgent: (pid: number | null) => void
@@ -75,7 +79,11 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
         spawnAgent: async (args) => {
           set({ isSpawning: true })
           try {
-            const result = await spawnLocal(args)
+            const result = await spawnLocal({
+              task: args.task,
+              repoPath: args.repoPath,
+              assistant: args.assistant
+            })
             set((s) => ({
               spawnedAgents: [
                 ...s.spawnedAgents,
@@ -85,7 +93,6 @@ export const useLocalAgentsStore = create<LocalAgentsState>()(
                   logPath: result.logPath,
                   task: args.task,
                   repoPath: args.repoPath,
-                  model: args.model ?? 'sonnet',
                   spawnedAt: Date.now(),
                   interactive: result.interactive ?? false
                 }
