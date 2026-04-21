@@ -7,10 +7,7 @@ import {
   type CreateTaskWithValidationDeps,
   type CreateTaskWithValidationOpts
 } from '../../services/sprint-service'
-import type {
-  CreateTaskInput,
-  ListTasksOptions
-} from '../../data/sprint-task-repository'
+import type { CreateTaskInput, ListTasksOptions } from '../../data/sprint-task-repository'
 import { McpDomainError, McpErrorCode, parseToolArgs } from '../errors'
 import {
   TaskCancelSchema,
@@ -117,10 +114,7 @@ export interface TaskHistoryPort {
  * tool functions can depend on a narrower port when they're lifted
  * out of this file.
  */
-export interface TaskToolsDeps
-  extends TaskCommandPort,
-    TaskQueryPort,
-    TaskHistoryPort {
+export interface TaskToolsDeps extends TaskCommandPort, TaskQueryPort, TaskHistoryPort {
   logger: CreateTaskWithValidationDeps['logger']
 }
 
@@ -273,9 +267,7 @@ function runCreateWithValidation(
  * repository always sees an explicit `LIMIT`/`OFFSET` — matches the
  * previous in-memory `slice(offset, offset + limit)` default.
  */
-function toListTasksOptions(
-  args: ReturnType<typeof TaskListSchema.parse>
-): ListTasksOptions {
+function toListTasksOptions(args: ReturnType<typeof TaskListSchema.parse>): ListTasksOptions {
   return {
     status: args.status,
     repo: args.repo,
@@ -299,10 +291,7 @@ function rewrapTaskValidationError(err: unknown): unknown {
   return err
 }
 
-function buildEffectiveUpdatePatch(
-  patch: TaskPatch,
-  current: SprintTask | null
-): TaskPatch {
+function buildEffectiveUpdatePatch(patch: TaskPatch, current: SprintTask | null): TaskPatch {
   if (!('status' in patch) || !current) return { ...patch }
   if (!isRevivingTerminalTask(current.status, patch.status)) return { ...patch }
   return { ...patch, ...TERMINAL_STATE_RESET_PATCH }
@@ -329,10 +318,7 @@ async function fireTerminalHookIfNeeded(
  * `TASK_HISTORY_MAX_WINDOW`. Beyond this window SQLite pays the full
  * scan cost for the skipped rows — effectively an unbounded query.
  */
-function assertHistoryWindowWithinCap(
-  limit: number | undefined,
-  offset: number | undefined
-): void {
+function assertHistoryWindowWithinCap(limit: number | undefined, offset: number | undefined): void {
   const effectiveLimit = limit ?? TASK_HISTORY_DEFAULT_LIMIT
   const effectiveOffset = offset ?? 0
   if (effectiveLimit + effectiveOffset > TASK_HISTORY_MAX_WINDOW) {
