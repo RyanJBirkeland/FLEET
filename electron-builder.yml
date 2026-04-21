@@ -27,7 +27,7 @@ dmg:
   contents:
     - x: 130
       y: 220
-      name: BDE
+      name: BDE.app
     - x: 410
       y: 220
       type: link
