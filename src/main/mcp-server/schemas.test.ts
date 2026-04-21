@@ -291,15 +291,11 @@ describe('EpicWriteFieldsSchema — icon length', () => {
 
 describe('EpicWriteFieldsSchema — accent_color hex regex', () => {
   it('accepts 6-digit lowercase hex', () => {
-    expect(() =>
-      EpicWriteFieldsSchema.parse({ name: 'e', accent_color: '#aabbcc' })
-    ).not.toThrow()
+    expect(() => EpicWriteFieldsSchema.parse({ name: 'e', accent_color: '#aabbcc' })).not.toThrow()
   })
 
   it('accepts 6-digit uppercase hex (case-insensitive)', () => {
-    expect(() =>
-      EpicWriteFieldsSchema.parse({ name: 'e', accent_color: '#AABBCC' })
-    ).not.toThrow()
+    expect(() => EpicWriteFieldsSchema.parse({ name: 'e', accent_color: '#AABBCC' })).not.toThrow()
   })
 
   it('rejects 3-digit shorthand #fff', () => {
@@ -307,29 +303,21 @@ describe('EpicWriteFieldsSchema — accent_color hex regex', () => {
   })
 
   it('rejects non-hex characters #GGGGGG', () => {
-    expect(() =>
-      EpicWriteFieldsSchema.parse({ name: 'e', accent_color: '#GGGGGG' })
-    ).toThrow()
+    expect(() => EpicWriteFieldsSchema.parse({ name: 'e', accent_color: '#GGGGGG' })).toThrow()
   })
 
   it('rejects missing leading #', () => {
-    expect(() =>
-      EpicWriteFieldsSchema.parse({ name: 'e', accent_color: 'aabbcc' })
-    ).toThrow()
+    expect(() => EpicWriteFieldsSchema.parse({ name: 'e', accent_color: 'aabbcc' })).toThrow()
   })
 })
 
 describe('EpicWriteFieldsSchema — goal length and nullability', () => {
   it('accepts 2000-char goal', () => {
-    expect(() =>
-      EpicWriteFieldsSchema.parse({ name: 'e', goal: 'x'.repeat(2000) })
-    ).not.toThrow()
+    expect(() => EpicWriteFieldsSchema.parse({ name: 'e', goal: 'x'.repeat(2000) })).not.toThrow()
   })
 
   it('rejects 2001-char goal', () => {
-    expect(() =>
-      EpicWriteFieldsSchema.parse({ name: 'e', goal: 'x'.repeat(2001) })
-    ).toThrow()
+    expect(() => EpicWriteFieldsSchema.parse({ name: 'e', goal: 'x'.repeat(2001) })).toThrow()
   })
 
   it('accepts goal: null (clear-goal semantics)', () => {
