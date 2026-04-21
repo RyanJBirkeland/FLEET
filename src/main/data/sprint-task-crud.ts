@@ -322,13 +322,42 @@ interface WriteTaskUpdateOptions {
   changedBy: string
 }
 
+/**
+ * Narrow an allowlisted string key to `keyof SprintTask`. Every entry in
+ * `UPDATE_ALLOWLIST` is, by construction, a valid `SprintTask` field — the
+ * module-load invariant in `sprint-task-types.ts` guarantees it. Centralising
+ * the assertion here keeps the call sites free of inline casts.
+ */
+type SprintTaskFieldKey = keyof SprintTask
+
+function asSprintTaskField(key: string): SprintTaskFieldKey {
+  return key as SprintTaskFieldKey
+}
+
+/** Read an allowlisted field off `SprintTask` without widening the task type. */
+function readTaskField(task: SprintTask, key: SprintTaskFieldKey): SprintTask[SprintTaskFieldKey] {
+  return task[key]
+}
+
+/**
+ * Adapt a `SprintTask` to the `Record<string, unknown>` shape required by
+ * `recordTaskChanges`. The audit writer treats the task as a field bag; this
+ * helper copies the properties into an indexable record so we never rely on
+ * structural casts that would let typoed field names slip through silently.
+ */
+function toAuditableTask(task: SprintTask): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(task))
+}
+
 function writeTaskUpdate(
   id: string,
   patch: Record<string, unknown>,
   options: WriteTaskUpdateOptions,
   db?: Database.Database
 ): SprintTask | null {
-  const entries = Object.entries(patch).filter(([k]) => UPDATE_ALLOWLIST.has(k))
+  const entries: Array<[SprintTaskFieldKey, unknown]> = Object.entries(patch)
+    .filter(([k]) => UPDATE_ALLOWLIST.has(k))
+    .map(([k, v]) => [asSprintTaskField(k), v])
   if (entries.length === 0) return null
 
   try {
@@ -358,7 +387,7 @@ function writeTaskUpdate(
         // unchanged values, but filtering here also avoids the SQL UPDATE.
         const changedEntries = entries.filter(([key, value]) => {
           const serializedNew = serializeFieldForStorage(key, value)
-          const oldRaw = (oldTask as unknown as Record<string, unknown>)[key]
+          const oldRaw = readTaskField(oldTask, key)
           const serializedOld = serializeFieldForStorage(key, oldRaw)
           return serializedNew !== serializedOld
         })
@@ -406,13 +435,7 @@ function writeTaskUpdate(
 
         // Record changes for audit trail (within transaction)
         try {
-          recordTaskChanges(
-            id,
-            oldTask as unknown as Record<string, unknown>,
-            auditPatch,
-            options.changedBy,
-            conn
-          )
+          recordTaskChanges(id, toAuditableTask(oldTask), auditPatch, options.changedBy, conn)
         } catch (err) {
           getSprintQueriesLogger().warn(`[sprint-queries] Failed to record task changes: ${err}`)
           // Re-throw to abort transaction

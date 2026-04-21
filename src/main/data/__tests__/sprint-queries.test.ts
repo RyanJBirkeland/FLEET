@@ -409,6 +409,43 @@ describe('updateTask', () => {
     expect(result).toBeNull()
   })
 
+  // T-48: guard against typoed patch keys falling through the allowlist.
+  // A misspelled field must be silently dropped (no write, no audit row)
+  // rather than coerced onto the task via a permissive double cast.
+  it('rejects typoed patch keys and never writes them to the task', () => {
+    const created = createTask({ title: 'Typo target', repo: 'bde', priority: 1 })!
+    mockRecordTaskChanges.mockClear()
+
+    // `titlee` is a typo for `title`; `statuss` is a typo for `status`.
+    // Neither is in UPDATE_ALLOWLIST, so the patch is effectively empty.
+    const result = updateTask(created.id, { titlee: 'wrong', statuss: 'active' })
+
+    expect(result).toBeNull()
+    expect(mockRecordTaskChanges).not.toHaveBeenCalled()
+
+    // Row on disk must be unchanged.
+    const reloaded = getTask(created.id)
+    expect(reloaded!.title).toBe('Typo target')
+    expect(reloaded!.status).toBe('backlog')
+  })
+
+  it('applies valid fields and drops typoed keys when both are present', () => {
+    const created = createTask({ title: 'Mixed patch', repo: 'bde', priority: 1 })!
+    mockRecordTaskChanges.mockClear()
+
+    // `priority` is valid; `prioritee` is a typo that must be ignored.
+    updateTask(created.id, { priority: 7, prioritee: 99 })
+
+    const reloaded = getTask(created.id)
+    expect(reloaded!.priority).toBe(7)
+
+    // Audit trail must record only the legitimately changed field.
+    expect(mockRecordTaskChanges).toHaveBeenCalledTimes(1)
+    const auditPatch = mockRecordTaskChanges.mock.calls[0][2] as Record<string, unknown>
+    expect(auditPatch).toEqual({ priority: 7 })
+    expect(auditPatch).not.toHaveProperty('prioritee')
+  })
+
   it('returns null for non-existent task', () => {
     const result = updateTask('nonexistent', { title: 'nope' })
     expect(result).toBeNull()
