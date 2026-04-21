@@ -15,7 +15,7 @@
  * foreign-Host request over a loopback socket so the SDK's real 403 path is
  * exercised end-to-end.
  */
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import http, { IncomingMessage, ServerResponse } from 'node:http'
 import { AddressInfo } from 'node:net'
 import { createTransportHandler } from './transport'
@@ -478,6 +478,64 @@ describe('transport handler body size cap (T-46)', () => {
     const parsed = JSON.parse(written.body)
     expect(parsed.error.code).toBe(-32700)
     expect(transportInstances).toHaveLength(0)
+  })
+})
+
+describe('transport handler close timeout (T-47)', () => {
+  const validToken = 'test-bearer-token-12345'
+  const port = 18792
+  const authHeaders = {
+    host: '127.0.0.1:18792',
+    authorization: `Bearer ${validToken}`
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    transportInstances.length = 0
+    vi.useFakeTimers()
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('logs a timeout warning when transport.close never resolves', async () => {
+    const mockServer = createMockMcpServer()
+    const logger = createMockLogger()
+    const handler = createTransportHandler(() => mockServer, validToken, port, logger)
+
+    const { req } = createMockRequest({ headers: authHeaders })
+    const { res } = createMockResponse()
+
+    await handler.handle(req, res)
+
+    const transport = latestMockTransport()
+    transport.close.mockImplementation(() => new Promise<void>(() => {}))
+
+    triggerResponseClose(res)
+    await vi.advanceTimersByTimeAsync(6_000)
+
+    const warnCalls = (logger.warn as unknown as { mock: { calls: unknown[][] } }).mock.calls
+    const hasTimeoutWarning = warnCalls.some(
+      ([msg]) => typeof msg === 'string' && msg.includes('transport close timeout')
+    )
+    expect(hasTimeoutWarning).toBe(true)
+  })
+
+  it('does not log a warning when close resolves before the timeout', async () => {
+    const mockServer = createMockMcpServer()
+    const logger = createMockLogger()
+    const handler = createTransportHandler(() => mockServer, validToken, port, logger)
+
+    const { req } = createMockRequest({ headers: authHeaders })
+    const { res } = createMockResponse()
+
+    await handler.handle(req, res)
+    triggerResponseClose(res)
+    await vi.advanceTimersByTimeAsync(1_000)
+    await Promise.resolve()
+
+    expect(logger.warn).not.toHaveBeenCalled()
   })
 })
 

@@ -30,8 +30,13 @@ export interface TransportHandler {
 
 const ALLOWED_METHOD = 'POST'
 const MAX_BODY_BYTES = 2 * 1024 * 1024 // 2 MB ceiling for MCP payloads (T-46)
+const CLOSE_TIMEOUT_MS = 5_000 // Bound transport/server teardown so stuck closes don't leak (T-47)
 const JSON_RPC_INVALID_REQUEST = -32600 // JSON-RPC 2.0 spec: "The JSON sent is not a valid Request."
 const JSON_RPC_PARSE_ERROR = -32700 // JSON-RPC 2.0 spec: "Invalid JSON was received by the server."
+
+interface Closable {
+  close: () => Promise<void>
+}
 
 type BodyReadResult =
   | { ok: true; parsed: unknown }
@@ -90,8 +95,8 @@ export function createTransportHandler(
         await server.connect(transport)
         await transport.handleRequest(req, res, bodyResult.parsed)
         res.on('close', () => {
-          transport.close().catch((err) => logger.warn(`transport close: ${err}`))
-          server.close().catch((err) => logger.warn(`server close: ${err}`))
+          closeWithTimeout('transport', transport, logger)
+          closeWithTimeout('mcp server', server, logger)
         })
       } catch (err) {
         logger.error(
@@ -222,6 +227,27 @@ function readJsonBodyWithCap(req: IncomingMessage): Promise<BodyReadResult> {
       })
     })
   })
+}
+
+/**
+ * Bounds `closable.close()` so a stuck close doesn't leak the underlying
+ * resource. Logs a structured warning (with stack when available) on both
+ * timeouts and close failures — template-stringifying an unknown throw
+ * would lose the stack.
+ */
+function closeWithTimeout(label: string, closable: Closable, logger: Logger): void {
+  withTimeout(closable.close(), CLOSE_TIMEOUT_MS, label).catch((err) => {
+    logger.warn(`${label} close timeout or failure: ${formatTransportError(err)}`)
+  })
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
+  return Promise.race([
+    promise,
+    new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error(`${label} close timed out after ${ms}ms`)), ms)
+    )
+  ])
 }
 
 function formatTransportError(err: unknown): string {

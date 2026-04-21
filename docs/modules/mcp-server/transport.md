@@ -21,6 +21,9 @@ The SDK then applies DNS-rebinding (Host) validation and the explicit Origin all
 ## Origin allow-list (T-45)
 The handler passes an explicit `allowedOrigins` list to every transport instance — `['null', 'http://127.0.0.1:<port>', 'http://localhost:<port>']` — instead of relying on the SDK's disabled-when-empty default. MCP clients typically send no Origin header and the SDK only enforces when one is present, so absent-Origin requests are still accepted.
 
+## Response close cleanup (T-47)
+On `res.on('close')`, both `transport.close()` and `server.close()` are invoked through a local `closeWithTimeout` helper that races them against `CLOSE_TIMEOUT_MS = 5s`. Timeouts and close failures log a structured `logger.warn` that preserves the stack for non-Error throws.
+
 ## Key Dependencies
 - `auth.ts` — `checkBearerAuth` validates the `Authorization: Bearer` header
 - `errors.ts` — `writeJsonRpcError()` is used by the catch-all 500 path; `JSON_RPC_UNAUTHORIZED` names the 401 error code. Other non-2xx paths (405, 413, 400) build the JSON-RPC 2.0 envelope inline with explicit codes (`-32600`, `-32700`) so the shape stays readable at the call site.
