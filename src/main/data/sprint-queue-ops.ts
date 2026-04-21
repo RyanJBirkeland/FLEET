@@ -18,6 +18,16 @@ function fetchTask(id: string, db: Database.Database): SprintTask | null {
   return row ? mapRowToTask(row) : null
 }
 
+/**
+ * Adapt a `SprintTask` to the `Record<string, unknown>` shape required by
+ * `recordTaskChanges`. The audit writer treats the task as a field bag; this
+ * helper copies the properties into an indexable record so we never rely on
+ * structural casts that would let typoed field names slip through silently.
+ */
+function toAuditableTask(task: SprintTask): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(task))
+}
+
 function checkWipLimit(db: Database.Database, maxActive: number): boolean {
   const { count } = db
     .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'active'")
@@ -68,7 +78,7 @@ export function claimTask(id: string, claimedBy: string, maxActive?: number, db?
           if (updated) {
             recordTaskChanges(
               id,
-              oldTask as unknown as Record<string, unknown>,
+              toAuditableTask(oldTask),
               { status: 'active', claimed_by: claimedBy, started_at: now },
               claimedBy,
               conn
@@ -116,7 +126,7 @@ export function releaseTask(id: string, claimedBy: string, db?: Database.Databas
         if (result) {
           recordTaskChanges(
             id,
-            oldTask as unknown as Record<string, unknown>,
+            toAuditableTask(oldTask),
             { status: 'queued', claimed_by: null, started_at: null, agent_run_id: null },
             claimedBy,
             conn
