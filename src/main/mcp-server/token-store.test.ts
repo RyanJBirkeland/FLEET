@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { promises as fs } from 'node:fs'
 import * as path from 'node:path'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import * as os from 'node:os'
 import { tmpdir } from 'node:os'
 import { randomBytes } from 'node:crypto'
@@ -82,6 +82,23 @@ describe('token-store', () => {
     } finally {
       await fs.rm(missingDir, { recursive: true, force: true })
     }
+  })
+
+  it('locks the parent directory to 0o700 on first generation', async () => {
+    await readOrCreateToken(filePath)
+    const parentStat = await fs.stat(dirname(filePath))
+    expect(parentStat.mode & 0o777).toBe(0o700)
+  })
+
+  it('tightens a pre-existing parent directory with mode 0o755 down to 0o700', async () => {
+    await fs.chmod(dir, 0o755)
+    const before = await fs.stat(dir)
+    expect(before.mode & 0o777).toBe(0o755)
+
+    await readOrCreateToken(filePath)
+
+    const after = await fs.stat(dir)
+    expect(after.mode & 0o777).toBe(0o700)
   })
 
   it('rethrows non-ENOENT read errors instead of swallowing them', async () => {

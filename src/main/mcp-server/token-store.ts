@@ -1,20 +1,48 @@
 import { promises as fs } from 'node:fs'
 import { homedir } from 'node:os'
-import { join } from 'node:path'
+import { dirname, join } from 'node:path'
 import { randomBytes } from 'node:crypto'
 
 const TOKEN_BYTES = 32
 const FILE_MODE = 0o600
+const DIR_MODE = 0o700
 
 export function tokenFilePath(): string {
   return join(homedir(), '.bde', 'mcp-token')
 }
 
+async function lockParentDirectoryPermissions(filePath: string): Promise<void> {
+  const dir = dirname(filePath)
+  await fs.mkdir(dir, { recursive: true, mode: DIR_MODE })
+  await fs.chmod(dir, DIR_MODE)
+}
+
+async function writeExclusive(filePath: string, contents: string): Promise<boolean> {
+  try {
+    const handle = await fs.open(filePath, 'wx', FILE_MODE)
+    try {
+      await handle.write(contents)
+    } finally {
+      await handle.close()
+    }
+    return true
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === 'EEXIST') return false
+    throw err
+  }
+}
+
+async function overwriteWithMode(filePath: string, contents: string): Promise<void> {
+  await fs.writeFile(filePath, contents, { mode: FILE_MODE, flag: 'w' })
+  await fs.chmod(filePath, FILE_MODE)
+}
+
 async function generateAndWrite(filePath: string): Promise<string> {
   const token = randomBytes(TOKEN_BYTES).toString('hex')
-  await fs.mkdir(join(filePath, '..'), { recursive: true })
-  await fs.writeFile(filePath, token + '\n', { mode: FILE_MODE, flag: 'w' })
-  await fs.chmod(filePath, FILE_MODE)
+  const payload = token + '\n'
+  await lockParentDirectoryPermissions(filePath)
+  const createdFresh = await writeExclusive(filePath, payload)
+  if (!createdFresh) await overwriteWithMode(filePath, payload)
   return token
 }
 
