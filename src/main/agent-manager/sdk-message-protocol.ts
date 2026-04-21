@@ -36,11 +36,40 @@ export interface SDKWireMessage {
 }
 
 /**
- * Safely casts unknown SDK message to SDKWireMessage for field access.
+ * Narrows an unknown SDK wire message to `SDKWireMessage`.
+ *
+ * Rejects values whose outer shape contradicts the declared type:
+ * - non-objects or null
+ * - `message` present but not an object
+ * - `message.content` present but not an array
+ *
+ * Leaf fields (e.g. `type`, `session_id`, individual content blocks) are
+ * still narrowed at each consumer site — this guard only prevents shapes
+ * that would force consumers to re-check the container they just asked for.
  */
 export function asSDKMessage(msg: unknown): SDKWireMessage | null {
-  if (typeof msg !== 'object' || msg === null) return null
+  if (!isNonNullObject(msg)) return null
+  if (!hasValidNestedMessage(msg)) return null
   return msg as SDKWireMessage
+}
+
+function isNonNullObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null
+}
+
+function hasValidNestedMessage(msg: Record<string, unknown>): boolean {
+  if (!('message' in msg)) return true
+  const nested = msg.message
+  if (nested === undefined) return true
+  if (!isNonNullObject(nested)) return false
+  return hasValidContentArray(nested)
+}
+
+function hasValidContentArray(nested: Record<string, unknown>): boolean {
+  if (!('content' in nested)) return true
+  const content = nested.content
+  if (content === undefined) return true
+  return Array.isArray(content)
 }
 
 /**
