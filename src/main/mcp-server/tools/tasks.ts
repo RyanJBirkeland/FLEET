@@ -154,7 +154,10 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
       async () => {
         const { id } = parseToolArgs(TaskIdSchema, rawArgs)
         const row = deps.getTask(id)
-        if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+        if (!row) {
+          deps.logger.debug(`mcp.tasks.get: task ${id} not found`)
+          throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+        }
         return jsonContent(row)
       },
       { schema: TaskIdSchema, logger: deps.logger }
@@ -171,7 +174,10 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
           const { id, limit, offset } = parseToolArgs(TaskHistorySchema, rawArgs)
           assertHistoryWindowWithinCap(limit, offset)
           const task = deps.getTask(id)
-          if (!task) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          if (!task) {
+            deps.logger.debug(`mcp.tasks.history: task ${id} not found`)
+            throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          }
           const rows = deps.getTaskChanges(id, { limit, offset })
           return jsonContent(rows)
         },
@@ -218,7 +224,10 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
           const current = deps.getTask(id)
           const effectivePatch = buildEffectiveUpdatePatch(patch, current)
           const row = deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
-          if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          if (!row) {
+            deps.logger.debug(`mcp.tasks.update: task ${id} not found`)
+            throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          }
           await fireTerminalHookIfNeeded(deps, current, row)
           return jsonContent(row)
         },
@@ -235,7 +244,10 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
         async () => {
           const { id, reason } = parseToolArgs(TaskCancelSchema, rawArgs)
           const row = await deps.cancelTask(id, reason, { caller: MCP_CALLER })
-          if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          if (!row) {
+            deps.logger.debug(`mcp.tasks.cancel: task ${id} not found`)
+            throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          }
           return jsonContent(row)
         },
         { schema: TaskCancelSchema, logger: deps.logger }

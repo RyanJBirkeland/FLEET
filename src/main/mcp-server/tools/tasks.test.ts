@@ -446,6 +446,14 @@ describe('tasks.* read tools', () => {
     expect(body.data).toMatchObject({ id: 'missing' })
   })
 
+  it('tasks.get logs a debug trace when the id is missing (T-10)', async () => {
+    const deps = fakeDeps({ getTask: vi.fn(() => null) })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.get', { id: 'missing' })
+    expect(deps.logger.debug).toHaveBeenCalledWith(expect.stringContaining('missing'))
+  })
+
   it('tasks.create returns structured InvalidParams payload on zod validation failure', async () => {
     const deps = fakeDeps()
     const { server, call } = mockServer()
