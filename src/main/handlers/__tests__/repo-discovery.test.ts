@@ -149,6 +149,102 @@ describe('listGithubRepos', () => {
 
     await expect(listGithubRepos()).rejects.toThrow(/gh/)
   })
+
+  it('drops entries missing owner.login and keeps valid ones', async () => {
+    execFileAsyncMock.mockResolvedValue({
+      stdout: JSON.stringify([
+        {
+          name: 'good-repo',
+          owner: { login: 'octocat' },
+          description: null,
+          visibility: 'PUBLIC',
+          url: 'https://github.com/octocat/good-repo'
+        },
+        {
+          name: 'missing-owner',
+          description: null,
+          visibility: 'PUBLIC',
+          url: 'https://github.com/x/missing-owner'
+        },
+        {
+          name: 'null-owner',
+          owner: null,
+          description: null,
+          visibility: 'PUBLIC',
+          url: 'https://github.com/x/null-owner'
+        }
+      ]),
+      stderr: ''
+    })
+
+    const result = await listGithubRepos()
+    expect(result).toEqual([
+      {
+        name: 'good-repo',
+        owner: 'octocat',
+        description: undefined,
+        isPrivate: false,
+        url: 'https://github.com/octocat/good-repo'
+      }
+    ])
+  })
+
+  it('drops entries where owner.login is not a string', async () => {
+    execFileAsyncMock.mockResolvedValue({
+      stdout: JSON.stringify([
+        {
+          name: 'bad-login',
+          owner: { login: 123 },
+          description: null,
+          visibility: 'PUBLIC',
+          url: 'https://github.com/x/bad-login'
+        }
+      ]),
+      stderr: ''
+    })
+
+    const result = await listGithubRepos()
+    expect(result).toEqual([])
+  })
+
+  it('returns empty array when gh returns non-array JSON', async () => {
+    execFileAsyncMock.mockResolvedValue({
+      stdout: JSON.stringify({ unexpected: 'shape' }),
+      stderr: ''
+    })
+
+    const result = await listGithubRepos()
+    expect(result).toEqual([])
+  })
+
+  it('drops non-object items in the JSON array', async () => {
+    execFileAsyncMock.mockResolvedValue({
+      stdout: JSON.stringify([
+        'a string',
+        42,
+        null,
+        {
+          name: 'survivor',
+          owner: { login: 'octocat' },
+          description: 'kept',
+          visibility: 'PRIVATE',
+          url: 'https://github.com/octocat/survivor'
+        }
+      ]),
+      stderr: ''
+    })
+
+    const result = await listGithubRepos()
+    expect(result).toEqual([
+      {
+        name: 'survivor',
+        owner: 'octocat',
+        description: 'kept',
+        isPrivate: true,
+        url: 'https://github.com/octocat/survivor'
+      }
+    ])
+  })
 })
 
 describe('cloneRepo destDir validation', () => {

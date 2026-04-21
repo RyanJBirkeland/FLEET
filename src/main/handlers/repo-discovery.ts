@@ -126,15 +126,10 @@ export async function listGithubRepos(): Promise<GithubRepoInfo[]> {
     throw new Error(`Failed to list GitHub repos: ${e.message}`)
   }
 
-  const raw = JSON.parse(stdout) as Array<{
-    name: string
-    owner: { login: string }
-    description: string | null
-    visibility: string
-    url: string
-  }>
+  const parsed: unknown = JSON.parse(stdout)
+  const validEntries = extractValidGhRepoEntries(parsed)
 
-  return raw
+  return validEntries
     .map((r) => ({
       name: r.name,
       owner: r.owner.login,
@@ -143,6 +138,65 @@ export async function listGithubRepos(): Promise<GithubRepoInfo[]> {
       url: r.url
     }))
     .filter((r) => !configuredSet.has(`${r.owner}/${r.name}`.toLowerCase()))
+}
+
+interface GhRepoEntry {
+  name: string
+  owner: { login: string }
+  description: string | null
+  visibility: string
+  url: string
+}
+
+function isGhRepoEntry(value: unknown): value is GhRepoEntry {
+  if (typeof value !== 'object' || value === null) return false
+  const record = value as Record<string, unknown>
+
+  if (typeof record.name !== 'string') return false
+  if (typeof record.visibility !== 'string') return false
+  if (typeof record.url !== 'string') return false
+  if (record.description !== null && typeof record.description !== 'string') return false
+
+  const owner = record.owner
+  if (typeof owner !== 'object' || owner === null) return false
+  if (typeof (owner as Record<string, unknown>).login !== 'string') return false
+
+  return true
+}
+
+function describeDroppedEntry(value: unknown): string {
+  if (typeof value !== 'object' || value === null) return `non-object entry (${typeof value})`
+
+  const record = value as Record<string, unknown>
+  const name = typeof record.name === 'string' ? record.name : '<unknown>'
+
+  if (record.owner === undefined || record.owner === null) {
+    return `name="${name}" missing owner`
+  }
+  const owner = record.owner as Record<string, unknown>
+  if (typeof owner.login !== 'string') {
+    return `name="${name}" owner.login is not a string (got ${typeof owner.login})`
+  }
+  return `name="${name}" missing or invalid required fields`
+}
+
+function extractValidGhRepoEntries(parsed: unknown): GhRepoEntry[] {
+  if (!Array.isArray(parsed)) {
+    logger.warn(
+      `[listGithubRepos] gh repo list returned non-array JSON (got ${typeof parsed}); ignoring output`
+    )
+    return []
+  }
+
+  const valid: GhRepoEntry[] = []
+  for (const entry of parsed) {
+    if (isGhRepoEntry(entry)) {
+      valid.push(entry)
+    } else {
+      logger.warn(`[listGithubRepos] skipping gh entry: ${describeDroppedEntry(entry)}`)
+    }
+  }
+  return valid
 }
 
 export function cloneRepo(owner: string, repo: string, destDir: string): void {
