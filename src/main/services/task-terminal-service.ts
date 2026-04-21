@@ -6,6 +6,7 @@ import {
 } from './dependency-service'
 import type { EpicDepsReader } from './epic-dependency-service'
 import type { SprintTask, TaskDependency, TaskGroup } from '../../shared/types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { broadcast } from '../broadcast'
 import { getErrorMessage } from '../../shared/errors'
 import { refreshDependencyIndex, type DepsFingerprint } from '../agent-manager/dependency-refresher'
@@ -38,14 +39,18 @@ export interface TaskTerminalServiceDeps {
 }
 
 export interface TaskTerminalService {
-  onStatusTerminal: (taskId: string, status: string) => void
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void
 }
 
 class BatchedTaskResolver {
-  private pending = new Map<string, string>() // taskId → terminal status
+  private pending = new Map<string, TaskStatus>() // taskId → terminal status
   private timer: ReturnType<typeof setTimeout> | null = null
 
-  schedule(taskId: string, status: string, execute: (pending: Map<string, string>) => void): void {
+  schedule(
+    taskId: string,
+    status: TaskStatus,
+    execute: (pending: Map<string, TaskStatus>) => void
+  ): void {
     this.pending.set(taskId, status)
     if (!this.timer) {
       this.timer = setTimeout(() => {
@@ -74,7 +79,7 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
     // Epic dependency graph is owned by EpicGroupService — read via deps.epicDepsReader.
   }
 
-  function scheduleDependencyResolution(taskId: string, status: string): void {
+  function scheduleDependencyResolution(taskId: string, status: TaskStatus): void {
     // DESIGN: Batched resolution via setTimeout(0) for bulk PR merges.
     // When multiple PRs merge simultaneously (e.g., sprint PR poller tick),
     // we rebuild the dependency index once and process all resolutions together.
@@ -119,7 +124,7 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
     })
   }
 
-  function onStatusTerminal(taskId: string, status: string): void {
+  function onStatusTerminal(taskId: string, status: TaskStatus): void {
     if (!TERMINAL_STATUSES.has(status)) return
     scheduleDependencyResolution(taskId, status)
   }

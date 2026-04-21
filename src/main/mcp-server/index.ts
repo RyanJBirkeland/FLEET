@@ -12,6 +12,7 @@ import {
   updateTask
 } from '../services/sprint-service'
 import type { EpicGroupService } from '../services/epic-group-service'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { readOrCreateToken } from './token-store'
 import { createTransportHandler } from './transport'
 import { registerTaskTools } from './tools/tasks'
@@ -41,7 +42,7 @@ export interface McpServerConfig {
 
 export interface McpServerDeps {
   epicService: EpicGroupService
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export interface McpServerHandle {

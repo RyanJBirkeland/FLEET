@@ -92,6 +92,12 @@ describe('task-state-machine', () => {
       }
     })
 
+    it('should have exactly one entry per TASK_STATUSES value (exhaustive + no extras)', () => {
+      const transitionKeys = Object.keys(VALID_TRANSITIONS).sort()
+      const statusList = [...TASK_STATUSES].sort()
+      expect(transitionKeys).toEqual(statusList)
+    })
+
     it('should allow backlog → queued', () => {
       expect(VALID_TRANSITIONS.backlog).toContain('queued')
     })

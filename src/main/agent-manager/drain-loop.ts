@@ -8,6 +8,7 @@
 
 import type { Logger } from '../logger'
 import type { AgentManagerConfig, ActiveAgent } from './types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { NOTES_MAX_LENGTH, DRAIN_PAUSE_ON_ENV_ERROR_MS } from './types'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { DependencyIndex } from '../services/dependency-service'
@@ -56,7 +57,7 @@ export interface DrainLoopDeps {
   /** Counts consecutive drain-loop failures per task. Lives on AgentManagerImpl, passed in to persist across ticks. */
   drainFailureCounts: Map<string, number>
   /** Called when a task is quarantined after repeated failures so dependency resolution runs. */
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   /** Called when drain pauses because of an environmental failure. */
   emitDrainPaused: (event: AgentManagerDrainPausedEvent) => void
   /** Unix-ms; when set and > Date.now(), the drain tick short-circuits. */

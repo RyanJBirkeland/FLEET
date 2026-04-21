@@ -19,6 +19,7 @@ import { setupWorktree } from './worktree'
 import { nowIso } from '../../shared/time'
 import type { AgentRunClaim } from './run-agent'
 import { taskHasMatchingCommitOnMain } from './already-done-check'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -29,7 +30,7 @@ export interface TaskClaimerDeps {
   repo: IAgentTaskRepository
   depIndex: DependencyIndex
   logger: Logger
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 }
 
 // ---------------------------------------------------------------------------

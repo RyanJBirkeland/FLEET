@@ -1,4 +1,4 @@
-import { isValidTransition, VALID_TRANSITIONS } from '../task-state-machine'
+import { isValidTransition, VALID_TRANSITIONS, type TaskStatus } from '../task-state-machine'
 
 describe('task-transitions', () => {
   it('allows backlog → queued', () => {
@@ -48,8 +48,10 @@ describe('task-transitions', () => {
     expect(VALID_TRANSITIONS['backlog']).toBeInstanceOf(Set)
   })
 
-  it('returns false for unknown from-status', () => {
-    expect(isValidTransition('unknown-status', 'queued')).toBe(false)
+  it('returns false for unknown from-status (runtime defensive check)', () => {
+    // Exercise runtime safety with a fabricated invalid status. The cast
+    // documents the intent: guards must not trust values that bypass the type.
+    expect(isValidTransition('unknown-status' as TaskStatus, 'queued')).toBe(false)
   })
 
   it('cancelled has no outbound transitions', () => {

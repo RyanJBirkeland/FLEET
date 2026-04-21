@@ -28,6 +28,7 @@ import {
 import { runPostMergeDedup } from '../lib/post-merge-dedup'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
 import { getErrorMessage } from '../../shared/errors'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 // ============================================================================
 // Dependency Injection
@@ -36,7 +37,7 @@ import { getErrorMessage } from '../../shared/errors'
 export interface ReviewActionDeps {
   repo: Pick<ISprintTaskRepository, 'getTask' | 'updateTask'>
   broadcast: (event: string, payload: unknown) => void
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
   env: NodeJS.ProcessEnv
   logger: Logger
 }

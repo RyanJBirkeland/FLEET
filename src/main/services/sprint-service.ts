@@ -17,6 +17,7 @@ import { RequiredSectionsValidator } from './spec-quality/validators/sync-valida
 import { getRepoPaths } from '../git'
 import { listGroups } from '../data/task-group-queries'
 import type { Logger } from '../logger'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 export type {
   CreateTaskInput,
@@ -111,7 +112,7 @@ export function createReviewTaskFromAdhoc(input: {
 
 export interface CancelTaskDeps {
   /** Fires task-terminal resolution so dependents unblock. */
-  onStatusTerminal: (taskId: string, status: string) => Promise<void> | void
+  onStatusTerminal: (taskId: string, status: TaskStatus) => Promise<void> | void
   logger: Logger
   /**
    * Optional override for the underlying update call (tests inject a spy).

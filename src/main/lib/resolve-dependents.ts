@@ -1,5 +1,6 @@
 import type { SprintTask, TaskDependency, TaskGroup } from '../../shared/types'
 import type { Logger } from '../logger'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import {
   type DependencyIndex,
   buildBlockedNotes,
@@ -25,7 +26,7 @@ import type { EpicDepsReader } from '../services/epic-dependency-service'
  */
 export function resolveDependents(
   completedTaskId: string,
-  completedStatus: string,
+  completedStatus: TaskStatus,
   index: DependencyIndex,
   getTask: (id: string) =>
     | (Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_id'> & {
@@ -39,7 +40,7 @@ export function resolveDependents(
   getGroup?: (id: string) => TaskGroup | null,
   listGroupTasks?: (groupId: string) => SprintTask[],
   runInTransaction?: (fn: () => void) => void,
-  onTaskTerminal?: (taskId: string, status: string) => void
+  onTaskTerminal?: (taskId: string, status: TaskStatus) => void
 ): void {
   // Guard: only process terminal statuses — calling with active/queued/blocked
   // produces nonsensical cascade-cancel and satisfaction results.
@@ -175,7 +176,7 @@ export function resolveDependents(
 
       // Build status cache for all epics and their tasks
       const epicStatusMap = new Map<string, string>()
-      const tasksByEpic = new Map<string, Array<{ status: string }>>()
+      const tasksByEpic = new Map<string, Array<{ status: TaskStatus }>>()
 
       // Helper to ensure we've cached an epic's data
       const cacheEpic = (epicId: string): void => {

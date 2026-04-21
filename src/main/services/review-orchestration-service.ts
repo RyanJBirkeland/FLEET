@@ -29,6 +29,7 @@ import type {
   RebaseResult
 } from './review-orchestration-types'
 import type { SprintTask } from '../../shared/types/task-types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 export type {
   MergeLocallyInput,
@@ -57,7 +58,7 @@ async function runPlan(
   taskId: string,
   input: Parameters<typeof classifyReviewAction>[0],
   env: NodeJS.ProcessEnv,
-  onTerminal: (taskId: string, status: string) => void | Promise<void>
+  onTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 ): Promise<ReturnType<typeof executeReviewAction>> {
   return executeReviewAction(classifyReviewAction(input), taskId, {
     repo,

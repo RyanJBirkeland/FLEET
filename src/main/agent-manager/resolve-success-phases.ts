@@ -19,6 +19,7 @@ import { MAX_NO_COMMITS_RETRIES } from './prompt-constants'
 import type { Logger } from '../logger'
 import { broadcastCoalesced } from '../broadcast'
 import type { AgentEvent } from '../../shared/types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
 import { rebaseOntoMain, autoCommitIfDirty } from '../lib/git-operations'
 import { transitionToReview } from './review-transition'
@@ -171,7 +172,7 @@ export async function failTaskWithError(
   notes: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 ): Promise<void> {
   logger.error(`[completion] ${message}`)
 
@@ -212,7 +213,7 @@ export async function verifyWorktreeExists(
   worktreePath: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 ): Promise<boolean> {
   if (existsSync(worktreePath)) {
     return true
@@ -233,7 +234,7 @@ export async function detectAgentBranch(
   worktreePath: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 ): Promise<string | null> {
   let branch: string
   try {
@@ -312,7 +313,7 @@ interface CommitCheckContext {
   retryCount: number
   repo: IAgentTaskRepository
   logger: Logger
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   resolveFailure: (opts: { taskId: string; retryCount: number; notes?: string; repo: IAgentTaskRepository }, logger?: Logger) => boolean
 }
 
@@ -376,7 +377,7 @@ async function failTaskExhaustedNoCommits(
   branch: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 ): Promise<void> {
   logger.warn(
     `[completion] Task ${taskId}: no commits on branch ${branch} after ${MAX_NO_COMMITS_RETRIES} attempts — marking failed`
@@ -415,8 +416,8 @@ export async function transitionTaskToReview(
   rebaseOutcome: RebaseOutcome,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>,
-  attemptAutoMerge: (opts: { taskId: string; title: string; branch: string; worktreePath: string; repo: IAgentTaskRepository; logger: Logger; onTaskTerminal: (taskId: string, status: string) => Promise<void> }) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
+  attemptAutoMerge: (opts: { taskId: string; title: string; branch: string; worktreePath: string; repo: IAgentTaskRepository; logger: Logger; onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void> }) => Promise<void>
 ): Promise<void> {
   logger.info(
     `[completion] Task ${taskId}: agent finished with commits on branch ${branch} — transitioning to review`

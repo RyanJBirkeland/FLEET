@@ -4,6 +4,7 @@
  */
 
 import type { EpicDependency } from '../../shared/types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { TERMINAL_STATUSES, HARD_SATISFIED_STATUSES } from './dependency-service'
 
 // Re-export canonical status sets for epic satisfaction checks
@@ -20,7 +21,7 @@ export interface EpicDepsReader {
     epicId: string,
     deps: EpicDependency[],
     getEpicStatus: (id: string) => string | undefined,
-    getEpicTasks: (id: string) => Array<{ status: string }> | undefined
+    getEpicTasks: (id: string) => Array<{ status: TaskStatus }> | undefined
   ): { satisfied: boolean; blockedBy: string[] }
 }
 
