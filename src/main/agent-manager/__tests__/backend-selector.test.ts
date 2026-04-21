@@ -9,6 +9,7 @@ import * as settings from '../../settings'
 import {
   DEFAULT_SETTINGS,
   loadBackendSettings,
+  resolveAgentRuntime,
   resolveBackend,
   saveBackendSettings,
   SETTING_BACKEND_CONFIG,
@@ -107,5 +108,15 @@ describe('resolveBackend', () => {
     for (const type of allTypes) {
       expect(resolveBackend(type, DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS[type])
     }
+  })
+})
+
+describe('resolveAgentRuntime (rename)', () => {
+  it('is the canonical export and returns the same value as the deprecated alias', () => {
+    vi.mocked(settings.getSettingJson).mockReturnValue(null)
+    const viaNew = resolveAgentRuntime('pipeline')
+    const viaOld = resolveBackend('pipeline')
+    expect(viaNew).toEqual(viaOld)
+    expect(viaNew).toEqual(DEFAULT_SETTINGS.pipeline)
   })
 })

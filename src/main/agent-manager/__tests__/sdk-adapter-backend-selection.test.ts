@@ -10,6 +10,7 @@ const mockSpawnViaCli = vi.fn()
 
 vi.mock('../backend-selector', () => ({
   loadBackendSettings: () => mockLoadBackendSettings(),
+  resolveAgentRuntime: (...args: unknown[]) => mockResolveBackend(...args),
   resolveBackend: (...args: unknown[]) => mockResolveBackend(...args)
 }))
 

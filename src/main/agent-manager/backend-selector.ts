@@ -41,12 +41,19 @@ export function saveBackendSettings(next: BackendSettings): void {
   setSettingJson<BackendSettings>(SETTING_BACKEND_CONFIG, next)
 }
 
-export function resolveBackend(
+export function resolveAgentRuntime(
   agentType: AgentType,
   settings: BackendSettings = loadBackendSettings()
 ): AgentBackendConfig {
   return settings[agentType]
 }
+
+/**
+ * @deprecated Use `resolveAgentRuntime`. Kept for one release to keep the
+ * rename's blast radius bounded — remove in a follow-up once all call sites
+ * land on the new name.
+ */
+export const resolveBackend = resolveAgentRuntime
 
 function mergeWithDefaults(stored: Partial<BackendSettings>): BackendSettings {
   return {
