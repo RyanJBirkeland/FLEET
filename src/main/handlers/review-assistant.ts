@@ -4,6 +4,8 @@ import { createLogger } from '../logger'
 import { buildAgentPrompt } from '../lib/prompt-composer'
 import { runSdkStreaming } from '../sdk-streaming'
 import { isValidTaskId } from '../lib/validation'
+import { resolveAgentRuntime as resolveAgentRuntimeFn } from '../agent-manager/backend-selector'
+import type { AgentBackendConfig } from '../agent-manager/backend-selector'
 import type { ReviewService } from '../services/review-service'
 import type { IReviewRepository } from '../data/review-repository'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
@@ -36,6 +38,7 @@ export interface ChatStreamDeps {
   buildChatPrompt: typeof buildAgentPrompt
   runSdkStreaming: typeof runSdkStreaming
   activeStreams: Map<string, { close: () => void }>
+  resolveAgentRuntime: () => AgentBackendConfig
 }
 
 /**
@@ -83,6 +86,8 @@ export async function handleChatStream(
     reviewSeed
   })
 
+  const { model: reviewerModel } = deps.resolveAgentRuntime()
+
   ;(async () => {
     try {
       const full = await deps.runSdkStreaming(
@@ -97,7 +102,7 @@ export async function handleChatStream(
         {
           cwd: task.worktree_path!,
           tools: ['Read', 'Grep', 'Glob'],
-          model: 'claude-opus-4-6',
+          model: reviewerModel,
           onToolUse: (event) => {
             const payload: ChatChunk = { streamId, toolUse: event }
             sender?.send('review:chatChunk', payload)
@@ -132,7 +137,8 @@ export function buildChatStreamDeps(input: {
   return {
     ...input,
     buildChatPrompt: buildAgentPrompt,
-    runSdkStreaming
+    runSdkStreaming,
+    resolveAgentRuntime: () => resolveAgentRuntimeFn('reviewer')
   }
 }
 

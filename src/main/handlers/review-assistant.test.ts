@@ -1,8 +1,10 @@
 import { describe, it, expect, vi } from 'vitest'
 import { handleAutoReview, handleChatStream, buildChatStreamDeps } from './review-assistant'
+import type { ChatStreamDeps } from './review-assistant'
 import type { ReviewService } from '../services/review-service'
 import type { IReviewRepository } from '../data/review-repository'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { SdkStreamingOptions } from '../sdk-streaming'
 import type { ReviewResult, PartnerMessage, ChatChunk } from '../../shared/types'
 
 function fakeResult(): ReviewResult {
@@ -53,6 +55,7 @@ describe('buildChatStreamDeps', () => {
     expect(deps.activeStreams).toBe(activeStreams)
     expect(typeof deps.buildChatPrompt).toBe('function')
     expect(typeof deps.runSdkStreaming).toBe('function')
+    expect(typeof deps.resolveAgentRuntime).toBe('function')
   })
 })
 
@@ -127,7 +130,8 @@ describe('handleChatStream', () => {
           return 'hello world'
         }
       ),
-      activeStreams: new Map<string, { close: () => void }>()
+      activeStreams: new Map<string, { close: () => void }>(),
+      resolveAgentRuntime: () => ({ backend: 'claude' as const, model: 'claude-opus-4-6' })
     }
     const input: { taskId: string; messages: PartnerMessage[] } = {
       taskId: 'task-1',
@@ -167,7 +171,8 @@ describe('handleChatStream', () => {
       runSdkStreaming: async () => {
         throw new Error('rate limit')
       },
-      activeStreams: new Map<string, { close: () => void }>()
+      activeStreams: new Map<string, { close: () => void }>(),
+      resolveAgentRuntime: () => ({ backend: 'claude' as const, model: 'claude-opus-4-6' })
     }
     await handleChatStream(deps, { taskId: 'task-1', messages: [] }, sender as any)
     await new Promise((r) => setImmediate(r))
@@ -184,7 +189,8 @@ describe('handleChatStream', () => {
       getDiff: async () => '',
       buildChatPrompt: () => '',
       runSdkStreaming: async () => '',
-      activeStreams: new Map()
+      activeStreams: new Map(),
+      resolveAgentRuntime: () => ({ backend: 'claude' as const, model: 'claude-opus-4-6' })
     }
     await expect(
       handleChatStream(deps, { taskId: 'missing', messages: [] }, sender as any)
@@ -202,7 +208,8 @@ describe('handleChatStream', () => {
       getDiff: async () => '',
       buildChatPrompt: () => '',
       runSdkStreaming: async () => '',
-      activeStreams: new Map()
+      activeStreams: new Map(),
+      resolveAgentRuntime: () => ({ backend: 'claude' as const, model: 'claude-opus-4-6' })
     }
     // Path traversal attempt
     await expect(
@@ -222,5 +229,35 @@ describe('handleChatStream', () => {
     ).rejects.toThrow('Invalid task ID format')
     // Task lookup should never be called for invalid IDs
     expect(taskRepo.getTask).not.toHaveBeenCalled()
+  })
+
+  it('passes the reviewer model from settings into runSdkStreaming', async () => {
+    let capturedOptions: SdkStreamingOptions | null = null
+    const resolveAgentRuntime = vi
+      .fn()
+      .mockReturnValue({ backend: 'claude', model: 'claude-sonnet-4-5' })
+    const deps: ChatStreamDeps = {
+      taskRepo: { getTask: () => fakeTask() } as unknown as IAgentTaskRepository,
+      reviewRepo: {
+        getCached: () => null,
+        setCached: () => {},
+        invalidate: () => {}
+      } as IReviewRepository,
+      getHeadCommitSha: async () => 'sha-abc',
+      getBranch: async () => 'feat/auth',
+      getDiff: async () => 'diff --git a/x b/x\n+ change',
+      buildChatPrompt: () => 'prompt',
+      runSdkStreaming: async (_prompt, _onChunk, _streams, _id, _timeout, options) => {
+        capturedOptions = options ?? null
+        return 'reply'
+      },
+      activeStreams: new Map<string, { close: () => void }>(),
+      resolveAgentRuntime
+    }
+    const sender = { send: () => {} }
+    await handleChatStream(deps, { taskId: 'task-1', messages: [] }, sender as any)
+    await new Promise((r) => setImmediate(r))
+    expect(resolveAgentRuntime).toHaveBeenCalled()
+    expect(capturedOptions?.model).toBe('claude-sonnet-4-5')
   })
 })
