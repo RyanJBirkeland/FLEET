@@ -1,4 +1,5 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
+import type { z } from 'zod'
 import type { SprintTask } from '../../../shared/types'
 import type { TaskChange } from '../../data/task-changes'
 import {
@@ -18,6 +19,13 @@ import {
 } from '../schemas'
 import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
 import { jsonContent, safeToolResponse } from './response'
+
+/**
+ * Precise patch shape derived from the MCP write schema. Replaces the
+ * previous `Record<string, unknown>` signature so downstream callers see
+ * the exact set of fields the schema validates and strips.
+ */
+export type TaskPatch = z.infer<typeof TaskUpdateSchema>['patch']
 
 /**
  * Patch fragment that clears stale terminal-state fields. Applied when an
@@ -48,7 +56,7 @@ export interface TaskToolsDeps {
     deps: CreateTaskWithValidationDeps,
     opts?: CreateTaskWithValidationOpts
   ) => SprintTask
-  updateTask: (id: string, patch: Record<string, unknown>) => SprintTask | null
+  updateTask: (id: string, patch: TaskPatch) => SprintTask | null
   cancelTask: (id: string, reason?: string) => Promise<SprintTask | null> | SprintTask | null
   /** Mirrors the data-layer signature: (taskId, limit?). Offset is applied in the tool handler via slice. */
   getTaskChanges: (id: string, limit?: number) => TaskChange[]
@@ -217,9 +225,9 @@ function rewrapTaskValidationError(err: unknown): unknown {
 }
 
 function buildEffectiveUpdatePatch(
-  patch: Record<string, unknown>,
+  patch: TaskPatch,
   current: SprintTask | null
-): Record<string, unknown> {
+): TaskPatch {
   if (!('status' in patch) || !current) return { ...patch }
   if (!isRevivingTerminalTask(current.status, patch.status)) return { ...patch }
   return { ...patch, ...TERMINAL_STATE_RESET_PATCH }
