@@ -137,13 +137,13 @@ export function useTaskCreation({
         prompt: title,
         spec,
         priority,
-        depends_on: dependsOn.length > 0 ? dependsOn : undefined,
-        playground_enabled: playgroundEnabled || undefined,
-        max_cost_usd: maxCostUsd ?? undefined,
-        model: model || undefined,
-        spec_type: specType ?? undefined,
-        group_id: pendingGroupId ?? undefined,
-        cross_repo_contract: crossRepoContract || undefined
+        ...(dependsOn.length > 0 ? { depends_on: dependsOn } : {}),
+        ...(playgroundEnabled ? { playground_enabled: playgroundEnabled } : {}),
+        ...(maxCostUsd !== null && maxCostUsd !== undefined ? { max_cost_usd: maxCostUsd } : {}),
+        ...(model ? { model } : {}),
+        ...(specType ? { spec_type: specType } : {}),
+        ...(pendingGroupId ? { group_id: pendingGroupId } : {}),
+        ...(crossRepoContract ? { cross_repo_contract: crossRepoContract } : {})
       }
       const createdId = await createTaskRef.current(input)
       // createTask hardcodes status=backlog. If queuing, promote to queued.

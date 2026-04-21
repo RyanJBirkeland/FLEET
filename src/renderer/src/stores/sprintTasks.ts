@@ -10,38 +10,45 @@ import {
   mergePendingFields,
   expirePendingUpdates,
   trackPendingOperation,
-  type PendingUpdates
+  type PendingUpdates,
+  type SprintTaskField
 } from '../lib/optimisticUpdateManager'
 import { getRepoPaths } from '../services/git'
-import {
-  listTasks,
-  updateTask,
-  deleteTask,
-  createTask,
-  batchUpdate,
-  generatePrompt
-} from '../services/sprint'
+import { listTasks, updateTask, deleteTask, createTask, batchUpdate, generatePrompt } from '../services/sprint'
 import { spawnLocal } from '../services/agents'
 
 export interface CreateTicketInput {
   title: string
   repo: string
-  prompt?: string | undefined
-  notes?: string | undefined
-  spec?: string | null | undefined
+  prompt?: string
+  notes?: string
+  spec?: string | null
   priority: number
-  template_name?: string | undefined
-  depends_on?: TaskDependency[] | undefined
-  playground_enabled?: boolean | undefined
-  max_cost_usd?: number | null | undefined
-  model?: string | undefined
-  spec_type?: string | null | undefined
-  group_id?: string | null | undefined
-  cross_repo_contract?: string | null | undefined
+  template_name?: string
+  depends_on?: TaskDependency[]
+  playground_enabled?: boolean
+  max_cost_usd?: number | null
+  model?: string
+  spec_type?: string | null
+  group_id?: string | null
+  cross_repo_contract?: string | null
 }
 
 /** How long (ms) to protect an optimistic update from being overwritten by poll data. */
 const PENDING_UPDATE_TTL = 5000
+
+/**
+ * Copy one typed field from the local (optimistic) task onto a server-merged task.
+ * Generic K keeps the assignment type-safe: `target[field] = source[field]` only
+ * compiles when both sides agree on the field's type.
+ */
+function preserveField<K extends SprintTaskField>(
+  target: SprintTask,
+  source: SprintTask,
+  field: K
+): void {
+  target[field] = source[field]
+}
 
 interface SprintTasksState {
   // --- Data ---
@@ -126,13 +133,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         for (const task of incoming) {
           mergedById.set(
             task.id,
-            mergePendingFields(
-              task,
-              currentTaskMap.get(task.id),
-              nextPending[task.id],
-              now,
-              PENDING_UPDATE_TTL
-            )
+            mergePendingFields(task, currentTaskMap.get(task.id), nextPending[task.id], now, PENDING_UPDATE_TTL)
           )
         }
 
@@ -160,17 +161,14 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   updateTask: async (taskId, patch): Promise<void> => {
     const updateId = Date.now() // Unique ID for this update operation
 
-    // Record pending update before optimistic patch, merging fields from prior pending updates
+    // Record pending update before optimistic patch, merging fields from prior pending updates.
+    // `Object.keys(patch)` is typed as `string[]`; narrow it to the SprintTask field union so
+    // `trackPendingOperation` type-checks. `patch: Partial<SprintTask>` guarantees every key is
+    // a valid SprintTaskField at runtime.
+    const patchedFields = Object.keys(patch) as SprintTaskField[]
     set((state) => ({
-      pendingUpdates: trackPendingOperation(
-        state.pendingUpdates,
-        taskId,
-        Object.keys(patch),
-        updateId
-      ),
-      tasks: state.tasks.map((t) =>
-        t.id === taskId ? { ...t, ...patch, updated_at: nowIso() } : t
-      )
+      pendingUpdates: trackPendingOperation(state.pendingUpdates, taskId, patchedFields, updateId),
+      tasks: state.tasks.map((t) => (t.id === taskId ? { ...t, ...patch, updated_at: nowIso() } : t))
     }))
     try {
       const serverTask = await updateTask(taskId, patch)
@@ -374,9 +372,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         const pending = state.pendingUpdates[t.id]
         if (pending && Date.now() - pending.ts <= PENDING_UPDATE_TTL) {
           for (const field of pending.fields) {
-            ;(merged as unknown as Record<string, unknown>)[field] = (
-              t as unknown as Record<string, unknown>
-            )[field]
+            preserveField(merged, t, field)
           }
         }
         return merged
