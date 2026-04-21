@@ -27,6 +27,41 @@ describe('asSDKMessage', () => {
     const msg = {}
     expect(asSDKMessage(msg)).toBe(msg)
   })
+
+  it('accepts a well-formed assistant message with content array', () => {
+    const msg = {
+      type: 'assistant',
+      message: {
+        role: 'assistant',
+        content: [{ type: 'text', text: 'hi' }]
+      }
+    }
+    expect(asSDKMessage(msg)).toBe(msg)
+  })
+
+  it('accepts a message with an empty content array', () => {
+    const msg = { type: 'assistant', message: { content: [] } }
+    expect(asSDKMessage(msg)).toBe(msg)
+  })
+
+  it('accepts a message whose nested message has no content field', () => {
+    const msg = { type: 'assistant', message: { role: 'assistant' } }
+    expect(asSDKMessage(msg)).toBe(msg)
+  })
+
+  it('returns null when nested message is a non-object', () => {
+    expect(asSDKMessage({ type: 'assistant', message: 'oops' })).toBeNull()
+    expect(asSDKMessage({ type: 'assistant', message: 42 })).toBeNull()
+    expect(asSDKMessage({ type: 'assistant', message: null })).toBeNull()
+    expect(asSDKMessage({ type: 'assistant', message: true })).toBeNull()
+  })
+
+  it('returns null when nested message.content is not an array', () => {
+    expect(asSDKMessage({ message: { content: 'not an array' } })).toBeNull()
+    expect(asSDKMessage({ message: { content: { 0: 'block' } } })).toBeNull()
+    expect(asSDKMessage({ message: { content: 42 } })).toBeNull()
+    expect(asSDKMessage({ message: { content: null } })).toBeNull()
+  })
 })
 
 describe('getNumericField', () => {

@@ -5,7 +5,7 @@ Source: `src/main/agent-manager/`
 
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
-| `sdk-message-protocol.ts` | SDK wire protocol type guards and field accessors | `SDKWireMessage`, `asSDKMessage`, `getNumericField`, `getSessionId`, `isRateLimitMessage` |
+| `sdk-message-protocol.ts` | SDK wire protocol type guards and field accessors. `asSDKMessage` rejects messages whose outer shape contradicts the declared type — `message` must be an object if present, and `message.content` must be an array if present — so consumers never receive a value that lies about its container shape. | `SDKWireMessage`, `asSDKMessage`, `getNumericField`, `getSessionId`, `isRateLimitMessage` |
 | `spawn-sdk.ts` | SDK-based agent spawn — session ID extraction, abort wiring, steer stub. Exports `MAX_TURNS = 20` used by both SDK config and message consumer. | `spawnViaSdk`, `MAX_TURNS` |
 | `spawn-cli.ts` | CLI fallback spawn — stream-json protocol, V8 heap cap, stdin steer. Accepts optional `maxBudgetUsd` and passes it via `CLAUDE_MAX_COST_USD` env var to the CLI process. | `spawnViaCli`, `withMaxOldSpaceOption`, `AGENT_PROCESS_MAX_OLD_SPACE_MB` |
 | `prompt-assembly.ts` | Task validation + prompt context prep — upstream context, scratchpad, prompt build | `validateTaskForRun`, `assembleRunContext`, `fetchUpstreamContext`, `readPriorScratchpad` |
