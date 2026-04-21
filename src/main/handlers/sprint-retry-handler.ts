@@ -18,7 +18,7 @@ export function registerSprintRetryHandler(): void {
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
     const task = getTask(taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
-    if (task.status !== 'failed' && task.status !== 'error') {
+    if (task.status !== 'failed' && task.status !== 'error' && task.status !== 'cancelled') {
       throw new Error(`Cannot retry task with status ${task.status}`)
     }
 

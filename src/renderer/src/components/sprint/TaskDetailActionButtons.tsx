@@ -284,12 +284,13 @@ export function TaskDetailActionButtons({
     case 'cancelled':
       return (
         <>
-          {(task.status === 'failed' || task.status === 'error') && onRetry && (
+          {onRetry && (
             <button
               className="task-drawer__btn task-drawer__btn--primary"
               onClick={() => handleAction('retry', onRetry)}
               disabled={isLoading}
               aria-busy={loadingAction === 'retry'}
+              aria-label={`Retry task ${task.title}`}
             >
               {loadingAction === 'retry' ? (
                 <Loader2 size={12} className="spinner" />

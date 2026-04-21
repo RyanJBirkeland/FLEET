@@ -268,9 +268,10 @@ export function TaskDetailDrawer({
           </button>
         )}
 
-        {/* Failure details — show prominently when task failed/errored */}
-        {(task.status === 'failed' || task.status === 'error') && (
-          <div
+        {/* Failure details — show prominently when task failed, errored, or was cancelled */}
+        {(task.status === 'failed' || task.status === 'error' || task.status === 'cancelled') && (
+          <section
+            aria-label="Failure details"
             className="task-drawer__failure"
             data-testid="task-drawer-failure"
             style={{
@@ -278,18 +279,18 @@ export function TaskDetailDrawer({
               background: 'var(--bde-danger-surface)'
             }}
           >
-            <div
+            <h4
               className="task-drawer__failure-label"
               style={{
                 color: 'var(--bde-danger)'
               }}
             >
-              Failure Details
-            </div>
+              {task.status === 'cancelled' ? 'Cancellation details' : 'Failure details'}
+            </h4>
             {task.failure_reason && (
-              <div className="task-drawer__failure-reason" data-testid="task-drawer-failure-reason">
-                reason: {task.failure_reason}
-              </div>
+              <pre className="task-drawer__failure-reason" data-testid="task-drawer-failure-reason">
+                {task.failure_reason}
+              </pre>
             )}
             {task.notes ? (
               <pre
@@ -325,7 +326,7 @@ export function TaskDetailDrawer({
                   </div>
                 )
               })()}
-          </div>
+          </section>
         )}
 
         {/* PR section */}

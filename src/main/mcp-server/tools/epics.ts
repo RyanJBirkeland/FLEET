@@ -1,6 +1,6 @@
 import type { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import type { EpicGroupService } from '../../services/epic-group-service'
-import { McpDomainError, McpErrorCode } from '../errors'
+import { McpDomainError, McpErrorCode, parseToolArgs } from '../errors'
 import {
   EpicAddTaskSchema,
   EpicIdSchema,
@@ -27,7 +27,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     'List epics (task groups). Optionally filter by status or search string on name.',
     EpicListSchema.shape,
     async (rawArgs) => {
-      const args = EpicListSchema.parse(rawArgs)
+      const args = parseToolArgs(EpicListSchema, rawArgs)
       let rows = svc.listEpics()
       if (args.status) rows = rows.filter((e) => e.status === args.status)
       if (args.search) {
@@ -43,7 +43,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     "Fetch one epic by id. Pass includeTasks=true to also return the epic's task list.",
     EpicIdSchema.shape,
     async (rawArgs) => {
-      const { id, includeTasks } = EpicIdSchema.parse(rawArgs)
+      const { id, includeTasks } = parseToolArgs(EpicIdSchema, rawArgs)
       const epic = svc.getEpic(id)
       if (!epic) throw new McpDomainError(`Epic ${id} not found`, McpErrorCode.NotFound, { id })
       if (includeTasks) {
@@ -58,7 +58,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     'Create a new epic (task group).',
     EpicWriteFieldsSchema.shape,
     async (rawArgs) => {
-      const { goal, ...rest } = EpicWriteFieldsSchema.parse(rawArgs)
+      const { goal, ...rest } = parseToolArgs(EpicWriteFieldsSchema, rawArgs)
       return json(svc.createEpic({ ...rest, goal: goal ?? undefined }))
     }
   )
@@ -68,7 +68,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     "Update an epic's fields (name, icon, accent_color, goal, status).",
     EpicUpdateSchema.shape,
     async (rawArgs) => {
-      const { id, patch } = EpicUpdateSchema.parse(rawArgs)
+      const { id, patch } = parseToolArgs(EpicUpdateSchema, rawArgs)
       const { goal, ...rest } = patch
       return json(svc.updateEpic(id, { ...rest, goal: goal ?? undefined }))
     }
@@ -79,7 +79,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     'Delete an epic. Its tasks remain but are detached.',
     EpicIdSchema.shape,
     async (rawArgs) => {
-      const { id } = EpicIdSchema.parse(rawArgs)
+      const { id } = parseToolArgs(EpicIdSchema, rawArgs)
       svc.deleteEpic(id)
       return json({ deleted: true, id })
     }
@@ -90,7 +90,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     'Attach an existing task to an epic.',
     EpicAddTaskSchema.shape,
     async (rawArgs) => {
-      const { epicId, taskId } = EpicAddTaskSchema.parse(rawArgs)
+      const { epicId, taskId } = parseToolArgs(EpicAddTaskSchema, rawArgs)
       svc.addTask(epicId, taskId)
       return json({ ok: true, epicId, taskId })
     }
@@ -101,7 +101,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     'Detach a task from its epic.',
     EpicRemoveTaskSchema.shape,
     async (rawArgs) => {
-      const { taskId } = EpicRemoveTaskSchema.parse(rawArgs)
+      const { taskId } = parseToolArgs(EpicRemoveTaskSchema, rawArgs)
       svc.removeTask(taskId)
       return json({ ok: true, taskId })
     }
@@ -112,7 +112,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
     "Replace an epic's upstream dependencies. Rejects cycles atomically.",
     EpicSetDependenciesSchema.shape,
     async (rawArgs) => {
-      const { id, dependencies } = EpicSetDependenciesSchema.parse(rawArgs)
+      const { id, dependencies } = parseToolArgs(EpicSetDependenciesSchema, rawArgs)
       try {
         const updated = svc.setDependencies(id, dependencies)
         return json(updated)

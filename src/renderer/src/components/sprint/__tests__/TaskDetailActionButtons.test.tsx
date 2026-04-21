@@ -408,7 +408,7 @@ describe('TaskDetailActionButtons', () => {
       expect(screen.getByText('Retry')).toBeInTheDocument()
     })
 
-    it('does not render Retry button for cancelled status', () => {
+    it('renders Retry button for cancelled status when onRetry provided', () => {
       const task = makeTask({ status: 'cancelled' })
       render(
         <TaskDetailActionButtons
@@ -422,7 +422,24 @@ describe('TaskDetailActionButtons', () => {
           onRetry={mockOnRetry}
         />
       )
-      expect(screen.queryByText('Retry')).not.toBeInTheDocument()
+      expect(screen.getByText('Retry')).toBeInTheDocument()
+    })
+
+    it('Retry button carries an aria-label that names the task', () => {
+      const task = makeTask({ status: 'failed', title: 'Fix auth bug' })
+      render(
+        <TaskDetailActionButtons
+          task={task}
+          onLaunch={mockOnLaunch}
+          onStop={mockOnStop}
+          onRerun={mockOnRerun}
+          onDelete={mockOnDelete}
+          onViewLogs={mockOnViewLogs}
+          onEdit={mockOnEdit}
+          onRetry={mockOnRetry}
+        />
+      )
+      expect(screen.getByLabelText(/Retry task Fix auth bug/)).toBeInTheDocument()
     })
 
     it('always renders Clone & Queue, Edit, and Delete buttons', () => {

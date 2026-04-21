@@ -661,7 +661,7 @@ describe('TaskDetailDrawer - Review Changes button', () => {
       expect(screen.getByTestId('task-drawer-failure-notes').textContent).toContain(
         'npm test exited with code 1'
       )
-      expect(screen.getByText('Failure Details')).toBeInTheDocument()
+      expect(screen.getByText('Failure details')).toBeInTheDocument()
     })
 
     it('renders notes block when task status is error', () => {
@@ -676,7 +676,30 @@ describe('TaskDetailDrawer - Review Changes button', () => {
       expect(screen.getByTestId('task-drawer-failure-reason').textContent).toContain('unknown')
     })
 
-    it('does not render failure block for non-failed statuses', () => {
+    it('renders Cancellation details heading for cancelled tasks with a failure_reason', () => {
+      const task: SprintTask = {
+        ...baseTask,
+        status: 'cancelled',
+        failure_reason: 'timeout'
+      }
+      render(<TaskDetailDrawer {...makeProps({ task })} />)
+      expect(screen.getByTestId('task-drawer-failure')).toBeInTheDocument()
+      expect(screen.getByText('Cancellation details')).toBeInTheDocument()
+      expect(screen.getByTestId('task-drawer-failure-reason').textContent).toContain('timeout')
+    })
+
+    it('exposes the failure block as a landmark with accessible name', () => {
+      const task: SprintTask = {
+        ...baseTask,
+        status: 'failed',
+        failure_reason: 'test_failure'
+      }
+      render(<TaskDetailDrawer {...makeProps({ task })} />)
+      const region = screen.getByRole('region', { name: /failure details/i })
+      expect(region).toBeInTheDocument()
+    })
+
+    it('does not render failure block for non-terminal statuses', () => {
       for (const status of ['queued', 'active', 'done', 'review'] as const) {
         const { unmount } = render(
           <TaskDetailDrawer {...makeProps({ task: { ...baseTask, status, notes: 'x' } })} />

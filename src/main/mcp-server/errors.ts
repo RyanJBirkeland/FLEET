@@ -1,4 +1,4 @@
-import { ZodError } from 'zod'
+import { z, ZodError } from 'zod'
 
 export enum McpErrorCode {
   NotFound = 'NOT_FOUND',
@@ -18,6 +18,20 @@ export class McpDomainError extends Error {
   }
 }
 
+/**
+ * Thrown by `parseToolArgs` — carries the schema that rejected the input so
+ * `toJsonRpcError` can enrich each issue with the field's `.describe()` text.
+ */
+export class McpZodError extends Error {
+  constructor(
+    public readonly zodError: ZodError,
+    public readonly schema: z.ZodTypeAny
+  ) {
+    super(zodError.message)
+    this.name = 'McpZodError'
+  }
+}
+
 export interface JsonRpcErrorBody {
   code: number
   message: string
@@ -31,16 +45,62 @@ const CODE_MAP: Record<McpErrorCode, number> = {
   [McpErrorCode.ForbiddenField]: -32004
 }
 
-export function toJsonRpcError(err: unknown): JsonRpcErrorBody {
+export function toJsonRpcError(err: unknown, schema?: z.ZodTypeAny): JsonRpcErrorBody {
+  if (err instanceof McpZodError) {
+    return formatZodError(err.zodError, err.schema)
+  }
   if (err instanceof ZodError) {
-    return {
-      code: -32602,
-      message: `Invalid params: ${err.issues.map((i) => i.message).join('; ')}`,
-      data: { issues: err.issues }
-    }
+    return formatZodError(err, schema)
   }
   if (err instanceof McpDomainError) {
     return { code: CODE_MAP[err.kind], message: err.message, data: err.data }
   }
   return { code: -32603, message: 'Internal error' }
+}
+
+/**
+ * Parse MCP tool arguments against a zod schema. On failure throws an
+ * `McpZodError` that carries the schema so `toJsonRpcError` can surface
+ * each field's `.describe()` text in the JSON-RPC error response.
+ */
+export function parseToolArgs<T extends z.ZodTypeAny>(schema: T, raw: unknown): z.infer<T> {
+  const result = schema.safeParse(raw)
+  if (!result.success) {
+    throw new McpZodError(result.error, schema)
+  }
+  return result.data as z.infer<T>
+}
+
+function formatZodError(err: ZodError, schema?: z.ZodTypeAny): JsonRpcErrorBody {
+  return {
+    code: -32602,
+    message: `Invalid params: ${err.issues.map((issue) => enrichIssue(issue, schema)).join('; ')}`,
+    data: { issues: err.issues }
+  }
+}
+
+function enrichIssue(issue: z.ZodIssue, schema?: z.ZodTypeAny): string {
+  const description = topLevelFieldDescription(schema, issue.path)
+  const pathLabel = issue.path.length > 0 ? issue.path.join('.') : '(root)'
+  if (description) {
+    return `${pathLabel}: ${description} — got: ${issue.message}`
+  }
+  return `${pathLabel}: ${issue.message}`
+}
+
+/**
+ * Look up the description of the top-level object field named by the issue
+ * path. Nested paths fall back to an undefined description — callers then
+ * surface the raw issue message without enrichment.
+ */
+function topLevelFieldDescription(
+  schema: z.ZodTypeAny | undefined,
+  path: ReadonlyArray<PropertyKey>
+): string | undefined {
+  if (!(schema instanceof z.ZodObject)) return undefined
+  const fieldName = path[0]
+  if (typeof fieldName !== 'string') return undefined
+  const shape = schema.shape as Record<string, z.ZodTypeAny>
+  const fieldSchema = shape[fieldName]
+  return fieldSchema?.description
 }

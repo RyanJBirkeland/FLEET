@@ -11,9 +11,11 @@ Translates service exceptions and domain rule violations into JSON-RPC error bod
 
 - `McpErrorCode` — enum of domain error types: `NotFound` (-32001), `InvalidTransition` (-32002), `Cycle` (-32003), `ForbiddenField` (-32004)
 - `McpDomainError` — thrown by tool handlers when a domain rule fails; carries error code, message, and optional context data
+- `McpZodError` — wraps a `ZodError` together with the schema that rejected the input so user-facing messages can include field `.describe()` text
 - `JsonRpcErrorBody` — interface for the mapped error response: `{ code: number; message: string; data?: unknown }`
-- `toJsonRpcError(err)` — converts zod validation errors (-32602), domain errors (domain-specific codes), or unknown errors (-32603) to `JsonRpcErrorBody`
+- `toJsonRpcError(err, schema?)` — converts zod validation errors (-32602), domain errors (domain-specific codes), or unknown errors (-32603) to `JsonRpcErrorBody`. When `err` is an `McpZodError` or the optional `schema` arg is provided, top-level object fields are enriched with their `.describe()` text in the rendered message
+- `parseToolArgs(schema, raw)` — strict parse helper for MCP tool handlers; on failure throws an `McpZodError` carrying the schema, which `toJsonRpcError` then uses to enrich the message
 
 ## Key Dependencies
 
-- `zod` — for `ZodError` detection and issue extraction
+- `zod` — for `ZodError` detection, issue extraction, and `.describe()` metadata lookup

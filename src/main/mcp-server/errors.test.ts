@@ -1,16 +1,60 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { toJsonRpcError, McpDomainError, McpErrorCode } from './errors'
+import { toJsonRpcError, McpDomainError, McpErrorCode, parseToolArgs } from './errors'
 
 describe('toJsonRpcError', () => {
   it('maps zod ZodError to -32602 Invalid params', () => {
     const schema = z.object({ id: z.string() })
     let caught: unknown
-    try { schema.parse({}) } catch (err) { caught = err }
+    try {
+      schema.parse({})
+    } catch (err) {
+      caught = err
+    }
     const mapped = toJsonRpcError(caught)
     expect(mapped.code).toBe(-32602)
     expect(mapped.message).toMatch(/invalid/i)
     expect(mapped.data).toBeDefined()
+  })
+
+  it('includes .describe() text in the user-facing message when schema is passed', () => {
+    const schema = z.object({
+      icon: z.string().max(4).describe('Single emoji glyph identifying the epic (max 4 chars)')
+    })
+    const result = schema.safeParse({ icon: 'shield' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const rpc = toJsonRpcError(result.error, schema)
+      expect(rpc.message).toMatch(/Single emoji glyph/)
+      expect(rpc.message).toMatch(/icon/)
+    }
+  })
+
+  it('falls back to raw issue path when schema is omitted', () => {
+    const schema = z.object({
+      icon: z.string().max(4).describe('Single emoji glyph identifying the epic (max 4 chars)')
+    })
+    const result = schema.safeParse({ icon: 'shield' })
+    expect(result.success).toBe(false)
+    if (!result.success) {
+      const rpc = toJsonRpcError(result.error)
+      expect(rpc.message).not.toMatch(/Single emoji glyph/)
+    }
+  })
+
+  it('enriches messages automatically when parseToolArgs is used', () => {
+    const schema = z.object({
+      icon: z.string().max(4).describe('Single emoji glyph identifying the epic (max 4 chars)')
+    })
+    let caught: unknown
+    try {
+      parseToolArgs(schema, { icon: 'shield' })
+    } catch (err) {
+      caught = err
+    }
+    const rpc = toJsonRpcError(caught)
+    expect(rpc.code).toBe(-32602)
+    expect(rpc.message).toMatch(/Single emoji glyph/)
   })
 
   it('maps McpDomainError with code NOT_FOUND to -32001', () => {

@@ -459,12 +459,19 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   font-weight: 600;
-  margin-bottom: 6px;
+  margin: 0 0 6px 0;
 }
 
 .task-drawer__failure-reason {
+  margin: 0 0 6px 0;
+  padding: 6px 8px;
   font-size: var(--bde-size-sm);
   font-family: var(--bde-font-code);
+  white-space: pre-wrap;
+  word-break: break-word;
+  border-left: 3px solid var(--bde-danger);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--bde-radius-sm);
 }
 
 .task-drawer__failure-notes {
@@ -472,13 +479,6 @@
   font-size: var(--bde-size-sm);
   white-space: pre-wrap;
   word-break: break-word;
-  font-family: var(--bde-font-code);
-}
-
-.task-drawer__failure-reason {
-  font-size: var(--bde-size-xs);
-  opacity: 0.8;
-  margin-bottom: 6px;
   font-family: var(--bde-font-code);
 }
 

@@ -6,7 +6,7 @@ import type {
   CreateTaskWithValidationOpts
 } from '../../services/sprint-service'
 import type { CreateTaskInput } from '../../data/sprint-task-repository'
-import { McpDomainError, McpErrorCode } from '../errors'
+import { McpDomainError, McpErrorCode, parseToolArgs } from '../errors'
 import {
   TaskCancelSchema,
   TaskCreateSchema,
@@ -15,7 +15,6 @@ import {
   TaskListSchema,
   TaskUpdateSchema
 } from '../schemas'
-
 
 export interface TaskToolsDeps {
   listTasks: (status?: string) => SprintTask[]
@@ -36,7 +35,10 @@ function json(value: unknown): { content: [{ type: 'text'; text: string }] } {
   return { content: [{ type: 'text' as const, text: JSON.stringify(value) }] }
 }
 
-function filterInMemory(tasks: SprintTask[], args: ReturnType<typeof TaskListSchema.parse>): SprintTask[] {
+function filterInMemory(
+  tasks: SprintTask[],
+  args: ReturnType<typeof TaskListSchema.parse>
+): SprintTask[] {
   let out = tasks
   if (args.repo) out = out.filter((t) => t.repo === args.repo)
   if (args.epicId) out = out.filter((t) => t.group_id === args.epicId)
@@ -44,7 +46,8 @@ function filterInMemory(tasks: SprintTask[], args: ReturnType<typeof TaskListSch
   if (args.search) {
     const q = args.search.toLowerCase()
     out = out.filter(
-      (t) => t.title.toLowerCase().includes(q) || (t.spec ? t.spec.toLowerCase().includes(q) : false)
+      (t) =>
+        t.title.toLowerCase().includes(q) || (t.spec ? t.spec.toLowerCase().includes(q) : false)
     )
   }
   const offset = args.offset ?? 0
@@ -58,30 +61,25 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
     'List sprint tasks with optional filters (status, repo, epicId, tag, search).',
     TaskListSchema.shape,
     async (rawArgs) => {
-      const args = TaskListSchema.parse(rawArgs)
+      const args = parseToolArgs(TaskListSchema, rawArgs)
       const rows = deps.listTasks(args.status)
       return json(filterInMemory(rows, args))
     }
   )
 
-  server.tool(
-    'tasks.get',
-    'Fetch one task by id.',
-    TaskIdSchema.shape,
-    async (rawArgs) => {
-      const { id } = TaskIdSchema.parse(rawArgs)
-      const row = deps.getTask(id)
-      if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
-      return json(row)
-    }
-  )
+  server.tool('tasks.get', 'Fetch one task by id.', TaskIdSchema.shape, async (rawArgs) => {
+    const { id } = parseToolArgs(TaskIdSchema, rawArgs)
+    const row = deps.getTask(id)
+    if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+    return json(row)
+  })
 
   server.tool(
     'tasks.history',
     'Fetch the audit trail (field-level change log) for a task.',
     TaskHistorySchema.shape,
     async (rawArgs) => {
-      const { id, limit, offset } = TaskHistorySchema.parse(rawArgs)
+      const { id, limit, offset } = parseToolArgs(TaskHistorySchema, rawArgs)
       const task = deps.getTask(id)
       if (!task) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
       const effectiveLimit = (limit ?? 100) + (offset ?? 0)
@@ -90,7 +88,7 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
     }
   )
 
-    registerTaskWriteTools(server, deps)
+  registerTaskWriteTools(server, deps)
 }
 
 function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
@@ -99,7 +97,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
     'Create a new sprint task. Runs the same validation as the in-app Task Workbench.',
     TaskCreateSchema.shape,
     async (rawArgs) => {
-      const parsed = TaskCreateSchema.parse(rawArgs)
+      const parsed = parseToolArgs(TaskCreateSchema, rawArgs)
       const { skipReadinessCheck, ...createInput } = parsed
       const delegateDeps = { logger: deps.logger }
       const row =
@@ -117,7 +115,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
     'Update an existing task. Status transitions are validated; forbidden fields are stripped.',
     TaskUpdateSchema.shape,
     async (rawArgs) => {
-      const { id, patch } = TaskUpdateSchema.parse(rawArgs)
+      const { id, patch } = parseToolArgs(TaskUpdateSchema, rawArgs)
       const row = deps.updateTask(id, patch)
       if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
       return json(row)
@@ -129,7 +127,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
     'Cancel a task. Runs through the terminal-status path so dependents are re-evaluated.',
     TaskCancelSchema.shape,
     async (rawArgs) => {
-      const { id, reason } = TaskCancelSchema.parse(rawArgs)
+      const { id, reason } = parseToolArgs(TaskCancelSchema, rawArgs)
       const row = await deps.cancelTask(id, reason)
       if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
       return json(row)
