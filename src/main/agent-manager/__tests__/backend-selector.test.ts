@@ -10,7 +10,6 @@ import {
   DEFAULT_SETTINGS,
   loadBackendSettings,
   resolveAgentRuntime,
-  resolveBackend,
   saveBackendSettings,
   SETTING_BACKEND_CONFIG,
   type BackendSettings
@@ -69,30 +68,30 @@ describe('saveBackendSettings', () => {
   })
 })
 
-describe('resolveBackend', () => {
+describe('resolveAgentRuntime', () => {
   const settingsWithPipelineLocal: BackendSettings = {
     ...DEFAULT_SETTINGS,
     pipeline: { backend: 'local', model: 'openai/qwen/qwen3.6-35b-a3b' }
   }
 
   it('returns the per-agent-type config from the provided settings', () => {
-    expect(resolveBackend('pipeline', settingsWithPipelineLocal)).toEqual({
+    expect(resolveAgentRuntime('pipeline', settingsWithPipelineLocal)).toEqual({
       backend: 'local',
       model: 'openai/qwen/qwen3.6-35b-a3b'
     })
   })
 
   it('leaves other agent types on claude when pipeline is flipped to local', () => {
-    expect(resolveBackend('synthesizer', settingsWithPipelineLocal).backend).toBe('claude')
-    expect(resolveBackend('copilot', settingsWithPipelineLocal).backend).toBe('claude')
-    expect(resolveBackend('assistant', settingsWithPipelineLocal).backend).toBe('claude')
-    expect(resolveBackend('adhoc', settingsWithPipelineLocal).backend).toBe('claude')
-    expect(resolveBackend('reviewer', settingsWithPipelineLocal).backend).toBe('claude')
+    expect(resolveAgentRuntime('synthesizer', settingsWithPipelineLocal).backend).toBe('claude')
+    expect(resolveAgentRuntime('copilot', settingsWithPipelineLocal).backend).toBe('claude')
+    expect(resolveAgentRuntime('assistant', settingsWithPipelineLocal).backend).toBe('claude')
+    expect(resolveAgentRuntime('adhoc', settingsWithPipelineLocal).backend).toBe('claude')
+    expect(resolveAgentRuntime('reviewer', settingsWithPipelineLocal).backend).toBe('claude')
   })
 
   it('falls back to loadBackendSettings when no settings argument is passed', () => {
     vi.mocked(settings.getSettingJson).mockReturnValue(null)
-    const resolved = resolveBackend('pipeline')
+    const resolved = resolveAgentRuntime('pipeline')
     expect(resolved).toEqual(DEFAULT_SETTINGS.pipeline)
   })
 
@@ -106,17 +105,7 @@ describe('resolveBackend', () => {
       'reviewer'
     ] as const
     for (const type of allTypes) {
-      expect(resolveBackend(type, DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS[type])
+      expect(resolveAgentRuntime(type, DEFAULT_SETTINGS)).toEqual(DEFAULT_SETTINGS[type])
     }
-  })
-})
-
-describe('resolveAgentRuntime (rename)', () => {
-  it('is the canonical export and returns the same value as the deprecated alias', () => {
-    vi.mocked(settings.getSettingJson).mockReturnValue(null)
-    const viaNew = resolveAgentRuntime('pipeline')
-    const viaOld = resolveBackend('pipeline')
-    expect(viaNew).toEqual(viaOld)
-    expect(viaNew).toEqual(DEFAULT_SETTINGS.pipeline)
   })
 })
