@@ -33,6 +33,14 @@ interface LocalAgentsState extends LogPollerState {
 
   fetchProcesses: () => Promise<void>
   setCollapsed: (collapsed: boolean) => void
+  /**
+   * `model` is a display-only hint attached to the local spawned-agent record.
+   * It is NOT forwarded through IPC — the main process resolves the actual
+   * runtime model from `agents.backendConfig` via `resolveAgentRuntime`. The
+   * field survives here purely so the spawned-agent list can label a row;
+   * picking a different value does not change which model the agent runs on.
+   * Change the routing in Settings → Models instead.
+   */
   spawnAgent: (args: {
     task: string
     repoPath: string
