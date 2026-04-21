@@ -13,7 +13,7 @@ import * as queries from './sprint-queries'
 import * as reportingQueries from './reporting-queries'
 import * as groupQueries from './task-group-queries'
 import type { CreateTaskInput, QueueStats } from './sprint-queries'
-import type { ListTasksOptions } from './sprint-task-crud'
+import type { ListTasksOptions, UpdateTaskOptions } from './sprint-task-crud'
 import type {
   SpecTypeSuccessRate,
   DailySuccessRate,
@@ -26,7 +26,8 @@ export type {
   SpecTypeSuccessRate,
   DailySuccessRate,
   FailureReasonBreakdown,
-  ListTasksOptions
+  ListTasksOptions,
+  UpdateTaskOptions
 }
 
 
@@ -35,7 +36,12 @@ export type {
  */
 export interface IAgentTaskRepository {
   getTask(id: string): SprintTask | null
-  updateTask(id: string, patch: Record<string, unknown>): SprintTask | null
+  /**
+   * Mutate a task. `options.caller` is recorded as the `changed_by`
+   * attribution in the `task_changes` audit trail (defaults to
+   * `'unknown'` when omitted, which historical call sites rely on).
+   */
+  updateTask(id: string, patch: Record<string, unknown>, options?: UpdateTaskOptions): SprintTask | null
   getQueuedTasks(limit: number): SprintTask[]
   getTasksWithDependencies(): Array<{
     id: string
@@ -113,7 +119,7 @@ export interface ISprintTaskRepository
 export function createSprintTaskRepository(): ISprintTaskRepository {
   return {
     getTask: queries.getTask,
-    updateTask: queries.updateTask,
+    updateTask: (id, patch, options) => queries.updateTask(id, patch, options),
     getQueuedTasks: queries.getQueuedTasks,
     getTasksWithDependencies: queries.getTasksWithDependencies,
     getOrphanedTasks: queries.getOrphanedTasks,

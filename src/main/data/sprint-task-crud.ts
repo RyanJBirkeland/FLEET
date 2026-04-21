@@ -269,8 +269,32 @@ export function createReviewTaskFromAdhoc(input: {
   return updated
 }
 
-export function updateTask(id: string, patch: Record<string, unknown>, db?: Database.Database): SprintTask | null {
-  return writeTaskUpdate(id, patch, { enforceTransitionCheck: true, changedBy: 'unknown' }, db)
+/**
+ * Options for `updateTask`.
+ *
+ * `caller` identifies *who* initiated the write, and is recorded in the
+ * `task_changes` audit trail as the `changed_by` value. It lets operators
+ * tell MCP-originated writes (`'mcp'` or `'mcp:<client-name>'`) apart from
+ * IPC-originated ones (`'ipc'`, `'ui'`, etc.) without reverse-engineering
+ * the change log. When omitted, the attribution falls back to `'unknown'`
+ * for backward compatibility with historical call sites.
+ */
+export interface UpdateTaskOptions {
+  caller?: string
+}
+
+export function updateTask(
+  id: string,
+  patch: Record<string, unknown>,
+  options?: UpdateTaskOptions,
+  db?: Database.Database
+): SprintTask | null {
+  return writeTaskUpdate(
+    id,
+    patch,
+    { enforceTransitionCheck: true, changedBy: options?.caller ?? 'unknown' },
+    db
+  )
 }
 
 /**

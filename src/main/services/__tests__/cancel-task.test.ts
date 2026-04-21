@@ -24,10 +24,11 @@ describe('cancelTask', () => {
       { onStatusTerminal, logger: fakeLogger, updateTask }
     )
 
-    expect(updateTask).toHaveBeenCalledWith('t1', {
-      status: 'cancelled',
-      notes: 'no longer needed'
-    })
+    expect(updateTask).toHaveBeenCalledWith(
+      't1',
+      { status: 'cancelled', notes: 'no longer needed' },
+      undefined
+    )
     expect(onStatusTerminal).toHaveBeenCalledWith('t1', 'cancelled')
     expect(result).toBe(row)
   })
@@ -38,7 +39,24 @@ describe('cancelTask', () => {
 
     await cancelTask('t1', {}, { onStatusTerminal, logger: fakeLogger, updateTask })
 
-    expect(updateTask).toHaveBeenCalledWith('t1', { status: 'cancelled' })
+    expect(updateTask).toHaveBeenCalledWith('t1', { status: 'cancelled' }, undefined)
+  })
+
+  it('forwards the caller attribution through updateTask', async () => {
+    const updateTask = vi.fn().mockReturnValue({ id: 't1', status: 'cancelled' })
+    const onStatusTerminal = vi.fn().mockResolvedValue(undefined)
+
+    await cancelTask(
+      't1',
+      { reason: 'no longer needed', caller: 'mcp' },
+      { onStatusTerminal, logger: fakeLogger, updateTask }
+    )
+
+    expect(updateTask).toHaveBeenCalledWith(
+      't1',
+      { status: 'cancelled', notes: 'no longer needed' },
+      { caller: 'mcp' }
+    )
   })
 
   it('returns null and skips onStatusTerminal when updateTask misses', async () => {

@@ -23,7 +23,8 @@ export type {
   QueueStats,
   SpecTypeSuccessRate,
   DailySuccessRate,
-  ListTasksOptions
+  ListTasksOptions,
+  UpdateTaskOptions
 } from './sprint-mutations'
 
 export type { SprintMutationEvent, SprintMutationListener } from './sprint-mutation-broadcaster'
@@ -60,8 +61,12 @@ export function claimTask(id: string, claimedBy: string): SprintTask | null {
   return result
 }
 
-export function updateTask(id: string, patch: Record<string, unknown>): SprintTask | null {
-  const result = mutations.updateTask(id, patch)
+export function updateTask(
+  id: string,
+  patch: Record<string, unknown>,
+  options?: mutations.UpdateTaskOptions
+): SprintTask | null {
+  const result = mutations.updateTask(id, patch, options)
   if (result) broadcaster.notifySprintMutation('updated', result)
   return result
 }
@@ -108,7 +113,22 @@ export interface CancelTaskDeps {
    * Optional override for the underlying update call (tests inject a spy).
    * Defaults to this module's `updateTask` which wraps the broadcaster.
    */
-  updateTask?: (id: string, patch: Record<string, unknown>) => SprintTask | null
+  updateTask?: (
+    id: string,
+    patch: Record<string, unknown>,
+    options?: mutations.UpdateTaskOptions
+  ) => SprintTask | null
+}
+
+export interface CancelTaskOptions {
+  /**
+   * Attribution for the audit trail — forwarded to `updateTask` as the
+   * `changed_by` value. Lets MCP-originated cancels surface as
+   * `'mcp'` / `'mcp:<client>'` instead of `'unknown'`. Optional; the
+   * default `'unknown'` preserves existing behaviour for callers that
+   * do not specify.
+   */
+  caller?: string
 }
 
 /**
@@ -146,15 +166,16 @@ function isInvalidTransitionError(err: unknown): err is Error {
  */
 export async function cancelTask(
   id: string,
-  opts: { reason?: string },
+  opts: { reason?: string } & CancelTaskOptions,
   deps: CancelTaskDeps
 ): Promise<SprintTask | null> {
   const patch: Record<string, unknown> = { status: 'cancelled' }
   if (opts.reason) patch.notes = opts.reason
   const doUpdate = deps.updateTask ?? updateTask
+  const updateOptions = opts.caller ? { caller: opts.caller } : undefined
   let row: SprintTask | null
   try {
-    row = doUpdate(id, patch)
+    row = doUpdate(id, patch, updateOptions)
   } catch (err) {
     if (isInvalidTransitionError(err)) {
       const current = mutations.getTask(id)
