@@ -28,6 +28,7 @@ import { spawnAndWireAgent } from './spawn-and-wire'
 import { MAX_TURNS } from './spawn-sdk'
 import { sleep } from '../lib/async-utils'
 import { NOTES_MAX_LENGTH } from './types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 export type { ConsumeMessagesResult }
 
@@ -54,7 +55,7 @@ export interface RunAgentSpawnDeps {
   activeAgents: Map<string, ActiveAgent>
   defaultModel: string
   logger: Logger
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   /**
    * Configured worktree base — used by spawnAgent's cwd allowlist check so
    * pipeline agents that run inside a user-configured worktreeBase aren't
@@ -75,7 +76,7 @@ export interface RunAgentDataDeps {
 
 /** Terminal status notification. */
 export interface RunAgentEventDeps {
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   logger: Logger
 }
 
@@ -202,7 +203,7 @@ async function resolveAgentExit(
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   repo: IAgentTaskRepository,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>,
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   logger: Logger
 ): Promise<void> {
   const ffResult = classifyExit(agent.startedAt, exitedAt, exitCode ?? 1, task.fast_fail_count ?? 0)

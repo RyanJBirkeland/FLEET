@@ -31,7 +31,7 @@ function transitionTasksByPrNumber(
   // Filter to only tasks whose transition is valid per the state machine.
   // Skipped tasks are logged as warnings rather than silently dropped.
   const eligible = affected.filter((row) => {
-    const currentStatus = row.status as string
+    const currentStatus = row.status as TaskStatus
     const validation = validateTransition(currentStatus, targetStatus)
     if (!validation.ok) {
       getSprintQueriesLogger().warn(

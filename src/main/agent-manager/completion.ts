@@ -10,6 +10,7 @@
  */
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { buildAgentEnv } from '../env-utils'
 import { execFileAsync } from '../lib/async-utils'
 import { findOrCreatePR as findOrCreatePRUtil } from '../lib/git-operations'
@@ -36,7 +37,7 @@ export interface ResolveSuccessContext {
   worktreePath: string
   title: string
   ghRepo: string
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   agentSummary?: string | null
   retryCount: number
   repo: IAgentTaskRepository
@@ -172,7 +173,7 @@ async function detectNoOpAndFailIfSo(
   retryCount: number,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 ): Promise<boolean> {
   const env = buildAgentEnv()
   const changedFiles = await listChangedFiles(branch, worktreePath, env, { logger })
@@ -257,7 +258,7 @@ async function verifyBranchTipOrFail(
   repoPath: string | undefined,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 ): Promise<boolean> {
   if (!repoPath) return true
 

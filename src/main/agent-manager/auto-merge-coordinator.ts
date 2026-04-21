@@ -8,6 +8,7 @@
  */
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
 import { evaluateAutoMergePolicy } from './auto-merge-policy'
 import { executeSquashMerge } from '../lib/git-operations'
@@ -20,7 +21,7 @@ export interface AutoMergeContext {
   worktreePath: string
   repo: IAgentTaskRepository
   logger: Logger
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
 }
 
 /**

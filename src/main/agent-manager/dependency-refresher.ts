@@ -2,7 +2,7 @@ import type { DependencyIndex } from '../services/dependency-service'
 import type { TaskDependency } from '../../shared/types'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
-import { isTerminal } from '../../shared/task-state-machine'
+import { isTerminal, isTaskStatus } from '../../shared/task-state-machine'
 
 export type DepsFingerprint = Map<string, { deps: TaskDependency[] | null; hash: string }>
 
@@ -62,7 +62,8 @@ export function refreshDependencyIndex(
     // Evict on first terminal encounter; dep-index edges stay intact for
     // dependency-satisfaction checks.
     for (const task of allTasks) {
-      if (isTerminal(task.status)) {
+      // Raw DB row provides `status: string`; skip unknown values defensively.
+      if (isTaskStatus(task.status) && isTerminal(task.status)) {
         // Terminal tasks' deps are frozen — evict from fingerprint cache so
         // the map doesn't grow without bound. The dep-index retains the task's
         // edges for dependency-satisfaction checks.

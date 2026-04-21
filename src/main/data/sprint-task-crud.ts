@@ -8,7 +8,7 @@ import { withRetry } from './sqlite-retry'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 import { SPRINT_TASK_COLUMNS } from './sprint-query-constants'
-import { validateTransition } from '../../shared/task-state-machine'
+import { validateTransition, isTaskStatus } from '../../shared/task-state-machine'
 import { getSprintQueriesLogger } from './sprint-query-logger'
 import { mapRowToTask, mapRowsToTasks, serializeFieldForStorage } from './sprint-task-mapper'
 import { UPDATE_ALLOWLIST, COLUMN_MAP } from './sprint-task-types'
@@ -371,9 +371,13 @@ function writeTaskUpdate(
         if (!oldTask) return null
 
         // Enforce status transition state machine (skipped for manual overrides)
-        if (options.enforceTransitionCheck && patch.status && typeof patch.status === 'string') {
-          const currentStatus = oldTask.status as string
-          const validationResult = validateTransition(currentStatus, patch.status)
+        if (
+          options.enforceTransitionCheck &&
+          patch.status &&
+          typeof patch.status === 'string' &&
+          isTaskStatus(patch.status)
+        ) {
+          const validationResult = validateTransition(oldTask.status, patch.status)
           if (!validationResult.ok) {
             throw new Error(
               `[sprint-queries] Invalid transition for task ${id}: ${validationResult.reason}`

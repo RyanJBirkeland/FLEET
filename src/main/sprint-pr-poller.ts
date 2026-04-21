@@ -6,6 +6,7 @@
 import { parsePrUrl } from '../shared/github'
 import type { SprintTaskPR } from '../shared/types'
 import type { PrStatusInput, PrStatusResult } from './github-pr-status'
+import type { TaskStatus } from '../shared/task-state-machine'
 
 const POLL_INTERVAL_MS = 60_000
 
@@ -22,7 +23,7 @@ export interface SprintPrPollerDeps {
   markTaskCancelledByPrNumber: (prNumber: number) => string[]
   updateTaskMergeableState: (prNumber: number, state: string | null) => void
   /** Required: called after PR merge/close to trigger dependency resolution. */
-  onTaskTerminal: (taskId: string, status: string) => void
+  onTaskTerminal: (taskId: string, status: TaskStatus) => void
   logger?: { info: (msg: string) => void; warn: (msg: string) => void }
   /**
    * F-t1-concur-5: Optional override for the startup delay. Production passes
@@ -42,8 +43,8 @@ type Logger = NonNullable<SprintPrPollerDeps['logger']>
 
 async function notifyTaskTerminalBatch(
   ids: string[],
-  status: string,
-  onTaskTerminal: (taskId: string, status: string) => void,
+  status: TaskStatus,
+  onTaskTerminal: (taskId: string, status: TaskStatus) => void,
   log: Logger
 ): Promise<void> {
   if (ids.length === 0) return
@@ -156,7 +157,7 @@ import { createLogger } from './logger'
 let _instance: SprintPrPollerInstance | null = null
 
 export interface SprintPrPollerLegacyDeps {
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export function startSprintPrPoller(deps: SprintPrPollerLegacyDeps): void {

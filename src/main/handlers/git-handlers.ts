@@ -17,6 +17,7 @@ import {
   gitPull
 } from '../git'
 import { pollPrStatuses, type PrStatusInput } from '../github-pr-status'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { checkConflictFiles, type ConflictFilesInput } from '../github-conflict-check'
 import { getLatestPrList, refreshPrList } from '../pr-poller'
 import { getGitHubToken } from '../config'
@@ -141,7 +142,7 @@ function isGitHubRequestAllowed(method: string, path: string, body?: string): bo
 }
 
 export interface GitHandlersDeps {
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export function registerGitHandlers(deps: GitHandlersDeps): void {

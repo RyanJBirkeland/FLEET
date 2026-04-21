@@ -8,11 +8,12 @@
 
 import { applyBackpressure, type ConcurrencyState } from './concurrency'
 import type { WatchdogAction } from './types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 export interface WatchdogVerdictResult {
   taskUpdate: Record<string, unknown> | null
   shouldNotifyTerminal: boolean
-  terminalStatus?: string
+  terminalStatus?: TaskStatus
   shouldRequeue?: boolean
   concurrency: ConcurrencyState
 }

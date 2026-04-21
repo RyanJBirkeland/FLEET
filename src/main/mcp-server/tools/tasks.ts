@@ -22,6 +22,7 @@ import {
   TASK_LIST_DEFAULT_OFFSET
 } from '../schemas'
 import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
+import type { TaskStatus } from '../../../shared/task-state-machine'
 import { jsonContent, safeToolResponse } from './response'
 
 /**
@@ -47,7 +48,7 @@ const TERMINAL_STATE_RESET_PATCH = {
   next_eligible_at: null
 } as const
 
-function isRevivingTerminalTask(currentStatus: string, targetStatus: unknown): boolean {
+function isRevivingTerminalTask(currentStatus: TaskStatus, targetStatus: unknown): boolean {
   if (targetStatus !== 'queued' && targetStatus !== 'backlog') return false
   return TERMINAL_STATUSES.has(currentStatus)
 }
@@ -82,7 +83,7 @@ export interface TaskCommandPort {
    * dependents unblock, the PR poller cleans up, and worktrees are reclaimed.
    * The revival direction (terminal → queued/backlog) never triggers this.
    */
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 /**

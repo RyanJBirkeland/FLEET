@@ -5,6 +5,7 @@ import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { NOTES_MAX_LENGTH } from './types'
 import type { AgentManagerConfig } from './types'
 import type { Logger } from '../logger'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { createLogger } from '../logger'
 import { resolveDependents } from '../lib/resolve-dependents'
 import { getSetting } from '../settings'
@@ -29,7 +30,7 @@ function runInTransactionSafe(fn: () => void): void {
   }
 }
 
-function recordTerminalMetrics(status: string, metrics: MetricsCollector): void {
+function recordTerminalMetrics(status: TaskStatus, metrics: MetricsCollector): void {
   if (status === 'done' || status === 'review') {
     metrics.increment('agentsCompleted')
   } else if (status === 'failed' || status === 'error') {
@@ -39,11 +40,11 @@ function recordTerminalMetrics(status: string, metrics: MetricsCollector): void 
 
 async function resolveTerminalDependents(
   taskId: string,
-  status: string,
+  status: TaskStatus,
   depIndex: DependencyIndex,
   epicIndex: EpicDepsReader,
   repo: IAgentTaskRepository,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>,
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   logger: Logger
 ): Promise<void> {
   // DESIGN: Inline resolution for immediate drain loop feedback.
@@ -100,8 +101,8 @@ export interface TerminalHandlerDeps {
 
 async function executeTerminal(
   taskId: string,
-  status: string,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>,
+  status: TaskStatus,
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   deps: TerminalHandlerDeps
 ): Promise<void> {
   const { metrics, depIndex, epicIndex, repo, config, logger } = deps
@@ -123,8 +124,8 @@ async function executeTerminal(
 
 export async function handleTaskTerminal(
   taskId: string,
-  status: string,
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>,
+  status: TaskStatus,
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   deps: TerminalHandlerDeps
 ): Promise<void> {
   const { terminalCalled, logger } = deps

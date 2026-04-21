@@ -8,8 +8,10 @@ import type { Logger } from '../logger'
 import {
   TERMINAL_STATUSES,
   FAILURE_STATUSES,
-  HARD_SATISFIED_STATUSES
+  HARD_SATISFIED_STATUSES,
+  isTaskStatus
 } from '../../shared/task-state-machine'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { createEpicDependencyIndex } from './epic-dependency-service'
 
 // Re-export canonical status sets
@@ -108,8 +110,14 @@ export function createDependencyIndex(): DependencyIndex {
       if (deps.length === 0) return { satisfied: true, blockedBy: [] }
       const blockedBy: string[] = []
       for (const dep of deps) {
-        const status = getTaskStatus(dep.id)
-        if (status === undefined) continue // deleted dep = satisfied
+        const rawStatus = getTaskStatus(dep.id)
+        if (rawStatus === undefined) continue // deleted dep = satisfied
+        // Unknown status string from stale/corrupt data — treat as unsatisfied.
+        if (!isTaskStatus(rawStatus)) {
+          blockedBy.push(dep.id)
+          continue
+        }
+        const status = rawStatus
 
         // If condition is specified, use condition-based logic
         if (dep.condition) {
@@ -241,7 +249,7 @@ export function checkEpicDependencies(
     const allTasks = listTasks()
 
     const epicStatusMap = new Map(allGroups.map((g) => [g.id, g.status]))
-    const tasksByEpic = new Map<string, Array<{ status: string }>>()
+    const tasksByEpic = new Map<string, Array<{ status: TaskStatus }>>()
     for (const t of allTasks) {
       if (!t.group_id) continue
       const tasks = tasksByEpic.get(t.group_id) ?? []

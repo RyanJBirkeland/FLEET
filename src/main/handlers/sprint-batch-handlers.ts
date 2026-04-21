@@ -8,12 +8,13 @@ import { getTask, updateTask, deleteTask } from '../services/sprint-service'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { validateTaskSpec } from '../services/spec-quality/index'
-import { TERMINAL_STATUSES } from '../../shared/task-state-machine'
+import { TERMINAL_STATUSES, isTaskStatus } from '../../shared/task-state-machine'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { getSettingJson } from '../settings'
 import { validateAndFilterPatch } from '../lib/patch-validation'
 
 export interface BatchHandlersDeps {
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
   repo?: ISprintTaskRepository
 }
 
@@ -90,8 +91,8 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
           const updated = updateTask(id, filtered)
           if (
             updated &&
-            filtered.status &&
             typeof filtered.status === 'string' &&
+            isTaskStatus(filtered.status) &&
             TERMINAL_STATUSES.has(filtered.status)
           ) {
             deps.onStatusTerminal(id, filtered.status)

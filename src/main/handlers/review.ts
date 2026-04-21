@@ -25,6 +25,7 @@ import type { AutoReviewRule } from '../../shared/types'
 import * as reviewOrchestration from '../services/review-orchestration-service'
 import { parseNumstat } from '../services/review-orchestration-service'
 import { shipBatch } from '../services/review-ship-batch'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 const logger = createLogger('review-handlers')
 
@@ -36,7 +37,7 @@ interface RepoConfig {
 }
 
 export interface ReviewHandlersDeps {
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 function getRepoConfig(repoName: string): RepoConfig | null {

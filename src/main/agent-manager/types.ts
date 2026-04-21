@@ -2,6 +2,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 /**
  * Conceptual parameters for resolveDependents() orchestration.
@@ -10,7 +11,7 @@ import type { Logger } from '../logger'
  */
 export interface ResolveDependentsParams {
   taskId: string
-  terminalStatus: string
+  terminalStatus: TaskStatus
   repo: IAgentTaskRepository
   logger: Logger
 }
@@ -22,7 +23,7 @@ export interface AgentManagerConfig {
   idleTimeoutMs: number
   pollIntervalMs: number
   defaultModel: string
-  onStatusTerminal?: (taskId: string, status: string) => void
+  onStatusTerminal?: (taskId: string, status: TaskStatus) => void
 }
 
 export const DEFAULT_CONFIG: AgentManagerConfig = {

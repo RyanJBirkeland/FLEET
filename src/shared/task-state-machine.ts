@@ -48,7 +48,7 @@ export const TASK_STATUSES = [
  * Terminal statuses — task has reached end of lifecycle.
  * No further automatic transitions occur.
  */
-export const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
+export const TERMINAL_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
   'done',
   'cancelled',
   'failed',
@@ -59,34 +59,44 @@ export const TERMINAL_STATUSES: ReadonlySet<string> = new Set([
  * Failure statuses — task did not complete successfully.
  * Subset of terminal statuses.
  */
-export const FAILURE_STATUSES: ReadonlySet<string> = new Set(['failed', 'error', 'cancelled'])
+export const FAILURE_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>([
+  'failed',
+  'error',
+  'cancelled'
+])
 
 /**
  * Statuses that satisfy hard dependencies.
  * Only 'done' unblocks downstream tasks with hard dependencies.
  */
-export const HARD_SATISFIED_STATUSES: ReadonlySet<string> = new Set(['done'])
+export const HARD_SATISFIED_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStatus>(['done'])
 
 /**
  * Valid state transitions — adjacency list representation.
- * Copied verbatim from src/shared/task-transitions.ts (as of D1a).
+ *
+ * TS enforces exhaustiveness; add a new status here whenever TASK_STATUSES grows.
+ * The `Record<TaskStatus, ...>` type makes missing entries a compile error.
  */
-export const VALID_TRANSITIONS: Record<string, Set<string>> = {
-  backlog: new Set(['queued', 'blocked', 'cancelled']),
-  queued: new Set(['active', 'blocked', 'cancelled']),
-  blocked: new Set(['queued', 'cancelled']),
-  active: new Set(['review', 'done', 'failed', 'error', 'cancelled', 'queued']),
-  review: new Set(['queued', 'done', 'cancelled', 'failed']),
-  done: new Set(['cancelled']),
-  failed: new Set(['queued', 'cancelled']),
-  error: new Set(['queued', 'cancelled']),
-  cancelled: new Set([])
+export const VALID_TRANSITIONS: Record<TaskStatus, ReadonlySet<TaskStatus>> = {
+  backlog: new Set<TaskStatus>(['queued', 'blocked', 'cancelled']),
+  queued: new Set<TaskStatus>(['active', 'blocked', 'cancelled']),
+  blocked: new Set<TaskStatus>(['queued', 'cancelled']),
+  active: new Set<TaskStatus>(['review', 'done', 'failed', 'error', 'cancelled', 'queued']),
+  review: new Set<TaskStatus>(['queued', 'done', 'cancelled', 'failed']),
+  done: new Set<TaskStatus>(['cancelled']),
+  failed: new Set<TaskStatus>(['queued', 'cancelled']),
+  error: new Set<TaskStatus>(['queued', 'cancelled']),
+  cancelled: new Set<TaskStatus>()
 }
 
 /**
  * Check if a transition from one status to another is valid.
+ *
+ * Accepts `TaskStatus` parameters. Callers that hold an unvalidated string
+ * (e.g. from a database row or wire payload) must narrow to `TaskStatus`
+ * first — typically via `isTaskStatus()` or a Zod parse — before calling.
  */
-export function isValidTransition(from: string, to: string): boolean {
+export function isValidTransition(from: TaskStatus, to: TaskStatus): boolean {
   const allowed = VALID_TRANSITIONS[from]
   if (!allowed) return false
   return allowed.has(to)
@@ -95,23 +105,33 @@ export function isValidTransition(from: string, to: string): boolean {
 /**
  * Check if a status is terminal (end of lifecycle).
  */
-export function isTerminal(status: string): boolean {
-  return TERMINAL_STATUSES.has(status as TaskStatus)
+export function isTerminal(status: TaskStatus): boolean {
+  return TERMINAL_STATUSES.has(status)
 }
 
 /**
  * Check if a status represents a failure.
  */
-export function isFailure(status: string): boolean {
-  return FAILURE_STATUSES.has(status as TaskStatus)
+export function isFailure(status: TaskStatus): boolean {
+  return FAILURE_STATUSES.has(status)
 }
 
 /**
  * Check if a status satisfies hard dependencies.
  * Only 'done' returns true; all other statuses return false.
  */
-export function isHardSatisfied(status: string): boolean {
-  return HARD_SATISFIED_STATUSES.has(status as TaskStatus)
+export function isHardSatisfied(status: TaskStatus): boolean {
+  return HARD_SATISFIED_STATUSES.has(status)
+}
+
+/**
+ * Type guard: narrows a `string` to `TaskStatus`.
+ *
+ * Use at trust boundaries (DB rows, IPC payloads, external input) before
+ * calling the narrowed predicates above.
+ */
+export function isTaskStatus(value: string): value is TaskStatus {
+  return (TASK_STATUSES as readonly string[]).includes(value)
 }
 
 /**
@@ -133,7 +153,10 @@ export type ValidationResult = { ok: true } | { ok: false; reason: string }
  *   return null
  * }
  */
-export function validateTransition(currentStatus: string, targetStatus: string): ValidationResult {
+export function validateTransition(
+  currentStatus: TaskStatus,
+  targetStatus: TaskStatus
+): ValidationResult {
   if (!isValidTransition(currentStatus, targetStatus)) {
     const allowed = VALID_TRANSITIONS[currentStatus]
     const allowedArray = allowed ? Array.from(allowed) : []

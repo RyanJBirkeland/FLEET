@@ -2,6 +2,7 @@ import type { AgentManagerConfig, ActiveAgent, SteerResult } from './types'
 import type { Logger } from '../logger'
 import type { TaskDependency } from '../../shared/types'
 import type { SprintTask } from '../../shared/types/task-types'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { computeDepsFingerprint, refreshDependencyIndex } from './dependency-refresher'
 import { handleTaskTerminal } from './terminal-handler'
 import {
@@ -230,7 +231,7 @@ export class AgentManagerImpl implements AgentManager {
     return refreshDependencyIndex(this._depIndex, this._lastTaskDeps, this.repo, this.logger)
   }
 
-  async onTaskTerminal(taskId: string, status: string): Promise<void> {
+  async onTaskTerminal(taskId: string, status: TaskStatus): Promise<void> {
     // Mark dirty synchronously so any concurrent drain tick that fires while
     // handleTaskTerminal is awaited will see the flag and do a full rebuild,
     // rather than reading a stale dependency index.

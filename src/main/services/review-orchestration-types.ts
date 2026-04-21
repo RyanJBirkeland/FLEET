@@ -5,6 +5,8 @@
  * preserving the exported API for IPC handlers.
  */
 
+import type { TaskStatus } from '../../shared/task-state-machine'
+
 // ============================================================================
 // Result Types
 // ============================================================================
@@ -58,7 +60,7 @@ export interface MergeLocallyInput {
   taskId: string
   strategy: 'merge' | 'squash' | 'rebase'
   env: NodeJS.ProcessEnv
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export interface CreatePrInput {
@@ -66,7 +68,7 @@ export interface CreatePrInput {
   title: string
   body: string
   env: NodeJS.ProcessEnv
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export interface RequestRevisionInput {
@@ -78,21 +80,21 @@ export interface RequestRevisionInput {
 export interface DiscardInput {
   taskId: string
   env: NodeJS.ProcessEnv
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export interface ShipItInput {
   taskId: string
   strategy: 'merge' | 'squash' | 'rebase'
   env: NodeJS.ProcessEnv
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export interface ShipBatchInput {
   taskIds: string[]
   strategy: 'merge' | 'squash' | 'rebase'
   env: NodeJS.ProcessEnv
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
 export interface RebaseInput {

@@ -11,8 +11,10 @@ import { getSettingJson } from '../settings'
 import {
   TASK_STATUSES,
   TERMINAL_STATUSES,
-  isValidTransition
+  isValidTransition,
+  isTaskStatus
 } from '../../shared/task-state-machine'
+import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
 import { detectCycle } from '../services/dependency-service'
 import {
@@ -80,7 +82,7 @@ function describeValue(value: unknown): string {
 }
 
 export interface SprintLocalDeps {
-  onStatusTerminal: (taskId: string, status: string) => void | Promise<void>
+  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
   dialog: DialogService
 }
 
@@ -129,31 +131,31 @@ export function registerSprintLocalHandlers(
     patch = filteredPatch
 
     // Validate status string at the handler boundary — defense-in-depth before DB round-trips.
+    // `validatedStatus` narrows `patch.status` to `TaskStatus` for downstream use.
+    let validatedStatus: TaskStatus | undefined
     if (patch.status !== undefined) {
-      if (
-        typeof patch.status !== 'string' ||
-        !(TASK_STATUSES as readonly string[]).includes(patch.status)
-      ) {
+      if (typeof patch.status !== 'string' || !isTaskStatus(patch.status)) {
         throw new Error(
           `Invalid status "${patch.status}". Valid statuses: ${TASK_STATUSES.join(', ')}`
         )
       }
+      validatedStatus = patch.status
     }
 
     // Validate status transition at the handler boundary before touching the DB.
     // The data layer also validates, but catching it early produces a clearer error
     // and prevents unnecessary DB round-trips for invalid input.
-    if (patch.status && typeof patch.status === 'string') {
+    if (validatedStatus) {
       const current = getTask(id)
-      if (current && !isValidTransition(current.status, patch.status)) {
+      if (current && !isValidTransition(current.status, validatedStatus)) {
         throw new Error(
-          `Invalid status transition: ${current.status} → ${patch.status} for task ${id}`
+          `Invalid status transition: ${current.status} → ${validatedStatus} for task ${id}`
         )
       }
     }
 
     // SP-1: Queuing business rules delegated to TaskStateService
-    if (patch.status === 'queued') {
+    if (validatedStatus === 'queued') {
       const { patch: finalPatch } = await prepareQueueTransition(id, patch, { logger })
       patch = finalPatch
     }
@@ -162,8 +164,8 @@ export function registerSprintLocalHandlers(
     // Fire terminal callback regardless of updateTask's return value so that
     // dependents are unblocked even when the update is a no-op (e.g. task not found).
     const result = updateTask(id, patch)
-    if (patch.status && TERMINAL_STATUSES.has(patch.status as string)) {
-      deps.onStatusTerminal(id, patch.status as string)
+    if (validatedStatus && TERMINAL_STATUSES.has(validatedStatus)) {
+      deps.onStatusTerminal(id, validatedStatus)
     }
     return result
   }

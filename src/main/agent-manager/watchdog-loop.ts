@@ -14,6 +14,7 @@ import { checkAgent } from './watchdog'
 import { handleWatchdogVerdict } from './watchdog-handler'
 import { flushAgentEventBatcher } from '../agent-event-mapper'
 import { nowIso } from '../../shared/time'
+import type { TaskStatus } from '../../shared/task-state-machine'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -29,7 +30,7 @@ export interface WatchdogLoopDeps {
   /** Returns the live ConcurrencyState — called each time to avoid stale captures. */
   getConcurrency: () => ConcurrencyState
   setConcurrency: (state: ConcurrencyState) => void
-  onTaskTerminal: (taskId: string, status: string) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   /**
    * Optional hook to clean up the agent's git worktree after a watchdog kill.
    * Called only when the task is NOT in `review` status (review worktrees are
