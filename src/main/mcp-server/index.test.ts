@@ -366,7 +366,9 @@ describe('createMcpServer lifecycle', () => {
     // Custom emit-error path with a crafted stack containing a sensitive path.
     fakeServer.listen = function listen(port, host, _cb) {
       this.listenCalls.push({ port, host })
-      const err = new Error('listen EACCES 0.0.0.0:80 /private/var/secret/socket') as NodeJS.ErrnoException
+      const err = new Error(
+        'listen EACCES 0.0.0.0:80 /private/var/secret/socket'
+      ) as NodeJS.ErrnoException
       err.code = 'EACCES'
       err.stack =
         'Error: listen EACCES\n' +

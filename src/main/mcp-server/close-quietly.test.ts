@@ -54,11 +54,17 @@ describe('closeQuietly', () => {
   it('swallows a rejected close and logs the error with label context', async () => {
     const logger = makeLogger()
     const err = new Error('transport kaboom')
-    const closable = { close: vi.fn(async () => { throw err }) }
+    const closable = {
+      close: vi.fn(async () => {
+        throw err
+      })
+    }
 
     await expect(closeQuietly(closable, 'transport', logger)).resolves.toBeUndefined()
 
-    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('transport close: transport kaboom'))
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('transport close: transport kaboom')
+    )
     // Stack preserved via logError → debug channel.
     expect(logger.debug).toHaveBeenCalled()
     const debugArg = logger.debug.mock.calls[0]?.[0] as string
@@ -67,7 +73,11 @@ describe('closeQuietly', () => {
 
   it('logs non-Error throws as strings without losing the label', async () => {
     const logger = makeLogger()
-    const closable = { close: vi.fn(async () => { throw 'raw-string' }) }
+    const closable = {
+      close: vi.fn(async () => {
+        throw 'raw-string'
+      })
+    }
 
     await expect(closeQuietly(closable, 'mcp server', logger)).resolves.toBeUndefined()
 
