@@ -156,4 +156,9 @@ describe('sdk-streaming', () => {
       })
     )
   })
+
+  it('requires an explicit model (guards against future drift back to optional)', async () => {
+    // @ts-expect-error — model is required; this call omits it on purpose.
+    await runSdkStreaming('Test', onChunkMock, activeStreams, 'stream-1', 180_000, {})
+  })
 })
