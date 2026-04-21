@@ -93,14 +93,25 @@ export const BDE_MEMORY_DIR = join(BDE_DIR, 'memory')
 export const BDE_TASK_MEMORY_DIR = join(BDE_MEMORY_DIR, 'tasks')
 
 /**
+ * Default pipeline worktree base. Lives under `~/.bde/` alongside the SQLite DB
+ * and logs so all BDE state consolidates in one dotfile directory — hidden from
+ * Finder and typically skipped by employer file-indexers that scan visible home
+ * subdirectories (Documents, Desktop, Downloads).
+ *
+ * Users can override via the `agentManager.worktreeBase` setting; the override
+ * is still validated to stay inside `$HOME` by `validateWorktreeBase()`.
+ */
+export const DEFAULT_PIPELINE_WORKTREE_BASE = join(BDE_DIR, 'worktrees')
+
+/**
  * Dedicated worktree base for adhoc agents. Kept separate from the pipeline
- * worktree base (`agentManager.worktreeBase`, default `~/worktrees/bde`) so the
- * pipeline pruner can't see adhoc worktrees and accidentally delete them.
+ * worktree base so the pipeline pruner can't see adhoc worktrees and
+ * accidentally delete them.
  *
  * Exported here so any module that needs to recognize an adhoc worktree path
  * (e.g. the review handlers' worktree validator) shares the same constant.
  */
-export const ADHOC_WORKTREE_BASE = join(homedir(), 'worktrees', 'bde-adhoc')
+export const ADHOC_WORKTREE_BASE = join(BDE_DIR, 'worktrees-adhoc')
 
 // --- Dynamic repo configuration (backed by settings table) ---
 

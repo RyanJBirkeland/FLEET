@@ -20,12 +20,12 @@ gh pr diff <number> --name-only
 \`\`\`
 
 ## Resolve Merge Conflicts
-1. Create worktree: \`git worktree add ~/worktrees/bde/rebase-<branch> <branch>\`
-2. Rebase: \`cd ~/worktrees/bde/rebase-<branch> && git rebase origin/main\`
+1. Create worktree: \`git worktree add ~/.bde/worktrees/rebase-<branch> <branch>\`
+2. Rebase: \`cd ~/.bde/worktrees/rebase-<branch> && git rebase origin/main\`
 3. Resolve conflicts, then \`git add <file> && git rebase --continue\`
 4. For modify/delete conflicts: \`git rm <file>\`
 5. Push: \`git push --force-with-lease origin <branch>\`
-6. Cleanup: \`git worktree remove ~/worktrees/bde/rebase-<branch>\`
+6. Cleanup: \`git worktree remove ~/.bde/worktrees/rebase-<branch>\`
 
 ## Merge Strategies
 - **Squash** (default): Combines all commits. Best for feature branches.

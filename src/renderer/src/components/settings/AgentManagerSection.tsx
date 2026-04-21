@@ -13,7 +13,7 @@ import { SettingsCard } from './SettingsCard'
 import { AgentPermissionsSection } from './AgentPermissionsSection'
 
 const DEFAULT_MAX_CONCURRENT = 2
-const DEFAULT_WORKTREE_BASE = '~/worktrees/bde'
+const DEFAULT_WORKTREE_BASE = '~/.bde/worktrees'
 const DEFAULT_MAX_RUNTIME_MINUTES = 60
 const DEFAULT_AUTO_START = true
 
@@ -153,7 +153,7 @@ export function AgentManagerSection(): React.JSX.Element {
               setWorktreeBase(e.target.value)
               markDirty()
             }}
-            placeholder="~/worktrees/bde"
+            placeholder="~/.bde/worktrees"
           />
         </label>
 

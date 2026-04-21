@@ -132,7 +132,7 @@ vi.mock('../../data/sprint-queries', () => ({
 
 vi.mock('../../settings', () => ({
   getSettingJson: vi.fn(),
-  getSetting: vi.fn().mockReturnValue(null) // null → uses default ~/worktrees/bde
+  getSetting: vi.fn().mockReturnValue(null) // null → uses default ~/.bde/worktrees
 }))
 
 vi.mock('../../env-utils', () => ({
@@ -951,7 +951,7 @@ describe('Review handlers', () => {
     }
 
     const _mockEvent = {} as IpcMainInvokeEvent
-    const VALID_WORKTREE = `${homedir()}/worktrees/bde/Users-ryan-projects-BDE/some-task-id`
+    const VALID_WORKTREE = `${homedir()}/.bde/worktrees/Users-ryan-projects-BDE/some-task-id`
 
     it.each([
       ['main', true],
@@ -1037,11 +1037,11 @@ describe('Review handlers', () => {
 
     const _mockEvent = {} as IpcMainInvokeEvent
     const VALID_BASE = 'main'
-    const VALID_WORKTREE = `${homedir()}/worktrees/bde/Users-ryan-projects-BDE/abc123`
+    const VALID_WORKTREE = `${homedir()}/.bde/worktrees/Users-ryan-projects-BDE/abc123`
 
     it.each([
-      [`${homedir()}/worktrees/bde/Users-ryan-projects-BDE/abc123`, true],
-      [`${homedir()}/worktrees/bde-adhoc/Users-ryan-projects-BDE/abc123`, true],
+      [`${homedir()}/.bde/worktrees/Users-ryan-projects-BDE/abc123`, true],
+      [`${homedir()}/.bde/worktrees-adhoc/Users-ryan-projects-BDE/abc123`, true],
       ['/etc/passwd', false],
       ['../../etc', false],
       ['/tmp/evil', false],
@@ -1063,7 +1063,7 @@ describe('Review handlers', () => {
       // Pins the fix for the bug where adhoc-spawned tasks could not be
       // reviewed because validateWorktreePath only knew the pipeline base.
       const handlers = captureHandlers()
-      const adhocPath = `${homedir()}/worktrees/bde-adhoc/Users-ryan-projects-BDE/abc123`
+      const adhocPath = `${homedir()}/.bde/worktrees-adhoc/Users-ryan-projects-BDE/abc123`
       await expect(
         handlers['review:getDiff'](_mockEvent, { worktreePath: adhocPath, base: VALID_BASE })
       ).resolves.not.toThrow()
@@ -1132,7 +1132,7 @@ describe('Review handlers', () => {
     }
 
     const _mockEvent = {} as IpcMainInvokeEvent
-    const VALID_WORKTREE = `${homedir()}/worktrees/bde/Users-ryan-projects-BDE/abc123`
+    const VALID_WORKTREE = `${homedir()}/.bde/worktrees/Users-ryan-projects-BDE/abc123`
     const VALID_BASE = 'main'
 
     it.each([

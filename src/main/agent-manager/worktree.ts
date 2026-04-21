@@ -335,12 +335,11 @@ export async function pruneStaleWorktrees(
 
     for (const taskId of taskDirs) {
       // Safety: only consider directories whose name matches BDE's task-ID
-      // UUID format. The default `worktreeBase` (`~/worktrees/bde/`) is
-      // shared with human-created git worktrees per the documented
-      // ~/worktrees/<project>/<branch> convention, so we MUST NOT delete
-      // anything that doesn't look like a BDE-managed task directory.
-      // Without this guard the pruner would `rm -rf` `src/`, `docs/`, etc.
-      // inside human worktree branches.
+      // UUID format. Users may point `worktreeBase` at a path they share with
+      // human-created git worktrees (e.g. `~/worktrees/<project>/<branch>`),
+      // so we MUST NOT delete anything that doesn't look like a BDE-managed
+      // task directory. Without this guard the pruner would `rm -rf` `src/`,
+      // `docs/`, etc. inside human worktree branches.
       if (!TASK_ID_UUID_PATTERN.test(taskId)) continue
 
       const worktreePath = path.join(repoDir, taskId)

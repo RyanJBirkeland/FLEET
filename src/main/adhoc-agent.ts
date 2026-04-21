@@ -15,7 +15,7 @@
  * double-inject the same context at ~5-10KB extra per turn.
  *
  * **Worktree isolation**: each adhoc agent runs in its own git worktree under a
- * dedicated adhoc base (`~/worktrees/bde-adhoc/`) so concurrent sessions can't
+ * dedicated adhoc base (`~/.bde/worktrees-adhoc/`) so concurrent sessions can't
  * stomp on each other or on the user's main checkout. The worktree is preserved
  * after the session ends so the user can review the diff and optionally promote
  * the work into a sprint task via `agents:promoteToReview`.

@@ -159,7 +159,7 @@ Format: `{type}: {description}`
 - Diff components: `src/renderer/src/components/diff/PlainDiffContent.tsx` (non-virtualized diff), `DiffFileList.tsx` (diff file sidebar)
 - Format utilities: `src/renderer/src/lib/format.ts` — `formatDuration()` and `formatDurationMs()` consolidated here
 - Textarea prompt modal: `src/renderer/src/components/ui/TextareaPromptModal.tsx` — multi-line input modal (used by Code Review revision requests)
-- Pipeline agent worktrees: `~/worktrees/bde/Users-ryanbirkeland-Projects-git-repos-BDE/<32-char-taskId>/` (derived from `agentManager.worktreeBase` setting, which defaults to `~/worktrees/bde` — users who override this in Settings get their configured path instead)
+- Pipeline agent worktrees: `~/.bde/worktrees/Users-ryanbirkeland-Projects-git-repos-BDE/<32-char-taskId>/` (derived from `agentManager.worktreeBase` setting, which defaults to `~/.bde/worktrees` — users who override this in Settings get their configured path instead)
 - ADR — store separation: `docs/architecture-decisions/costdata-agenthistory-separation.md`
 - Main process shared libs: `src/main/lib/async-utils.ts` (`sleep`, `execFileAsync`) · `src/main/lib/patch-validation.ts` (`validateAndFilterPatch`) — don't reimplement these inline
 - Renderer shared libs: `src/renderer/src/lib/createDebouncedPersister.ts` — debounced localStorage/settings writes, used by 5 stores
@@ -185,7 +185,7 @@ git rebase origin/main           # critical: local main must match origin
 git cherry-pick origin/agent/<branch>
 git push origin main             # pre-push hook runs the full suite
 git push origin --delete agent/<branch>
-git worktree remove ~/worktrees/bde/Users-ryanbirkeland-Projects-git-repos-BDE/<taskId> --force
+git worktree remove ~/.bde/worktrees/Users-ryanbirkeland-Projects-git-repos-BDE/<taskId> --force
 ```
 
 The rebase step is mandatory — local main can diverge from origin if another session pushed in between. Skipping it causes the same bug the in-app Ship It fix was built to prevent.

@@ -1,8 +1,7 @@
 import { existsSync } from 'fs'
 import { resolve } from 'path'
-import { homedir } from 'os'
 import { getSetting } from '../settings'
-import { ADHOC_WORKTREE_BASE } from '../paths'
+import { ADHOC_WORKTREE_BASE, DEFAULT_PIPELINE_WORKTREE_BASE } from '../paths'
 
 /**
  * Safe git ref pattern: commit SHAs, branch names, and remote refs.
@@ -20,13 +19,14 @@ export function validateGitRef(ref: string | undefined | null): void {
 }
 
 /**
- * Returns the configured pipeline worktree base, defaulting to ~/worktrees/bde.
- * Resolved to an absolute path (no trailing slash). Used by the agent manager
- * and disk-space tracking — they only know about pipeline worktrees.
+ * Returns the configured pipeline worktree base, defaulting to
+ * `DEFAULT_PIPELINE_WORKTREE_BASE` (~/.bde/worktrees). Resolved to an absolute
+ * path (no trailing slash). Used by the agent manager and disk-space tracking —
+ * they only know about pipeline worktrees.
  */
 export function getWorktreeBase(): string {
   const configured = getSetting('agentManager.worktreeBase')
-  const raw = configured ?? `${homedir()}/worktrees/bde`
+  const raw = configured ?? DEFAULT_PIPELINE_WORKTREE_BASE
   return resolve(raw)
 }
 

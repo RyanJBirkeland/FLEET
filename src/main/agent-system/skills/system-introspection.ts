@@ -37,7 +37,7 @@ Check depends_on field for dependency chains.
 ## Diagnose Pipeline Stalls
 - Tasks stuck in 'active' for >1hr (check started_at)
 - Check ~/.bde/agent-manager.log for watchdog timeouts
-- Verify worktrees exist: ls ~/worktrees/bde/agent-*
+- Verify worktrees exist: ls ~/.bde/worktrees/
 
 ## Example Usage
 \`\`\`bash

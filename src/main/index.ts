@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
-import { homedir } from 'os'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
+import { DEFAULT_PIPELINE_WORKTREE_BASE } from './paths'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
 import {
   startDbWatcher,
@@ -346,7 +346,7 @@ function wireAgentManagerAndMcp(
 ): ReturnType<typeof createAgentManager> | undefined {
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
-    worktreeBase: getSetting('agentManager.worktreeBase') ?? join(homedir(), 'worktrees', 'bde'),
+    worktreeBase: getSetting('agentManager.worktreeBase') ?? DEFAULT_PIPELINE_WORKTREE_BASE,
     maxRuntimeMs: getSettingJson<number>('agentManager.maxRuntimeMs') ?? 3_600_000,
     idleTimeoutMs: 900_000,
     pollIntervalMs: 30_000,
