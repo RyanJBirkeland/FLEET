@@ -13,12 +13,10 @@ export const TaskDependencySchema = z.object({
 })
 
 /**
- * Write allow-list — fields an external agent may set on create/update.
- * Must stay structurally aligned with `CreateTaskInput` so MCP callers
- * aren't surprised when a field is accepted by the schema but silently
- * dropped downstream (or vice versa).
- * System-managed fields (claimed_by, pr_*, completed_at, agent_run_id,
- * failure_reason, etc.) are intentionally absent.
+ * Fields an external agent may set on task create/update. System-managed
+ * fields (`claimed_by`, `pr_*`, `completed_at`, `agent_run_id`,
+ * `failure_reason`, etc.) are intentionally absent — mutating those belongs
+ * to the data layer / sprint-service, not to MCP callers.
  */
 export const TaskWriteFieldsSchema = z.object({
   title: z.string().min(1).max(500).describe('Task title (1-500 chars)'),
