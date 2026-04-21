@@ -1,4 +1,6 @@
+import type { ServerResponse } from 'node:http'
 import { z, ZodError } from 'zod'
+import type { Logger } from '../logger'
 
 /**
  * Named JSON-RPC error codes used by the MCP server. The MCP spec reserves
@@ -65,7 +67,11 @@ const CODE_MAP: Record<McpErrorCode, number> = {
   [McpErrorCode.RepoUnconfigured]: JSON_RPC_REPO_UNCONFIGURED
 }
 
-export function toJsonRpcError(err: unknown, schema?: z.ZodTypeAny): JsonRpcErrorBody {
+export function toJsonRpcError(
+  err: unknown,
+  schema?: z.ZodTypeAny,
+  logger?: Pick<Logger, 'error'>
+): JsonRpcErrorBody {
   if (err instanceof McpZodError) {
     return formatZodError(err.zodError, err.schema)
   }
@@ -75,7 +81,35 @@ export function toJsonRpcError(err: unknown, schema?: z.ZodTypeAny): JsonRpcErro
   if (err instanceof McpDomainError) {
     return { code: CODE_MAP[err.kind], message: err.message, data: err.data }
   }
+  logUnknownError(err, logger)
   return { code: -32603, message: 'Internal error' }
+}
+
+/**
+ * Writes a JSON-RPC 2.0 error envelope to an HTTP response. Centralizes the
+ * header + body shape so transport layers never hand-roll the envelope.
+ * Skips `writeHead` if headers are already sent — the caller is mid-stream
+ * and only the body matters.
+ */
+export function writeJsonRpcError(
+  res: ServerResponse,
+  status: number,
+  err: unknown,
+  opts?: {
+    id?: string | number | null
+    schema?: z.ZodTypeAny
+    logger?: Pick<Logger, 'error'>
+  }
+): void {
+  if (!res.headersSent) {
+    res.writeHead(status, { 'Content-Type': 'application/json' })
+  }
+  const body = {
+    jsonrpc: '2.0' as const,
+    id: opts?.id ?? null,
+    error: toJsonRpcError(err, opts?.schema, opts?.logger)
+  }
+  res.end(JSON.stringify(body))
 }
 
 /**
@@ -123,4 +157,10 @@ function topLevelFieldDescription(
   const shape = schema.shape as Record<string, z.ZodTypeAny>
   const fieldSchema = shape[fieldName]
   return fieldSchema?.description
+}
+
+function logUnknownError(err: unknown, logger: Pick<Logger, 'error'> | undefined): void {
+  if (!logger) return
+  const detail = err instanceof Error ? err.stack ?? err.message : String(err)
+  logger.error(`toJsonRpcError received unknown throw: ${detail}`)
 }
