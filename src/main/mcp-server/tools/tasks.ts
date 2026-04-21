@@ -7,10 +7,7 @@ import {
   type CreateTaskWithValidationDeps,
   type CreateTaskWithValidationOpts
 } from '../../services/sprint-service'
-import type {
-  CreateTaskInput,
-  ListTasksOptions
-} from '../../data/sprint-task-repository'
+import type { CreateTaskInput, ListTasksOptions } from '../../data/sprint-task-repository'
 import { McpDomainError, McpErrorCode, parseToolArgs } from '../errors'
 import {
   TaskCancelSchema,
@@ -20,7 +17,9 @@ import {
   TaskListSchema,
   TaskUpdateSchema,
   TASK_HISTORY_DEFAULT_LIMIT,
-  TASK_HISTORY_MAX_WINDOW
+  TASK_HISTORY_MAX_WINDOW,
+  TASK_LIST_DEFAULT_LIMIT,
+  TASK_LIST_DEFAULT_OFFSET
 } from '../schemas'
 import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
 import { jsonContent, safeToolResponse } from './response'
@@ -115,20 +114,9 @@ export interface TaskHistoryPort {
  * tool functions can depend on a narrower port when they're lifted
  * out of this file.
  */
-export interface TaskToolsDeps
-  extends TaskCommandPort,
-    TaskQueryPort,
-    TaskHistoryPort {
+export interface TaskToolsDeps extends TaskCommandPort, TaskQueryPort, TaskHistoryPort {
   logger: CreateTaskWithValidationDeps['logger']
 }
-
-/**
- * Default pagination window for `tasks.list` when the caller omits
- * `limit`/`offset`. Mirrors the previous in-memory `slice` default so
- * existing clients see the same page size after the SQL push-down.
- */
-const TASK_LIST_DEFAULT_LIMIT = 100
-const TASK_LIST_DEFAULT_OFFSET = 0
 
 /**
  * Attribution label the MCP adapter passes through to the audit trail
@@ -160,7 +148,10 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
       async () => {
         const { id } = parseToolArgs(TaskIdSchema, rawArgs)
         const row = deps.getTask(id)
-        if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+        if (!row) {
+          deps.logger.debug(`mcp.tasks.get: task ${id} not found`)
+          throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+        }
         return jsonContent(row)
       },
       { schema: TaskIdSchema, logger: deps.logger }
@@ -177,7 +168,10 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
           const { id, limit, offset } = parseToolArgs(TaskHistorySchema, rawArgs)
           assertHistoryWindowWithinCap(limit, offset)
           const task = deps.getTask(id)
-          if (!task) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          if (!task) {
+            deps.logger.debug(`mcp.tasks.history: task ${id} not found`)
+            throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          }
           const rows = deps.getTaskChanges(id, { limit, offset })
           return jsonContent(rows)
         },
@@ -224,7 +218,10 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
           const current = deps.getTask(id)
           const effectivePatch = buildEffectiveUpdatePatch(patch, current)
           const row = deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
-          if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          if (!row) {
+            deps.logger.debug(`mcp.tasks.update: task ${id} not found`)
+            throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          }
           await fireTerminalHookIfNeeded(deps, current, row)
           return jsonContent(row)
         },
@@ -241,7 +238,10 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
         async () => {
           const { id, reason } = parseToolArgs(TaskCancelSchema, rawArgs)
           const row = await deps.cancelTask(id, reason, { caller: MCP_CALLER })
-          if (!row) throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          if (!row) {
+            deps.logger.debug(`mcp.tasks.cancel: task ${id} not found`)
+            throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+          }
           return jsonContent(row)
         },
         { schema: TaskCancelSchema, logger: deps.logger }
@@ -267,9 +267,7 @@ function runCreateWithValidation(
  * repository always sees an explicit `LIMIT`/`OFFSET` — matches the
  * previous in-memory `slice(offset, offset + limit)` default.
  */
-function toListTasksOptions(
-  args: ReturnType<typeof TaskListSchema.parse>
-): ListTasksOptions {
+function toListTasksOptions(args: ReturnType<typeof TaskListSchema.parse>): ListTasksOptions {
   return {
     status: args.status,
     repo: args.repo,
@@ -293,10 +291,7 @@ function rewrapTaskValidationError(err: unknown): unknown {
   return err
 }
 
-function buildEffectiveUpdatePatch(
-  patch: TaskPatch,
-  current: SprintTask | null
-): TaskPatch {
+function buildEffectiveUpdatePatch(patch: TaskPatch, current: SprintTask | null): TaskPatch {
   if (!('status' in patch) || !current) return { ...patch }
   if (!isRevivingTerminalTask(current.status, patch.status)) return { ...patch }
   return { ...patch, ...TERMINAL_STATE_RESET_PATCH }
@@ -323,10 +318,7 @@ async function fireTerminalHookIfNeeded(
  * `TASK_HISTORY_MAX_WINDOW`. Beyond this window SQLite pays the full
  * scan cost for the skipped rows — effectively an unbounded query.
  */
-function assertHistoryWindowWithinCap(
-  limit: number | undefined,
-  offset: number | undefined
-): void {
+function assertHistoryWindowWithinCap(limit: number | undefined, offset: number | undefined): void {
   const effectiveLimit = limit ?? TASK_HISTORY_DEFAULT_LIMIT
   const effectiveOffset = offset ?? 0
   if (effectiveLimit + effectiveOffset > TASK_HISTORY_MAX_WINDOW) {

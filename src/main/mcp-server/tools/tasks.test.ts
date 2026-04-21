@@ -446,6 +446,14 @@ describe('tasks.* read tools', () => {
     expect(body.data).toMatchObject({ id: 'missing' })
   })
 
+  it('tasks.get logs a debug trace when the id is missing (T-10)', async () => {
+    const deps = fakeDeps({ getTask: vi.fn(() => null) })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.get', { id: 'missing' })
+    expect(deps.logger.debug).toHaveBeenCalledWith(expect.stringContaining('missing'))
+  })
+
   it('tasks.create returns structured InvalidParams payload on zod validation failure', async () => {
     const deps = fakeDeps()
     const { server, call } = mockServer()
@@ -489,9 +497,7 @@ describe('tasks.list — forwards filter + pagination into the data layer (T-2)'
   it('forwards epicId as an option', async () => {
     const { listTasks, call } = callWith({ epicId: 'epic-1' })
     await call()
-    expect(listTasks).toHaveBeenCalledWith(
-      expect.objectContaining({ epicId: 'epic-1' })
-    )
+    expect(listTasks).toHaveBeenCalledWith(expect.objectContaining({ epicId: 'epic-1' }))
   })
 
   it('forwards tag as an option', async () => {
@@ -522,17 +528,13 @@ describe('tasks.list — forwards filter + pagination into the data layer (T-2)'
   it('forwards explicit offset and limit verbatim', async () => {
     const { listTasks, call } = callWith({ offset: 2, limit: 5 })
     await call()
-    expect(listTasks).toHaveBeenCalledWith(
-      expect.objectContaining({ offset: 2, limit: 5 })
-    )
+    expect(listTasks).toHaveBeenCalledWith(expect.objectContaining({ offset: 2, limit: 5 }))
   })
 
   it('defaults to offset 0 and limit 100 when both omitted', async () => {
     const { listTasks, call } = callWith({})
     await call()
-    expect(listTasks).toHaveBeenCalledWith(
-      expect.objectContaining({ offset: 0, limit: 100 })
-    )
+    expect(listTasks).toHaveBeenCalledWith(expect.objectContaining({ offset: 0, limit: 100 }))
   })
 
   it('returns the rows the data layer produced without further filtering', async () => {
