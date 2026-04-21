@@ -22,7 +22,8 @@ export type {
   CreateTaskInput,
   QueueStats,
   SpecTypeSuccessRate,
-  DailySuccessRate
+  DailySuccessRate,
+  ListTasksOptions
 } from './sprint-mutations'
 
 export type { SprintMutationEvent, SprintMutationListener } from './sprint-mutation-broadcaster'

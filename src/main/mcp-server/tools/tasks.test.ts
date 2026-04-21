@@ -456,119 +456,79 @@ describe('tasks.* read tools', () => {
   })
 })
 
-describe('tasks.list filter + pagination composition', () => {
-  const fixture: SprintTask[] = [
-    fakeTask({
-      id: 'a',
-      title: 'Alpha widget',
-      repo: 'bde',
-      tags: ['foo'],
-      group_id: 'epic-1',
-      spec: 'details about alpha'
-    }),
-    fakeTask({
-      id: 'b',
-      title: 'Beta panel',
-      repo: 'bde',
-      tags: ['foo', 'bar'],
-      group_id: 'epic-2',
-      spec: null
-    }),
-    fakeTask({
-      id: 'c',
-      title: 'Gamma report',
-      repo: 'other',
-      tags: ['bar'],
-      group_id: 'epic-1',
-      spec: 'report details'
-    }),
-    fakeTask({
-      id: 'd',
-      title: 'Delta note',
-      repo: 'other',
-      tags: null,
-      group_id: null,
-      spec: 'mentions ALPHA inside'
-    }),
-    fakeTask({
-      id: 'e',
-      title: 'Epsilon task',
-      repo: 'bde',
-      tags: ['baz'],
-      group_id: 'epic-2',
-      spec: 'nothing special'
-    })
-  ]
+describe('tasks.list — forwards filter + pagination into the data layer (T-2)', () => {
+  const prefiltered: SprintTask[] = [fakeTask({ id: 'x' })]
 
-  function idsFromResult(res: ToolResult): string[] {
-    return (JSON.parse(res.content[0].text) as SprintTask[]).map((t) => t.id)
+  function callWith(args: Record<string, unknown>) {
+    const listTasks = vi.fn(() => prefiltered)
+    const deps = fakeDeps({ listTasks })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    return { listTasks, call: () => call('tasks.list', args) }
   }
 
-  it('filters by repo', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', { repo: 'bde' })
-    expect(idsFromResult(res)).toEqual(['a', 'b', 'e'])
+  it('forwards repo as an option', async () => {
+    const { listTasks, call } = callWith({ repo: 'bde' })
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ repo: 'bde', limit: 100, offset: 0 })
+    )
   })
 
-  it('filters by epicId', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', { epicId: 'epic-1' })
-    expect(idsFromResult(res)).toEqual(['a', 'c'])
+  it('forwards epicId as an option', async () => {
+    const { listTasks, call } = callWith({ epicId: 'epic-1' })
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ epicId: 'epic-1' })
+    )
   })
 
-  it('filters by tag (array membership)', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', { tag: 'foo' })
-    expect(idsFromResult(res)).toEqual(['a', 'b'])
+  it('forwards tag as an option', async () => {
+    const { listTasks, call } = callWith({ tag: 'foo' })
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(expect.objectContaining({ tag: 'foo' }))
   })
 
-  it('filters by search (case-insensitive, title OR spec)', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', { search: 'alpha' })
-    // 'a' matches title; 'd' matches spec body ("mentions ALPHA inside") case-insensitively.
-    expect(idsFromResult(res).sort()).toEqual(['a', 'd'])
+  it('forwards search as an option', async () => {
+    const { listTasks, call } = callWith({ search: 'alpha' })
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(expect.objectContaining({ search: 'alpha' }))
   })
 
-  it('composes two filters as an intersection', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', { repo: 'bde', tag: 'bar' })
-    expect(idsFromResult(res)).toEqual(['b'])
+  it('forwards status as an option (not as a bare string)', async () => {
+    const { listTasks, call } = callWith({ status: 'queued' })
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(expect.objectContaining({ status: 'queued' }))
   })
 
-  it('paginates with explicit offset + limit', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const firstPage = await call('tasks.list', { offset: 0, limit: 2 })
-    expect(idsFromResult(firstPage)).toEqual(['a', 'b'])
-    const secondPage = await call('tasks.list', { offset: 2, limit: 2 })
-    expect(idsFromResult(secondPage)).toEqual(['c', 'd'])
+  it('composes multiple filters into a single options object', async () => {
+    const { listTasks, call } = callWith({ repo: 'bde', tag: 'bar', search: 'thing' })
+    await call()
+    const options = (listTasks.mock.calls[0][0] ?? {}) as Record<string, unknown>
+    expect(options).toMatchObject({ repo: 'bde', tag: 'bar', search: 'thing' })
   })
 
-  it('returns empty page when offset exceeds fixture size', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', { offset: 10 })
-    expect(idsFromResult(res)).toEqual([])
+  it('forwards explicit offset and limit verbatim', async () => {
+    const { listTasks, call } = callWith({ offset: 2, limit: 5 })
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 2, limit: 5 })
+    )
   })
 
   it('defaults to offset 0 and limit 100 when both omitted', async () => {
-    const deps = fakeDeps({ listTasks: vi.fn(() => fixture) })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    const res = await call('tasks.list', {})
-    expect(idsFromResult(res)).toEqual(['a', 'b', 'c', 'd', 'e'])
+    const { listTasks, call } = callWith({})
+    await call()
+    expect(listTasks).toHaveBeenCalledWith(
+      expect.objectContaining({ offset: 0, limit: 100 })
+    )
+  })
+
+  it('returns the rows the data layer produced without further filtering', async () => {
+    const { call } = callWith({ repo: 'bde' })
+    const res = await call()
+    const ids = (JSON.parse(res.content[0].text) as SprintTask[]).map((t) => t.id)
+    expect(ids).toEqual(['x'])
   })
 })
 

@@ -7,7 +7,10 @@ import {
   type CreateTaskWithValidationDeps,
   type CreateTaskWithValidationOpts
 } from '../../services/sprint-service'
-import type { CreateTaskInput } from '../../data/sprint-task-repository'
+import type {
+  CreateTaskInput,
+  ListTasksOptions
+} from '../../data/sprint-task-repository'
 import { McpDomainError, McpErrorCode, parseToolArgs } from '../errors'
 import {
   TaskCancelSchema,
@@ -75,9 +78,13 @@ export interface TaskCommandPort {
 
 /**
  * Read-side task queries used by `tasks.list` and `tasks.get`.
+ *
+ * `listTasks` accepts either a bare `status` (legacy callers) or a
+ * `ListTasksOptions` object so every filter and the pagination window
+ * are pushed into SQL instead of being applied in memory at the tool.
  */
 export interface TaskQueryPort {
-  listTasks: (status?: string) => SprintTask[]
+  listTasks: (options?: string | ListTasksOptions) => SprintTask[]
   getTask: (id: string) => SprintTask | null
 }
 
@@ -105,25 +112,13 @@ export interface TaskToolsDeps
   logger: CreateTaskWithValidationDeps['logger']
 }
 
-function filterInMemory(
-  tasks: SprintTask[],
-  args: ReturnType<typeof TaskListSchema.parse>
-): SprintTask[] {
-  let out = tasks
-  if (args.repo) out = out.filter((t) => t.repo === args.repo)
-  if (args.epicId) out = out.filter((t) => t.group_id === args.epicId)
-  if (args.tag) out = out.filter((t) => Array.isArray(t.tags) && t.tags.includes(args.tag!))
-  if (args.search) {
-    const q = args.search.toLowerCase()
-    out = out.filter(
-      (t) =>
-        t.title.toLowerCase().includes(q) || (t.spec ? t.spec.toLowerCase().includes(q) : false)
-    )
-  }
-  const offset = args.offset ?? 0
-  const limit = args.limit ?? 100
-  return out.slice(offset, offset + limit)
-}
+/**
+ * Default pagination window for `tasks.list` when the caller omits
+ * `limit`/`offset`. Mirrors the previous in-memory `slice` default so
+ * existing clients see the same page size after the SQL push-down.
+ */
+const TASK_LIST_DEFAULT_LIMIT = 100
+const TASK_LIST_DEFAULT_OFFSET = 0
 
 export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void {
   server.tool(
@@ -134,8 +129,8 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
       safeToolResponse(
         async () => {
           const args = parseToolArgs(TaskListSchema, rawArgs)
-          const rows = deps.listTasks(args.status)
-          return jsonContent(filterInMemory(rows, args))
+          const rows = deps.listTasks(toListTasksOptions(args))
+          return jsonContent(rows)
         },
         { schema: TaskListSchema, logger: deps.logger }
       )
@@ -245,6 +240,26 @@ function runCreateWithValidation(
     return deps.createTaskWithValidation(createInput, delegateDeps)
   }
   return deps.createTaskWithValidation(createInput, delegateDeps, { skipReadinessCheck })
+}
+
+/**
+ * Project the parsed `tasks.list` args into the `ListTasksOptions` shape
+ * the data layer consumes. Applies the default pagination window so the
+ * repository always sees an explicit `LIMIT`/`OFFSET` — matches the
+ * previous in-memory `slice(offset, offset + limit)` default.
+ */
+function toListTasksOptions(
+  args: ReturnType<typeof TaskListSchema.parse>
+): ListTasksOptions {
+  return {
+    status: args.status,
+    repo: args.repo,
+    epicId: args.epicId,
+    tag: args.tag,
+    search: args.search,
+    limit: args.limit ?? TASK_LIST_DEFAULT_LIMIT,
+    offset: args.offset ?? TASK_LIST_DEFAULT_OFFSET
+  }
 }
 
 /**

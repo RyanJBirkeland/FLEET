@@ -189,7 +189,7 @@ describe('createSprintTaskRepository', () => {
   })
 
   describe('IDashboardRepository methods', () => {
-    it('should delegate listTasks to queries.listTasks', () => {
+    it('should delegate listTasks to queries.listTasks with a bare status', () => {
       const repo = createSprintTaskRepository()
       const mockTasks = [{ id: '1' }]
       vi.mocked(queries.listTasks).mockReturnValue(mockTasks as any)
@@ -197,6 +197,22 @@ describe('createSprintTaskRepository', () => {
       const result = repo.listTasks('queued')
 
       expect(queries.listTasks).toHaveBeenCalledWith('queued')
+      expect(result).toBe(mockTasks)
+    })
+
+    it('should delegate listTasks to queries.listTasks with a ListTasksOptions object', () => {
+      const repo = createSprintTaskRepository()
+      const mockTasks = [{ id: '1' }]
+      vi.mocked(queries.listTasks).mockReturnValue(mockTasks as any)
+
+      const result = repo.listTasks({ repo: 'bde', tag: 'foo', limit: 10, offset: 5 })
+
+      expect(queries.listTasks).toHaveBeenCalledWith({
+        repo: 'bde',
+        tag: 'foo',
+        limit: 10,
+        offset: 5
+      })
       expect(result).toBe(mockTasks)
     })
 

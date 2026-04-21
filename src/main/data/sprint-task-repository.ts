@@ -13,6 +13,7 @@ import * as queries from './sprint-queries'
 import * as reportingQueries from './reporting-queries'
 import * as groupQueries from './task-group-queries'
 import type { CreateTaskInput, QueueStats } from './sprint-queries'
+import type { ListTasksOptions } from './sprint-task-crud'
 import type {
   SpecTypeSuccessRate,
   DailySuccessRate,
@@ -24,7 +25,8 @@ export type {
   QueueStats,
   SpecTypeSuccessRate,
   DailySuccessRate,
-  FailureReasonBreakdown
+  FailureReasonBreakdown,
+  ListTasksOptions
 }
 
 
@@ -65,7 +67,13 @@ export interface ISprintPollerRepository {
  * Methods used by IPC handlers, dashboard, and status server.
  */
 export interface IDashboardRepository {
-  listTasks(status?: string): SprintTask[]
+  /**
+   * List sprint tasks, optionally filtered and paginated. Accepts the legacy
+   * bare-status string for backward compatibility with existing callers, or
+   * a `ListTasksOptions` object when a caller needs repo/epic/tag/search
+   * filters or pagination pushed into SQL.
+   */
+  listTasks(options?: string | ListTasksOptions): SprintTask[]
   listTasksRecent(): SprintTask[]
   createTask(input: CreateTaskInput): SprintTask | null
   deleteTask(id: string, deletedBy?: string): void
@@ -115,7 +123,7 @@ export function createSprintTaskRepository(): ISprintTaskRepository {
     getGroup: groupQueries.getGroup,
     getGroupTasks: groupQueries.getGroupTasks,
     getGroupsWithDependencies: groupQueries.getGroupsWithDependencies,
-    listTasks: queries.listTasks,
+    listTasks: (options) => queries.listTasks(options),
     listTasksRecent: queries.listTasksRecent,
     createTask: queries.createTask,
     deleteTask: queries.deleteTask,
