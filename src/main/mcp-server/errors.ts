@@ -1,10 +1,27 @@
 import { z, ZodError } from 'zod'
 
+/**
+ * Named JSON-RPC error codes used by the MCP server. The MCP spec reserves
+ * -32000..-32099 for server-defined errors; these constants name each slot
+ * we use so call sites read as vocabulary rather than magic numbers.
+ */
+export const JSON_RPC_UNAUTHORIZED = -32000
+export const JSON_RPC_NOT_FOUND = -32001
+export const JSON_RPC_INVALID_TRANSITION = -32002
+export const JSON_RPC_CYCLE = -32003
+export const JSON_RPC_FORBIDDEN_FIELD = -32004
+export const JSON_RPC_VALIDATION_FAILED = -32005
+export const JSON_RPC_CONFLICT = -32006
+export const JSON_RPC_REPO_UNCONFIGURED = -32007
+
 export enum McpErrorCode {
   NotFound = 'NOT_FOUND',
   InvalidTransition = 'INVALID_TRANSITION',
   Cycle = 'CYCLE',
-  ForbiddenField = 'FORBIDDEN_FIELD'
+  ForbiddenField = 'FORBIDDEN_FIELD',
+  ValidationFailed = 'VALIDATION_FAILED',
+  Conflict = 'CONFLICT',
+  RepoUnconfigured = 'REPO_UNCONFIGURED'
 }
 
 export class McpDomainError extends Error {
@@ -39,10 +56,13 @@ export interface JsonRpcErrorBody {
 }
 
 const CODE_MAP: Record<McpErrorCode, number> = {
-  [McpErrorCode.NotFound]: -32001,
-  [McpErrorCode.InvalidTransition]: -32002,
-  [McpErrorCode.Cycle]: -32003,
-  [McpErrorCode.ForbiddenField]: -32004
+  [McpErrorCode.NotFound]: JSON_RPC_NOT_FOUND,
+  [McpErrorCode.InvalidTransition]: JSON_RPC_INVALID_TRANSITION,
+  [McpErrorCode.Cycle]: JSON_RPC_CYCLE,
+  [McpErrorCode.ForbiddenField]: JSON_RPC_FORBIDDEN_FIELD,
+  [McpErrorCode.ValidationFailed]: JSON_RPC_VALIDATION_FAILED,
+  [McpErrorCode.Conflict]: JSON_RPC_CONFLICT,
+  [McpErrorCode.RepoUnconfigured]: JSON_RPC_REPO_UNCONFIGURED
 }
 
 export function toJsonRpcError(err: unknown, schema?: z.ZodTypeAny): JsonRpcErrorBody {

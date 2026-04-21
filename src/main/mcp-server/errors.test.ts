@@ -1,6 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { z } from 'zod'
-import { toJsonRpcError, McpDomainError, McpErrorCode, parseToolArgs } from './errors'
+import {
+  toJsonRpcError,
+  McpDomainError,
+  McpErrorCode,
+  parseToolArgs,
+  JSON_RPC_VALIDATION_FAILED,
+  JSON_RPC_CONFLICT,
+  JSON_RPC_REPO_UNCONFIGURED
+} from './errors'
 
 describe('toJsonRpcError', () => {
   it('maps zod ZodError to -32602 Invalid params', () => {
@@ -77,6 +85,21 @@ describe('toJsonRpcError', () => {
   it('maps McpDomainError with code FORBIDDEN_FIELD to -32004', () => {
     const err = new McpDomainError('nope', McpErrorCode.ForbiddenField)
     expect(toJsonRpcError(err).code).toBe(-32004)
+  })
+
+  it('maps McpDomainError with code VALIDATION_FAILED to -32005', () => {
+    const err = new McpDomainError('invalid input', McpErrorCode.ValidationFailed)
+    expect(toJsonRpcError(err).code).toBe(JSON_RPC_VALIDATION_FAILED)
+  })
+
+  it('maps McpDomainError with code CONFLICT to -32006', () => {
+    const err = new McpDomainError('conflict', McpErrorCode.Conflict)
+    expect(toJsonRpcError(err).code).toBe(JSON_RPC_CONFLICT)
+  })
+
+  it('maps McpDomainError with code REPO_UNCONFIGURED to -32007', () => {
+    const err = new McpDomainError('repo missing', McpErrorCode.RepoUnconfigured)
+    expect(toJsonRpcError(err).code).toBe(JSON_RPC_REPO_UNCONFIGURED)
   })
 
   it('maps any other thrown value to -32603 Internal error without leaking stack', () => {
