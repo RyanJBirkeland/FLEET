@@ -7,6 +7,15 @@ const TOKEN_BYTES = 32
 const FILE_MODE = 0o600
 const DIR_MODE = 0o700
 
+export interface TokenStoreLogger {
+  warn(msg: string): void
+  error(msg: string): void
+}
+
+export interface TokenStoreOptions {
+  logger?: TokenStoreLogger
+}
+
 export function tokenFilePath(): string {
   return join(homedir(), '.bde', 'mcp-token')
 }
@@ -47,15 +56,22 @@ async function generateAndWrite(filePath: string): Promise<string> {
 }
 
 export async function readOrCreateToken(
-  filePath: string = tokenFilePath()
+  filePath: string = tokenFilePath(),
+  options: TokenStoreOptions = {}
 ): Promise<string> {
+  const { logger } = options
   try {
     const contents = await fs.readFile(filePath, 'utf8')
     const token = contents.trim()
     if (/^[0-9a-f]{64}$/.test(token)) return token
+    logger?.warn(`token-store: corrupt token at ${filePath} — regenerating`)
   } catch (err) {
     const code = (err as NodeJS.ErrnoException).code
-    if (code !== 'ENOENT') throw err
+    if (code !== 'ENOENT') {
+      const detail = err instanceof Error ? (err.stack ?? err.message) : String(err)
+      logger?.error(`token-store read failed: code=${code} path=${filePath} — ${detail}`)
+      throw err
+    }
   }
   return generateAndWrite(filePath)
 }

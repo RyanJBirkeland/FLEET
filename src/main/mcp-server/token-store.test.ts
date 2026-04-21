@@ -9,6 +9,10 @@ import { readOrCreateToken, regenerateToken, tokenFilePath } from './token-store
 
 const HEX_TOKEN = /^[0-9a-f]{64}$/
 
+function makeTestLogger(): { warn: ReturnType<typeof vi.fn>; error: ReturnType<typeof vi.fn> } {
+  return { warn: vi.fn(), error: vi.fn() }
+}
+
 describe('token-store', () => {
   let dir: string
   let filePath: string
@@ -105,6 +109,32 @@ describe('token-store', () => {
     const eaccesError = Object.assign(new Error('permission denied'), { code: 'EACCES' })
     vi.spyOn(fs, 'readFile').mockRejectedValueOnce(eaccesError)
     await expect(readOrCreateToken(filePath)).rejects.toMatchObject({ code: 'EACCES' })
+  })
+
+  it('logs non-ENOENT read errors before rethrowing them', async () => {
+    const logger = makeTestLogger()
+    const eaccesError = Object.assign(new Error('permission denied'), { code: 'EACCES' })
+    vi.spyOn(fs, 'readFile').mockRejectedValueOnce(eaccesError)
+
+    await expect(readOrCreateToken(filePath, { logger })).rejects.toMatchObject({ code: 'EACCES' })
+
+    expect(logger.error).toHaveBeenCalledTimes(1)
+    const message = logger.error.mock.calls[0][0] as string
+    expect(message).toContain('code=EACCES')
+    expect(message).toContain(filePath)
+  })
+
+  it('warns via logger when regenerating a corrupt token', async () => {
+    const logger = makeTestLogger()
+    await fs.writeFile(filePath, 'not-a-token\n')
+
+    const token = await readOrCreateToken(filePath, { logger })
+
+    expect(token).toMatch(HEX_TOKEN)
+    expect(logger.warn).toHaveBeenCalledTimes(1)
+    const message = logger.warn.mock.calls[0][0] as string
+    expect(message).toContain('corrupt token')
+    expect(message).toContain(filePath)
   })
 
   it('writes the token file with mode 0o600 after generation', async () => {
