@@ -268,7 +268,7 @@ export function registerSprintLocalHandlers(
     return updateTask(taskId, { status: 'queued' })
   })
 
-  safeHandle('sprint:getChanges', (_e, taskId: string) => {
+  safeHandle('sprint:getChanges', async (_e, taskId: string) => {
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
     return getTaskChanges(taskId)
   })

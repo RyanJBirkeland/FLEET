@@ -16,6 +16,20 @@ vi.mock('../../env-utils', () => ({
   getOAuthToken: vi.fn().mockReturnValue(null)
 }))
 
+// auth-guard now imports credential-service, which transitively loads
+// settings-queries.ts — and its module-scope `createLogger()` call writes to
+// ~/.bde at import time. Mock the logger module so the test stays hermetic
+// regardless of which path reaches it.
+vi.mock('../../logger', () => ({
+  createLogger: () => ({
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
+  }),
+  logError: vi.fn()
+}))
+
 import { checkAuthStatus } from '../../credential-store'
 import type { CredentialStore } from '../../credential-store'
 import { ensureSubscriptionAuth } from '../../auth-guard'
