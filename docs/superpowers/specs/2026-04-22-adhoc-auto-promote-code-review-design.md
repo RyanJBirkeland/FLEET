@@ -6,14 +6,15 @@
 
 ## Motivation
 
-Pipeline agents auto-escalate to the Code Review Station on completion. Adhoc and Assistant agents — both user-spawned, both running in `~/.bde/worktrees-adhoc/`, both capable of committing code — do not. They are intentionally treated as "scratchpads" that never enter the sprint task lifecycle unless the user explicitly clicks a "Promote to Code Review" button.
+Pipeline agents auto-escalate to the Code Review Station on completion. Adhoc and Assistant agents — both user-spawned, both running in `~/.bde/worktrees-adhoc/`, both capable of committing code — do not. They are intentionally treated as "scratchpads" that never enter the sprint task lifecycle unless the user takes an explicit action.
 
-Two things are broken with this model:
+Three things are broken with the current UX:
 
-1. **The button is missing or not rendering** in the console header today. The scratchpad helper text in the Agents sidebar still references it, so something in `ConsoleHeader.tsx` has drifted from intent. Users must verbally prompt the agent — *"push the changes to code review"* — and agents interpret this as `git push`, which pushes to GitHub but does not put anything in BDE's Code Review queue.
-2. **Even if the button worked**, it is silent: an adhoc agent that has finished committing work never announces itself, and there is no UI breadcrumb drawing the user back to Code Review. The user has to remember to check. Pipeline agents do not have this failure mode because the task status flips to `review` automatically and the Code Review view updates.
+1. **The Promote button is present in `ConsoleHeader.tsx` but undiscoverable.** The existing button at lines 255-265 renders as a small icon-only `GitPullRequest` glyph (size 14) tucked among Terminal / Stop / Copy Log icons in a dense header row, with only a `title` tooltip and `aria-label`. In real-world use (see the session transcript that motivated this spec) the user did not realize the glyph was the promote action and resorted to prompting the agent with *"push the changes to code review."* The agent interpreted this as `git push`, pushed to GitHub, and told the user to "open Code Review" — but the task never entered BDE's review queue because `agents:promoteToReview` was never called. The button isn't missing; it's invisible.
+2. **Even when the button is used, it is silent at the session boundary.** There is no auto-promotion when the user stops the session, no system message in the agent transcript once a promotion happens, and no badge on the Code Review nav entry. An adhoc agent that finishes committing work and goes idle just sits there with its worktree; the user has to remember to come back. Pipeline agents don't have this failure mode because the task flips to `review` automatically and Code Review polls for updates.
+3. **The Stop confirm dialog actively discourages the right behavior for adhoc/assistant.** `handleStop` in `ConsoleHeader.tsx:121` warns *"Killing it will leave those changes on disk but will not commit or push them."* For a worktree-running scratchpad with uncommitted edits, that's exactly the outcome users complain about — work stranded on disk, no review entry. The current warning reflects the old scratchpad-only model.
 
-The fix is to make user-spawned agents (Adhoc + Assistant) behave like pipeline agents at the boundary that matters — work that produces commits ends up in Code Review, with the user notified, regardless of agent type.
+The fix is to make user-spawned agents (Adhoc + Assistant) behave like pipeline agents at the boundary that matters — work that produces commits ends up in Code Review, with the user notified, regardless of agent type, and with a visible trigger surface that users actually see.
 
 ## Scope
 
@@ -39,24 +40,38 @@ All three triggers flow through the existing `promoteAdhocToTask()` service in `
 
 **Trigger 1 — Session close (auto)**
 
-When the user clicks stop/close on the agent card, BDE checks the session's role. For `adhoc` and `assistant` sessions only:
+The existing `handleStop` confirm dialog (`ConsoleHeader.tsx:98-145`) is updated for agents where the promote predicate (`canPromote`, already defined at line 160) holds. The dialog copy for these agents replaces the current *"will leave those changes on disk but will not commit or push them"* warning with: *"Stopping this session will auto-commit any pending changes and promote the work to Code Review as task #T-N."* Two confirmation buttons: **Stop and promote** (default) and **Cancel**. A secondary link *"Stop without promoting"* preserves the old behavior for users who explicitly want the scratchpad path.
 
-1. If the agent is mid-turn, wait for the turn to finish (or abort to land).
-2. Inspect the worktree: commits beyond `origin/main` exist? If yes → promote directly.
-3. No commits, but dirty working tree (modified or untracked files under the worktree)? Run `git add -A` followed by `git commit -m "chore: capture uncommitted work on session close"`, then promote. Mirrors the pipeline agent auto-commit behavior in `completion.ts`.
-4. No commits and clean worktree? Scratchpad — do nothing; teardown proceeds as today.
+On confirmed **Stop and promote**, BDE:
 
-**Trigger 2 — Console header button**
+1. If the agent is mid-turn, waits for the turn to finish (or abort to land) before proceeding.
+2. Inspects the worktree: commits beyond `origin/main` exist? If yes → promotes directly.
+3. No commits, but dirty working tree (modified or untracked files under the worktree)? Runs `git add -A` followed by `git commit -m "chore: capture uncommitted work on session close"`, then promotes. Mirrors the pipeline agent auto-commit behavior in `completion.ts`.
+4. No commits and clean worktree? Scratchpad — no promotion; teardown proceeds as today.
 
-Fix the broken/missing "Promote to Code Review" button in `ConsoleHeader.tsx`. Button is visible only for `adhoc` and `assistant` sessions that have a worktree. Clicking it invokes `agents:promoteToReview` IPC with the current agent id. Same auto-commit-if-dirty semantics as the close path.
+On confirmed **Stop without promoting**, current behavior is preserved: session ends, worktree remains as today.
+
+**Trigger 2 — Console header button (discoverability fix)**
+
+The existing `canPromote` predicate (`(agent.status === 'done' || agent.status === 'running') && !!agent.worktreePath && !agent.sprintTaskId`) is preserved. This already correctly excludes pipeline agents (which carry `sprintTaskId`) and limits the button to worktree-having sessions in done/running state, so Adhoc and Assistant agents with worktrees get it and Reviewer / Copilot / Synthesizer do not (they have no `worktreePath`).
+
+The discoverability problem is solved by:
+
+- Replacing the icon-only button with an icon + label pair: `GitPullRequest` glyph + the text *"Promote to Code Review"*.
+- Giving it its own styling distinct from the neutral icon buttons (e.g., the existing accent color `var(--bde-accent)` is retained, but the button becomes primary-shaped rather than a 28px square icon).
+- Moving it to the left of the icon cluster — visually adjacent to the task name and model badge, not hidden in the action-icon row.
+
+Click path is unchanged in shape — `window.api.agents.promoteToReview(agent.id)` — but the IPC handler now passes `{autoCommitIfDirty: true}` into the service so the button honors the same auto-commit semantics as the close path.
 
 **Trigger 3 — Agent tool call**
 
-A new `promote_to_review` tool is registered for adhoc and assistant spawns only (not pipeline, reviewer, copilot, synthesizer). The user says *"send this to code review"* in chat; the agent's model recognizes the intent and calls the tool. The tool handler delegates to the promotion service. The tool result returns `{ok: true, taskId: "T-123"}` on success or a human-readable error string, which the agent then references in its next message.
+A new `promote_to_review` tool is registered for adhoc and assistant spawns only (not pipeline, reviewer, copilot, synthesizer). The user says *"send this to code review"* in chat; the agent's model recognizes the intent and calls the tool. The tool handler delegates to the promotion service with `autoCommitIfDirty: true`. The tool result returns `{ok: true, taskId: "T-123"}` on success or a human-readable error string, which the agent then references in its next message.
 
 ### Idempotency
 
-After the first successful promotion, the agent meta is marked with `promotedTaskId`. Subsequent triggers (close, button, tool call) check this field and return early with `{ok: true, taskId}` — no second task is created, no duplicate system messages are emitted. New commits produced after the first promotion automatically flow into the existing review entry because the Code Review view reads from the live branch / worktree, not the frozen diff snapshot captured at promotion time. The snapshot only matters after worktree teardown.
+After the first successful promotion, the agent meta is marked with `promotedTaskId`. Subsequent triggers (close, button, tool call) check this field and return early with `{ok: true, taskId}` — no second task is created, no duplicate system messages are emitted.
+
+New commits produced after the first promotion automatically flow into the existing review entry. This is not assumed; it is backed by the current read logic in `src/renderer/src/hooks/useReviewChanges.ts`: when `task.worktree_path` is set and exists on disk, the hook reads the live diff from the worktree and only falls back to `review_diff_snapshot` when the worktree is gone. Since the worktree is preserved across the adhoc session's lifetime, the Code Review view sees live commits without any snapshot refresh. The snapshot exists solely to cover post-teardown review, which is a different lifecycle event outside this spec.
 
 ### User-visible outcomes
 
@@ -64,7 +79,19 @@ Every successful promotion — regardless of trigger — produces three artifact
 
 1. **Transcript system line** — A non-agent event injected into the agent event stream and persisted to `agent_events`: *"✓ Promoted to Code Review → Task #T-123"*. Renders as a system row in the console, distinct from agent-generated content. Replays on history reload.
 2. **Toast** — Fires once in the renderer on receipt of a `review:queueChanged` broadcast.
-3. **Code Review nav badge** — Small count badge on the Code Review nav entry. Count = review-status tasks with `promoted_at > ui.lastReviewOpenedAt`. Clears to zero when the user opens Code Review. Also benefits pipeline completions; not adhoc-specific.
+3. **Code Review nav badge** — Small count badge on the Code Review nav entry. Count = review-status tasks with `promoted_to_review_at > ui.last_review_opened_at`. Clears to zero when the user opens Code Review. Also benefits pipeline completions; not adhoc-specific.
+
+### Schema changes
+
+Three new fields, summarized in one place so the implementation plan can enumerate migrations cleanly:
+
+| Field | Location | Purpose |
+|---|---|---|
+| `sprint_tasks.promoted_to_review_at` (TEXT, ISO8601, nullable) | New column via SQLite migration (next sequential `vNNN`) | Timestamps when a task transitioned into `review` status. Written by both `transitionToReview()` (pipeline path) and `createReviewTaskFromAdhoc()` (adhoc path). Used by the nav badge selector. |
+| `settings.ui.last_review_opened_at` (TEXT, ISO8601) | Existing `settings` table, new key | Written when the user opens the Code Review view. Read by the badge selector. No migration beyond a default insert. |
+| `agent_runs.promoted_task_id` (TEXT, nullable) | New column on `agent_runs` (or equivalent agent-meta table — verify at implementation; `AgentMeta` today is backed by `agent_runs` per `src/main/agent-history.ts`) | Idempotency marker. Set on successful promotion. Read by all three triggers to short-circuit duplicate promotions. |
+
+Migration tests follow the `vNNN.test.ts` pattern per CLAUDE.md (data-mutating migrations require a dedicated test).
 
 ### Error surfaces
 
@@ -103,20 +130,22 @@ Changes grouped by BDE process boundary.
 
 ### Preload / IPC
 
-- Existing `agents:promoteToReview` handler remains the single entry point. No new handler needed. (The close-path and tool-path both call the service directly in main, not via IPC.)
+- Existing `agents:promoteToReview` handler is extended to accept an optional payload `{autoCommitIfDirty?: boolean}`. Default `false` to preserve prior behavior; the button path passes `true`. The close-path and tool-path call the service directly in main (not via IPC) and also pass `true`. Signature change is additive and does not break existing callers.
 - New broadcast channel `review:queueChanged` — emitted after successful promotion; renderer listens to update the nav badge and fire a toast.
 
 ### Renderer
 
 - `src/renderer/src/components/agents/ConsoleHeader.tsx`
-  - Audit the render path. Expected behavior: the "Promote to Code Review" button is visible when `agent.role === 'adhoc' || agent.role === 'assistant'` AND `agent.worktreePath` is set. Currently missing or hidden — fix whatever invariant drifted.
-  - Button click calls `window.api.agents.promoteToReview(agentId)`; UI surface shows inflight state + toast on result.
-- Agent transcript renderer (`src/renderer/src/components/agents/` — verify file at implementation)
+  - Keep the existing `canPromote` predicate (no change needed — pipeline is already excluded via `!sprintTaskId`, reviewer/copilot/synthesizer have no `worktreePath`).
+  - Replace the icon-only button (lines 255-265) with an icon + label pair. Promote it visually to a primary-styled action distinct from the neutral icon cluster (Terminal / Stop / Copy Log). Move it out of the `console-header__actions` cluster to its own slot adjacent to the model badge.
+  - Update `handlePromote` to continue invoking `window.api.agents.promoteToReview(agent.id)`; the IPC wrapper will include `{autoCommitIfDirty: true}`.
+  - Update `handleStop` to branch on `canPromote`: when true, show the new dialog copy (*"Stop and promote"* default, *"Stop without promoting"* secondary); when false, keep current copy. On **Stop and promote** confirm, fire promotion before kill; on **Stop without promoting** confirm, fire kill without promotion. A shared helper keeps the paths consistent.
+- Agent transcript renderer (verify exact component at implementation)
   - Handle the new `agent:promoted` event kind; render as a distinct system row with a link to the promoted task.
 - Toast — emit on `review:queueChanged` broadcast.
-- Nav — add a badge to the Code Review view entry in `view-registry.ts`. Badge selector reads review-status tasks with `promoted_at > ui.lastReviewOpenedAt`. Clears on view open. View registry may need an optional `badgeSelector` field.
-- `src/renderer/src/stores/sprintTasks.ts` — add a derived selector for the unseen-review count.
-- Settings row `ui.lastReviewOpenedAt` — persisted on Code Review view open.
+- Nav — add a badge to the Code Review view entry in `view-registry.ts`. Badge selector reads review-status tasks with `promoted_to_review_at > ui.last_review_opened_at`. Clears on view open. View registry may need an optional `badgeSelector` field.
+- `src/renderer/src/stores/sprintTasks.ts` — add a derived selector `selectUnseenReviewCount(lastOpenedAt)` that returns the badge count.
+- Settings key `ui.last_review_opened_at` — written on Code Review view mount (debounced to avoid spam if the view remounts).
 
 ### Shared
 
@@ -171,9 +200,15 @@ Changes grouped by BDE process boundary.
 
 ## Rollout
 
-- Single PR. No feature flag. Behavior change is additive (new breadcrumbs + working button) and the existing manual-promote path is preserved.
+- Single PR. No feature flag. Behavior change is additive: the existing button works today (it's just hard to find) and the existing manual-promote path stays in place; what's new is discoverability + auto-promote-on-close + the tool.
 - Coverage thresholds unchanged; new code ships with its own tests.
-- No new npm dependencies expected. SDK custom-tool registration is confirmed against the `@anthropic-ai/claude-agent-sdk` version already in use during implementation.
+- No new npm dependencies expected.
+
+## Dependencies / risks
+
+- **SDK custom-tool support must be confirmed before the implementation plan lands**, not deferred to implementation. The plan author inspects the `@anthropic-ai/claude-agent-sdk` version in BDE's `package.json` and confirms that `query()` (or the call used by `adhoc-agent.ts`) accepts an `mcpServers` option with in-process servers. If not supported, **Trigger 3 (agent tool) is descoped to a follow-up** and this spec ships with Triggers 1 and 2 only. The user message-scanning fallback mentioned in earlier drafts is explicitly rejected as a substitute — it's a different UX surface and would not land under this spec's banner.
+- **No behavior change for pipeline agents** beyond `transitionToReview()` gaining a single `promoted_to_review_at` write. The pipeline completion flow, worktree teardown, and review transition are otherwise untouched.
+- **Discoverability button redesign** — moving the button out of the icon cluster is a visible UX change on an established surface. Screenshot / ASCII in the PR body per BDE's UX PR rule.
 
 ## Open questions (none blocking design)
 
