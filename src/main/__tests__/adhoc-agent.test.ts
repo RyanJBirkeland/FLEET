@@ -3,7 +3,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 // Mock dependencies before imports
 const mockQuery = vi.fn()
 vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
-  query: (...args: unknown[]) => mockQuery(...args)
+  query: (...args: unknown[]) => mockQuery(...args),
+  createSdkMcpServer: vi.fn(() => ({ name: 'bde', type: 'sdk' })),
+  tool: (name: string, description: string, inputSchema: unknown, handler: unknown) => ({
+    name,
+    description,
+    inputSchema,
+    handler
+  })
 }))
 vi.mock('../agent-history', () => ({
   importAgent: vi.fn(),

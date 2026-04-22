@@ -33,6 +33,8 @@ import { buildAgentPrompt } from './lib/prompt-composer'
 import { resolveAgentRuntime } from './agent-manager/backend-selector'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
+import { createPlannerMcpServer } from './agent-manager/planner-mcp-server'
+import { createEpicGroupService } from './services/epic-group-service'
 import type { IDashboardRepository } from './data/sprint-task-repository'
 import { getErrorMessage } from '../shared/errors'
 import { nowIso } from '../shared/time'
@@ -134,6 +136,16 @@ export async function spawnAdhocAgent(args: {
     repoName
   })
 
+  // In-process MCP server exposing BDE's task/epic CRUD to this session.
+  // Without it the agent has no first-class way to create tasks or epics
+  // and falls back to shelling out with sqlite3 against ~/.bde/bde.db —
+  // which bypasses validation, audit, dependency auto-blocking, and the
+  // renderer broadcast. See src/main/agent-manager/planner-mcp-server.ts.
+  const plannerServer = createPlannerMcpServer({
+    epicService: createEpicGroupService(),
+    logger: log
+  })
+
   const baseOptions = {
     model,
     cwd: worktreePath,
@@ -143,6 +155,7 @@ export async function spawnAdhocAgent(args: {
     // CLAUDE.md via 'project' would double-inject conventions and cost ~5-10KB
     // extra per turn. 'user' and 'local' kept for permission settings.
     settingSources: [],
+    mcpServers: { bde: plannerServer },
     // Hard cap on spend per interactive session. User-controlled agents can
     // rack up cost across many turns. This is a safety ceiling, not a target.
     maxBudgetUsd: 5.0

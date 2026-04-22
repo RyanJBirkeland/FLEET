@@ -8,6 +8,7 @@ import { selectUserMemory } from '../agent-system/memory'
 import { selectSkills } from '../agent-system/skills'
 import {
   CODING_AGENT_PREAMBLE,
+  PLANNER_TOOLS_INSTRUCTIONS,
   PLAYGROUND_INSTRUCTIONS,
   buildPersonalitySection,
   buildUpstreamContextSection,
@@ -53,6 +54,9 @@ export function buildAssistantPrompt(input: BuildPromptInput): string {
   if (branch) {
     prompt += buildBranchAppendix(branch)
   }
+
+  // Planner tools are wired into every adhoc/assistant session by adhoc-agent.ts
+  prompt += PLANNER_TOOLS_INSTRUCTIONS
 
   // Playground (default on for assistant/adhoc)
   const effectivePlayground = playgroundEnabled ?? true
