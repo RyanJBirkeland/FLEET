@@ -22,7 +22,7 @@ Single discriminated-return entry point for resolving Claude and GitHub credenti
 
 ## Key Dependencies
 
-- `../auth-guard.ts` — `checkAuthStatus` + `MacOSCredentialStore` (Claude expiry + CLI detection).
+- `../credential-store.ts` — `checkAuthStatus` + `MacOSCredentialStore` (Claude expiry + CLI detection).
 - `../env-utils.ts` — `getOAuthToken`, `refreshOAuthTokenFromKeychain` (Claude token file + Keychain refresh).
 - `../settings.ts` — reads `githubOptedOut` for the opt-out branch.
 - `gh` CLI (via `execFile`) — used by `DefaultGithubStore.isAuthenticated` when no `GH_TOKEN` is set.

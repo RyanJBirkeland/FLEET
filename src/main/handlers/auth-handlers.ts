@@ -1,5 +1,5 @@
 import { safeHandle } from '../ipc-utils'
-import { checkAuthStatus } from '../auth-guard'
+import { checkAuthStatus } from '../credential-store'
 import { execFileAsync } from '../lib/async-utils'
 
 export function registerAuthHandlers(): void {

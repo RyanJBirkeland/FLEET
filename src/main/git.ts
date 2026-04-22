@@ -1,3 +1,4 @@
+import { stat } from 'node:fs/promises'
 import { execFileAsync } from './lib/async-utils'
 
 import type { Result } from '../shared/types'
@@ -82,7 +83,6 @@ export async function detectGitRemote(cwd: string): Promise<{
 }> {
   try {
     // Confirm .git exists (file for worktrees, dir for regular repos)
-    const { stat } = await import('node:fs/promises')
     try {
       await stat(`${cwd}/.git`)
     } catch {

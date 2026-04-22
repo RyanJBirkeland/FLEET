@@ -14,7 +14,7 @@
  * See `docs/superpowers/specs/credential-service.md` for the full design.
  */
 import { getOAuthToken, refreshOAuthTokenFromKeychain } from '../env-utils'
-import { checkAuthStatus, MacOSCredentialStore, type CredentialStore } from '../auth-guard'
+import { checkAuthStatus, MacOSCredentialStore, type CredentialStore } from '../credential-store'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
 import { existsSync } from 'node:fs'

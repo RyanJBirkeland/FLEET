@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { IpcMainInvokeEvent } from 'electron'
 
-vi.mock('../../auth-guard', () => ({
+vi.mock('../../credential-store', () => ({
   checkAuthStatus: vi.fn()
 }))
 
@@ -14,7 +14,7 @@ vi.mock('../../ipc-utils', () => ({
 
 import { registerAuthHandlers } from '../auth-handlers'
 import { safeHandle } from '../../ipc-utils'
-import { checkAuthStatus } from '../../auth-guard'
+import { checkAuthStatus } from '../../credential-store'
 
 describe('Auth handlers', () => {
   beforeEach(() => {

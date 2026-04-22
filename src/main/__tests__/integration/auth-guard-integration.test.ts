@@ -16,8 +16,9 @@ vi.mock('../../env-utils', () => ({
   getOAuthToken: vi.fn().mockReturnValue(null)
 }))
 
-import { checkAuthStatus, ensureSubscriptionAuth } from '../../auth-guard'
-import type { CredentialStore } from '../../auth-guard'
+import { checkAuthStatus } from '../../credential-store'
+import type { CredentialStore } from '../../credential-store'
+import { ensureSubscriptionAuth } from '../../auth-guard'
 
 // --- Helpers ---
 

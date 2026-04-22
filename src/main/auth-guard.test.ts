@@ -19,8 +19,9 @@ vi.mock('./env-utils', () => ({
 
 import { execFile, spawnSync } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { checkAuthStatus, ensureSubscriptionAuth, MacOSCredentialStore } from './auth-guard'
-import type { CredentialStore } from './auth-guard'
+import { checkAuthStatus, MacOSCredentialStore } from './credential-store'
+import type { CredentialStore } from './credential-store'
+import { ensureSubscriptionAuth } from './auth-guard'
 
 // Helper: find the callback in execFile's variadic args.
 type ExecFileCallback = (err: Error | null, stdout: string, stderr: string) => void

@@ -20,7 +20,7 @@ const { mockCheckAuthStatus } = vi.hoisted(() => ({
   mockCheckAuthStatus: vi.fn()
 }))
 
-vi.mock('../../auth-guard', () => ({
+vi.mock('../../credential-store', () => ({
   checkAuthStatus: mockCheckAuthStatus
 }))
 

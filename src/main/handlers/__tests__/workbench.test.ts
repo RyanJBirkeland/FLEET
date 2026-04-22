@@ -39,7 +39,7 @@ vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
 }))
 
 // Mock dependencies
-vi.mock('../../auth-guard', () => ({
+vi.mock('../../credential-store', () => ({
   checkAuthStatus: vi.fn().mockResolvedValue({
     cliFound: true,
     tokenFound: true,
