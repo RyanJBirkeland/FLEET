@@ -69,9 +69,16 @@ A new `promote_to_review` tool is registered for adhoc and assistant spawns only
 
 ### Idempotency
 
-After the first successful promotion, the agent meta is marked with `promotedTaskId`. Subsequent triggers (close, button, tool call) check this field and return early with `{ok: true, taskId}` — no second task is created, no duplicate system messages are emitted.
+On successful promotion, the adhoc agent's meta row has its existing `sprintTaskId` field written with the newly created review task's id. No new column is introduced for idempotency — `sprintTaskId` already exists on `agent_runs` and is already consulted by the `canPromote` predicate (`!agent.sprintTaskId`). Writing it on promotion has two aligned effects:
 
-New commits produced after the first promotion automatically flow into the existing review entry. This is not assumed; it is backed by the current read logic in `src/renderer/src/hooks/useReviewChanges.ts`: when `task.worktree_path` is set and exists on disk, the hook reads the live diff from the worktree and only falls back to `review_diff_snapshot` when the worktree is gone. Since the worktree is preserved across the adhoc session's lifetime, the Code Review view sees live commits without any snapshot refresh. The snapshot exists solely to cover post-teardown review, which is a different lifecycle event outside this spec.
+1. The button disappears from `ConsoleHeader.tsx` (since `canPromote` becomes false), which is the correct state: there's no second task to create.
+2. Subsequent close / tool-call triggers read the same field, find it populated, and short-circuit with `{ok: true, taskId}` without creating duplicate tasks or emitting duplicate system messages.
+
+**Semantic note.** Today, pipeline agents acquire `sprintTaskId` at spawn (pre-bound to the task they're executing). Adhoc/assistant agents acquire it retroactively via promotion. Both meanings are "this agent is bound to that sprint task" — the timing differs but the field is authoritative in either case. No separate `promoted_task_id` is required.
+
+**Stale-meta race guard.** `promoteAdhocToTask()` re-reads `AgentMeta` via `getAgentMeta(agentId)` at the top of the function, before the idempotency check. This prevents a stale snapshot (e.g., a button-path caller invoking the service with in-memory meta from before the tool-path already promoted) from bypassing the guard.
+
+**Live diffs flow through without snapshot work.** New commits produced after the first promotion appear in Code Review automatically. This is backed by the current read logic in `src/renderer/src/hooks/useReviewChanges.ts`: when `task.worktree_path` is set and exists on disk, the hook reads the live diff from the worktree and only falls back to `review_diff_snapshot` when the worktree is gone. Since the worktree is preserved across the adhoc session's lifetime, Code Review sees live commits without any snapshot refresh. The snapshot exists solely for post-teardown review.
 
 ### User-visible outcomes
 
@@ -83,13 +90,14 @@ Every successful promotion — regardless of trigger — produces three artifact
 
 ### Schema changes
 
-Three new fields, summarized in one place so the implementation plan can enumerate migrations cleanly:
+Two new fields (no third). The idempotency marker reuses the existing `agent_runs.sprintTaskId` column — see §Idempotency.
 
 | Field | Location | Purpose |
 |---|---|---|
 | `sprint_tasks.promoted_to_review_at` (TEXT, ISO8601, nullable) | New column via SQLite migration (next sequential `vNNN`) | Timestamps when a task transitioned into `review` status. Written by both `transitionToReview()` (pipeline path) and `createReviewTaskFromAdhoc()` (adhoc path). Used by the nav badge selector. |
-| `settings.ui.last_review_opened_at` (TEXT, ISO8601) | Existing `settings` table, new key | Written when the user opens the Code Review view. Read by the badge selector. No migration beyond a default insert. |
-| `agent_runs.promoted_task_id` (TEXT, nullable) | New column on `agent_runs` (or equivalent agent-meta table — verify at implementation; `AgentMeta` today is backed by `agent_runs` per `src/main/agent-history.ts`) | Idempotency marker. Set on successful promotion. Read by all three triggers to short-circuit duplicate promotions. |
+| `settings.ui.last_review_opened_at` (TEXT, ISO8601) | Existing `settings` table, new key | Written on Code Review view mount (debounced so remounts don't churn). Read by the badge selector. No migration beyond a default insert. |
+
+Badge comparison is strict: `promoted_to_review_at > last_review_opened_at`. The write order on view open is (1) persist `last_review_opened_at = now()`, (2) trigger re-render, so any promotion arriving after the write naturally surfaces the next time the user leaves and re-enters the view.
 
 Migration tests follow the `vNNN.test.ts` pattern per CLAUDE.md (data-mutating migrations require a dedicated test).
 
@@ -114,32 +122,35 @@ Changes grouped by BDE process boundary.
 ### Main process
 
 - `src/main/services/adhoc-promotion-service.ts`
-  - Extend the `PromoteAdhocParams` interface with `autoCommitIfDirty?: boolean` (default `false` for backward compat with existing callers).
-  - When set and `hasCommitsBeyondMain()` returns false, run `git add -A` + `git commit -m "chore: capture uncommitted work on session close"` inside the worktree (using `execFileAsync` with `buildAgentEnv()`), then re-check for commits. If still none, return `{ok: false, error: ...}`.
-  - Idempotency: before doing anything, read `agent.promotedTaskId`. If set, return `{ok: true, taskId: agent.promotedTaskId}`.
-  - On successful promotion, call a new `markAgentPromoted(agentId, taskId)` in the history layer.
+  - Extend the `PromoteAdhocParams` / function signature with `autoCommitIfDirty?: boolean` (default `false` for backward compat with existing callers).
+  - At the top of the function, re-fetch `AgentMeta` via `getAgentMeta(agentId)`. If `meta.sprintTaskId` is set, return `{ok: true, taskId: meta.sprintTaskId}` (idempotency short-circuit, see §Idempotency).
+  - When `autoCommitIfDirty` is true and `hasCommitsBeyondMain()` returns false, run `git add -A` + `git commit -m "chore: capture uncommitted work on session close"` inside the worktree (using `execFileAsync` with `buildAgentEnv()`), then re-check for commits. If still none, return `{ok: false, error: ...}`.
+  - On successful promotion, write the new task's id into the adhoc agent's `sprintTaskId` via the history layer.
 - `src/main/agent-history.ts`
-  - Add `promotedTaskId?: string` to the `AgentMeta` shape.
-  - Add `markAgentPromoted(agentId, taskId)` helper that persists the field.
+  - Add `setAgentSprintTaskId(agentId, taskId)` helper that persists into the existing `sprintTaskId` column on `agent_runs`. No schema change.
 - `src/main/adhoc-agent.ts`
-  - In the close / teardown path, before worktree cleanup is considered: for `role: 'adhoc' | 'assistant'` sessions, call `promoteAdhocToTask(agentId, meta, {autoCommitIfDirty: true})`. Log and emit a warning toast on non-idempotent errors; proceed with teardown regardless.
+  - Expose a `stopAndPromote(agentId)` orchestrator that: (a) calls `promoteAdhocToTask(agentId, {autoCommitIfDirty: true})`, (b) emits the `agent:promoted` event and `review:queueChanged` broadcast, (c) kills the SDK session regardless of promotion outcome. If promotion fails, emit a warning toast and still tear down; worktree preservation on failure is the service's responsibility.
+  - Separately expose `stopWithoutPromoting(agentId)` that skips promotion and only tears down. (Wired for the secondary dialog action.)
 - `src/main/agent-manager/sdk-adapter.ts` (or the adhoc spawn path — verify at implementation)
-  - Register an in-process MCP server exposing a single `promote_to_review` tool for adhoc and assistant spawns only. Tool handler delegates to `promoteAdhocToTask()`. If the SDK version in BDE does not support in-process MCP servers for adhoc, fall back to scanning each user message for a canonical intent phrase (`/promote-to-review` or a natural-language marker) before forwarding to the SDK — less elegant but equivalent behavior.
+  - Register an in-process MCP server exposing a single `promote_to_review` tool for adhoc and assistant spawns only. Tool handler calls `promoteAdhocToTask(agentId, {autoCommitIfDirty: true})` directly (same path as the main-process orchestrator; the tool runs inside the main process since it's in-process MCP). If SDK support is unavailable at the version in `package.json`, Trigger 3 is descoped per §Dependencies; no fallback is implemented.
 - `src/main/agent-event-mapper.ts`
   - Add a new `agent:promoted` event variant (payload: `{ taskId: string; trigger: 'close' | 'button' | 'tool' }`). Persist via the existing `emitAgentEvent()` path so it hits both the renderer broadcast and `agent_events`.
 
 ### Preload / IPC
 
-- Existing `agents:promoteToReview` handler is extended to accept an optional payload `{autoCommitIfDirty?: boolean}`. Default `false` to preserve prior behavior; the button path passes `true`. The close-path and tool-path call the service directly in main (not via IPC) and also pass `true`. Signature change is additive and does not break existing callers.
+- `agents:promoteToReview` — existing handler, extended to accept an optional payload `{autoCommitIfDirty?: boolean}`. Default `false` to preserve prior behavior. The button path passes `true`. Signature change is additive.
+- `agents:stopAndPromote` — **new** channel. Renderer calls this from the updated stop confirm dialog when the user chooses *"Stop and promote"*. Main-side handler delegates to `stopAndPromote(agentId)` in `adhoc-agent.ts`, which orchestrates promote-then-kill atomically. Keeps the renderer from having to sequence two IPCs and handle partial-failure UI.
+- `agents:kill` — existing handler, unchanged. Used by the secondary *"Stop without promoting"* action and by all non-promote-eligible stops (pipeline agents, assistant-with-no-worktree, etc.).
+- Tool-path (Trigger 3) runs in-process via the SDK's MCP integration — no IPC involvement.
 - New broadcast channel `review:queueChanged` — emitted after successful promotion; renderer listens to update the nav badge and fire a toast.
 
 ### Renderer
 
 - `src/renderer/src/components/agents/ConsoleHeader.tsx`
-  - Keep the existing `canPromote` predicate (no change needed — pipeline is already excluded via `!sprintTaskId`, reviewer/copilot/synthesizer have no `worktreePath`).
+  - Keep the existing `canPromote` predicate (no change needed — pipeline is already excluded via `!sprintTaskId`, reviewer/copilot/synthesizer have no `worktreePath`). The predicate's `!sprintTaskId` clause will naturally hide the button once promotion writes the field (desired; see §Idempotency).
   - Replace the icon-only button (lines 255-265) with an icon + label pair. Promote it visually to a primary-styled action distinct from the neutral icon cluster (Terminal / Stop / Copy Log). Move it out of the `console-header__actions` cluster to its own slot adjacent to the model badge.
-  - Update `handlePromote` to continue invoking `window.api.agents.promoteToReview(agent.id)`; the IPC wrapper will include `{autoCommitIfDirty: true}`.
-  - Update `handleStop` to branch on `canPromote`: when true, show the new dialog copy (*"Stop and promote"* default, *"Stop without promoting"* secondary); when false, keep current copy. On **Stop and promote** confirm, fire promotion before kill; on **Stop without promoting** confirm, fire kill without promotion. A shared helper keeps the paths consistent.
+  - Update `handlePromote` to continue invoking `window.api.agents.promoteToReview(agent.id, {autoCommitIfDirty: true})`.
+  - Update `handleStop` to branch on `canPromote`. When `canPromote` is true, show a custom dialog (the existing `ConfirmModal` component at `src/renderer/src/components/ui/` takes `title`/`message`/`confirmLabel`/`variant` and does not natively support a secondary action link, so a one-off dialog component or a `ConfirmModal` extension is needed — call it out in the plan). Primary action: *"Stop and promote"* → `window.api.agents.stopAndPromote(agent.id)`. Secondary action: *"Stop without promoting"* → `window.api.agents.kill(agent.id)`. When `canPromote` is false, keep the current single-button dialog and existing kill path.
 - Agent transcript renderer (verify exact component at implementation)
   - Handle the new `agent:promoted` event kind; render as a distinct system row with a link to the promoted task.
 - Toast — emit on `review:queueChanged` broadcast.
@@ -150,9 +161,10 @@ Changes grouped by BDE process boundary.
 ### Shared
 
 - `src/shared/types/agent-types.ts`
-  - Add `promotedTaskId?: string` to the agent meta type.
-  - Add the `agent:promoted` event discriminant to the event union.
-- `src/shared/ipc-channels/` — declare the `review:queueChanged` channel.
+  - Add the `agent:promoted` event discriminant to the event union. No new agent-meta field needed — reusing existing `sprintTaskId`.
+- `src/shared/ipc-channels/`
+  - Declare `agents:stopAndPromote` channel with `{ agentId: string }` payload and `{ ok: boolean; taskId?: string; error?: string }` return.
+  - Declare `review:queueChanged` broadcast channel.
 
 ## Testing
 
