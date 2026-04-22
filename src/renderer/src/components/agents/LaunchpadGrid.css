@@ -23,6 +23,10 @@
   border-bottom: 1px solid var(--bde-accent-border);
 }
 
+.launchpad__header .launchpad__repo-selector {
+  margin-left: auto;
+}
+
 .launchpad__header-dot {
   width: 8px;
   height: 8px;
@@ -221,26 +225,36 @@
 .launchpad__repo-chip {
   display: flex;
   align-items: center;
-  gap: 5px;
-  color: var(--bde-text-dim);
+  gap: 6px;
+  color: var(--bde-accent);
   font-size: var(--bde-size-xs);
-  padding: 6px 10px;
-  border: 1px solid var(--bde-border);
+  font-weight: 600;
+  padding: 6px 12px;
+  border: 1px solid var(--bde-accent-border);
   border-radius: var(--bde-radius-lg);
   cursor: pointer;
   white-space: nowrap;
-  background: none;
-  transition: border-color 150ms ease;
+  background: var(--bde-accent-surface);
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease;
 }
 
 .launchpad__repo-chip:hover {
-  border-color: var(--bde-surface);
+  background: var(--bde-accent);
+  border-color: var(--bde-accent);
+  color: var(--bde-bg);
+}
+
+.launchpad__repo-chip:hover .launchpad__repo-dot {
+  background: var(--bde-bg);
+  opacity: 1;
 }
 
 .launchpad__repo-chip:focus-visible {
-  background: var(--bde-surface);
-  color: var(--bde-text);
-  outline: none;
+  outline: 2px solid var(--bde-accent);
+  outline-offset: 2px;
 }
 
 .launchpad__repo-dot {
@@ -248,7 +262,6 @@
   height: 6px;
   border-radius: 50%;
   background: var(--bde-accent);
-  opacity: 0.5;
 }
 
 .launchpad__repo-dropdown-backdrop {
@@ -310,44 +323,6 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-/* ── Model Pills ── */
-.launchpad__model-pills {
-  display: flex;
-  gap: 3px;
-}
-
-.launchpad__model-pill {
-  padding: var(--bde-space-1) 10px;
-  border-radius: var(--bde-radius-xl);
-  font-size: var(--bde-size-2xs);
-  font-weight: 600;
-  cursor: pointer;
-  transition: all var(--bde-transition-base) ease;
-  border: 1px solid var(--bde-border);
-  color: var(--bde-text-dim);
-  background: var(--bde-border);
-}
-
-.launchpad__model-pill:hover {
-  border-color: var(--bde-surface);
-  color: var(--bde-text-muted);
-}
-
-.launchpad__model-pill:focus-visible {
-  background: var(--bde-surface);
-  color: var(--bde-text);
-  outline: none;
-}
-
-/* ── Defaults Row ── */
-.launchpad__defaults-row {
-  display: flex;
-  align-items: center;
-  gap: var(--bde-space-2);
-  padding: var(--bde-space-2) var(--bde-space-4);
-  opacity: 0.7;
 }
 
 /* ── Reduced Motion ── */
