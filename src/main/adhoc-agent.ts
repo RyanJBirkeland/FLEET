@@ -23,7 +23,7 @@
 import { randomUUID } from 'node:crypto'
 import { basename } from 'node:path'
 import { importAgent, updateAgentMeta, getAgentMeta } from './agent-history'
-import { ADHOC_WORKTREE_BASE } from './paths'
+import { ADHOC_WORKTREE_BASE, getRepoPaths } from './paths'
 import { updateAgentRunCost } from './data/agent-queries'
 import { execFileAsync } from './lib/async-utils'
 import { buildAgentEnvWithAuth, getClaudeCliPath, refreshOAuthTokenFromKeychain } from './env-utils'
@@ -34,6 +34,7 @@ import { resolveAgentRuntime } from './agent-manager/backend-selector'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createPlannerMcpServer } from './agent-manager/planner-mcp-server'
+import { createWorktreeIsolationHook } from './agent-manager/worktree-isolation-hook'
 import { createEpicGroupService } from './services/epic-group-service'
 import type { IDashboardRepository } from './data/sprint-task-repository'
 import { getErrorMessage } from '../shared/errors'
@@ -156,6 +157,17 @@ export async function spawnAdhocAgent(args: {
     // extra per turn. 'user' and 'local' kept for permission settings.
     settingSources: [],
     mcpServers: { bde: plannerServer },
+    // Without a canUseTool hook the SDK defaults to prompting the user for
+    // every tool call — and adhoc agents have no interactive permission UI,
+    // so calls to the in-process BDE MCP server (mcp__bde__tasks.create etc.)
+    // stay permanently denied with "you haven't granted it yet". Reusing the
+    // pipeline's worktree-isolation hook lets all reads and MCP tools through
+    // while still refusing writes that escape the adhoc worktree.
+    canUseTool: createWorktreeIsolationHook({
+      worktreePath,
+      mainRepoPaths: Object.values(getRepoPaths()),
+      logger: log
+    }),
     // Hard cap on spend per interactive session. User-controlled agents can
     // rack up cost across many turns. This is a safety ceiling, not a target.
     maxBudgetUsd: 5.0

@@ -26,6 +26,14 @@ vi.mock('../data/agent-queries', () => ({
 vi.mock('../db', () => ({
   getDb: vi.fn(() => ({}))
 }))
+// Mock `paths` so the worktree-isolation hook doesn't hit the settings DB
+// while building the blocked-prefix list. Tests own the repo path value so
+// the isolation hook sees a deterministic main-repo set to refuse writes to.
+vi.mock('../paths', () => ({
+  ADHOC_WORKTREE_BASE: '/tmp/bde-adhoc',
+  getRepoPaths: vi.fn(() => ({ bde: '/tmp/fake-main-repo' })),
+  getConfiguredRepos: vi.fn(() => [])
+}))
 vi.mock('../broadcast', () => ({
   broadcast: vi.fn(),
   broadcastCoalesced: vi.fn()
@@ -528,5 +536,30 @@ describe('spawnAdhocAgent — prompt composer integration', () => {
         })
       })
     )
+  })
+
+  it('provides a canUseTool hook so in-process MCP tools can run', async () => {
+    // The in-process BDE MCP server (mcp__bde__tasks.create etc.) has no
+    // interactive permission-granting UI — the adhoc agent runs in the main
+    // process with only a renderer broadcast. Without a canUseTool hook the
+    // SDK defaults to 'prompt' and every MCP tool call is permanently denied
+    // with "you haven't granted it yet", making the planner tools unreachable.
+    // Pipeline agents solve the same problem with a worktree isolation hook;
+    // adhoc reuses that hook so writes stay scoped to the adhoc worktree.
+    const handle = createMockQueryHandle([])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'test', repoPath: '/tmp/r' })
+
+    const call = mockQuery.mock.calls[0][0]
+    expect(typeof call.options.canUseTool).toBe('function')
+
+    // The hook must allow MCP tool calls — they're validated server-side
+    // by sprint-service / EpicGroupService, so the SDK should not block them.
+    const mcpDecision = await call.options.canUseTool('mcp__bde__tasks.create', {
+      title: 'x',
+      repo: 'bde'
+    })
+    expect(mcpDecision).toEqual(expect.objectContaining({ behavior: 'allow' }))
   })
 })
