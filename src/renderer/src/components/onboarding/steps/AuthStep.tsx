@@ -21,6 +21,8 @@ const AUTH_CHECK_TIMEOUT_MS = 10_000
 const CLAUDE_INSTALL_DOCS_URL = 'https://docs.claude.com/en/docs/claude-code'
 const CLAUDE_INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | bash'
 const CLAUDE_LOGIN_COMMAND = 'claude login'
+const CLAUDE_AUTH_STATUS_COMMAND = 'claude auth status'
+const TROUBLESHOOTING_DOCS_URL = 'https://docs.claude.com/en/docs/troubleshooting'
 
 function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -153,8 +155,77 @@ export function AuthStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
       {timedOut && (
         <div className="onboarding-step__help" role="alert">
           <p>
-            Authentication check timed out. The Claude CLI may be slow to respond or blocked by a
-            firewall. Resolve the issue, then click &quot;Check Again&quot; to continue.
+            <strong>Authentication check timed out.</strong> The Claude CLI may be slow to respond
+            or blocked by a firewall.
+          </p>
+          <p style={{ marginTop: 'var(--bde-space-2)' }}>Try these diagnostic steps:</p>
+          <ol style={{ marginTop: 'var(--bde-space-1)', paddingLeft: 'var(--bde-space-4)' }}>
+            <li style={{ marginBottom: 'var(--bde-space-2)' }}>
+              Run this command in Terminal to check CLI status:
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--bde-space-2)',
+                  marginTop: 'var(--bde-space-1)'
+                }}
+              >
+                <code
+                  style={{
+                    padding: '4px 10px',
+                    background: 'var(--bde-surface, rgba(0,0,0,0.08))',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    fontSize: 'var(--bde-size-sm)'
+                  }}
+                >
+                  {CLAUDE_AUTH_STATUS_COMMAND}
+                </code>
+                <Button
+                  variant="ghost"
+                  onClick={() => copyToClipboard(CLAUDE_AUTH_STATUS_COMMAND)}
+                  aria-label="Copy auth status command"
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
+            </li>
+            <li>
+              If the CLI itself hangs, quit BDE and relaunch it.
+              <div
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 'var(--bde-space-2)',
+                  marginTop: 'var(--bde-space-1)'
+                }}
+              >
+                <code
+                  style={{
+                    padding: '4px 10px',
+                    background: 'var(--bde-surface, rgba(0,0,0,0.08))',
+                    borderRadius: '4px',
+                    fontFamily: 'monospace',
+                    fontSize: 'var(--bde-size-sm)'
+                  }}
+                >
+                  ⌘Q then relaunch
+                </code>
+                <Button
+                  variant="ghost"
+                  onClick={() => copyToClipboard('⌘Q then relaunch')}
+                  aria-label="Copy quit and relaunch instruction"
+                >
+                  <Copy size={14} />
+                </Button>
+              </div>
+            </li>
+          </ol>
+          <p style={{ marginTop: 'var(--bde-space-2)' }}>
+            <a href={TROUBLESHOOTING_DOCS_URL} target="_blank" rel="noreferrer">
+              View full troubleshooting guide{' '}
+              <ExternalLink size={12} style={{ verticalAlign: 'middle' }} />
+            </a>
           </p>
         </div>
       )}
