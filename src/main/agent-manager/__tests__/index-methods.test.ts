@@ -1014,13 +1014,13 @@ describe('AgentManagerImpl — class internals', () => {
       const repo = makeMockRepo()
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      expect(manager._consecutiveSpawnFailures).toBe(0)
+      expect(manager._circuitBreaker.failureCount).toBe(0)
 
       manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
       await Promise.allSettled(Array.from(manager._agentPromises))
 
       // Circuit breaker must record the failure even though onSpawnFailure was never called
-      expect(manager._consecutiveSpawnFailures).toBe(1)
+      expect(manager._circuitBreaker.failureCount).toBe(1)
     })
 
     it('accumulates circuit breaker failures across multiple unexpected spawn crashes', async () => {
@@ -1035,7 +1035,7 @@ describe('AgentManagerImpl — class internals', () => {
       await Promise.allSettled(Array.from(manager._agentPromises))
 
       // Both failures should be counted by the circuit breaker
-      expect(manager._consecutiveSpawnFailures).toBe(2)
+      expect(manager._circuitBreaker.failureCount).toBe(2)
     })
   })
 

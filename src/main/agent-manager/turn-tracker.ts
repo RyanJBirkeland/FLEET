@@ -1,5 +1,19 @@
 import { getDb } from '../db'
-import { insertAgentRunTurn } from '../data/agent-queries'
+import { insertAgentRunTurn, type TurnRecord } from '../data/agent-queries'
+
+/**
+ * Writes one `agent_run_turns` row. Injecting this instead of a raw `Database`
+ * handle lets tests verify the payload without mocking better-sqlite3.
+ */
+export type InsertTurnFn = (record: TurnRecord) => void
+
+export interface TurnTrackerDeps {
+  insertTurn: InsertTurnFn
+}
+
+const defaultTurnTrackerDeps: TurnTrackerDeps = {
+  insertTurn: (record) => insertAgentRunTurn(getDb(), record)
+}
 
 export class TurnTracker {
   private tokensIn = 0
@@ -8,11 +22,14 @@ export class TurnTracker {
   private cacheTokensRead = 0
   private turnCount = 0
   private currentTurnToolCalls = 0
+  private readonly insertTurn: InsertTurnFn
 
   constructor(
     private runId: string,
-    private db?: import('better-sqlite3').Database
-  ) {}
+    deps: TurnTrackerDeps = defaultTurnTrackerDeps
+  ) {
+    this.insertTurn = deps.insertTurn
+  }
 
   processMessage(msg: unknown): void {
     if (typeof msg !== 'object' || msg === null) return
@@ -47,7 +64,7 @@ export class TurnTracker {
 
       this.turnCount++
       try {
-        insertAgentRunTurn(this.db ?? getDb(), {
+        this.insertTurn({
           runId: this.runId,
           turn: this.turnCount,
           tokensIn: this.tokensIn,

@@ -11,7 +11,12 @@ vi.mock('electron', () => ({
   ipcMain: { handle: vi.fn(), on: vi.fn() }
 }))
 
-import { TurnTracker } from '../agent-manager/turn-tracker'
+import { TurnTracker, type TurnTrackerDeps } from '../agent-manager/turn-tracker'
+import { insertAgentRunTurn } from '../data/agent-queries'
+
+function makeTrackerDeps(db: Database.Database): TurnTrackerDeps {
+  return { insertTurn: (row) => insertAgentRunTurn(db, row) }
+}
 
 function makeDb(): Database.Database {
   const db = new Database(':memory:')
@@ -45,12 +50,12 @@ describe('TurnTracker', () => {
   })
 
   it('starts with zero totals', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     expect(tracker.totals()).toMatchObject({ tokensIn: 0, tokensOut: 0 })
   })
 
   it('accumulates tokens from msg.message.usage (real SDK format)', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
@@ -63,14 +68,14 @@ describe('TurnTracker', () => {
   })
 
   it('falls back to msg.usage when msg.message.usage absent', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({ type: 'assistant', usage: { input_tokens: 100, output_tokens: 50 } })
     tracker.processMessage({ type: 'assistant', usage: { input_tokens: 200, output_tokens: 80 } })
     expect(tracker.totals()).toMatchObject({ tokensIn: 300, tokensOut: 130 })
   })
 
   it('accumulates cache tokens from msg.message.usage', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({
       type: 'assistant',
       message: {
@@ -107,7 +112,7 @@ describe('TurnTracker', () => {
   })
 
   it('stores zero cache tokens when cache fields absent from usage', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
@@ -122,14 +127,14 @@ describe('TurnTracker', () => {
   })
 
   it('ignores non-assistant messages (result/system carry no useful token data)', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({ type: 'result', tokens_in: 500, tokens_out: 200 })
     tracker.processMessage({ type: 'system', subtype: 'init' })
     expect(tracker.totals()).toMatchObject({ tokensIn: 0, tokensOut: 0 })
   })
 
   it('ignores top-level tokens_in/tokens_out even on assistant messages', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({
       type: 'assistant',
       message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] },
@@ -141,7 +146,7 @@ describe('TurnTracker', () => {
   })
 
   it('writes one turn row per assistant message with cumulative totals', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
 
     tracker.processMessage({
       type: 'assistant',
@@ -165,7 +170,7 @@ describe('TurnTracker', () => {
   })
 
   it('resets tool_calls per turn but keeps cumulative tokens', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({
       type: 'assistant',
       message: {
@@ -191,7 +196,7 @@ describe('TurnTracker', () => {
   })
 
   it('returns zero totals and writes no rows for a zero-turn run', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     tracker.processMessage({ type: 'system', subtype: 'init' })
     tracker.processMessage({ type: 'result', tokens_in: 50, tokens_out: 10 })
 
@@ -201,7 +206,7 @@ describe('TurnTracker', () => {
   })
 
   it('ignores non-object and null messages without throwing', () => {
-    const tracker = new TurnTracker('run-1', db)
+    const tracker = new TurnTracker('run-1', makeTrackerDeps(db))
     expect(() => {
       tracker.processMessage(null)
       tracker.processMessage(undefined)

@@ -120,7 +120,7 @@ export class AgentManagerImpl implements AgentManager {
   _depIndexDirty = false
 
   // Circuit breaker — pauses drain loop after consecutive spawn failures.
-  private readonly _circuitBreaker: CircuitBreaker
+  readonly _circuitBreaker: CircuitBreaker
 
   // Counts agents that have been fired via _spawnAgent but have not yet called
   // initializeAgentTracking (i.e. not yet in _activeAgents). Used by the drain
@@ -181,38 +181,6 @@ export class AgentManagerImpl implements AgentManager {
         this._circuitBreaker.recordFailure()
       }
     }
-  }
-
-  /**
-   * Backward compatibility accessors for tests that check circuit breaker state.
-   */
-  get _consecutiveSpawnFailures(): number {
-    return this._circuitBreaker.failureCount
-  }
-
-  get _circuitOpenUntil(): number {
-    return this._circuitBreaker.openUntilTimestamp
-  }
-
-  /**
-   * Backward compatibility — delegates to CircuitBreaker.recordSuccess().
-   */
-  _recordSpawnSuccess(): void {
-    this._circuitBreaker.recordSuccess()
-  }
-
-  /**
-   * Backward compatibility — delegates to CircuitBreaker.recordFailure().
-   */
-  _recordSpawnFailure(): void {
-    this._circuitBreaker.recordFailure()
-  }
-
-  /**
-   * Backward compatibility — delegates to CircuitBreaker.isOpen().
-   */
-  _isCircuitOpen(now?: number): boolean {
-    return this._circuitBreaker.isOpen(now)
   }
 
   // ---- Helpers ----
@@ -341,17 +309,6 @@ export class AgentManagerImpl implements AgentManager {
       activeAgents: this._activeAgents,
       spawnAgent: this._spawnAgent.bind(this)
     })
-  }
-
-  // ---- static helpers ----
-
-  /**
-   * Backward compat delegate — tests that call `AgentManagerImpl._depsFingerprint`
-   * directly continue to work. New code should import `computeDepsFingerprint`
-   * from `dependency-refresher.ts` directly.
-   */
-  static _depsFingerprint(deps: TaskDependency[] | null): string {
-    return computeDepsFingerprint(deps)
   }
 
   // ---- Drain loop delegates ----

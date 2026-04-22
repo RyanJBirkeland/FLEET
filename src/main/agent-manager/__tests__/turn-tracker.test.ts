@@ -1,23 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { TurnTracker } from '../turn-tracker'
-import * as agentQueries from '../../data/agent-queries'
-
-vi.mock('../../db', () => ({
-  getDb: vi.fn(() => mockDb)
-}))
-
-vi.mock('../../data/agent-queries', () => ({
-  insertAgentRunTurn: vi.fn()
-}))
-
-const mockDb = {} as import('better-sqlite3').Database
+import { TurnTracker, type InsertTurnFn } from '../turn-tracker'
 
 describe('turn-tracker', () => {
   let tracker: TurnTracker
+  let insertTurnSpy: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
-    vi.mocked(agentQueries.insertAgentRunTurn).mockClear()
-    tracker = new TurnTracker('run-123', mockDb)
+    insertTurnSpy = vi.fn()
+    tracker = new TurnTracker('run-123', { insertTurn: insertTurnSpy as InsertTurnFn })
   })
 
   describe('processMessage', () => {
@@ -105,7 +95,7 @@ describe('turn-tracker', () => {
         }
       })
 
-      expect(agentQueries.insertAgentRunTurn).toHaveBeenCalledWith(mockDb, {
+      expect(insertTurnSpy).toHaveBeenCalledWith({
         runId: 'run-123',
         turn: 1,
         tokensIn: 100,
@@ -136,14 +126,12 @@ describe('turn-tracker', () => {
         }
       })
 
-      expect(agentQueries.insertAgentRunTurn).toHaveBeenNthCalledWith(
+      expect(insertTurnSpy).toHaveBeenNthCalledWith(
         1,
-        mockDb,
         expect.objectContaining({ toolCalls: 1 })
       )
-      expect(agentQueries.insertAgentRunTurn).toHaveBeenNthCalledWith(
+      expect(insertTurnSpy).toHaveBeenNthCalledWith(
         2,
-        mockDb,
         expect.objectContaining({ toolCalls: 2 })
       )
     })
@@ -160,7 +148,7 @@ describe('turn-tracker', () => {
       expect(totals.turnCount).toBe(1)
     })
 
-    it('should call insertAgentRunTurn on assistant messages', () => {
+    it('should call insertTurn on assistant messages', () => {
       tracker.processMessage({
         type: 'assistant',
         message: {
@@ -169,7 +157,7 @@ describe('turn-tracker', () => {
         }
       })
 
-      expect(agentQueries.insertAgentRunTurn).toHaveBeenCalledWith(mockDb, {
+      expect(insertTurnSpy).toHaveBeenCalledWith({
         runId: 'run-123',
         turn: 1,
         tokensIn: 100,
@@ -180,9 +168,9 @@ describe('turn-tracker', () => {
       })
     })
 
-    it('should log warning but not throw when insertAgentRunTurn fails', () => {
+    it('should log warning but not throw when insertTurn fails', () => {
       const consoleWarnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {})
-      vi.mocked(agentQueries.insertAgentRunTurn).mockImplementation(() => {
+      insertTurnSpy.mockImplementation(() => {
         throw new Error('DB error')
       })
 

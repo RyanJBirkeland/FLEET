@@ -71,18 +71,18 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
   it('does not open the breaker before reaching the threshold', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
-    expect(mgr._isCircuitOpen()).toBe(false)
+    expect(mgr._circuitBreaker.isOpen()).toBe(false)
     expect(broadcast).not.toHaveBeenCalled()
   })
 
   it('opens the breaker exactly at the threshold and emits an event', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
-    expect(mgr._isCircuitOpen()).toBe(true)
+    expect(mgr._circuitBreaker.isOpen()).toBe(true)
     expect(broadcast).toHaveBeenCalledWith(
       'agent-manager:circuit-breaker-open',
       expect.objectContaining({
@@ -94,29 +94,29 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
   it('a successful spawn resets the failure counter', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
-    mgr._recordSpawnSuccess()
-    expect(mgr._consecutiveSpawnFailures).toBe(0)
+    mgr._circuitBreaker.recordSuccess()
+    expect(mgr._circuitBreaker.failureCount).toBe(0)
 
     // Now we can fail threshold-1 more times without opening
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
-    expect(mgr._isCircuitOpen()).toBe(false)
+    expect(mgr._circuitBreaker.isOpen()).toBe(false)
   })
 
   it('auto-resets after the pause window elapses', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
-    expect(mgr._isCircuitOpen()).toBe(true)
+    expect(mgr._circuitBreaker.isOpen()).toBe(true)
 
     // Pretend pause window has fully elapsed
-    const future = mgr._circuitOpenUntil + SPAWN_CIRCUIT_PAUSE_MS + 1
-    expect(mgr._isCircuitOpen(future)).toBe(false)
-    expect(mgr._consecutiveSpawnFailures).toBe(0)
+    const future = mgr._circuitBreaker.openUntilTimestamp + SPAWN_CIRCUIT_PAUSE_MS + 1
+    expect(mgr._circuitBreaker.isOpen(future)).toBe(false)
+    expect(mgr._circuitBreaker.failureCount).toBe(0)
   })
 
   it('drain loop is skipped while breaker is open', async () => {
@@ -124,7 +124,7 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
     const mgr = new AgentManagerImpl(baseConfig, repo, makeLogger())
     // Trip the breaker
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
 
     await mgr._drainLoop()
@@ -136,13 +136,13 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
   it('only opens once per trip — repeated failures during pause do not re-broadcast', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._recordSpawnFailure()
+      mgr._circuitBreaker.recordFailure()
     }
     expect(broadcast).toHaveBeenCalledTimes(1)
 
     // Additional failures while open should not re-emit
-    mgr._recordSpawnFailure()
-    mgr._recordSpawnFailure()
+    mgr._circuitBreaker.recordFailure()
+    mgr._circuitBreaker.recordFailure()
     expect(broadcast).toHaveBeenCalledTimes(1)
   })
 })
