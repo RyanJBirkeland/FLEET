@@ -17,7 +17,8 @@ vi.mock('../../lib/async-utils', () => ({
   execFileAsync: vi.fn()
 }))
 vi.mock('../../agent-history', () => ({
-  getAgentMeta: vi.fn()
+  getAgentMeta: vi.fn(),
+  setAgentSprintTaskId: vi.fn()
 }))
 vi.mock('../sprint-service', () => ({
   createReviewTaskFromAdhoc: vi.fn()
@@ -25,7 +26,7 @@ vi.mock('../sprint-service', () => ({
 
 import { existsSync } from 'node:fs'
 import { execFileAsync } from '../../lib/async-utils'
-import { getAgentMeta } from '../../agent-history'
+import { getAgentMeta, setAgentSprintTaskId } from '../../agent-history'
 import { createReviewTaskFromAdhoc } from '../sprint-service'
 import { promoteAdhocToTask } from '../adhoc-promotion-service'
 import type { AgentMeta } from '../../../shared/types'
@@ -34,6 +35,7 @@ const mockExistsSync = vi.mocked(existsSync)
 const mockExecFileAsync = vi.mocked(execFileAsync)
 const mockGetAgentMeta = vi.mocked(getAgentMeta)
 const mockCreateReviewTask = vi.mocked(createReviewTaskFromAdhoc)
+const mockSetAgentSprintTaskId = vi.mocked(setAgentSprintTaskId)
 
 function makeAgent(overrides: Partial<AgentMeta> = {}): AgentMeta {
   return {
@@ -145,6 +147,77 @@ describe('promoteAdhocToTask', () => {
       const result = await promoteAdhocToTask('agent-1')
 
       expect(result).toEqual({ ok: false, error: 'Failed to create review task — see logs' })
+    })
+  })
+
+  describe('sprintTaskId writeback', () => {
+    it('writes taskId back to agent_runs after a successful fresh promotion', async () => {
+      const result = await promoteAdhocToTask('agent-1')
+
+      expect(result).toEqual({ ok: true, taskId: 'task-abc' })
+      expect(mockSetAgentSprintTaskId).toHaveBeenCalledWith('agent-1', 'task-abc')
+    })
+
+    it('does not write taskId on the idempotency short-circuit path', async () => {
+      mockGetAgentMeta.mockResolvedValue(makeAgent({ sprintTaskId: 'existing-task-id' }))
+
+      await promoteAdhocToTask('agent-1')
+
+      expect(mockSetAgentSprintTaskId).not.toHaveBeenCalled()
+    })
+
+    it('does not write taskId when createReviewTaskFromAdhoc fails', async () => {
+      mockCreateReviewTask.mockReturnValue(null)
+
+      await promoteAdhocToTask('agent-1')
+
+      expect(mockSetAgentSprintTaskId).not.toHaveBeenCalled()
+    })
+  })
+
+  describe('autoCommitIfDirty', () => {
+    it('runs git add -A and git commit when no commits, dirty tree, and autoCommitIfDirty is true', async () => {
+      // no commits → dirty worktree → after commit, 1 commit
+      mockExecFileAsync
+        .mockResolvedValueOnce({ stdout: '0\n', stderr: '' }) // rev-list: no commits
+        .mockResolvedValueOnce({ stdout: 'M src/foo.ts\n', stderr: '' }) // status --porcelain: dirty
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // git add -A
+        .mockResolvedValueOnce({ stdout: '[adhoc 1234abc] chore: capture\n', stderr: '' }) // git commit
+        .mockResolvedValueOnce({ stdout: '1\n', stderr: '' }) // rev-list: 1 commit now
+
+      const result = await promoteAdhocToTask('agent-1', { autoCommitIfDirty: true })
+
+      const calls = mockExecFileAsync.mock.calls
+      expect(calls[1][1]).toEqual(['status', '--porcelain'])
+      expect(calls[2][1]).toEqual(['add', '-A'])
+      expect(calls[3][1]).toContain('commit')
+      expect(calls[3][1]).toContain('-m')
+      expect(result).toEqual({ ok: true, taskId: 'task-abc' })
+    })
+
+    it('returns error when no commits, clean tree, and autoCommitIfDirty is true', async () => {
+      mockExecFileAsync
+        .mockResolvedValueOnce({ stdout: '0\n', stderr: '' }) // rev-list: no commits
+        .mockResolvedValueOnce({ stdout: '', stderr: '' }) // status --porcelain: clean
+
+      const result = await promoteAdhocToTask('agent-1', { autoCommitIfDirty: true })
+
+      expect(result.ok).toBe(false)
+      expect(result.error).toMatch(/nothing to promote/i)
+      expect(mockCreateReviewTask).not.toHaveBeenCalled()
+    })
+
+    it('skips auto-commit path when commits already exist even if autoCommitIfDirty is true', async () => {
+      // default mock returns '2\n' (2 commits already)
+      const callsBefore = mockExecFileAsync.mock.calls.length
+
+      const result = await promoteAdhocToTask('agent-1', { autoCommitIfDirty: true })
+
+      // Only the one rev-list call should have been made (no status/add/commit calls)
+      const newCalls = mockExecFileAsync.mock.calls.slice(callsBefore)
+      expect(newCalls).toHaveLength(1)
+      expect(newCalls[0][1]).toEqual(expect.arrayContaining(['rev-list']))
+      expect(result).toEqual({ ok: true, taskId: 'task-abc' })
     })
   })
 })

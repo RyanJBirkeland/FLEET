@@ -7,7 +7,7 @@ import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { createLogger } from '../logger'
 import { createReviewTaskFromAdhoc } from './sprint-service'
-import { getAgentMeta } from '../agent-history'
+import { getAgentMeta, setAgentSprintTaskId } from '../agent-history'
 
 const log = createLogger('adhoc-promotion-service')
 
@@ -57,6 +57,25 @@ async function hasCommitsBeyondMain(worktreePath: string, branch: string): Promi
   }
 }
 
+async function isWorktreeDirty(worktreePath: string): Promise<boolean> {
+  const env = buildAgentEnv()
+  const { stdout } = await execFileAsync('git', ['status', '--porcelain'], {
+    cwd: worktreePath,
+    env
+  })
+  return stdout.trim().length > 0
+}
+
+async function commitAllChanges(worktreePath: string): Promise<void> {
+  const env = buildAgentEnv()
+  await execFileAsync('git', ['add', '-A'], { cwd: worktreePath, env })
+  await execFileAsync(
+    'git',
+    ['commit', '-m', 'chore: capture uncommitted work on session close'],
+    { cwd: worktreePath, env }
+  )
+}
+
 /**
  * Validate agent preconditions and promote the adhoc worktree to a
  * sprint task in `review` status.
@@ -93,7 +112,19 @@ export async function promoteAdhocToTask(
     return { ok: false, error: 'Agent has no branch recorded' }
   }
 
-  const hasWork = await hasCommitsBeyondMain(agent.worktreePath, agent.branch)
+  let hasWork = await hasCommitsBeyondMain(agent.worktreePath, agent.branch)
+  if (!hasWork && options.autoCommitIfDirty) {
+    try {
+      const dirty = await isWorktreeDirty(agent.worktreePath)
+      if (!dirty) {
+        return { ok: false, error: 'Agent has not committed any work yet — nothing to promote' }
+      }
+      await commitAllChanges(agent.worktreePath)
+      hasWork = await hasCommitsBeyondMain(agent.worktreePath, agent.branch)
+    } catch (err) {
+      return { ok: false, error: `Auto-commit failed: ${err instanceof Error ? err.message : String(err)}` }
+    }
+  }
   if (!hasWork) {
     return {
       ok: false,
@@ -115,6 +146,7 @@ export async function promoteAdhocToTask(
     return { ok: false, error: 'Failed to create review task — see logs' }
   }
 
+  setAgentSprintTaskId(agentId, task.id)
   log.info(
     `[adhoc-promotion] Promoted agent ${agentId} → sprint task ${task.id} (trigger=${options.trigger ?? 'button'})`
   )

@@ -332,6 +332,11 @@ export async function findAgentByPid(
   return _findAgentByPid(db ?? getDb(), pid)
 }
 
+export function setAgentSprintTaskId(agentId: string, taskId: string): void {
+  const sql = 'UPDATE agent_runs SET sprint_task_id = ? WHERE id = ?'
+  getDb().prepare(sql).run(taskId, agentId)
+}
+
 export async function listAgentRunsByTaskId(
   sprintTaskId?: string,
   limit?: number,
