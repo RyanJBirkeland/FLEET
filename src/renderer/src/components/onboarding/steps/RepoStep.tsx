@@ -2,7 +2,6 @@ import { ArrowRight, ArrowLeft, FolderGit, Check, X, FolderOpen, Plus } from 'lu
 import { useEffect, useState, useCallback } from 'react'
 import { Button } from '../../ui/Button'
 import { toast } from '../../../stores/toasts'
-import { getBasename } from '../../../../../shared/path-utils'
 
 interface StepProps {
   onNext: () => void
@@ -50,7 +49,7 @@ export function RepoStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
     const dir = await window.api.fs.openDirDialog()
     if (!dir) return
     setNewPath(dir)
-    const basename = getBasename(dir)
+    const basename = dir.split('/').filter(Boolean).pop() ?? ''
     if (!newName.trim() && basename) setNewName(basename)
     try {
       const detected = await window.api.git.detectRemote(dir)
