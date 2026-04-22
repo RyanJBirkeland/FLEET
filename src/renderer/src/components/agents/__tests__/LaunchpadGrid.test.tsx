@@ -35,10 +35,9 @@ describe('LaunchpadGrid', () => {
     expect(screen.getByText('New Feature')).toBeInTheDocument()
   })
 
-  it('renders repo chip and model pills', () => {
+  it('renders repo chip', () => {
     render(<LaunchpadGrid {...defaultProps} />)
     expect(screen.getByText(/BDE/)).toBeInTheDocument()
-    expect(screen.getByText('Sonnet')).toBeInTheDocument()
   })
 
   it('renders chat input with placeholder "What would you like to work on?"', () => {
@@ -86,13 +85,10 @@ describe('LaunchpadGrid', () => {
     expect(screen.queryByText(/Recent/i)).not.toBeInTheDocument()
   })
 
-  it('disables the model pills and renders none as active (routing lives in Settings → Models)', () => {
+  it('does not render model pills (routing lives in Settings → Models)', () => {
     render(<LaunchpadGrid {...defaultProps} />)
     for (const label of ['Haiku', 'Sonnet', 'Opus']) {
-      const pill = screen.getByRole('button', { name: label })
-      expect(pill).toBeDisabled()
-      expect(pill).toHaveAttribute('title', expect.stringMatching(/Settings.*Models/i))
-      expect(pill.className).not.toMatch(/--active/)
+      expect(screen.queryByRole('button', { name: label })).not.toBeInTheDocument()
     }
   })
 })

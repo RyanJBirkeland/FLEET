@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from 'react'
 import './LaunchpadGrid.css'
 import { useRepoOptions } from '../../hooks/useRepoOptions'
-import { CLAUDE_MODELS } from '../../../../shared/models'
 import type { PromptTemplate } from '../../lib/launchpad-types'
 import type { NeonAccent } from '../neon/types'
 import { Play, ChevronDown } from 'lucide-react'
@@ -12,8 +11,6 @@ interface LaunchpadGridProps {
   onCustomPrompt: (prompt: string, repo: string) => void
   spawning: boolean
 }
-
-const MODEL_PICKER_DISABLED_TOOLTIP = 'Change the adhoc/assistant model in Settings → Models.'
 
 const ACCENT_VARS: Record<
   NeonAccent,
@@ -150,40 +147,6 @@ export function LaunchpadGrid({
       <div className="launchpad__header">
         <div className="launchpad__header-dot" />
         <span className="launchpad__header-title">New Session</span>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="launchpad__section-label">Quick Actions</div>
-      <div className="launchpad__tile-grid">
-        {templates.map((t) => {
-          const vars = ACCENT_VARS[t.accent]
-          return (
-            <button
-              key={t.id}
-              type="button"
-              className="launchpad__tile"
-              disabled={spawning}
-              style={
-                {
-                  '--tile-bg': vars.bg,
-                  '--tile-border': vars.border,
-                  '--tile-color': vars.color,
-                  '--tile-glow': vars.glow,
-                  '--tile-hover-border': vars.hover
-                } as React.CSSProperties
-              }
-              onClick={() => onSelectTemplate(t, effectiveRepo)}
-            >
-              <div className="launchpad__tile-icon">{t.icon}</div>
-              <div className="launchpad__tile-name">{t.name}</div>
-              <div className="launchpad__tile-desc">{t.description}</div>
-            </button>
-          )
-        })}
-      </div>
-
-      {/* Repo / Model defaults */}
-      <div className="launchpad__defaults-row">
         <div className="launchpad__repo-selector">
           <button
             type="button"
@@ -233,23 +196,36 @@ export function LaunchpadGrid({
             </>
           )}
         </div>
-        <div
-          className="launchpad__model-pills"
-          title={MODEL_PICKER_DISABLED_TOOLTIP}
-          aria-label="Available model tiers (configure in Settings → Models)"
-        >
-          {CLAUDE_MODELS.map((m) => (
+      </div>
+
+      {/* Quick Actions */}
+      <div className="launchpad__section-label">Quick Actions</div>
+      <div className="launchpad__tile-grid">
+        {templates.map((t) => {
+          const vars = ACCENT_VARS[t.accent]
+          return (
             <button
-              key={m.id}
+              key={t.id}
               type="button"
-              disabled
-              title={MODEL_PICKER_DISABLED_TOOLTIP}
-              className="launchpad__model-pill"
+              className="launchpad__tile"
+              disabled={spawning}
+              style={
+                {
+                  '--tile-bg': vars.bg,
+                  '--tile-border': vars.border,
+                  '--tile-color': vars.color,
+                  '--tile-glow': vars.glow,
+                  '--tile-hover-border': vars.hover
+                } as React.CSSProperties
+              }
+              onClick={() => onSelectTemplate(t, effectiveRepo)}
             >
-              {m.label}
+              <div className="launchpad__tile-icon">{t.icon}</div>
+              <div className="launchpad__tile-name">{t.name}</div>
+              <div className="launchpad__tile-desc">{t.description}</div>
             </button>
-          ))}
-        </div>
+          )
+        })}
       </div>
 
       {/* Chat Input */}
