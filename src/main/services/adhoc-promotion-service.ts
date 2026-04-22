@@ -7,13 +7,13 @@ import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { createLogger } from '../logger'
 import { createReviewTaskFromAdhoc } from './sprint-service'
-import type { AgentMeta } from '../agent-history'
+import { getAgentMeta } from '../agent-history'
 
 const log = createLogger('adhoc-promotion-service')
 
-export interface PromoteAdhocParams {
-  agentId: string
-  agent: AgentMeta
+export interface PromoteAdhocOptions {
+  autoCommitIfDirty?: boolean
+  trigger?: 'close' | 'button' | 'tool'
 }
 
 export interface PromoteAdhocResult {
@@ -60,11 +60,23 @@ async function hasCommitsBeyondMain(worktreePath: string, branch: string): Promi
 /**
  * Validate agent preconditions and promote the adhoc worktree to a
  * sprint task in `review` status.
+ *
+ * Idempotent: if the agent was already promoted (`sprintTaskId` set),
+ * returns the existing task id without creating a duplicate.
  */
 export async function promoteAdhocToTask(
   agentId: string,
-  agent: AgentMeta
+  options: PromoteAdhocOptions = {}
 ): Promise<PromoteAdhocResult> {
+  const agent = await getAgentMeta(agentId)
+  if (!agent) {
+    return { ok: false, error: `Agent ${agentId} not found` }
+  }
+
+  if (agent.sprintTaskId) {
+    return { ok: true, taskId: agent.sprintTaskId }
+  }
+
   if (!agent.worktreePath) {
     return {
       ok: false,
@@ -103,6 +115,8 @@ export async function promoteAdhocToTask(
     return { ok: false, error: 'Failed to create review task — see logs' }
   }
 
-  log.info(`[adhoc-promotion] Promoted agent ${agentId} → sprint task ${task.id}`)
+  log.info(
+    `[adhoc-promotion] Promoted agent ${agentId} → sprint task ${task.id} (trigger=${options.trigger ?? 'button'})`
+  )
   return { ok: true, taskId: task.id }
 }

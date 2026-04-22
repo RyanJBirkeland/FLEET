@@ -5,7 +5,7 @@
 import { safeHandle } from '../ipc-utils'
 import { tailAgentLog, cleanupOldLogs } from '../agent-log-manager'
 import type { TailLogArgs } from '../agent-log-manager'
-import { listAgents, readLog, importAgent, pruneOldAgents, getAgentMeta } from '../agent-history'
+import { listAgents, readLog, importAgent, pruneOldAgents } from '../agent-history'
 import { getAgentRunContextTokens } from '../data/agent-queries'
 import { getDb } from '../db'
 import { getEventHistory } from '../data/event-queries'
@@ -224,15 +224,10 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
   ) => Promise<PromoteToReviewResult>
   const promoteToReview: PromoteHandler = async (_e, agentId) => {
     try {
-      const agent = await getAgentMeta(agentId)
-      if (!agent) {
-        return { ok: false, error: `Agent ${agentId} not found` }
-      }
-      return await promoteAdhocToTask(agentId, agent)
+      return await promoteAdhocToTask(agentId)
     } catch (err) {
       logError(log, '[agents:promoteToReview] failed', err)
-      const msg = err instanceof Error ? err.message : String(err)
-      return { ok: false, error: msg }
+      return { ok: false, error: err instanceof Error ? err.message : String(err) }
     }
   }
   safeHandle('agents:promoteToReview', promoteToReview)

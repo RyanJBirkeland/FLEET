@@ -6,7 +6,7 @@ Source: `src/main/services/`
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
 | `repo-search-service.ts` | Grep-based codebase search for workbench research — literal fixed-string search to prevent ReDoS | `searchRepo`, `parseGrepOutput`, `RepoSearchResult`, `RepoSearchMatch` |
-| `adhoc-promotion-service.ts` | Validates and promotes a completed adhoc agent worktree into the Code Review queue as a sprint task | `promoteAdhocToTask`, `PromoteAdhocParams`, `PromoteAdhocResult` |
+| `adhoc-promotion-service.ts` | Validates and promotes a completed adhoc agent worktree into the Code Review queue as a sprint task. Idempotent: re-promotion returns the existing taskId if the agent was already promoted. | `promoteAdhocToTask`, `PromoteAdhocOptions`, `PromoteAdhocResult` |
 | `webhook-delivery-service.ts` | Constructs and delivers test webhook events including HMAC-SHA256 signing and HTTP POST delivery | `deliverWebhookTestEvent`, `WebhookTestResult` |
 | `checkpoint-service.ts` | Creates a git commit snapshot of the current agent worktree state without stopping the agent | `createCheckpoint`, `CheckpointResult` |
 | `epic-group-service.ts` | Owns the in-memory epic dependency index and the single entry point for all epic mutations; exports typed `EpicNotFoundError` / `EpicCycleError` so adapters can map to MCP / IPC error codes without regex-matching | `EpicGroupService`, `createEpicGroupService`, `EpicNotFoundError`, `EpicCycleError` |
