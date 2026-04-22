@@ -13,6 +13,7 @@ import { nowIso } from '../../shared/time'
 import { evaluateAutoMergePolicy } from './auto-merge-policy'
 import { executeSquashMerge } from '../lib/git-operations'
 import { getDb } from '../db'
+import { getSettingJson } from '../settings'
 
 export interface AutoMergeContext {
   taskId: string
@@ -28,18 +29,17 @@ export interface AutoMergeContext {
  * Get repository config for a task from settings.
  * Returns null if task or repo config not found.
  */
-async function getRepoConfig(
+function getRepoConfig(
   taskId: string,
   repo: IAgentTaskRepository,
   logger: Logger
-): Promise<{ name: string; localPath: string } | null> {
+): { name: string; localPath: string } | null {
   const task = repo.getTask(taskId)
   if (!task) {
     logger.error(`[completion] Task ${taskId} not found`)
     return null
   }
 
-  const { getSettingJson } = await import('../settings')
   const repos = getSettingJson<Array<{ name: string; localPath: string }>>('repos')
   const repoConfig = repos?.find((r) => r.name === task.repo)
   if (!repoConfig) {
@@ -52,7 +52,6 @@ async function getRepoConfig(
 
 export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
   const { taskId, title, branch, worktreePath, repo, logger, onTaskTerminal } = opts
-  const { getSettingJson } = await import('../settings')
   const rules =
     getSettingJson<import('../../shared/types/task-types').AutoReviewRule[]>('autoReview.rules')
 
@@ -71,7 +70,7 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
       `[completion] Task ${taskId} qualifies for auto-merge (rule: ${decision.ruleName}) — merging`
     )
 
-    const repoConfig = await getRepoConfig(taskId, repo, logger)
+    const repoConfig = getRepoConfig(taskId, repo, logger)
     if (!repoConfig) {
       return
     }

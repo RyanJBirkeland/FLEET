@@ -1,6 +1,7 @@
 import type { AutoReviewRule } from '../../shared/types/task-types'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
+import { evaluateAutoReviewRules } from '../services/auto-review'
 
 /**
  * `cssOnly` flags diffs that touch only stylesheet files. Downstream callers
@@ -75,7 +76,6 @@ export async function evaluateAutoMergePolicy(
 
   const cssOnly = isCssOnlyChange(files.map((f) => f.path))
 
-  const { evaluateAutoReviewRules } = await import('../services/auto-review')
   const result = evaluateAutoReviewRules(rules, files)
 
   if (result && result.action === 'auto-merge') {

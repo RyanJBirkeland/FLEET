@@ -15,6 +15,7 @@ import { detectPlaygroundWrite } from './playground-handler'
 import type { PlaygroundWriteResult } from './playground-handler'
 import { TurnTracker } from './turn-tracker'
 import type { AgentRunClaim } from './run-agent'
+import { invalidateOAuthToken, refreshOAuthTokenFromKeychain } from '../env-utils'
 
 export interface ConsumeMessagesResult {
   exitCode: number | undefined
@@ -26,8 +27,7 @@ export interface ConsumeMessagesResult {
 /**
  * Handles OAuth token refresh after auth errors.
  */
-async function handleOAuthRefresh(logger: Logger): Promise<void> {
-  const { invalidateOAuthToken, refreshOAuthTokenFromKeychain } = await import('../env-utils')
+function handleOAuthRefresh(logger: Logger): void {
   invalidateOAuthToken()
   // Intentionally fire-and-forget: Keychain access on macOS can block for several seconds.
   // Awaiting it here would stall the entire message-consumer loop while the stream is still live.
@@ -190,7 +190,7 @@ export async function consumeMessages(
       errMsg.includes('invalid_api_key') ||
       errMsg.includes('authentication')
     ) {
-      await handleOAuthRefresh(logger)
+      handleOAuthRefresh(logger)
     }
     // Flush immediately: the batcher's 100ms timer may not fire before the
     // next drain tick or process shutdown, so the stream-error event would

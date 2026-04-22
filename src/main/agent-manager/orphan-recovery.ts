@@ -1,5 +1,6 @@
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import { EXECUTOR_ID } from './types'
+import { reconcileRunningAgentRuns } from '../agent-history'
 
 export async function recoverOrphans(
   isAgentActive: (taskId: string) => boolean,
@@ -38,7 +39,6 @@ export async function recoverOrphans(
   // Reconcile agent_runs: finalize any DB records marked 'running' whose
   // agent is no longer in the in-memory active set (crashed without cleanup).
   try {
-    const { reconcileRunningAgentRuns } = await import('../agent-history')
     const cleaned = reconcileRunningAgentRuns(isAgentActive)
     if (cleaned > 0) logger.info(`[agent-manager] Reconciled ${cleaned} stale agent_runs records`)
   } catch {

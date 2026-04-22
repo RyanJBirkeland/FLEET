@@ -1,6 +1,7 @@
 import { safeHandle } from '../ipc-utils'
 import { isValidAgentId, isValidTaskId } from '../lib/validation'
 import { getDb } from '../db'
+import { getTaskChanges } from '../data/task-changes'
 import { readFile } from 'fs/promises'
 import { createLogger } from '../logger'
 import type { DialogService } from '../dialog-service'
@@ -267,9 +268,8 @@ export function registerSprintLocalHandlers(
     return updateTask(taskId, { status: 'queued' })
   })
 
-  safeHandle('sprint:getChanges', async (_e, taskId: string) => {
+  safeHandle('sprint:getChanges', (_e, taskId: string) => {
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
-    const { getTaskChanges } = await import('../data/task-changes')
     return getTaskChanges(taskId)
   })
 

@@ -7,6 +7,7 @@ import { writeFile } from 'fs/promises'
 import { safeHandle } from '../ipc-utils'
 import type { DialogService } from '../dialog-service'
 import { getTask, listTasks } from '../services/sprint-service'
+import { getTaskChanges } from '../data/task-changes'
 import { formatTasksAsCsv } from '../services/csv-export'
 import { nowIso } from '../../shared/time'
 import { createLogger } from '../logger'
@@ -19,8 +20,6 @@ export interface ExportHandlersDeps {
 
 export function registerSprintExportHandlers(deps: ExportHandlersDeps): void {
   safeHandle('sprint:exportTaskHistory', async (_e, taskId: string) => {
-    const { getTaskChanges } = await import('../data/task-changes')
-
     // Get task to use title in filename suggestion
     const task = getTask(taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)

@@ -6,6 +6,7 @@ import {
   getRepoPath as getRepoPathFromSettings
 } from './paths'
 import { getErrorMessage } from '../shared/errors'
+import { parseGitHubRemote } from '../shared/git-remote'
 
 const MAX_BUFFER = 10 * 1024 * 1024
 
@@ -94,7 +95,6 @@ export async function detectGitRemote(cwd: string): Promise<{
       maxBuffer: MAX_BUFFER
     })
     const remoteUrl = stdout.trim() || null
-    const { parseGitHubRemote } = await import('../shared/git-remote')
     const parsed = parseGitHubRemote(remoteUrl)
     return {
       isGitRepo: true,

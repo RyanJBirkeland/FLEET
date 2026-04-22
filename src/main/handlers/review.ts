@@ -21,6 +21,7 @@ import {
   assertWorktreeExists
 } from '../lib/review-paths'
 import { checkAutoReview } from '../services/auto-review-service'
+import { getTask } from '../services/sprint-service'
 import type { AutoReviewRule } from '../../shared/types'
 import * as reviewOrchestration from '../services/review-orchestration-service'
 import { parseNumstat } from '../services/review-orchestration-service'
@@ -137,8 +138,6 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     const { taskId } = payload
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
 
-    // Import task functions inline to avoid top-level coupling
-    const { getTask } = await import('../services/sprint-service')
     const task = getTask(taskId)
     if (!task) return { status: 'unknown' as const }
     if (!task.rebase_base_sha) return { status: 'unknown' as const }
@@ -188,7 +187,6 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     const { taskId } = payload
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
 
-    const { getTask } = await import('../services/sprint-service')
     const task = getTask(taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
     if (!task.worktree_path) {

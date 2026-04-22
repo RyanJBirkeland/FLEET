@@ -9,6 +9,7 @@
 export { createSpecQualityService } from './factory'
 
 import { createSpecQualityService } from './factory'
+import { validateStructural } from '../../../shared/spec-validation'
 
 const specQualityService = createSpecQualityService()
 
@@ -24,8 +25,6 @@ export async function validateTaskSpec(input: {
 }): Promise<void> {
   const prefix = input.context === 'queue' ? 'Cannot queue task' : 'Cannot unblock task'
 
-  // Structural check
-  const { validateStructural } = await import('../../../shared/spec-validation')
   const structural = validateStructural({
     title: input.title,
     repo: input.repo,

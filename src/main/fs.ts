@@ -6,6 +6,7 @@ import { dialog } from 'electron'
 import { safeHandle } from './ipc-utils'
 import { BDE_MEMORY_DIR, BDE_AGENT_LOGS_DIR as AGENT_LOGS_ROOT } from './paths'
 import { getSettingJson, setSettingJson } from './settings'
+import { getIdeRootPath } from './handlers/ide-fs-handlers'
 
 const OPENCLAW_MEMORY_DIR = resolve(homedir(), '.openclaw', 'workspace', 'memory')
 
@@ -236,13 +237,11 @@ export function registerFsHandlers(): void {
   safeHandle('fs:openFileDialog', (_e, opts?: { filters?: Electron.FileFilter[] }) =>
     openFileDialog(opts)
   )
-  safeHandle('fs:readFileAsBase64', async (_e, filePath: string) => {
-    const { getIdeRootPath } = await import('./handlers/ide-fs-handlers')
-    return readFileAsBase64(filePath, getIdeRootPath() ?? undefined)
-  })
-  safeHandle('fs:readFileAsText', async (_e, filePath: string) => {
-    const { getIdeRootPath } = await import('./handlers/ide-fs-handlers')
-    return readFileAsText(filePath, getIdeRootPath() ?? undefined)
-  })
+  safeHandle('fs:readFileAsBase64', (_e, filePath: string) =>
+    readFileAsBase64(filePath, getIdeRootPath() ?? undefined)
+  )
+  safeHandle('fs:readFileAsText', (_e, filePath: string) =>
+    readFileAsText(filePath, getIdeRootPath() ?? undefined)
+  )
   safeHandle('fs:openDirectoryDialog', () => openDirectoryDialog())
 }

@@ -8,6 +8,7 @@ import type { TailLogArgs } from '../agent-log-manager'
 import { listAgents, readLog, importAgent, pruneOldAgents, getAgentMeta } from '../agent-history'
 import { getAgentRunContextTokens } from '../data/agent-queries'
 import { getDb } from '../db'
+import { getEventHistory } from '../data/event-queries'
 import type { AgentMeta } from '../agent-history'
 import { spawnAdhocAgent, getAdhocHandle } from '../adhoc-agent'
 import { createLogger, logError } from '../logger'
@@ -187,8 +188,6 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
     // after spawn doesn't race the 100 ms SQLite-batch timer and return an
     // empty slice.
     flushAgentEventBatcher()
-    const { getEventHistory } = await import('../data/event-queries')
-    const { getDb } = await import('../db')
     const rows = getEventHistory(getDb(), agentId)
     const events: AgentEvent[] = []
     for (const row of rows) {

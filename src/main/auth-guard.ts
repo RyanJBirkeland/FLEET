@@ -4,6 +4,7 @@ import { join } from 'node:path'
 import { homedir } from 'node:os'
 import { z } from 'zod'
 import { getOAuthToken } from './env-utils'
+import { createLogger } from './logger'
 
 function execFileAsync(cmd: string, args: string[]): Promise<{ stdout: string; stderr: string }> {
   return new Promise((resolve, reject) => {
@@ -174,7 +175,6 @@ export async function ensureSubscriptionAuth(
   // callers (tests) keep the local path for backwards compatibility.
   if (store === defaultCredentialStore) {
     const { getDefaultCredentialService } = await import('./services/credential-service')
-    const { createLogger } = await import('./logger')
     const service = getDefaultCredentialService(createLogger('auth-guard'))
     const result = await service.getCredential('claude')
     if (result.status !== 'ok') {
