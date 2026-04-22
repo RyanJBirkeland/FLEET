@@ -6,7 +6,12 @@ vi.mock('../../agent-event-mapper', () => ({
   flushAgentEventBatcher: vi.fn()
 }))
 
+// Shared spy + queue for the detector mock. Tests push a hit into
+// `detectorHits` via `detectorOnMessage.mockReturnValueOnce(...)`.
+const detectorOnMessage = vi.fn().mockReturnValue(null)
+
 vi.mock('../playground-handler', () => ({
+  createPlaygroundDetector: vi.fn(() => ({ onMessage: detectorOnMessage })),
   detectPlaygroundWrite: vi.fn().mockReturnValue(null)
 }))
 
@@ -23,7 +28,8 @@ import type { AgentRunClaim } from '../run-agent'
 import type { TurnTracker } from '../turn-tracker'
 import { emitAgentEvent, flushAgentEventBatcher } from '../../agent-event-mapper'
 import { invalidateOAuthToken } from '../../env-utils'
-import { detectPlaygroundWrite } from '../playground-handler'
+// detectorOnMessage is the shared spy declared at the top of this file —
+// tests push a hit into it via `detectorOnMessage.mockReturnValueOnce(...)`.
 
 function makeTurnTracker(): TurnTracker {
   return {
@@ -188,7 +194,7 @@ describe('consumeMessages', () => {
   })
 
   it('accumulates playground paths when playground_enabled', async () => {
-    vi.mocked(detectPlaygroundWrite).mockReturnValueOnce({
+    detectorOnMessage.mockReturnValueOnce({
       path: '/worktree/output.html',
       contentType: 'html'
     })
@@ -209,7 +215,7 @@ describe('consumeMessages', () => {
   })
 
   it('does not accumulate playground paths when playground disabled', async () => {
-    vi.mocked(detectPlaygroundWrite).mockReturnValueOnce({
+    detectorOnMessage.mockReturnValueOnce({
       path: '/worktree/output.html',
       contentType: 'html'
     })

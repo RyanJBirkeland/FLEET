@@ -248,12 +248,12 @@ describe('tryEmitPlaygroundEvent — path containment (Fix 4: trailing slash)', 
 
     // /worktrees/abc123-evil passes startsWith('/worktrees/abc123') WITHOUT trailing slash fix
     // It must be blocked because it is NOT inside /worktrees/abc123
-    await tryEmitPlaygroundEvent(
-      'task-1',
-      '/worktrees/abc123-evil/attack.html',
-      '/worktrees/abc123',
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: '/worktrees/abc123-evil/attack.html',
+      worktreePath: '/worktrees/abc123',
       logger
-    )
+    })
 
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('Path traversal blocked'))
     expect(emitAgentEvent).not.toHaveBeenCalled()
@@ -267,12 +267,12 @@ describe('tryEmitPlaygroundEvent — path containment (Fix 4: trailing slash)', 
 
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
-    await tryEmitPlaygroundEvent(
-      'task-1',
-      '/worktrees/abc123/output.html',
-      '/worktrees/abc123',
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: '/worktrees/abc123/output.html',
+      worktreePath: '/worktrees/abc123',
       logger
-    )
+    })
 
     expect(emitAgentEvent).toHaveBeenCalled()
   })
@@ -285,12 +285,12 @@ describe('tryEmitPlaygroundEvent — path containment (Fix 4: trailing slash)', 
 
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
-    await tryEmitPlaygroundEvent(
-      'task-1',
-      '/worktrees/abc123/dist/index.html',
-      '/worktrees/abc123',
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: '/worktrees/abc123/dist/index.html',
+      worktreePath: '/worktrees/abc123',
       logger
-    )
+    })
 
     expect(emitAgentEvent).toHaveBeenCalled()
   })

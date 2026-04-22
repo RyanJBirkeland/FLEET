@@ -34,32 +34,156 @@ function resolveContentType(filePath: string): PlaygroundContentType | null {
   return null
 }
 
+export interface PlaygroundDetector {
+  /**
+   * Feed every raw SDK message from a single session. Returns a hit only
+   * when a `Write` tool has *completed* successfully for a playground
+   * content type (.html, .htm, .svg, .md, .markdown, .json). Returns null
+   * for every other message — including the tool_use that opens a write,
+   * and for writes whose tool_result reports an error.
+   */
+  onMessage(msg: unknown): PlaygroundWriteResult | null
+}
+
 /**
- * Detects if a message is a tool_result for a Write tool that created a
- * playground-supported file (.html, .htm, .svg, .md, .markdown, .json).
- * Returns path and content type if detected, null otherwise.
+ * Creates a per-session detector that pairs each Write tool_use block with
+ * its matching tool_result block (via tool_use_id), so the caller only sees
+ * a hit when the file is guaranteed to exist on disk.
+ */
+export function createPlaygroundDetector(): PlaygroundDetector {
+  const pendingWrites = new Map<string, PlaygroundWriteResult>()
+
+  return {
+    onMessage(msg: unknown): PlaygroundWriteResult | null {
+      const sdkMsg = asSDKMessage(msg)
+      if (!sdkMsg) return null
+
+      const legacyHit = matchLegacyTopLevelToolResult(sdkMsg)
+      if (legacyHit) return legacyHit
+
+      if (sdkMsg.type === 'assistant') {
+        rememberAssistantWrites(sdkMsg, pendingWrites)
+        return null
+      }
+
+      if (sdkMsg.type === 'user') {
+        return flushMatchingToolResult(sdkMsg, pendingWrites)
+      }
+
+      return null
+    }
+  }
+}
+
+/**
+ * Pure per-message detector. Preserved for the legacy top-level tool_result
+ * wire format (pre-content-block SDK). Current SDK callers should prefer
+ * `createPlaygroundDetector` — it handles the correlation required by the
+ * current `tool_use` / `tool_result` content-block protocol.
  */
 export function detectPlaygroundWrite(msg: unknown): PlaygroundWriteResult | null {
-  const m = asSDKMessage(msg)
-  if (!m) return null
-
-  if (m.type !== 'tool_result' && m.type !== 'result') return null
-
-  const toolName = m.tool_name ?? m.name ?? ''
-  if (toolName.toLowerCase() !== 'write') return null
-
-  const filePath = m.input?.file_path as string | undefined
-  if (!filePath) return null
-
-  const contentType = resolveContentType(filePath)
-  if (!contentType) return null
-
-  return { path: filePath, contentType }
+  const sdkMsg = asSDKMessage(msg)
+  if (!sdkMsg) return null
+  return matchLegacyTopLevelToolResult(sdkMsg)
 }
 
 /** Backward-compat alias — returns only the path for existing callers. */
 export function detectHtmlWrite(msg: unknown): string | null {
   return detectPlaygroundWrite(msg)?.path ?? null
+}
+
+function matchLegacyTopLevelToolResult(
+  sdkMsg: import('./sdk-message-protocol').SDKWireMessage
+): PlaygroundWriteResult | null {
+  if (sdkMsg.type !== 'tool_result' && sdkMsg.type !== 'result') return null
+  const toolName = sdkMsg.tool_name ?? sdkMsg.name ?? ''
+  if (toolName.toLowerCase() !== 'write') return null
+  const filePath = sdkMsg.input?.file_path as string | undefined
+  return buildWriteResult(filePath)
+}
+
+function rememberAssistantWrites(
+  sdkMsg: import('./sdk-message-protocol').SDKWireMessage,
+  pendingWrites: Map<string, PlaygroundWriteResult>
+): void {
+  const content = sdkMsg.message?.content
+  if (!Array.isArray(content)) return
+  for (const block of content) {
+    if (!isToolUseBlock(block)) continue
+    const toolName = (block.name ?? block.tool_name ?? '').toLowerCase()
+    if (toolName !== 'write') continue
+    const filePath = block.input?.file_path
+    if (typeof filePath !== 'string') continue
+    const hit = buildWriteResult(filePath)
+    if (!hit) continue
+    const id = (block as { id?: unknown }).id
+    if (typeof id !== 'string') continue
+    pendingWrites.set(id, hit)
+  }
+}
+
+function flushMatchingToolResult(
+  sdkMsg: import('./sdk-message-protocol').SDKWireMessage,
+  pendingWrites: Map<string, PlaygroundWriteResult>
+): PlaygroundWriteResult | null {
+  const content = sdkMsg.message?.content
+  if (!Array.isArray(content)) return null
+  for (const block of content) {
+    if (!isToolResultBlock(block)) continue
+    const toolUseId = (block as { tool_use_id?: unknown }).tool_use_id
+    if (typeof toolUseId !== 'string') continue
+    const pending = pendingWrites.get(toolUseId)
+    pendingWrites.delete(toolUseId)
+    if (!pending) continue
+    const isError = (block as { is_error?: unknown }).is_error === true
+    if (isError) continue
+    return pending
+  }
+  return null
+}
+
+function isToolUseBlock(
+  block: unknown
+): block is {
+  type: 'tool_use'
+  name?: string
+  tool_name?: string
+  input?: Record<string, unknown>
+} {
+  return (
+    typeof block === 'object' && block !== null && (block as { type?: unknown }).type === 'tool_use'
+  )
+}
+
+function isToolResultBlock(block: unknown): block is { type: 'tool_result' } {
+  return (
+    typeof block === 'object' &&
+    block !== null &&
+    (block as { type?: unknown }).type === 'tool_result'
+  )
+}
+
+function buildWriteResult(filePath: string | undefined): PlaygroundWriteResult | null {
+  if (!filePath) return null
+  const contentType = resolveContentType(filePath)
+  if (!contentType) return null
+  return { path: filePath, contentType }
+}
+
+export interface PlaygroundEmitRequest {
+  taskId: string
+  filePath: string
+  worktreePath: string
+  logger: Logger
+  contentType?: PlaygroundContentType
+  /**
+   * Skip the worktree containment check. Adhoc/assistant agents set this
+   * because the user directly controls the session and may ask the agent to
+   * render files outside the worktree (e.g. /tmp scratch files). DOMPurify
+   * sanitization still runs — that is the real security boundary, not the
+   * path check.
+   */
+  allowAnyPath?: boolean
 }
 
 /**
@@ -69,28 +193,37 @@ export function detectHtmlWrite(msg: unknown): string | null {
  * filesystem from blocking indefinitely.
  * Silently fails if the file doesn't exist, is too large, or times out.
  */
-export async function tryEmitPlaygroundEvent(
-  taskId: string,
-  filePath: string,
-  worktreePath: string,
-  logger: Logger,
-  contentType: PlaygroundContentType = 'html'
-): Promise<void> {
+export async function tryEmitPlaygroundEvent(request: PlaygroundEmitRequest): Promise<void> {
+  const {
+    taskId,
+    filePath,
+    worktreePath,
+    logger,
+    contentType = 'html',
+    allowAnyPath = false
+  } = request
   try {
     // Resolve absolute path
     const absolutePath = filePath.startsWith('/') ? filePath : join(worktreePath, filePath)
 
-    // Validate path is within worktree (prevent traversal + symlink bypass).
-    // realpath resolves symlinks before comparing, which resolve() does not.
     const resolvedPath = await realpath(absolutePath).catch(() => null)
-    const resolvedWorktree = await realpath(worktreePath).catch(() => null)
-    if (!resolvedPath || !resolvedWorktree) {
+    if (!resolvedPath) {
       logger.warn(`[playground] Path does not exist: ${filePath}`)
       return
     }
-    if (!resolvedPath.startsWith(resolvedWorktree + '/') && resolvedPath !== resolvedWorktree) {
-      logger.warn(`[playground] Path traversal blocked: ${filePath} (resolved to ${resolvedPath})`)
-      return
+
+    if (!allowAnyPath) {
+      const resolvedWorktree = await realpath(worktreePath).catch(() => null)
+      if (!resolvedWorktree) {
+        logger.warn(`[playground] Worktree path does not exist: ${worktreePath}`)
+        return
+      }
+      if (!resolvedPath.startsWith(resolvedWorktree + '/') && resolvedPath !== resolvedWorktree) {
+        logger.warn(
+          `[playground] Path traversal blocked: ${filePath} (resolved to ${resolvedPath})`
+        )
+        return
+      }
     }
 
     // Check file size — race against timeout in case of filesystem stall

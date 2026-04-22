@@ -11,7 +11,7 @@ import { logError } from '../logger'
 import { LAST_OUTPUT_MAX_LENGTH } from './types'
 import { asSDKMessage, getNumericField, isRateLimitMessage } from './sdk-message-protocol'
 import { mapRawMessage, emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
-import { detectPlaygroundWrite } from './playground-handler'
+import { createPlaygroundDetector } from './playground-handler'
 import type { PlaygroundWriteResult } from './playground-handler'
 import { TurnTracker } from './turn-tracker'
 import type { AgentRunClaim } from './run-agent'
@@ -56,15 +56,13 @@ function trackAgentCosts(msg: unknown, agent: ActiveAgent, turnTracker: TurnTrac
 }
 
 /**
- * Processes a single message: tracks costs, emits events, detects playground file writes.
- * Returns detectedPlaygroundWrite instead of emitting playground events inline —
- * callers accumulate paths and await emission after the stream ends,
- * preventing worktree cleanup from racing the async file read.
+ * Processes a single message: tracks costs, emits events.
+ * Playground detection lives in the calling loop because it needs
+ * per-session state (tool_use / tool_result pairing).
  */
 function processSDKMessage(
   msg: unknown,
   agent: ActiveAgent,
-  task: AgentRunClaim,
   agentRunId: string,
   turnTracker: TurnTracker,
   exitCode: number | undefined,
@@ -72,7 +70,6 @@ function processSDKMessage(
 ): {
   exitCode: number | undefined
   lastAgentOutput: string
-  detectedPlaygroundWrite: PlaygroundWriteResult | null
 } {
   agent.lastOutputAt = Date.now()
 
@@ -88,14 +85,12 @@ function processSDKMessage(
     emitAgentEvent(agentRunId, event)
   }
 
-  const detectedPlaygroundWrite = task.playground_enabled ? detectPlaygroundWrite(msg) : null
-
   const m = asSDKMessage(msg)
   if (m?.type === 'assistant' && typeof m.text === 'string') {
     lastAgentOutput = m.text.slice(-LAST_OUTPUT_MAX_LENGTH)
   }
 
-  return { exitCode, lastAgentOutput, detectedPlaygroundWrite }
+  return { exitCode, lastAgentOutput }
 }
 
 /**
@@ -115,6 +110,7 @@ export async function consumeMessages(
   let exitCode: number | undefined
   let lastAgentOutput = ''
   const pendingPlaygroundPaths: PlaygroundWriteResult[] = []
+  const playgroundDetector = createPlaygroundDetector()
   let turnCount = 0
 
   try {
@@ -122,7 +118,6 @@ export async function consumeMessages(
       const result = processSDKMessage(
         msg,
         agent,
-        task,
         agentRunId,
         turnTracker,
         exitCode,
@@ -130,8 +125,10 @@ export async function consumeMessages(
       )
       exitCode = result.exitCode
       lastAgentOutput = result.lastAgentOutput
-      if (result.detectedPlaygroundWrite) {
-        pendingPlaygroundPaths.push(result.detectedPlaygroundWrite)
+
+      if (task.playground_enabled) {
+        const playgroundHit = playgroundDetector.onMessage(msg)
+        if (playgroundHit) pendingPlaygroundPaths.push(playgroundHit)
       }
 
       // Hard turn limit: abort if agent exceeds maxTurns (SDK soft limit may not enforce)

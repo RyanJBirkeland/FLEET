@@ -595,7 +595,12 @@ describe('tryEmitPlaygroundEvent', () => {
     vi.mocked(stat).mockResolvedValue({ size: 1024 } as any)
     vi.mocked(readFile).mockResolvedValue('<html>hello</html>')
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
-    await tryEmitPlaygroundEvent('task-1', '/wt/index.html', '/wt', logger)
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: '/wt/index.html',
+      worktreePath: '/wt',
+      logger
+    })
     expect(emitAgentEvent).toHaveBeenCalledWith(
       'task-1',
       expect.objectContaining({
@@ -611,7 +616,12 @@ describe('tryEmitPlaygroundEvent', () => {
     vi.mocked(stat).mockResolvedValue({ size: 100 } as any)
     vi.mocked(readFile).mockResolvedValue('<html/>')
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
-    await tryEmitPlaygroundEvent('task-1', 'relative/file.html', '/wt/path', logger)
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: 'relative/file.html',
+      worktreePath: '/wt/path',
+      logger
+    })
     expect(stat).toHaveBeenCalledWith('/wt/path/relative/file.html')
   })
   it('skips file that is too large', async () => {
@@ -619,7 +629,12 @@ describe('tryEmitPlaygroundEvent', () => {
     const { emitAgentEvent } = await import('../../agent-event-mapper')
     vi.mocked(stat).mockResolvedValue({ size: 10 * 1024 * 1024 } as any)
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
-    await tryEmitPlaygroundEvent('task-1', '/wt/big.html', '/wt', logger)
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: '/wt/big.html',
+      worktreePath: '/wt',
+      logger
+    })
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('File too large'))
     expect(emitAgentEvent).not.toHaveBeenCalled()
   })
@@ -627,7 +642,12 @@ describe('tryEmitPlaygroundEvent', () => {
     const { stat } = await import('node:fs/promises')
     vi.mocked(stat).mockRejectedValue(new Error('ENOENT'))
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
-    await tryEmitPlaygroundEvent('task-1', '/wt/missing.html', '/wt', logger)
+    await tryEmitPlaygroundEvent({
+      taskId: 'task-1',
+      filePath: '/wt/missing.html',
+      worktreePath: '/wt',
+      logger
+    })
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Failed to read playground file')
     )

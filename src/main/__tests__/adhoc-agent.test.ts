@@ -76,12 +76,25 @@ vi.mock('../agent-manager/backend-selector', () => ({
           : 'claude-sonnet-4-5'
   })
 }))
+// Keep the real `createPlaygroundDetector` (pure state machine over SDK
+// wire messages) so tests can feed realistic tool_use/tool_result pairs
+// and exercise the correlation. Stub `tryEmitPlaygroundEvent` — it touches
+// the filesystem and we only want to assert the adhoc runTurn loop routes
+// detected hits into it with the right options.
+vi.mock('../agent-manager/playground-handler', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../agent-manager/playground-handler')>()
+  return {
+    ...actual,
+    tryEmitPlaygroundEvent: vi.fn().mockResolvedValue(undefined)
+  }
+})
 
 import { spawnAdhocAgent, getAdhocHandle } from '../adhoc-agent'
 import { importAgent, updateAgentMeta } from '../agent-history'
 import { broadcastCoalesced } from '../broadcast'
 import { buildAgentPrompt } from '../lib/prompt-composer'
 import { setupWorktree } from '../agent-manager/worktree'
+import { tryEmitPlaygroundEvent } from '../agent-manager/playground-handler'
 import { nowIso } from '../../shared/time'
 
 function createMockQueryHandle(messages: unknown[] = []) {
@@ -561,5 +574,117 @@ describe('spawnAdhocAgent — prompt composer integration', () => {
       repo: 'bde'
     })
     expect(mcpDecision).toEqual(expect.objectContaining({ behavior: 'allow' }))
+  })
+})
+
+describe('spawnAdhocAgent — playground wiring', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(importAgent).mockResolvedValue({
+      id: 'agent-1',
+      logPath: '/tmp/logs/agent-1/log.jsonl'
+    } as any)
+    vi.mocked(updateAgentMeta).mockResolvedValue(undefined as any)
+  })
+
+  function assistantWrite(id: string, filePath: string): unknown {
+    return {
+      type: 'assistant',
+      message: {
+        content: [{ type: 'tool_use', id, name: 'Write', input: { file_path: filePath } }]
+      }
+    }
+  }
+
+  function userToolResult(toolUseId: string, isError = false): unknown {
+    return {
+      type: 'user',
+      message: {
+        content: [{ type: 'tool_result', tool_use_id: toolUseId, content: 'ok', is_error: isError }]
+      }
+    }
+  }
+
+  it('emits a playground event when the agent writes an HTML file anywhere on disk', async () => {
+    // Adhoc sessions are user-driven — the HTML can land in /tmp, outside the
+    // worktree. The playground emitter must not refuse those paths.
+    const handle = createMockQueryHandle([
+      assistantWrite('tu_1', '/tmp/mcp-verification-results.html'),
+      userToolResult('tu_1')
+    ])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'verify MCP', repoPath: '/tmp/r' })
+
+    await vi.waitFor(() => expect(tryEmitPlaygroundEvent).toHaveBeenCalled(), { timeout: 1000 })
+
+    expect(tryEmitPlaygroundEvent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        taskId: 'agent-1',
+        filePath: '/tmp/mcp-verification-results.html',
+        worktreePath: TEST_WORKTREE_PATH,
+        contentType: 'html',
+        allowAnyPath: true
+      })
+    )
+  })
+
+  it('does not emit until the tool_result confirms the Write succeeded', async () => {
+    // Only the tool_use arrives — no tool_result yet. Emission must wait.
+    const handle = createMockQueryHandle([assistantWrite('tu_1', '/tmp/pending.html')])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'verify MCP', repoPath: '/tmp/r' })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(tryEmitPlaygroundEvent).not.toHaveBeenCalled()
+  })
+
+  it('does not emit when the tool_result reports an error', async () => {
+    const handle = createMockQueryHandle([
+      assistantWrite('tu_1', '/tmp/failed.html'),
+      userToolResult('tu_1', true)
+    ])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'verify MCP', repoPath: '/tmp/r' })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(tryEmitPlaygroundEvent).not.toHaveBeenCalled()
+  })
+
+  it('ignores Writes whose file is not a playground content type', async () => {
+    const handle = createMockQueryHandle([
+      assistantWrite('tu_1', '/tmp/notes.txt'),
+      userToolResult('tu_1')
+    ])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'verify MCP', repoPath: '/tmp/r' })
+
+    await new Promise((resolve) => setTimeout(resolve, 50))
+    expect(tryEmitPlaygroundEvent).not.toHaveBeenCalled()
+  })
+
+  it('emits for SVG, markdown, and JSON playground content types', async () => {
+    const handle = createMockQueryHandle([
+      assistantWrite('s', '/tmp/diagram.svg'),
+      userToolResult('s'),
+      assistantWrite('m', '/tmp/notes.md'),
+      userToolResult('m'),
+      assistantWrite('j', '/tmp/data.json'),
+      userToolResult('j')
+    ])
+    mockQuery.mockReturnValue(handle)
+
+    await spawnAdhocAgent({ task: 'render things', repoPath: '/tmp/r' })
+
+    await vi.waitFor(() => expect(tryEmitPlaygroundEvent).toHaveBeenCalledTimes(3), {
+      timeout: 1000
+    })
+
+    const calls = vi.mocked(tryEmitPlaygroundEvent).mock.calls
+    const contentTypes = calls.map((c) => (c[0] as { contentType: string }).contentType)
+    expect(contentTypes).toEqual(['svg', 'markdown', 'json'])
   })
 })

@@ -35,6 +35,10 @@ import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createPlannerMcpServer } from './agent-manager/planner-mcp-server'
 import { createWorktreeIsolationHook } from './agent-manager/worktree-isolation-hook'
+import {
+  createPlaygroundDetector,
+  tryEmitPlaygroundEvent
+} from './agent-manager/playground-handler'
 import { createEpicGroupService } from './services/epic-group-service'
 import type { IDashboardRepository } from './data/sprint-task-repository'
 import { getErrorMessage } from '../shared/errors'
@@ -237,6 +241,37 @@ export async function spawnAdhocAgent(args: {
   }
 
   /**
+   * Pairs tool_use with tool_result blocks across the SDK stream so the
+   * session-scoped detector only fires when a Write has actually completed.
+   */
+  const playgroundDetector = createPlaygroundDetector()
+
+  /**
+   * Inspect a raw SDK message for a completed Write to a playground content
+   * type (html / svg / md / json) and, if so, sanitize-and-emit the
+   * agent:playground event so the renderer shows a PlaygroundCard.
+   *
+   * Unlike pipeline agents, adhoc sessions are user-driven — the user may ask
+   * the agent to render files outside the worktree (e.g. /tmp scratch files),
+   * so we pass `allowAnyPath: true`. DOMPurify still runs inside the emitter.
+   */
+  function maybeEmitPlaygroundFromMessage(raw: unknown): void {
+    const write = playgroundDetector.onMessage(raw)
+    if (!write) return
+
+    void tryEmitPlaygroundEvent({
+      taskId: meta.id,
+      filePath: write.path,
+      worktreePath,
+      logger: log,
+      contentType: write.contentType,
+      allowAnyPath: true
+    }).catch((err) => {
+      log.warn(`[adhoc] ${meta.id} playground emit failed: ${getErrorMessage(err)}`)
+    })
+  }
+
+  /**
    * Run one conversation turn: create a query (first turn) or resume (subsequent turns).
    * When images are present and a session already exists, we send a proper multimodal
    * SDKUserMessage with base64 image blocks so Claude actually sees the screenshot.
@@ -262,6 +297,8 @@ export async function spawnAdhocAgent(args: {
         for (const event of events) {
           emitAgentEvent(meta.id, event)
         }
+
+        maybeEmitPlaygroundFromMessage(raw)
 
         // Extract session ID from system init message
         if (typeof raw === 'object' && raw !== null) {
