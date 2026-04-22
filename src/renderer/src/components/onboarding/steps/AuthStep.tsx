@@ -1,5 +1,5 @@
 import { ArrowRight, ArrowLeft, Terminal, Check, X, Copy, ExternalLink } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { Button } from '../../ui/Button'
 import { copyToClipboard } from '../../../lib/copy-to-clipboard'
 
@@ -18,6 +18,7 @@ interface AuthStatus {
 }
 
 const AUTH_CHECK_TIMEOUT_MS = 10_000
+const VISIBILITY_CHECK_THROTTLE_MS = 2_000
 const CLAUDE_INSTALL_DOCS_URL = 'https://docs.claude.com/en/docs/claude-code'
 const CLAUDE_INSTALL_COMMAND = 'curl -fsSL https://claude.ai/install.sh | bash'
 const CLAUDE_LOGIN_COMMAND = 'claude login'
@@ -44,6 +45,7 @@ export function AuthStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
   const [status, setStatus] = useState<AuthStatus | null>(null)
   const [checking, setChecking] = useState(true)
   const [timedOut, setTimedOut] = useState(false)
+  const lastVisibilityCheckRef = useRef<number>(0)
 
   const checkAuth = async (): Promise<void> => {
     setChecking(true)
@@ -63,6 +65,22 @@ export function AuthStep({ onNext, onBack, isFirst }: StepProps): React.JSX.Elem
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void checkAuth()
+  }, [])
+
+  useEffect(() => {
+    const handleVisibilityChange = (): void => {
+      if (document.visibilityState !== 'visible') return
+
+      const now = Date.now()
+      const elapsed = now - lastVisibilityCheckRef.current
+      if (elapsed < VISIBILITY_CHECK_THROTTLE_MS) return
+
+      lastVisibilityCheckRef.current = now
+      void checkAuth()
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
   }, [])
 
   const isReady = status?.cliFound && status?.tokenFound && !status?.tokenExpired
