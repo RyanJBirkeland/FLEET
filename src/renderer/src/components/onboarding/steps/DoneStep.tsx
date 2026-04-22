@@ -20,7 +20,7 @@ export function DoneStep({ onBack, onComplete, isFirst }: StepProps): React.JSX.
   const setView = usePanelLayoutStore((s) => s.setView)
   const repoOptions = useRepoOptions()
   const [repoOverride, setRepoOverride] = useState<string | null>(null)
-  const selectedRepoLabel = repoOverride ?? repoOptions[0]?.label ?? ''
+  const selectedRepoLabel = repoOverride ?? repoOptions[repoOptions.length - 1]?.label ?? ''
 
   const handleCreateFirstTask = (): void => {
     setField('title', SAMPLE_FIRST_TASK.title)
