@@ -30,7 +30,8 @@ import { buildAgentEnvWithAuth, getClaudeCliPath, refreshOAuthTokenFromKeychain 
 import { mapRawMessage, emitAgentEvent } from './agent-event-mapper'
 import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './lib/prompt-composer'
-import { resolveAgentRuntime } from './agent-manager/backend-selector'
+import { resolveAgentRuntime, loadBackendSettings } from './agent-manager/backend-selector'
+import { spawnOpencode } from './agent-manager/spawn-opencode'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createPlannerMcpServer } from './services/planner-mcp-server'
@@ -94,7 +95,8 @@ export async function spawnAdhocAgent(args: {
   // Route through agents.backendConfig — the Settings UI is the single source
   // of truth for which model runs each agent type. Assistant and adhoc each
   // get their own entry so they can diverge without code changes.
-  const { model } = resolveAgentRuntime(args.assistant ? 'assistant' : 'adhoc')
+  const agentType = args.assistant ? 'assistant' : 'adhoc'
+  const { model, backend } = resolveAgentRuntime(agentType)
 
   // Proactively refresh the OAuth token before spawning — the pipeline drain
   // loop handles this for pipeline agents, but adhoc agents bypass that path.
@@ -200,10 +202,110 @@ export async function spawnAdhocAgent(args: {
     ''
   )
 
-  // State shared across turns
-  let sessionId: string | null = null
+  // Shared mutable state — declared before both the opencode and SDK paths
+  // so both can reference `closed` without a temporal dependency.
   let closed = false
   const startedAt = Date.now()
+
+  // --- Opencode path ---
+  // When the configured backend is opencode, each conversational turn spawns
+  // `opencode run` rather than calling the Anthropic SDK. The existing
+  // mapRawMessage / emitAgentEvent pipeline handles the translated wire messages.
+  if (backend === 'opencode') {
+    const backendSettings = loadBackendSettings()
+    let opencodeSessionId: string | undefined
+
+    adhocSessions.set(meta.id, {
+      async send(message: string): Promise<void> {
+        if (closed) return
+
+        emitAgentEvent(meta.id, {
+          type: 'agent:user_message',
+          text: message,
+          timestamp: Date.now()
+        })
+
+        const handle = await spawnOpencode({
+          prompt: message,
+          cwd: worktreePath,
+          model,
+          ...(opencodeSessionId !== undefined && { sessionId: opencodeSessionId }),
+          executable: backendSettings.opencodeExecutable,
+          logger: log
+        })
+
+        for await (const rawMsg of handle.messages) {
+          if (!opencodeSessionId && handle.sessionId) {
+            opencodeSessionId = handle.sessionId
+          }
+          const events = mapRawMessage(rawMsg)
+          for (const event of events) {
+            emitAgentEvent(meta.id, event)
+          }
+        }
+      },
+      close() {
+        if (closed) return
+        closed = true
+        const durationMs = Date.now() - startedAt
+        emitAgentEvent(meta.id, {
+          type: 'agent:completed',
+          exitCode: 0,
+          costUsd: 0,
+          tokensIn: 0,
+          tokensOut: 0,
+          durationMs,
+          timestamp: Date.now()
+        })
+        updateAgentMeta(meta.id, { status: 'done', finishedAt: nowIso(), exitCode: 0 }).catch(
+          (err) => log.warn(`[adhoc] ${meta.id} failed to update meta: ${getErrorMessage(err)}`)
+        )
+        adhocSessions.delete(meta.id)
+        log.info(`[adhoc] ${meta.id} opencode session completed after ${Math.round(durationMs / 1000)}s`)
+        autoPromoteToReview().catch(
+          (err) => log.warn(`[adhoc] ${meta.id} auto-promote failed: ${getErrorMessage(err)}`)
+        )
+      }
+    })
+
+    emitAgentEvent(meta.id, { type: 'agent:started', model, timestamp: Date.now() })
+    log.info(`[adhoc] ${meta.id} starting opencode session in ${worktreePath}`)
+
+    // Kick off the first turn with the composed prompt
+    adhocSessions
+      .get(meta.id)!
+      .send(prompt)
+      .catch((err) => {
+        log.error(`[adhoc] ${meta.id} opencode initial turn failed: ${err}`)
+        if (closed) return
+        closed = true
+        const durationMs = Date.now() - startedAt
+        emitAgentEvent(meta.id, {
+          type: 'agent:completed',
+          exitCode: 1,
+          costUsd: 0,
+          tokensIn: 0,
+          tokensOut: 0,
+          durationMs,
+          timestamp: Date.now()
+        })
+        updateAgentMeta(meta.id, { status: 'done', finishedAt: nowIso(), exitCode: 1 }).catch(
+          (updateErr) => log.warn(`[adhoc] ${meta.id} failed to update meta: ${getErrorMessage(updateErr)}`)
+        )
+        adhocSessions.delete(meta.id)
+      })
+
+    return {
+      id: meta.id,
+      pid: 0,
+      logPath: meta.logPath ?? '',
+      interactive: true
+    }
+  }
+  // --- end opencode path, fall through to SDK path ---
+
+  // State shared across SDK turns
+  let sessionId: string | null = null
   let costUsd = 0
   let tokensIn = 0
   let tokensOut = 0
