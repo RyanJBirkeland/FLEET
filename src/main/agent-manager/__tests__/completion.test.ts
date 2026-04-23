@@ -165,6 +165,7 @@ describe('resolveSuccess', () => {
       status: 'review',
       worktree_path: opts.worktreePath,
       claimed_by: null,
+      fast_fail_count: 0,
       rebase_base_sha: 'abc123',
       rebased_at: expect.any(String)
     })
@@ -197,6 +198,7 @@ describe('resolveSuccess', () => {
       status: 'review',
       worktree_path: opts.worktreePath,
       claimed_by: null,
+      fast_fail_count: 0,
       rebase_base_sha: 'abc123',
       rebased_at: expect.any(String)
     })
@@ -373,6 +375,7 @@ describe('resolveSuccess', () => {
       status: 'review',
       worktree_path: opts.worktreePath,
       claimed_by: null,
+      fast_fail_count: 0,
       rebase_base_sha: 'abc123',
       rebased_at: expect.any(String)
     })
@@ -404,6 +407,7 @@ describe('resolveSuccess', () => {
       status: 'review',
       worktree_path: opts.worktreePath,
       claimed_by: null,
+      fast_fail_count: 0,
       notes: 'Rebase onto main failed — manual conflict resolution needed.',
       rebase_base_sha: null,
       rebased_at: null
@@ -517,6 +521,7 @@ describe('resolveSuccess', () => {
       status: 'review',
       worktree_path: opts.worktreePath,
       claimed_by: null,
+      fast_fail_count: 0,
       rebase_base_sha: 'abc123',
       rebased_at: expect.any(String)
     })
@@ -595,6 +600,7 @@ describe('resolveSuccess — catch handler coverage', () => {
       status: 'review',
       worktree_path: catchOpts.worktreePath,
       claimed_by: null,
+      fast_fail_count: 0,
       rebase_base_sha: 'abc123',
       rebased_at: expect.any(String)
     })

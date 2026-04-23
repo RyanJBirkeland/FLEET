@@ -14,6 +14,16 @@ import { createAgentRecord } from '../agent-history'
 import { emitAgentEvent } from '../agent-event-mapper'
 import { TurnTracker } from './turn-tracker'
 
+const MIN_RUNTIME_MS = 60_000
+const MAX_RUNTIME_MS = 24 * 60 * 60_000 // 24 hours
+
+function clampMaxRuntimeMs(value: number | null | undefined): number | null {
+  if (value == null || value <= 0) return null
+  if (value < MIN_RUNTIME_MS) return MIN_RUNTIME_MS
+  if (value > MAX_RUNTIME_MS) return MAX_RUNTIME_MS
+  return value
+}
+
 /**
  * Wires stderr, builds the ActiveAgent, registers it in the map,
  * persists agent_run_id, fires the agent record, and emits agent:started.
@@ -48,7 +58,7 @@ export function initializeAgentTracking(
     costUsd: 0,
     tokensIn: 0,
     tokensOut: 0,
-    maxRuntimeMs: task.max_runtime_ms ?? null,
+    maxRuntimeMs: clampMaxRuntimeMs(task.max_runtime_ms),
     maxCostUsd: task.max_cost_usd ?? null,
     worktreePath: worktree.worktreePath,
     branch: worktree.branch

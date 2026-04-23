@@ -123,14 +123,10 @@ export async function createPr(i: CreatePrInput): Promise<CreatePrResult> {
     updateTask(i.taskId, { pr_url: pr.prUrl, pr_number: pr.prNumber ?? null, pr_status: 'open' })
     const cfg = getRepoConfig(task.repo)
     if (cfg) await cleanupWorktree(task.worktree_path, branch, cfg.localPath, i.env)
-    const updated = updateTask(i.taskId, {
-      status: 'done',
-      completed_at: nowIso(),
-      worktree_path: null
-    })
-    // Fire terminal callback before broadcast so dependency resolution completes
-    // before the renderer receives the mutation — avoids stale pipeline state.
-    i.onStatusTerminal(i.taskId, 'done')
+    // Keep the task in `review` — the sprint PR poller watches pr_status='open' tasks
+    // and marks them done when GitHub reports the PR as merged. Marking done here would
+    // transition before the merge event and bypass the poller's cancelled-on-close path.
+    const updated = updateTask(i.taskId, { worktree_path: null })
     if (updated) notifySprintMutation('updated', updated)
     return { success: true, prUrl: pr.prUrl }
   } catch (err: unknown) {

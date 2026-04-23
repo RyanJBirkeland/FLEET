@@ -278,7 +278,19 @@ export async function setupWorktree(
       // after, and on any post-condition breach abort + refuse to proceed.
       await assertRepoCleanOrAbort(repoPath, env, log, 'pre-ffMergeMain')
       try {
-        await ffMergeMain(repoPath, env, log, GIT_FF_MERGE_TIMEOUT_MS)
+        const { stdout: branchOut } = await execFileAsync(
+          'git',
+          ['rev-parse', '--abbrev-ref', 'HEAD'],
+          { cwd: repoPath, env }
+        )
+        const currentBranch = branchOut.trim()
+        if (currentBranch !== 'main') {
+          log.warn(
+            `[worktree] Main repo is on branch "${currentBranch}", not "main" — skipping ff-merge to avoid corrupting unrelated branch`
+          )
+        } else {
+          await ffMergeMain(repoPath, env, log, GIT_FF_MERGE_TIMEOUT_MS)
+        }
       } catch (err) {
         log.warn(`[worktree] Failed to ff-merge origin/main (proceeding anyway): ${err}`)
       }

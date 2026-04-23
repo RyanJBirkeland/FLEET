@@ -188,6 +188,7 @@ describe('Agent completion pipeline integration', () => {
         status: 'review',
         worktree_path: '/tmp/wt/task-1',
         claimed_by: null,
+        fast_fail_count: 0,
         rebase_base_sha: 'abc123',
         rebased_at: expect.any(String),
         duration_ms: expect.any(Number)
@@ -245,6 +246,7 @@ describe('Agent completion pipeline integration', () => {
         status: 'review',
         worktree_path: '/tmp/wt/task-1',
         claimed_by: null,
+        fast_fail_count: 0,
         rebase_base_sha: 'abc123',
         rebased_at: expect.any(String),
         duration_ms: expect.any(Number)

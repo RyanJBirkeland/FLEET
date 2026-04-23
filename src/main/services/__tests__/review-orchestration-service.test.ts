@@ -153,15 +153,16 @@ describe('review-orchestration-service', () => {
   })
 
   describe('createPr', () => {
-    it('should push branch, create PR, cleanup worktree, and mark task done', async () => {
+    it('should push branch, create PR, cleanup worktree, and keep task in review', async () => {
       const mockTask = {
         id: 'task2',
         repo: 'bde',
         title: 'Test PR task',
         worktree_path: '/worktree/task2'
       }
+      const updatedTask = { ...mockTask, worktree_path: null }
       vi.mocked(sprintService.getTask).mockReturnValue(mockTask as any)
-      vi.mocked(sprintService.updateTask).mockReturnValue(mockTask as any)
+      vi.mocked(sprintService.updateTask).mockReturnValue(updatedTask as any)
       vi.mocked(reviewPr.createPullRequest).mockResolvedValue({
         success: true,
         prUrl: 'https://github.com/org/repo/pull/123',
@@ -187,12 +188,13 @@ describe('review-orchestration-service', () => {
           body: 'PR body'
         })
       )
-      // updateTask calls now go through repository in executor
-      expect(mockOnStatusTerminal).toHaveBeenCalledWith('task2', 'done')
+      // Task stays in review — worktree_path cleared, no done transition
+      expect(sprintService.updateTask).toHaveBeenCalledWith('task2', { worktree_path: null })
+      expect(mockOnStatusTerminal).not.toHaveBeenCalled()
     })
 
     describe('createPr call ordering', () => {
-      it('calls onStatusTerminal before notifySprintMutation', async () => {
+      it('calls notifySprintMutation after the worktree_path update', async () => {
         const callOrder: string[] = []
 
         vi.mocked(sprintService.getTask).mockReturnValue({
@@ -203,10 +205,8 @@ describe('review-orchestration-service', () => {
           title: 'Test'
         } as any)
 
-        vi.mocked(sprintService.updateTask).mockReturnValue({
-          id: 'task-1',
-          status: 'done'
-        } as any)
+        const updatedTask = { id: 'task-1', worktree_path: null, status: 'review' }
+        vi.mocked(sprintService.updateTask).mockReturnValue(updatedTask as any)
 
         vi.mocked(sprintService.notifySprintMutation).mockImplementation(() => {
           callOrder.push('notify')
@@ -227,9 +227,7 @@ describe('review-orchestration-service', () => {
 
         vi.mocked(reviewMerge.cleanupWorktree).mockResolvedValue(undefined)
 
-        const onStatusTerminal = vi.fn().mockImplementation(async () => {
-          callOrder.push('terminal')
-        })
+        const onStatusTerminal = vi.fn()
 
         await orchestration.createPr({
           taskId: 'task-1',
@@ -239,7 +237,11 @@ describe('review-orchestration-service', () => {
           onStatusTerminal
         })
 
-        expect(callOrder).toEqual(['terminal', 'notify'])
+        // notifySprintMutation must be called with the worktree_path-cleared update
+        expect(sprintService.notifySprintMutation).toHaveBeenCalledWith('updated', updatedTask)
+        expect(callOrder).toEqual(['notify'])
+        // onStatusTerminal is not called — task stays in review awaiting PR poller
+        expect(onStatusTerminal).not.toHaveBeenCalled()
       })
     })
   })
