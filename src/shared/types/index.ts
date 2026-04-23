@@ -86,3 +86,6 @@ export type {
 
 // Agent prompt input
 export type { BuildPromptInput } from './agent-prompt'
+
+// Revision feedback
+export type { RevisionFeedback, RevisionDiagnostic } from './revision'

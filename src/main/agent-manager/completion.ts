@@ -32,6 +32,10 @@ import { detectUntouchedTests, listChangedFiles, formatAdvisory } from './test-t
 import { detectNoOpRun } from './noop-detection'
 import { NOOP_RUN_NOTE } from './failure-messages'
 import { verifyWorktreeBuildsAndTests } from './verify-worktree'
+import { scanForUnverifiedFacts } from './unverified-facts-scanner'
+import { readFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { buildVerificationRevisionFeedback } from './revision-feedback-builder'
 
 export type { ResolveFailureContext } from './resolve-failure-phases'
 
@@ -116,7 +120,12 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
   const branch = await detectAgentBranch(taskId, worktreePath, repo, logger, onTaskTerminal)
   if (!branch) return
 
-  await autoCommitPendingChanges(taskId, worktreePath, title, logger)
+  const task = repo.getTask(taskId)
+  if (!task) {
+    logger.error(`[completion] Task ${taskId} not found — skipping auto-commit`)
+    return
+  }
+  await autoCommitPendingChanges(taskId, worktreePath, task, logger)
 
   const rebaseOutcome = await performRebaseOntoMain(taskId, worktreePath, logger)
 
@@ -155,6 +164,7 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
   if (!tipVerified) return
 
   await annotateIfTestsUntouched(taskId, branch, worktreePath, repoPath, repo, logger)
+  await annotateUnverifiedFacts(taskId, worktreePath, repo, logger)
 
   const verified = await verifyWorktreeOrFail({
     taskId,
@@ -242,6 +252,44 @@ async function annotateIfTestsUntouched(
   } catch (err) {
     logger.warn(
       `[completion] Untouched-test check skipped for task ${taskId}: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
+}
+
+/**
+ * Post-commit advisory: diffs the last commit against its parent, then scans
+ * the diff for heuristic signals of fabricated external references — unknown
+ * brew tap installs, npm global packages not in package.json, unrecognised
+ * URLs, and pipe-to-shell patterns. Each finding is appended to the task's
+ * `notes` as a separate line so the human reviewer sees them in Code Review.
+ *
+ * Never throws, never blocks the success path.
+ */
+async function annotateUnverifiedFacts(
+  taskId: string,
+  worktreePath: string,
+  repo: IAgentTaskRepository,
+  logger: Logger
+): Promise<void> {
+  try {
+    const env = buildAgentEnv()
+    const { stdout: diff } = await execFileAsync('git', ['diff', 'HEAD~1', 'HEAD'], {
+      cwd: worktreePath,
+      env
+    })
+
+    const packageJsonPath = join(worktreePath, 'package.json')
+    const packageJsonContent = await readFile(packageJsonPath, 'utf8').catch(() => '{}')
+
+    const warnings = scanForUnverifiedFacts(diff, packageJsonContent)
+    if (warnings.length === 0) return
+
+    for (const warning of warnings) {
+      appendAdvisoryNote(taskId, warning, repo, logger)
+    }
+  } catch (err) {
+    logger.warn(
+      `[completion] Unverified-facts scan skipped for task ${taskId}: ${err instanceof Error ? err.message : String(err)}`
     )
   }
 }
@@ -352,10 +400,11 @@ async function verifyWorktreeOrFail(opts: {
   logger.warn(
     `[completion] task ${taskId}: pre-review verification failed (${result.failure.kind}) — requeueing instead of transitioning to review`
   )
-  const isTerminal = resolveFailurePhase(
-    { taskId, retryCount, notes: result.failure.stderr, repo },
-    logger
-  )
+
+  const feedback = buildVerificationRevisionFeedback(result.failure.kind, result.failure.stderr)
+  const notes = JSON.stringify(feedback)
+
+  const isTerminal = resolveFailurePhase({ taskId, retryCount, notes, repo }, logger)
   await onTaskTerminal(taskId, isTerminal ? 'failed' : 'queued')
   return false
 }

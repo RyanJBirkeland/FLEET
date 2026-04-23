@@ -31,6 +31,7 @@ import { MAX_TURNS } from './spawn-sdk'
 import { sleep } from '../lib/async-utils'
 import { NOTES_MAX_LENGTH } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import { extractFilesToChange } from './spec-parser'
 
 export type { ConsumeMessagesResult }
 
@@ -39,6 +40,7 @@ export interface AgentRunClaim {
   title: string
   prompt: string | null
   spec: string | null
+  spec_type?: string | null
   repo: string
   retry_count: number
   fast_fail_count: number
@@ -288,7 +290,89 @@ async function handleFastFailRequeue(ctx: ResolveAgentExitContext): Promise<void
   await ctx.onTaskTerminal(ctx.task.id, 'queued')
 }
 
+/**
+ * Checks that all files listed in the spec's `## Files to Change` section
+ * appear in the agent's commit diff.
+ *
+ * Returns `null` when no checklist is present (prompt-type tasks, missing
+ * section) — the caller should continue normally.
+ *
+ * Returns a non-empty array of missing paths when the commit diff is
+ * incomplete. The caller must re-queue the task with a note listing them.
+ */
+async function detectMissingSpecFiles(
+  task: AgentRunClaim,
+  worktreePath: string,
+  logger: Logger
+): Promise<string[] | null> {
+  if (task.spec_type === 'prompt' || !task.spec) return null
+
+  const requiredFiles = extractFilesToChange(task.spec)
+  if (requiredFiles.length === 0) return null
+
+  let diffOutput: string
+  try {
+    const env = buildAgentEnv()
+    const { stdout } = await execFileAsync('git', ['diff', '--name-only', 'main..HEAD'], {
+      cwd: worktreePath,
+      env
+    })
+    diffOutput = stdout
+  } catch (err) {
+    // If the diff command fails (e.g. no commits yet), let the existing
+    // commit-check guard handle it rather than re-queuing here.
+    logger.warn(`[run-agent] git diff failed during files-checklist check: ${err}`)
+    return null
+  }
+
+  const changedFiles = new Set(
+    diffOutput
+      .split('\n')
+      .map((line) => line.trim())
+      .filter(Boolean)
+  )
+
+  const missingFiles = requiredFiles.filter((required) => !changedFiles.has(required))
+  return missingFiles.length > 0 ? missingFiles : null
+}
+
+/**
+ * Re-queues the task with a note listing the spec files the agent missed.
+ * The retry agent will see the exact missing paths in its context.
+ */
+async function handleIncompleteFiles(
+  ctx: ResolveAgentExitContext,
+  missingFiles: string[]
+): Promise<void> {
+  const notes = `Files to Change checklist incomplete. Missing: ${missingFiles.join(', ')}`
+  ctx.logger.warn(`[run-agent] task ${ctx.task.id}: ${notes}`)
+
+  const isTerminal = resolveFailure(
+    {
+      taskId: ctx.task.id,
+      retryCount: ctx.task.retry_count ?? 0,
+      notes,
+      repo: ctx.repo
+    },
+    ctx.logger
+  )
+  if (isTerminal) {
+    await ctx.onTaskTerminal(ctx.task.id, 'failed')
+    return
+  }
+  await deleteAgentBranchBeforeRetry(ctx.repoPath, ctx.worktree.branch, ctx.logger)
+}
+
 async function resolveNormalExit(ctx: ResolveAgentExitContext): Promise<void> {
+  const missingFiles = await detectMissingSpecFiles(
+    ctx.task,
+    ctx.worktree.worktreePath,
+    ctx.logger
+  )
+  if (missingFiles !== null) {
+    return handleIncompleteFiles(ctx, missingFiles)
+  }
+
   try {
     const ghRepo = getGhRepo(ctx.task.repo) ?? ctx.task.repo
     await resolveSuccess(

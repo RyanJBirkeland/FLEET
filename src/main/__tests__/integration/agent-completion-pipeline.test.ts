@@ -138,7 +138,7 @@ describe('Agent completion pipeline integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     updateTaskMock.mockReturnValue(null)
-    getTaskMock.mockReturnValue(null)
+    getTaskMock.mockReturnValue(makeTaskRecord())
     onTaskTerminal.mockReset().mockResolvedValue(undefined)
   })
 
@@ -189,7 +189,8 @@ describe('Agent completion pipeline integration', () => {
         worktree_path: '/tmp/wt/task-1',
         claimed_by: null,
         rebase_base_sha: 'abc123',
-        rebased_at: expect.any(String)
+        rebased_at: expect.any(String),
+        duration_ms: expect.any(Number)
       })
 
       // onTaskTerminal should NOT be called (review is not terminal)
@@ -245,7 +246,8 @@ describe('Agent completion pipeline integration', () => {
         worktree_path: '/tmp/wt/task-1',
         claimed_by: null,
         rebase_base_sha: 'abc123',
-        rebased_at: expect.any(String)
+        rebased_at: expect.any(String),
+        duration_ms: expect.any(Number)
       })
     })
   })
@@ -608,6 +610,9 @@ describe('Agent completion pipeline integration', () => {
             depends_on: [{ id: 'task-parent', type: 'hard' }]
           }) as any
         }
+        if (id === 'task-parent') {
+          return makeTaskRecord({ id: 'task-parent', status: 'active' }) as any
+        }
         return null
       })
 
@@ -623,7 +628,9 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git fetch origin main
         { stdout: '' }, // git rebase origin/main
         { stdout: 'abc123\n' }, // git rev-parse origin/main (rebase base SHA)
-        { stdout: '0\n' } // git rev-list (no commits)
+        { stdout: '0\n' }, // git rev-list (no commits)
+        { stdout: '' }, // logUncommittedWorktreeState: git diff HEAD
+        { stdout: '' } // logUncommittedWorktreeState: git status --porcelain
       ])
 
       await resolveSuccess(

@@ -483,6 +483,7 @@ describe('AgentManagerImpl — class internals', () => {
         title: 'Build feature',
         prompt: 'Add login page',
         spec: 'Login spec',
+        spec_type: null,
         repo: 'myrepo',
         retry_count: 2,
         fast_fail_count: 1,

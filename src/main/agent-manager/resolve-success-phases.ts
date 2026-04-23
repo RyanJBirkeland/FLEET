@@ -24,6 +24,9 @@ import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
 import { rebaseOntoMain, autoCommitIfDirty } from '../lib/git-operations'
 import { transitionToReview } from './review-transition'
+import type { SprintTask } from '../../shared/types/task-types'
+import { buildCommitMessage } from './commit-message'
+import { NO_COMMITS_NOTE } from './failure-messages'
 
 export interface RebaseOutcome {
   rebaseNote: string | undefined
@@ -272,11 +275,11 @@ export async function detectAgentBranch(
 export async function autoCommitPendingChanges(
   taskId: string,
   worktreePath: string,
-  title: string,
+  task: SprintTask,
   logger: Logger
 ): Promise<void> {
   try {
-    await autoCommitIfDirty(worktreePath, title, logger)
+    await autoCommitIfDirty(worktreePath, buildCommitMessage(task), logger)
   } catch (err) {
     // Auto-commit is best-effort: if it fails the agent's explicit commits are still present.
     // The subsequent rev-list check will catch the no-commits case if the worktree is truly empty.
@@ -329,6 +332,35 @@ interface CommitCheckContext {
 }
 
 /**
+ * Captures `git diff HEAD` and `git status --porcelain` from the worktree and
+ * logs both under the task id. Called whenever the agent exited without commits
+ * so that the next retry (and the operator) can see what work was abandoned.
+ */
+async function logUncommittedWorktreeState(
+  taskId: string,
+  worktreePath: string,
+  logger: Logger
+): Promise<void> {
+  const env = buildAgentEnv()
+  try {
+    const [{ stdout: diff }, { stdout: status }] = await Promise.all([
+      execFileAsync('git', ['diff', 'HEAD'], { cwd: worktreePath, env }),
+      execFileAsync('git', ['status', '--porcelain'], { cwd: worktreePath, env })
+    ])
+    logger.warn(
+      `[completion] Task ${taskId}: no-commits — uncommitted status:\n${status.trim() || '(empty)'}`
+    )
+    logger.warn(
+      `[completion] Task ${taskId}: no-commits — uncommitted diff:\n${diff.trim() || '(empty)'}`
+    )
+  } catch (err) {
+    logger.warn(
+      `[completion] Task ${taskId}: could not capture uncommitted state for no-commits log: ${err}`
+    )
+  }
+}
+
+/**
  * Check if branch has any commits ahead of origin/main.
  * Returns true if commits exist, false if none (triggers retry/failure).
  */
@@ -352,9 +384,11 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
       { cwd: worktreePath, env }
     )
     if (parseInt(diffOut.trim(), 10) === 0) {
+      await logUncommittedWorktreeState(taskId, worktreePath, logger)
+
       const summaryNote = agentSummary
-        ? `Agent produced no commits. Last output: ${agentSummary.slice(0, AGENT_SUMMARY_MAX_LENGTH)}`
-        : 'Agent produced no commits (no output captured)'
+        ? `${NO_COMMITS_NOTE} Last agent output: ${agentSummary.slice(0, AGENT_SUMMARY_MAX_LENGTH)}`
+        : NO_COMMITS_NOTE
 
       if (retryCount >= MAX_NO_COMMITS_RETRIES) {
         await failTaskExhaustedNoCommits(taskId, branch, repo, logger, onTaskTerminal)

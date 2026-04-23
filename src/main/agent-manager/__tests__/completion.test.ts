@@ -57,16 +57,35 @@ function mockExecFileSequence(responses: Array<{ stdout?: string; error?: Error 
   })
 }
 
-function resetMocks() {
-  getCustomMock().mockReset()
-  updateTaskMock.mockReset()
-  updateTaskMock.mockReturnValue(null)
-}
-
 const noopLogger = { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
 
+const stubTask = {
+  id: 'task-1',
+  title: 'Add login page',
+  repo: 'bde',
+  prompt: null,
+  priority: 1,
+  status: 'queued' as const,
+  notes: null,
+  spec: null,
+  spec_type: 'feature',
+  retry_count: 0,
+  fast_fail_count: 0,
+  agent_run_id: null,
+  pr_number: null,
+  pr_status: null as null,
+  pr_url: null,
+  claimed_by: null,
+  started_at: null,
+  completed_at: null,
+  template_name: null,
+  depends_on: null,
+  updated_at: '2026-01-01T00:00:00.000Z',
+  created_at: '2026-01-01T00:00:00.000Z'
+}
+
 const mockRepo: IAgentTaskRepository = {
-  getTask: vi.fn(),
+  getTask: vi.fn().mockReturnValue(stubTask),
   updateTask: (...args: [string, Record<string, unknown>]) => (updateTask as any)(...args),
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
@@ -77,6 +96,13 @@ const mockRepo: IAgentTaskRepository = {
   getGroup: vi.fn().mockReturnValue(null),
   getGroupTasks: vi.fn().mockReturnValue([]),
   getGroupsWithDependencies: vi.fn().mockReturnValue([])
+}
+
+function resetMocks() {
+  getCustomMock().mockReset()
+  updateTaskMock.mockReset()
+  updateTaskMock.mockReturnValue(null)
+  vi.mocked(mockRepo.getTask).mockReturnValue(stubTask)
 }
 
 describe('resolveSuccess', () => {

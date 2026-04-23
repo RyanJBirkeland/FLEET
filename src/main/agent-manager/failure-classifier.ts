@@ -71,6 +71,10 @@ registerFailurePattern({
   type: 'spawn',
   keywords: ['spawn failed', 'failed to spawn', 'enoent', 'command not found']
 })
+registerFailurePattern({
+  type: 'incomplete_files',
+  keywords: ['missing:', 'incomplete files', 'files to change checklist']
+})
 
 export function classifyFailureReason(notes: string | undefined): FailureReason {
   if (!notes) return 'unknown'

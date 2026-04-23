@@ -53,6 +53,7 @@ export type FailureReason =
   | 'no_commits'
   | 'no-commits-exhausted'
   | 'tip-mismatch'
+  | 'incomplete_files'
   | 'environmental'
   | 'unknown'
 

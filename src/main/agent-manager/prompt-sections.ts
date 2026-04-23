@@ -8,6 +8,7 @@ import { join } from 'node:path'
 import { BDE_TASK_MEMORY_DIR } from '../paths'
 import { PROMPT_TRUNCATION } from './prompt-constants'
 import type { AgentPersonality } from '../agent-system/personality/types'
+import { parseRevisionFeedback, renderRevisionFeedbackBlock } from './revision-feedback-builder'
 
 // ---------------------------------------------------------------------------
 // Preambles (coding agents vs spec-drafting agents)
@@ -194,6 +195,25 @@ If you need to push, use: \`git push origin ${branch}\``
 
 const MAX_RETRIES_FOR_DISPLAY = 3
 
+/**
+ * Formats the "previous attempt" text for the auto-retry section.
+ *
+ * When `notes` is valid RevisionFeedback JSON, renders a structured
+ * `<revision_feedback>` block so the agent receives precise, machine-readable
+ * diagnostics. Falls back to a raw `<failure_notes>` block for legacy freeform
+ * strings so older notes are never silently dropped.
+ */
+function buildAutoRetryNotesText(notes: string | undefined, retryCount: number): string {
+  if (!notes) return `This is retry attempt ${retryCount}.`
+
+  const structured = parseRevisionFeedback(notes)
+  if (structured) {
+    return `${renderRevisionFeedbackBlock(structured)}`
+  }
+
+  return `Previous attempt failed:\n<failure_notes>\n${escapeXmlContent(truncateSpec(notes, PROMPT_TRUNCATION.RETRY_NOTES_CHARS))}\n</failure_notes>`
+}
+
 export function buildRetryContext(
   retryCount: number,
   previousNotes?: string,
@@ -221,9 +241,7 @@ export function buildRetryContext(
   if (hasAutoRetry) {
     const attemptNum = retryCount + 1
     const maxAttempts = MAX_RETRIES_FOR_DISPLAY + 1
-    const notesText = previousNotes
-      ? `Previous attempt failed:\n<failure_notes>\n${escapeXmlContent(truncateSpec(previousNotes, PROMPT_TRUNCATION.RETRY_NOTES_CHARS))}\n</failure_notes>`
-      : `This is retry attempt ${retryCount}.`
+    const notesText = buildAutoRetryNotesText(previousNotes, retryCount)
     section += `## Auto-Retry\nThis is attempt ${attemptNum} of ${maxAttempts}. ${notesText}\nDo not repeat your prior approach — analyze the failure and try something different.\nIf the failure was a test/typecheck error, fix that specific error first.\n`
   }
 
