@@ -16,6 +16,9 @@ import { spawnViaCli } from './spawn-cli'
 import { loadBackendSettings, resolveAgentRuntime } from './backend-selector'
 import { spawnLocalAgent } from './local-adapter'
 import { spawnOpencode } from './spawn-opencode'
+import { startOpencodeSessionMcp, type OpencodeSessionMcpHandle } from './opencode-session-mcp'
+import { writeOpencodeWorktreeConfig, buildOpencodeFirstTurnPrompt } from './opencode-worktree-config'
+import { createEpicGroupService } from '../services/epic-group-service'
 
 /**
  * Pipeline agents must only spawn with a `cwd` inside a BDE-managed worktree
@@ -80,6 +83,12 @@ export async function spawnAgent(opts: {
    */
   worktreeBase?: string | undefined
   sessionId?: string | undefined
+  /**
+   * Branch name for opencode agents. When provided, the prompt is replaced
+   * with a lightweight branch-prefixed version — opencode already reads
+   * CLAUDE.md from --dir, so the full assembled prompt is not needed.
+   */
+  branch?: string | undefined
 }): Promise<AgentHandle> {
   // Worktree-base cwd assertion applies only to pipeline agents — adhoc,
   // assistant, copilot, and synthesizer agents run in the user's repo or
@@ -113,20 +122,67 @@ export async function spawnAgent(opts: {
   }
 
   if (resolved.backend === 'opencode') {
-    const handle = await spawnOpencode({
-      prompt: opts.prompt,
-      cwd: opts.cwd,
-      model: resolved.model,
-      ...(opts.sessionId && { sessionId: opts.sessionId }),
-      executable: settings.opencodeExecutable,
-      ...(opts.logger && { logger: opts.logger })
-    })
-    return annotateHandle(handle, 'opencode', resolved.model)
+    return spawnOpencodeWithMcp(opts, resolved.model, settings.opencodeExecutable)
   }
 
   const modelForClaude = resolved.backend === 'claude' ? resolved.model : opts.model
   const claudeHandle = await spawnClaudeAgent({ ...opts, model: modelForClaude })
   return annotateHandle(claudeHandle, 'claude', modelForClaude)
+}
+
+async function spawnOpencodeWithMcp(
+  opts: {
+    prompt: string
+    cwd: string
+    model: string
+    logger?: Logger | undefined
+    sessionId?: string | undefined
+    branch?: string | undefined
+  },
+  resolvedModel: string,
+  executable?: string
+): Promise<AgentHandle> {
+  const logger = opts.logger ?? nullLogger()
+  const sessionMcp = await startOpencodeSessionMcp(createEpicGroupService(), logger)
+  await writeOpencodeWorktreeConfig(opts.cwd, sessionMcp.url, sessionMcp.token)
+
+  const prompt =
+    opts.branch != null
+      ? buildOpencodeFirstTurnPrompt(opts.prompt, opts.branch)
+      : opts.prompt
+
+  const handle = await spawnOpencode({
+    prompt,
+    cwd: opts.cwd,
+    model: resolvedModel,
+    ...(opts.sessionId && { sessionId: opts.sessionId }),
+    ...(executable && { executable }),
+    ...(opts.logger && { logger: opts.logger })
+  })
+
+  return {
+    ...handle,
+    messages: withMcpCleanup(handle.messages, sessionMcp, opts.logger)
+  }
+}
+
+async function* withMcpCleanup(
+  messages: AsyncIterable<unknown>,
+  sessionMcp: OpencodeSessionMcpHandle,
+  logger?: Logger
+): AsyncGenerator<unknown> {
+  try {
+    yield* messages
+  } finally {
+    sessionMcp.close().catch((err: unknown) => {
+      logger?.warn(`[agent-manager] Failed to close opencode session MCP server: ${err}`)
+    })
+  }
+}
+
+function nullLogger(): Logger {
+  const noop = (): void => {}
+  return { info: noop, warn: noop, error: noop, debug: noop }
 }
 
 function annotateHandle(
@@ -177,7 +233,8 @@ export async function spawnWithTimeout(
   logger: Logger,
   maxBudgetUsd?: number,
   pipelineTuning?: PipelineSpawnTuning,
-  worktreeBase?: string
+  worktreeBase?: string,
+  branch?: string
 ): Promise<AgentHandle> {
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -187,7 +244,7 @@ export async function spawnWithTimeout(
     )
   })
   return await Promise.race([
-    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase }),
+    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase, branch }),
     timeoutPromise
   ]).finally(() => clearTimeout(timer!))
 }

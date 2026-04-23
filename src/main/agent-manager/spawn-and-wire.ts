@@ -130,7 +130,8 @@ export async function spawnAndWireAgent(
       logger,
       task.max_cost_usd ?? undefined,
       pipelineTuning,
-      deps.worktreeBase
+      deps.worktreeBase,
+      worktree.branch
     )
     try {
       onSpawnSuccess?.()

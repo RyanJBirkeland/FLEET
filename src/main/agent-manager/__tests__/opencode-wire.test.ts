@@ -15,7 +15,7 @@ const STEP_FINISH_TOOL_CALLS_LINE =
   '{"type":"step_finish","timestamp":1776922162124,"sessionID":"ses_abc","part":{"id":"prt_3","reason":"tool-calls","messageID":"msg_1","sessionID":"ses_abc","type":"step-finish","tokens":{"total":100,"input":80,"output":20,"reasoning":0,"cache":{"write":0,"read":0}},"cost":0.001}}'
 
 const TOOL_USE_LINE =
-  '{"type":"tool_use","timestamp":1776922320554,"sessionID":"ses_abc","part":{"type":"tool","tool":"apply_patch","callID":"call_zErW","state":{"status":"completed","input":{"patchText":"*** Begin Patch\\n+hello\\n*** End Patch"},"output":"Success. Updated the following files:\\nA test.txt"},"id":"prt_4","sessionID":"ses_abc","messageID":"msg_2"}}'
+  '{"type":"tool","timestamp":1776922320554,"sessionID":"ses_abc","part":{"type":"tool","tool":"apply_patch","callID":"call_zErW","state":{"status":"completed","input":{"patchText":"*** Begin Patch\\n+hello\\n*** End Patch"},"output":"Success. Updated the following files:\\nA test.txt"},"id":"prt_4","sessionID":"ses_abc","messageID":"msg_2"}}'
 
 const ERROR_LINE =
   '{"type":"error","timestamp":1776922149919,"sessionID":"ses_abc","error":{"name":"UnknownError","data":{"message":"Model not found: anthropic/claude-haiku-4-5."}}}'
@@ -81,7 +81,7 @@ describe('translateOpencodeEvent', () => {
 
     it('sets is_error true when tool call status is not completed', () => {
       const failedToolUseLine =
-        '{"type":"tool_use","timestamp":100,"sessionID":"ses_abc","part":{"type":"tool","tool":"bash","callID":"call_fail","state":{"status":"error","input":{"command":"ls"},"output":"permission denied"},"id":"prt_5","sessionID":"ses_abc","messageID":"msg_3"}}'
+        '{"type":"tool","timestamp":100,"sessionID":"ses_abc","part":{"type":"tool","tool":"bash","callID":"call_fail","state":{"status":"error","input":{"command":"ls"},"output":"permission denied"},"id":"prt_5","sessionID":"ses_abc","messageID":"msg_3"}}'
 
       const result = translateOpencodeEvent(failedToolUseLine)
 
@@ -91,7 +91,7 @@ describe('translateOpencodeEvent', () => {
 
     it('falls back to empty object when tool state input is absent', () => {
       const noInputLine =
-        '{"type":"tool_use","timestamp":100,"sessionID":"ses_abc","part":{"type":"tool","tool":"bash","callID":"call_noinput","state":{"status":"completed","output":"done"},"id":"prt_6","sessionID":"ses_abc","messageID":"msg_4"}}'
+        '{"type":"tool","timestamp":100,"sessionID":"ses_abc","part":{"type":"tool","tool":"bash","callID":"call_noinput","state":{"status":"completed","output":"done"},"id":"prt_6","sessionID":"ses_abc","messageID":"msg_4"}}'
 
       const result = translateOpencodeEvent(noInputLine)
 
@@ -101,7 +101,7 @@ describe('translateOpencodeEvent', () => {
 
     it('falls back to empty string when tool state output is absent', () => {
       const noOutputLine =
-        '{"type":"tool_use","timestamp":100,"sessionID":"ses_abc","part":{"type":"tool","tool":"bash","callID":"call_noout","state":{"status":"completed","input":{}},"id":"prt_7","sessionID":"ses_abc","messageID":"msg_5"}}'
+        '{"type":"tool","timestamp":100,"sessionID":"ses_abc","part":{"type":"tool","tool":"bash","callID":"call_noout","state":{"status":"completed","input":{}},"id":"prt_7","sessionID":"ses_abc","messageID":"msg_5"}}'
 
       const result = translateOpencodeEvent(noOutputLine)
 

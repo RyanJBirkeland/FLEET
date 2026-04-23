@@ -142,7 +142,7 @@ export function translateOpencodeEvent(line: string): SDKWireMessage[] {
   switch (event.type) {
     case 'text':
       return translateTextEvent(event.part as OpencodeTextPart)
-    case 'tool_use':
+    case 'tool':
       return translateToolUseEvent(event.part as OpencodeToolPart)
     case 'step_finish':
       return translateStepFinishEvent(event.part as OpencodeStepFinishPart)
