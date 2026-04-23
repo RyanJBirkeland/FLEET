@@ -50,6 +50,7 @@ import {
   SHARED_WEB_PREFERENCES,
   restoreTearoffWindows
 } from './tearoff-manager'
+import { clearAnthropicEnvVars } from './auth-guard'
 
 // Side-effecting startup steps run before any whenReady-time work touches
 // process.env, the network, or the singleton lock. Order matters: PATH first,
@@ -58,6 +59,11 @@ import {
 runStartupPreflight()
 
 function runStartupPreflight(): void {
+  // Clear raw API key env vars before any agent or service code runs.
+  // BDE authenticates via the OAuth token written to ~/.bde/oauth-token;
+  // a stray ANTHROPIC_API_KEY in the environment would bypass that path
+  // and could allow unauthenticated cost accumulation.
+  clearAnthropicEnvVars()
   // Augment process.env.PATH so child_process.spawn() can find user-installed
   // CLIs (claude, gh, git, node) when launched from Finder/Spotlight. Must run
   // before any whenReady-time spawn (agent-manager, status-server, adhoc agents).

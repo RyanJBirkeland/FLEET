@@ -1,6 +1,7 @@
 /**
  * Task Workbench IPC handlers — AI-assisted task creation.
  */
+import { randomUUID } from 'node:crypto'
 import { safeHandle } from '../ipc-utils'
 import { getRepoPath } from '../paths'
 import { searchRepo } from '../services/repo-search-service'
@@ -128,7 +129,7 @@ export function registerWorkbenchHandlers(
     // Case-insensitive lookup — the renderer sends e.g. `repo: 'BDE'` but
     // the underlying map is keyed by lowercase name.
     const repoPath = getRepoPath(input.formContext.repo)
-    const streamId = `copilot-${Date.now()}`
+    const streamId = randomUUID()
 
     // Fail fast if the repo is not configured: code-awareness depends on a
     // valid `cwd`, and silently falling back to `process.cwd()` (the BDE app

@@ -19,15 +19,37 @@ export interface StatusServer {
  * @param agentManager - Agent manager instance to query for status/metrics
  * @param repo - Sprint task repository for queue statistics
  * @param port - Port to listen on (default 18791, use 0 for random port in tests)
+ * @param token - Optional bearer token; when provided, all requests must carry it
  */
 export function createStatusServer(
   agentManager: AgentManagerStatusReader,
   repo: Pick<ISprintTaskRepository, 'getQueueStats'>,
-  port = 18791
+  port = 18791,
+  token?: string
 ): StatusServer {
   let server: http.Server | null = null
+  // Updated after bind so the Host check uses the real port (important when port=0).
+  let boundPort = port
 
   function handleRequest(req: http.IncomingMessage, res: http.ServerResponse): void {
+    // Host header check — reject requests that spoof a different Host
+    const host = req.headers['host']
+    if (host && host !== `127.0.0.1:${boundPort}` && host !== `localhost:${boundPort}`) {
+      res.writeHead(400, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Invalid Host header' }))
+      return
+    }
+
+    // Bearer token check
+    if (token) {
+      const auth = req.headers['authorization']
+      if (auth !== `Bearer ${token}`) {
+        res.writeHead(401, { 'Content-Type': 'application/json' })
+        res.end(JSON.stringify({ error: 'Unauthorized' }))
+        return
+      }
+    }
+
     // Only handle GET /status
     if (req.url === '/status') {
       if (req.method !== 'GET') {
@@ -88,9 +110,9 @@ export function createStatusServer(
 
         server.listen(port, '127.0.0.1', () => {
           const addr = server!.address()
-          const actualPort = typeof addr === 'object' && addr ? addr.port : port
-          logger.info(`[status-server] Listening on http://127.0.0.1:${actualPort}/status`)
-          resolve(actualPort)
+          boundPort = typeof addr === 'object' && addr ? addr.port : port
+          logger.info(`[status-server] Listening on http://127.0.0.1:${boundPort}/status`)
+          resolve(boundPort)
         })
       })
     },

@@ -90,6 +90,13 @@ export function registerConfigHandlers(): void {
 
   safeHandle('mcp:getToken', async () => {
     const { token } = await readOrCreateToken()
+    // Mask all but the last 4 chars — caller must use mcp:revealToken for the full value
+    const masked = token.length > 4 ? '*'.repeat(token.length - 4) + token.slice(-4) : '****'
+    return masked
+  })
+
+  safeHandle('mcp:revealToken', async () => {
+    const { token } = await readOrCreateToken()
     return token
   })
 

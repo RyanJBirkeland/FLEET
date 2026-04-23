@@ -176,7 +176,14 @@ export function setupTearoffWindow(
   onPersistBounds: (windowId: string) => void
 ): void {
   win.webContents.setWindowOpenHandler((details) => {
-    shell.openExternal(details.url)
+    try {
+      const parsed = new URL(details.url)
+      if (['https:', 'http:', 'mailto:'].includes(parsed.protocol)) {
+        shell.openExternal(details.url).catch(() => {})
+      }
+    } catch {
+      // Malformed URL — deny silently
+    }
     return { action: 'deny' }
   })
 

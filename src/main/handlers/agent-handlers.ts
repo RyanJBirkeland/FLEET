@@ -84,9 +84,29 @@ export interface PromoteToReviewResult {
   error?: string | undefined
 }
 
+function validateLocalEndpointUrl(endpoint: string): string | null {
+  try {
+    const url = new URL(endpoint.replace(/\/$/, ''))
+    if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+      return 'Only http:// and https:// endpoints are supported'
+    }
+    const hostname = url.hostname
+    const LOOPBACK = ['localhost', '127.0.0.1', '::1', '0.0.0.0']
+    if (!LOOPBACK.includes(hostname)) {
+      return 'Endpoint must be a localhost address (127.0.0.1 or ::1)'
+    }
+    return null
+  } catch {
+    return 'Invalid URL'
+  }
+}
+
 export async function testLocalEndpoint(
   endpoint: string
 ): Promise<{ ok: true; latencyMs: number; modelCount: number } | { ok: false; error: string }> {
+  const validationError = validateLocalEndpointUrl(endpoint)
+  if (validationError) return { ok: false, error: validationError }
+
   const started = Date.now()
   try {
     const trimmed = endpoint.replace(/\/$/, '')

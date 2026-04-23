@@ -40,6 +40,7 @@ import {
   tryEmitPlaygroundEvent
 } from './agent-manager/playground-handler'
 import { createEpicGroupService } from './services/epic-group-service'
+import { PIPELINE_DISALLOWED_TOOLS } from './agent-manager/turn-budget'
 import type { IDashboardRepository } from './data/sprint-task-repository'
 import { getErrorMessage } from '../shared/errors'
 import { nowIso } from '../shared/time'
@@ -173,6 +174,7 @@ export async function spawnAdhocAgent(args: {
       mainRepoPaths: Object.values(getRepoPaths()),
       logger: log
     }),
+    disallowedTools: [...PIPELINE_DISALLOWED_TOOLS],
     // Hard cap on spend per interactive session. User-controlled agents can
     // rack up cost across many turns. This is a safety ceiling, not a target.
     maxBudgetUsd: 5.0
