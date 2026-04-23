@@ -32,6 +32,10 @@ import type { SpawnLocalAgentResult } from '../shared/types'
 import { buildAgentPrompt } from './lib/prompt-composer'
 import { resolveAgentRuntime, loadBackendSettings } from './agent-manager/backend-selector'
 import { spawnOpencode } from './agent-manager/spawn-opencode'
+import {
+  writeOpencodeWorktreeConfig,
+  buildOpencodeFirstTurnPrompt
+} from './agent-manager/opencode-worktree-config'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createPlannerMcpServer } from './services/planner-mcp-server'
@@ -215,6 +219,12 @@ export async function spawnAdhocAgent(args: {
     const backendSettings = loadBackendSettings()
     let opencodeSessionId: string | undefined
 
+    // Write .opencode/opencode.json into the worktree with the BDE MCP server
+    // wired up (if enabled). This gives the model task/epic CRUD tools on par
+    // with the Claude path. Done once before the first turn; subsequent turns
+    // resume the same opencode session so the config is already in place.
+    await writeOpencodeWorktreeConfig(worktreePath, log)
+
     adhocSessions.set(meta.id, {
       async send(message: string): Promise<void> {
         if (closed) return
@@ -271,13 +281,13 @@ export async function spawnAdhocAgent(args: {
     emitAgentEvent(meta.id, { type: 'agent:started', model, timestamp: Date.now() })
     log.info(`[adhoc] ${meta.id} starting opencode session in ${worktreePath}`)
 
-    // Kick off the first turn. For opencode, pass the raw user task — the
-    // Claude-optimized assembled prompt (XML tags, BDE architecture docs) causes
-    // local models to echo the context rather than respond. opencode injects its
-    // own context via --dir; the user's task is all the model needs.
+    // Kick off the first turn with a concise opencode-specific prompt. The full
+    // Claude-assembled prompt causes local models to echo context rather than
+    // respond. opencode reads CLAUDE.md from --dir automatically (conventions,
+    // architecture, key files), so only branch + commit rules need injection.
     adhocSessions
       .get(meta.id)!
-      .send(args.task)
+      .send(buildOpencodeFirstTurnPrompt(args.task, branch))
       .catch((err) => {
         log.error(`[adhoc] ${meta.id} opencode initial turn failed: ${err}`)
         if (closed) return
