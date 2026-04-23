@@ -8,7 +8,7 @@
  */
 
 export const FAST_FAIL_EXHAUSTED_NOTE =
-  "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/agent-manager.log for details. To retry: reset task status to 'queued' and clear claimed_by."
+  "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/bde.log for details. To retry: reset task status to 'queued' and clear claimed_by."
 
 export const NO_COMMITS_NOTE =
   'The agent ran to completion but did not create a commit. Any uncommitted changes in the worktree have been logged to ~/.bde/bde.log.'

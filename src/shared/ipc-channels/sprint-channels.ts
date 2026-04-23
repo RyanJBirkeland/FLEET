@@ -216,10 +216,6 @@ export interface ReviewChannels {
           conflicts?: string[] | undefined
         }
   }
-  'review:generateSummary': {
-    args: [payload: { taskId: string }]
-    result: { summary: string }
-  }
   'review:checkAutoReview': {
     args: [payload: { taskId: string }]
     result: { shouldAutoMerge: boolean; shouldAutoApprove: boolean; matchedRule: string | null }

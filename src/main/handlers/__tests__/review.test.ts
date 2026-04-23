@@ -174,11 +174,11 @@ describe('Review handlers', () => {
     mockExistsSync.mockReturnValue(true)
   })
 
-  it('registers all 13 review channels', () => {
+  it('registers all 12 review channels', () => {
     const mockDeps = { onStatusTerminal: vi.fn() }
     registerReviewHandlers(mockDeps)
 
-    expect(safeHandle).toHaveBeenCalledTimes(13)
+    expect(safeHandle).toHaveBeenCalledTimes(12)
     expect(safeHandle).toHaveBeenCalledWith('review:getDiff', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:getCommits', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:getFileDiff', expect.any(Function))
@@ -190,7 +190,6 @@ describe('Review handlers', () => {
     expect(safeHandle).toHaveBeenCalledWith('review:shipBatch', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:rebase', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:checkFreshness', expect.any(Function))
-    expect(safeHandle).toHaveBeenCalledWith('review:generateSummary', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:checkAutoReview', expect.any(Function))
   })
 

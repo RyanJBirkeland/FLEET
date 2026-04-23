@@ -225,7 +225,7 @@ Flexible split-pane layout system for arranging views side-by-side with drag-and
 - **Drag-and-drop**: 5-zone drop targets (top/bottom/left/right/center) for docking views. Visual overlay shows target zone during drag
 - **Persistence**: Layout tree and active tabs saved to `panel.layout` setting on every mutation. Restored on app launch
 - **Tear-off windows**: Views can be torn off into separate Electron windows. Each tear-off has its own independent panel layout. Tear-off windows set `persistable: false` to prevent overwriting the main window's saved layout
-- **View shortcuts**: Dashboard (Cmd+1), Agents (Cmd+2), IDE (Cmd+3), Task Pipeline (Cmd+4), Code Review (Cmd+5), Source Control (Cmd+6), Settings (Cmd+7)
+- **View shortcuts**: Dashboard (Cmd+1), Agents (Cmd+2), IDE (Cmd+3), Task Pipeline (Cmd+4), Code Review (Cmd+5), Source Control (Cmd+6), Settings (Cmd+7), Task Planner (Cmd+8)
 - Related: All views
 
 ### Settings

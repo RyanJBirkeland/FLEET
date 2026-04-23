@@ -107,12 +107,6 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     }
   })
 
-  // review:generateSummary — AI-generated review summary (stub, not implemented)
-  safeHandle('review:generateSummary', async (_e, _payload) => {
-    logger.warn('review:generateSummary called but not implemented — returning empty summary')
-    return { summary: '' }
-  })
-
   // review:checkAutoReview — check if task qualifies for auto-review
   safeHandle('review:checkAutoReview', async (_e, payload) => {
     const { taskId } = payload
