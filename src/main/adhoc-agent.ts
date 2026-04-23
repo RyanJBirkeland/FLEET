@@ -36,6 +36,7 @@ import {
   writeOpencodeWorktreeConfig,
   buildOpencodeFirstTurnPrompt
 } from './agent-manager/opencode-worktree-config'
+import { startOpencodeSessionMcp } from './agent-manager/opencode-session-mcp'
 import { setupWorktree } from './agent-manager/worktree'
 import { TurnTracker } from './agent-manager/turn-tracker'
 import { createPlannerMcpServer } from './services/planner-mcp-server'
@@ -219,11 +220,16 @@ export async function spawnAdhocAgent(args: {
     const backendSettings = loadBackendSettings()
     let opencodeSessionId: string | undefined
 
-    // Write .opencode/opencode.json into the worktree with the BDE MCP server
-    // wired up (if enabled). This gives the model task/epic CRUD tools on par
-    // with the Claude path. Done once before the first turn; subsequent turns
-    // resume the same opencode session so the config is already in place.
-    await writeOpencodeWorktreeConfig(worktreePath, log)
+    // Start a per-session MCP HTTP server backed by the same sprint-service +
+    // EpicGroupService as the in-process planner server used by the Claude path.
+    // opencode is an external process so it can only reach MCP tools over HTTP;
+    // this ephemeral server gives it the same mcp__bde__tasks/epics/meta tools
+    // without routing through the persistent external server (port 18792).
+    const sessionMcp = await startOpencodeSessionMcp(
+      createEpicGroupService(),
+      log
+    )
+    await writeOpencodeWorktreeConfig(worktreePath, sessionMcp.url, sessionMcp.token)
 
     adhocSessions.set(meta.id, {
       async send(message: string): Promise<void> {
@@ -271,6 +277,9 @@ export async function spawnAdhocAgent(args: {
           (err) => log.warn(`[adhoc] ${meta.id} failed to update meta: ${getErrorMessage(err)}`)
         )
         adhocSessions.delete(meta.id)
+        sessionMcp.close().catch(
+          (err) => log.warn(`[adhoc] ${meta.id} failed to stop session MCP server: ${getErrorMessage(err)}`)
+        )
         log.info(`[adhoc] ${meta.id} opencode session completed after ${Math.round(durationMs / 1000)}s`)
         autoPromoteToReview().catch(
           (err) => log.warn(`[adhoc] ${meta.id} auto-promote failed: ${getErrorMessage(err)}`)
