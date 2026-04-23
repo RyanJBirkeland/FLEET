@@ -13,6 +13,8 @@
  * Every function takes a value and returns a value.
  */
 
+import { SDKWireMessage } from './sdk-message-protocol'
+
 interface OpencodeTextPart {
   type: 'text'
   text: string
@@ -61,7 +63,7 @@ function parseOpencodeEvent(line: string): OpencodeEvent | undefined {
   }
 }
 
-function buildAssistantTextMessage(text: string): object {
+function buildAssistantTextMessage(text: string): SDKWireMessage {
   return {
     type: 'assistant',
     message: {
@@ -75,7 +77,7 @@ function buildAssistantToolUseMessage(
   name: string,
   id: string,
   input: Record<string, unknown>
-): object {
+): SDKWireMessage {
   return {
     type: 'assistant',
     message: {
@@ -89,7 +91,7 @@ function buildUserToolResultMessage(
   toolUseId: string,
   content: string,
   isError: boolean
-): object {
+): SDKWireMessage {
   return {
     type: 'user',
     message: {
@@ -99,11 +101,13 @@ function buildUserToolResultMessage(
   }
 }
 
-function translateTextEvent(part: OpencodeTextPart): object[] {
+function translateTextEvent(part: OpencodeTextPart): SDKWireMessage[] {
+  if (typeof part?.text !== 'string') return []
   return [buildAssistantTextMessage(part.text)]
 }
 
-function translateToolUseEvent(part: OpencodeToolPart): object[] {
+function translateToolUseEvent(part: OpencodeToolPart): SDKWireMessage[] {
+  if (!part?.tool || !part?.callID || !part?.state) return []
   const input = part.state.input ?? {}
   const output = part.state.output ?? ''
   const isError = part.state.status !== 'completed'
@@ -114,12 +118,13 @@ function translateToolUseEvent(part: OpencodeToolPart): object[] {
   ]
 }
 
-function translateStepFinishEvent(part: OpencodeStepFinishPart): object[] {
+function translateStepFinishEvent(part: OpencodeStepFinishPart): SDKWireMessage[] {
+  if (!part) return []
   if (part.reason !== 'stop') return []
-  return [{ type: 'result', cost_usd: part.cost, stop_reason: 'end_turn' }]
+  return [{ type: 'result', cost_usd: part.cost ?? 0, stop_reason: 'end_turn' }]
 }
 
-function translateErrorEvent(error: OpencodeError): object[] {
+function translateErrorEvent(error: OpencodeError): SDKWireMessage[] {
   const message = error.data?.message ?? 'Unknown error'
   return [buildAssistantTextMessage(`Error: ${message}`)]
 }
@@ -130,7 +135,7 @@ function translateErrorEvent(error: OpencodeError): object[] {
  *
  * Returns an empty array for unrecognized event types, invalid JSON, and empty lines.
  */
-export function translateOpencodeEvent(line: string): object[] {
+export function translateOpencodeEvent(line: string): SDKWireMessage[] {
   const event = parseOpencodeEvent(line)
   if (event === undefined) return []
 

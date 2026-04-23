@@ -86,7 +86,7 @@ describe('translateOpencodeEvent', () => {
       const result = translateOpencodeEvent(failedToolUseLine)
 
       expect(result).toHaveLength(2)
-      expect((result[1] as { message: { content: [{ is_error: boolean }] } }).message.content[0].is_error).toBe(true)
+      expect(result[1]).toMatchObject({ message: { content: [{ is_error: true }] } })
     })
 
     it('falls back to empty object when tool state input is absent', () => {
@@ -96,7 +96,7 @@ describe('translateOpencodeEvent', () => {
       const result = translateOpencodeEvent(noInputLine)
 
       expect(result).toHaveLength(2)
-      expect((result[0] as { message: { content: [{ input: unknown }] } }).message.content[0].input).toEqual({})
+      expect(result[0]).toMatchObject({ message: { content: [{ input: {} }] } })
     })
 
     it('falls back to empty string when tool state output is absent', () => {
@@ -106,7 +106,7 @@ describe('translateOpencodeEvent', () => {
       const result = translateOpencodeEvent(noOutputLine)
 
       expect(result).toHaveLength(2)
-      expect((result[1] as { message: { content: [{ content: unknown }] } }).message.content[0].content).toBe('')
+      expect(result[1]).toMatchObject({ message: { content: [{ content: '' }] } })
     })
   })
 
