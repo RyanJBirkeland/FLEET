@@ -31,6 +31,7 @@ import { nowIso } from '../../shared/time'
 import { detectUntouchedTests, listChangedFiles, formatAdvisory } from './test-touch-check'
 import { detectNoOpRun } from './noop-detection'
 import { NOOP_RUN_NOTE } from './failure-messages'
+import { verifyWorktreeBuildsAndTests } from './verify-worktree'
 
 export type { ResolveFailureContext } from './resolve-failure-phases'
 
@@ -154,6 +155,16 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
   if (!tipVerified) return
 
   await annotateIfTestsUntouched(taskId, branch, worktreePath, repoPath, repo, logger)
+
+  const verified = await verifyWorktreeOrFail({
+    taskId,
+    worktreePath,
+    retryCount,
+    repo,
+    logger,
+    onTaskTerminal
+  })
+  if (!verified) return
 
   await transitionTaskToReview(
     taskId,
@@ -316,6 +327,37 @@ async function verifyBranchTipOrFail(
     )
     return true
   }
+}
+
+/**
+ * Pre-review verification gate: runs `npm run typecheck` and `npm test` inside
+ * the worktree. On failure, requeues the task with the tool's stderr in notes
+ * so the retry agent sees the exact error. Returns `true` when verification
+ * passes (caller should proceed to transition); `false` when the task has been
+ * requeued or marked failed.
+ */
+async function verifyWorktreeOrFail(opts: {
+  taskId: string
+  worktreePath: string
+  retryCount: number
+  repo: IAgentTaskRepository
+  logger: Logger
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+}): Promise<boolean> {
+  const { taskId, worktreePath, retryCount, repo, logger, onTaskTerminal } = opts
+
+  const result = await verifyWorktreeBuildsAndTests(worktreePath, logger)
+  if (result.ok) return true
+
+  logger.warn(
+    `[completion] task ${taskId}: pre-review verification failed (${result.failure.kind}) — requeueing instead of transitioning to review`
+  )
+  const isTerminal = resolveFailurePhase(
+    { taskId, retryCount, notes: result.failure.stderr, repo },
+    logger
+  )
+  await onTaskTerminal(taskId, isTerminal ? 'failed' : 'queued')
+  return false
 }
 
 export function resolveFailure(

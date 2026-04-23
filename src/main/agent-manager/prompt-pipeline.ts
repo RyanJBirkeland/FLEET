@@ -126,6 +126,8 @@ You only run targeted tests (\`npx vitest run <your-test-file>\`), not the full 
 
 const DEFINITION_OF_DONE = `\n\n## Definition of Done\nYour task is complete when ALL of these are true:\n1. All changes are committed to your branch\n2. \`npm run typecheck\` passes with zero errors\n3. \`npx vitest run <your-test-file>\` passes for each test file you created or modified (skip if no test files touched)\n4. \`npm run lint\` passes with zero errors\n5. Your commit is on \`origin/<your-branch>\` (verified via \`git ls-remote\`, not by reading bash output files)\n6. \`docs/modules/\` updated for every source file you created or modified — add a row to the layer \`index.md\`; update the \`<module>.md\` detail file if exports or observable behavior changed\nDo NOT run \`npm test\` — the pre-push hook runs the full suite. Only run the specific test files you touched.\nDo NOT exit without verifying all six.`
 
+const PRE_REVIEW_VERIFICATION_GATE = `\n\n## Pre-Review Verification Gate (automatic)\nAfter you commit, the pipeline runs \`npm run typecheck\` and \`npm test --run\` in your worktree. If either fails, your commit is NOT promoted to review — the task is requeued with the tool's error output for the next attempt. Run these locally before committing to catch failures in-session rather than burning a retry.`
+
 const MINIMAL_PIPELINE_PREAMBLE = `You are an autonomous coding agent working in a git worktree. Follow the task specification below exactly.
 
 ## Rules
@@ -255,6 +257,10 @@ Before your final push, verify:
 
   // Definition of Done directly after self-review so it's read before operational boilerplate
   prompt += DEFINITION_OF_DONE
+
+  // Pre-review verification gate — the pipeline runs typecheck + tests after the commit.
+  // Agents that read this are less likely to burn a retry on a catchable failure.
+  prompt += PRE_REVIEW_VERIFICATION_GATE
 
   // Testing guidance — sits adjacent to Definition of Done so the test-update
   // expectation is read alongside the verification checklist.
