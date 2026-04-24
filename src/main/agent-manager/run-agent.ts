@@ -27,7 +27,7 @@ import { consumeMessages } from './message-consumer'
 import type { ConsumeMessagesResult } from './message-consumer'
 import { persistAgentRunTelemetry } from './agent-telemetry'
 import { spawnAndWireAgent } from './spawn-and-wire'
-import { MAX_TURNS } from './spawn-sdk'
+import { computeMaxTurns } from './turn-budget'
 import { sleep } from '../lib/async-utils'
 import { NOTES_MAX_LENGTH } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
@@ -625,7 +625,7 @@ export async function runAgent(
     agentRunId,
     turnTracker,
     logger,
-    MAX_TURNS
+    computeMaxTurns(task.spec ?? task.prompt ?? task.title ?? '')
   )
 
   // Await playground events before worktree cleanup.
