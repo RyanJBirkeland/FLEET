@@ -143,7 +143,7 @@ export async function spawnAndWireAgent(
     throw err // unreachable — handleSpawnFailure always throws; satisfies TypeScript
   }
 
-  return initializeAgentTracking(
+  const result = initializeAgentTracking(
     task,
     handle,
     effectiveModel,
@@ -153,4 +153,10 @@ export async function spawnAndWireAgent(
     repo,
     logger
   )
+  try {
+    deps.onAgentRegistered?.()
+  } catch (cbErr) {
+    logger.warn(`[agent-manager] onAgentRegistered hook threw: ${cbErr}`)
+  }
+  return result
 }

@@ -238,7 +238,17 @@ export class AgentManagerImpl implements AgentManager {
   ): Promise<void> {
     this._metrics.increment('agentsSpawned')
     this._pendingSpawns++
-    const agentPromise = _runAgent(task, worktree, repoPath, this.runAgentDeps)
+    // Decrement exactly once: when the agent enters activeAgents (onAgentRegistered),
+    // or on early failure before registration (decrementPendingOnce in .finally).
+    let pendingDecremented = false
+    const decrementPendingOnce = (): void => {
+      if (!pendingDecremented) {
+        pendingDecremented = true
+        this._pendingSpawns = Math.max(0, this._pendingSpawns - 1)
+      }
+    }
+    const spawnDeps = { ...this.runAgentDeps, onAgentRegistered: decrementPendingOnce }
+    const agentPromise = _runAgent(task, worktree, repoPath, spawnDeps)
       .catch((err) => {
         this.logger.error(`[agent-manager] runAgent failed for task ${task.id}: ${err}`)
         // Record the failure so the circuit breaker can open after repeated crashes.
@@ -259,7 +269,7 @@ export class AgentManagerImpl implements AgentManager {
         }
       })
       .finally(() => {
-        this._pendingSpawns = Math.max(0, this._pendingSpawns - 1)
+        decrementPendingOnce() // no-op if onAgentRegistered already fired
         this._agentPromises.delete(agentPromise)
       })
     this._agentPromises.add(agentPromise)

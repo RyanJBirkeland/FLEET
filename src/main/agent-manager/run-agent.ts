@@ -70,6 +70,12 @@ export interface RunAgentSpawnDeps {
   onSpawnSuccess?: () => void
   /** Optional — called when spawnAgent throws. */
   onSpawnFailure?: () => void
+  /**
+   * Optional — called immediately after the agent is registered in activeAgents.
+   * Used by AgentManagerImpl to decrement _pendingSpawns once the agent has
+   * entered activeAgents so each running agent is counted exactly once.
+   */
+  onAgentRegistered?: () => void
 }
 
 /** Sprint task data access. */
