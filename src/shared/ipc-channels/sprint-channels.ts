@@ -10,6 +10,7 @@ import type {
   EpicDependency,
   BatchOperation,
   BatchResult,
+  BatchImportTask,
   SpecTypeSuccessRate,
   SynthesizeRequest,
   ReviseRequest,
@@ -101,22 +102,7 @@ export interface SprintChannels {
     result: { results: BatchResult[] }
   }
   'sprint:batchImport': {
-    args: [
-      tasks: Array<{
-        title: string
-        repo: string
-        prompt?: string | undefined
-        spec?: string | undefined
-        status?: string | undefined
-        dependsOnIndices?: number[]
-        depType?: 'hard' | 'soft'
-        playgroundEnabled?: boolean | undefined
-        model?: string | undefined
-        tags?: string[] | undefined
-        priority?: number | undefined
-        templateName?: string | undefined
-      }>
-    ]
+    args: [tasks: BatchImportTask[]]
     result: {
       created: SprintTask[]
       errors: string[]
