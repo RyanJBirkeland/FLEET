@@ -51,12 +51,14 @@ describe('validateTransition', () => {
       }
     })
 
-    it('should reject cancelled → any status (terminal)', () => {
+    it('should reject cancelled → queued (re-queueing a cancelled task is not allowed)', () => {
       const result = validateTransition('cancelled', 'queued')
       expect(result.ok).toBe(false)
       if (!result.ok) {
         expect(result.reason).toContain('cancelled → queued')
-        expect(result.reason).toContain('Allowed: none')
+        // cancelled now permits → done as a manual recovery escape; only that
+        // single transition is allowed, so the error message should list it.
+        expect(result.reason).toContain('Allowed: done')
       }
     })
 
@@ -86,12 +88,12 @@ describe('validateTransition', () => {
       }
     })
 
-    it('should show "none" for terminal cancelled status', () => {
+    it('now permits cancelled → done as a manual recovery escape hatch', () => {
+      // Previously cancelled was a true sink; painpoint #3 from the 2026-04-24
+      // RCA added the escape hatch so humans can mark a task done after
+      // implementing the work outside the pipeline.
       const result = validateTransition('cancelled', 'done')
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.reason).toContain('Allowed: none')
-      }
+      expect(result.ok).toBe(true)
     })
   })
 })

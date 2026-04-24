@@ -234,20 +234,20 @@ describe('AgentManagerImpl — class internals', () => {
   describe('state visibility', () => {
     it('_activeAgents is an empty Map on construction', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
-      expect(manager._activeAgents).toBeInstanceOf(Map)
-      expect(manager._activeAgents.size).toBe(0)
+      expect(manager.__testInternals.activeAgents).toBeInstanceOf(Map)
+      expect(manager.__testInternals.activeAgents.size).toBe(0)
     })
 
     it('_concurrency.maxSlots matches config.maxConcurrent', () => {
       const config = { ...baseConfig, maxConcurrent: 5 }
       const manager = new AgentManagerImpl(config, makeMockRepo(), makeLogger())
-      expect(manager._concurrency.maxSlots).toBe(5)
+      expect(manager.__testInternals.concurrency.maxSlots).toBe(5)
     })
 
     it('_processingTasks is an empty Set on construction', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
-      expect(manager._processingTasks).toBeInstanceOf(Set)
-      expect(manager._processingTasks.size).toBe(0)
+      expect(manager.__testInternals.processingTasks).toBeInstanceOf(Set)
+      expect(manager.__testInternals.processingTasks.size).toBe(0)
     })
   })
 
@@ -261,9 +261,9 @@ describe('AgentManagerImpl — class internals', () => {
       const raw = makeRawTask({ id: 'task-race' })
 
       // Pre-populate the guard set
-      manager._processingTasks.add('task-race')
+      manager.__testInternals.processingTasks.add('task-race')
 
-      await manager._processQueuedTask(raw, new Map())
+      await manager.__testInternals.processQueuedTask(raw, new Map())
 
       expect(claimTask).not.toHaveBeenCalled()
     })
@@ -277,9 +277,9 @@ describe('AgentManagerImpl — class internals', () => {
       vi.mocked(getRepoPaths).mockReturnValue({})
       const raw = makeRawTask({ id: 'task-cleanup', repo: 'unknown-repo' })
 
-      await manager._processQueuedTask(raw, new Map())
+      await manager.__testInternals.processQueuedTask(raw, new Map())
 
-      expect(manager._processingTasks.has('task-cleanup')).toBe(false)
+      expect(manager.__testInternals.processingTasks.has('task-cleanup')).toBe(false)
     })
 
     it('removes task from _processingTasks even when claim fails (early return path)', async () => {
@@ -287,9 +287,9 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const raw = makeRawTask({ id: 'task-claim-fail' })
 
-      await manager._processQueuedTask(raw, new Map())
+      await manager.__testInternals.processQueuedTask(raw, new Map())
 
-      expect(manager._processingTasks.has('task-claim-fail')).toBe(false)
+      expect(manager.__testInternals.processingTasks.has('task-claim-fail')).toBe(false)
     })
 
     it('removes task from _processingTasks when repo path not found (early return path)', async () => {
@@ -297,9 +297,9 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const raw = makeRawTask({ id: 'task-no-repo', repo: 'no-such-repo' })
 
-      await manager._processQueuedTask(raw, new Map())
+      await manager.__testInternals.processQueuedTask(raw, new Map())
 
-      expect(manager._processingTasks.has('task-no-repo')).toBe(false)
+      expect(manager.__testInternals.processingTasks.has('task-no-repo')).toBe(false)
       expect(claimTask).not.toHaveBeenCalled()
     })
 
@@ -308,9 +308,9 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const raw = makeRawTask({ id: 'task-wt-fail' })
 
-      await manager._processQueuedTask(raw, new Map())
+      await manager.__testInternals.processQueuedTask(raw, new Map())
 
-      expect(manager._processingTasks.has('task-wt-fail')).toBe(false)
+      expect(manager.__testInternals.processingTasks.has('task-wt-fail')).toBe(false)
     })
   })
 
@@ -322,44 +322,44 @@ describe('AgentManagerImpl — class internals', () => {
     it('skips agents whose taskId is in _processingTasks — agent NOT killed despite max-runtime verdict', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const agent = makeActiveAgent('task-in-flight')
-      manager._activeAgents.set('task-in-flight', agent)
-      manager._processingTasks.add('task-in-flight')
+      manager.__testInternals.activeAgents.set('task-in-flight', agent)
+      manager.__testInternals.processingTasks.add('task-in-flight')
 
       // checkAgent returns max-runtime — without the guard the agent would be killed
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      manager._watchdogLoop()
+      manager.__testInternals.watchdogLoop()
 
       // Agent must still be in _activeAgents — guard protected it
-      expect(manager._activeAgents.has('task-in-flight')).toBe(true)
+      expect(manager.__testInternals.activeAgents.has('task-in-flight')).toBe(true)
       expect(agent.handle.abort).not.toHaveBeenCalled()
     })
 
     it('kills agents NOT in _processingTasks when verdict is max-runtime', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const agent = makeActiveAgent('task-idle')
-      manager._activeAgents.set('task-idle', agent)
+      manager.__testInternals.activeAgents.set('task-idle', agent)
       // _processingTasks does NOT contain this agent
 
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      manager._watchdogLoop()
+      manager.__testInternals.watchdogLoop()
 
       // Agent should be removed and abort called
-      expect(manager._activeAgents.has('task-idle')).toBe(false)
+      expect(manager.__testInternals.activeAgents.has('task-idle')).toBe(false)
       expect(agent.handle.abort).toHaveBeenCalledOnce()
     })
 
     it('does not kill agents when verdict is ok', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const agent = makeActiveAgent('task-healthy')
-      manager._activeAgents.set('task-healthy', agent)
+      manager.__testInternals.activeAgents.set('task-healthy', agent)
 
       vi.mocked(checkAgent).mockReturnValue('ok')
 
-      manager._watchdogLoop()
+      manager.__testInternals.watchdogLoop()
 
-      expect(manager._activeAgents.has('task-healthy')).toBe(true)
+      expect(manager.__testInternals.activeAgents.has('task-healthy')).toBe(true)
       expect(agent.handle.abort).not.toHaveBeenCalled()
     })
 
@@ -369,21 +369,21 @@ describe('AgentManagerImpl — class internals', () => {
       const agentA = makeActiveAgent('task-a')
       const agentB = makeActiveAgent('task-b')
 
-      manager._activeAgents.set('task-a', agentA)
-      manager._activeAgents.set('task-b', agentB)
+      manager.__testInternals.activeAgents.set('task-a', agentA)
+      manager.__testInternals.activeAgents.set('task-b', agentB)
 
       // task-a is being processed — protected by guard
-      manager._processingTasks.add('task-a')
+      manager.__testInternals.processingTasks.add('task-a')
 
       // Both would fail max-runtime check
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      manager._watchdogLoop()
+      manager.__testInternals.watchdogLoop()
 
-      expect(manager._activeAgents.has('task-a')).toBe(true)
+      expect(manager.__testInternals.activeAgents.has('task-a')).toBe(true)
       expect(agentA.handle.abort).not.toHaveBeenCalled()
 
-      expect(manager._activeAgents.has('task-b')).toBe(false)
+      expect(manager.__testInternals.activeAgents.has('task-b')).toBe(false)
       expect(agentB.handle.abort).toHaveBeenCalledOnce()
     })
 
@@ -393,11 +393,11 @@ describe('AgentManagerImpl — class internals', () => {
       const agent = makeActiveAgent('task-sigkill')
       // Attach a mock process with kill() to the handle, simulating the SDK subprocess
       ;(agent.handle as any).process = { kill: killFn }
-      manager._activeAgents.set('task-sigkill', agent)
+      manager.__testInternals.activeAgents.set('task-sigkill', agent)
 
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      manager._watchdogLoop()
+      manager.__testInternals.watchdogLoop()
 
       expect(agent.handle.abort).toHaveBeenCalledOnce()
       expect(killFn).toHaveBeenCalledWith('SIGKILL')
@@ -407,11 +407,11 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const agent = makeActiveAgent('task-no-proc')
       // No process property on handle
-      manager._activeAgents.set('task-no-proc', agent)
+      manager.__testInternals.activeAgents.set('task-no-proc', agent)
 
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      expect(() => manager._watchdogLoop()).not.toThrow()
+      expect(() => manager.__testInternals.watchdogLoop()).not.toThrow()
       expect(agent.handle.abort).toHaveBeenCalledOnce()
     })
   })
@@ -610,16 +610,16 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
       // Directly seed the cache (simulates a task that was cached while active)
-      manager._lastTaskDeps.set('task-active', { deps: null, hash: 'h1' })
-      manager._lastTaskDeps.set('task-done', { deps: null, hash: 'h2' })
+      manager.__testInternals.lastTaskDeps.set('task-active', { deps: null, hash: 'h1' })
+      manager.__testInternals.lastTaskDeps.set('task-done', { deps: null, hash: 'h2' })
 
       // Drain loop sees task-done as terminal → should evict from fingerprint cache
-      await manager._drainLoop()
+      await manager.__testInternals.drainLoop()
 
       // active task stays cached (non-terminal, hash unchanged → no mutation)
-      expect(manager._lastTaskDeps.has('task-active')).toBe(true)
+      expect(manager.__testInternals.lastTaskDeps.has('task-active')).toBe(true)
       // terminal task must be evicted
-      expect(manager._lastTaskDeps.has('task-done')).toBe(false)
+      expect(manager.__testInternals.lastTaskDeps.has('task-done')).toBe(false)
     })
 
     it('never adds a task to _lastTaskDeps when it starts in terminal status', async () => {
@@ -631,13 +631,13 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
       // Map starts empty — terminal tasks should never be added
-      expect(manager._lastTaskDeps.size).toBe(0)
-      await manager._drainLoop()
+      expect(manager.__testInternals.lastTaskDeps.size).toBe(0)
+      await manager.__testInternals.drainLoop()
 
       // No terminal task should ever land in the cache
-      expect(manager._lastTaskDeps.has('task-failed')).toBe(false)
-      expect(manager._lastTaskDeps.has('task-cancelled')).toBe(false)
-      expect(manager._lastTaskDeps.has('task-error')).toBe(false)
+      expect(manager.__testInternals.lastTaskDeps.has('task-failed')).toBe(false)
+      expect(manager.__testInternals.lastTaskDeps.has('task-cancelled')).toBe(false)
+      expect(manager.__testInternals.lastTaskDeps.has('task-error')).toBe(false)
     })
   })
 
@@ -686,7 +686,7 @@ describe('AgentManagerImpl — class internals', () => {
       expect(taskStatusMap.get('task-2')).toBe('blocked')
 
       const raw = makeRawTask({ id: 'task-1' })
-      await manager._processQueuedTask(raw, taskStatusMap)
+      await manager.__testInternals.processQueuedTask(raw, taskStatusMap)
 
       // Verify refresh happened: task-2 should now be 'queued', task-1 should be 'active'
       expect(taskStatusMap.get('task-2')).toBe('queued')
@@ -717,7 +717,7 @@ describe('AgentManagerImpl — class internals', () => {
       const raw = makeRawTask({ id: 'task-1' })
 
       // Should not throw — refresh failure is caught
-      await expect(manager._processQueuedTask(raw, taskStatusMap)).resolves.toBeUndefined()
+      await expect(manager.__testInternals.processQueuedTask(raw, taskStatusMap)).resolves.toBeUndefined()
 
       // Map unchanged since refresh failed
       expect(taskStatusMap.get('task-2')).toBe('blocked')
@@ -752,7 +752,7 @@ describe('AgentManagerImpl — class internals', () => {
       ])
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      const result = manager._refreshDependencyIndex()
+      const result = manager.__testInternals.refreshDependencyIndex()
 
       expect(result).toBeInstanceOf(Map)
       expect(result.get('task-a')).toBe('queued')
@@ -765,15 +765,15 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
       // Pre-seed cache with task-a (which is no longer in DB)
-      manager._lastTaskDeps.set('task-a', { deps: null, hash: 'old-hash' })
-      manager._lastTaskDeps.set('task-b', { deps: null, hash: 'old-hash' })
+      manager.__testInternals.lastTaskDeps.set('task-a', { deps: null, hash: 'old-hash' })
+      manager.__testInternals.lastTaskDeps.set('task-b', { deps: null, hash: 'old-hash' })
 
-      manager._refreshDependencyIndex()
+      manager.__testInternals.refreshDependencyIndex()
 
       // task-a was deleted → should be removed from cache
-      expect(manager._lastTaskDeps.has('task-a')).toBe(false)
+      expect(manager.__testInternals.lastTaskDeps.has('task-a')).toBe(false)
       // task-b still exists (non-terminal) → should be in cache
-      expect(manager._lastTaskDeps.has('task-b')).toBe(true)
+      expect(manager.__testInternals.lastTaskDeps.has('task-b')).toBe(true)
     })
 
     it('returns empty map and logs warning when repo throws', () => {
@@ -792,7 +792,7 @@ describe('AgentManagerImpl — class internals', () => {
       const logger = makeLogger()
       const manager = new AgentManagerImpl(baseConfig, repo, logger)
 
-      const result = manager._refreshDependencyIndex()
+      const result = manager.__testInternals.refreshDependencyIndex()
 
       expect(result).toBeInstanceOf(Map)
       expect(result.size).toBe(0)
@@ -823,7 +823,7 @@ describe('AgentManagerImpl — class internals', () => {
 
       await manager.onTaskTerminal('task-A', 'done')
 
-      expect(manager._depIndexDirty).toBe(true)
+      expect(manager.__testInternals.depIndexDirty).toBe(true)
     })
   })
 
@@ -852,7 +852,7 @@ describe('AgentManagerImpl — class internals', () => {
       const processSpy = vi.spyOn(manager, '_processQueuedTask').mockResolvedValue(undefined)
 
       const taskStatusMap = new Map<string, string>()
-      await manager._drainQueuedTasks(2, taskStatusMap)
+      await manager.__testInternals.drainQueuedTasks(2, taskStatusMap)
 
       expect(processSpy).toHaveBeenCalledTimes(2)
       expect(processSpy).toHaveBeenCalledWith(tasks[0], taskStatusMap)
@@ -872,11 +872,11 @@ describe('AgentManagerImpl — class internals', () => {
       vi.spyOn(manager, '_processQueuedTask').mockImplementation(async () => {
         callCount++
         if (callCount === 1) {
-          manager._shuttingDown = true
+          manager.__testInternals.shuttingDown = true
         }
       })
 
-      await manager._drainQueuedTasks(3, new Map())
+      await manager.__testInternals.drainQueuedTasks(3, new Map())
 
       // Should stop after the first task triggers _shuttingDown
       expect(callCount).toBe(1)
@@ -888,15 +888,15 @@ describe('AgentManagerImpl — class internals', () => {
       const config = { ...baseConfig, maxConcurrent: 1 }
       const manager = new AgentManagerImpl(config, repo, makeLogger())
 
-      vi.spyOn(manager, '_processQueuedTask').mockImplementation(async () => {
+      const processSpy = vi.spyOn(manager, '_processQueuedTask').mockImplementation(async () => {
         // Simulate a slot being consumed after the first task
-        manager._activeAgents.set('fill-slot', makeActiveAgent('fill-slot'))
+        manager.__testInternals.activeAgents.set('fill-slot', makeActiveAgent('fill-slot'))
       })
 
-      await manager._drainQueuedTasks(2, new Map())
+      await manager.__testInternals.drainQueuedTasks(2, new Map())
 
       // Only first task processed; second skipped due to no available slots
-      expect(manager._processQueuedTask).toHaveBeenCalledTimes(1)
+      expect(processSpy).toHaveBeenCalledTimes(1)
     })
 
     it('logs errors per task without stopping the loop', async () => {
@@ -905,14 +905,15 @@ describe('AgentManagerImpl — class internals', () => {
       const logger = makeLogger()
       const manager = new AgentManagerImpl(baseConfig, repo, logger)
 
-      vi.spyOn(manager, '_processQueuedTask')
+      const processSpy = vi
+        .spyOn(manager, '_processQueuedTask')
         .mockRejectedValueOnce(new Error('task-1 exploded'))
         .mockResolvedValueOnce(undefined)
 
-      await manager._drainQueuedTasks(2, new Map())
+      await manager.__testInternals.drainQueuedTasks(2, new Map())
 
       // Both tasks attempted — error didn't stop the loop
-      expect(manager._processQueuedTask).toHaveBeenCalledTimes(2)
+      expect(processSpy).toHaveBeenCalledTimes(2)
       expect(logger.error).toHaveBeenCalledWith(expect.stringContaining('task-1'))
     })
   })
@@ -949,17 +950,17 @@ describe('AgentManagerImpl — class internals', () => {
       const repo = makeMockRepo()
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      expect(manager._pendingSpawns).toBe(0)
+      expect(manager.__testInternals.pendingSpawns).toBe(0)
 
-      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      manager.__testInternals.spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
 
       // _pendingSpawns is incremented synchronously before the async work
-      expect(manager._pendingSpawns).toBe(1)
+      expect(manager.__testInternals.pendingSpawns).toBe(1)
 
       // Wait for all pending promises to settle
-      await Promise.allSettled(Array.from(manager._agentPromises))
+      await Promise.allSettled(Array.from(manager.__testInternals.agentPromises))
 
-      expect(manager._pendingSpawns).toBe(0)
+      expect(manager.__testInternals.pendingSpawns).toBe(0)
     })
 
     it('decrements _pendingSpawns to 0 when runAgent resolves successfully', async () => {
@@ -968,10 +969,10 @@ describe('AgentManagerImpl — class internals', () => {
       const repo = makeMockRepo()
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
-      await Promise.allSettled(Array.from(manager._agentPromises))
+      manager.__testInternals.spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      await Promise.allSettled(Array.from(manager.__testInternals.agentPromises))
 
-      expect(manager._pendingSpawns).toBe(0)
+      expect(manager.__testInternals.pendingSpawns).toBe(0)
     })
 
     it('releases task claim (status=error, claimed_by=null) when runAgent throws unexpectedly', async () => {
@@ -982,8 +983,8 @@ describe('AgentManagerImpl — class internals', () => {
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
       const task = makeSpawnTask()
 
-      manager._spawnAgent(task, mockWorktree, mockRepoPath)
-      await Promise.allSettled(Array.from(manager._agentPromises))
+      manager.__testInternals.spawnAgent(task, mockWorktree, mockRepoPath)
+      await Promise.allSettled(Array.from(manager.__testInternals.agentPromises))
 
       expect(updateTask).toHaveBeenCalledWith(
         task.id,
@@ -997,14 +998,14 @@ describe('AgentManagerImpl — class internals', () => {
       const repo = makeMockRepo()
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
-      manager._spawnAgent({ ...makeSpawnTask(), id: 'task-spawn-2' }, mockWorktree, mockRepoPath)
+      manager.__testInternals.spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      manager.__testInternals.spawnAgent({ ...makeSpawnTask(), id: 'task-spawn-2' }, mockWorktree, mockRepoPath)
 
-      expect(manager._pendingSpawns).toBe(2)
+      expect(manager.__testInternals.pendingSpawns).toBe(2)
 
-      await Promise.allSettled(Array.from(manager._agentPromises))
+      await Promise.allSettled(Array.from(manager.__testInternals.agentPromises))
 
-      expect(manager._pendingSpawns).toBe(0)
+      expect(manager.__testInternals.pendingSpawns).toBe(0)
     })
 
     it('records a circuit breaker failure when runAgent throws before onSpawnFailure is reached', async () => {
@@ -1015,13 +1016,13 @@ describe('AgentManagerImpl — class internals', () => {
       const repo = makeMockRepo()
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      expect(manager._circuitBreaker.failureCount).toBe(0)
+      expect(manager.__testInternals.circuitBreaker.failureCount).toBe(0)
 
-      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
-      await Promise.allSettled(Array.from(manager._agentPromises))
+      manager.__testInternals.spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      await Promise.allSettled(Array.from(manager.__testInternals.agentPromises))
 
       // Circuit breaker must record the failure even though onSpawnFailure was never called
-      expect(manager._circuitBreaker.failureCount).toBe(1)
+      expect(manager.__testInternals.circuitBreaker.failureCount).toBe(1)
     })
 
     it('accumulates circuit breaker failures across multiple unexpected spawn crashes', async () => {
@@ -1030,13 +1031,13 @@ describe('AgentManagerImpl — class internals', () => {
       const repo = makeMockRepo()
       const manager = new AgentManagerImpl(baseConfig, repo, makeLogger())
 
-      manager._spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
-      manager._spawnAgent({ ...makeSpawnTask(), id: 'task-spawn-2' }, mockWorktree, mockRepoPath)
+      manager.__testInternals.spawnAgent(makeSpawnTask(), mockWorktree, mockRepoPath)
+      manager.__testInternals.spawnAgent({ ...makeSpawnTask(), id: 'task-spawn-2' }, mockWorktree, mockRepoPath)
 
-      await Promise.allSettled(Array.from(manager._agentPromises))
+      await Promise.allSettled(Array.from(manager.__testInternals.agentPromises))
 
       // Both failures should be counted by the circuit breaker
-      expect(manager._circuitBreaker.failureCount).toBe(2)
+      expect(manager.__testInternals.circuitBreaker.failureCount).toBe(2)
     })
   })
 
@@ -1047,7 +1048,7 @@ describe('AgentManagerImpl — class internals', () => {
   describe('consecutive drain error threshold', () => {
     it('initialises _consecutiveDrainErrors to 0', () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
-      expect(manager._consecutiveDrainErrors).toBe(0)
+      expect(manager.__testInternals.consecutiveDrainErrors).toBe(0)
     })
 
     it('increments _consecutiveDrainErrors when _drainLoop rejects', async () => {
@@ -1064,7 +1065,7 @@ describe('AgentManagerImpl — class internals', () => {
       for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
       vi.useRealTimers()
 
-      expect(manager._consecutiveDrainErrors).toBeGreaterThanOrEqual(1)
+      expect(manager.__testInternals.consecutiveDrainErrors).toBeGreaterThanOrEqual(1)
 
       await manager.stop(0)
     })
@@ -1072,7 +1073,7 @@ describe('AgentManagerImpl — class internals', () => {
     it('resets _consecutiveDrainErrors to 0 after a successful drain', async () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       // Pre-set the counter to simulate prior failures
-      manager._consecutiveDrainErrors = 2
+      manager.__testInternals.consecutiveDrainErrors = 2
 
       vi.spyOn(manager, '_drainLoop').mockResolvedValue(undefined)
 
@@ -1086,7 +1087,7 @@ describe('AgentManagerImpl — class internals', () => {
       for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
       vi.useRealTimers()
 
-      expect(manager._consecutiveDrainErrors).toBe(0)
+      expect(manager.__testInternals.consecutiveDrainErrors).toBe(0)
 
       await manager.stop(0)
     })

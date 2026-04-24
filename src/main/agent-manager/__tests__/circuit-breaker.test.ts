@@ -71,18 +71,18 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
   it('does not open the breaker before reaching the threshold', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
-    expect(mgr._circuitBreaker.isOpen()).toBe(false)
+    expect(mgr.__testInternals.circuitBreaker.isOpen()).toBe(false)
     expect(broadcast).not.toHaveBeenCalled()
   })
 
   it('opens the breaker exactly at the threshold and emits an event', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
-    expect(mgr._circuitBreaker.isOpen()).toBe(true)
+    expect(mgr.__testInternals.circuitBreaker.isOpen()).toBe(true)
     expect(broadcast).toHaveBeenCalledWith(
       'agent-manager:circuit-breaker-open',
       expect.objectContaining({
@@ -94,29 +94,29 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
   it('a successful spawn resets the failure counter', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
-    mgr._circuitBreaker.recordSuccess()
-    expect(mgr._circuitBreaker.failureCount).toBe(0)
+    mgr.__testInternals.circuitBreaker.recordSuccess()
+    expect(mgr.__testInternals.circuitBreaker.failureCount).toBe(0)
 
     // Now we can fail threshold-1 more times without opening
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
-    expect(mgr._circuitBreaker.isOpen()).toBe(false)
+    expect(mgr.__testInternals.circuitBreaker.isOpen()).toBe(false)
   })
 
   it('auto-resets after the pause window elapses', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
-    expect(mgr._circuitBreaker.isOpen()).toBe(true)
+    expect(mgr.__testInternals.circuitBreaker.isOpen()).toBe(true)
 
     // Pretend pause window has fully elapsed
-    const future = mgr._circuitBreaker.openUntilTimestamp + SPAWN_CIRCUIT_PAUSE_MS + 1
-    expect(mgr._circuitBreaker.isOpen(future)).toBe(false)
-    expect(mgr._circuitBreaker.failureCount).toBe(0)
+    const future = mgr.__testInternals.circuitBreaker.openUntilTimestamp + SPAWN_CIRCUIT_PAUSE_MS + 1
+    expect(mgr.__testInternals.circuitBreaker.isOpen(future)).toBe(false)
+    expect(mgr.__testInternals.circuitBreaker.failureCount).toBe(0)
   })
 
   it('drain loop is skipped while breaker is open', async () => {
@@ -124,10 +124,10 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
     const mgr = new AgentManagerImpl(baseConfig, repo, makeLogger())
     // Trip the breaker
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
 
-    await mgr._drainLoop()
+    await mgr.__testInternals.drainLoop()
 
     // No queued-task fetch should happen while paused
     expect(repo.getQueuedTasks).not.toHaveBeenCalled()
@@ -136,13 +136,13 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
   it('only opens once per trip — repeated failures during pause do not re-broadcast', () => {
     const mgr = new AgentManagerImpl(baseConfig, makeRepo(), makeLogger())
     for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
-      mgr._circuitBreaker.recordFailure()
+      mgr.__testInternals.circuitBreaker.recordFailure()
     }
     expect(broadcast).toHaveBeenCalledTimes(1)
 
     // Additional failures while open should not re-emit
-    mgr._circuitBreaker.recordFailure()
-    mgr._circuitBreaker.recordFailure()
+    mgr.__testInternals.circuitBreaker.recordFailure()
+    mgr.__testInternals.circuitBreaker.recordFailure()
     expect(broadcast).toHaveBeenCalledTimes(1)
   })
 })

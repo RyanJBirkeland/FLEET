@@ -28,6 +28,7 @@ import { resolveRepoPath } from './task-claimer'
 import { executeShutdown } from './shutdown-coordinator'
 import { reloadConfiguration } from './config-manager'
 import { LifecycleController } from './lifecycle-controller'
+import { AgentManagerTestInternals } from './agent-manager-test-internals'
 
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
@@ -181,6 +182,21 @@ export class AgentManagerImpl implements AgentManager {
         this._circuitBreaker.recordFailure()
       }
     }
+  }
+
+  // ---- Test seam ----
+
+  /**
+   * Stable typed view of the underscore-prefixed members tests reach into.
+   * Construct lazily and cache so repeat access returns the same view.
+   *
+   * Tests should access internals via `mgr.__testInternals.<name>` rather
+   * than `mgr._<name>` so future field renames touch only the seam mapping
+   * in `agent-manager-test-internals.ts`, not 35+ test sites.
+   */
+  private _testInternalsView?: AgentManagerTestInternals
+  get __testInternals(): AgentManagerTestInternals {
+    return (this._testInternalsView ??= new AgentManagerTestInternals(this))
   }
 
   // ---- Helpers ----
