@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import fs from 'fs'
 import os from 'os'
 import path from 'path'
-import { mkdtemp, mkdir, writeFile, symlink, rm } from 'fs/promises'
+import { mkdtemp, writeFile, symlink, rm } from 'fs/promises'
 import { validateIdePath, _resetApprovedIdeRoots } from '../ide-fs-service'
 
 // electron and paths modules are not available in the test environment

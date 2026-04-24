@@ -261,8 +261,7 @@ export function registerWorkbenchHandlers(
   })
 
   // --- AI-powered spec checks ---
-  safeHandle(
-    'workbench:checkSpec',
+  safeHandle('workbench:checkSpec',
     async (_e, input: CheckSpecInput) => {
       const result = await specQualityService.validateFull(input.spec)
       return mapQualityResult(result)

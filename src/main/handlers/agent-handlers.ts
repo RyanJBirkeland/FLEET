@@ -250,8 +250,7 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
   safeHandle('agents:list', (_e, args: ListAgentsArgs) => listAgents(args.limit, args.status))
   type ReadLogArgs = { id: string; fromByte?: number | undefined }
   safeHandle('agents:readLog', (_e, args: ReadLogArgs) => readLog(args.id, args.fromByte))
-  safeHandle(
-    'agents:import',
+  safeHandle('agents:import',
     (_e, args: { meta: Partial<AgentMeta>; content: string }) =>
       importAgent(args.meta, args.content),
     parseAgentsImportArgs

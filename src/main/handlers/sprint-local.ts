@@ -106,8 +106,7 @@ export function registerSprintLocalHandlers(
     return listTasksRecent()
   })
 
-  safeHandle(
-    'sprint:create',
+  safeHandle('sprint:create',
     async (_e, task: CreateTaskInput) => createTaskWithValidation(task, { logger }),
     parseSprintCreateArgs
   )

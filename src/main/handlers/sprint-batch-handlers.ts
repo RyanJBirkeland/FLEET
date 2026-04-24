@@ -150,8 +150,7 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
     return { results }
   })
 
-  safeHandle(
-    'sprint:batchImport',
+  safeHandle('sprint:batchImport',
     async (_e, tasks: BatchImportTask[]) => {
       const { batchImportTasks } = await import('../services/batch-import')
       const reposConfig = getSettingJson<Array<{ name: string; localPath: string }>>('repos') ?? []
