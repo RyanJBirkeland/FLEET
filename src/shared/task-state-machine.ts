@@ -76,6 +76,12 @@ export const HARD_SATISFIED_STATUSES: ReadonlySet<TaskStatus> = new Set<TaskStat
  *
  * TS enforces exhaustiveness; add a new status here whenever TASK_STATUSES grows.
  * The `Record<TaskStatus, ...>` type makes missing entries a compile error.
+ *
+ * Each terminal failure state (`cancelled`, `failed`, `error`) allows a manual
+ * `→ done` transition. A human who implements the work outside the pipeline
+ * (or determines the failure was spurious) needs a clean way to mark the task
+ * resolved without raw SQLite — the escape hatch lives in the state machine
+ * rather than as a backdoor in the data layer.
  */
 export const VALID_TRANSITIONS: Record<TaskStatus, ReadonlySet<TaskStatus>> = {
   backlog: new Set<TaskStatus>(['queued', 'blocked', 'cancelled']),
@@ -84,9 +90,9 @@ export const VALID_TRANSITIONS: Record<TaskStatus, ReadonlySet<TaskStatus>> = {
   active: new Set<TaskStatus>(['review', 'done', 'failed', 'error', 'cancelled', 'queued']),
   review: new Set<TaskStatus>(['queued', 'done', 'cancelled', 'failed']),
   done: new Set<TaskStatus>(['cancelled']),
-  failed: new Set<TaskStatus>(['queued', 'cancelled']),
-  error: new Set<TaskStatus>(['queued', 'cancelled']),
-  cancelled: new Set<TaskStatus>()
+  failed: new Set<TaskStatus>(['queued', 'cancelled', 'done']),
+  error: new Set<TaskStatus>(['queued', 'cancelled', 'done']),
+  cancelled: new Set<TaskStatus>(['done'])
 }
 
 /**
