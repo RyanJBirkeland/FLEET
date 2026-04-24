@@ -17,14 +17,12 @@ let unsubscribe: (() => void) | null = null
  * since ES2019, so events sharing a millisecond keep their emit order.
  */
 function mergeHistoryWithLiveEvents(history: AgentEvent[], live: AgentEvent[]): AgentEvent[] {
-  const seen = new Set<string>()
-  const merged: AgentEvent[] = []
-  for (const event of history.concat(live)) {
+  const seen = new Map<string, AgentEvent>()
+  for (const event of [...history, ...live]) {
     const key = JSON.stringify(event)
-    if (seen.has(key)) continue
-    seen.add(key)
-    merged.push(event)
+    if (!seen.has(key)) seen.set(key, event)
   }
+  const merged = [...seen.values()]
   merged.sort((a, b) => a.timestamp - b.timestamp)
   return merged
 }

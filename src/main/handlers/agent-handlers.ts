@@ -8,7 +8,7 @@ import type { TailLogArgs } from '../agent-log-manager'
 import { listAgents, readLog, importAgent, pruneOldAgents, getAgentMeta } from '../agent-history'
 import { getAgentRunContextTokens } from '../data/agent-queries'
 import { getDb } from '../db'
-import { getEventHistory } from '../data/event-queries'
+import { queryEvents } from '../data/event-queries'
 import type { AgentMeta } from '../agent-history'
 import { spawnAdhocAgent, getAdhocHandle } from '../adhoc-agent'
 import { createLogger, logError } from '../logger'
@@ -200,7 +200,8 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
     }
     return { ok: false, error: 'Agent not found' }
   })
-  safeHandle('agent:history', async (_e, agentId: string) => {
+  type HistoryArgs = { agentId: string; limit?: number; before?: number }
+  safeHandle('agent:history', async (_e, args: HistoryArgs) => {
     // Event history from local SQLite — kept for viewing historical runs.
     // Rows are parsed and shape-guarded before crossing the IPC boundary so
     // corrupted / drifted payloads can't pose as typed AgentEvents downstream.
@@ -208,10 +209,10 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
     // after spawn doesn't race the 100 ms SQLite-batch timer and return an
     // empty slice.
     flushAgentEventBatcher()
-    const rows = getEventHistory(getDb(), agentId)
+    const { events: rows } = queryEvents(getDb(), { agentId: args.agentId, limit: args.limit ?? 500 })
     const events: AgentEvent[] = []
     for (const row of rows) {
-      const event = parseHistoryRow(row.payload, agentId)
+      const event = parseHistoryRow(row.payload, args.agentId)
       if (event) events.push(event)
     }
     return events

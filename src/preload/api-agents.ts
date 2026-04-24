@@ -97,5 +97,5 @@ export const agentEvents = {
     }
   },
   getHistory: (agentId: string): Promise<IpcChannelMap['agent:history']['result']> =>
-    typedInvoke('agent:history', agentId)
+    typedInvoke('agent:history', { agentId })
 }
