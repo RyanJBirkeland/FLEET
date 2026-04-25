@@ -32,3 +32,5 @@
 - [ ] 5.2 `npx vitest run --config src/main/vitest.main.config.ts` all pass
 - [ ] 5.3 `npm run lint` zero errors
 - [ ] 5.4 Update `docs/modules/` for `sprint-pr-poller.ts`
+
+> Phase A invariant: this change satisfies the **bounded retry queues with structured exhaustion events** invariant in `pipeline-stop-the-bleeding/specs/pipeline-correctness-baseline/spec.md`.

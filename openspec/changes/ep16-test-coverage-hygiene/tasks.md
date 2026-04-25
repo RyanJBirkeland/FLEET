@@ -38,3 +38,5 @@
 - [ ] 7.2 `npx vitest run --config src/main/vitest.main.config.ts` all pass
 - [ ] 7.3 `npm test` all pass
 - [ ] 7.4 `npm run lint` zero errors
+
+> Phase A invariant: this change contributes to the **direct test coverage on high-blast-radius state mutators** invariant in `pipeline-stop-the-bleeding/specs/pipeline-correctness-baseline/spec.md`. The Phase A coordination change adds the additional named-function test files (`updateTaskFromUi`, `transitionToReview`, `handleWatchdogVerdict`, `resolveNodeExecutable`, prompt builders) that this epic does not cover.

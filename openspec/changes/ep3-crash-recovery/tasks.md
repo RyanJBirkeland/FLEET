@@ -29,3 +29,5 @@
 - [ ] 4.3 `npm test` all pass
 - [ ] 4.4 `npm run lint` zero errors
 - [ ] 4.5 Update `docs/modules/agent-manager/index.md` for `orphan-recovery.ts`; `docs/modules/stores/index.md` for `sprintUI.ts`
+
+> Phase A invariant: this change satisfies the **crash-loop cap on orphan recovery** invariant in `pipeline-stop-the-bleeding/specs/pipeline-correctness-baseline/spec.md`.

@@ -30,3 +30,5 @@
 - [x] 5.1 Grep confirms zero `updateTask.*status` calls outside `TaskStateService` and `sprint-task-crud.ts` assertion (remaining survivors all carry explicit deferred comments documenting EP-2 ownership)
 - [x] 5.2 All existing tests pass (`npm test` + `npx vitest run --config src/main/vitest.main.config.ts`)
 - [x] 5.3 Update `docs/modules/services/index.md` with `task-state-service.ts` row
+
+> Phase A invariant: this change satisfies the **single chokepoint for terminal status writes** invariant in `pipeline-stop-the-bleeding/specs/pipeline-correctness-baseline/spec.md`.

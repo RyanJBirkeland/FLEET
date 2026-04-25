@@ -44,3 +44,5 @@
 - [x] 7.2 `npx vitest run --config src/main/vitest.main.config.ts` — all pass
 - [x] 7.3 `npm run lint` — zero errors
 - [x] 7.4 Update `docs/modules/agent-manager/index.md` for all changed files
+
+> Phase A note: scope-coordination with `pipeline-stop-the-bleeding`. This epic owns the drain-loop deadline and `run-agent.ts` split. The Phase A coordination change owns audit task T-21 (drain-loop dep-index dirty-flag preservation) — make sure this epic's drain-loop work does not also touch the `_depIndexDirty` clear path.

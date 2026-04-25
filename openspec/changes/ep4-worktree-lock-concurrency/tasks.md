@@ -17,3 +17,5 @@
 - [x] 3.2 `npx vitest run --config src/main/vitest.main.config.ts` — all pass
 - [x] 3.3 `npm run lint` — zero errors
 - [x] 3.4 Update `docs/modules/agent-manager/index.md` rows for `file-lock.ts` and `worktree.ts`
+
+> Phase A invariant: this change satisfies the **`setupWorktree` never leaks the lock** invariant in `pipeline-stop-the-bleeding/specs/pipeline-correctness-baseline/spec.md`.
