@@ -173,7 +173,7 @@ const baseConfig: AgentManagerConfig = {
 }
 
 function makeLogger() {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 }
 
 function makeTask(overrides: Record<string, unknown> = {}) {
@@ -814,8 +814,9 @@ describe('createAgentManager', () => {
       for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
 
       expect(abortFn).toHaveBeenCalled()
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Watchdog killing task task-1: max-runtime')
+      expect(logger.event).toHaveBeenCalledWith(
+        'agent.watchdog.kill',
+        expect.objectContaining({ taskId: 'task-1', verdict: 'max-runtime' })
       )
       expect(vi.mocked(updateTask)).toHaveBeenCalledWith(
         'task-1',
@@ -866,8 +867,9 @@ describe('createAgentManager', () => {
       await vi.advanceTimersByTimeAsync(10_100)
 
       expect(abortFn).toHaveBeenCalled()
-      expect(logger.warn).toHaveBeenCalledWith(
-        expect.stringContaining('Watchdog killing task task-1: idle')
+      expect(logger.event).toHaveBeenCalledWith(
+        'agent.watchdog.kill',
+        expect.objectContaining({ taskId: 'task-1', verdict: 'idle' })
       )
 
       // Cleanup

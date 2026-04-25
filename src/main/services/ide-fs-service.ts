@@ -3,6 +3,9 @@ import { mkdir, readdir, readFile, rename, rm, stat, writeFile } from 'fs/promis
 import { dirname, join, resolve, relative } from 'path'
 import { BrowserWindow } from 'electron'
 import { getConfiguredRepos } from '../paths'
+import { createLogger } from '../logger'
+
+const log = createLogger('ide-fs-service')
 
 const MAX_READ_BYTES = 5 * 1024 * 1024 // 5 MB
 const BINARY_DETECT_BYTES = 8 * 1024 // 8 KB
@@ -267,7 +270,7 @@ export function watchRoot(validatedPath: string): void {
   })
 
   watcher.on('error', (err) => {
-    console.error('File watcher error:', err)
+    log.error(`File watcher error: ${err}`)
     stopWatcher()
     const windows = BrowserWindow.getAllWindows()
     for (const win of windows) {

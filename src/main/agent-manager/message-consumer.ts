@@ -183,9 +183,12 @@ export async function consumeMessages(
     }
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err)
-    logger.warn(
-      `[agent-manager] Stream interrupted for task ${task.id}: ${errMsg} (messagesConsumed=${messagesConsumed} lastEventType=${lastEventType})`
-    )
+    logger.event('agent.stream.error', {
+      taskId: task.id,
+      messagesConsumed,
+      lastEventType,
+      error: errMsg
+    })
     logError(logger, `[agent-manager] Error consuming messages for task ${task.id}`, err)
     emitAgentEvent(agentRunId, {
       type: 'agent:error',

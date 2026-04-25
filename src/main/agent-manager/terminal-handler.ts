@@ -35,12 +35,7 @@ function recordTerminalMetrics(
   } else if (status === 'failed' || status === 'error') {
     metrics.increment('agentsFailed')
   }
-  logger.info(JSON.stringify({
-    event: 'agent.completed',
-    taskId,
-    status,
-    timestamp: new Date().toISOString()
-  }))
+  logger.event('agent.terminal', { taskId, status, source: 'terminal-handler' })
 }
 
 async function resolveTerminalDependents(

@@ -30,6 +30,7 @@ export interface Logger {
   warn(msg: string): void
   error(msg: string): void
   debug(msg: string): void
+  event(name: string, fields: Record<string, unknown>): void
 }
 
 function ensureLogDir(): void {
@@ -95,6 +96,27 @@ const ROTATION_CHECK_INTERVAL = 1000 // check every 1000 writes
 const SLOW_WRITE_THRESHOLD_MS = 50
 let slowWriteWarned = false
 
+function fileEvent(name: string, eventName: string, fields: Record<string, unknown>): void {
+  try {
+    const line = JSON.stringify({ ts: nowIso(), level: 'INFO', module: name, event: eventName, ...fields })
+    const startedAt = Date.now()
+    appendFileSync(LOG_PATH, line + '\n', { mode: 0o600 })
+    const elapsedMs = Date.now() - startedAt
+    if (!slowWriteWarned && elapsedMs > SLOW_WRITE_THRESHOLD_MS) {
+      slowWriteWarned = true
+      console.warn(
+        `[logger] slow log write: ${elapsedMs}ms (threshold ${SLOW_WRITE_THRESHOLD_MS}ms) — disk may be under pressure. Further slow writes will be silent.`
+      )
+    }
+    if (++writeCount >= ROTATION_CHECK_INTERVAL) {
+      writeCount = 0
+      rotateIfNeeded()
+    }
+  } catch {
+    // Logging should never crash the app
+  }
+}
+
 function fileLog(level: string, name: string, msg: string): void {
   try {
     const ts = nowIso()
@@ -139,6 +161,9 @@ export function createLogger(name: string): Logger {
     debug: (m: string) => {
       if (CONSOLE_LOG_ENABLED) console.debug(`[${name}]`, m)
       fileLog('DEBUG', name, m)
+    },
+    event: (eventName: string, fields: Record<string, unknown>) => {
+      fileEvent(name, eventName, fields)
     }
   }
 }

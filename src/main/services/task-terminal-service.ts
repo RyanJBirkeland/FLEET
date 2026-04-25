@@ -11,6 +11,7 @@ import { broadcast } from '../broadcast'
 import { getErrorMessage } from '../../shared/errors'
 import { refreshDependencyIndex, type DepsFingerprint } from '../agent-manager/dependency-refresher'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { Logger } from '../logger'
 
 type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_id'> & {
   depends_on: TaskDependency[] | null
@@ -30,12 +31,7 @@ export interface TaskTerminalServiceDeps {
   epicDepsReader: EpicDepsReader
   getSetting?: (key: string) => string | null
   runInTransaction?: (fn: () => void) => void
-  logger: {
-    info: (msg: string) => void
-    warn: (msg: string) => void
-    error: (msg: string) => void
-    debug: (msg: string) => void
-  }
+  logger: Logger
 }
 
 export interface TaskTerminalService {

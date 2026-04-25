@@ -104,7 +104,7 @@ function makeErrorHandle(err: Error): AgentHandle {
 }
 
 function makeLogger() {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 }
 
 describe('consumeMessages', () => {

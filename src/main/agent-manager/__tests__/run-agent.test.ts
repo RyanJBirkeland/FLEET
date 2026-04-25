@@ -193,7 +193,8 @@ function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      debug: vi.fn()
+      debug: vi.fn(),
+      event: vi.fn()
     },
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
     repo: mockRepo,
@@ -596,7 +597,7 @@ describe('tryEmitPlaygroundEvent', () => {
     const { emitAgentEvent } = await import('../../agent-event-mapper')
     vi.mocked(stat).mockResolvedValue({ size: 1024 } as any)
     vi.mocked(readFile).mockResolvedValue('<html>hello</html>')
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     await tryEmitPlaygroundEvent({
       taskId: 'task-1',
       filePath: '/wt/index.html',
@@ -617,7 +618,7 @@ describe('tryEmitPlaygroundEvent', () => {
     const { readFile } = await import('node:fs/promises')
     vi.mocked(stat).mockResolvedValue({ size: 100 } as any)
     vi.mocked(readFile).mockResolvedValue('<html/>')
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     await tryEmitPlaygroundEvent({
       taskId: 'task-1',
       filePath: 'relative/file.html',
@@ -630,7 +631,7 @@ describe('tryEmitPlaygroundEvent', () => {
     const { stat } = await import('node:fs/promises')
     const { emitAgentEvent } = await import('../../agent-event-mapper')
     vi.mocked(stat).mockResolvedValue({ size: 10 * 1024 * 1024 } as any)
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     await tryEmitPlaygroundEvent({
       taskId: 'task-1',
       filePath: '/wt/big.html',
@@ -643,7 +644,7 @@ describe('tryEmitPlaygroundEvent', () => {
   it('logs warning on file read error', async () => {
     const { stat } = await import('node:fs/promises')
     vi.mocked(stat).mockRejectedValue(new Error('ENOENT'))
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     await tryEmitPlaygroundEvent({
       taskId: 'task-1',
       filePath: '/wt/missing.html',
@@ -906,7 +907,7 @@ describe('validateTaskForRun', () => {
       getTask: vi.fn().mockReturnValue(null)
     } as unknown as IAgentTaskRepository
     const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
     const emptyTask: AgentRunClaim = {
       id: 'task-1',
@@ -954,7 +955,7 @@ describe('validateTaskForRun', () => {
       validateTaskForRun(task, { worktreePath: '/wt', branch: 'b' }, '/repo', {
         activeAgents: new Map(),
         defaultModel: 'claude-3-5-sonnet-20241022',
-        logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+        logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() },
         onTaskTerminal: vi.fn(),
         repo: mockRepoLocal
       })
@@ -968,25 +969,25 @@ describe('fetchUpstreamContext', () => {
   beforeEach(() => vi.clearAllMocks())
 
   it('returns [] when deps is null', () => {
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     const result = fetchUpstreamContext(null, mockRepo, logger)
     expect(result).toEqual([])
   })
 
   it('returns [] when deps is undefined', () => {
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     const result = fetchUpstreamContext(undefined, mockRepo, logger)
     expect(result).toEqual([])
   })
 
   it('returns [] when deps is an empty array', () => {
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     const result = fetchUpstreamContext([], mockRepo, logger)
     expect(result).toEqual([])
   })
 
   it('returns context entries for done upstream tasks with non-empty spec', () => {
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     ;(mockRepo.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
       id: 'upstream-1',
       title: 'Upstream task',
@@ -1002,7 +1003,7 @@ describe('fetchUpstreamContext', () => {
   })
 
   it('skips upstream tasks that are not done', () => {
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     ;(mockRepo.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
       id: 'upstream-1',
       title: 'Active task',
@@ -1015,7 +1016,7 @@ describe('fetchUpstreamContext', () => {
   })
 
   it('skips upstream tasks with empty spec', () => {
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     ;(mockRepo.getTask as ReturnType<typeof vi.fn>).mockReturnValue({
       id: 'upstream-1',
       title: 'Done task',
@@ -1073,7 +1074,7 @@ describe('assembleRunContext', () => {
       {
         activeAgents: new Map(),
         defaultModel: 'claude-3-5-sonnet-20241022',
-        logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
+        logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() },
         onTaskTerminal: vi.fn(),
         repo: mockRepoLocal
       }
@@ -1108,7 +1109,7 @@ describe('consumeMessages', () => {
     }
     const task = makeTask()
     const turnTracker = new TurnTracker('run-1')
-    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
     const result = await consumeMessages(handle as any, agent, task, 'run-1', turnTracker, logger)
 

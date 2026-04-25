@@ -137,12 +137,12 @@ export function getOAuthToken(): string | null {
       // Use lstatSync (not statSync) to detect symlinks before following them.
       const lstats = lstatSync(tokenPath)
       if (lstats.isSymbolicLink()) {
-        console.warn('[env-utils] OAuth token file is a symlink — rejecting for security')
+        logger.warn('[env-utils] OAuth token file is a symlink — rejecting for security')
         _cachedOAuthToken = null
         return _cachedOAuthToken
       }
       if (lstats.size > MAX_TOKEN_BYTES) {
-        console.warn('[env-utils] OAuth token file exceeds maximum size — rejecting')
+        logger.warn('[env-utils] OAuth token file exceeds maximum size — rejecting')
         _cachedOAuthToken = null
         return _cachedOAuthToken
       }

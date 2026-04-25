@@ -119,6 +119,10 @@ export async function spawnAgent(opts: {
    * CLAUDE.md from --dir, so the full assembled prompt is not needed.
    */
   branch?: string | undefined
+  /** Task ID forwarded to spawn log for forensic timeline reconstruction. */
+  taskId?: string | undefined
+  /** Drain-tick correlation ID for cross-event log joins. */
+  tickId?: string | undefined
 }): Promise<AgentHandle> {
   // Worktree-base cwd assertion applies only to pipeline agents — adhoc,
   // assistant, copilot, and synthesizer agents run in the user's repo or
@@ -220,7 +224,7 @@ async function* withMcpCleanup(
 
 function nullLogger(): Logger {
   const noop = (): void => {}
-  return { info: noop, warn: noop, error: noop, debug: noop }
+  return { info: noop, warn: noop, error: noop, debug: noop, event: noop }
 }
 
 function annotateHandle(
@@ -238,6 +242,9 @@ async function spawnClaudeAgent(opts: {
   maxBudgetUsd?: number | undefined
   logger?: Logger | undefined
   pipelineTuning?: PipelineSpawnTuning | undefined
+  taskId?: string | undefined
+  agentType?: string | undefined
+  tickId?: string | undefined
 }): Promise<AgentHandle> {
   const env = { ...buildAgentEnv() }
   prependResolvedNodeDirToPath(env, opts.logger)
@@ -272,7 +279,8 @@ export async function spawnWithTimeout(
   maxBudgetUsd?: number,
   pipelineTuning?: PipelineSpawnTuning,
   worktreeBase?: string,
-  branch?: string
+  branch?: string,
+  tickId?: string
 ): Promise<AgentHandle> {
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -282,7 +290,7 @@ export async function spawnWithTimeout(
     )
   })
   return await Promise.race([
-    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase, branch }),
+    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase, branch, tickId }),
     timeoutPromise
   ]).finally(() => clearTimeout(timer!))
 }

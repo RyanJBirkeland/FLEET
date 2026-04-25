@@ -128,7 +128,7 @@ describe('spawnAgent (SDK path)', () => {
 
   it('steer() returns delivered: false and logs warning (AM-6)', async () => {
     const mockWarn = vi.fn()
-    const logger = { info: vi.fn(), warn: mockWarn, error: vi.fn() }
+    const logger = { info: vi.fn(), warn: mockWarn, error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
     const handle = await spawnAgent({
       prompt: 'test',

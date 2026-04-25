@@ -77,6 +77,8 @@ export interface RunAgentSpawnDeps {
    * entered activeAgents so each running agent is counted exactly once.
    */
   onAgentRegistered?: () => void
+  /** Drain-tick correlation ID — threads from DrainLoopDeps to the spawn log. */
+  tickId?: string | undefined
 }
 
 /** Sprint task data access. */
@@ -497,9 +499,13 @@ async function finalizeAgentRun(
   })
 
   await persistAndCleanupAfterRun(task, worktree, repoPath, agent, deps)
-  deps.logger.info(
-    `[agent-manager] Agent completed for task ${task.id} (exitCode=${exitCode ?? 'none'} durationMs=${durationMs} model=${agent.model || 'unknown'} costUsd=${agent.costUsd ?? 'unknown'})`
-  )
+  deps.logger.event('agent.completed', {
+    taskId: task.id,
+    status: 'review',
+    durationMs,
+    model: agent.model || 'unknown',
+    costUsd: agent.costUsd ?? null
+  })
 }
 
 function emitCompletionEvent(

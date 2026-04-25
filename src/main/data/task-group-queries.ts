@@ -9,15 +9,11 @@ import { mapRowsToTasks } from './sprint-queries'
 import { getErrorMessage } from '../../shared/errors'
 import { sanitizeEpicDependsOn } from '../../shared/sanitize-epic-depends-on'
 import type { Logger } from '../logger'
+import { createLogger } from '../logger'
 import { withDataLayerError } from './data-utils'
 
-// Module-level logger — defaults to console, injectable for testing/structured logging
-let _logger: Logger = {
-  info: (m) => console.log(m),
-  warn: (m) => console.warn(m),
-  error: (m) => console.error(m),
-  debug: (m) => console.debug(m)
-}
+// Module-level logger — defaults to file logger, injectable for testing/structured logging
+let _logger: Logger = createLogger('task-group-queries')
 
 /**
  * Inject a logger. Called at app startup to route logs to the shared log file.

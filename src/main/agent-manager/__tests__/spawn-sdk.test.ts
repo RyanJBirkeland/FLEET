@@ -165,7 +165,7 @@ describe('spawnViaSdk', () => {
   })
 
   it('steer() logs warning when logger provided', async () => {
-    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     const handle = spawnViaSdk(
       sdk,
       { prompt: 'test', cwd: '/tmp', model: 'sonnet' },
@@ -180,7 +180,7 @@ describe('spawnViaSdk', () => {
   })
 
   it('steer() warn log does NOT contain the message body', async () => {
-    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     const handle = spawnViaSdk(
       sdk,
       { prompt: 'test', cwd: '/tmp', model: 'sonnet' },

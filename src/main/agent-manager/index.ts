@@ -243,7 +243,8 @@ export class AgentManagerImpl implements AgentManager {
   _spawnAgent(
     task: AgentRunClaim,
     worktree: { worktreePath: string; branch: string },
-    repoPath: string
+    repoPath: string,
+    tickId?: string
   ): Promise<void> {
     this._metrics.increment('agentsSpawned')
     this._pendingSpawns++
@@ -256,7 +257,7 @@ export class AgentManagerImpl implements AgentManager {
         this._pendingSpawns = Math.max(0, this._pendingSpawns - 1)
       }
     }
-    const spawnDeps = { ...this.runAgentDeps, onAgentRegistered: decrementPendingOnce }
+    const spawnDeps = { ...this.runAgentDeps, onAgentRegistered: decrementPendingOnce, tickId }
     const agentPromise = _runAgent(task, worktree, repoPath, spawnDeps)
       .catch((err) => {
         this.logger.error(`[agent-manager] runAgent failed for task ${task.id}: ${err}`)
@@ -325,7 +326,11 @@ export class AgentManagerImpl implements AgentManager {
    * Full pipeline for one queued task row. Delegates to task-claimer.ts.
    * Exposed via _ prefix for testability.
    */
-  async _processQueuedTask(rawTask: SprintTask, taskStatusMap: Map<string, string>): Promise<void> {
+  async _processQueuedTask(
+    rawTask: SprintTask,
+    taskStatusMap: Map<string, string>,
+    tickId?: string
+  ): Promise<void> {
     return processQueuedTask(rawTask, taskStatusMap, {
       config: this.config,
       repo: this.repo,
@@ -334,7 +339,7 @@ export class AgentManagerImpl implements AgentManager {
       onTaskTerminal: this.onTaskTerminal.bind(this),
       processingTasks: this._processingTasks,
       activeAgents: this._activeAgents,
-      spawnAgent: this._spawnAgent.bind(this)
+      spawnAgent: (task, wt, repoPath) => this._spawnAgent(task, wt, repoPath, tickId)
     })
   }
 
@@ -389,7 +394,7 @@ export class AgentManagerImpl implements AgentManager {
       setConcurrency: (state) => {
         this._concurrency = state
       },
-      processQueuedTask: (raw, map) => this._processQueuedTask(raw, map),
+      processQueuedTask: (raw, map) => this._processQueuedTask(raw, map, drainDeps.tickId),
       drainFailureCounts: this._drainFailureCounts,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       drainPausedUntil: this._drainPausedUntil,

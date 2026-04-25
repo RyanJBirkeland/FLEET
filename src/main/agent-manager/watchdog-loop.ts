@@ -185,9 +185,13 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
   for (const { agent, verdict } of agentsToKill) {
     const runtimeMs = Date.now() - agent.startedAt
     const limitMs = agent.maxRuntimeMs ?? deps.config.maxRuntimeMs
-    deps.logger.warn(
-      `[agent-manager] Watchdog killing task ${agent.taskId}: ${verdict} (taskId=${agent.taskId} runtimeMs=${runtimeMs} limitMs=${limitMs} agentType=pipeline)`
-    )
+    deps.logger.event('agent.watchdog.kill', {
+      taskId: agent.taskId,
+      runtimeMs,
+      limitMs,
+      agentType: 'pipeline',
+      verdict
+    })
     deps.metrics.recordWatchdogVerdict(verdict)
     if (verdict === 'rate-limit-loop') {
       deps.metrics.increment('retriesQueued')

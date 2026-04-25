@@ -14,6 +14,55 @@ vi.mock('node:fs', () => ({
 import { createLogger } from '../logger'
 import { appendFileSync, statSync, renameSync, rmSync, chmodSync } from 'node:fs'
 
+describe('logger.event()', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('writes a parseable JSON line to bde.log', () => {
+    const logger = createLogger('test-module')
+    logger.event('agent.spawn', { taskId: 'abc123', model: 'claude-opus-4-7' })
+
+    const calls = vi.mocked(appendFileSync).mock.calls
+    const eventCall = calls.find((c) => {
+      const line = String(c[1])
+      return line.includes('"event"')
+    })
+    expect(eventCall).toBeDefined()
+    const parsed = JSON.parse(String(eventCall![1]).trim())
+    expect(parsed.event).toBe('agent.spawn')
+    expect(parsed.taskId).toBe('abc123')
+    expect(parsed.model).toBe('claude-opus-4-7')
+    expect(parsed.ts).toBeDefined()
+    expect(parsed.level).toBe('INFO')
+    expect(parsed.module).toBe('test-module')
+  })
+
+  it('does not include missing optional fields', () => {
+    const logger = createLogger('test-module')
+    logger.event('drain.tick.idle', { tickId: 'x1' })
+
+    const calls = vi.mocked(appendFileSync).mock.calls
+    const eventCall = calls.find((c) => String(c[1]).includes('"drain.tick.idle"'))
+    expect(eventCall).toBeDefined()
+    const parsed = JSON.parse(String(eventCall![1]).trim())
+    expect(parsed.tickId).toBe('x1')
+    expect(parsed.taskId).toBeUndefined()
+  })
+
+  it('extra fields from the caller pass through to the JSON line', () => {
+    const logger = createLogger('test-module')
+    logger.event('agent.watchdog.kill', { taskId: 't-1', runtimeMs: 5000, limitMs: 3600000, agentType: 'pipeline', verdict: 'timeout' })
+
+    const calls = vi.mocked(appendFileSync).mock.calls
+    const eventCall = calls.find((c) => String(c[1]).includes('"agent.watchdog.kill"'))
+    expect(eventCall).toBeDefined()
+    const parsed = JSON.parse(String(eventCall![1]).trim())
+    expect(parsed.runtimeMs).toBe(5000)
+    expect(parsed.verdict).toBe('timeout')
+  })
+})
+
 describe('createLogger', () => {
   beforeEach(() => {
     vi.clearAllMocks()

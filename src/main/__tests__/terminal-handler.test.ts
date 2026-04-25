@@ -15,7 +15,8 @@ vi.mock('../logger', () => ({
     error: vi.fn(),
     warn: vi.fn(),
     info: vi.fn(),
-    debug: vi.fn()
+    debug: vi.fn(),
+    event: vi.fn()
   })
 }))
 
@@ -53,7 +54,7 @@ function makeDeps(repo: IAgentTaskRepository): TerminalHandlerDeps {
     unitOfWork: { runInTransaction: (fn) => fn() },
     config: {} as AgentManagerConfig,
     terminalCalled: new Map(),
-    logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() } as any
+    logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn(), event: vi.fn() } as any
   }
 }
 

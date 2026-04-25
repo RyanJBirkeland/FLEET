@@ -182,7 +182,8 @@ function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
       info: vi.fn(),
       warn: vi.fn(),
       error: vi.fn(),
-      debug: vi.fn()
+      debug: vi.fn(),
+      event: vi.fn()
     },
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
     repo: mockRepo,

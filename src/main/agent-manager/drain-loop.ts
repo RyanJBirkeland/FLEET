@@ -59,6 +59,12 @@ export interface DrainLoopDeps {
   emitDrainPaused: (event: AgentManagerDrainPausedEvent) => void
   /** Unix-ms; when set and > Date.now(), the drain tick short-circuits. */
   drainPausedUntil: number | undefined
+  /**
+   * Short random hex token generated once per runDrain() invocation.
+   * Threads through processQueuedTask → spawnAgent so every event in
+   * a single drain tick can be correlated in the log.
+   */
+  tickId?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -285,6 +291,9 @@ function applyQuarantine(taskId: string, note: string, deps: DrainLoopDeps): voi
  * the caller via `_drainInFlight` — this function is the body of that promise.
  */
 export async function runDrain(deps: DrainLoopDeps): Promise<void> {
+  const tickId = Math.random().toString(16).slice(2, 10)
+  deps.tickId = tickId
+
   deps.logger.info(
     `[agent-manager] Drain loop starting (shuttingDown=${deps.isShuttingDown()}, slots=${availableSlots(deps.getConcurrency(), deps.activeAgents.size)})`
   )
@@ -304,7 +313,11 @@ export async function runDrain(deps: DrainLoopDeps): Promise<void> {
   const taskStatusMap = buildTaskStatusMap(deps)
 
   const available = availableSlots(deps.getConcurrency(), deps.activeAgents.size)
-  if (available <= 0) return
+  if (available <= 0) {
+    deps.logger.debug(`drain.tick.idle tickId=${tickId} queuedCount=0`)
+    deps.logger.event('drain.tick.idle', { tickId, queuedCount: 0 })
+    return
+  }
 
   try {
     await drainQueuedTasks(available, taskStatusMap, deps)
