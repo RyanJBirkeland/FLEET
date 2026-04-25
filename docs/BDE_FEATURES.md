@@ -105,7 +105,7 @@ Orchestrates pipeline agent lifecycle. Core module: `src/main/agent-manager/`.
 - **WIP limit**: `MAX_ACTIVE_TASKS` concurrent agents, enforced at agent manager drain loop
 - **Watchdog**: Monitors agent health with configurable timeout. Default 1 hour, overridable per-task via `max_runtime_ms` field
 - **Completion flow**: Agent exits normally → classify exit → mark task `review` → preserve worktree for human review. On failure: retry up to 3x, then mark `failed`. Human actions in Code Review Station (merge locally, create PR, revise, discard) determine final task status
-- **Fast-fail detection**: 3 failures within 30s of starting = exhausted. Task marked `error` with diagnostic notes pointing to `~/.bde/agent-manager.log`
+- **Fast-fail detection**: 3 failures within 30s of starting = exhausted. Task marked `error` with diagnostic notes pointing to `~/.bde/bde.log`
 - **Worktree isolation**: Each pipeline agent gets `~/.bde/worktrees/<repo-slug>/<task-id>/`. Worktree cleaned up after completion (success or failure). Stale worktrees from previous runs should be cleaned with `git worktree prune`
 - **Config**: Max concurrent agents, worktree base path, and max runtime are read once at startup. Changes via Settings UI take effect on next app restart
 - Related: Sprint Pipeline, Task Dependencies

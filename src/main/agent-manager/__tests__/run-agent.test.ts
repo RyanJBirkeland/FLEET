@@ -28,6 +28,7 @@ import type { ActiveAgent } from '../types'
 import { mkdirSync, readFileSync } from 'node:fs'
 import { buildAgentPrompt } from '../../lib/prompt-composer'
 import { TurnTracker } from '../turn-tracker'
+import { FAST_FAIL_EXHAUSTED_NOTE } from '../failure-messages'
 import { emitAgentEvent } from '../../agent-event-mapper'
 const mockMkdirSync = vi.mocked(mkdirSync)
 const mockReadFileSync = vi.mocked(readFileSync)
@@ -392,8 +393,7 @@ describe('runAgent — fast-fail paths', () => {
       'task-1',
       expect.objectContaining({
         status: 'error',
-        notes:
-          "Agent failed 3 times within 30s of starting. Common causes: expired OAuth token (~/.bde/oauth-token), missing npm dependencies, or invalid task spec. Check ~/.bde/bde.log for details. To retry: reset task status to 'queued' and clear claimed_by.",
+        notes: FAST_FAIL_EXHAUSTED_NOTE,
         needs_review: true,
         claimed_by: null
       })
