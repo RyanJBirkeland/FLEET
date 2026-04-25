@@ -47,7 +47,7 @@ describe('isInsideAllowedWorktreeBase symlink defense', () => {
     const trojanCwd = join(worktreeBase, 'task-abc')
     symlinkSync(outsideTarget, trojanCwd)
 
-    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
     await expect(
       spawnAgent({
@@ -66,7 +66,7 @@ describe('isInsideAllowedWorktreeBase symlink defense', () => {
     const realCwd = join(worktreeBase, 'task-abc')
     mkdirSync(realCwd, { recursive: true })
 
-    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
     await expect(
       spawnAgent({
@@ -85,7 +85,7 @@ describe('isInsideAllowedWorktreeBase symlink defense', () => {
     mkdirSync(worktreeBase, { recursive: true })
     const missingCwd = join(worktreeBase, 'never-created')
 
-    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
     await expect(
       spawnAgent({
