@@ -54,6 +54,7 @@ export const MUTABLE_TASK_FIELDS = [
   'pr_number',
   'pr_mergeable_state',
   'retry_count',
+  'revision_feedback',
   'notes',
   'title',
   'spec',
