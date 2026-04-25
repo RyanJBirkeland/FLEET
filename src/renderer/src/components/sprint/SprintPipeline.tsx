@@ -6,6 +6,7 @@ import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { useSprintFilters } from '../../stores/sprintFilters'
+import { useSprintTasks } from '../../stores/sprintTasks'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { useTaskWorkbenchModalStore } from '../../stores/taskWorkbenchModal'
 import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
@@ -26,6 +27,7 @@ import { PipelineOverlays } from './PipelineOverlays'
 import { DagOverlay } from './DagOverlay'
 import { BulkActionBar } from './BulkActionBar'
 import { NeonCard } from '../neon'
+import { ErrorBanner } from '../ui/ErrorBanner'
 import type { SprintTask } from '../../../../shared/types'
 import { useSprintPipelineCommands } from '../../hooks/useSprintPipelineCommands'
 
@@ -64,6 +66,9 @@ export function SprintPipeline(): React.JSX.Element {
     selectedTask,
     conflictingTasks
   } = useSprintPipelineState()
+
+  const pollError = useSprintTasks((s) => s.pollError)
+  const clearPollError = useSprintTasks((s) => s.clearPollError)
 
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
   const setView = usePanelLayoutStore((s) => s.setView)
@@ -261,6 +266,20 @@ export function SprintPipeline(): React.JSX.Element {
       <PipelineFilterBar tasks={tasks} />
 
       <PipelineFilterBanner filteredTasks={filteredTasks} totalTasks={tasks} />
+
+      {pollError && (
+        <div className="pipeline-poll-error">
+          <ErrorBanner message={pollError} className="pipeline-poll-error__message" />
+          <div className="pipeline-poll-error__actions">
+            <Button variant="primary" size="sm" onClick={() => { clearPollError(); void loadData() }} disabled={loading}>
+              {loading ? 'Retrying…' : 'Retry'}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={clearPollError}>
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      )}
 
       {loading && tasks.length === 0 && (
         <div className="sprint-pipeline__body">
