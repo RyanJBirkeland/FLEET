@@ -101,109 +101,209 @@ export async function deleteAgentBranchBeforeRetry(
   }
 }
 
-export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger): Promise<void> {
-  const {
-    taskId,
-    worktreePath,
-    title,
-    onTaskTerminal,
-    agentSummary,
-    retryCount,
-    repo,
-    unitOfWork,
-    repoPath,
-    taskStateService
-  } = opts
-
-  const worktreeExists = await verifyWorktreeExists(
-    taskId,
-    worktreePath,
-    repo,
-    logger,
-    onTaskTerminal,
-    taskStateService
-  )
-  if (!worktreeExists) return
-
-  const branch = await detectAgentBranch(
-    taskId,
-    worktreePath,
-    repo,
-    logger,
-    onTaskTerminal,
-    taskStateService
-  )
-  if (!branch) return
-
-  const task = repo.getTask(taskId)
-  if (!task) {
-    logger.error(`[completion] Task ${taskId} not found — skipping auto-commit`)
-    return
+/**
+ * Thrown by a SuccessPhase when it has already handled the error and wants to
+ * abort the pipeline without further processing. The orchestrator catches this
+ * as a clean stop signal — not a bug.
+ */
+class PipelineAbortError extends Error {
+  constructor() {
+    super('pipeline aborted')
+    this.name = 'PipelineAbortError'
   }
-  await autoCommitPendingChanges(taskId, worktreePath, task, logger)
+}
 
-  const rebaseOutcome = await performRebaseOntoMain(taskId, worktreePath, logger)
+/**
+ * Mutable accumulator threaded through every SuccessPhase.
+ *
+ * Guard phases populate fields that later phases depend on. Each phase writes
+ * only the fields it owns; reads what prior phases wrote.
+ */
+interface SuccessPhaseContext extends ResolveSuccessContext {
+  logger: Logger
+  branch: string
+  rebaseOutcome: import('./resolve-success-phases').RebaseOutcome
+}
 
-  const hasCommits = await hasCommitsAheadOfMain({
-    taskId,
-    branch,
-    worktreePath,
-    agentSummary,
-    retryCount,
-    repo,
+/**
+ * A single named step in the agent success pipeline.
+ * Returns void on success; throws PipelineAbortError to halt the pipeline.
+ */
+interface SuccessPhase {
+  name: string
+  run(ctx: SuccessPhaseContext): Promise<void>
+}
+
+const verifyWorktreePhase: SuccessPhase = {
+  name: 'verifyWorktree',
+  async run(ctx) {
+    const exists = await verifyWorktreeExists(
+      ctx.taskId,
+      ctx.worktreePath,
+      ctx.repo,
+      ctx.logger,
+      ctx.onTaskTerminal,
+      ctx.taskStateService
+    )
+    if (!exists) throw new PipelineAbortError()
+  }
+}
+
+const detectBranchPhase: SuccessPhase = {
+  name: 'detectBranch',
+  async run(ctx) {
+    const branch = await detectAgentBranch(
+      ctx.taskId,
+      ctx.worktreePath,
+      ctx.repo,
+      ctx.logger,
+      ctx.onTaskTerminal,
+      ctx.taskStateService
+    )
+    if (!branch) throw new PipelineAbortError()
+    ctx.branch = branch
+  }
+}
+
+const autoCommitPhase: SuccessPhase = {
+  name: 'autoCommit',
+  async run(ctx) {
+    const task = ctx.repo.getTask(ctx.taskId)
+    if (!task) {
+      ctx.logger.error(`[completion] Task ${ctx.taskId} not found — skipping auto-commit`)
+      throw new PipelineAbortError()
+    }
+    await autoCommitPendingChanges(ctx.taskId, ctx.worktreePath, task, ctx.logger)
+  }
+}
+
+const rebasePhase: SuccessPhase = {
+  name: 'rebase',
+  async run(ctx) {
+    ctx.rebaseOutcome = await performRebaseOntoMain(ctx.taskId, ctx.worktreePath, ctx.logger)
+  }
+}
+
+const verifyCommitsPhase: SuccessPhase = {
+  name: 'verifyCommits',
+  async run(ctx) {
+    const hasCommits = await hasCommitsAheadOfMain({
+      taskId: ctx.taskId,
+      branch: ctx.branch,
+      worktreePath: ctx.worktreePath,
+      agentSummary: ctx.agentSummary,
+      retryCount: ctx.retryCount,
+      repo: ctx.repo,
+      logger: ctx.logger,
+      onTaskTerminal: ctx.onTaskTerminal,
+      resolveFailure: resolveFailurePhase
+    })
+    if (!hasCommits) throw new PipelineAbortError()
+  }
+}
+
+const noOpGuardPhase: SuccessPhase = {
+  name: 'noOpGuard',
+  async run(ctx) {
+    const isNoOp = await detectNoOpAndFailIfSo(
+      ctx.taskId,
+      ctx.branch,
+      ctx.worktreePath,
+      ctx.retryCount,
+      ctx.repo,
+      ctx.logger,
+      ctx.onTaskTerminal
+    )
+    if (isNoOp) throw new PipelineAbortError()
+  }
+}
+
+const branchTipVerifyPhase: SuccessPhase = {
+  name: 'branchTipVerify',
+  async run(ctx) {
+    const verified = await verifyBranchTipOrFail(
+      ctx.taskId,
+      ctx.branch,
+      ctx.repoPath,
+      ctx.repo,
+      ctx.logger,
+      ctx.onTaskTerminal
+    )
+    if (!verified) throw new PipelineAbortError()
+  }
+}
+
+const advisoryAnnotationsPhase: SuccessPhase = {
+  name: 'advisoryAnnotations',
+  async run(ctx) {
+    await annotateIfTestsUntouched(ctx.taskId, ctx.branch, ctx.worktreePath, ctx.repoPath, ctx.repo, ctx.logger)
+    await annotateUnverifiedFacts(ctx.taskId, ctx.worktreePath, ctx.repo, ctx.logger)
+  }
+}
+
+const verifyWorktreeBuildPhase: SuccessPhase = {
+  name: 'verifyWorktreeBuild',
+  async run(ctx) {
+    const verified = await verifyWorktreeOrFail({
+      taskId: ctx.taskId,
+      worktreePath: ctx.worktreePath,
+      retryCount: ctx.retryCount,
+      repo: ctx.repo,
+      logger: ctx.logger,
+      onTaskTerminal: ctx.onTaskTerminal
+    })
+    if (!verified) throw new PipelineAbortError()
+  }
+}
+
+const reviewTransitionPhase: SuccessPhase = {
+  name: 'reviewTransition',
+  async run(ctx) {
+    await transitionTaskToReview(
+      ctx.taskId,
+      ctx.branch,
+      ctx.worktreePath,
+      ctx.title,
+      ctx.rebaseOutcome,
+      ctx.repo,
+      ctx.unitOfWork,
+      ctx.logger,
+      ctx.onTaskTerminal,
+      evaluateAutoMerge,
+      ctx.taskStateService
+    )
+  }
+}
+
+/** Ordered pipeline of named phases executed by resolveSuccess. */
+const successPhases: SuccessPhase[] = [
+  verifyWorktreePhase,
+  detectBranchPhase,
+  autoCommitPhase,
+  rebasePhase,
+  verifyCommitsPhase,
+  noOpGuardPhase,
+  branchTipVerifyPhase,
+  advisoryAnnotationsPhase,
+  verifyWorktreeBuildPhase,
+  reviewTransitionPhase
+]
+
+export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger): Promise<void> {
+  const ctx: SuccessPhaseContext = {
+    ...opts,
     logger,
-    onTaskTerminal,
-    resolveFailure: resolveFailurePhase
-  })
-  if (!hasCommits) return
+    branch: '',
+    rebaseOutcome: { rebaseNote: undefined, rebaseBaseSha: undefined, rebaseSucceeded: false }
+  }
 
-  const isNoOp = await detectNoOpAndFailIfSo(
-    taskId,
-    branch,
-    worktreePath,
-    retryCount,
-    repo,
-    logger,
-    onTaskTerminal
-  )
-  if (isNoOp) return
-
-  const tipVerified = await verifyBranchTipOrFail(
-    taskId,
-    branch,
-    repoPath,
-    repo,
-    logger,
-    onTaskTerminal
-  )
-  if (!tipVerified) return
-
-  await annotateIfTestsUntouched(taskId, branch, worktreePath, repoPath, repo, logger)
-  await annotateUnverifiedFacts(taskId, worktreePath, repo, logger)
-
-  const verified = await verifyWorktreeOrFail({
-    taskId,
-    worktreePath,
-    retryCount,
-    repo,
-    logger,
-    onTaskTerminal
-  })
-  if (!verified) return
-
-  await transitionTaskToReview(
-    taskId,
-    branch,
-    worktreePath,
-    title,
-    rebaseOutcome,
-    repo,
-    unitOfWork,
-    logger,
-    onTaskTerminal,
-    evaluateAutoMerge,
-    taskStateService
-  )
+  try {
+    for (const phase of successPhases) {
+      await phase.run(ctx)
+    }
+  } catch (err) {
+    if (!(err instanceof PipelineAbortError)) throw err
+  }
 }
 
 /**
