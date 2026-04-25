@@ -9,6 +9,7 @@ import type { Logger } from '../logger'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { resolveDependents } from '../lib/resolve-dependents'
 import { getSetting } from '../settings'
+import type { TerminalDispatcher } from '../services/task-state-service'
 
 function wrapTransactionWithLogging(
   unitOfWork: IUnitOfWork,
@@ -148,5 +149,25 @@ export async function handleTaskTerminal(
     await work
   } finally {
     terminalCalled.delete(taskId)
+  }
+}
+
+/**
+ * Wraps `handleTaskTerminal` as a `TerminalDispatcher` so the agent-manager
+ * terminal path plugs into `TaskStateService` via the port rather than being
+ * called directly.
+ *
+ * The `onTaskTerminal` parameter is the recursion hook passed to
+ * `resolveDependents` — it fires when a downstream task also reaches a
+ * terminal state as part of dependency resolution.
+ */
+export function createAgentTerminalDispatcher(
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
+  deps: TerminalHandlerDeps
+): TerminalDispatcher {
+  return {
+    dispatch(taskId: string, status: TaskStatus): Promise<void> {
+      return handleTaskTerminal(taskId, status, onTaskTerminal, deps)
+    }
   }
 }

@@ -12,6 +12,7 @@ import { getErrorMessage } from '../../shared/errors'
 import { refreshDependencyIndex, type DepsFingerprint } from '../agent-manager/dependency-refresher'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
+import type { TerminalDispatcher } from './task-state-service'
 
 type TaskSlice = Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_id'> & {
   depends_on: TaskDependency[] | null
@@ -124,4 +125,17 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
   }
 
   return { onStatusTerminal }
+}
+
+/**
+ * Wraps `TaskTerminalService.onStatusTerminal` as a `TerminalDispatcher` so
+ * the PR-poller / manual terminal path plugs into `TaskStateService` via the
+ * port rather than being called directly.
+ */
+export function createPollerTerminalDispatcher(service: TaskTerminalService): TerminalDispatcher {
+  return {
+    dispatch(taskId: string, status: TaskStatus): void {
+      service.onStatusTerminal(taskId, status)
+    }
+  }
 }

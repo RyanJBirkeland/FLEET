@@ -1,8 +1,24 @@
 /**
- * Tests for task state transition validation service.
+ * Tests for task-state-service: validateTransition (re-export) and TaskStateService.
  */
-import { describe, it, expect } from 'vitest'
-import { validateTransition } from '../task-state-service'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { validateTransition, createTaskStateService, InvalidTransitionError } from '../task-state-service'
+
+// Mock sprint-mutations so TaskStateService never touches SQLite
+vi.mock('../sprint-mutations', () => ({
+  getTask: vi.fn(),
+  updateTask: vi.fn()
+}))
+
+// sprint-mutations is mocked, but we need to import after mock registration
+import { getTask, updateTask } from '../sprint-mutations'
+
+const fakeLogger = {
+  info: vi.fn(),
+  warn: vi.fn(),
+  error: vi.fn(),
+  debug: vi.fn()
+}
 
 describe('validateTransition', () => {
   describe('valid transitions', () => {
@@ -95,5 +111,88 @@ describe('validateTransition', () => {
       const result = validateTransition('cancelled', 'done')
       expect(result.ok).toBe(true)
     })
+  })
+})
+
+// ---- TaskStateService -------------------------------------------------------
+
+describe('TaskStateService', () => {
+  const mockGetTask = vi.mocked(getTask)
+  const mockUpdateTask = vi.mocked(updateTask)
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  function makeService(dispatchFn: (id: string, status: string) => Promise<void> = vi.fn().mockResolvedValue(undefined)) {
+    const dispatcher = { dispatch: dispatchFn }
+    return { service: createTaskStateService({ terminalDispatcher: dispatcher, logger: fakeLogger }), dispatcher }
+  }
+
+  it('performs a valid transition and writes the status field', async () => {
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockUpdateTask.mockReturnValue({ id: 't1', status: 'review' } as ReturnType<typeof updateTask>)
+
+    const { service } = makeService()
+    await service.transition('t1', 'review')
+
+    expect(mockUpdateTask).toHaveBeenCalledWith(
+      't1',
+      expect.objectContaining({ status: 'review' }),
+      expect.objectContaining({ caller: 'task-state-service' })
+    )
+  })
+
+  it('merges extra fields from ctx.fields into the DB patch', async () => {
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockUpdateTask.mockReturnValue({ id: 't1', status: 'done' } as ReturnType<typeof updateTask>)
+
+    const { service } = makeService()
+    await service.transition('t1', 'done', { fields: { completed_at: '2026-01-01' } })
+
+    expect(mockUpdateTask).toHaveBeenCalledWith(
+      't1',
+      { status: 'done', completed_at: '2026-01-01' },
+      expect.anything()
+    )
+  })
+
+  it('throws InvalidTransitionError for a forbidden transition without writing to the DB', async () => {
+    mockGetTask.mockReturnValue({ id: 't1', status: 'done' } as ReturnType<typeof getTask>)
+
+    const { service } = makeService()
+    await expect(service.transition('t1', 'active')).rejects.toBeInstanceOf(InvalidTransitionError)
+    expect(mockUpdateTask).not.toHaveBeenCalled()
+  })
+
+  it('calls TerminalDispatcher.dispatch exactly once after a terminal write', async () => {
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockUpdateTask.mockReturnValue({ id: 't1', status: 'done' } as ReturnType<typeof updateTask>)
+
+    const dispatchFn = vi.fn().mockResolvedValue(undefined)
+    const { service } = makeService(dispatchFn)
+    await service.transition('t1', 'done')
+
+    expect(dispatchFn).toHaveBeenCalledTimes(1)
+    expect(dispatchFn).toHaveBeenCalledWith('t1', 'done')
+  })
+
+  it('does not call TerminalDispatcher for a non-terminal transition', async () => {
+    mockGetTask.mockReturnValue({ id: 't1', status: 'queued' } as ReturnType<typeof getTask>)
+    mockUpdateTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof updateTask>)
+
+    const dispatchFn = vi.fn().mockResolvedValue(undefined)
+    const { service } = makeService(dispatchFn)
+    await service.transition('t1', 'active')
+
+    expect(dispatchFn).not.toHaveBeenCalled()
+  })
+
+  it('throws when the task is not found', async () => {
+    mockGetTask.mockReturnValue(null)
+
+    const { service } = makeService()
+    await expect(service.transition('missing', 'queued')).rejects.toThrow('not found')
+    expect(mockUpdateTask).not.toHaveBeenCalled()
   })
 })
