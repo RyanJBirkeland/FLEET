@@ -334,6 +334,45 @@ describe('createAgentManager', () => {
       await flush()
     })
 
+    it('logs WARN on second start() call (double-start guard)', async () => {
+      const logger = makeLogger()
+      const mgr = createAgentManager(baseConfig, mockRepo, logger)
+
+      mgr.start()
+      mgr.start() // duplicate — should trigger WARN
+
+      expect(logger.warn).toHaveBeenCalledWith(
+        expect.stringContaining('start() called while already running')
+      )
+
+      await mgr.stop(100)
+      await flush()
+    })
+
+    it('stop() resets the started flag so start() can run again', async () => {
+      const logger = makeLogger()
+      const mgr = createAgentManager(baseConfig, mockRepo, logger) as import('../index').AgentManagerImpl
+
+      mgr.start()
+      expect(mgr.__testInternals.started).toBe(true)
+
+      await mgr.stop(100)
+      await flush()
+
+      expect(mgr.__testInternals.started).toBe(false)
+
+      // Second start after stop must not log a duplicate WARN
+      logger.warn.mockClear()
+      mgr.start()
+      expect(logger.warn).not.toHaveBeenCalledWith(
+        expect.stringContaining('start() called while already running')
+      )
+      expect(mgr.__testInternals.started).toBe(true)
+
+      await mgr.stop(100)
+      await flush()
+    })
+
     it('runs initial drain after defer period', async () => {
       vi.useFakeTimers()
       const logger = makeLogger()

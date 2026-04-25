@@ -98,6 +98,12 @@ export class AgentManagerImpl implements AgentManager {
   // the test-access need.
   _running = false
   _shuttingDown = false
+  /**
+   * Guards against duplicate `start()` calls. A second call while the manager
+   * is already started logs a WARN and returns immediately — no new timers are
+   * created and no startup side-effects are repeated.
+   */
+  _started = false
 
   // ---- Drain runtime ----
   _concurrency: ConcurrencyState
@@ -488,7 +494,11 @@ export class AgentManagerImpl implements AgentManager {
   // ---- Public methods ----
 
   start(): void {
-    if (this._running) return
+    if (this._started) {
+      this.logger.warn('[agent-manager] start() called while already running — ignoring duplicate call')
+      return
+    }
+    this._started = true
     this._running = true
     this._shuttingDown = false
     this._concurrency = makeConcurrencyState(this.config.maxConcurrent)
@@ -636,6 +646,7 @@ export class AgentManagerImpl implements AgentManager {
     )
     this._drainInFlight = null
 
+    this._started = false
     this._running = false
     this.logger.info('[agent-manager] Stopped')
   }

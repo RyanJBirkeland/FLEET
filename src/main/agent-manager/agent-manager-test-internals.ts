@@ -38,6 +38,9 @@ export class AgentManagerTestInternals {
   set shuttingDown(value: boolean) {
     this.mgr._shuttingDown = value
   }
+  get started(): boolean {
+    return this.mgr._started
+  }
 
   // ---- Drain runtime ----
   get concurrency(): ConcurrencyState {
