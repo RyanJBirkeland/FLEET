@@ -517,7 +517,8 @@ export class AgentManagerImpl implements AgentManager {
       const result = await recoverOrphans(
         (id: string) => this._activeAgents.has(id),
         this.repo,
-        this.logger
+        this.logger,
+        this._taskStateService
       )
       this._broadcastOrphanResultIfNonEmpty(result)
     } catch (err) {
@@ -618,7 +619,12 @@ export class AgentManagerImpl implements AgentManager {
   }
 
   private kickOffOrphanRecovery(): void {
-    recoverOrphans((id: string) => this._activeAgents.has(id), this.repo, this.logger)
+    recoverOrphans(
+      (id: string) => this._activeAgents.has(id),
+      this.repo,
+      this.logger,
+      this._taskStateService
+    )
       .then((result) => this._broadcastOrphanResultIfNonEmpty(result))
       .catch((err) => {
         this.logger.error(`[agent-manager] Initial orphan recovery error: ${err}`)
@@ -691,7 +697,8 @@ export class AgentManagerImpl implements AgentManager {
           const result = await recoverOrphans(
             (id: string) => this._activeAgents.has(id),
             this.repo,
-            this.logger
+            this.logger,
+            this._taskStateService
           )
           this._broadcastOrphanResultIfNonEmpty(result)
         } catch (err) {
