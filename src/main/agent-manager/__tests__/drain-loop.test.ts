@@ -23,6 +23,7 @@ import {
   buildTaskStatusMap,
   drainQueuedTasks,
   runDrain,
+  DRAIN_TICK_TIMEOUT_MS,
   type DrainLoopDeps
 } from '../drain-loop'
 import { checkOAuthToken } from '../oauth-checker'
@@ -282,6 +283,53 @@ describe('runDrain', () => {
     await runDrain(deps)
     expect(deps.metrics.increment).not.toHaveBeenCalled()
     expect(deps.processQueuedTask).not.toHaveBeenCalled()
+  })
+})
+
+describe('drain-loop: tick deadline', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(checkOAuthToken).mockResolvedValue(true)
+    vi.mocked(refreshDependencyIndex).mockReturnValue(new Map())
+  })
+
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  it('skips tick and logs drain.tick.timeout when getQueuedTasks hangs past the deadline', async () => {
+    vi.useFakeTimers()
+    const repo = makeRepo()
+    // getQueuedTasks never resolves — simulates a hung DB read
+    vi.mocked(repo.getQueuedTasks).mockImplementation(() => {
+      return new Promise<never>(() => {}) as unknown as ReturnType<
+        IAgentTaskRepository['getQueuedTasks']
+      >
+    })
+    const processQueuedTask = vi.fn()
+    const deps = makeDeps({ repo, processQueuedTask })
+
+    const drainPromise = drainQueuedTasks(2, new Map(), deps)
+    // Advance past the deadline
+    await vi.advanceTimersByTimeAsync(DRAIN_TICK_TIMEOUT_MS + 100)
+    await drainPromise
+
+    // Tick was skipped — no tasks processed
+    expect(processQueuedTask).not.toHaveBeenCalled()
+    // drain.tick.timeout event was logged
+    expect(deps.logger.event).toHaveBeenCalledWith('drain.tick.timeout', expect.objectContaining({ tickId: expect.anything() }))
+  })
+
+  it('processes tasks normally when getQueuedTasks returns within the deadline', async () => {
+    const repo = makeRepo()
+    vi.mocked(repo.getQueuedTasks).mockReturnValue([{ id: 'task-fast' }] as any)
+    const processQueuedTask = vi.fn().mockResolvedValue(undefined)
+    const deps = makeDeps({ repo, processQueuedTask })
+
+    await drainQueuedTasks(2, new Map(), deps)
+
+    expect(processQueuedTask).toHaveBeenCalledTimes(1)
+    expect(deps.logger.event).not.toHaveBeenCalledWith('drain.tick.timeout', expect.anything())
   })
 })
 

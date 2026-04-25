@@ -26,6 +26,45 @@ import { getConfiguredRepos } from '../paths'
 import type { SprintTask } from '../../shared/types/task-types'
 import { classifyFailureReason } from './failure-classifier'
 import type { AgentManagerDrainPausedEvent } from '../../shared/ipc-channels/broadcast-channels'
+import { sleep } from '../lib/async-utils'
+
+// ---------------------------------------------------------------------------
+// Drain tick deadline
+// ---------------------------------------------------------------------------
+
+/** Hard per-tick deadline for the DB read inside each drain tick. */
+export const DRAIN_TICK_TIMEOUT_MS = 10_000
+
+/**
+ * Thrown when `getQueuedTasks` does not return within `DRAIN_TICK_TIMEOUT_MS`.
+ * The drain loop catches this, logs the event, and skips the tick rather than
+ * hanging indefinitely on a locked WAL or stalled filesystem.
+ */
+export class DrainTimeoutError extends Error {
+  constructor(tickId: string) {
+    super(`Drain tick ${tickId} timed out after ${DRAIN_TICK_TIMEOUT_MS}ms`)
+    this.name = 'DrainTimeoutError'
+  }
+}
+
+/**
+ * Defers `fn` to the next event-loop iteration via `setImmediate`.
+ * This gives the Node.js event loop a chance to process pending callbacks
+ * before the synchronous `better-sqlite3` call occupies the thread.
+ * Note: does not prevent a truly blocking DB call from stalling the loop —
+ * the race with `sleep(DRAIN_TICK_TIMEOUT_MS)` is still the safety net.
+ */
+function runInNextTick<T>(fn: () => T): Promise<T> {
+  return new Promise<T>((resolve, reject) =>
+    setImmediate(() => {
+      try {
+        resolve(fn())
+      } catch (err) {
+        reject(err)
+      }
+    })
+  )
+}
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -159,7 +198,24 @@ export async function drainQueuedTasks(
   const freshSlots = availableSlots(deps.getConcurrency(), deps.activeAgents.size)
   const limit = Math.min(available, freshSlots)
   deps.logger.info(`[agent-manager] Fetching queued tasks (limit=${limit})...`)
-  const queued = deps.repo.getQueuedTasks(limit)
+
+  const tickId = deps.tickId ?? 'unknown'
+  let queued: SprintTask[]
+  try {
+    queued = await Promise.race([
+      runInNextTick(() => deps.repo.getQueuedTasks(limit)),
+      sleep(DRAIN_TICK_TIMEOUT_MS).then(() => {
+        throw new DrainTimeoutError(tickId)
+      })
+    ])
+  } catch (err) {
+    if (err instanceof DrainTimeoutError) {
+      deps.logger.event('drain.tick.timeout', { tickId })
+      return
+    }
+    throw err
+  }
+
   deps.logger.info(`[agent-manager] Found ${queued.length} queued tasks`)
   for (const rawTask of queued) {
     if (deps.isShuttingDown()) break
