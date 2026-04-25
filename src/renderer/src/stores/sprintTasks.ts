@@ -35,7 +35,7 @@ export interface CreateTicketInput {
 }
 
 /** How long (ms) to protect an optimistic update from being overwritten by poll data. */
-const PENDING_UPDATE_TTL = 5000
+export const PENDING_UPDATE_TTL = 5000
 
 /**
  * Fields that can change during or after a task run. The poll-merge path
