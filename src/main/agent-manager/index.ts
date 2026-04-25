@@ -210,9 +210,9 @@ export class AgentManagerImpl implements AgentManager {
         this._circuitBreaker.recordSuccess()
         this._errorRegistry.recordSpawnSuccess()
       },
-      onSpawnFailure: () => {
-        this._circuitBreaker.recordFailure()
-        this._errorRegistry.recordSpawnFailure()
+      onSpawnFailure: (taskId: string, reason: string) => {
+        this._circuitBreaker.recordFailure(taskId, reason)
+        this._errorRegistry.recordSpawnFailure(taskId, reason)
       }
     }
   }
@@ -290,15 +290,36 @@ export class AgentManagerImpl implements AgentManager {
         this._pendingSpawns = Math.max(0, this._pendingSpawns - 1)
       }
     }
-    const spawnDeps = { ...this.runAgentDeps, onAgentRegistered: decrementPendingOnce, tickId }
+    // Track whether the spawn phase reported an outcome via its callbacks so the
+    // catch below can distinguish "spawn never attempted" (unexpected early error)
+    // from "spawn failed and onSpawnFailure already counted it" vs "spawn
+    // succeeded but something broke after" — only the first case should trip the
+    // circuit breaker from this catch site.
+    let spawnPhaseReported = false
+    const spawnDeps: typeof this.runAgentDeps = {
+      ...this.runAgentDeps,
+      onAgentRegistered: decrementPendingOnce,
+      tickId,
+      onSpawnSuccess: () => {
+        spawnPhaseReported = true
+        this.runAgentDeps.onSpawnSuccess?.()
+      },
+      onSpawnFailure: (taskId: string, reason: string) => {
+        spawnPhaseReported = true
+        this.runAgentDeps.onSpawnFailure?.(taskId, reason)
+      }
+    }
     const agentPromise = _runAgent(task, worktree, repoPath, spawnDeps)
       .catch((err) => {
         this.logger.error(`[agent-manager] runAgent failed for task ${task.id}: ${err}`)
-        // Record the failure so the circuit breaker can open after repeated crashes.
-        // handleSpawnFailure calls onSpawnFailure() when spawnWithTimeout throws, but
-        // if runAgent throws before or after spawnAndWireAgent (e.g. unexpected error),
-        // the circuit breaker would never see the failure without this guard.
-        this._circuitBreaker.recordFailure()
+        // Only increment the circuit breaker when the spawn phase never reported an
+        // outcome — meaning an unexpected error fired before spawnAndWireAgent could
+        // call onSpawnSuccess or onSpawnFailure. Stream errors and post-spawn
+        // failures must NOT trip the circuit breaker (they indicate a task-level
+        // issue, not a systemic spawn infrastructure failure).
+        if (!spawnPhaseReported) {
+          this._circuitBreaker.recordFailure(task.id, String(err))
+        }
         // Release the claim so the task does not remain stuck 'active'.
         // validateTaskForRun and handleSpawnFailure already do this on their
         // own code paths — this catch handles any remaining gap (e.g. an

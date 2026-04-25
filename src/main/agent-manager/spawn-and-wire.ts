@@ -46,8 +46,9 @@ export async function handleSpawnFailure(
   deps: RunAgentDeps
 ): Promise<never> {
   const { logger, repo, onTaskTerminal, onSpawnFailure } = deps
+  const errReason = err instanceof Error ? err.message : String(err)
   try {
-    onSpawnFailure?.()
+    onSpawnFailure?.(task.id, errReason)
   } catch (cbErr) {
     logger.warn(`[agent-manager] onSpawnFailure hook threw: ${cbErr}`)
   }

@@ -37,8 +37,8 @@ export class ErrorRegistry {
     this.circuitBreaker.recordSuccess()
   }
 
-  recordSpawnFailure(): void {
-    this.circuitBreaker.recordFailure()
+  recordSpawnFailure(taskId?: string, reason?: string): void {
+    this.circuitBreaker.recordFailure(taskId, reason)
   }
 
   getDrainFailureCount(taskId: string): number {

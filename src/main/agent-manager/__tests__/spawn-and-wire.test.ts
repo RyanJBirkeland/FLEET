@@ -183,14 +183,14 @@ describe('spawnAndWireAgent', () => {
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'error')
   })
 
-  it('calls onSpawnFailure when spawn fails', async () => {
+  it('calls onSpawnFailure with taskId and reason when spawn fails', async () => {
     vi.mocked(spawnWithTimeout).mockRejectedValue(new Error('Timeout'))
     const onSpawnFailure = vi.fn()
     const deps = makeDeps({ onSpawnFailure })
     await expect(
       spawnAndWireAgent(makeTask(), 'prompt', worktree, repoPath, 'sonnet', deps)
     ).rejects.toThrow()
-    expect(onSpawnFailure).toHaveBeenCalled()
+    expect(onSpawnFailure).toHaveBeenCalledWith('task-1', expect.stringContaining('Timeout'))
   })
 })
 

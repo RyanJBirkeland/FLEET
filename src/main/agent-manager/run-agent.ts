@@ -70,8 +70,12 @@ export interface RunAgentSpawnDeps {
   worktreeBase: string
   /** Optional — called when agent process successfully spawns. */
   onSpawnSuccess?: () => void
-  /** Optional — called when spawnAgent throws. */
-  onSpawnFailure?: () => void
+  /**
+   * Optional — called when spawnAgent throws (spawn phase only, before the
+   * SDK stream starts). Receives the task ID and error reason so callers can
+   * scope circuit-breaker accounting to spawn-phase failures exclusively.
+   */
+  onSpawnFailure?: (taskId: string, reason: string) => void
   /**
    * Optional — called immediately after the agent is registered in activeAgents.
    * Used by AgentManagerImpl to decrement _pendingSpawns once the agent has

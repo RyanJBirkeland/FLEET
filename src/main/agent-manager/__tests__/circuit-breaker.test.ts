@@ -29,7 +29,7 @@ vi.mock('../../paths', () => ({
 }))
 
 import { AgentManagerImpl } from '../index'
-import { SPAWN_CIRCUIT_FAILURE_THRESHOLD, SPAWN_CIRCUIT_PAUSE_MS } from '../circuit-breaker'
+import { CircuitBreaker, SPAWN_CIRCUIT_FAILURE_THRESHOLD, SPAWN_CIRCUIT_PAUSE_MS } from '../circuit-breaker'
 import type { AgentManagerConfig } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { broadcast } from '../../broadcast'
@@ -44,7 +44,7 @@ const baseConfig: AgentManagerConfig = {
 }
 
 function makeLogger() {
-  return { info: vi.fn(), warn: vi.fn(), error: vi.fn() }
+  return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 }
 
 function makeRepo(): IAgentTaskRepository {
@@ -144,5 +144,59 @@ describe('spawn failure circuit breaker (PHASE3-3.4)', () => {
     mgr.__testInternals.circuitBreaker.recordFailure()
     mgr.__testInternals.circuitBreaker.recordFailure()
     expect(broadcast).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('spawn-phase circuit breaker scope (EP-5 T-55)', () => {
+  function makeLogger() {
+    return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('increments when recordFailure is called (spawn-phase failure)', () => {
+    const breaker = new CircuitBreaker(makeLogger())
+    breaker.recordFailure('task-1', 'spawn failed')
+    expect(breaker.failureCount).toBe(1)
+  })
+
+  it('includes taskId and reason in structured event when circuit opens', () => {
+    const logger = makeLogger()
+    const breaker = new CircuitBreaker(logger)
+    for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD - 1; i++) {
+      breaker.recordFailure('task-prev', 'spawn error')
+    }
+    breaker.recordFailure('task-trigger', 'enoent: node not found')
+    expect(logger.event).toHaveBeenCalledWith(
+      'circuit-breaker.open',
+      expect.objectContaining({
+        triggeringTask: 'task-trigger',
+        failureCount: SPAWN_CIRCUIT_FAILURE_THRESHOLD,
+        recentFailures: expect.arrayContaining([
+          expect.objectContaining({ taskId: 'task-trigger', reason: 'enoent: node not found' })
+        ])
+      })
+    )
+  })
+
+  it('resets recentFailures on recordSuccess', () => {
+    const logger = makeLogger()
+    const breaker = new CircuitBreaker(logger)
+    breaker.recordFailure('task-1', 'error')
+    breaker.recordSuccess()
+    // After success, failure list is cleared so a fresh trip logs only new failures
+    for (let i = 0; i < SPAWN_CIRCUIT_FAILURE_THRESHOLD; i++) {
+      breaker.recordFailure('task-2', 'new error')
+    }
+    expect(logger.event).toHaveBeenCalledWith(
+      'circuit-breaker.open',
+      expect.objectContaining({
+        recentFailures: expect.not.arrayContaining([
+          expect.objectContaining({ taskId: 'task-1' })
+        ])
+      })
+    )
   })
 })
