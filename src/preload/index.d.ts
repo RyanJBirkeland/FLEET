@@ -511,6 +511,12 @@ declare global {
         }) => Promise<IpcResult<'review:shipBatch'>>
         rebase: (payload: { taskId: string }) => Promise<IpcResult<'review:rebase'>>
         checkFreshness: (payload: { taskId: string }) => Promise<IpcResult<'review:checkFreshness'>>
+        checkAutoReview: (payload: {
+          taskId: string
+        }) => Promise<IpcResult<'review:checkAutoReview'>>
+        markShippedOutsideBde: (payload: {
+          taskId: string
+        }) => Promise<IpcResult<'review:markShippedOutsideBde'>>
         // AI Review Partner
         autoReview: (taskId: string, force?: boolean) => Promise<ReviewResult>
         chatStream: (params: {

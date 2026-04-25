@@ -226,6 +226,15 @@ export interface ReviewChannels {
       commitsBehind?: number | undefined
     }
   }
+  /**
+   * Mark a task done when work was shipped outside of BDE (terminal push,
+   * manual PR merge, etc.). Transitions status → done without touching the
+   * worktree; dependency resolution and audit trail happen as normal.
+   */
+  'review:markShippedOutsideBde': {
+    args: [payload: { taskId: string }]
+    result: { success: boolean }
+  }
 }
 
 /** Task template CRUD */

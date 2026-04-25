@@ -15,7 +15,7 @@ import { getSettingJson } from '../settings'
 import { buildAgentEnv } from '../env-utils'
 import { execFileAsync } from '../lib/async-utils'
 import { checkAutoReview } from '../services/auto-review-service'
-import { getTask } from '../services/sprint-service'
+import { getTask, updateTask } from '../services/sprint-service'
 import type { AutoReviewRule } from '../../shared/types'
 import { getRepoConfig } from '../paths'
 import * as reviewOrchestration from '../services/review-orchestration-service'
@@ -26,6 +26,7 @@ import {
 } from '../services/review-query-service'
 import { shipBatch } from '../services/review-ship-batch'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import { nowIso } from '../../shared/time'
 
 const logger = createLogger('review-handlers')
 
@@ -192,5 +193,21 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       taskId: payload.taskId,
       env
     })
+  })
+
+  safeHandle('review:markShippedOutsideBde', async (_e, payload) => {
+    const { taskId } = payload
+    if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
+
+    const task = getTask(taskId)
+    if (!task) throw new Error(`Task ${taskId} not found`)
+    if (task.status !== 'review') {
+      throw new Error(`Task ${taskId} is not in review status (status: ${task.status})`)
+    }
+
+    logger.info(`review:markShippedOutsideBde task=${taskId}`)
+    updateTask(taskId, { status: 'done', completed_at: nowIso() })
+    await deps.onStatusTerminal(taskId, 'done')
+    return { success: true }
   })
 }
