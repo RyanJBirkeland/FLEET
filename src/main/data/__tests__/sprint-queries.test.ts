@@ -607,6 +607,32 @@ describe('claimTask', () => {
     expect(result).not.toBeNull()
     expect(result!.status).toBe('active')
   })
+
+  // T-102: regression guard against silent double-spawn. The atomic UPDATE
+  // ... WHERE status='queued' predicate is the *only* thing keeping two drain
+  // workers from claiming the same row. If a future change drops that
+  // predicate, both calls below would return non-null and the loser would
+  // overwrite the winner's claimed_by — this test makes that regression loud.
+  it('only one of two consecutive callers wins the claim', () => {
+    const created = createTask({ title: 'Race target', repo: 'bde' })!
+    updateTask(created.id, { status: 'queued' })
+
+    const firstClaim = claimTask(created.id, 'executor-winner')
+    const secondClaim = claimTask(created.id, 'executor-loser')
+
+    const winners = [firstClaim, secondClaim].filter((claim) => claim !== null)
+    const losers = [firstClaim, secondClaim].filter((claim) => claim === null)
+    expect(winners).toHaveLength(1)
+    expect(losers).toHaveLength(1)
+
+    expect(firstClaim).not.toBeNull()
+    expect(firstClaim!.claimed_by).toBe('executor-winner')
+    expect(secondClaim).toBeNull()
+
+    const stored = getTask(created.id)!
+    expect(stored.status).toBe('active')
+    expect(stored.claimed_by).toBe('executor-winner')
+  })
 })
 
 describe('releaseTask', () => {
