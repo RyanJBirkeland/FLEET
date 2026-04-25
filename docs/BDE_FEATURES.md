@@ -18,7 +18,7 @@ This document is auto-loaded by all BDE agents via the `@` directive in CLAUDE.m
 
 ### Task Workbench
 
-Planning and spec creation interface. Users draft task specs with AI copilot assistance, configure task properties, and run validation checks before queuing.
+Planning and spec creation interface, presented as a centered modal (`TaskWorkbenchModal`). Opens from the Task Planner (Add Task / Edit Task) and from the Task Pipeline (Edit on a selected task). Users draft task specs with AI copilot assistance, configure task properties, and run validation checks before queuing.
 
 - **Copilot**: AI chat assistant for drafting specs. Text-only, uses Agent SDK streaming via `workbench:chatStream` IPC. Messages persist to localStorage under `bde:copilot-messages` (capped at 100). Cannot use tools or explore code — for codebase-aware spec generation, use the Synthesizer instead
 - **Validation checks**: Validates spec quality before queuing. Specs require at least 2 `## heading` sections. Semantic checks use SDK with haiku model for speed
