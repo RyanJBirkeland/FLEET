@@ -24,6 +24,8 @@ import type { DependencyIndex } from '../services/dependency-service'
 import type { CircuitBreaker } from './circuit-breaker'
 import type { AgentManagerImpl } from './index'
 import type { AgentRunClaim } from './run-agent'
+import type { WipTracker } from './wip-tracker'
+import type { ErrorRegistry } from './error-registry'
 
 export class AgentManagerTestInternals {
   constructor(private readonly mgr: AgentManagerImpl) {}
@@ -85,6 +87,12 @@ export class AgentManagerTestInternals {
   }
   get circuitBreaker(): CircuitBreaker {
     return this.mgr._circuitBreaker
+  }
+  get wipTracker(): WipTracker {
+    return this.mgr._wipTracker
+  }
+  get errorRegistry(): ErrorRegistry {
+    return this.mgr._errorRegistry
   }
 
   // ---- Methods (delegated) ----

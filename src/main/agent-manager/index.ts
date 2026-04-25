@@ -30,6 +30,8 @@ import { executeShutdown } from './shutdown-coordinator'
 import { reloadConfiguration } from './config-manager'
 import { LifecycleController } from './lifecycle-controller'
 import { AgentManagerTestInternals } from './agent-manager-test-internals'
+import { WipTracker } from './wip-tracker'
+import { ErrorRegistry } from './error-registry'
 
 // ---------------------------------------------------------------------------
 // Logger helper — callers can supply their own or fall back to createLogger
@@ -118,8 +120,11 @@ export class AgentManagerImpl implements AgentManager {
   // to the renderer when the drain catches an environmental failure.
   _drainPausedUntil: number | undefined
   // Per-task processing-failure counts that persist across drain ticks; cleared
-  // on success or quarantine.
-  readonly _drainFailureCounts = new Map<string, number>()
+  // on success or quarantine. Accessor to _errorRegistry.drainFailureCounts —
+  // kept for backward compat with DrainLoopDeps (which expects a Map reference).
+  get _drainFailureCounts(): Map<string, number> {
+    return this._errorRegistry.drainFailureCounts
+  }
   // Drain-tick-level error counter. Reset on any successful tick. Emits
   // `manager:warning` after 3 consecutive failures.
   _consecutiveDrainErrors = 0
@@ -141,6 +146,8 @@ export class AgentManagerImpl implements AgentManager {
   // ---- Cross-cutting collaborators ----
   readonly _metrics: MetricsCollector
   readonly _circuitBreaker: CircuitBreaker
+  readonly _wipTracker: WipTracker
+  readonly _errorRegistry: ErrorRegistry
   // Idempotency guard for handleTaskTerminal — maps taskId to the in-flight
   // terminal promise. Duplicate callers receive the same promise; the entry is
   // deleted in finally.
@@ -171,6 +178,8 @@ export class AgentManagerImpl implements AgentManager {
     this._epicIndex = epicDepsReader
     this._metrics = createMetricsCollector()
     this._circuitBreaker = new CircuitBreaker(logger)
+    this._errorRegistry = new ErrorRegistry(logger)
+    this._wipTracker = new WipTracker(() => this._activeAgents.size)
     this.unitOfWork = unitOfWork
 
     // Build the agent-manager TaskStateService.
@@ -198,9 +207,11 @@ export class AgentManagerImpl implements AgentManager {
       worktreeBase: config.worktreeBase,
       onSpawnSuccess: () => {
         this._circuitBreaker.recordSuccess()
+        this._errorRegistry.recordSpawnSuccess()
       },
       onSpawnFailure: () => {
         this._circuitBreaker.recordFailure()
+        this._errorRegistry.recordSpawnFailure()
       }
     }
   }
