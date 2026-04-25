@@ -4,7 +4,9 @@ import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { assertRepoCleanOrAbort } from '../lib/main-repo-guards'
 import { BRANCH_SLUG_MAX_LENGTH, GIT_FETCH_TIMEOUT_MS, GIT_FF_MERGE_TIMEOUT_MS } from './types'
-import type { Logger } from '../logger'
+import { createLogger, type Logger } from '../logger'
+
+const defaultLogger = createLogger('worktree')
 import {
   listWorktrees,
   removeWorktreeForce,
@@ -91,7 +93,7 @@ async function cleanupStaleWorktrees(
   worktreePath: string,
   branch: string,
   env: Record<string, string | undefined>,
-  log: Logger | Console
+  log: Logger
 ): Promise<void> {
   await removeWorktreesForBranch(repoPath, branch, env, log)
   await removeWorktreeAtPath(repoPath, worktreePath, branch, env, log)
@@ -108,7 +110,7 @@ async function removeWorktreesForBranch(
   repoPath: string,
   branch: string,
   env: Record<string, string | undefined>,
-  log: Logger | Console
+  log: Logger
 ): Promise<void> {
   let stalePaths: string[]
   try {
@@ -147,7 +149,7 @@ async function removeWorktreeAtPath(
   worktreePath: string,
   branch: string,
   env: Record<string, string | undefined>,
-  log: Logger | Console
+  log: Logger
 ): Promise<void> {
   if (!existsSync(worktreePath)) return
   await removeWorktreeWithRmFallback(repoPath, worktreePath, branch, env, log)
@@ -158,7 +160,7 @@ async function removeWorktreeWithRmFallback(
   targetPath: string,
   branch: string,
   env: Record<string, string | undefined>,
-  log: Logger | Console
+  log: Logger
 ): Promise<void> {
   try {
     await removeWorktreeForce(repoPath, targetPath, env)
@@ -177,7 +179,7 @@ async function removeWorktreeWithRmFallback(
 async function pruneOrphanedWorktreeRefs(
   repoPath: string,
   env: Record<string, string | undefined>,
-  log: Logger | Console
+  log: Logger
 ): Promise<void> {
   try {
     await pruneWorktrees(repoPath, env)
@@ -196,7 +198,7 @@ async function deleteBranchRobustly(
   repoPath: string,
   branch: string,
   env: Record<string, string | undefined>,
-  log: Logger | Console
+  log: Logger
 ): Promise<void> {
   try {
     await deleteBranch(repoPath, branch, env)
@@ -225,7 +227,7 @@ export async function setupWorktree(
   const repoDir = path.join(worktreeBase, repoSlug(repoPath))
   const worktreePath = path.join(repoDir, taskId)
   const env = buildAgentEnv()
-  const log = logger ?? console
+  const log = logger ?? defaultLogger
 
   mkdirSync(repoDir, { recursive: true })
 
@@ -261,7 +263,7 @@ export async function setupWorktree(
     // The lock guards `git worktree add`, branch creation, and the merge --ff-only
     // (which mutates the main checkout's HEAD) — these races corrupted state in
     // testing when multiple agents started simultaneously on the same repo.
-    acquireLock(worktreeBase, repoPath, logger)
+    acquireLock(worktreeBase, repoPath, log)
 
     try {
       // Clean any stale state for this task/branch (other worktrees with the
@@ -322,11 +324,11 @@ export async function setupWorktree(
       } catch {
         /* best effort */
       }
-      releaseLock(worktreeBase, repoPath)
+      releaseLock(worktreeBase, repoPath, log)
       throw err
     }
 
-    releaseLock(worktreeBase, repoPath)
+    releaseLock(worktreeBase, repoPath, log)
     return { worktreePath, branch }
   } finally {
     // Always release the disk reservation whether setup succeeded or failed.
@@ -344,7 +346,7 @@ export interface CleanupWorktreeOpts {
 export async function cleanupWorktree(opts: CleanupWorktreeOpts): Promise<void> {
   const { repoPath, worktreePath, branch, logger } = opts
   const env = buildAgentEnv()
-  const log = logger ?? console
+  const log = logger ?? defaultLogger
 
   try {
     await removeWorktreeForce(repoPath, worktreePath, env)
@@ -393,7 +395,7 @@ export async function pruneStaleWorktrees(
   isReview?: (taskId: string) => boolean
 ): Promise<number> {
   if (!existsSync(worktreeBase)) return 0
-  const log = logger ?? console
+  const log = logger ?? defaultLogger
   let pruned = 0
   for (const candidate of enumeratePruneCandidates(worktreeBase, log)) {
     if (!isPrunableCandidate(candidate, isActive, isReview, log)) continue
@@ -409,7 +411,7 @@ interface PruneCandidate {
 
 function* enumeratePruneCandidates(
   worktreeBase: string,
-  log: Logger | Console
+  log: Logger
 ): Generator<PruneCandidate> {
   const repoDirs = readdirSync(worktreeBase, { withFileTypes: true })
     .filter((d) => d.isDirectory() && d.name !== '.locks')
@@ -421,7 +423,7 @@ function* enumeratePruneCandidates(
 
 function* enumerateRepoCandidates(
   repoDir: string,
-  log: Logger | Console
+  log: Logger
 ): Generator<PruneCandidate> {
   let taskDirs: string[]
   try {
@@ -452,7 +454,7 @@ function isPrunableCandidate(
   candidate: PruneCandidate,
   isActive: (taskId: string) => boolean,
   isReview: ((taskId: string) => boolean) | undefined,
-  log: Logger | Console
+  log: Logger
 ): boolean {
   if (!TASK_ID_UUID_PATTERN.test(candidate.taskId)) return false
   if (!looksLikeWorktree(candidate.worktreePath)) {
@@ -469,7 +471,7 @@ function isPrunableCandidate(
   return true
 }
 
-async function deleteWorktreeDir(worktreePath: string, log: Logger | Console): Promise<boolean> {
+async function deleteWorktreeDir(worktreePath: string, log: Logger): Promise<boolean> {
   try {
     // Use shell `rm -rf` instead of rmSync to avoid Electron's ASAR
     // interception, which treats .asar files as directories and fails with

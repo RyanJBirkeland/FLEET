@@ -1,6 +1,8 @@
 import { mkdirSync, writeFileSync, readFileSync, rmSync, renameSync } from 'node:fs'
 import path from 'node:path'
-import type { Logger } from '../logger'
+import { createLogger, type Logger } from '../logger'
+
+const defaultLogger = createLogger('file-lock')
 
 /**
  * Convert a repo path to a filesystem-safe slug for lock file naming.
@@ -41,7 +43,7 @@ export function acquireLock(worktreeBase: string, repoPath: string, logger?: Log
   const pid = parseInt(raw, 10)
 
   if (isNaN(pid)) {
-    ;(logger ?? console).warn(`[file-lock] Corrupted lock file for ${repoPath} — removing`)
+    ;(logger ?? defaultLogger).warn(`[file-lock] Corrupted lock file for ${repoPath} — removing`)
     rmSync(lockFile)
   } else {
     let alive = false
@@ -83,11 +85,11 @@ export function acquireLock(worktreeBase: string, repoPath: string, logger?: Log
  * Release the worktree lock for the given repo. Best-effort — warns on failure
  * but does not throw (lock files are cleaned up on next acquisition if stale).
  */
-export function releaseLock(worktreeBase: string, repoPath: string): void {
+export function releaseLock(worktreeBase: string, repoPath: string, logger?: Logger): void {
   const lockFile = lockPath(worktreeBase, repoPath)
   try {
     rmSync(lockFile)
   } catch (err) {
-    console.warn(`[file-lock] Failed to remove lock file: ${err}`)
+    ;(logger ?? defaultLogger).warn(`[file-lock] Failed to remove lock file: ${err}`)
   }
 }
