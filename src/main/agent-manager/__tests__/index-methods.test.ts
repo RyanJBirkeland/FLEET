@@ -110,6 +110,7 @@ vi.mock('../oauth-checker', () => ({
 
 import { AgentManagerImpl } from '../index'
 import type { AgentManagerConfig, ActiveAgent, AgentHandle } from '../types'
+import { DEFAULT_CONFIG } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { getRepoPaths } from '../../paths'
 import { setupWorktree, pruneStaleWorktrees } from '../worktree'
@@ -138,7 +139,7 @@ const baseConfig: AgentManagerConfig = {
   maxRuntimeMs: 60 * 60 * 1000,
   idleTimeoutMs: 15 * 60 * 1000,
   pollIntervalMs: 600_000,
-  defaultModel: 'claude-sonnet-4-5'
+  defaultModel: DEFAULT_CONFIG.defaultModel
 }
 
 function makeLogger() {
@@ -174,7 +175,7 @@ function makeActiveAgent(taskId: string): ActiveAgent {
       abort: vi.fn(),
       steer: vi.fn().mockResolvedValue({ delivered: true })
     } as AgentHandle,
-    model: 'claude-sonnet-4-5',
+    model: DEFAULT_CONFIG.defaultModel,
     startedAt: Date.now(),
     lastOutputAt: Date.now(),
     rateLimitCount: 0,
