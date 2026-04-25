@@ -7,7 +7,7 @@ import { motion, LayoutGroup } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { useSprintFilters } from '../../stores/sprintFilters'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
-import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
+import { useTaskWorkbenchModalStore } from '../../stores/taskWorkbenchModal'
 import { setOpenLogDrawerTaskId, useTaskToasts } from '../../hooks/useTaskNotifications'
 import { useSprintKeyboardShortcuts } from '../../hooks/useSprintKeyboardShortcuts'
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
@@ -68,7 +68,8 @@ export function SprintPipeline(): React.JSX.Element {
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
   const setView = usePanelLayoutStore((s) => s.setView)
   const reduced = useReducedMotion()
-  const openWorkbench = useCallback(() => setView('planner'), [setView])
+  const openWorkbenchForCreate = useTaskWorkbenchModalStore((s) => s.openForCreate)
+  const openWorkbench = useCallback(() => openWorkbenchForCreate(), [openWorkbenchForCreate])
 
   // --- Extracted hooks ---
   const {
@@ -88,7 +89,6 @@ export function SprintPipeline(): React.JSX.Element {
   // --- Focus management ---
   const triggerRef = useRef<HTMLElement | null>(null)
 
-  const loadTaskInWorkbench = useTaskWorkbenchStore((s) => s.loadTask)
 
   // Register sprint commands in command palette
   useSprintPipelineCommands({
@@ -124,7 +124,7 @@ export function SprintPipeline(): React.JSX.Element {
 
   // SP-7: Wire setConflictDrawerOpen to actual function (wrapped to match Dispatch<SetStateAction> signature)
   useSprintKeyboardShortcuts({
-    openWorkbench: () => setView('planner'),
+    openWorkbench,
     setConflictDrawerOpen: (value) => {
       setConflictDrawerOpen(typeof value === 'function' ? value(conflictDrawerOpen) : value)
     }
@@ -384,10 +384,7 @@ export function SprintPipeline(): React.JSX.Element {
               onDelete={handleDeleteTask}
               onViewLogs={() => setView('agents')}
               onOpenSpec={() => setSpecPanelOpen(true)}
-              onEdit={() => {
-                loadTaskInWorkbench(selectedTask)
-                setView('planner')
-              }}
+              onEdit={() => useTaskWorkbenchModalStore.getState().openForEdit(selectedTask)}
               onViewAgents={() => setView('agents')}
               onUnblock={handleUnblock}
               onRetry={handleRetry}
