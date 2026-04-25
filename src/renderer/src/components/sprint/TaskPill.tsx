@@ -4,7 +4,7 @@ import { AlertTriangle, Clock, Zap, GitBranch, Slash, XCircle } from 'lucide-rea
 import type { LucideIcon } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
-import { formatElapsed } from '../../lib/task-format'
+import { formatElapsed, failureCategoryForReason } from '../../lib/task-format'
 import { STATUS_METADATA } from '../../lib/task-status-ui'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
@@ -150,6 +150,14 @@ function TaskPillInner({
           />
         </span>
       )}
+      {failureInfo && task.failure_reason && (() => {
+        const chip = failureCategoryForReason(task.failure_reason)
+        return (
+          <span className={`task-pill__failure-chip ${chip.colorClass}`} aria-label={`Failure category: ${chip.label}`}>
+            {chip.label}
+          </span>
+        )
+      })()}
       {isZombie && (
         <span title="Agent finished but task not marked done">
           <AlertTriangle size={12} className="task-pill__zombie-icon" aria-label="Zombie task" />
@@ -158,6 +166,11 @@ function TaskPillInner({
       {isStale && !isZombie && (
         <span title="Task may be stuck">
           <Clock size={12} className="task-pill__stale-icon" aria-label="Stale task" />
+        </span>
+      )}
+      {task.status === 'queued' && !!task.claimed_by && (
+        <span className="task-pill__starting" aria-label="Agent starting">
+          starting…
         </span>
       )}
       <span className="task-pill__title" title={task.title}>

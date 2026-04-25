@@ -3,7 +3,7 @@ import type { SprintTask } from '../../../../shared/types'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintSelection } from '../../stores/sprintSelection'
 import { useAgentEventsStore } from '../../stores/agentEvents'
-import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { formatElapsed, getDotColor, failureCategoryForReason } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { TaskDetailActionButtons } from './TaskDetailActionButtons'
 import { AgentActivityPreview } from './AgentActivityPreview'
@@ -307,11 +307,33 @@ export function TaskDetailDrawer({
             >
               {task.status === 'cancelled' ? 'Cancellation details' : 'Failure details'}
             </h4>
+            {task.failure_reason && (() => {
+              const chip = failureCategoryForReason(task.failure_reason)
+              return (
+                <span
+                  className={`task-drawer__failure-chip ${chip.colorClass}`}
+                  data-testid="task-drawer-failure-chip"
+                >
+                  {chip.label}
+                </span>
+              )
+            })()}
             {task.failure_reason && (
               <pre className="task-drawer__failure-reason" data-testid="task-drawer-failure-reason">
                 {task.failure_reason}
               </pre>
             )}
+            {task.notes &&
+              task.failure_reason === 'timeout' &&
+              task.notes.toLowerCase().includes('watchdog') && (
+                <div
+                  className="task-drawer__watchdog-verdict"
+                  data-testid="task-drawer-watchdog-verdict"
+                >
+                  Watchdog terminated this agent. Increase the task&apos;s{' '}
+                  <strong>max runtime</strong> or split the work into smaller tasks.
+                </div>
+              )}
             {task.notes ? (
               <pre
                 className="task-drawer__failure-notes"
