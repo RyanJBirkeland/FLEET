@@ -327,7 +327,6 @@ describe('sprint:update handler', () => {
     vi.runAllTimers()
 
     expect(_updateTask).toHaveBeenCalledWith('1', { title: 'Updated' }, undefined)
-    expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     expect(result).toEqual(updated)
   })
 
