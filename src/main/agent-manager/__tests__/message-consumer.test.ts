@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 vi.mock('../../agent-event-mapper', () => ({
   mapRawMessage: vi.fn().mockReturnValue([]),
@@ -22,7 +22,11 @@ vi.mock('../../env-utils', () => ({
 
 // TurnTracker is not mocked — pass a stub object to avoid SQLite access.
 
-import { consumeMessages } from '../message-consumer'
+import {
+  consumeMessages,
+  __setStallTimeoutMsForTesting,
+  __resetStallTimeoutForTesting
+} from '../message-consumer'
 import type { ActiveAgent, AgentHandle } from '../types'
 import type { AgentRunClaim } from '../run-agent'
 import type { TurnTracker } from '../turn-tracker'
@@ -328,5 +332,63 @@ describe('consumeMessages', () => {
       })
     )
     expect(flushAgentEventBatcher).toHaveBeenCalled()
+  })
+
+  describe('stall detection', () => {
+    // Use the real system clock — stall detection uses `node:timers` (bypasses
+    // fake-timer patching) so we inject a very small timeout and wait on real time.
+    const FAST_STALL_MS = 50
+
+    beforeEach(() => __setStallTimeoutMsForTesting(FAST_STALL_MS))
+    afterEach(() => __resetStallTimeoutForTesting())
+
+    it(
+      'resolves with streamError reason stalled when stream yields no message within deadline',
+      async () => {
+        // An async generator that hangs indefinitely — never yields, never throws.
+        const hangingHandle: AgentHandle = {
+          messages: {
+            [Symbol.asyncIterator]() {
+              return {
+                next(): Promise<IteratorResult<unknown>> {
+                  return new Promise(() => {}) // never resolves
+                }
+              }
+            }
+          },
+          sessionId: 'test-session',
+          abort: vi.fn(),
+          steer: vi.fn()
+        }
+
+        const agent = makeAgent({ maxCostUsd: null })
+        const logger = makeLogger()
+        const task = makeTask()
+
+        const result = await consumeMessages(
+          hangingHandle,
+          agent,
+          task,
+          'run-1',
+          makeTurnTracker(),
+          logger,
+          20
+        )
+
+        expect(result.streamError).toBeInstanceOf(Error)
+        expect(result.streamError?.message).toBe('stream_stalled')
+        expect(logger.event).toHaveBeenCalledWith(
+          'agent.stream.error',
+          expect.objectContaining({ reason: 'stalled', taskId: task.id })
+        )
+        expect(emitAgentEvent).toHaveBeenCalledWith(
+          'run-1',
+          expect.objectContaining({ type: 'agent:error' })
+        )
+        expect(flushAgentEventBatcher).toHaveBeenCalled()
+      },
+      // generous wall-clock budget: FAST_STALL_MS + async overhead
+      FAST_STALL_MS + 2000
+    )
   })
 })

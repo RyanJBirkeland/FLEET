@@ -15,7 +15,59 @@ import { createPlaygroundDetector } from './playground-handler'
 import type { PlaygroundWriteResult } from './playground-handler'
 import { TurnTracker } from './turn-tracker'
 import type { AgentRunClaim } from './run-agent'
+import { setTimeout as nodeSetTimeout, clearTimeout as nodeClearTimeout } from 'node:timers'
 import { invalidateOAuthToken, refreshOAuthTokenFromKeychain } from '../env-utils'
+
+/**
+ * Maximum time between consecutive messages before the stream is considered stalled.
+ * 2 minutes is deliberately conservative — a healthy network should never approach this.
+ */
+export const MESSAGE_STALL_TIMEOUT_MS = 120_000
+
+/**
+ * Module-level override for the stall timeout — settable only in tests.
+ * Uses `node:timers` (not the global `setTimeout`) so the stall deadline runs
+ * on the real system clock and is not disturbed by `vi.useFakeTimers()` in
+ * unrelated test suites. Production code never calls `__setStallTimeoutMsForTesting`.
+ */
+let stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
+export function __setStallTimeoutMsForTesting(ms: number): void {
+  stallTimeoutMs = ms
+}
+
+export function __resetStallTimeoutForTesting(): void {
+  stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
+}
+
+/** Sentinel returned by the per-iteration race when the deadline fires. */
+const STALL_SENTINEL = Symbol('stall')
+
+/**
+ * Races `iter.next()` against a per-message deadline.
+ * Uses `node:timers` `setTimeout` (bypasses Vitest fake-timer patching) so the
+ * stall clock runs on real wall time and does not fire when test suites advance
+ * fake timers for drain-loop polling intervals.
+ * Clears the timer when the iterator resolves first to prevent timer leaks.
+ * Returns the iterator result, or `STALL_SENTINEL` if no message arrives in time.
+ */
+async function nextOrStall(
+  iter: AsyncIterator<unknown>
+): Promise<IteratorResult<unknown> | typeof STALL_SENTINEL> {
+  let stallTimer: ReturnType<typeof nodeSetTimeout>
+  const stallPromise: Promise<typeof STALL_SENTINEL> = new Promise<typeof STALL_SENTINEL>(
+    (resolve) => {
+      stallTimer = nodeSetTimeout(() => resolve(STALL_SENTINEL), stallTimeoutMs)
+    }
+  )
+  try {
+    const result = await Promise.race([iter.next(), stallPromise])
+    nodeClearTimeout(stallTimer!)
+    return result
+  } catch (err) {
+    nodeClearTimeout(stallTimer!)
+    throw err
+  }
+}
 
 export interface ConsumeMessagesResult {
   exitCode: number | undefined
@@ -115,8 +167,38 @@ export async function consumeMessages(
   let messagesConsumed = 0
   let lastEventType = 'none'
 
+  const iter = handle.messages[Symbol.asyncIterator]()
   try {
-    for await (const msg of handle.messages) {
+    // Manual iteration instead of `for await` so each `iter.next()` call
+    // can be raced against a per-message deadline.  If no message arrives
+    // within MESSAGE_STALL_TIMEOUT_MS the stream is declared stalled and
+    // the loop exits early with a structured streamError.
+    while (true) {
+      const raceResult = await nextOrStall(iter)
+
+      if (raceResult === STALL_SENTINEL) {
+        logger.event('agent.stream.error', {
+          reason: 'stalled',
+          taskId: task.id,
+          messagesConsumed,
+          lastEventType
+        })
+        const stallError = new Error('stream_stalled')
+        emitAgentEvent(agentRunId, {
+          type: 'agent:error',
+          message: `Stream interrupted: stream stalled — no message in ${MESSAGE_STALL_TIMEOUT_MS / 1000}s`,
+          timestamp: Date.now(),
+          taskId: task.id,
+          messagesConsumed,
+          lastEventType
+        })
+        flushAgentEventBatcher()
+        return { exitCode, lastAgentOutput, streamError: stallError, pendingPlaygroundPaths }
+      }
+
+      if (raceResult.done) break
+
+      const msg = raceResult.value
       messagesConsumed++
       const sdkMsg = asSDKMessage(msg)
       if (sdkMsg?.type) {

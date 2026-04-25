@@ -118,6 +118,13 @@ export interface ActiveAgent {
   branch: string
 }
 
+/**
+ * Describes which transport will execute the agent spawn.
+ * The SDK path is preferred; the CLI path is a fallback when the SDK package
+ * is absent from the runtime environment.
+ */
+export type SpawnStrategy = { type: 'sdk' } | { type: 'cli'; claudePath: string }
+
 // Watchdog verdict types
 export type WatchdogCheck =
   | 'ok'

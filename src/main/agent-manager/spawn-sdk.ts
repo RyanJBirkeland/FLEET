@@ -4,7 +4,7 @@
  * Wraps `@anthropic-ai/claude-agent-sdk`'s `query()` call with session-ID
  * extraction, abort controller wiring, and a steer() stub.
  */
-import type { AgentHandle, SteerResult } from './types'
+import type { AgentHandle, SteerResult, SpawnStrategy } from './types'
 import type { Logger } from '../logger'
 import { randomUUID } from 'node:crypto'
 import { getClaudeCliPath } from '../env-utils'
@@ -48,6 +48,7 @@ export function spawnViaSdk(
   },
   env: NodeJS.ProcessEnv,
   token: string | null,
+  strategy: SpawnStrategy,
   logger?: Logger
 ): AgentHandle {
   const abortController = new AbortController()
@@ -65,7 +66,8 @@ export function spawnViaSdk(
       agentType: opts.agentType ?? 'unknown',
       model: opts.model,
       maxBudgetUsd: effectiveMaxBudget,
-      cwd: opts.cwd
+      cwd: opts.cwd,
+      backend: strategy.type
     })
   }
 

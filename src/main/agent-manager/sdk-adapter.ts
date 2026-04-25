@@ -4,13 +4,13 @@
  * Public API (`spawnAgent`, `spawnWithTimeout`) is unchanged.
  * Protocol helpers re-exported for callers that import them from here.
  */
-import type { AgentHandle } from './types'
+import type { AgentHandle, SpawnStrategy } from './types'
 import type { Logger } from '../logger'
 import type { AgentType } from '../agent-system/personality/types'
 import { dirname, resolve as resolvePath } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { DEFAULT_CONFIG, SPAWN_TIMEOUT_MS } from './types'
-import { buildAgentEnv, getOAuthToken } from '../env-utils'
+import { buildAgentEnv, getOAuthToken, getClaudeCliPath } from '../env-utils'
 import { resolveNodeExecutable } from './resolve-node'
 import { spawnViaSdk, type PipelineSpawnTuning } from './spawn-sdk'
 import { spawnViaCli } from './spawn-cli'
@@ -74,6 +74,22 @@ function assertCwdIsInsideWorktreeBase(cwd: string, worktreeBase: string, logger
     )
   }
 }
+
+/**
+ * Resolves the spawn strategy by attempting to import the SDK.
+ * Returns `{ type: 'sdk' }` on success, `{ type: 'cli'; claudePath }` on failure.
+ */
+async function resolveSpawnStrategy(): Promise<SpawnStrategy> {
+  try {
+    await import('@anthropic-ai/claude-agent-sdk')
+    return { type: 'sdk' }
+  } catch {
+    return { type: 'cli', claudePath: getClaudeCliPath() }
+  }
+}
+
+// Re-export SpawnStrategy so callers can reference the type without importing types.ts directly
+export type { SpawnStrategy } from './types'
 
 // Re-export protocol helpers so existing imports don't break
 export type { SDKWireMessage } from './sdk-message-protocol'
@@ -249,15 +265,12 @@ async function spawnClaudeAgent(opts: {
   const env = { ...buildAgentEnv() }
   prependResolvedNodeDirToPath(env, opts.logger)
 
-  // Get OAuth token for SDK auth (not passed via env)
   const token = getOAuthToken()
+  const strategy = await resolveSpawnStrategy()
 
-  // Try SDK first, fall back to CLI
-  try {
+  if (strategy.type === 'sdk') {
     const sdk = await import('@anthropic-ai/claude-agent-sdk')
-    return spawnViaSdk(sdk, opts, env, token, opts.logger)
-  } catch {
-    // SDK not available — use CLI fallback
+    return spawnViaSdk(sdk, opts, env, token, strategy, opts.logger)
   }
 
   return spawnViaCli(
