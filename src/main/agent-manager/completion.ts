@@ -233,11 +233,102 @@ const branchTipVerifyPhase: SuccessPhase = {
   }
 }
 
+/**
+ * Context passed to each PreReviewAdvisor. Advisory checks read these fields
+ * to produce their warnings; they never write to the repository directly.
+ */
+interface PreReviewAdvisorContext {
+  taskId: string
+  branch: string
+  worktreePath: string
+  repoPath: string | undefined
+  logger: Logger
+}
+
+/**
+ * A pluggable advisory check run before the review transition.
+ *
+ * Returns a warning string (appended to task.notes) or null when nothing to
+ * report. Errors are caught by the orchestrator so a flaky check cannot stall
+ * the success path.
+ */
+interface PreReviewAdvisor {
+  name: string
+  advise(ctx: PreReviewAdvisorContext): Promise<string | null>
+}
+
+const untouchedTestsAdvisor: PreReviewAdvisor = {
+  name: 'untouchedTests',
+  async advise(ctx) {
+    const env = buildAgentEnv()
+    const changedFiles = await listChangedFiles(ctx.branch, ctx.worktreePath, env, { logger: ctx.logger })
+    if (changedFiles.length === 0) return null
+
+    const testCheckRepoPath = ctx.repoPath ?? ctx.worktreePath
+    const untouched = detectUntouchedTests(changedFiles, testCheckRepoPath, { logger: ctx.logger })
+    if (untouched.length === 0) return null
+
+    return formatAdvisory(untouched)
+  }
+}
+
+const unverifiedFactsAdvisor: PreReviewAdvisor = {
+  name: 'unverifiedFacts',
+  async advise(ctx) {
+    const env = buildAgentEnv()
+    const { stdout: diff } = await execFileAsync('git', ['diff', 'HEAD~1', 'HEAD'], {
+      cwd: ctx.worktreePath,
+      env,
+      timeout: GIT_EXEC_TIMEOUT_MS
+    })
+
+    const packageJsonPath = join(ctx.worktreePath, 'package.json')
+    const packageJsonContent = await readFile(packageJsonPath, 'utf8').catch(() => '{}')
+
+    const warnings = scanForUnverifiedFacts(diff, packageJsonContent)
+    return warnings.length > 0 ? warnings.join('\n') : null
+  }
+}
+
+/** Registered pre-review advisors — extend by appending to this array. */
+const preReviewAdvisors: PreReviewAdvisor[] = [untouchedTestsAdvisor, unverifiedFactsAdvisor]
+
+/**
+ * Runs each registered PreReviewAdvisor. Non-null warnings are appended to the
+ * task's notes. Errors in individual advisors are caught and logged so a
+ * single flaky check cannot stall the success path.
+ */
+async function runPreReviewAdvisors(
+  ctx: PreReviewAdvisorContext,
+  repo: IAgentTaskRepository
+): Promise<void> {
+  for (const advisor of preReviewAdvisors) {
+    try {
+      const warning = await advisor.advise(ctx)
+      if (warning) {
+        appendAdvisoryNote(ctx.taskId, warning, repo, ctx.logger)
+      }
+    } catch (err) {
+      ctx.logger.warn(
+        `[completion] Advisory check "${advisor.name}" skipped for task ${ctx.taskId}: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }
+}
+
 const advisoryAnnotationsPhase: SuccessPhase = {
   name: 'advisoryAnnotations',
   async run(ctx) {
-    await annotateIfTestsUntouched(ctx.taskId, ctx.branch, ctx.worktreePath, ctx.repoPath, ctx.repo, ctx.logger)
-    await annotateUnverifiedFacts(ctx.taskId, ctx.worktreePath, ctx.repo, ctx.logger)
+    await runPreReviewAdvisors(
+      {
+        taskId: ctx.taskId,
+        branch: ctx.branch,
+        worktreePath: ctx.worktreePath,
+        repoPath: ctx.repoPath,
+        logger: ctx.logger
+      },
+      ctx.repo
+    )
   }
 }
 
@@ -338,80 +429,6 @@ async function detectNoOpAndFailIfSo(
   logger.event('completion.decision', { taskId, decision, reason: 'noop' })
   await onTaskTerminal(taskId, isTerminal ? 'failed' : 'queued')
   return true
-}
-
-/**
- * Pre-review advisory: checks whether the agent changed source files whose
- * sibling test files exist but were not also changed. Appends a single-line
- * warning to the task's `notes` so the human reviewer sees it in Code Review.
- *
- * Intentionally advisory-only — never blocks the review transition. Failures
- * in git diff or fs lookups are logged and swallowed so a flaky check cannot
- * stall the success path.
- */
-async function annotateIfTestsUntouched(
-  taskId: string,
-  agentBranch: string,
-  worktreePath: string,
-  repoPath: string | undefined,
-  repo: IAgentTaskRepository,
-  logger: Logger
-): Promise<void> {
-  const testCheckRepoPath = repoPath ?? worktreePath
-  const env = buildAgentEnv()
-
-  try {
-    const changedFiles = await listChangedFiles(agentBranch, worktreePath, env, { logger })
-    if (changedFiles.length === 0) return
-
-    const untouched = detectUntouchedTests(changedFiles, testCheckRepoPath, { logger })
-    if (untouched.length === 0) return
-
-    appendAdvisoryNote(taskId, formatAdvisory(untouched), repo, logger)
-  } catch (err) {
-    logger.warn(
-      `[completion] Untouched-test check skipped for task ${taskId}: ${err instanceof Error ? err.message : String(err)}`
-    )
-  }
-}
-
-/**
- * Post-commit advisory: diffs the last commit against its parent, then scans
- * the diff for heuristic signals of fabricated external references — unknown
- * brew tap installs, npm global packages not in package.json, unrecognised
- * URLs, and pipe-to-shell patterns. Each finding is appended to the task's
- * `notes` as a separate line so the human reviewer sees them in Code Review.
- *
- * Never throws, never blocks the success path.
- */
-async function annotateUnverifiedFacts(
-  taskId: string,
-  worktreePath: string,
-  repo: IAgentTaskRepository,
-  logger: Logger
-): Promise<void> {
-  try {
-    const env = buildAgentEnv()
-    const { stdout: diff } = await execFileAsync('git', ['diff', 'HEAD~1', 'HEAD'], {
-      cwd: worktreePath,
-      env,
-      timeout: GIT_EXEC_TIMEOUT_MS
-    })
-
-    const packageJsonPath = join(worktreePath, 'package.json')
-    const packageJsonContent = await readFile(packageJsonPath, 'utf8').catch(() => '{}')
-
-    const warnings = scanForUnverifiedFacts(diff, packageJsonContent)
-    if (warnings.length === 0) return
-
-    for (const warning of warnings) {
-      appendAdvisoryNote(taskId, warning, repo, logger)
-    }
-  } catch (err) {
-    logger.warn(
-      `[completion] Unverified-facts scan skipped for task ${taskId}: ${err instanceof Error ? err.message : String(err)}`
-    )
-  }
 }
 
 /**
