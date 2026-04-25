@@ -59,8 +59,7 @@ vi.mock('../pr-poller', () => ({
   stopPrPoller: vi.fn()
 }))
 vi.mock('../sprint-pr-poller', () => ({
-  startSprintPrPoller: vi.fn(),
-  stopSprintPrPoller: vi.fn()
+  createSprintPrPoller: vi.fn(() => ({ start: vi.fn(), stop: vi.fn() }))
 }))
 vi.mock('../data/event-queries')
 vi.mock('../data/task-changes')

@@ -7,7 +7,14 @@ import { is } from '@electron-toolkit/utils'
 import { BDE_DB_PATH } from './paths'
 import { getDb, backupDatabase } from './db'
 import { startPrPoller, stopPrPoller } from './pr-poller'
-import { startSprintPrPoller, stopSprintPrPoller } from './sprint-pr-poller'
+import { createSprintPrPoller } from './sprint-pr-poller'
+import { pollPrStatuses } from './github-pr-status'
+import {
+  listTasksWithOpenPrs,
+  markTaskDoneByPrNumber,
+  markTaskCancelledByPrNumber,
+  updateTaskMergeableState
+} from './services/sprint-service'
 import { pruneOldEvents } from './data/event-queries'
 import { pruneOldChanges } from './data/task-changes'
 import { getEventRetentionDays } from './config'
@@ -221,11 +228,22 @@ export function startPrPollers(terminalDeps: {
   onStatusTerminal: TaskTerminalService['onStatusTerminal']
   dialog: DialogService
 }): void {
+  const pollerLogger = createLogger('sprint-pr-poller')
+  const sprintPrPoller = createSprintPrPoller({
+    listTasksWithOpenPrs,
+    pollPrStatuses,
+    markTaskDoneByPrNumber,
+    markTaskCancelledByPrNumber,
+    updateTaskMergeableState,
+    onTaskTerminal: terminalDeps.onStatusTerminal,
+    logger: pollerLogger
+  })
+
   startPrPoller()
-  startSprintPrPoller(terminalDeps)
+  sprintPrPoller.start()
   app.on('will-quit', () => {
     stopPrPoller()
-    stopSprintPrPoller()
+    sprintPrPoller.stop()
   })
 }
 
