@@ -1215,16 +1215,16 @@ describe('createAgentManager', () => {
         mockRepo,
         logger
       ) as import('../index').AgentManagerImpl
-      expect(mgr._depIndexDirty).toBe(false)
+      expect(mgr.__testInternals.depIndexDirty).toBe(false)
 
       // Start terminal without awaiting — dirty flag should be set before async work finishes
       const p = mgr.onTaskTerminal('task-1', 'done')
       // At this point handleTaskTerminal is still awaited — but the flag must already be true
-      expect(mgr._depIndexDirty).toBe(true)
+      expect(mgr.__testInternals.depIndexDirty).toBe(true)
 
       resolveResolveDependents()
       await p
-      expect(mgr._depIndexDirty).toBe(true)
+      expect(mgr.__testInternals.depIndexDirty).toBe(true)
     })
 
     it('two concurrent terminals for different tasks both set dirty flag synchronously', async () => {
@@ -1257,14 +1257,14 @@ describe('createAgentManager', () => {
         mockRepo,
         logger
       ) as import('../index').AgentManagerImpl
-      expect(mgr._depIndexDirty).toBe(false)
+      expect(mgr.__testInternals.depIndexDirty).toBe(false)
 
       // Fire two concurrent terminal events for different tasks
       const pA = mgr.onTaskTerminal('task-a', 'done')
       const pB = mgr.onTaskTerminal('task-b', 'done')
 
       // Both must have set the dirty flag synchronously before either resolves
-      expect(mgr._depIndexDirty).toBe(true)
+      expect(mgr.__testInternals.depIndexDirty).toBe(true)
 
       // A drain tick that fires here will see dirty=true and do a full rebuild
       // instead of reading a partially-updated stale index.
@@ -1272,7 +1272,7 @@ describe('createAgentManager', () => {
       resolveA()
       resolveB()
       await Promise.all([pA, pB])
-      expect(mgr._depIndexDirty).toBe(true)
+      expect(mgr.__testInternals.depIndexDirty).toBe(true)
     })
 
     it('drain loop does full rebuild when _depIndexDirty', async () => {
@@ -1286,13 +1286,13 @@ describe('createAgentManager', () => {
       ) as import('../index').AgentManagerImpl
 
       // _depIndex is the DependencyIndex created in the constructor — grab its rebuild spy
-      const rebuildSpy = vi.mocked(mgr._depIndex.rebuild)
+      const rebuildSpy = vi.mocked(mgr.__testInternals.depIndex.rebuild)
       rebuildSpy.mockClear()
 
-      mgr._depIndexDirty = true
-      await mgr._drainLoop()
+      mgr.__testInternals.depIndexDirty = true
+      await mgr.__testInternals.drainLoop()
 
-      expect(mgr._depIndexDirty).toBe(false)
+      expect(mgr.__testInternals.depIndexDirty).toBe(false)
       expect(rebuildSpy).toHaveBeenCalled()
     })
   })

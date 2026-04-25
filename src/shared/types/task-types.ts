@@ -228,6 +228,35 @@ export interface TaskTemplate {
   isBuiltIn?: boolean | undefined
 }
 
+/**
+ * Input shape for `sprint:batchImport`.
+ *
+ * Single source of truth — IPC channel definition, the IPC handler, the
+ * preload API, and the service-side `batchImportTasks` all import from
+ * here. Defining the shape four times invited drift; in particular,
+ * `dependsOnIndices?: number[]` and `dependsOnIndices?: number[] | undefined`
+ * are distinct types under `exactOptionalPropertyTypes: true`, and the
+ * mismatch caused subtle typecheck failures whose error messages didn't
+ * point at the divergence.
+ *
+ * Optionality style: bare `?:` (no `| undefined`). Callers should omit the
+ * property when not needed, not pass an explicit `undefined`.
+ */
+export interface BatchImportTask {
+  title: string
+  repo: string
+  prompt?: string
+  spec?: string
+  status?: string
+  dependsOnIndices?: number[]
+  depType?: 'hard' | 'soft'
+  playgroundEnabled?: boolean
+  model?: string
+  tags?: string[]
+  priority?: number
+  templateName?: string
+}
+
 /** A claimed task with an optional template prompt prefix. */
 export interface ClaimedTask extends SprintTask {
   templatePromptPrefix: string | null

@@ -122,8 +122,13 @@ describe('task-state-machine', () => {
       expect(VALID_TRANSITIONS.cancelled).not.toContain('queued')
     })
 
-    it('should have empty transitions for cancelled (truly terminal)', () => {
-      expect(VALID_TRANSITIONS.cancelled).toHaveLength(0)
+    it('should allow cancelled → done (manual recovery escape hatch)', () => {
+      expect(VALID_TRANSITIONS.cancelled).toContain('done')
+    })
+
+    it('should allow failed → done and error → done (manual recovery escape hatches)', () => {
+      expect(VALID_TRANSITIONS.failed).toContain('done')
+      expect(VALID_TRANSITIONS.error).toContain('done')
     })
   })
 

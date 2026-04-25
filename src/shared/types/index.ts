@@ -52,6 +52,7 @@ export type {
   ReviseRequest,
   BatchOperation,
   BatchResult,
+  BatchImportTask,
   TaskOutputEventType,
   TaskOutputEvent,
   AutoReviewRule,

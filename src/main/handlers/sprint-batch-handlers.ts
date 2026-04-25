@@ -10,27 +10,13 @@ import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { validateTaskSpec } from '../services/spec-quality/index'
 import { TERMINAL_STATUSES, isTaskStatus } from '../../shared/task-state-machine'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import type { BatchImportTask } from '../../shared/types'
 import { getSettingJson } from '../settings'
 import { validateAndFilterPatch } from '../lib/patch-validation'
 
 export interface BatchHandlersDeps {
   onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
   repo?: ISprintTaskRepository
-}
-
-type BatchImportTask = {
-  title: string
-  repo: string
-  prompt?: string | undefined
-  spec?: string | undefined
-  status?: string | undefined
-  dependsOnIndices?: number[]
-  depType?: 'hard' | 'soft'
-  playgroundEnabled?: boolean | undefined
-  model?: string | undefined
-  tags?: string[] | undefined
-  priority?: number | undefined
-  templateName?: string | undefined
 }
 
 function isPlainObject(value: unknown): value is Record<string, unknown> {
@@ -164,8 +150,7 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
     return { results }
   })
 
-  safeHandle(
-    'sprint:batchImport',
+  safeHandle('sprint:batchImport',
     async (_e, tasks: BatchImportTask[]) => {
       const { batchImportTasks } = await import('../services/batch-import')
       const reposConfig = getSettingJson<Array<{ name: string; localPath: string }>>('repos') ?? []
