@@ -5,6 +5,7 @@ import type { ReviewService } from '../services/review-service'
 import type { ChatStreamDeps } from './review-assistant'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import type { EpicGroupService } from '../services/epic-group-service'
+import type { TaskStateService } from '../services/task-state-service'
 
 import { registerAgentHandlers } from './agent-handlers'
 import { registerGitHandlers } from './git-handlers'
@@ -37,6 +38,7 @@ import { registerTearoffHandlers } from '../tearoff-manager'
 export interface TerminalDeps {
   onStatusTerminal: TaskTerminalService['onStatusTerminal']
   dialog: DialogService
+  taskStateService: TaskStateService
 }
 
 export interface AppHandlerDeps {

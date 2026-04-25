@@ -316,25 +316,23 @@ export function createTaskWithValidation(
 
 import {
   TASK_STATUSES,
-  TERMINAL_STATUSES,
-  isValidTransition,
   isTaskStatus
 } from '../../shared/task-state-machine'
 import { isValidTaskId } from '../lib/validation'
 import { UPDATE_ALLOWLIST } from '../data/sprint-maintenance-facade'
 import { validateAndFilterPatch } from '../lib/patch-validation'
-import { prepareQueueTransition } from './task-state-service'
+import { prepareQueueTransition, type TaskStateService } from './task-state-service'
 
 export interface UpdateTaskFromUiDeps {
   logger: Logger
-  onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
+  taskStateService: TaskStateService
 }
 
 /**
  * Apply an IPC-originated task patch with the full UI safety pipeline:
- * id check, allowlist filtering, status narrowing, transition validation,
- * `queued`-transition policy (spec quality + dependency auto-block), and
- * the post-update terminal callback.
+ * id check, allowlist filtering, status narrowing, queued-transition policy
+ * (spec quality + dependency auto-block), and delegated status write via
+ * `TaskStateService.transition()` for any status change.
  *
  * Replaces the inline business logic that used to live in
  * `sprint-local.ts:sprintUpdateHandler`. Handlers now delegate here.
@@ -351,22 +349,31 @@ export async function updateTaskFromUi(
   let workingPatch = filtered
 
   const validatedStatus = narrowStatus(workingPatch.status)
-  if (validatedStatus) {
-    rejectInvalidTransition(id, validatedStatus)
-  }
 
   if (validatedStatus === 'queued') {
+    // prepareQueueTransition may redirect to 'blocked' if hard deps unsatisfied.
+    // The returned patch contains the final status + any additional fields.
     const { patch: finalPatch } = await prepareQueueTransition(id, workingPatch, {
       logger: deps.logger
     })
     workingPatch = finalPatch
   }
 
-  const result = updateTask(id, workingPatch)
-  if (validatedStatus && TERMINAL_STATUSES.has(validatedStatus)) {
-    deps.onStatusTerminal(id, validatedStatus)
+  if (workingPatch.status !== undefined) {
+    // Status is changing — route through TaskStateService for validation + terminal dispatch.
+    const finalStatus = narrowStatus(workingPatch.status)
+    if (!finalStatus) throw new Error('Status narrowing failed unexpectedly')
+    const { status: _dropped, ...nonStatusFields } = workingPatch
+    await deps.taskStateService.transition(id, finalStatus, {
+      fields: nonStatusFields,
+      caller: 'ui'
+    })
+    // Return the updated task so callers get the full row as before.
+    return mutations.getTask(id)
   }
-  return result
+
+  // No status change — plain field update, no transition logic needed.
+  return updateTask(id, workingPatch)
 }
 
 function narrowStatus(value: unknown): TaskStatus | undefined {
@@ -377,11 +384,4 @@ function narrowStatus(value: unknown): TaskStatus | undefined {
     )
   }
   return value
-}
-
-function rejectInvalidTransition(taskId: string, target: TaskStatus): void {
-  const current = mutations.getTask(taskId)
-  if (current && !isValidTransition(current.status, target)) {
-    throw new Error(`Invalid status transition: ${current.status} → ${target} for task ${taskId}`)
-  }
 }

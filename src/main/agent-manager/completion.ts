@@ -15,6 +15,7 @@ import type { TaskStatus } from '../../shared/task-state-machine'
 import { buildAgentEnv } from '../env-utils'
 import { execFileAsync } from '../lib/async-utils'
 import { findOrCreatePR as findOrCreatePRUtil } from '../lib/git-operations'
+import type { TaskStateService } from '../services/task-state-service'
 import {
   verifyWorktreeExists,
   detectAgentBranch,
@@ -49,6 +50,7 @@ export interface ResolveSuccessContext {
   retryCount: number
   repo: IAgentTaskRepository
   unitOfWork: IUnitOfWork
+  taskStateService: TaskStateService
   /**
    * Absolute path to the MAIN repo checkout (not the worktree). Required for
    * branch-tip verification — the tip check reads the branch ref via git log
@@ -105,7 +107,8 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
     retryCount,
     repo,
     unitOfWork,
-    repoPath
+    repoPath,
+    taskStateService
   } = opts
 
   const worktreeExists = await verifyWorktreeExists(
@@ -113,11 +116,19 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
     worktreePath,
     repo,
     logger,
-    onTaskTerminal
+    onTaskTerminal,
+    taskStateService
   )
   if (!worktreeExists) return
 
-  const branch = await detectAgentBranch(taskId, worktreePath, repo, logger, onTaskTerminal)
+  const branch = await detectAgentBranch(
+    taskId,
+    worktreePath,
+    repo,
+    logger,
+    onTaskTerminal,
+    taskStateService
+  )
   if (!branch) return
 
   const task = repo.getTask(taskId)
@@ -186,7 +197,8 @@ export async function resolveSuccess(opts: ResolveSuccessContext, logger: Logger
     unitOfWork,
     logger,
     onTaskTerminal,
-    evaluateAutoMerge
+    evaluateAutoMerge,
+    taskStateService
   )
 }
 

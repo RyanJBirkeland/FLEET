@@ -56,16 +56,26 @@ function makeRepo(overrides: Record<string, unknown> = {}) {
   }
 }
 
+function makeMockTaskStateService(repo: ReturnType<typeof makeRepo>) {
+  return {
+    transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+      repo.updateTask(taskId, { status, ...(ctx?.fields ?? {}) })
+    })
+  }
+}
+
 function makeContext(overrides: Partial<AutoMergeContext> = {}): AutoMergeContext {
+  const repo = makeRepo()
   return {
     taskId: 'task-1',
     title: 'Test task',
     branch: 'agent/test-task',
     worktreePath: '/tmp/worktrees/task-1',
-    repo: makeRepo() as unknown as AutoMergeContext['repo'],
+    repo: repo as unknown as AutoMergeContext['repo'],
     unitOfWork: { runInTransaction: (fn) => fn() },
     logger: makeLogger() as unknown as AutoMergeContext['logger'],
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
+    taskStateService: makeMockTaskStateService(repo) as unknown as AutoMergeContext['taskStateService'],
     ...overrides
   }
 }
@@ -154,7 +164,7 @@ describe('evaluateAutoMerge', () => {
   })
 
   describe('successful merge', () => {
-    it('transitions task to done and calls onTaskTerminal on successful merge', async () => {
+    it('transitions task to done via TaskStateService on successful merge', async () => {
       const ctx = makeContext()
       await evaluateAutoMerge(ctx)
 
@@ -167,11 +177,18 @@ describe('evaluateAutoMerge', () => {
           title: 'Test task'
         })
       )
+      // transition() is the single entry point for status writes
+      expect(ctx.taskStateService.transition).toHaveBeenCalledWith(
+        'task-1',
+        'done',
+        expect.objectContaining({ fields: expect.objectContaining({ worktree_path: null }) })
+      )
+      // The mock transition delegates to repo.updateTask for test verifiability
       expect(ctx.repo.updateTask).toHaveBeenCalledWith(
         'task-1',
         expect.objectContaining({ status: 'done', worktree_path: null })
       )
-      expect(ctx.onTaskTerminal).toHaveBeenCalledWith('task-1', 'done')
+      // onTaskTerminal is dispatched by TaskStateService's terminal dispatcher — not called directly
     })
 
     it('logs success after merge', async () => {

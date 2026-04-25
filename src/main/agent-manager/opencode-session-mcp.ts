@@ -35,6 +35,7 @@ import { registerEpicTools } from '../mcp-server/tools/epics'
 import { registerMetaTools } from '../mcp-server/tools/meta'
 import { wrapServerWithSafeToolHandlers } from '../mcp-server/safe-tool-handler'
 import { getConfiguredRepos } from '../paths'
+import { createTaskStateService } from '../services/task-state-service'
 import type { EpicGroupService } from '../services/epic-group-service'
 import type { Logger } from '../logger'
 
@@ -133,6 +134,11 @@ function buildMcpServer(epicService: EpicGroupService, logger: Logger): McpServe
 
   registerMetaTools(mcp, { getRepos: getConfiguredRepos })
 
+  const taskStateService = createTaskStateService({
+    terminalDispatcher: { dispatch: () => {} },
+    logger
+  })
+
   registerTaskTools(mcp, {
     listTasks,
     getTask,
@@ -146,6 +152,7 @@ function buildMcpServer(epicService: EpicGroupService, logger: Logger): McpServe
       ),
     getTaskChanges: (id, options) => getTaskChanges(id, options),
     onStatusTerminal: () => {},
+    taskStateService,
     logger
   })
 

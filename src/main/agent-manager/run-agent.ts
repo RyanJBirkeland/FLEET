@@ -33,6 +33,7 @@ import { sleep } from '../lib/async-utils'
 import { NOTES_MAX_LENGTH } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { extractFilesToChange } from './spec-parser'
+import type { TaskStateService } from '../services/task-state-service'
 
 export type { ConsumeMessagesResult }
 
@@ -81,12 +82,13 @@ export interface RunAgentSpawnDeps {
   tickId?: string | undefined
 }
 
-/** Sprint task data access. */
+/** Sprint task data access and status transition service. */
 export interface RunAgentDataDeps {
   repo: IAgentTaskRepository
   unitOfWork: IUnitOfWork
   logger: Logger
   metrics: MetricsCollector
+  taskStateService: TaskStateService
 }
 
 /** Terminal status notification. */
@@ -248,6 +250,7 @@ interface ResolveAgentExitContext {
   repo: IAgentTaskRepository
   unitOfWork: IUnitOfWork
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+  taskStateService: TaskStateService
   logger: Logger
 }
 
@@ -266,28 +269,31 @@ async function resolveAgentExit(ctx: ResolveAgentExitContext): Promise<void> {
 async function handleFastFailExhausted(ctx: ResolveAgentExitContext): Promise<void> {
   flushAgentEventBatcher()
   try {
-    ctx.repo.updateTask(ctx.task.id, {
-      status: 'error',
-      failure_reason: 'spawn',
-      completed_at: nowIso(),
-      notes: FAST_FAIL_EXHAUSTED_NOTE,
-      claimed_by: null,
-      needs_review: true
+    await ctx.taskStateService.transition(ctx.task.id, 'error', {
+      fields: {
+        failure_reason: 'spawn',
+        completed_at: nowIso(),
+        notes: FAST_FAIL_EXHAUSTED_NOTE,
+        claimed_by: null,
+        needs_review: true
+      },
+      caller: 'run-agent:fast-fail-exhausted'
     })
   } catch (err) {
     ctx.logger.error(
-      `[agent-manager] Failed to update task ${ctx.task.id} after fast-fail exhausted: ${err}`
+      `[agent-manager] Failed to transition task ${ctx.task.id} after fast-fail exhausted: ${err}`
     )
   }
-  await ctx.onTaskTerminal(ctx.task.id, 'error')
 }
 
 async function handleFastFailRequeue(ctx: ResolveAgentExitContext): Promise<void> {
   try {
-    ctx.repo.updateTask(ctx.task.id, {
-      status: 'queued',
-      fast_fail_count: (ctx.task.fast_fail_count ?? 0) + 1,
-      claimed_by: null
+    await ctx.taskStateService.transition(ctx.task.id, 'queued', {
+      fields: {
+        fast_fail_count: (ctx.task.fast_fail_count ?? 0) + 1,
+        claimed_by: null
+      },
+      caller: 'run-agent:fast-fail-requeue'
     })
   } catch (err) {
     ctx.logger.error(`[agent-manager] Failed to requeue fast-fail task ${ctx.task.id}: ${err}`)
@@ -396,7 +402,8 @@ async function resolveNormalExit(ctx: ResolveAgentExitContext): Promise<void> {
         retryCount: ctx.task.retry_count ?? 0,
         repo: ctx.repo,
         unitOfWork: ctx.unitOfWork,
-        repoPath: ctx.repoPath
+        repoPath: ctx.repoPath,
+        taskStateService: ctx.taskStateService
       },
       ctx.logger
     )
@@ -495,6 +502,7 @@ async function finalizeAgentRun(
     repo: deps.repo,
     unitOfWork: deps.unitOfWork,
     onTaskTerminal: deps.onTaskTerminal,
+    taskStateService: deps.taskStateService,
     logger: deps.logger
   })
 
@@ -594,22 +602,13 @@ export async function runAgent(
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err)
     logger.error(`[run-agent] ${errMsg}`)
-    try {
-      deps.repo.updateTask(task.id, {
-        status: 'error',
-        completed_at: nowIso(),
-        notes: errMsg,
-        claimed_by: null
+    await deps.taskStateService
+      .transition(task.id, 'error', {
+        fields: { completed_at: nowIso(), notes: errMsg, claimed_by: null },
+        caller: 'run-agent:pre-spawn-failure'
       })
-    } catch (updateErr) {
-      logger.error(
-        `[run-agent] Failed to persist pre-spawn failure for task ${task.id}: ${updateErr}`
-      )
-    }
-    await deps
-      .onTaskTerminal(task.id, 'error')
       .catch((terminalErr) =>
-        logger.warn(`[run-agent] onTaskTerminal failed for ${task.id}: ${terminalErr}`)
+        logger.warn(`[run-agent] pre-spawn transition failed for ${task.id}: ${terminalErr}`)
       )
     return
   }

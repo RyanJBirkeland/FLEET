@@ -21,7 +21,7 @@ import {
   TASK_LIST_DEFAULT_LIMIT,
   TASK_LIST_DEFAULT_OFFSET
 } from '../schemas'
-import { TERMINAL_STATUSES } from '../../../shared/task-state-machine'
+import { TERMINAL_STATUSES, isTaskStatus } from '../../../shared/task-state-machine'
 import type { TaskStatus } from '../../../shared/task-state-machine'
 import { jsonContent, safeToolResponse } from './response'
 
@@ -84,6 +84,8 @@ export interface TaskCommandPort {
    * The revival direction (terminal → queued/backlog) never triggers this.
    */
   onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
+  /** Central status-transition service — routes MCP status writes through TaskStateService. */
+  taskStateService: import('../../services/task-state-service').TaskStateService
 }
 
 /**
@@ -234,13 +236,29 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
           const { id, patch } = parseToolArgs(TaskUpdateSchema, rawArgs)
           const current = deps.getTask(id)
           const effectivePatch = buildEffectiveUpdatePatch(patch, current)
-          const row = deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
-          if (!row) {
-            deps.logger.debug(`mcp.tasks.update: task ${id} not found`)
+
+          if ('status' in effectivePatch && typeof effectivePatch.status === 'string' && isTaskStatus(effectivePatch.status)) {
+            // Status-changing write — route through TaskStateService for validation + terminal dispatch.
+            const { status, ...nonStatusFields } = effectivePatch
+            await deps.taskStateService.transition(id, status, {
+              fields: nonStatusFields as Record<string, unknown>,
+              caller: MCP_CALLER
+            })
+          } else {
+            // Non-status write — plain field update.
+            const row = deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
+            if (!row) {
+              deps.logger.debug(`mcp.tasks.update: task ${id} not found`)
+              throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
+            }
+          }
+
+          const updated = deps.getTask(id)
+          if (!updated) {
+            deps.logger.debug(`mcp.tasks.update: task ${id} not found after update`)
             throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
           }
-          await fireTerminalHookIfNeeded(deps, current, row)
-          return jsonContent(row)
+          return jsonContent(updated)
         },
         { schema: TaskUpdateSchema, logger: deps.logger }
       )
@@ -315,22 +333,6 @@ function buildEffectiveUpdatePatch(patch: TaskPatch, current: SprintTask | null)
   if (!('status' in patch) || !current) return { ...patch }
   if (!isRevivingTerminalTask(current.status, patch.status)) return { ...patch }
   return { ...patch, ...TERMINAL_STATE_RESET_PATCH }
-}
-
-/**
- * Fire `onStatusTerminal` when `tasks.update` drives a task into a terminal
- * status from a non-terminal one. The revival direction (terminal → queued or
- * terminal → backlog) is handled elsewhere — it is not a terminal *entry*.
- */
-async function fireTerminalHookIfNeeded(
-  deps: TaskToolsDeps,
-  pre: SprintTask | null,
-  post: SprintTask
-): Promise<void> {
-  if (!pre) return
-  if (!TERMINAL_STATUSES.has(post.status)) return
-  if (TERMINAL_STATUSES.has(pre.status)) return
-  await deps.onStatusTerminal(post.id, post.status)
 }
 
 /**

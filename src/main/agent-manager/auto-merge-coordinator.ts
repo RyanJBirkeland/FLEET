@@ -16,6 +16,7 @@ import { evaluateAutoMergePolicy } from './auto-merge-policy'
 import { executeSquashMerge } from '../lib/git-operations'
 import { getSettingJson } from '../settings'
 import { getRepoConfig } from '../paths'
+import type { TaskStateService } from '../services/task-state-service'
 
 function isAutoReviewRulesArray(u: unknown): u is AutoReviewRule[] {
   return Array.isArray(u)
@@ -30,10 +31,11 @@ export interface AutoMergeContext {
   unitOfWork: IUnitOfWork
   logger: Logger
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+  taskStateService: TaskStateService
 }
 
 export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
-  const { taskId, title, branch, worktreePath, repo, unitOfWork, logger, onTaskTerminal } = opts
+  const { taskId, title, branch, worktreePath, repo, unitOfWork, logger, taskStateService } = opts
   const rules = getSettingJson<AutoReviewRule[]>('autoReview.rules', isAutoReviewRulesArray)
 
   if (!rules || rules.length === 0) {
@@ -72,9 +74,8 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
     })
 
     if (mergeResult === 'merged') {
-      finalizeAutoMergeStatus(taskId, repo, unitOfWork, logger)
+      await finalizeAutoMergeStatus(taskId, repo, unitOfWork, logger, taskStateService)
       logger.info(`[completion] Task ${taskId} auto-merged successfully`)
-      await onTaskTerminal(taskId, 'done')
     } else if (mergeResult === 'dirty-main') {
       logger.warn(
         `[completion] Task ${taskId} auto-merge skipped: main repo has uncommitted changes — task remains in review`
@@ -106,23 +107,28 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
  * loud banner so the on-call operator knows exactly which task needs manual
  * status reconciliation.
  */
-function finalizeAutoMergeStatus(
+async function finalizeAutoMergeStatus(
   taskId: string,
   repo: IAgentTaskRepository,
-  unitOfWork: IUnitOfWork,
-  logger: Logger
-): void {
+  _unitOfWork: IUnitOfWork,
+  logger: Logger,
+  taskStateService: TaskStateService
+): Promise<void> {
   const reviewTask = repo.getTask(taskId)
-  const statusPatch: Record<string, unknown> = {
-    status: 'done',
+  const extraFields: Record<string, unknown> = {
     completed_at: nowIso(),
     worktree_path: null,
     ...(reviewTask?.duration_ms !== undefined ? { duration_ms: reviewTask.duration_ms } : {})
   }
 
   try {
-    unitOfWork.runInTransaction(() => {
-      repo.updateTask(taskId, statusPatch)
+    // transition() writes status + extraFields then dispatches the terminal
+    // handler (dependency resolution + metrics). The prior transaction wrapper
+    // was only needed to atomically pair the DB write with its audit trail,
+    // which updateTask already guarantees internally.
+    await taskStateService.transition(taskId, 'done', {
+      fields: extraFields,
+      caller: 'auto-merge'
     })
   } catch (err) {
     logger.error(

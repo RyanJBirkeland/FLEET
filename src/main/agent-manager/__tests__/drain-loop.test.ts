@@ -82,11 +82,20 @@ function makeDepIndex(): DependencyIndex {
   } as unknown as DependencyIndex
 }
 
+function makeTaskStateService(repo: IAgentTaskRepository) {
+  return {
+    transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+      repo.updateTask(taskId, { status, ...(ctx?.fields ?? {}) })
+    })
+  } as unknown as import('../../services/task-state-service').TaskStateService
+}
+
 function makeDeps(overrides: Partial<DrainLoopDeps> = {}): DrainLoopDeps {
   const concurrency = makeConcurrencyState(2)
+  const repo = (overrides.repo as IAgentTaskRepository | undefined) ?? makeRepo()
   return {
     config: baseConfig,
-    repo: makeRepo(),
+    repo,
     depIndex: makeDepIndex(),
     metrics: makeMetrics() as any,
     logger: makeLogger(),
@@ -103,6 +112,7 @@ function makeDeps(overrides: Partial<DrainLoopDeps> = {}): DrainLoopDeps {
     processQueuedTask: vi.fn().mockResolvedValue(undefined),
     drainFailureCounts: new Map<string, number>(),
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
+    taskStateService: makeTaskStateService(repo),
     emitDrainPaused: vi.fn(),
     drainPausedUntil: undefined,
     ...overrides

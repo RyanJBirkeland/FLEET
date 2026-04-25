@@ -81,7 +81,7 @@ const fakeTask = (overrides: Partial<SprintTask> = {}): SprintTask => ({
 })
 
 function fakeDeps(overrides: Partial<TaskToolsDeps> = {}): TaskToolsDeps {
-  return {
+  const deps: TaskToolsDeps = {
     listTasks: vi.fn(() => [fakeTask()]),
     getTask: vi.fn(() => fakeTask()),
     createTaskWithValidation: vi.fn(() => fakeTask()),
@@ -89,9 +89,19 @@ function fakeDeps(overrides: Partial<TaskToolsDeps> = {}): TaskToolsDeps {
     cancelTask: vi.fn(() => fakeTask({ status: 'cancelled' })),
     getTaskChanges: vi.fn(() => []),
     onStatusTerminal: vi.fn(() => Promise.resolve()),
+    taskStateService: null as unknown as TaskToolsDeps['taskStateService'],
     logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() },
     ...overrides
   }
+  // Provide a default taskStateService that delegates to the updateTask mock
+  if (!deps.taskStateService) {
+    deps.taskStateService = {
+      transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+        deps.updateTask(taskId, { status, ...(ctx?.fields ?? {}) } as any)
+      })
+    } as unknown as TaskToolsDeps['taskStateService']
+  }
+  return deps
 }
 
 describe('tasks.* write tools', () => {
@@ -380,44 +390,40 @@ describe('tasks.* write tools', () => {
     expect(body.data).toMatchObject({ id: 'missing' })
   })
 
-  it('tasks.update fires onStatusTerminal when entering a terminal status from non-terminal', async () => {
+  it('tasks.update routes terminal status changes through TaskStateService.transition', async () => {
     const deps = fakeDeps({
-      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' })),
-      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'done' }))
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' }))
     })
     const { server, call } = mockServer()
     registerTaskTools(server, deps)
     await call('tasks.update', { id: 't1', patch: { status: 'done' } })
-    expect(deps.onStatusTerminal).toHaveBeenCalledTimes(1)
-    expect(deps.onStatusTerminal).toHaveBeenCalledWith('t1', 'done')
+    expect(deps.taskStateService.transition).toHaveBeenCalledWith('t1', 'done', expect.anything())
+    // TaskStateService dispatches the terminal handler internally — onStatusTerminal is no longer called directly
   })
 
-  it('tasks.update does NOT fire onStatusTerminal on the revival path (terminal → queued)', async () => {
+  it('tasks.update routes non-terminal status through TaskStateService.transition', async () => {
     const deps = fakeDeps({
-      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'failed' })),
-      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'queued' }))
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' }))
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.update', { id: 't1', patch: { status: 'review' } })
+    expect(deps.taskStateService.transition).toHaveBeenCalledWith('t1', 'review', expect.anything())
+  })
+
+  it('tasks.update routes revival path (terminal → queued) through TaskStateService.transition', async () => {
+    const deps = fakeDeps({
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'failed' }))
     })
     const { server, call } = mockServer()
     registerTaskTools(server, deps)
     await call('tasks.update', { id: 't1', patch: { status: 'queued' } })
-    expect(deps.onStatusTerminal).not.toHaveBeenCalled()
+    expect(deps.taskStateService.transition).toHaveBeenCalledWith('t1', 'queued', expect.anything())
   })
 
-  it('tasks.update does NOT fire onStatusTerminal when already terminal (idempotent retry)', async () => {
+  it('tasks.update does NOT fire onStatusTerminal for non-terminal transitions (terminal dispatch is in TaskStateService)', async () => {
     const deps = fakeDeps({
-      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'failed' })),
-      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'error' }))
-    })
-    const { server, call } = mockServer()
-    registerTaskTools(server, deps)
-    await call('tasks.update', { id: 't1', patch: { status: 'error' } })
-    expect(deps.onStatusTerminal).not.toHaveBeenCalled()
-  })
-
-  it('tasks.update does NOT fire onStatusTerminal for non-terminal transitions', async () => {
-    const deps = fakeDeps({
-      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' })),
-      updateTask: vi.fn(() => fakeTask({ id: 't1', status: 'review' }))
+      getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' }))
     })
     const { server, call } = mockServer()
     registerTaskTools(server, deps)

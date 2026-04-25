@@ -11,6 +11,7 @@ import type { AgentManagerConfig, ActiveAgent } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { NOTES_MAX_LENGTH, DRAIN_PAUSE_ON_ENV_ERROR_MS } from './types'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { TaskStateService } from '../services/task-state-service'
 import type { DependencyIndex } from '../services/dependency-service'
 import type { MetricsCollector } from './metrics'
 import type { ConcurrencyState } from './concurrency'
@@ -55,6 +56,8 @@ export interface DrainLoopDeps {
   drainFailureCounts: Map<string, number>
   /** Called when a task is quarantined after repeated failures so dependency resolution runs. */
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+  /** Central status-transition service — used by applyQuarantine to route status writes. */
+  taskStateService: TaskStateService
   /** Called when drain pauses because of an environmental failure. */
   emitDrainPaused: (event: AgentManagerDrainPausedEvent) => void
   /** Unix-ms; when set and > Date.now(), the drain tick short-circuits. */
@@ -265,14 +268,18 @@ function applyQuarantine(taskId: string, note: string, deps: DrainLoopDeps): voi
   try {
     const currentTask = deps.repo.getTask(taskId)
     const status = quarantineStatusFor(currentTask?.status)
-    deps.repo.updateTask(taskId, { status, notes: note, claimed_by: null })
-    deps.drainFailureCounts.delete(taskId)
-    deps
-      .onTaskTerminal(taskId, status)
+    deps.taskStateService
+      .transition(taskId, status, {
+        fields: { notes: note, claimed_by: null },
+        caller: 'drain-loop:quarantine'
+      })
+      .then(() => {
+        // Clear the failure count only after a successful status write —
+        // if the write fails the count must stay so future ticks can re-quarantine.
+        deps.drainFailureCounts.delete(taskId)
+      })
       .catch((termErr) =>
-        deps.logger.warn(
-          `[agent-manager] onTerminal failed for quarantined task ${taskId}: ${termErr}`
-        )
+        deps.logger.warn(`[agent-manager] transition failed for quarantined task ${taskId}: ${termErr}`)
       )
   } catch (quarantineErr) {
     deps.logger.error(`[agent-manager] Failed to quarantine task ${taskId}: ${quarantineErr}`)

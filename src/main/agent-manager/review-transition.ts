@@ -8,6 +8,7 @@ import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { Logger } from '../logger'
 import { captureDiffSnapshot } from './diff-snapshot'
 import { nowIso } from '../../shared/time'
+import type { TaskStateService } from '../services/task-state-service'
 
 export interface TransitionToReviewOpts {
   taskId: string
@@ -17,6 +18,7 @@ export interface TransitionToReviewOpts {
   rebaseSucceeded: boolean
   repo: IAgentTaskRepository
   logger: Logger
+  taskStateService: TaskStateService
 }
 
 /**
@@ -24,7 +26,16 @@ export interface TransitionToReviewOpts {
  * Preserves worktree for human code review.
  */
 export async function transitionToReview(opts: TransitionToReviewOpts): Promise<void> {
-  const { taskId, worktreePath, rebaseNote, rebaseBaseSha, rebaseSucceeded, repo, logger } = opts
+  const {
+    taskId,
+    worktreePath,
+    rebaseNote,
+    rebaseBaseSha,
+    rebaseSucceeded,
+    repo,
+    logger,
+    taskStateService
+  } = opts
   const task = repo.getTask(taskId)
   let durationMs: number | undefined
   if (task?.started_at) {
@@ -44,18 +55,20 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
   }
 
   try {
-    repo.updateTask(taskId, {
-      status: 'review',
-      worktree_path: worktreePath,
-      claimed_by: null,
-      fast_fail_count: 0,
-      ...(durationMs !== undefined ? { duration_ms: durationMs } : {}),
-      ...(rebaseNote ? { notes: rebaseNote } : {}),
-      ...(diffSnapshotJson ? { review_diff_snapshot: diffSnapshotJson } : {}),
-      rebase_base_sha: rebaseBaseSha ?? null,
-      rebased_at: rebaseSucceeded ? nowIso() : null
+    await taskStateService.transition(taskId, 'review', {
+      fields: {
+        worktree_path: worktreePath,
+        claimed_by: null,
+        fast_fail_count: 0,
+        ...(durationMs !== undefined ? { duration_ms: durationMs } : {}),
+        ...(rebaseNote ? { notes: rebaseNote } : {}),
+        ...(diffSnapshotJson ? { review_diff_snapshot: diffSnapshotJson } : {}),
+        rebase_base_sha: rebaseBaseSha ?? null,
+        rebased_at: rebaseSucceeded ? nowIso() : null
+      },
+      caller: 'review-transition'
     })
   } catch (err) {
-    logger.error(`[completion] Failed to update task ${taskId} to review status: ${err}`)
+    logger.error(`[completion] Failed to transition task ${taskId} to review status: ${err}`)
   }
 }

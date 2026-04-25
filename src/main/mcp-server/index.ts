@@ -43,6 +43,7 @@ export interface McpServerConfig {
 export interface McpServerDeps {
   epicService: EpicGroupService
   onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
+  taskStateService: import('../services/task-state-service').TaskStateService
 }
 
 export interface McpServerHandle {
@@ -73,6 +74,7 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
       cancelTask: cancelTaskForMcp,
       getTaskChanges: (id, options) => getTaskChanges(id, options),
       onStatusTerminal: deps.onStatusTerminal,
+      taskStateService: deps.taskStateService,
       logger
     })
 

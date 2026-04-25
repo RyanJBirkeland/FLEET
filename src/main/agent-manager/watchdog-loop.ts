@@ -220,6 +220,9 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
     // until orphan-recovery resets it on the next startup.
     if (result.taskUpdate) {
       try {
+        // EP-1 note: result.taskUpdate may include a `status` field from watchdog-handler.ts.
+        // Migrating to TaskStateService.transition() here requires async handling and
+        // threading taskStateService through WatchdogLoopDeps. Deferred to EP-2.
         deps.repo.updateTask(agent.taskId, result.taskUpdate)
       } catch (err) {
         deps.logger.warn(

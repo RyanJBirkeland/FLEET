@@ -35,7 +35,11 @@ import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { getAgentLogInfo } from '../data/agent-queries'
 import { readLog } from '../agent-history'
 import { instantiateWorkflow } from '../services/workflow-engine'
-import { prepareUnblockTransition, forceTerminalOverride } from '../services/task-state-service'
+import {
+  prepareUnblockTransition,
+  forceTerminalOverride,
+  type TaskStateService
+} from '../services/task-state-service'
 
 const logger = createLogger('sprint-local')
 
@@ -93,6 +97,7 @@ function describeValue(value: unknown): string {
 export interface SprintLocalDeps {
   onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
   dialog: DialogService
+  taskStateService: TaskStateService
 }
 
 // --- Handler registration ---
@@ -132,7 +137,7 @@ export function registerSprintLocalHandlers(
     id: string,
     patch: Record<string, unknown>
   ): Promise<ReturnType<typeof updateTask>> =>
-    updateTaskFromUi(id, patch, { logger, onStatusTerminal: deps.onStatusTerminal })
+    updateTaskFromUi(id, patch, { logger, taskStateService: deps.taskStateService })
   safeHandle('sprint:update', sprintUpdateHandler, parseSprintUpdateArgs)
 
   safeHandle('sprint:delete', async (_e, id: string) => {
@@ -216,7 +221,8 @@ export function registerSprintLocalHandlers(
   safeHandle('sprint:unblockTask', async (_e, taskId: string) => {
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
     await prepareUnblockTransition(taskId)
-    return updateTask(taskId, { status: 'queued' })
+    await deps.taskStateService.transition(taskId, 'queued', { caller: 'sprint:unblockTask' })
+    return getTask(taskId)
   })
 
   safeHandle('sprint:getChanges', async (_e, taskId: string) => {

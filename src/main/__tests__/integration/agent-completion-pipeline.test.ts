@@ -131,12 +131,24 @@ function makeTaskRecord(overrides: Record<string, unknown> = {}) {
 // Tests
 // ---------------------------------------------------------------------------
 
+// Mock TaskStateService that delegates to the mocked updateTask for test assertions
+const mockTaskStateService = {
+  transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+    updateTaskMock(taskId, { status, ...(ctx?.fields ?? {}) })
+  })
+} as unknown as import('../../services/task-state-service').TaskStateService
+
 describe('Agent completion pipeline integration', () => {
   const logger = makeLogger()
   const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.mocked(mockTaskStateService.transition as ReturnType<typeof vi.fn>).mockImplementation(
+      async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+        updateTaskMock(taskId, { status, ...(ctx?.fields ?? {}) })
+      }
+    )
     updateTaskMock.mockReturnValue(null)
     getTaskMock.mockReturnValue(makeTaskRecord())
     onTaskTerminal.mockReset().mockResolvedValue(undefined)
@@ -165,7 +177,8 @@ describe('Agent completion pipeline integration', () => {
           title: 'Add login page',
           ghRepo: 'owner/repo',
           onTaskTerminal,
-          retryCount: 0
+          retryCount: 0,
+          taskStateService: mockTaskStateService
         },
         logger
       )
@@ -224,7 +237,8 @@ describe('Agent completion pipeline integration', () => {
           title: 'Add login page',
           ghRepo: 'owner/repo',
           onTaskTerminal,
-          retryCount: 0
+          retryCount: 0,
+          taskStateService: mockTaskStateService
         },
         logger
       )
@@ -277,7 +291,8 @@ describe('Agent completion pipeline integration', () => {
           title: 'Empty task',
           ghRepo: 'owner/repo',
           onTaskTerminal,
-          retryCount: 0
+          retryCount: 0,
+          taskStateService: mockTaskStateService
         },
         logger
       )
@@ -327,7 +342,8 @@ describe('Agent completion pipeline integration', () => {
           title: 'Empty task',
           ghRepo: 'owner/repo',
           onTaskTerminal,
-          retryCount: MAX_RETRIES
+          retryCount: MAX_RETRIES,
+          taskStateService: mockTaskStateService
         },
         logger
       )
@@ -365,7 +381,8 @@ describe('Agent completion pipeline integration', () => {
           ghRepo: 'owner/repo',
           onTaskTerminal,
           retryCount: 0,
-          agentSummary: 'I could not complete the task because the API was down'
+          agentSummary: 'I could not complete the task because the API was down',
+          taskStateService: mockTaskStateService
         },
         logger
       )
@@ -644,7 +661,8 @@ describe('Agent completion pipeline integration', () => {
           title: 'Parent task',
           ghRepo: 'owner/repo',
           onTaskTerminal: onTerminal,
-          retryCount: MAX_RETRIES
+          retryCount: MAX_RETRIES,
+          taskStateService: mockTaskStateService
         },
         logger
       )

@@ -40,7 +40,8 @@ import { getSetting, getSettingJson, getMcpEnabled, getMcpPort } from './setting
 import { createMcpServer, type McpServerHandle } from './mcp-server'
 import { onSettingChanged } from './events/settings-events'
 import { createEpicGroupService } from './services/epic-group-service'
-import { createTaskTerminalService } from './services/task-terminal-service'
+import { createTaskTerminalService, createPollerTerminalDispatcher } from './services/task-terminal-service'
+import { createTaskStateService } from './services/task-state-service'
 import { createStatusServer } from './services/status-server'
 import { createElectronDialogService } from './dialog-service'
 import { getTask, updateTask } from './services/sprint-service'
@@ -304,17 +305,18 @@ interface CoreStartupServices {
   repo: ReturnType<typeof createSprintTaskRepository>
   epicGroupService: ReturnType<typeof createEpicGroupService>
   terminalService: ReturnType<typeof createTaskTerminalService>
+  /** TaskStateService wired with the poller/manual terminal dispatcher. */
+  pollerTaskStateService: ReturnType<typeof createTaskStateService>
   terminalDeps: {
     onStatusTerminal: ReturnType<typeof createTaskTerminalService>['onStatusTerminal']
     dialog: ReturnType<typeof createElectronDialogService>
+    taskStateService: ReturnType<typeof createTaskStateService>
   }
 }
 
 /**
- * Wires the repo, EpicGroupService, TaskTerminalService, and the pollers
- * that every other startup stage depends on. Runs the DB watcher, the
- * background service init, the PR pollers, and the periodic cleanup
- * scheduler — the low-level infrastructure that sits behind everything.
+ * Wires the repo, EpicGroupService, TaskTerminalService, TaskStateService,
+ * and the pollers that every other startup stage depends on.
  */
 function initCoreServices(): CoreStartupServices {
   const stopDbWatcher = startDbWatcher()
@@ -339,16 +341,26 @@ function initCoreServices(): CoreStartupServices {
     runInTransaction: (fn) => getDb().transaction(fn)(),
     logger: createLogger('task-terminal')
   })
+
+  // TaskStateService for IPC handlers, review services, and the PR poller path.
+  // Uses the poller dispatcher so terminal status changes schedule dependency
+  // resolution via the batched setTimeout(0) approach (vs. agent-manager's inline approach).
+  const pollerTaskStateService = createTaskStateService({
+    terminalDispatcher: createPollerTerminalDispatcher(terminalService),
+    logger: createLogger('task-state')
+  })
+
   const dialogService = createElectronDialogService()
   const terminalDeps = {
     onStatusTerminal: terminalService.onStatusTerminal,
-    dialog: dialogService
+    dialog: dialogService,
+    taskStateService: pollerTaskStateService
   }
 
   startPrPollers(terminalDeps)
   setupCleanupTasks()
 
-  return { repo, epicGroupService, terminalService, terminalDeps }
+  return { repo, epicGroupService, terminalService, pollerTaskStateService, terminalDeps }
 }
 
 /**
@@ -403,7 +415,8 @@ function wireAgentManagerAndMcp(
     const handle = createMcpServer(
       {
         epicService: core.epicGroupService,
-        onStatusTerminal: core.terminalService.onStatusTerminal
+        onStatusTerminal: core.terminalService.onStatusTerminal,
+        taskStateService: core.pollerTaskStateService
       },
       { port }
     )

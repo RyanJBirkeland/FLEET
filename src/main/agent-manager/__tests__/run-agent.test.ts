@@ -185,7 +185,22 @@ const mockRepo: IAgentTaskRepository = {
   getGroupsWithDependencies: vi.fn().mockReturnValue([])
 }
 
+// TERMINAL_STATUSES for the mock dispatcher
+const TERMINAL_STATUS_SET = new Set(['done', 'cancelled', 'failed', 'error'])
+
 function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
+  const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
+  const taskStateService = {
+    transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+      // Delegate to mockRepo.updateTask so existing test assertions keep working
+      ;(mockRepo.updateTask as ReturnType<typeof vi.fn>)(taskId, { status, ...(ctx?.fields ?? {}) })
+      // Simulate terminal dispatch for terminal statuses so onTaskTerminal assertions keep working
+      if (TERMINAL_STATUS_SET.has(status)) {
+        await onTaskTerminal(taskId, status)
+      }
+    })
+  } as unknown as import('../../../services/task-state-service').TaskStateService
+
   return {
     activeAgents: new Map<string, ActiveAgent>(),
     defaultModel: 'claude-sonnet-4-5',
@@ -196,10 +211,11 @@ function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
       debug: vi.fn(),
       event: vi.fn()
     },
-    onTaskTerminal: vi.fn().mockResolvedValue(undefined),
+    onTaskTerminal,
     repo: mockRepo,
     unitOfWork: { runInTransaction: (fn) => fn() },
     metrics: { increment: vi.fn(), recordWatchdogVerdict: vi.fn(), setLastDrainDuration: vi.fn(), recordAgentDuration: vi.fn(), snapshot: vi.fn().mockReturnValue({}), reset: vi.fn() },
+    taskStateService,
     ...overrides
   }
 }
@@ -695,7 +711,7 @@ describe('runAgent — updateTask.catch error handlers', () => {
     const deps = makeDeps()
     await runAgent(makeTask({ fast_fail_count: 3 }), worktree, repoPath, deps)
     expect(deps.logger.error).toHaveBeenCalledWith(
-      expect.stringContaining('Failed to update task task-1 after fast-fail exhausted')
+      expect.stringContaining('Failed to transition task task-1 after fast-fail exhausted')
     )
   })
   it('logs error when updateTask rejects in fast-fail-requeue path', async () => {

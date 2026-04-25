@@ -285,6 +285,17 @@ export interface UpdateTaskOptions {
   caller?: string
 }
 
+/**
+ * NOTE: `updateTask` is NOT the primary enforcement point for status transitions.
+ * All `sprint_tasks.status` writes must go through `TaskStateService.transition()`
+ * (src/main/services/task-state-service.ts), which validates via `isValidTransition`,
+ * persists via this function, and dispatches to the `TerminalDispatcher` port.
+ *
+ * The `enforceTransitionCheck` flag in `writeTaskUpdate` provides defense-in-depth
+ * only — it fires when code bypasses `TaskStateService`. New callers must not call
+ * `updateTask({ status })` directly; use `TaskStateService.transition()` instead.
+ */
+
 export function updateTask(
   id: string,
   patch: Record<string, unknown>,
@@ -404,9 +415,14 @@ function filterAllowlistedEntries(
 }
 
 /**
- * Throws a user-visible "Invalid transition" error when the requested status
- * change is not permitted by the state machine. Manual-override callers skip
- * this guard via `options.enforceTransitionCheck === false`.
+ * Defense-in-depth assertion: throws when an invalid status transition reaches
+ * the data layer. Primary enforcement lives in `TaskStateService.transition()`.
+ * This guard fires only when code bypasses `TaskStateService` and calls
+ * `updateTask` with a `status` field directly — protecting DB integrity if
+ * a call site is missed during the EP-1 migration.
+ *
+ * Manual-override callers (`forceUpdateTask`) skip this via
+ * `options.enforceTransitionCheck === false`.
  */
 function enforceTransitionOrThrow(
   taskId: string,
@@ -417,7 +433,9 @@ function enforceTransitionOrThrow(
   if (!isTaskStatus(currentStatus)) return
   const validation = validateTransition(currentStatus, nextStatus)
   if (!validation.ok) {
-    throw new Error(`[sprint-queries] Invalid transition for task ${taskId}: ${validation.reason}`)
+    throw new Error(
+      `[sprint-task-crud] Bypass-prevention: status write for task ${taskId} rejected at data layer — ${validation.reason}. Route through TaskStateService.transition() instead.`
+    )
   }
 }
 

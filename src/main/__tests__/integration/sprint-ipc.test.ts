@@ -265,7 +265,18 @@ describe('Sprint IPC handlers — integration', () => {
     registeredHandlers.clear()
     const mockDeps = {
       onStatusTerminal: vi.fn(),
-      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
+      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() },
+      taskStateService: {
+        transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+          // Call through to the mocked updateTask so existing test assertions keep working.
+          // updateTask mock returns the "expected updated task" which we then feed back to getTask.
+          const patchResult = mockUpdateTask(taskId, { status, ...(ctx?.fields ?? {}) })
+          if (patchResult) {
+            // Make the next getTask call return the updated row
+            mockGetTask.mockReturnValueOnce(patchResult)
+          }
+        })
+      } as unknown as import('../../services/task-state-service').TaskStateService
     }
     registerSprintLocalHandlers(mockDeps)
   })
@@ -538,7 +549,8 @@ describe('Sprint IPC handlers — integration', () => {
       const result = await invoke('sprint:unblockTask', 'task-blk')
 
       expect(result).toEqual(unblocked)
-      expect(mockUpdateTask).toHaveBeenCalledWith('task-blk', { status: 'queued' }, undefined)
+      // transition() is the entry point; it delegates to updateTask for test verifiability
+      expect(mockUpdateTask).toHaveBeenCalledWith('task-blk', { status: 'queued' })
     })
 
     it('throws if task is not blocked', async () => {

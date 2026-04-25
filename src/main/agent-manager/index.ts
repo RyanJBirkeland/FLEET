@@ -5,6 +5,7 @@ import type { SprintTask } from '../../shared/types/task-types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { computeDepsFingerprint, refreshDependencyIndex } from './dependency-refresher'
 import { handleTaskTerminal } from './terminal-handler'
+import { createTaskStateService, type TaskStateService } from '../services/task-state-service'
 import { EXECUTOR_ID, INITIAL_DRAIN_DEFER_MS } from './types'
 import { makeConcurrencyState, availableSlots, type ConcurrencyState } from './concurrency'
 import { recoverOrphans } from './orphan-recovery'
@@ -145,6 +146,7 @@ export class AgentManagerImpl implements AgentManager {
   // ---- Injected deps ----
   private readonly runAgentDeps: RunAgentDeps
   private readonly unitOfWork: IUnitOfWork
+  private readonly _taskStateService: TaskStateService
 
   // `config` is mutable so `reloadConfig()` can hot-update runtime-safe fields.
   // `worktreeBase` is never mutated after construction.
@@ -165,7 +167,19 @@ export class AgentManagerImpl implements AgentManager {
     this._circuitBreaker = new CircuitBreaker(logger)
     this.unitOfWork = unitOfWork
 
-    // Build runAgentDeps with bound onTaskTerminal
+    // Build the agent-manager TaskStateService.
+    // The dispatcher delegates to this.onTaskTerminal which sets _depIndexDirty
+    // and calls handleTaskTerminal — preserving the existing pipeline-agent
+    // terminal semantics (metrics, dep resolution, dep-index rebuild).
+    const agentTerminalDispatcher = {
+      dispatch: (taskId: string, status: TaskStatus) => this.onTaskTerminal(taskId, status)
+    }
+    this._taskStateService = createTaskStateService({
+      terminalDispatcher: agentTerminalDispatcher,
+      logger
+    })
+
+    // Build runAgentDeps with bound onTaskTerminal and taskStateService
     this.runAgentDeps = {
       activeAgents: this._activeAgents,
       defaultModel: config.defaultModel,
@@ -174,6 +188,7 @@ export class AgentManagerImpl implements AgentManager {
       repo,
       unitOfWork,
       metrics: this._metrics,
+      taskStateService: this._taskStateService,
       worktreeBase: config.worktreeBase,
       onSpawnSuccess: () => {
         this._circuitBreaker.recordSuccess()
@@ -270,6 +285,9 @@ export class AgentManagerImpl implements AgentManager {
         // validateTaskForRun and handleSpawnFailure already do this on their
         // own code paths — this catch handles any remaining gap (e.g. an
         // unexpected throw before either of those paths is reached).
+        // EP-1 note: this is a last-resort safety net for unexpected errors before
+        // or after spawnAndWireAgent — using repo.updateTask directly avoids a
+        // circular-service dependency in the error path.
         try {
           this.repo.updateTask(task.id, { status: 'error', claimed_by: null, notes: String(err) })
         } catch (updateErr) {
@@ -397,6 +415,7 @@ export class AgentManagerImpl implements AgentManager {
       processQueuedTask: (raw, map) => this._processQueuedTask(raw, map, drainDeps.tickId),
       drainFailureCounts: this._drainFailureCounts,
       onTaskTerminal: this.onTaskTerminal.bind(this),
+      taskStateService: this._taskStateService,
       drainPausedUntil: this._drainPausedUntil,
       emitDrainPaused: (event) => {
         this._drainPausedUntil = event.pausedUntil

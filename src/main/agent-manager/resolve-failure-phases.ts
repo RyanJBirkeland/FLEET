@@ -70,6 +70,8 @@ export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): bo
       // Exponential backoff: 30s, 60s, 120s, capped at 5 minutes
       const backoffMs = calculateRetryBackoff(retryCount)
       const nextEligibleAt = new Date(Date.now() + backoffMs).toISOString()
+      // EP-1 note: these writes bypass TaskStateService because resolveFailure is synchronous.
+      // Migrating them requires making this function async (breaking change). Deferred to EP-2.
       repo.updateTask(taskId, {
         status: 'queued',
         retry_count: retryCount + 1,
@@ -80,6 +82,7 @@ export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): bo
       })
       return false // not terminal
     } else {
+      // EP-1 note: same deferral as the non-terminal branch above.
       repo.updateTask(taskId, {
         status: 'failed',
         completed_at: nowIso(),

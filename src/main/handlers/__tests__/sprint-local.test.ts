@@ -185,6 +185,25 @@ import { getRepoPaths as _getRepoPathsFromPaths } from '../../paths'
 
 const mockEvent = {} as IpcMainInvokeEvent
 
+function makeMockDeps() {
+  return {
+    onStatusTerminal: vi.fn(),
+    dialog: {
+      showSaveDialog: vi.fn(),
+      showOpenDialog: vi.fn()
+    },
+    taskStateService: {
+      transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
+        // Delegate to the mocked updateTask so existing test assertions keep working
+        vi.mocked(_updateTask)(taskId, { status, ...(ctx?.fields ?? {}) })
+        // Update getTask mock to return the post-transition task
+        const current = vi.mocked(_getTask).mock.results.slice(-1)[0]?.value
+        if (current) vi.mocked(_getTask).mockReturnValueOnce({ ...current, status })
+      })
+    } as unknown as import('../sprint-local').SprintLocalDeps['taskStateService']
+  }
+}
+
 /** Helper: capture handler registered for a given channel */
 function captureHandler(channel: string): (...args: any[]) => any {
   let captured: ((...args: any[]) => any) | undefined
@@ -193,13 +212,7 @@ function captureHandler(channel: string): (...args: any[]) => any {
     if (ch === channel) captured = handler as (...args: any[]) => any
   })
 
-  const mockDeps = {
-    onStatusTerminal: vi.fn(),
-    dialog: {
-      showSaveDialog: vi.fn(),
-      showOpenDialog: vi.fn()
-    }
-  }
+  const mockDeps = makeMockDeps()
   registerSprintLocalHandlers(mockDeps)
 
   if (!captured) throw new Error(`No handler captured for channel "${channel}"`)
@@ -212,20 +225,12 @@ describe('registerSprintLocalHandlers', () => {
   })
 
   it('registers 17 handlers', () => {
-    const mockDeps = {
-      onStatusTerminal: vi.fn(),
-      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
-    }
-    registerSprintLocalHandlers(mockDeps)
+    registerSprintLocalHandlers(makeMockDeps())
     expect(safeHandle).toHaveBeenCalledTimes(17)
   })
 
   it('registers the expected channel names', () => {
-    const mockDeps = {
-      onStatusTerminal: vi.fn(),
-      dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() }
-    }
-    registerSprintLocalHandlers(mockDeps)
+    registerSprintLocalHandlers(makeMockDeps())
     const channels = vi.mocked(safeHandle).mock.calls.map(([ch]) => ch)
     expect(channels).toContain('sprint:list')
     expect(channels).toContain('sprint:create')
@@ -351,10 +356,10 @@ describe('sprint:update handler', () => {
     await handler(mockEvent, '1', { status: 'queued' })
 
     // Since deps are satisfied, patch should not be changed to blocked
+    // (transition() delegates to updateTask in mock; third arg is omitted by mock)
     expect(_updateTask).toHaveBeenCalledWith(
       '1',
-      { status: 'queued', needs_review: false },
-      undefined
+      { status: 'queued', needs_review: false }
     )
   })
 
@@ -384,8 +389,7 @@ describe('sprint:update handler', () => {
 
     expect(_updateTask).toHaveBeenCalledWith(
       '1',
-      expect.objectContaining({ status: 'blocked' }),
-      undefined
+      expect.objectContaining({ status: 'blocked' })
     )
   })
 
@@ -747,10 +751,10 @@ describe('sprint:update spec validation on queue transition', () => {
 
     const handler = captureHandler('sprint:update')
     const result = await handler(mockEvent, 'abc', { status: 'queued' })
-    expect(result).toEqual({ id: 'abc', status: 'queued' })
+    expect(result).toMatchObject({ id: 'abc', status: 'queued' })
   })
 
-  it('does NOT trigger spec validation for non-queued transitions, but DOES check state machine', async () => {
+  it('does NOT trigger spec validation for non-queued transitions', async () => {
     // active → done is a valid transition — should succeed without spec validation
     vi.mocked(_getTask).mockReturnValue({
       id: 'abc',
@@ -764,8 +768,7 @@ describe('sprint:update spec validation on queue transition', () => {
     const handler = captureHandler('sprint:update')
     await handler(mockEvent, 'abc', { status: 'done' })
 
-    // State machine check IS called (getTask called for transition validation)
-    expect(_getTask).toHaveBeenCalled()
+    // State machine validation happens inside TaskStateService.transition() — not directly here
     // But spec quality validation is NOT called for non-queued transitions
     expect(mockValidateFull).not.toHaveBeenCalled()
   })

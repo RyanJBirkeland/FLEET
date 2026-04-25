@@ -27,6 +27,7 @@ import { transitionToReview } from './review-transition'
 import type { SprintTask } from '../../shared/types/task-types'
 import { buildCommitMessage } from './commit-message'
 import { NO_COMMITS_NOTE } from './failure-messages'
+import type { TaskStateService } from '../services/task-state-service'
 
 export interface RebaseOutcome {
   rebaseNote: string | undefined
@@ -185,7 +186,8 @@ export async function failTaskWithError(
   notes: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
+  taskStateService?: TaskStateService
 ): Promise<void> {
   logger.error(`[completion] ${message}`)
 
@@ -197,19 +199,27 @@ export async function failTaskWithError(
   broadcastCoalesced('agent:event', { agentId: taskId, event })
 
   try {
-    repo.updateTask(taskId, {
-      status: 'error',
-      completed_at: nowIso(),
-      notes,
-      claimed_by: null
-    })
+    if (taskStateService) {
+      await taskStateService.transition(taskId, 'error', {
+        fields: { completed_at: nowIso(), notes, claimed_by: null },
+        caller: 'completion:failTaskWithError'
+      })
+    } else {
+      // Fallback: direct write + manual terminal notification for callers that have
+      // not yet been migrated to inject TaskStateService.
+      repo.updateTask(taskId, {
+        status: 'error',
+        completed_at: nowIso(),
+        notes,
+        claimed_by: null
+      })
+      await onTaskTerminal(taskId, 'error')
+    }
   } catch (e) {
     // DB failure after an already-error path: log as error but do not re-throw —
-    // onTaskTerminal must still fire so dependency resolution and metrics run.
-    logger.error(`[completion] Failed to update task ${taskId} after error: ${e}`)
+    // so dependency resolution and metrics always run.
+    logger.error(`[completion] Failed to transition task ${taskId} to error: ${e}`)
   }
-
-  await onTaskTerminal(taskId, 'error')
 }
 
 async function detectBranch(worktreePath: string): Promise<string> {
@@ -226,7 +236,8 @@ export async function verifyWorktreeExists(
   worktreePath: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
+  taskStateService?: TaskStateService
 ): Promise<boolean> {
   if (existsSync(worktreePath)) {
     return true
@@ -237,7 +248,8 @@ export async function verifyWorktreeExists(
     `Worktree evicted before completion (${worktreePath}). Use ~/worktrees/ instead of /tmp/.`,
     repo,
     logger,
-    onTaskTerminal
+    onTaskTerminal,
+    taskStateService
   )
   return false
 }
@@ -247,7 +259,8 @@ export async function detectAgentBranch(
   worktreePath: string,
   repo: IAgentTaskRepository,
   logger: Logger,
-  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
+  taskStateService?: TaskStateService
 ): Promise<string | null> {
   let branch: string
   try {
@@ -259,7 +272,8 @@ export async function detectAgentBranch(
       'Failed to detect branch',
       repo,
       logger,
-      onTaskTerminal
+      onTaskTerminal,
+      taskStateService
     )
     return null
   }
@@ -271,7 +285,8 @@ export async function detectAgentBranch(
       'Empty branch name',
       repo,
       logger,
-      onTaskTerminal
+      onTaskTerminal,
+      taskStateService
     )
     return null
   }
@@ -453,6 +468,9 @@ async function failTaskExhaustedNoCommits(
       : undefined
 
   try {
+    // EP-1 note: migrating to taskStateService.transition() here would require adding
+    // taskStateService to the CommitCheckContext, changing this function to async, and
+    // updating all callers. Deferred to EP-2 completion-path refactoring.
     repo.updateTask(taskId, {
       status: 'failed',
       completed_at: nowIso(),
@@ -488,7 +506,9 @@ export async function transitionTaskToReview(
     unitOfWork: IUnitOfWork
     logger: Logger
     onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
-  }) => Promise<void>
+    taskStateService: TaskStateService
+  }) => Promise<void>,
+  taskStateService: TaskStateService
 ): Promise<void> {
   logger.info(
     `[completion] Task ${taskId}: agent finished with commits on branch ${branch} — transitioning to review`
@@ -501,7 +521,8 @@ export async function transitionTaskToReview(
     rebaseBaseSha: rebaseOutcome.rebaseBaseSha,
     rebaseSucceeded: rebaseOutcome.rebaseSucceeded,
     repo,
-    logger
+    logger,
+    taskStateService
   })
 
   await attemptAutoMerge({
@@ -512,7 +533,8 @@ export async function transitionTaskToReview(
     repo,
     unitOfWork,
     logger,
-    onTaskTerminal
+    onTaskTerminal,
+    taskStateService
   })
 
   // The task enters 'review' status to await human inspection — this is NOT a terminal state.

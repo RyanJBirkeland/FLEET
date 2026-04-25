@@ -28,6 +28,8 @@ export async function recoverOrphans(
     // Re-queue: clear claimed_by so drain loop or external runner can pick it up.
     // Do NOT increment retry_count — orphaning is a process crash, not a task failure.
     // retry_count is only incremented by agent failure paths in completion.ts.
+    // EP-1 note: startup recovery runs before AgentManager is constructed, so
+    // TaskStateService is not available here. Deferred to EP-2.
     repo.updateTask(task.id, {
       status: 'queued',
       claimed_by: null,
