@@ -328,17 +328,18 @@ export async function setupWorktree(
         }
       }
     } catch (err) {
-      // Clean up on failure
+      // Clean up the worktree directory on setup failure (best effort).
+      // The lock is released in the finally block below.
       try {
         rmSync(worktreePath, { recursive: true, force: true })
       } catch {
         /* best effort */
       }
-      releaseLock(worktreeBase, repoPath, log)
       throw err
+    } finally {
+      releaseLock(worktreeBase, repoPath, log)
     }
 
-    releaseLock(worktreeBase, repoPath, log)
     return { worktreePath, branch }
   } finally {
     // Always release the disk reservation whether setup succeeded or failed.
