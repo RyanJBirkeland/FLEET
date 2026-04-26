@@ -176,7 +176,8 @@ import {
   claimTask as _claimTask,
   getHealthCheckTasks as _getHealthCheckTasks
 } from '../../data/sprint-queries'
-import { broadcast } from '../../broadcast'
+import { setSprintBroadcaster } from '../../services/sprint-mutation-broadcaster'
+const mockBroadcastFn = vi.fn()
 import { getSettingJson } from '../../settings'
 import { getAgentLogInfo } from '../../data/agent-queries'
 import { readLog } from '../../agent-history'
@@ -222,6 +223,8 @@ function captureHandler(channel: string): (...args: any[]) => any {
 describe('registerSprintLocalHandlers', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockBroadcastFn.mockReset()
+    setSprintBroadcaster(mockBroadcastFn)
   })
 
   it('registers 18 handlers', () => {
@@ -253,6 +256,8 @@ describe('registerSprintLocalHandlers', () => {
 describe('sprint:list handler', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockBroadcastFn.mockReset()
+    setSprintBroadcaster(mockBroadcastFn)
   })
 
   it('returns tasks from listTasksRecent', async () => {
@@ -297,7 +302,7 @@ describe('sprint:create handler', () => {
     vi.runAllTimers()
 
     expect(_createTask).toHaveBeenCalledWith(input)
-    expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
+    expect(mockBroadcastFn).toHaveBeenCalled()
     expect(result).toEqual(created)
   })
 })
@@ -428,7 +433,7 @@ describe('sprint:delete handler', () => {
 
     vi.runAllTimers()
     expect(_deleteTask).toHaveBeenCalledWith('1')
-    expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
+    expect(mockBroadcastFn).toHaveBeenCalled()
     expect(result).toEqual({ ok: true })
   })
 
@@ -440,7 +445,7 @@ describe('sprint:delete handler', () => {
     await expect(handler(mockEvent, 'nonexistent')).rejects.toThrow('Task nonexistent not found')
 
     expect(_deleteTask).not.toHaveBeenCalled()
-    expect(broadcast).not.toHaveBeenCalled()
+    expect(mockBroadcastFn).not.toHaveBeenCalled()
   })
 })
 
