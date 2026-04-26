@@ -259,7 +259,8 @@ export async function consumeMessages(
           emitAgentEvent(agentRunId, {
             type: 'agent:error',
             message: turnsError.message,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            taskId: task.id
           })
           flushAgentEventBatcher()
           return { exitCode, lastAgentOutput, streamError: turnsError, pendingPlaygroundPaths }
@@ -278,7 +279,8 @@ export async function consumeMessages(
         emitAgentEvent(agentRunId, {
           type: 'agent:error',
           message: budgetError.message,
-          timestamp: Date.now()
+          timestamp: Date.now(),
+          taskId: task.id
         })
         flushAgentEventBatcher()
         return {
