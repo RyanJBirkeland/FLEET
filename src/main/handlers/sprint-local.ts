@@ -81,6 +81,20 @@ function parseSprintCreateArgs(args: unknown[]): [CreateTaskInput] {
   return [task as unknown as CreateTaskInput]
 }
 
+export function parseCreateWorkflowArgs(args: unknown[]): [WorkflowTemplate] {
+  const [template] = args
+  if (!isPlainObject(template)) {
+    throw new Error(`sprint:createWorkflow template must be a plain object; got ${describeValue(template)}`)
+  }
+  if (typeof template.name !== 'string' || template.name.trim() === '') {
+    throw new Error('sprint:createWorkflow template.name must be a non-empty string')
+  }
+  if (!Array.isArray(template.tasks)) {
+    throw new Error('sprint:createWorkflow template.tasks must be an array')
+  }
+  return [template as unknown as WorkflowTemplate]
+}
+
 function isPlainObject(value: unknown): value is Record<string, unknown> {
   return (
     typeof value === 'object' &&
@@ -100,6 +114,8 @@ export interface SprintLocalDeps {
   onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
   dialog: DialogService
   taskStateService: TaskStateService
+  /** When present, `sprint:forceReleaseClaim` aborts the running agent before re-queuing. */
+  cancelAgent?: (taskId: string) => Promise<void>
 }
 
 // --- Handler registration ---
@@ -118,7 +134,9 @@ export function registerSprintLocalHandlers(
     parseSprintCreateArgs
   )
 
-  safeHandle('sprint:createWorkflow', async (_e, template: WorkflowTemplate) => {
+  safeHandle(
+    'sprint:createWorkflow',
+    async (_e, template: WorkflowTemplate) => {
     const result = instantiateWorkflow(template, effectiveRepo)
 
     if (result.errors.length > 0) {
@@ -132,7 +150,9 @@ export function registerSprintLocalHandlers(
       errors: result.errors,
       success: result.errors.length === 0
     }
-  })
+  },
+    parseCreateWorkflowArgs
+  )
 
   const sprintUpdateHandler = async (
     _e: Electron.IpcMainInvokeEvent,
@@ -257,9 +277,10 @@ export function registerSprintLocalHandlers(
     if (task.status !== 'active') {
       throw new Error(`Cannot force-release a task with status ${task.status} — only active tasks can be released`)
     }
-    // TODO(audit T-10): also abort the running agent before re-queue. Out of scope for EP-1
-    // (which only routes the status write through TaskStateService). The agent process can
-    // continue running against the now-queued task until it terminates naturally.
+    // Abort the running agent before re-queuing so it does not continue
+    // consuming API credits or commit to a task that is no longer claimed.
+    // No-op when no agent is currently running for this task.
+    await deps.cancelAgent?.(taskId)
     resetTaskForRetry(taskId)
     await deps.taskStateService.transition(taskId, 'queued', {
       fields: { notes: null, agent_run_id: null },

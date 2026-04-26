@@ -179,9 +179,9 @@ describe('Review handlers', () => {
     registerReviewHandlers(mockDeps)
 
     expect(safeHandle).toHaveBeenCalledTimes(13)
-    expect(safeHandle).toHaveBeenCalledWith('review:getDiff', expect.any(Function))
-    expect(safeHandle).toHaveBeenCalledWith('review:getCommits', expect.any(Function))
-    expect(safeHandle).toHaveBeenCalledWith('review:getFileDiff', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('review:getDiff', expect.any(Function), expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('review:getCommits', expect.any(Function), expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('review:getFileDiff', expect.any(Function), expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:mergeLocally', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:createPr', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('review:requestRevision', expect.any(Function))

@@ -9,6 +9,8 @@
  * call the service, and return results.
  */
 import { safeHandle } from '../ipc-utils'
+import type { IpcArgsParser } from '../ipc-utils'
+import type { IpcChannelMap } from '../../shared/ipc-channels'
 import { isValidTaskId } from '../lib/validation'
 import { createLogger } from '../logger'
 import { getSettingJson } from '../settings'
@@ -25,9 +27,52 @@ import {
   getReviewCommits,
   getReviewFileDiff
 } from '../services/review-query-service'
+import {
+  validateWorktreePath,
+  validateFilePath,
+  validateGitRef
+} from '../lib/review-paths'
 import { shipBatch } from '../services/review-ship-batch'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
+
+export function parseReviewWorktreeArgs(
+  args: unknown[]
+): IpcChannelMap['review:getDiff']['args'] {
+  const [payload] = args
+  if (payload === null || typeof payload !== 'object') {
+    throw new Error('review payload must be an object')
+  }
+  const p = payload as Record<string, unknown>
+  if (typeof p.worktreePath !== 'string') {
+    throw new Error('payload.worktreePath must be a string')
+  }
+  validateWorktreePath(p.worktreePath)
+  return [p as IpcChannelMap['review:getDiff']['args'][0]]
+}
+
+export function parseReviewFileDiffArgs(
+  args: unknown[]
+): IpcChannelMap['review:getFileDiff']['args'] {
+  const [payload] = args
+  if (payload === null || typeof payload !== 'object') {
+    throw new Error('review:getFileDiff payload must be an object')
+  }
+  const p = payload as Record<string, unknown>
+  if (typeof p.worktreePath !== 'string') {
+    throw new Error('payload.worktreePath must be a string')
+  }
+  if (typeof p.filePath !== 'string') {
+    throw new Error('payload.filePath must be a string')
+  }
+  if (typeof p.base !== 'string') {
+    throw new Error('payload.base must be a string')
+  }
+  validateWorktreePath(p.worktreePath)
+  validateFilePath(p.filePath)
+  validateGitRef(p.base)
+  return [p as IpcChannelMap['review:getFileDiff']['args'][0]]
+}
 
 const logger = createLogger('review-handlers')
 
@@ -43,17 +88,24 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
   // Query Handlers (delegate to review-query-service)
   // ============================================================================
 
-  safeHandle('review:getDiff', async (_e, payload) => {
-    return getReviewDiff(payload.worktreePath, payload.base, { env })
-  })
+  safeHandle(
+    'review:getDiff',
+    async (_e, payload) => getReviewDiff(payload.worktreePath, payload.base, { env }),
+    parseReviewWorktreeArgs as IpcArgsParser<'review:getDiff'>
+  )
 
-  safeHandle('review:getCommits', async (_e, payload) => {
-    return getReviewCommits(payload.worktreePath, payload.base, { env })
-  })
+  safeHandle(
+    'review:getCommits',
+    async (_e, payload) => getReviewCommits(payload.worktreePath, payload.base, { env }),
+    parseReviewWorktreeArgs as IpcArgsParser<'review:getCommits'>
+  )
 
-  safeHandle('review:getFileDiff', async (_e, payload) => {
-    return getReviewFileDiff(payload.worktreePath, payload.filePath, payload.base, { env })
-  })
+  safeHandle(
+    'review:getFileDiff',
+    async (_e, payload) =>
+      getReviewFileDiff(payload.worktreePath, payload.filePath, payload.base, { env }),
+    parseReviewFileDiffArgs
+  )
 
   // review:checkFreshness — check if task's rebase is current with origin/main
   safeHandle('review:checkFreshness', async (_e, payload) => {

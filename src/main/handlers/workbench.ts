@@ -3,6 +3,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { safeHandle } from '../ipc-utils'
+import type { IpcChannelMap } from '../../shared/ipc-channels'
 import { getRepoPath } from '../paths'
 import { searchRepo } from '../services/repo-search-service'
 import type { AgentManager } from '../agent-manager'
@@ -125,6 +126,40 @@ function parseCheckSpecArgs(args: unknown[]): [CheckSpecInput] {
   return [input as unknown as CheckSpecInput]
 }
 
+export function parseResearchRepoArgs(args: unknown[]): [{ query: string; repo: string }] {
+  const [input] = args
+  if (!isPlainObject(input)) {
+    throw new Error('workbench:researchRepo input must be a plain object')
+  }
+  if (typeof input.query !== 'string' || input.query.trim() === '') {
+    throw new Error('workbench:researchRepo input.query must be a non-empty string')
+  }
+  if (typeof input.repo !== 'string' || input.repo.trim() === '') {
+    throw new Error('workbench:researchRepo input.repo must be a non-empty string')
+  }
+  return [input as { query: string; repo: string }]
+}
+
+export function parseChatStreamArgs(args: unknown[]): IpcChannelMap['workbench:chatStream']['args'] {
+  const [input] = args
+  if (!isPlainObject(input)) {
+    throw new Error('workbench:chatStream input must be a plain object')
+  }
+  if (!Array.isArray(input.messages)) {
+    throw new Error('workbench:chatStream input.messages must be an array')
+  }
+  if (!isPlainObject(input.formContext)) {
+    throw new Error('workbench:chatStream input.formContext must be an object')
+  }
+  if (
+    typeof (input.formContext as Record<string, unknown>).repo !== 'string' ||
+    ((input.formContext as Record<string, unknown>).repo as string).trim() === ''
+  ) {
+    throw new Error('workbench:chatStream input.formContext.repo must be a non-empty string')
+  }
+  return [input as IpcChannelMap['workbench:chatStream']['args'][0]]
+}
+
 /** Active streaming handles, keyed by streamId. */
 const activeStreams = new Map<string, { close: () => void }>()
 
@@ -139,18 +174,22 @@ export function registerWorkbenchHandlers(
   })
 
   // --- Fully implemented: Repo research via grep ---
-  safeHandle('workbench:researchRepo', async (_e, input: { query: string; repo: string }) => {
-    const { query, repo } = input
-    const repoPath = getRepoPath(repo)
-    if (!repoPath) {
-      return {
-        content: `Error: No path configured for repo "${repo}"`,
-        filesSearched: [],
-        totalMatches: 0
+  safeHandle(
+    'workbench:researchRepo',
+    async (_e, input: { query: string; repo: string }) => {
+      const { query, repo } = input
+      const repoPath = getRepoPath(repo)
+      if (!repoPath) {
+        return {
+          content: `Error: No path configured for repo "${repo}"`,
+          filesSearched: [],
+          totalMatches: 0
+        }
       }
-    }
-    return searchRepo(repoPath, query)
-  })
+      return searchRepo(repoPath, query)
+    },
+    parseResearchRepoArgs
+  )
 
   // NOTE: The non-streaming `workbench:chat` IPC handler was removed.
   // It is fully superseded by `workbench:chatStream`, which is the only
@@ -161,7 +200,9 @@ export function registerWorkbenchHandlers(
   // this channel without routing it through `getCopilotSdkOptions`.
 
   // --- AI-powered streaming chat ---
-  safeHandle('workbench:chatStream', async (e, input) => {
+  safeHandle(
+    'workbench:chatStream',
+    async (e, input) => {
     // Case-insensitive lookup — the renderer sends e.g. `repo: 'BDE'` but
     // the underlying map is keyed by lowercase name.
     const repoPath = getRepoPath(input.formContext.repo)
@@ -240,7 +281,9 @@ export function registerWorkbenchHandlers(
       )
 
     return { streamId }
-  })
+  },
+    parseChatStreamArgs
+  )
 
   // --- Cancel active stream ---
   safeHandle('workbench:cancelStream', async (_e, streamId) => {

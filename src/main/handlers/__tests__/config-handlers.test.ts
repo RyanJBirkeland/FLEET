@@ -67,7 +67,7 @@ describe('Config handlers', () => {
     expect(safeHandle).toHaveBeenCalledWith('settings:hasSecret', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:set', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:getJson', expect.any(Function))
-    expect(safeHandle).toHaveBeenCalledWith('settings:setJson', expect.any(Function))
+    expect(safeHandle).toHaveBeenCalledWith('settings:setJson', expect.any(Function), expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:delete', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:saveProfile', expect.any(Function))
     expect(safeHandle).toHaveBeenCalledWith('settings:loadProfile', expect.any(Function))
