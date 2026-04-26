@@ -81,9 +81,7 @@ describe('handleTaskTerminal — dep resolution failure', () => {
 
   it('does not throw when repo.updateTask also fails', async () => {
     const repo = makeRepo({
-      updateTask: vi.fn().mockImplementation(() => {
-        throw new Error('write failed')
-      })
+      updateTask: vi.fn().mockRejectedValue(new Error('write failed'))
     })
     vi.mocked(resolveDependents).mockImplementation(() => {
       throw new Error('dep error')

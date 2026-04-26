@@ -124,10 +124,10 @@ describe('createTaskWithValidation — auto-blocking (T-6)', () => {
       valid: true, errors: [],
       task: { ...input, status: 'blocked' }
     } as never)
-    vi.mocked(mockCreateTask).mockImplementation((inp) => ({ ...inp, id: 'new-task' } as never))
+    vi.mocked(mockCreateTask).mockImplementation(async (inp) => ({ ...inp, id: 'new-task' } as never))
     vi.mocked(getTask).mockImplementation((id) => id === 'dep-1' ? depTask as never : null)
 
-    const result = createTaskWithValidation(input, { logger })
+    const result = await createTaskWithValidation(input, { logger })
     expect(result.status).toBe('blocked')
   })
 })

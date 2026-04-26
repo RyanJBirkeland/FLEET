@@ -158,7 +158,7 @@ describe('IPC vs MCP parity', () => {
       name: 'tasks.update',
       arguments: { id: mcpTask.id, patch: { priority: 7 } }
     })
-    updateTask(ipcTask.id, { priority: 7 })
+    await updateTask(ipcTask.id, { priority: 7 })
 
     const ipcHistory = changeFields(getTaskChanges(ipcTask.id))
     const mcpHistory = changeFields(getTaskChanges(mcpTask.id))

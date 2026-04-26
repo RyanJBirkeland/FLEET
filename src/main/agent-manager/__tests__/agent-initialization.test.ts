@@ -64,7 +64,7 @@ function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
 
 const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
-  updateTask: vi.fn().mockReturnValue(null),
+  updateTask: vi.fn().mockResolvedValue(null),
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
   getOrphanedTasks: vi.fn(),
@@ -230,11 +230,9 @@ describe('initializeAgentTracking', () => {
     )
   })
 
-  it('logs warning when updateTask fails', () => {
+  it('logs warning when updateTask fails', async () => {
     const activeAgents = new Map()
-    vi.mocked(mockRepo.updateTask).mockImplementationOnce(() => {
-      throw new Error('DB error')
-    })
+    vi.mocked(mockRepo.updateTask).mockRejectedValueOnce(new Error('DB error'))
     const logger = makeLogger()
     initializeAgentTracking(
       makeTask(),
@@ -246,6 +244,8 @@ describe('initializeAgentTracking', () => {
       mockRepo,
       logger
     )
+    // Allow the async rejection to propagate through the fire-and-forget .catch()
+    await new Promise((r) => setTimeout(r, 0))
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('Failed to persist agent_run_id')
     )
