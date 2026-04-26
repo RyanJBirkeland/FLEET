@@ -62,8 +62,8 @@ vi.mock('../../lib/async-utils', async (importOriginal) => {
 })
 
 vi.mock('../../data/sprint-queries', () => ({
-  updateTask: vi.fn().mockReturnValue(undefined),
-  forceUpdateTask: vi.fn().mockReturnValue(undefined)
+  updateTask: vi.fn().mockResolvedValue(undefined),
+  forceUpdateTask: vi.fn().mockResolvedValue(undefined)
 }))
 
 vi.mock('../../paths', () => ({
@@ -163,7 +163,7 @@ function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
 
 const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
-  updateTask: vi.fn().mockReturnValue(null),
+  updateTask: vi.fn().mockResolvedValue(null),
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
   getOrphanedTasks: vi.fn(),

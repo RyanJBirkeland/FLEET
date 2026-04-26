@@ -86,8 +86,8 @@ vi.mock('../../lib/async-utils', async (importOriginal) => {
 })
 
 vi.mock('../../data/sprint-queries', () => ({
-  updateTask: vi.fn().mockReturnValue(undefined),
-  forceUpdateTask: vi.fn().mockReturnValue(undefined)
+  updateTask: vi.fn().mockResolvedValue(undefined),
+  forceUpdateTask: vi.fn().mockResolvedValue(undefined)
 }))
 
 vi.mock('../../paths', () => ({
@@ -174,7 +174,7 @@ function makeTask(overrides: Partial<AgentRunClaim> = {}): AgentRunClaim {
 
 const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
-  updateTask: vi.fn().mockReturnValue(null),
+  updateTask: vi.fn().mockResolvedValue(null),
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
   getOrphanedTasks: vi.fn(),
@@ -193,8 +193,9 @@ function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
   const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
   const taskStateService = {
     transition: vi.fn(async (taskId: string, status: string, ctx?: { fields?: Record<string, unknown> }) => {
-      // Delegate to mockRepo.updateTask so existing test assertions keep working
-      ;(mockRepo.updateTask as ReturnType<typeof vi.fn>)(taskId, { status, ...(ctx?.fields ?? {}) })
+      // Delegate to mockRepo.updateTask so existing test assertions keep working.
+      // Await so that rejections propagate to the caller (matching production behaviour).
+      await (mockRepo.updateTask as ReturnType<typeof vi.fn>)(taskId, { status, ...(ctx?.fields ?? {}) })
       // Simulate terminal dispatch for terminal statuses so onTaskTerminal assertions keep working
       if (TERMINAL_STATUS_SET.has(status)) {
         await onTaskTerminal(taskId, status)
@@ -706,9 +707,7 @@ describe('runAgent — updateTask.catch error handlers', () => {
     const { classifyExit } = await import('../fast-fail')
     ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([{ exit_code: 1 }]))
     ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('fast-fail-exhausted')
-    ;(mockRepo.updateTask as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      throw new Error('DB error')
-    })
+    ;(mockRepo.updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DB error'))
     const deps = makeDeps()
     await runAgent(makeTask({ fast_fail_count: 3 }), worktree, repoPath, deps)
     expect(deps.logger.error).toHaveBeenCalledWith(
@@ -720,9 +719,7 @@ describe('runAgent — updateTask.catch error handlers', () => {
     const { classifyExit } = await import('../fast-fail')
     ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([{ exit_code: 1 }]))
     ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('fast-fail-requeue')
-    ;(mockRepo.updateTask as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      throw new Error('DB error')
-    })
+    ;(mockRepo.updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DB error'))
     const deps = makeDeps()
     await runAgent(makeTask({ fast_fail_count: 1 }), worktree, repoPath, deps)
     expect(deps.logger.error).toHaveBeenCalledWith(
@@ -732,9 +729,7 @@ describe('runAgent — updateTask.catch error handlers', () => {
   it('logs warning when updateTask rejects in spawn failure .catch path', async () => {
     const { spawnAgent } = await import('../sdk-adapter')
     ;(spawnAgent as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('Spawn failed'))
-    ;(mockRepo.updateTask as ReturnType<typeof vi.fn>).mockImplementation(() => {
-      throw new Error('DB error')
-    })
+    ;(mockRepo.updateTask as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('DB error'))
     const deps = makeDeps()
     await runAgent(makeTask(), worktree, repoPath, deps)
     expect(deps.logger.warn).toHaveBeenCalledWith(

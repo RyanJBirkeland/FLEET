@@ -146,9 +146,7 @@ describe('cleanupWorktreeWithRetry', () => {
   it('does not throw even when repo.updateTask fails', async () => {
     vi.mocked(cleanupWorktree).mockRejectedValue(new Error('fail'))
     const repo = makeRepo({
-      updateTask: vi.fn().mockImplementation(() => {
-        throw new Error('write failed')
-      })
+      updateTask: vi.fn().mockRejectedValue(new Error('write failed'))
     })
 
     await expect(
