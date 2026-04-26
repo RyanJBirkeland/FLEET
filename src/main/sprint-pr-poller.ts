@@ -30,9 +30,9 @@ const MAX_PENDING_TASKS = 500
 export interface SprintPrPollerDeps {
   listTasksWithOpenPrs: () => SprintTaskPR[]
   pollPrStatuses: (prs: PrStatusInput[]) => Promise<PrStatusResult[]>
-  markTaskDoneByPrNumber: (prNumber: number) => string[]
-  markTaskCancelledByPrNumber: (prNumber: number) => string[]
-  updateTaskMergeableState: (prNumber: number, state: string | null) => void
+  markTaskDoneByPrNumber: (prNumber: number) => Promise<string[]>
+  markTaskCancelledByPrNumber: (prNumber: number) => Promise<string[]>
+  updateTaskMergeableState: (prNumber: number, state: string | null) => Promise<void>
   /** Required: called after PR merge/close to trigger dependency resolution. */
   onTaskTerminal: (taskId: string, status: TaskStatus) => void
   logger?: {
@@ -224,12 +224,12 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
       if (!prNumber) continue
 
       if (result.merged) {
-        const ids = deps.markTaskDoneByPrNumber(prNumber)
+        const ids = await deps.markTaskDoneByPrNumber(prNumber)
         log.info(formatMergedLogLine(prNumber, ids, result.mergedAt))
         ids.forEach((id) => log.info(`[sprint-pr-poller] Calling onTaskTerminal(${id}, 'done')`))
         await notifyTaskTerminalBatch(ids, 'done')
       } else if (result.state === 'CLOSED') {
-        const ids = deps.markTaskCancelledByPrNumber(prNumber)
+        const ids = await deps.markTaskCancelledByPrNumber(prNumber)
         if (ids.length > 0) {
           log.info(
             `[sprint-pr-poller] PR #${prNumber} closed — cancelled ${ids.length} task(s): ${ids.join(', ')}`
@@ -237,7 +237,7 @@ export function createSprintPrPoller(deps: SprintPrPollerDeps): SprintPrPollerIn
           await notifyTaskTerminalBatch(ids, 'cancelled')
         }
       }
-      deps.updateTaskMergeableState(prNumber, result.mergeableState)
+      await deps.updateTaskMergeableState(prNumber, result.mergeableState)
     }
   }
 

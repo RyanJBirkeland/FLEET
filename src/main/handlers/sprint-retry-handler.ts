@@ -56,12 +56,12 @@ export function registerSprintRetryHandler(): void {
     // Clear stale terminal-state fields (completed_at, failure_reason,
     // retry_count, fast_fail_count, next_eligible_at, claimed_by, started_at)
     // before the status transition so the re-queued row looks fresh.
-    resetTaskForRetry(taskId)
+    await resetTaskForRetry(taskId)
 
     // Separately clear operator notes and agent_run_id, then transition to
     // queued. Keeping the status change as the final update makes the audit
     // trail read "task moved to queued" rather than "task reset + moved".
-    const updated = updateTask(taskId, {
+    const updated = await updateTask(taskId, {
       status: 'queued',
       notes: null,
       agent_run_id: null

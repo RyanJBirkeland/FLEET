@@ -212,7 +212,7 @@ export async function failTaskWithError(
     } else {
       // Fallback: direct write + manual terminal notification for callers that have
       // not yet been migrated to inject TaskStateService.
-      repo.updateTask(taskId, {
+      await repo.updateTask(taskId, {
         status: 'error',
         completed_at: nowIso(),
         notes,
@@ -512,7 +512,7 @@ async function failTaskExhaustedNoCommits(
         caller: 'resolve-success:no-commits-exhausted'
       })
     } else {
-      repo.updateTask(taskId, { status: 'failed', ...failFields })
+      await repo.updateTask(taskId, { status: 'failed', ...failFields })
     }
   } catch (err) {
     logger.error(`[completion] Failed to mark task ${taskId} no-commits-exhausted: ${err}`)

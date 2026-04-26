@@ -85,8 +85,8 @@ import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 function makeRepo(overrides: Partial<IAgentTaskRepository> = {}): IAgentTaskRepository {
   return {
     getTask: vi.fn().mockReturnValue({ id: 'task-1', status: 'error', notes: null }),
-    updateTask: vi.fn(),
-    claimTask: vi.fn(),
+    updateTask: vi.fn().mockResolvedValue(null),
+    claimTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
     getGroup: vi.fn().mockReturnValue(null),

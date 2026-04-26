@@ -50,7 +50,7 @@ export interface IAgentTaskRepository {
     id: string,
     patch: Record<string, unknown>,
     options?: UpdateTaskOptions
-  ): SprintTask | null
+  ): Promise<SprintTask | null>
   getQueuedTasks(limit: number): SprintTask[]
   getTasksWithDependencies(): Array<{
     id: string
@@ -60,7 +60,7 @@ export interface IAgentTaskRepository {
   getOrphanedTasks(claimedBy: string): SprintTask[]
   clearStaleClaimedBy(claimedBy: string): number
   getActiveTaskCount(): number
-  claimTask(id: string, claimedBy: string, maxActive?: number): SprintTask | null
+  claimTask(id: string, claimedBy: string, maxActive?: number): Promise<SprintTask | null>
   getGroup(id: string): TaskGroup | null
   getGroupTasks(groupId: string): SprintTask[]
   getGroupsWithDependencies(): Array<{ id: string; depends_on: EpicDependency[] | null }>
@@ -72,10 +72,10 @@ export interface IAgentTaskRepository {
  * Methods used by the sprint PR poller for tracking GitHub PR status.
  */
 export interface ISprintPollerRepository {
-  markTaskDoneByPrNumber(prNumber: number): string[]
-  markTaskCancelledByPrNumber(prNumber: number): string[]
+  markTaskDoneByPrNumber(prNumber: number): Promise<string[]>
+  markTaskCancelledByPrNumber(prNumber: number): Promise<string[]>
   listTasksWithOpenPrs(): SprintTaskPR[]
-  updateTaskMergeableState(prNumber: number, mergeableState: string | null): void
+  updateTaskMergeableState(prNumber: number, mergeableState: string | null): Promise<void>
 }
 
 /**
@@ -90,9 +90,9 @@ export interface IDashboardRepository {
    */
   listTasks(options?: string | ListTasksOptions): SprintTask[]
   listTasksRecent(): SprintTask[]
-  createTask(input: CreateTaskInput): SprintTask | null
+  createTask(input: CreateTaskInput): Promise<SprintTask | null>
   deleteTask(id: string, deletedBy?: string): void
-  releaseTask(id: string, claimedBy: string): SprintTask | null
+  releaseTask(id: string, claimedBy: string): Promise<SprintTask | null>
   getQueueStats(): QueueStats
   getDoneTodayCount(): number
   getHealthCheckTasks(): SprintTask[]
@@ -103,7 +103,7 @@ export interface IDashboardRepository {
     spec: string
     worktreePath: string
     branch: string
-  }): SprintTask | null
+  }): Promise<SprintTask | null>
   getDailySuccessRate(days?: number): DailySuccessRate[]
   getFailureReasonBreakdown(): FailureReasonBreakdown[]
   /**
@@ -111,7 +111,7 @@ export interface IDashboardRepository {
    * state-machine transition check. Used only by manual-override handlers
    * (sprint:forceFailTask / sprint:forceDoneTask).
    */
-  forceUpdateTask(id: string, patch: Record<string, unknown>): SprintTask | null
+  forceUpdateTask(id: string, patch: Record<string, unknown>): Promise<SprintTask | null>
 }
 
 /**

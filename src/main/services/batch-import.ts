@@ -22,11 +22,11 @@ export interface BatchImportResult {
  * @param repo - Sprint task repository for persistence
  * @returns Result with created tasks and any errors
  */
-export function batchImportTasks(
+export async function batchImportTasks(
   tasks: BatchImportTask[],
   repo: IDashboardRepository,
   configuredRepos?: string[]
-): BatchImportResult {
+): Promise<BatchImportResult> {
   const created: SprintTask[] = []
   const errors: string[] = []
 
@@ -100,7 +100,7 @@ export function batchImportTasks(
     }
 
     // Create task via repository
-    const task = repo.createTask(input)
+    const task = await repo.createTask(input)
     if (!task) {
       errors.push(`Task[${i}]: Failed to create task "${t.title}"`)
       continue

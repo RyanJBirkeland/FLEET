@@ -52,24 +52,24 @@ export const updateTaskMergeableState = mutations.updateTaskMergeableState
 export const flagStuckTasks = mutations.flagStuckTasks
 
 // Wrap mutation operations to auto-notify
-export function createTask(input: mutations.CreateTaskInput): SprintTask | null {
-  const row = mutations.createTask(input)
+export async function createTask(input: mutations.CreateTaskInput): Promise<SprintTask | null> {
+  const row = await mutations.createTask(input)
   if (row) broadcaster.notifySprintMutation('created', row)
   return row
 }
 
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
-  const result = mutations.claimTask(id, claimedBy)
+export async function claimTask(id: string, claimedBy: string): Promise<SprintTask | null> {
+  const result = await mutations.claimTask(id, claimedBy)
   if (result) broadcaster.notifySprintMutation('updated', result)
   return result
 }
 
-export function updateTask(
+export async function updateTask(
   id: string,
   patch: Record<string, unknown>,
   options?: mutations.UpdateTaskOptions
-): SprintTask | null {
-  const result = mutations.updateTask(id, patch, options)
+): Promise<SprintTask | null> {
+  const result = await mutations.updateTask(id, patch, options)
   if (result) broadcaster.notifySprintMutation('updated', result)
   return result
 }
@@ -78,8 +78,11 @@ export function updateTask(
  * Manual operator override — writes a terminal status bypassing the state machine.
  * See `forceUpdateTask` in sprint-task-crud for rationale.
  */
-export function forceUpdateTask(id: string, patch: Record<string, unknown>): SprintTask | null {
-  const result = mutations.forceUpdateTask(id, patch)
+export async function forceUpdateTask(
+  id: string,
+  patch: Record<string, unknown>
+): Promise<SprintTask | null> {
+  const result = await mutations.forceUpdateTask(id, patch)
   if (result) broadcaster.notifySprintMutation('updated', result)
   return result
 }
@@ -90,20 +93,20 @@ export function deleteTask(id: string): void {
   if (task) broadcaster.notifySprintMutation('deleted', task)
 }
 
-export function releaseTask(id: string, claimedBy: string): SprintTask | null {
-  const result = mutations.releaseTask(id, claimedBy)
+export async function releaseTask(id: string, claimedBy: string): Promise<SprintTask | null> {
+  const result = await mutations.releaseTask(id, claimedBy)
   if (result) broadcaster.notifySprintMutation('updated', result)
   return result
 }
 
-export function createReviewTaskFromAdhoc(input: {
+export async function createReviewTaskFromAdhoc(input: {
   title: string
   repo: string
   spec: string
   worktreePath: string
   branch: string
-}): SprintTask | null {
-  const row = mutations.createReviewTaskFromAdhoc(input)
+}): Promise<SprintTask | null> {
+  const row = await mutations.createReviewTaskFromAdhoc(input)
   if (row) broadcaster.notifySprintMutation('created', row)
   return row
 }
@@ -143,6 +146,6 @@ export function createTaskWithValidation(
   input: mutations.CreateTaskInput,
   deps: CreateTaskWithValidationDeps,
   opts?: CreateTaskWithValidationOpts
-): SprintTask {
+): Promise<SprintTask> {
   return _createTaskWithValidation(input, { ...deps, createTask }, opts)
 }

@@ -259,7 +259,7 @@ export async function drainQueuedTasks(
     } catch (err) {
       deps.logger.error(`[agent-manager] Failed to process task ${taskId}: ${err}`)
       if (!taskId) continue
-      if (handleEnvironmentalFailure(taskId, err, deps)) return
+      if (await handleEnvironmentalFailure(taskId, err, deps)) return
       handleSpecLevelFailure(taskId, err, deps)
     }
   }
@@ -273,13 +273,13 @@ export async function drainQueuedTasks(
  *
  * Returns `true` when the failure was environmental (caller should `return`).
  */
-function handleEnvironmentalFailure(taskId: string, err: unknown, deps: DrainLoopDeps): boolean {
+async function handleEnvironmentalFailure(taskId: string, err: unknown, deps: DrainLoopDeps): Promise<boolean> {
   const message = err instanceof Error ? (err.stack ?? err.message) : String(err)
   if (classifyFailureReason(message) !== 'environmental') return false
 
   const reason = (message.split('\n')[0] ?? '').slice(0, 200)
   try {
-    deps.repo.updateTask(taskId, {
+    await deps.repo.updateTask(taskId, {
       status: 'queued',
       failure_reason: 'environmental',
       claimed_by: null,

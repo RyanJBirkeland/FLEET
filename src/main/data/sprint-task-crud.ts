@@ -4,7 +4,7 @@ import { sanitizeDependsOn } from '../../shared/sanitize-depends-on'
 import { sanitizeTags } from '../../shared/sanitize-tags'
 import { getDb } from '../db'
 import { recordTaskChanges } from './task-changes'
-import { withRetry } from './sqlite-retry'
+import { withRetryAsync } from './sqlite-retry'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 import { SPRINT_TASK_COLUMNS, SPRINT_TASK_LIST_COLUMNS } from './sprint-query-constants'
@@ -189,10 +189,13 @@ export function listTasksRecent(db?: Database.Database): SprintTask[] {
   )
 }
 
-export function createTask(input: CreateTaskInput, db?: Database.Database): SprintTask | null {
+export async function createTask(
+  input: CreateTaskInput,
+  db?: Database.Database
+): Promise<SprintTask | null> {
   const conn = db ?? getDb()
-  return withDataLayerError(
-    () => {
+  try {
+    return await withRetryAsync(() => {
       const dependsOn = sanitizeDependsOn(input.depends_on)
       const tags = sanitizeTags(input.tags)
 
@@ -222,11 +225,12 @@ export function createTask(input: CreateTaskInput, db?: Database.Database): Spri
         ) as Record<string, unknown> | undefined
 
       return result ? mapRowToTask(result) : null
-    },
-    'createTask',
-    null,
-    getSprintQueriesLogger()
-  )
+    })
+  } catch (err) {
+    const msg = getErrorMessage(err)
+    getSprintQueriesLogger().warn(`[sprint-queries] createTask failed: ${msg}`)
+    return null
+  }
 }
 
 /**
@@ -238,15 +242,15 @@ export function createTask(input: CreateTaskInput, db?: Database.Database): Spri
  * Used by the `agents:promoteToReview` IPC handler. Do not call from anywhere
  * that should respect the standard task lifecycle.
  */
-export function createReviewTaskFromAdhoc(input: {
+export async function createReviewTaskFromAdhoc(input: {
   title: string
   repo: string
   spec: string
   worktreePath: string
   branch: string
-}): SprintTask | null {
+}): Promise<SprintTask | null> {
   // Reuse createTask instead of duplicating INSERT logic
-  const task = createTask({
+  const task = await createTask({
     title: input.title,
     repo: input.repo,
     spec: input.spec,
@@ -257,7 +261,7 @@ export function createReviewTaskFromAdhoc(input: {
   if (!task) return null
 
   // Set fields not in the create allowlist (worktree_path, started_at)
-  const updated = updateTask(task.id, {
+  const updated = await updateTask(task.id, {
     worktree_path: input.worktreePath,
     started_at: nowIso()
   })
@@ -296,12 +300,12 @@ export interface UpdateTaskOptions {
  * `updateTask({ status })` directly; use `TaskStateService.transition()` instead.
  */
 
-export function updateTask(
+export async function updateTask(
   id: string,
   patch: Record<string, unknown>,
   options?: UpdateTaskOptions,
   db?: Database.Database
-): SprintTask | null {
+): Promise<SprintTask | null> {
   return writeTaskUpdate(
     id,
     patch,
@@ -317,11 +321,11 @@ export function updateTask(
  * state (e.g. `blocked → failed`). Changes are still recorded in `task_changes` for
  * the audit trail, attributed to `'manual-override'`.
  */
-export function forceUpdateTask(
+export async function forceUpdateTask(
   id: string,
   patch: Record<string, unknown>,
   db?: Database.Database
-): SprintTask | null {
+): Promise<SprintTask | null> {
   return writeTaskUpdate(
     id,
     patch,
@@ -355,18 +359,18 @@ function toAuditableTask(task: SprintTask): Record<string, unknown> {
   return { ...task } as Record<string, unknown>
 }
 
-function writeTaskUpdate(
+async function writeTaskUpdate(
   id: string,
   patch: Record<string, unknown>,
   options: WriteTaskUpdateOptions,
   db?: Database.Database
-): SprintTask | null {
+): Promise<SprintTask | null> {
   const allowlistedEntries = filterAllowlistedEntries(patch)
   if (allowlistedEntries.length === 0) return null
 
   try {
     const conn = db ?? getDb()
-    return withRetry(() =>
+    return await withRetryAsync(() =>
       conn.transaction(() => runUpdate(id, patch, allowlistedEntries, options, conn))()
     )
   } catch (err) {

@@ -68,7 +68,7 @@ export interface CancelTaskDeps {
     id: string,
     patch: Record<string, unknown>,
     options?: mutations.UpdateTaskOptions
-  ) => SprintTask | null
+  ) => Promise<SprintTask | null>
 }
 
 export interface CancelTaskOptions {
@@ -135,7 +135,7 @@ export async function cancelTask(
   const updateOptions = opts.caller ? { caller: opts.caller } : undefined
   let row: SprintTask | null
   try {
-    row = doUpdate(id, patch, updateOptions)
+    row = await doUpdate(id, patch, updateOptions)
   } catch (err) {
     if (isInvalidTransitionError(err)) {
       const current = mutations.getTask(id)
@@ -185,12 +185,13 @@ function appendCancelFailureAnnotation(
   id: string,
   row: SprintTask,
   timestamp: string,
-  doUpdate: (id: string, patch: Record<string, unknown>, options?: mutations.UpdateTaskOptions) => SprintTask | null
+  doUpdate: (id: string, patch: Record<string, unknown>, options?: mutations.UpdateTaskOptions) => Promise<SprintTask | null>
 ): void {
   const existingNotes = typeof row.notes === 'string' ? row.notes : null
   const annotation = `[terminal-dispatch-failed ${timestamp}] Dependency resolution may not have run. Dependents may need manual unblock.`
   const updatedNotes = existingNotes ? `${existingNotes}\n${annotation}` : annotation
-  doUpdate(id, { notes: updatedNotes })
+  // fire-and-forget: best-effort annotation, failures are logged by the data layer
+  void doUpdate(id, { notes: updatedNotes })
 }
 
 // ============================================================================
@@ -198,7 +199,7 @@ function appendCancelFailureAnnotation(
 // ============================================================================
 
 export interface ResetTaskForRetryDeps {
-  updateTask?: (id: string, patch: Record<string, unknown>) => SprintTask | null
+  updateTask?: (id: string, patch: Record<string, unknown>) => Promise<SprintTask | null>
 }
 
 /**
@@ -209,7 +210,7 @@ export interface ResetTaskForRetryDeps {
  * - retry_count and fast_fail_count (reset to 0, not null)
  * - next_eligible_at
  */
-export function resetTaskForRetry(id: string, deps: ResetTaskForRetryDeps = {}): SprintTask | null {
+export function resetTaskForRetry(id: string, deps: ResetTaskForRetryDeps = {}): Promise<SprintTask | null> {
   const doUpdate = deps.updateTask ?? mutations.updateTask
   return doUpdate(id, {
     completed_at: null,
@@ -249,7 +250,7 @@ export interface CreateTaskWithValidationDeps {
    * mutations layer; production callers inject the broadcaster-wrapped version
    * from `sprint-service.ts` so the renderer gets notified.
    */
-  createTask?: (input: mutations.CreateTaskInput) => SprintTask | null
+  createTask?: (input: mutations.CreateTaskInput) => Promise<SprintTask | null>
 }
 
 export interface CreateTaskWithValidationOpts {
@@ -263,11 +264,11 @@ export interface CreateTaskWithValidationOpts {
 }
 
 /** Shared task-creation entry point for the sprint:create IPC handler and the MCP server. */
-export function createTaskWithValidation(
+export async function createTaskWithValidation(
   input: mutations.CreateTaskInput,
   deps: CreateTaskWithValidationDeps,
   opts: CreateTaskWithValidationOpts = {}
-): SprintTask {
+): Promise<SprintTask> {
   const validationInput = opts.skipReadinessCheck ? { ...input, status: 'backlog' as const } : input
   const validation = validateTaskCreation(validationInput, {
     logger: { warn: (msg) => deps.logger.warn(msg as string) },
@@ -312,7 +313,7 @@ export function createTaskWithValidation(
   }
 
   const doCreate = deps.createTask ?? mutations.createTask
-  const row = doCreate(validatedTask)
+  const row = await doCreate(validatedTask)
   if (!row) throw new Error('Failed to create task')
   return row
 }
@@ -333,7 +334,7 @@ export interface UpdateTaskFromUiDeps {
     id: string,
     patch: Record<string, unknown>,
     options?: mutations.UpdateTaskOptions
-  ) => SprintTask | null
+  ) => Promise<SprintTask | null>
 }
 
 /**

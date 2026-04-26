@@ -8,8 +8,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../data/sprint-queries', () => ({
   getQueuedTasks: vi.fn(),
-  claimTask: vi.fn(),
-  updateTask: vi.fn(),
+  claimTask: vi.fn().mockResolvedValue(null),
+  updateTask: vi.fn().mockResolvedValue(null),
   forceUpdateTask: vi.fn(),
   getTask: vi.fn(),
   getOrphanedTasks: vi.fn(),
@@ -51,13 +51,13 @@ function makeLogger() {
 function makeRepo(): IAgentTaskRepository {
   return {
     getTask: vi.fn(),
-    updateTask: vi.fn(),
+    updateTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
     getOrphanedTasks: vi.fn().mockReturnValue([]),
     clearStaleClaimedBy: vi.fn().mockReturnValue(0),
     getActiveTaskCount: vi.fn().mockReturnValue(0),
-    claimTask: vi.fn(),
+    claimTask: vi.fn().mockResolvedValue(null),
     getGroup: vi.fn().mockReturnValue(null),
     getGroupTasks: vi.fn().mockReturnValue([]),
     getGroupsWithDependencies: vi.fn().mockReturnValue([])

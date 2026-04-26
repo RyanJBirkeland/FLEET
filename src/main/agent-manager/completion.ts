@@ -449,14 +449,14 @@ function appendAdvisoryNote(
   repo: IAgentTaskRepository,
   logger: Logger
 ): void {
-  try {
-    const existing = repo.getTask(taskId)?.notes ?? ''
-    const combined = existing ? `${existing}\n${advisory}` : advisory
-    repo.updateTask(taskId, { notes: combined })
+  const existing = repo.getTask(taskId)?.notes ?? ''
+  const combined = existing ? `${existing}\n${advisory}` : advisory
+  // fire-and-forget: advisory annotation is best-effort
+  void repo.updateTask(taskId, { notes: combined }).then(() => {
     logger.info(`[completion] Annotated task ${taskId} with test-touch advisory: ${advisory}`)
-  } catch (err) {
+  }).catch((err) => {
     logger.warn(`[completion] Failed to persist test-touch advisory for ${taskId}: ${err}`)
-  }
+  })
 }
 
 /**

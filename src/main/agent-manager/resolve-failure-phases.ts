@@ -107,7 +107,7 @@ export async function resolveFailure(
           caller: 'resolve-failure:requeue'
         })
       } else {
-        repo.updateTask(taskId, { status: 'queued', ...requeueFields })
+        await repo.updateTask(taskId, { status: 'queued', ...requeueFields })
       }
       return { isTerminal: false }
     } else {
@@ -125,7 +125,7 @@ export async function resolveFailure(
           caller: 'resolve-failure:terminal'
         })
       } else {
-        repo.updateTask(taskId, { status: 'failed', ...failFields })
+        await repo.updateTask(taskId, { status: 'failed', ...failFields })
       }
       return { isTerminal: true }
     }

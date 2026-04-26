@@ -54,13 +54,13 @@ import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 
 const mockRepo: IAgentTaskRepository = {
   getTask: vi.fn(),
-  updateTask: vi.fn(),
+  updateTask: vi.fn().mockResolvedValue(null),
   getQueuedTasks: vi.fn(),
   getTasksWithDependencies: vi.fn().mockReturnValue([]),
   getOrphanedTasks: vi.fn(),
   clearStaleClaimedBy: vi.fn(),
   getActiveTaskCount: vi.fn(),
-  claimTask: vi.fn(),
+  claimTask: vi.fn().mockResolvedValue(null),
   getGroup: vi.fn().mockReturnValue(null),
   getGroupTasks: vi.fn().mockReturnValue([]),
   getGroupsWithDependencies: vi.fn().mockReturnValue([])

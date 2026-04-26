@@ -65,14 +65,14 @@ export interface TaskCommandPort {
     input: CreateTaskInput,
     deps: CreateTaskWithValidationDeps,
     opts?: CreateTaskWithValidationOpts
-  ) => SprintTask
+  ) => Promise<SprintTask>
   /**
    * `caller` is recorded in the `task_changes` audit trail as the
    * `changed_by` value. The MCP adapter passes `'mcp'` (or
    * `'mcp:<client-name>'` when the SDK exposes client info) so audit
    * rows can distinguish MCP-originated edits from IPC-originated ones.
    */
-  updateTask: (id: string, patch: TaskPatch, options?: { caller?: string }) => SprintTask | null
+  updateTask: (id: string, patch: TaskPatch, options?: { caller?: string }) => Promise<SprintTask | null>
   cancelTask: (
     id: string,
     reason?: string,
@@ -210,7 +210,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
           const parsed = parseToolArgs(TaskCreateSchema, rawArgs)
           const { skipReadinessCheck, ...createInput } = parsed
           try {
-            const row = runCreateWithValidation(
+            const row = await runCreateWithValidation(
               deps,
               createInput as CreateTaskInput,
               skipReadinessCheck
@@ -247,7 +247,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
             })
           } else {
             // Non-status write — plain field update.
-            const row = deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
+            const row = await deps.updateTask(id, effectivePatch, { caller: MCP_CALLER })
             if (!row) {
               deps.logger.debug(`mcp.tasks.update: task ${id} not found`)
               throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
@@ -302,7 +302,7 @@ function runCreateWithValidation(
   deps: TaskToolsDeps,
   createInput: CreateTaskInput,
   skipReadinessCheck: boolean | undefined
-): SprintTask {
+): Promise<SprintTask> {
   const delegateDeps = { logger: deps.logger }
   if (skipReadinessCheck === undefined) {
     return deps.createTaskWithValidation(createInput, delegateDeps)

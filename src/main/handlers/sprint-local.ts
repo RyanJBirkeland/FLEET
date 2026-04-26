@@ -5,7 +5,7 @@ import { getTaskChanges } from '../data/task-changes'
 import { readFile } from 'fs/promises'
 import { createLogger } from '../logger'
 import type { DialogService } from '../dialog-service'
-import type { TaskTemplate, ClaimedTask } from '../../shared/types'
+import type { TaskTemplate, ClaimedTask, SprintTask } from '../../shared/types'
 import type { WorkflowTemplate } from '../../shared/workflow-types'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
 import { getSettingJson } from '../settings'
@@ -19,7 +19,6 @@ import {
 } from './sprint-spec'
 import {
   getTask,
-  updateTask,
   deleteTask,
   getHealthCheckTasks,
   flagStuckTasks,
@@ -137,7 +136,7 @@ export function registerSprintLocalHandlers(
   safeHandle(
     'sprint:createWorkflow',
     async (_e, template: WorkflowTemplate) => {
-    const result = instantiateWorkflow(template, effectiveRepo)
+    const result = await instantiateWorkflow(template, effectiveRepo)
 
     if (result.errors.length > 0) {
       logger.warn(
@@ -158,7 +157,7 @@ export function registerSprintLocalHandlers(
     _e: Electron.IpcMainInvokeEvent,
     id: string,
     patch: Record<string, unknown>
-  ): Promise<ReturnType<typeof updateTask>> =>
+  ): Promise<SprintTask | null> =>
     updateTaskFromUi(id, patch, { logger, taskStateService: deps.taskStateService })
   safeHandle('sprint:update', sprintUpdateHandler, parseSprintUpdateArgs)
 
@@ -281,7 +280,7 @@ export function registerSprintLocalHandlers(
     // consuming API credits or commit to a task that is no longer claimed.
     // No-op when no agent is currently running for this task.
     await deps.cancelAgent?.(taskId)
-    resetTaskForRetry(taskId)
+    await resetTaskForRetry(taskId)
     await deps.taskStateService.transition(taskId, 'queued', {
       fields: { notes: null, agent_run_id: null },
       caller: 'sprint:forceReleaseClaim'

@@ -8,6 +8,7 @@ const VALID_TASK_STATUSES: ReadonlySet<string> = new Set(TASK_STATUSES)
 function isTaskStatus(value: unknown): value is TaskStatus {
   return typeof value === 'string' && VALID_TASK_STATUSES.has(value)
 }
+import { withRetryAsync } from './sqlite-retry'
 import { getDb } from '../db'
 import { recordTaskChangesBulk } from './task-changes'
 import { nowIso } from '../../shared/time'
@@ -132,34 +133,46 @@ function updatePrStatusBulk(
   }
 }
 
-export function markTaskDoneByPrNumber(prNumber: number, db?: Database.Database): string[] {
+export async function markTaskDoneByPrNumber(
+  prNumber: number,
+  db?: Database.Database
+): Promise<string[]> {
   const conn = db ?? getDb()
-  return withDataLayerError(
-    () =>
+  try {
+    return await withRetryAsync(() =>
       conn.transaction(() => {
         const affectedIds = transitionTasksByPrNumber(conn, prNumber, 'done', 'pr-poller')
         updatePrStatusBulk(prNumber, 'merged', 'pr-poller', conn, 'done')
         return affectedIds
-      })(),
-    `markTaskDoneByPrNumber(pr=${prNumber})`,
-    [],
-    getSprintQueriesLogger()
-  )
+      })()
+    )
+  } catch (err) {
+    getSprintQueriesLogger().warn(
+      `[sprint-pr-ops] markTaskDoneByPrNumber(pr=${prNumber}) failed: ${err instanceof Error ? err.message : String(err)}`
+    )
+    return []
+  }
 }
 
-export function markTaskCancelledByPrNumber(prNumber: number, db?: Database.Database): string[] {
+export async function markTaskCancelledByPrNumber(
+  prNumber: number,
+  db?: Database.Database
+): Promise<string[]> {
   const conn = db ?? getDb()
-  return withDataLayerError(
-    () =>
+  try {
+    return await withRetryAsync(() =>
       conn.transaction(() => {
         const affectedIds = transitionTasksByPrNumber(conn, prNumber, 'cancelled', 'pr-poller')
         updatePrStatusBulk(prNumber, 'closed', 'pr-poller', conn)
         return affectedIds
-      })(),
-    `markTaskCancelledByPrNumber(pr=${prNumber})`,
-    [],
-    getSprintQueriesLogger()
-  )
+      })()
+    )
+  } catch (err) {
+    getSprintQueriesLogger().warn(
+      `[sprint-pr-ops] markTaskCancelledByPrNumber(pr=${prNumber}) failed: ${err instanceof Error ? err.message : String(err)}`
+    )
+    return []
+  }
 }
 
 export function listTasksWithOpenPrs(db?: Database.Database): SprintTask[] {
@@ -180,15 +193,15 @@ export function listTasksWithOpenPrs(db?: Database.Database): SprintTask[] {
   )
 }
 
-export function updateTaskMergeableState(
+export async function updateTaskMergeableState(
   prNumber: number,
   mergeableState: string | null,
   db?: Database.Database
-): void {
+): Promise<void> {
   if (!mergeableState) return
   const conn = db ?? getDb()
-  withDataLayerError(
-    () => {
+  try {
+    await withRetryAsync(() =>
       conn.transaction(() => {
         // Record pr_mergeable_state changes in the audit trail.
         // Narrow projection: the audit comparison only needs `id` and the
@@ -212,9 +225,10 @@ export function updateTaskMergeableState(
           .prepare('UPDATE sprint_tasks SET pr_mergeable_state = ? WHERE pr_number = ?')
           .run(mergeableState, prNumber)
       })()
-    },
-    `updateTaskMergeableState(pr=${prNumber})`,
-    undefined,
-    getSprintQueriesLogger()
-  )
+    )
+  } catch (err) {
+    getSprintQueriesLogger().warn(
+      `[sprint-pr-ops] updateTaskMergeableState(pr=${prNumber}) failed: ${err instanceof Error ? err.message : String(err)}`
+    )
+  }
 }
