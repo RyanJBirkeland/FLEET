@@ -76,7 +76,7 @@ export function checkTaskDependencies(
   deps: TaskDependency[],
   logger: Logger,
   listTasks: () => SprintTask[]
-): { shouldBlock: boolean; blockedBy: string[] } {
+): { shouldBlock: boolean; blockedBy: string[]; reason?: string } {
   try {
     const allTasks = listTasks()
     const statusMap = new Map(allTasks.map((t) => [t.id, t.status]))
@@ -87,7 +87,9 @@ export function checkTaskDependencies(
     return { shouldBlock: !satisfied && blockedBy.length > 0, blockedBy }
   } catch (err) {
     logger.warn(`[dependency-service] checkTaskDependencies failed for ${taskId}: ${err}`)
-    return { shouldBlock: false, blockedBy: [] }
+    logger.event('dependency.check.error', { taskId, error: String(err) })
+    const reason = 'dep-check-failed: ' + (err instanceof Error ? err.message : String(err))
+    return { shouldBlock: true, blockedBy: [], reason }
   }
 }
 
@@ -102,7 +104,7 @@ export function checkEpicDependencies(
   logger: Logger,
   listTasks: () => SprintTask[],
   listGroups: () => TaskGroup[]
-): { shouldBlock: boolean; blockedBy: string[] } {
+): { shouldBlock: boolean; blockedBy: string[]; reason?: string } {
   // No epic deps = not blocked
   if (!epicDeps || epicDeps.length === 0) {
     return { shouldBlock: false, blockedBy: [] }
@@ -137,7 +139,9 @@ export function checkEpicDependencies(
     return { shouldBlock: !satisfied && blockedBy.length > 0, blockedBy }
   } catch (err) {
     logger.warn(`[dependency-service] checkEpicDependencies failed for epic ${groupId}: ${err}`)
-    return { shouldBlock: false, blockedBy: [] }
+    logger.event('dependency.check.error', { groupId, error: String(err) })
+    const reason = 'dep-check-failed: ' + (err instanceof Error ? err.message : String(err))
+    return { shouldBlock: true, blockedBy: [], reason }
   }
 }
 
@@ -154,7 +158,7 @@ export interface ComputeBlockStateContext {
 export function computeBlockState(
   task: { id: string; depends_on: TaskDependency[] | null; group_id?: string | null | undefined },
   ctx: ComputeBlockStateContext
-): { shouldBlock: boolean; blockedBy: string[] } {
+): { shouldBlock: boolean; blockedBy: string[]; reason?: string } {
   const taskDeps = task.depends_on ?? []
   const taskResult = checkTaskDependencies(task.id, taskDeps, ctx.logger, ctx.listTasks)
 
@@ -177,8 +181,12 @@ export function computeBlockState(
   // Compose blockers: task-level as-is, epic-level with "epic:" prefix
   const allBlockedBy = [...taskResult.blockedBy, ...epicResult.blockedBy.map((id) => `epic:${id}`)]
 
+  // Surface the failure reason from whichever check errored so callers can log why the task was held
+  const reason = taskResult.reason ?? epicResult.reason
+
   return {
-    shouldBlock: allBlockedBy.length > 0,
-    blockedBy: allBlockedBy
+    shouldBlock: allBlockedBy.length > 0 || !!reason,
+    blockedBy: allBlockedBy,
+    ...(reason !== undefined && { reason })
   }
 }
