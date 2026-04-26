@@ -84,13 +84,12 @@ async function resolveTerminalDependents(
     const note = `Dependency resolution failed: ${errMsg}. Downstream tasks may remain blocked — check and manually re-queue them.`
     const truncated =
       note.length > NOTES_MAX_LENGTH ? note.slice(0, NOTES_MAX_LENGTH - 3) + '...' : note
-    try {
-      repo.updateTask(taskId, { notes: truncated })
-    } catch (updateErr) {
+    // fire-and-forget: best-effort note update for dep-resolution failure
+    void repo.updateTask(taskId, { notes: truncated }).catch((updateErr) => {
       logger.error(
         `[agent-manager] Failed to surface dep-resolution failure for ${taskId}: ${updateErr}`
       )
-    }
+    })
   }
 }
 

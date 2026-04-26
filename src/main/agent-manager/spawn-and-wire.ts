@@ -64,7 +64,7 @@ export async function handleSpawnFailure(
   // persisted to SQLite before the task appears as 'error' in the UI.
   flushAgentEventBatcher()
   try {
-    repo.updateTask(task.id, {
+    await repo.updateTask(task.id, {
       status: 'error',
       completed_at: nowIso(),
       notes: `Spawn failed: ${errMsg}`,

@@ -66,11 +66,10 @@ export function initializeAgentTracking(
   activeAgents.set(task.id, agent)
   const turnTracker = new TurnTracker(agentRunId)
 
-  try {
-    repo.updateTask(task.id, { agent_run_id: agentRunId })
-  } catch (err) {
+  // fire-and-forget: agent_run_id persistence is best-effort; the agent is already registered
+  void repo.updateTask(task.id, { agent_run_id: agentRunId }).catch((err) => {
     logger.warn(`[agent-manager] Failed to persist agent_run_id for task ${task.id}: ${err}`)
-  }
+  })
 
   createAgentRecord({
     id: agentRunId,

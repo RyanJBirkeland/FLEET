@@ -91,11 +91,11 @@ export function getDailySuccessRate(days?: number): DailySuccessRate[] {
 
 // --- Write operations (no notifications) ---
 
-export function createTask(input: CreateTaskInput): SprintTask | null {
+export function createTask(input: CreateTaskInput): Promise<SprintTask | null> {
   return getRepo().createTask(input)
 }
 
-export async function claimTask(id: string, claimedBy: string): Promise<SprintTask | null> {
+export function claimTask(id: string, claimedBy: string): Promise<SprintTask | null> {
   return getRepo().claimTask(id, claimedBy)
 }
 
@@ -103,11 +103,11 @@ export function updateTask(
   id: string,
   patch: Record<string, unknown>,
   options?: UpdateTaskOptions
-): SprintTask | null {
+): Promise<SprintTask | null> {
   return getRepo().updateTask(id, patch, options)
 }
 
-export function forceUpdateTask(id: string, patch: Record<string, unknown>): SprintTask | null {
+export function forceUpdateTask(id: string, patch: Record<string, unknown>): Promise<SprintTask | null> {
   return getRepo().forceUpdateTask(id, patch)
 }
 
@@ -115,20 +115,20 @@ export function deleteTask(id: string): void {
   getRepo().deleteTask(id)
 }
 
-export function releaseTask(id: string, claimedBy: string): SprintTask | null {
+export function releaseTask(id: string, claimedBy: string): Promise<SprintTask | null> {
   return getRepo().releaseTask(id, claimedBy)
 }
 
-export function markTaskDoneByPrNumber(prNumber: number): string[] {
+export function markTaskDoneByPrNumber(prNumber: number): Promise<string[]> {
   return getRepo().markTaskDoneByPrNumber(prNumber)
 }
 
-export function markTaskCancelledByPrNumber(prNumber: number): string[] {
+export function markTaskCancelledByPrNumber(prNumber: number): Promise<string[]> {
   return getRepo().markTaskCancelledByPrNumber(prNumber)
 }
 
-export function updateTaskMergeableState(prNumber: number, mergeableState: string | null): void {
-  getRepo().updateTaskMergeableState(prNumber, mergeableState)
+export function updateTaskMergeableState(prNumber: number, mergeableState: string | null): Promise<void> {
+  return getRepo().updateTaskMergeableState(prNumber, mergeableState)
 }
 
 export function flagStuckTasks(): void {
@@ -143,7 +143,8 @@ export function flagStuckTasks(): void {
       new Date(t.updated_at).getTime() < oneHourAgo
   )
   for (const t of stuck) {
-    getRepo().updateTask(t.id, { needs_review: true })
+    // fire-and-forget: flagging is best-effort, failures are logged by the data layer
+    void getRepo().updateTask(t.id, { needs_review: true })
   }
 }
 
@@ -153,6 +154,6 @@ export function createReviewTaskFromAdhoc(input: {
   spec: string
   worktreePath: string
   branch: string
-}): SprintTask | null {
+}): Promise<SprintTask | null> {
   return getRepo().createReviewTaskFromAdhoc(input)
 }

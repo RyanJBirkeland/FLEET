@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../data/sprint-queries', () => ({
   getOrphanedTasks: vi.fn(),
-  updateTask: vi.fn(),
+  updateTask: vi.fn().mockResolvedValue(null),
   forceUpdateTask: vi.fn()
 }))
 
@@ -26,7 +26,7 @@ const mockRepo: IAgentTaskRepository = {
   getOrphanedTasks: (...args: [string]) => (getOrphanedTasks as any)(...args),
   clearStaleClaimedBy: vi.fn().mockReturnValue(0),
   getActiveTaskCount: vi.fn().mockReturnValue(0),
-  claimTask: vi.fn(),
+  claimTask: vi.fn().mockResolvedValue(null),
   getGroup: vi.fn().mockReturnValue(null),
   getGroupTasks: vi.fn().mockReturnValue([]),
   getGroupsWithDependencies: vi.fn().mockReturnValue([])

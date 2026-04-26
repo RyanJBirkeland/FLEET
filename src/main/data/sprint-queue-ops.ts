@@ -55,6 +55,7 @@ export async function claimTask(
           return null
         }
 
+        // DL-13 & DL-18: Record audit trail before update (pass conn for consistency)
         const oldTask = fetchTask(id, conn)
         if (!oldTask) return null
 
@@ -91,21 +92,23 @@ export async function claimTask(
 
     return result ? mapRowToTask(result) : null
   } catch (err) {
-    getSprintQueriesLogger().error(`[sprint-queue-ops] claimTask(id=${id}) failed: ${err}`)
+    getSprintQueriesLogger().warn(
+      `[sprint-queue-ops] claimTask(id=${id}) failed: ${err instanceof Error ? err.message : String(err)}`
+    )
     return null
   }
 }
 
-export function releaseTask(
+export async function releaseTask(
   id: string,
   claimedBy: string,
   db?: Database.Database
-): SprintTask | null {
+): Promise<SprintTask | null> {
   const conn = db ?? getDb()
-  return withDataLayerError(
-    () => {
-      // DL-13 & DL-18: Record audit trail for release (pass conn for consistency)
-      return conn.transaction(() => {
+  try {
+    // DL-13 & DL-18: Record audit trail for release (pass conn for consistency)
+    return await withRetryAsync(() =>
+      conn.transaction(() => {
         const oldTask = fetchTask(id, conn)
         if (!oldTask) return null
 
@@ -139,11 +142,13 @@ export function releaseTask(
 
         return null
       })()
-    },
-    `releaseTask(id=${id})`,
-    null,
-    getSprintQueriesLogger()
-  )
+    )
+  } catch (err) {
+    getSprintQueriesLogger().warn(
+      `[sprint-queue-ops] releaseTask(id=${id}) failed: ${err instanceof Error ? err.message : String(err)}`
+    )
+    return null
+  }
 }
 
 export function getActiveTaskCount(db?: Database.Database): number {

@@ -120,7 +120,7 @@ export function registerSprintBatchHandlers(deps: BatchHandlersDeps): void {
           }
 
           // updateTask (service) handles notifySprintMutation internally
-          const updated = updateTask(id, filtered)
+          const updated = await updateTask(id, filtered)
           if (
             updated &&
             typeof filtered.status === 'string' &&

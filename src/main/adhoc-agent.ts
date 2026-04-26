@@ -544,7 +544,7 @@ export async function spawnAdhocAgent(args: {
         ?.trim() ?? 'Adhoc agent session'
     const title = firstLine.length > 120 ? firstLine.slice(0, 117) + '...' : firstLine
 
-    const task = args.repo.createReviewTaskFromAdhoc({
+    const task = await args.repo.createReviewTaskFromAdhoc({
       title,
       repo: meta.repo,
       spec: meta.task,

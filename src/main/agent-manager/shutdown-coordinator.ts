@@ -84,7 +84,7 @@ export async function executeShutdown(
         )
         continue
       }
-      deps.repo.updateTask(agent.taskId, {
+      await deps.repo.updateTask(agent.taskId, {
         status: 'queued',
         claimed_by: null,
         started_at: null,

@@ -95,12 +95,12 @@ function makeAgent(taskId: string): ActiveAgent {
 
 function makeRepo(overrides: Partial<IAgentTaskRepository> = {}): IAgentTaskRepository {
   return {
-    updateTask: vi.fn(),
+    updateTask: vi.fn().mockResolvedValue(null),
     getTask: vi.fn().mockReturnValue(null),
-    claimTask: vi.fn(),
+    claimTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
-    releaseTask: vi.fn(),
+    releaseTask: vi.fn().mockResolvedValue(null),
     listActiveAgentRuns: vi.fn().mockReturnValue([]),
     ...overrides
   } as unknown as IAgentTaskRepository

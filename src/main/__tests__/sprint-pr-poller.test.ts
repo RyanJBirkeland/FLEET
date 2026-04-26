@@ -10,9 +10,9 @@ function makeDeps(overrides: Partial<SprintPrPollerDeps> = {}): SprintPrPollerDe
   return {
     listTasksWithOpenPrs: vi.fn().mockReturnValue([]),
     pollPrStatuses: vi.fn().mockResolvedValue([]),
-    markTaskDoneByPrNumber: vi.fn().mockReturnValue([]),
-    markTaskCancelledByPrNumber: vi.fn().mockReturnValue([]),
-    updateTaskMergeableState: vi.fn().mockReturnValue(undefined),
+    markTaskDoneByPrNumber: vi.fn().mockResolvedValue([]),
+    markTaskCancelledByPrNumber: vi.fn().mockResolvedValue([]),
+    updateTaskMergeableState: vi.fn().mockResolvedValue(undefined),
     onTaskTerminal: vi.fn().mockReturnValue(undefined),
     // tests fire poller immediately; production stagger is 30s.
     initialDelayMs: 0,
@@ -78,7 +78,7 @@ describe('createSprintPrPoller', () => {
           mergeableState: null
         }
       ]),
-      markTaskDoneByPrNumber: vi.fn().mockReturnValue(['task-1'])
+      markTaskDoneByPrNumber: vi.fn().mockResolvedValue(['task-1'])
     })
 
     const poller = createSprintPrPoller(deps)
@@ -149,7 +149,7 @@ describe('createSprintPrPoller', () => {
           mergeableState: null
         }
       ]),
-      markTaskDoneByPrNumber: vi.fn().mockReturnValue(['task-1']),
+      markTaskDoneByPrNumber: vi.fn().mockResolvedValue(['task-1']),
       logger: { info: logInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     })
 
@@ -177,7 +177,7 @@ describe('createSprintPrPoller', () => {
           mergeableState: null
         }
       ]),
-      markTaskDoneByPrNumber: vi.fn().mockReturnValue(['task-1']),
+      markTaskDoneByPrNumber: vi.fn().mockResolvedValue(['task-1']),
       logger: { info: logInfo, warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     })
 
@@ -207,7 +207,7 @@ describe('createSprintPrPoller', () => {
           mergeableState: null
         }
       ]),
-      markTaskCancelledByPrNumber: vi.fn().mockReturnValue(['task-1'])
+      markTaskCancelledByPrNumber: vi.fn().mockResolvedValue(['task-1'])
     })
 
     const poller = createSprintPrPoller(deps)
@@ -332,7 +332,7 @@ describe('createSprintPrPoller', () => {
           mergeableState: null
         }
       ]),
-      markTaskDoneByPrNumber: vi.fn().mockReturnValue(['task-1']),
+      markTaskDoneByPrNumber: vi.fn().mockResolvedValue(['task-1']),
       onTaskTerminal: vi.fn().mockRejectedValue(new Error('dependency resolution failed')),
       logger: { info: vi.fn(), warn: logWarn, error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     })
@@ -364,7 +364,7 @@ describe('createSprintPrPoller', () => {
           mergeableState: null
         }
       ]),
-      markTaskCancelledByPrNumber: vi.fn().mockReturnValue(['task-1']),
+      markTaskCancelledByPrNumber: vi.fn().mockResolvedValue(['task-1']),
       onTaskTerminal: vi.fn().mockRejectedValue(new Error('dependency resolution failed')),
       logger: { info: vi.fn(), warn: logWarn, error: vi.fn(), debug: vi.fn(), event: vi.fn() }
     })
@@ -463,7 +463,7 @@ describe('createSprintPrPoller', () => {
       pollPrStatuses: vi.fn().mockResolvedValue([
         { taskId: 'task-1', merged: true, state: 'MERGED', mergedAt: null, mergeableState: null }
       ]),
-      markTaskDoneByPrNumber: vi.fn().mockReturnValue(['task-1']),
+      markTaskDoneByPrNumber: vi.fn().mockResolvedValue(['task-1']),
       onTaskTerminal
     })
 
@@ -494,7 +494,7 @@ describe('createSprintPrPoller', () => {
       pollPrStatuses: vi.fn().mockResolvedValue([
         { taskId: 'task-1', merged: true, state: 'MERGED', mergedAt: null, mergeableState: null }
       ]),
-      markTaskDoneByPrNumber: vi.fn().mockReturnValue(['task-1']),
+      markTaskDoneByPrNumber: vi.fn().mockResolvedValue(['task-1']),
       onTaskTerminal,
       logger: { info: vi.fn(), warn: vi.fn(), error: logError, debug: vi.fn(), event: vi.fn() }
     })

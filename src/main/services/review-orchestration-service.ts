@@ -224,7 +224,7 @@ async function executePrCreation(
     throw new Error(pr.error || 'PR creation failed')
   }
 
-  updateTask(taskId, { pr_url: pr.prUrl, pr_number: pr.prNumber ?? null, pr_status: 'open' })
+  await updateTask(taskId, { pr_url: pr.prUrl, pr_number: pr.prNumber ?? null, pr_status: 'open' })
 
   const cfg = getRepoConfig(task.repo)
   if (cfg) await cleanupWorktree(task.worktree_path, branch, cfg.localPath, env)
@@ -232,7 +232,7 @@ async function executePrCreation(
   // Keep the task in `review` — the sprint PR poller watches pr_status='open' tasks
   // and marks them done when GitHub reports the PR as merged. Marking done here would
   // transition before the merge event and bypass the poller's cancelled-on-close path.
-  const updated = updateTask(taskId, { worktree_path: null })
+  const updated = await updateTask(taskId, { worktree_path: null })
   if (updated) notifySprintMutation('updated', updated)
 
   return { prUrl: pr.prUrl }
@@ -255,7 +255,7 @@ async function executeRebaseAction(
     }
   )
   if (state.baseSha) {
-    const u = updateTask(taskId, { rebase_base_sha: state.baseSha, rebased_at: nowIso() })
+    const u = await updateTask(taskId, { rebase_base_sha: state.baseSha, rebased_at: nowIso() })
     if (u) notifySprintMutation('updated', u)
   }
   return state

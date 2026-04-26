@@ -42,7 +42,7 @@ export async function recoverOrphans(
         )
         prClearingAlreadyLogged = true
       }
-      repo.updateTask(task.id, { claimed_by: null })
+      await repo.updateTask(task.id, { claimed_by: null })
       continue
     }
 
@@ -71,7 +71,7 @@ export async function recoverOrphans(
         // Legacy fallback for callers (older tests) that have not yet been
         // migrated to inject TaskStateService.
         const exhaustedReason = 'exhausted: orphan recovery cap reached'
-        repo.updateTask(task.id, {
+        await repo.updateTask(task.id, {
           status: 'error',
           claimed_by: null,
           failure_reason: exhaustedReason
@@ -86,7 +86,7 @@ export async function recoverOrphans(
         `(count=${recoveryCount + 1}/${MAX_ORPHAN_RECOVERY_COUNT}, priorStatus=${task.status}, retryCount=${task.retry_count ?? 0}, startedAt=${task.started_at ?? 'null'})`
     )
 
-    repo.updateTask(task.id, {
+    await repo.updateTask(task.id, {
       status: 'queued',
       claimed_by: null,
       orphan_recovery_count: recoveryCount + 1,

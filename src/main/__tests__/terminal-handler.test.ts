@@ -32,8 +32,8 @@ import type { AgentManagerConfig } from '../agent-manager/types'
 function makeRepo(overrides: Partial<IAgentTaskRepository> = {}): IAgentTaskRepository {
   return {
     getTask: vi.fn().mockReturnValue(null),
-    updateTask: vi.fn(),
-    claimTask: vi.fn(),
+    updateTask: vi.fn().mockResolvedValue(null),
+    claimTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
     getGroup: vi.fn().mockReturnValue(null),

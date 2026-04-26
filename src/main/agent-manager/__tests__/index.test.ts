@@ -6,8 +6,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 vi.mock('../../data/sprint-queries', () => ({
   getQueuedTasks: vi.fn(),
-  claimTask: vi.fn(),
-  updateTask: vi.fn(),
+  claimTask: vi.fn().mockResolvedValue(null),
+  updateTask: vi.fn().mockResolvedValue(null),
   forceUpdateTask: vi.fn(),
   getTask: vi.fn(),
   getOrphanedTasks: vi.fn(),

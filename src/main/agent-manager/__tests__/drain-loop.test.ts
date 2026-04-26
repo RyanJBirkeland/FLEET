@@ -44,12 +44,12 @@ const baseConfig: AgentManagerConfig = {
 
 function makeRepo(): IAgentTaskRepository {
   return {
-    updateTask: vi.fn(),
+    updateTask: vi.fn().mockResolvedValue(null),
     getTask: vi.fn(),
-    claimTask: vi.fn(),
+    claimTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn().mockReturnValue([]),
     getTasksWithDependencies: vi.fn().mockReturnValue([]),
-    releaseTask: vi.fn(),
+    releaseTask: vi.fn().mockResolvedValue(null),
     listActiveAgentRuns: vi.fn().mockReturnValue([]),
     getQueueStats: vi.fn().mockReturnValue({
       queued: 0,

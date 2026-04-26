@@ -97,7 +97,7 @@ export async function validateAndClaimTask(
       `[agent-manager] No repo path for "${task.repo}" — setting task ${task.id} to error`
     )
     try {
-      deps.repo.updateTask(task.id, {
+      await deps.repo.updateTask(task.id, {
         status: 'error',
         notes: `Repo "${task.repo}" is not configured in BDE settings. Add it in Settings > Repos, then reset this task to queued.`,
         claimed_by: null
@@ -190,11 +190,10 @@ export async function prepareWorktreeForTask(
       groupId: task.group_id ?? undefined,
       logger: deps.logger,
       appendToNotes: (text) => {
-        try {
-          deps.repo.updateTask(task.id, { notes: text })
-        } catch (err) {
+        // fire-and-forget: note append is best-effort, so void the Promise
+        void deps.repo.updateTask(task.id, { notes: text }).catch((err) => {
           deps.logger.warn(`[task-claimer] Failed to append fetchMain failure to notes for task ${task.id}: ${err}`)
-        }
+        })
       }
     })
   } catch (err) {
@@ -206,7 +205,7 @@ export async function prepareWorktreeForTask(
         ? '...' + fullNote.slice(-(NOTES_MAX_LENGTH - 3))
         : fullNote
     try {
-      deps.repo.updateTask(task.id, {
+      await deps.repo.updateTask(task.id, {
         status: 'error',
         completed_at: nowIso(),
         notes,
@@ -219,7 +218,7 @@ export async function prepareWorktreeForTask(
         `[task-claimer] Failed to set task ${task.id} to error status: ${updateErr}`
       )
       try {
-        deps.repo.updateTask(task.id, { claimed_by: null })
+        await deps.repo.updateTask(task.id, { claimed_by: null })
       } catch (releaseErr) {
         deps.logger.error(
           `[task-claimer] Failed to release claim for task ${task.id}: ${releaseErr}`

@@ -260,13 +260,12 @@ function surfaceCleanupFailureToTaskNotes(
   const note = `Worktree cleanup failed after ${CLEANUP_RETRY_DELAYS_MS.length + 1} attempts: ${detail}. Manual cleanup: git worktree remove --force ${worktreePath}`
   const truncated =
     note.length > NOTES_MAX_LENGTH ? note.slice(0, NOTES_MAX_LENGTH - 3) + '...' : note
-  try {
-    repo.updateTask(taskId, { notes: truncated })
-  } catch (updateErr) {
+  // fire-and-forget: best-effort note update for stale-worktree diagnostic
+  void repo.updateTask(taskId, { notes: truncated }).catch((updateErr) => {
     logger.error(
       `[agent-manager] Failed to surface cleanup failure for task ${taskId}: ${updateErr}`
     )
-  }
+  })
 }
 
 /**
