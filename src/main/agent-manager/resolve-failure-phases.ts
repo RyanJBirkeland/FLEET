@@ -20,6 +20,18 @@ export interface ResolveFailureContext {
 }
 
 /**
+ * Tagged result returned by `resolveFailure`.
+ *
+ * When the DB write succeeds, `writeFailed` is absent (or `false`).
+ * When the DB write fails after all retries, `writeFailed` is `true` and
+ * `error` holds the thrown error — callers must skip `onTaskTerminal` in this
+ * case to prevent unblocking dependents against a task still in `active` in DB.
+ */
+export type ResolveFailureResult =
+  | { isTerminal: boolean; writeFailed?: false }
+  | { isTerminal: boolean; writeFailed: true; error: Error }
+
+/**
  * Calculates exponential backoff delay for agent retries.
  * Returns delay in milliseconds, capped at RETRY_BACKOFF_CAP_MS.
  */
@@ -43,9 +55,11 @@ function truncateNotesTail(notes: string | undefined): string | undefined {
 
 /**
  * Resolve a task failure: requeue with backoff (non-terminal) or mark failed (terminal).
- * Returns true if the task is in a terminal failed state, false if requeued for retry.
+ * Returns a tagged result indicating whether the task is terminal and whether the DB write
+ * succeeded. Callers must check `writeFailed` before calling `onTaskTerminal` — firing
+ * dependency resolution against a task still `active` in SQLite would corrupt the graph.
  */
-export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): boolean {
+export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): ResolveFailureResult {
   const { taskId, retryCount, repo } = opts
   // Tail-truncate before writing to DB so stack trace root causes are preserved.
   const notes = truncateNotesTail(opts.notes)
@@ -80,7 +94,7 @@ export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): bo
         failure_reason: failureReason,
         ...(notes ? { notes } : {})
       })
-      return false // not terminal
+      return { isTerminal: false }
     } else {
       // EP-1 note: same deferral as the non-terminal branch above.
       repo.updateTask(taskId, {
@@ -92,13 +106,15 @@ export function resolveFailure(opts: ResolveFailureContext, logger?: Logger): bo
         ...(durationMs !== undefined ? { duration_ms: durationMs } : {}),
         ...(notes ? { notes } : {})
       })
-      return true // terminal
+      return { isTerminal: true }
     }
   } catch (err) {
+    const writeError = err instanceof Error ? err : new Error(String(err))
     logger?.event?.('failure.persist_failed', { taskId, error: String(err) })
     logger?.error(`[completion] Failed to update task ${taskId} during failure resolution: ${err}`)
-    // Rethrow: the DB row was not updated, so invoking onTaskTerminal would
-    // unblock dependents against a task that is still 'active' in SQLite.
-    throw err
+    // Return a tagged failure instead of rethrowing. The DB row was not updated,
+    // so callers must NOT invoke onTaskTerminal — that would unblock dependents
+    // against a task still `active` in SQLite.
+    return { isTerminal, writeFailed: true, error: writeError }
   }
 }

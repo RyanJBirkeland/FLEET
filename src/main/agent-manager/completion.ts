@@ -30,7 +30,7 @@ import {
   assertBranchTipMatches,
   BranchTipMismatchError
 } from './resolve-success-phases'
-import { resolveFailure as resolveFailurePhase } from './resolve-failure-phases'
+import { resolveFailure as resolveFailurePhase, type ResolveFailureResult } from './resolve-failure-phases'
 import { evaluateAutoMerge } from './auto-merge-coordinator'
 import { nowIso } from '../../shared/time'
 import { detectUntouchedTests, listChangedFiles, formatAdvisory } from './test-touch-check'
@@ -42,7 +42,7 @@ import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { buildVerificationRevisionFeedback } from './revision-feedback-builder'
 
-export type { ResolveFailureContext } from './resolve-failure-phases'
+export type { ResolveFailureContext, ResolveFailureResult } from './resolve-failure-phases'
 
 export interface ResolveSuccessContext {
   taskId: string
@@ -426,10 +426,16 @@ async function detectNoOpAndFailIfSo(
   logger.warn(
     `[completion] task ${taskId}: detected no-op run on branch ${branch} — failing instead of transitioning to review`
   )
-  const isTerminal = resolveFailurePhase({ taskId, retryCount, notes: NOOP_RUN_NOTE, repo }, logger)
-  const decision = isTerminal ? 'terminal' : 'requeue'
+  const result = resolveFailurePhase({ taskId, retryCount, notes: NOOP_RUN_NOTE, repo }, logger)
+  if (result.writeFailed) {
+    logger.warn(
+      `[completion] task ${taskId}: noop failure DB write failed — skipping terminal notification to avoid corrupting dependency graph`
+    )
+    return true
+  }
+  const decision = result.isTerminal ? 'terminal' : 'requeue'
   logger.event('completion.decision', { taskId, decision, reason: 'noop' })
-  await onTaskTerminal(taskId, isTerminal ? 'failed' : 'queued')
+  await onTaskTerminal(taskId, result.isTerminal ? 'failed' : 'queued')
   return true
 }
 
@@ -539,10 +545,16 @@ async function verifyWorktreeOrFail(opts: {
   const feedback = buildVerificationRevisionFeedback(result.failure.kind, result.failure.stderr)
   const notes = JSON.stringify(feedback)
 
-  const isTerminal = resolveFailurePhase({ taskId, retryCount, notes, repo }, logger)
-  const decision = isTerminal ? 'terminal' : 'requeue'
+  const failureResult = resolveFailurePhase({ taskId, retryCount, notes, repo }, logger)
+  if (failureResult.writeFailed) {
+    logger.warn(
+      `[completion] task ${taskId}: verification failure DB write failed — skipping terminal notification to avoid corrupting dependency graph`
+    )
+    return false
+  }
+  const decision = failureResult.isTerminal ? 'terminal' : 'requeue'
   logger.event('completion.decision', { taskId, decision, reason: result.failure.kind })
-  await onTaskTerminal(taskId, isTerminal ? 'failed' : 'queued')
+  await onTaskTerminal(taskId, failureResult.isTerminal ? 'failed' : 'queued')
   return false
 }
 
@@ -554,6 +566,6 @@ export function resolveFailure(
     repo: IAgentTaskRepository
   },
   logger?: Logger
-): boolean {
+): ResolveFailureResult {
   return resolveFailurePhase(opts, logger)
 }

@@ -82,6 +82,10 @@ vi.mock('../watchdog', () => ({
   checkAgent: vi.fn(() => 'ok')
 }))
 
+vi.mock('../../data/sqlite-retry', () => ({
+  withRetryAsync: vi.fn(async (fn: () => unknown) => fn())
+}))
+
 vi.mock('node:fs', () => ({
   appendFileSync: vi.fn(),
   existsSync: vi.fn().mockReturnValue(true),
@@ -336,7 +340,7 @@ describe('AgentManagerImpl — class internals', () => {
       expect(agent.handle.abort).not.toHaveBeenCalled()
     })
 
-    it('kills agents NOT in _processingTasks when verdict is max-runtime', () => {
+    it('kills agents NOT in _processingTasks when verdict is max-runtime', async () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
       const agent = makeActiveAgent('task-idle')
       manager.__testInternals.activeAgents.set('task-idle', agent)
@@ -344,7 +348,7 @@ describe('AgentManagerImpl — class internals', () => {
 
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      manager.__testInternals.watchdogLoop()
+      await manager.__testInternals.watchdogLoop()
 
       // Agent should be removed and abort called
       expect(manager.__testInternals.activeAgents.has('task-idle')).toBe(false)
@@ -364,7 +368,7 @@ describe('AgentManagerImpl — class internals', () => {
       expect(agent.handle.abort).not.toHaveBeenCalled()
     })
 
-    it('processes multiple agents: kills only those not in _processingTasks', () => {
+    it('processes multiple agents: kills only those not in _processingTasks', async () => {
       const manager = new AgentManagerImpl(baseConfig, makeMockRepo(), makeLogger())
 
       const agentA = makeActiveAgent('task-a')
@@ -379,7 +383,7 @@ describe('AgentManagerImpl — class internals', () => {
       // Both would fail max-runtime check
       vi.mocked(checkAgent).mockReturnValue('max-runtime')
 
-      manager.__testInternals.watchdogLoop()
+      await manager.__testInternals.watchdogLoop()
 
       expect(manager.__testInternals.activeAgents.has('task-a')).toBe(true)
       expect(agentA.handle.abort).not.toHaveBeenCalled()

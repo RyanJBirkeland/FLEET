@@ -720,7 +720,8 @@ describe('resolveFailure', () => {
         next_eligible_at: expect.any(String)
       })
     )
-    expect(result).toBe(false) // not terminal
+    expect(result).toMatchObject({ isTerminal: false })
+    expect(result.writeFailed).toBeFalsy()
   })
 
   it('marks task failed with needs_review when retry count is exhausted', async () => {
@@ -734,7 +735,8 @@ describe('resolveFailure', () => {
     const patch = updateTaskMock.mock.calls[0][1] as Record<string, unknown>
     expect(patch.status).toBe('failed')
     expect(typeof patch.completed_at).toBe('string')
-    expect(result).toBe(true) // terminal
+    expect(result).toMatchObject({ isTerminal: true })
+    expect(result.writeFailed).toBeFalsy()
   })
 
   it('re-queues when retryCount is one below MAX_RETRIES', async () => {
@@ -753,7 +755,8 @@ describe('resolveFailure', () => {
         next_eligible_at: expect.any(String)
       })
     )
-    expect(result).toBe(false) // not terminal
+    expect(result).toMatchObject({ isTerminal: false })
+    expect(result.writeFailed).toBeFalsy()
   })
 
   it('includes notes when provided', async () => {
@@ -773,7 +776,8 @@ describe('resolveFailure', () => {
         failure_reason: 'no_commits'
       })
     )
-    expect(result).toBe(false)
+    expect(result).toMatchObject({ isTerminal: false })
+    expect(result.writeFailed).toBeFalsy()
   })
 
   it('includes notes in terminal failure', async () => {
@@ -792,7 +796,8 @@ describe('resolveFailure', () => {
         failure_reason: 'no_commits'
       })
     )
-    expect(result).toBe(true)
+    expect(result).toMatchObject({ isTerminal: true })
+    expect(result.writeFailed).toBeFalsy()
   })
 
   it('classifies failure reason from notes when retrying', async () => {
@@ -812,7 +817,8 @@ describe('resolveFailure', () => {
         failure_reason: 'auth'
       })
     )
-    expect(result).toBe(false)
+    expect(result).toMatchObject({ isTerminal: false })
+    expect(result.writeFailed).toBeFalsy()
   })
 
   it('classifies failure reason from notes when terminal', async () => {
@@ -831,19 +837,18 @@ describe('resolveFailure', () => {
         failure_reason: 'test_failure'
       })
     )
-    expect(result).toBe(true)
+    expect(result).toMatchObject({ isTerminal: true })
+    expect(result.writeFailed).toBeFalsy()
   })
 
-  it('rethrows when updateTask throws so caller does NOT invoke onTaskTerminal (T-3 fix)', () => {
+  it('returns { writeFailed: true } when updateTask throws — caller must NOT invoke onTaskTerminal', () => {
     updateTaskMock.mockImplementationOnce(() => {
       throw new Error('DB error')
     })
 
-    // Phase A T-3: rethrow so caller skips onTaskTerminal — the row was not
-    // updated, so unblocking dependents would be incorrect.
-    expect(() =>
-      resolveFailure({ taskId: 'task-5', retryCount: MAX_RETRIES, repo: mockRepo })
-    ).toThrow('DB error')
+    const result = resolveFailure({ taskId: 'task-5', retryCount: MAX_RETRIES, repo: mockRepo })
+    expect(result).toMatchObject({ writeFailed: true })
+    expect(result).toHaveProperty('error')
   })
 })
 

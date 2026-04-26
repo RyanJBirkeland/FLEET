@@ -15,6 +15,9 @@ vi.mock('../../../shared/time', () => ({
 vi.mock('../../agent-event-mapper', () => ({
   flushAgentEventBatcher: vi.fn()
 }))
+vi.mock('../../data/sqlite-retry', () => ({
+  withRetryAsync: vi.fn(async (fn: () => unknown) => fn())
+}))
 
 import {
   killActiveAgent,

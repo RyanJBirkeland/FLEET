@@ -162,17 +162,20 @@ async function skipIfAlreadyOnMain(
       claimed_by: null,
       notes: autoCompleteNote
     })
+    await deps
+      .onTaskTerminal(task.id, 'done')
+      .catch((err) =>
+        deps.logger.warn(`[agent-manager] onTerminal failed for already-done task ${task.id}: ${err}`)
+      )
   } catch (err) {
+    // DB write failed — do NOT call onTaskTerminal. The task is still in its
+    // prior status in SQLite; firing dependency resolution here would unblock
+    // dependents against a task that has not actually completed.
     deps.logger.warn(
       `[agent-manager] Failed to mark task ${task.id} done after already-on-main match: ${err}`
     )
+    return false
   }
-
-  await deps
-    .onTaskTerminal(task.id, 'done')
-    .catch((err) =>
-      deps.logger.warn(`[agent-manager] onTerminal failed for already-done task ${task.id}: ${err}`)
-    )
   return true
 }
 

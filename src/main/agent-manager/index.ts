@@ -338,12 +338,23 @@ export class AgentManagerImpl implements AgentManager {
         // repo.updateTask directly avoids circular-service dependency and
         // test-environment issues (TaskStateService uses module-level sprint-mutations,
         // not the injected repo). See T-36 for the full fix path.
+        const errorNotes = String(err)
         try {
-          this.repo.updateTask(task.id, { status: 'error', claimed_by: null, notes: String(err) }) // phase-a-bypass: T-36
-        } catch (updateErr) {
-          this.logger.error(
-            `[agent-manager] Failed to release claim for task ${task.id}: ${updateErr}`
+          this.repo.updateTask(task.id, { status: 'error', claimed_by: null, notes: errorNotes }) // phase-a-bypass: T-36
+        } catch (statusWriteErr) {
+          // The transition guard rejected the status write (e.g. another path already moved the
+          // task to a terminal state). Fall back to a claim-only patch so `claimed_by` is always
+          // cleared even when the status field cannot be written.
+          this.logger.warn(
+            `[agent-manager] Status write rejected for task ${task.id} — retrying with claim-only patch: ${statusWriteErr}`
           )
+          try {
+            this.repo.updateTask(task.id, { claimed_by: null, notes: errorNotes })
+          } catch (claimReleaseErr) {
+            this.logger.error(
+              `[agent-manager] Failed to release claim for task ${task.id}: ${claimReleaseErr}`
+            )
+          }
         }
       })
       .finally(() => {
@@ -506,7 +517,8 @@ export class AgentManagerImpl implements AgentManager {
           branch: agent.branch,
           logger: this.logger
         })
-      }
+      },
+      broadcastToRenderer: (channel, payload) => broadcast(channel as 'manager:warning', payload as { message: string })
     }
     await runWatchdog(watchdogDeps)
   }

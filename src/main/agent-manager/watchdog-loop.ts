@@ -15,6 +15,7 @@ import { handleWatchdogVerdict } from './watchdog-handler'
 import { flushAgentEventBatcher } from '../agent-event-mapper'
 import { nowIso } from '../../shared/time'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import { withRetryAsync } from '../data/sqlite-retry'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -37,6 +38,12 @@ export interface WatchdogLoopDeps {
    * preserved for human inspection). Errors are caught and logged by the caller.
    */
   cleanupAgentWorktree?: (agent: ActiveAgent) => Promise<void>
+  /**
+   * Optional broadcast function for sending warning events to the renderer.
+   * Used when the watchdog DB write fails after all retries — surfaces the
+   * issue to the operator without triggering dependency resolution.
+   */
+  broadcastToRenderer?: (channel: string, payload: unknown) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -226,20 +233,28 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
     flushAgentEventBatcher()
 
     // Step 3: Persist the status change to DB before removing from map.
-    // If the DB write fails the agent is still gone from the process level,
-    // so we remove from the map anyway — but the task stays in `active` in DB
-    // until orphan-recovery resets it on the next startup.
+    // Retries SQLITE_BUSY transparently. If all retries are exhausted, broadcast
+    // a warning and return early — never call onTaskTerminal when the DB write
+    // did not land, as that would unblock dependents against a task still `active`.
     if (result.taskUpdate) {
+      let writeSucceeded = false
       try {
         // EP-1 note: result.taskUpdate may include a `status` field from watchdog-handler.ts.
         // Migrating to TaskStateService.transition() here requires async handling and
         // threading taskStateService through WatchdogLoopDeps. Deferred to EP-2.
-        deps.repo.updateTask(agent.taskId, result.taskUpdate)
+        await withRetryAsync(() => deps.repo.updateTask(agent.taskId, result.taskUpdate!))
+        writeSucceeded = true
       } catch (err) {
         deps.logger.warn(
           `[agent-manager] Failed to update task ${agent.taskId} after ${verdict}: ${err}`
         )
+        const warningMessage = `Watchdog kill for task ${agent.taskId} could not be persisted after all retries — manual rescue may be needed. Error: ${err}`
+        deps.broadcastToRenderer?.('manager:warning', { message: warningMessage })
+        removeAgentFromMap(agent, deps.activeAgents)
+        return
       }
+
+      if (!writeSucceeded) return
     }
 
     // Step 4: Remove from map only after DB write attempt so the watchdog does

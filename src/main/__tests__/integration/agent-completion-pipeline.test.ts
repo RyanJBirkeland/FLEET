@@ -401,7 +401,7 @@ describe('Agent completion pipeline integration', () => {
   // -------------------------------------------------------------------------
   describe('agent exits non-zero (resolveFailure)', () => {
     it('re-queues task with incremented retry count when under max retries', async () => {
-      const isTerminal = await resolveFailure(
+      const result = await resolveFailure(
         { repo: mockRepo, taskId: 'task-3', retryCount: 0 },
         logger
       )
@@ -414,13 +414,14 @@ describe('Agent completion pipeline integration', () => {
           claimed_by: null
         })
       )
-      expect(isTerminal).toBe(false)
+      expect(result).toMatchObject({ isTerminal: false })
+      expect(result.writeFailed).toBeFalsy()
     })
 
     it('re-queues at every retry count below MAX_RETRIES', async () => {
       for (let i = 0; i < MAX_RETRIES; i++) {
         updateTaskMock.mockClear()
-        const isTerminal = await resolveFailure(
+        const result = await resolveFailure(
           { repo: mockRepo, taskId: 'task-3', retryCount: i },
           logger
         )
@@ -432,12 +433,13 @@ describe('Agent completion pipeline integration', () => {
             claimed_by: null
           })
         )
-        expect(isTerminal).toBe(false)
+        expect(result).toMatchObject({ isTerminal: false })
+        expect(result.writeFailed).toBeFalsy()
       }
     })
 
     it('marks task permanently failed when retry count reaches MAX_RETRIES', async () => {
-      const isTerminal = await resolveFailure(
+      const result = await resolveFailure(
         { repo: mockRepo, taskId: 'task-3', retryCount: MAX_RETRIES },
         logger
       )
@@ -449,19 +451,20 @@ describe('Agent completion pipeline integration', () => {
           claimed_by: null
         })
       )
-      expect(isTerminal).toBe(true)
+      expect(result).toMatchObject({ isTerminal: true })
+      expect(result.writeFailed).toBeFalsy()
     })
 
-    it('rethrows when updateTask throws during failure resolution (T-3 fix)', () => {
+    it('returns { writeFailed: true } when updateTask throws during failure resolution', () => {
       updateTaskMock.mockImplementationOnce(() => {
         throw new Error('DB error')
       })
 
-      // Phase A T-3: rethrow prevents caller from invoking onTaskTerminal
-      // when the DB row was not actually updated.
-      expect(() =>
-        resolveFailure({ repo: mockRepo, taskId: 'task-3', retryCount: MAX_RETRIES }, logger)
-      ).toThrow('DB error')
+      // T-92: returns tagged result so caller can skip onTaskTerminal without
+      // relying on exception propagation.
+      const result = resolveFailure({ repo: mockRepo, taskId: 'task-3', retryCount: MAX_RETRIES }, logger)
+      expect(result).toMatchObject({ writeFailed: true })
+      expect(result).toHaveProperty('error')
     })
   })
 

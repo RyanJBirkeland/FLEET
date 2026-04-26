@@ -68,7 +68,7 @@ vi.mock('../../lib/prompt-composer', () => ({
 
 vi.mock('../completion', () => ({
   resolveSuccess: vi.fn().mockResolvedValue(undefined),
-  resolveFailure: vi.fn().mockReturnValue(false),
+  resolveFailure: vi.fn().mockReturnValue({ isTerminal: false }),
   deleteAgentBranchBeforeRetry: vi.fn().mockResolvedValue(undefined)
 }))
 
@@ -453,7 +453,7 @@ describe('runAgent — completion fallback', () => {
     ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([{ exit_code: 0 }]))
     ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('normal-exit')
     ;(resolveSuccess as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('PR creation failed'))
-    ;(resolveFailure as ReturnType<typeof vi.fn>).mockReturnValue(true)
+    ;(resolveFailure as ReturnType<typeof vi.fn>).mockReturnValue({ isTerminal: true })
 
     const deps = makeDeps()
     await runAgent(makeTask(), worktree, repoPath, deps)
@@ -465,7 +465,7 @@ describe('runAgent — completion fallback', () => {
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'failed')
   })
 
-  it('does NOT call onTaskTerminal when resolveFailure returns false (retry queued)', async () => {
+  it('does NOT call onTaskTerminal when resolveFailure returns isTerminal:false (retry queued)', async () => {
     const { spawnAgent } = await import('../sdk-adapter')
     const { classifyExit } = await import('../fast-fail')
     const { resolveSuccess, resolveFailure } = await import('../completion')
@@ -473,7 +473,7 @@ describe('runAgent — completion fallback', () => {
     ;(spawnAgent as ReturnType<typeof vi.fn>).mockResolvedValue(makeHandle([{ exit_code: 0 }]))
     ;(classifyExit as ReturnType<typeof vi.fn>).mockReturnValue('normal-exit')
     ;(resolveSuccess as ReturnType<typeof vi.fn>).mockRejectedValue(new Error('PR creation failed'))
-    ;(resolveFailure as ReturnType<typeof vi.fn>).mockReturnValue(false)
+    ;(resolveFailure as ReturnType<typeof vi.fn>).mockReturnValue({ isTerminal: false })
 
     const deps = makeDeps()
     await runAgent(makeTask(), worktree, repoPath, deps)

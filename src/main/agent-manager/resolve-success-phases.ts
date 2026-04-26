@@ -31,6 +31,7 @@ import type { SprintTask } from '../../shared/types/task-types'
 import { buildCommitMessage } from './commit-message'
 import { NO_COMMITS_NOTE } from './failure-messages'
 import type { TaskStateService } from '../services/task-state-service'
+import type { ResolveFailureResult } from './resolve-failure-phases'
 
 export interface RebaseOutcome {
   rebaseNote: string | undefined
@@ -356,7 +357,7 @@ interface CommitCheckContext {
       repo: IAgentTaskRepository
     },
     logger?: Logger
-  ) => boolean
+  ) => ResolveFailureResult
 }
 
 /**
@@ -424,8 +425,14 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
         return false
       }
 
-      const isTerminal = resolveFailure({ taskId, retryCount, notes: summaryNote, repo }, logger)
-      if (isTerminal) {
+      const failureResult = resolveFailure({ taskId, retryCount, notes: summaryNote, repo }, logger)
+      if (failureResult.writeFailed) {
+        logger.warn(
+          `[completion] Task ${taskId}: no-commits failure DB write failed — skipping terminal notification`
+        )
+        return false
+      }
+      if (failureResult.isTerminal) {
         logger.warn(
           `[completion] Task ${taskId}: no commits on branch ${branch} — exhausted retries`
         )
@@ -453,8 +460,8 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
       await onTaskTerminal(taskId, 'failed')
     } else {
       // No TaskStateService injected — fall back to resolveFailure path
-      const isTerminal = resolveFailure({ taskId, retryCount, notes: `git rev-list failed: ${String(err)}`, repo }, logger)
-      if (isTerminal) await onTaskTerminal(taskId, 'failed')
+      const fallbackResult = resolveFailure({ taskId, retryCount, notes: `git rev-list failed: ${String(err)}`, repo }, logger)
+      if (!fallbackResult.writeFailed && fallbackResult.isTerminal) await onTaskTerminal(taskId, 'failed')
     }
     return false
   }
