@@ -147,17 +147,10 @@ describe('checkTaskDependencies', () => {
     expect(mockLogger.event).toHaveBeenCalledWith('dependency.check.error', expect.objectContaining({ taskId: 'task-1' }))
   })
 
-  it('returns shouldBlock: true with dep-check-failed reason when areDependenciesSatisfied throws', async () => {
-    const { createDependencyIndex } = await import('../dependency-service')
+  it('returns shouldBlock: true with dep-check-failed reason when listTasks throws', async () => {
     const { checkTaskDependencies } = await import('../dependency-service')
-
-    const mockListTasks = vi.fn().mockReturnValue([{ id: 'task-2', status: 'queued' }] as any)
-    vi.mocked(createDependencyIndex).mockReturnValue({
-      rebuild: vi.fn(),
-      getDependents: vi.fn(),
-      areDependenciesSatisfied: vi.fn().mockImplementation(() => {
-        throw new Error('index corrupt')
-      })
+    const mockListTasks = vi.fn().mockImplementation(() => {
+      throw new Error('index corrupt')
     })
 
     const result = checkTaskDependencies(

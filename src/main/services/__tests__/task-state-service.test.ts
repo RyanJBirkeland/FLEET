@@ -64,12 +64,9 @@ describe('validateTransition', () => {
       }
     })
 
-    it('should reject queued → done', () => {
+    it('should allow queued → done (auto-complete path added in EP-1)', () => {
       const result = validateTransition('queued', 'done')
-      expect(result.ok).toBe(false)
-      if (!result.ok) {
-        expect(result.reason).toContain('queued → done')
-      }
+      expect(result.ok).toBe(true)
     })
 
     it('should reject cancelled → queued (re-queueing a cancelled task is not allowed)', () => {

@@ -87,7 +87,7 @@ export function checkTaskDependencies(
     return { shouldBlock: !satisfied && blockedBy.length > 0, blockedBy }
   } catch (err) {
     logger.warn(`[dependency-service] checkTaskDependencies failed for ${taskId}: ${err}`)
-    logger.event('dependency.check.error', { taskId, error: String(err) })
+    logger.event?.('dependency.check.error', { taskId, error: String(err) })
     const reason = 'dep-check-failed: ' + (err instanceof Error ? err.message : String(err))
     return { shouldBlock: true, blockedBy: [], reason }
   }
@@ -139,7 +139,7 @@ export function checkEpicDependencies(
     return { shouldBlock: !satisfied && blockedBy.length > 0, blockedBy }
   } catch (err) {
     logger.warn(`[dependency-service] checkEpicDependencies failed for epic ${groupId}: ${err}`)
-    logger.event('dependency.check.error', { groupId, error: String(err) })
+    logger.event?.('dependency.check.error', { groupId, error: String(err) })
     const reason = 'dep-check-failed: ' + (err instanceof Error ? err.message : String(err))
     return { shouldBlock: true, blockedBy: [], reason }
   }

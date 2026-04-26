@@ -455,14 +455,14 @@ describe('Agent completion pipeline integration', () => {
       expect(result.writeFailed).toBeFalsy()
     })
 
-    it('returns { writeFailed: true } when updateTask throws during failure resolution', () => {
+    it('returns { writeFailed: true } when updateTask throws during failure resolution', async () => {
       updateTaskMock.mockImplementationOnce(() => {
         throw new Error('DB error')
       })
 
       // T-92: returns tagged result so caller can skip onTaskTerminal without
       // relying on exception propagation.
-      const result = resolveFailure({ repo: mockRepo, taskId: 'task-3', retryCount: MAX_RETRIES }, logger)
+      const result = await resolveFailure({ repo: mockRepo, taskId: 'task-3', retryCount: MAX_RETRIES }, logger)
       expect(result).toMatchObject({ writeFailed: true })
       expect(result).toHaveProperty('error')
     })
