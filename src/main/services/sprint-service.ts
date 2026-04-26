@@ -58,8 +58,8 @@ export function createTask(input: mutations.CreateTaskInput): SprintTask | null 
   return row
 }
 
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
-  const result = mutations.claimTask(id, claimedBy)
+export async function claimTask(id: string, claimedBy: string): Promise<SprintTask | null> {
+  const result = await mutations.claimTask(id, claimedBy)
   if (result) broadcaster.notifySprintMutation('updated', result)
   return result
 }

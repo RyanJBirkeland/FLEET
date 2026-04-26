@@ -95,7 +95,7 @@ export function createTask(input: CreateTaskInput): SprintTask | null {
   return getRepo().createTask(input)
 }
 
-export function claimTask(id: string, claimedBy: string): SprintTask | null {
+export async function claimTask(id: string, claimedBy: string): Promise<SprintTask | null> {
   return getRepo().claimTask(id, claimedBy)
 }
 

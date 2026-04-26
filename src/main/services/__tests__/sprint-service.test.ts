@@ -223,20 +223,20 @@ describe('sprint-service', () => {
   })
 
   describe('claimTask', () => {
-    it('claims task and fires updated notification', () => {
+    it('claims task and fires updated notification', async () => {
       const claimed: Partial<SprintTask> = { id: '1', claimed_by: 'agent-1' }
-      vi.mocked(_claimTask).mockReturnValue(claimed as SprintTask)
+      vi.mocked(_claimTask).mockResolvedValue(claimed as SprintTask)
 
-      const result = claimTask('1', 'agent-1')
+      const result = await claimTask('1', 'agent-1')
       expect(result).toEqual(claimed)
       expect(_claimTask).toHaveBeenCalledWith('1', 'agent-1', undefined)
       vi.runAllTimers()
-      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange') // claimed)
+      expect(broadcast).toHaveBeenCalledWith('sprint:externalChange')
     })
 
-    it('does not notify when claim fails', () => {
-      vi.mocked(_claimTask).mockReturnValue(null)
-      const result = claimTask('1', 'agent-1')
+    it('does not notify when claim fails', async () => {
+      vi.mocked(_claimTask).mockResolvedValue(null)
+      const result = await claimTask('1', 'agent-1')
       expect(result).toBeNull()
       expect(broadcast).not.toHaveBeenCalled()
     })

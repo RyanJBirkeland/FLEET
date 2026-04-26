@@ -273,7 +273,7 @@ export async function setupWorktree(
     // The lock guards `git worktree add`, branch creation, and the merge --ff-only
     // (which mutates the main checkout's HEAD) — these races corrupted state in
     // testing when multiple agents started simultaneously on the same repo.
-    acquireLock(worktreeBase, repoPath, log)
+    await acquireLock(worktreeBase, repoPath, log)
 
     try {
       // Clean any stale state for this task/branch (other worktrees with the

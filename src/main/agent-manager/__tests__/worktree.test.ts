@@ -327,10 +327,10 @@ describe('setupWorktree', () => {
       })
     ).rejects.toThrow('fatal: unable to create worktree')
 
-    // Lock should have been released (lock file should not exist)
+    // releaseLock fires rm() fire-and-forget (async libuv I/O) — poll until gone
     const repoSlugVal = mockRepoPath.replace(/[^a-z0-9]/gi, '-').replace(/^-+|-+$/g, '')
     const lockFile = path.join(tmpDir, '.locks', `${repoSlugVal}.lock`)
-    expect(existsSync(lockFile)).toBe(false)
+    await vi.waitFor(() => expect(existsSync(lockFile)).toBe(false), { timeout: 1000 })
   })
 
   it('cleans up lock and throws when worktree add fails after nuke', async () => {
@@ -361,10 +361,10 @@ describe('setupWorktree', () => {
       })
     ).rejects.toThrow('fatal: unable to create worktree')
 
-    // Lock should have been released
+    // releaseLock fires rm() fire-and-forget (async libuv I/O) — poll until gone
     const repoSlugVal = mockRepoPath.replace(/[^a-z0-9]/gi, '-').replace(/^-+|-+$/g, '')
     const lockFile = path.join(tmpDir, '.locks', `${repoSlugVal}.lock`)
-    expect(existsSync(lockFile)).toBe(false)
+    await vi.waitFor(() => expect(existsSync(lockFile)).toBe(false), { timeout: 1000 })
   })
 
   it('removes corrupted lock file and proceeds', async () => {
