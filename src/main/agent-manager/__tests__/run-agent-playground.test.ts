@@ -371,7 +371,8 @@ describe('AgentRunClaim interface', () => {
 
 describe('runAgent — playground-before-cleanup ordering', () => {
   const mockRepo: IAgentTaskRepository = {
-    getTask: vi.fn(),
+    // Return a non-review task so cleanupOrPreserveWorktree proceeds to cleanup
+    getTask: vi.fn().mockReturnValue({ id: 'task-order-1', status: 'done' }),
     updateTask: vi.fn().mockResolvedValue(null),
     getQueuedTasks: vi.fn(),
     getTasksWithDependencies: vi.fn().mockResolvedValue([]),

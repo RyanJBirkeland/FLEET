@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { DEFAULT_CONFIG } from '../types'
+import { PipelineAbortError } from '../pipeline-abort-error'
 
 vi.mock('../../lib/prompt-composer', () => ({
   buildAgentPrompt: vi.fn((input) => `prompt:${input.taskContent}:${input.branch}`)
@@ -113,9 +114,12 @@ describe('validateTaskForRun', () => {
     ).resolves.toBeUndefined()
   })
 
-  it('throws and marks error when task has no content', async () => {
+  it('throws PipelineAbortError and marks error when task has no content', async () => {
     const deps = makeDeps()
     const task = makeTask({ prompt: null, spec: null, title: '' })
+    await expect(validateTaskForRun(task, worktree, repoPath, deps)).rejects.toThrow(
+      PipelineAbortError
+    )
     await expect(validateTaskForRun(task, worktree, repoPath, deps)).rejects.toThrow(
       'Task has no content'
     )

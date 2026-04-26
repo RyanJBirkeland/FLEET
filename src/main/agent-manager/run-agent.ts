@@ -34,6 +34,7 @@ import { NOTES_MAX_LENGTH } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { extractFilesToChange } from './spec-parser'
 import type { TaskStateService } from '../services/task-state-service'
+import { PipelineAbortError } from './pipeline-abort-error'
 
 export type { ConsumeMessagesResult }
 
@@ -484,16 +485,33 @@ async function handleResolveSuccessFailure(
 /**
  * Preserves the worktree if the task moved to 'review' status;
  * otherwise captures a partial diff and removes the worktree.
+ *
+ * Defaults to preserve when the DB read fails or returns null — deleting a
+ * worktree mid-review is irreversible, whereas a stale worktree is recoverable.
+ *
+ * Exported for unit testing.
  */
-async function cleanupOrPreserveWorktree(
+export async function cleanupOrPreserveWorktree(
   task: AgentRunClaim,
   worktree: { worktreePath: string; branch: string },
   repoPath: string,
   repo: IAgentTaskRepository,
   logger: Logger
 ): Promise<void> {
-  const currentTask = repo.getTask(task.id)
-  if (currentTask?.status !== 'review') {
+  let currentTask: ReturnType<typeof repo.getTask>
+  try {
+    currentTask = repo.getTask(task.id)
+  } catch (err) {
+    logger.warn(`[run-agent] could not read task status for ${task.id}, preserving worktree: ${err}`)
+    return
+  }
+
+  if (currentTask == null) {
+    logger.warn(`[run-agent] task ${task.id} not found in DB, preserving worktree`)
+    return
+  }
+
+  if (currentTask.status !== 'review') {
     await capturePartialDiff(task.id, worktree.worktreePath, repo, logger)
     await cleanupWorktreeWithRetry(task.id, worktree, repoPath, repo, logger)
   } else {
@@ -622,6 +640,36 @@ async function persistAndCleanupAfterRun(
   await cleanupOrPreserveWorktree(task, worktree, repoPath, deps.repo, deps.logger)
 }
 
+/**
+ * Best-effort recovery for an unexpected (non-PipelineAbortError) exception
+ * escaping Phase 1 or Phase 2.
+ *
+ * Releases the claim and fires the terminal notification so the task is never
+ * left `active` with `claimed_by` set. Both steps are wrapped individually —
+ * a secondary DB failure is logged but never re-thrown.
+ */
+async function abortPhaseUnexpectedly(
+  taskId: string,
+  phase: string,
+  err: unknown,
+  deps: Pick<RunAgentDeps, 'repo' | 'onTaskTerminal' | 'logger'>
+): Promise<void> {
+  const message = err instanceof Error ? err.message : String(err)
+  deps.logger.error(`[run-agent] ${phase} aborted unexpectedly for ${taskId}: ${message}`)
+
+  try {
+    deps.repo.updateTask(taskId, { status: 'error', claimed_by: null })
+  } catch (updateErr) {
+    deps.logger.warn(`[run-agent] failed to release claim for ${taskId} after ${phase} abort: ${updateErr}`)
+  }
+
+  try {
+    await deps.onTaskTerminal(taskId, 'error')
+  } catch (terminalErr) {
+    deps.logger.warn(`[run-agent] onTaskTerminal failed for ${taskId} after ${phase} abort: ${terminalErr}`)
+  }
+}
+
 /** Result produced by the streaming phase — passed to the completion phase. */
 interface StreamResult {
   exitCode: number | undefined
@@ -700,8 +748,10 @@ export async function runAgent(
   try {
     await validateTaskForRun(task, worktree, repoPath, deps)
     prompt = await assembleRunContext(task, worktree, deps)
-  } catch {
-    return // Early exit — validation failed and cleaned up
+  } catch (err) {
+    if (err instanceof PipelineAbortError) return // Helper already recovered — no double cleanup
+    await abortPhaseUnexpectedly(task.id, 'phase 1', err, deps)
+    return
   }
 
   // Pre-spawn tripwire — logs main/worktree porcelain status and fails fast
@@ -737,8 +787,10 @@ export async function runAgent(
     agent = spawnResult.agent
     agentRunId = spawnResult.agentRunId
     turnTracker = spawnResult.turnTracker
-  } catch {
-    return // Early exit — spawn failed and cleaned up
+  } catch (err) {
+    if (err instanceof PipelineAbortError) return // Helper already recovered — no double cleanup
+    await abortPhaseUnexpectedly(task.id, 'phase 2', err, deps)
+    return
   }
 
   const streamingCtx: StreamingContext = { task, agent, agentRunId, turnTracker, worktree, deps }

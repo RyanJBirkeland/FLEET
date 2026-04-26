@@ -17,6 +17,7 @@ import { nowIso } from '../../shared/time'
 import { TurnTracker } from './turn-tracker'
 import { getDefaultCredentialService } from '../services/credential-service'
 import { computeMaxTurns, PIPELINE_DISALLOWED_TOOLS } from './turn-budget'
+import { PipelineAbortError } from './pipeline-abort-error'
 
 /**
  * Logs a worktree cleanup warning with consistent format.
@@ -85,7 +86,7 @@ export async function handleSpawnFailure(
   } catch (cleanupErr) {
     logCleanupWarning(task.id, worktree.worktreePath, cleanupErr, logger)
   }
-  throw err
+  throw new PipelineAbortError('Spawn failed and recovered', err)
 }
 
 /**
@@ -142,7 +143,7 @@ export async function spawnAndWireAgent(
     }
   } catch (err) {
     await handleSpawnFailure(err, task, worktree, repoPath, deps)
-    throw err // unreachable — handleSpawnFailure always throws; satisfies TypeScript
+    throw err // unreachable — handleSpawnFailure throws PipelineAbortError; satisfies TypeScript
   }
 
   const result = initializeAgentTracking(
