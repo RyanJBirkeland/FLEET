@@ -14,7 +14,10 @@ vi.mock('../agent-event-mapper', () => ({
 vi.mock('../playground-handler', () => ({
   createPlaygroundDetector: vi.fn(() => ({ onMessage: vi.fn().mockReturnValue(null) }))
 }))
-vi.mock('../../broadcast', () => ({ broadcast: vi.fn() }))
+vi.mock('../../broadcast', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../broadcast')>()
+  return { ...actual, broadcast: vi.fn(), broadcastCoalesced: vi.fn() }
+})
 
 import { invalidateOAuthToken, refreshOAuthTokenFromKeychain } from '../../env-utils'
 import { consumeMessages } from '../message-consumer'
