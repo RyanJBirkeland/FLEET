@@ -185,7 +185,9 @@ describe('IPC vs MCP parity', () => {
     createdTaskIds.push(mcpTask.id)
 
     const reason = 'parity cancel reason'
-    await cancelTask(ipcTask.id, { reason }, { onStatusTerminal: () => {}, logger })
+    // cancelTask now returns CancelTaskResult — result.row is the cancelled task
+    const cancelResult = await cancelTask(ipcTask.id, { reason }, { onStatusTerminal: () => {}, logger })
+    expect(cancelResult.row).not.toBeNull()
     await mcpClient.callTool({
       name: 'tasks.cancel',
       arguments: { id: mcpTask.id, reason }

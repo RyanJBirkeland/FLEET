@@ -33,10 +33,27 @@ import { isValidTaskId } from '../lib/validation'
 import { UPDATE_ALLOWLIST } from '../data/sprint-maintenance-facade'
 import { validateAndFilterPatch } from '../lib/patch-validation'
 import { prepareQueueTransition, type TaskStateService } from './task-state-service'
+import { sleep } from '../lib/async-utils'
+import { DISPATCH_RETRY_DELAY_MS } from '../lib/retry-constants'
 
 // ============================================================================
 // cancelTask
 // ============================================================================
+
+/**
+ * Discriminated union returned by `cancelTask()`.
+ *
+ * - `{ row: SprintTask; sideEffectFailed: false }` — cancel succeeded and
+ *   `onStatusTerminal` ran cleanly.
+ * - `{ row: SprintTask; sideEffectFailed: true; sideEffectError: Error }` —
+ *   cancel succeeded in the DB but `onStatusTerminal` failed after retries.
+ *   Dependent tasks may remain stuck in `blocked`.
+ * - `{ row: null }` — task was not found.
+ */
+export type CancelTaskResult =
+  | { row: SprintTask; sideEffectFailed: false }
+  | { row: SprintTask; sideEffectFailed: true; sideEffectError: Error }
+  | { row: null }
 
 export interface CancelTaskDeps {
   /** Fires task-terminal resolution so dependents unblock. */
@@ -100,12 +117,18 @@ function isInvalidTransitionError(err: unknown): err is Error {
  *
  * Throws `TaskTransitionError` when the current status forbids cancellation
  * (e.g. already `done`). Unknown errors propagate unchanged.
+ *
+ * Returns a `CancelTaskResult` discriminated union:
+ * - `{ row: null }` — task not found.
+ * - `{ row, sideEffectFailed: false }` — clean cancel.
+ * - `{ row, sideEffectFailed: true, sideEffectError }` — cancel committed but
+ *   `onStatusTerminal` failed after retries; dependents may need manual unblock.
  */
 export async function cancelTask(
   id: string,
   opts: { reason?: string } & CancelTaskOptions,
   deps: CancelTaskDeps
-): Promise<SprintTask | null> {
+): Promise<CancelTaskResult> {
   const patch: Record<string, unknown> = { status: 'cancelled' }
   if (opts.reason) patch.notes = opts.reason
   const doUpdate = deps.updateTask ?? mutations.updateTask
@@ -124,14 +147,50 @@ export async function cancelTask(
     }
     throw err
   }
-  if (row) {
-    try {
-      await deps.onStatusTerminal(id, 'cancelled')
-    } catch (err) {
-      deps.logger.error(`onStatusTerminal after cancel ${id}: ${err}`)
-    }
+  if (!row) {
+    return { row: null }
   }
-  return row
+
+  return dispatchCancelWithRetry(id, row, deps)
+}
+
+async function dispatchCancelWithRetry(
+  id: string,
+  row: SprintTask,
+  deps: CancelTaskDeps
+): Promise<CancelTaskResult> {
+  const doUpdate = deps.updateTask ?? mutations.updateTask
+
+  try {
+    await deps.onStatusTerminal(id, 'cancelled')
+    return { row, sideEffectFailed: false }
+  } catch (firstError) {
+    deps.logger.warn(`onStatusTerminal after cancel ${id} (attempt 1), retrying in ${DISPATCH_RETRY_DELAY_MS}ms: ${firstError}`)
+  }
+
+  await sleep(DISPATCH_RETRY_DELAY_MS)
+
+  try {
+    await deps.onStatusTerminal(id, 'cancelled')
+    return { row, sideEffectFailed: false }
+  } catch (secondError) {
+    const sideEffectError = secondError instanceof Error ? secondError : new Error(String(secondError))
+    deps.logger.error(`onStatusTerminal after cancel ${id} (attempt 2, giving up): ${sideEffectError}`)
+    appendCancelFailureAnnotation(id, row, new Date().toISOString(), doUpdate)
+    return { row, sideEffectFailed: true, sideEffectError }
+  }
+}
+
+function appendCancelFailureAnnotation(
+  id: string,
+  row: SprintTask,
+  timestamp: string,
+  doUpdate: (id: string, patch: Record<string, unknown>, options?: mutations.UpdateTaskOptions) => SprintTask | null
+): void {
+  const existingNotes = typeof row.notes === 'string' ? row.notes : null
+  const annotation = `[terminal-dispatch-failed ${timestamp}] Dependency resolution may not have run. Dependents may need manual unblock.`
+  const updatedNotes = existingNotes ? `${existingNotes}\n${annotation}` : annotation
+  doUpdate(id, { notes: updatedNotes })
 }
 
 // ============================================================================

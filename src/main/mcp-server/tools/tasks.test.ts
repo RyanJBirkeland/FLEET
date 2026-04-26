@@ -80,13 +80,17 @@ const fakeTask = (overrides: Partial<SprintTask> = {}): SprintTask => ({
   ...overrides
 })
 
+function fakeCancelResult(overrides: Partial<SprintTask> = {}): import('../../services/sprint-use-cases').CancelTaskResult {
+  return { row: fakeTask({ status: 'cancelled', ...overrides }), sideEffectFailed: false }
+}
+
 function fakeDeps(overrides: Partial<TaskToolsDeps> = {}): TaskToolsDeps {
   const deps: TaskToolsDeps = {
     listTasks: vi.fn(() => [fakeTask()]),
     getTask: vi.fn(() => fakeTask()),
     createTaskWithValidation: vi.fn(() => fakeTask()),
     updateTask: vi.fn(() => fakeTask()),
-    cancelTask: vi.fn(() => fakeTask({ status: 'cancelled' })),
+    cancelTask: vi.fn(() => Promise.resolve(fakeCancelResult())),
     getTaskChanges: vi.fn(() => []),
     onStatusTerminal: vi.fn(() => Promise.resolve()),
     taskStateService: null as unknown as TaskToolsDeps['taskStateService'],
@@ -367,6 +371,34 @@ describe('tasks.* write tools', () => {
     expect(JSON.parse(res.content[0].text).status).toBe('cancelled')
   })
 
+  it('tasks.cancel includes warning field when sideEffectFailed is true', async () => {
+    const deps = fakeDeps({
+      cancelTask: vi.fn(() =>
+        Promise.resolve({
+          row: fakeTask({ status: 'cancelled' }),
+          sideEffectFailed: true as const,
+          sideEffectError: new Error('dispatch exploded')
+        })
+      )
+    })
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    const res = await call('tasks.cancel', { id: 't1' })
+    const body = JSON.parse(res.content[0].text)
+    expect(body.status).toBe('cancelled')
+    expect(body.warning).toMatch(/terminal dispatch failed/)
+  })
+
+  it('tasks.cancel does not include warning field on clean cancel', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    const res = await call('tasks.cancel', { id: 't1' })
+    const body = JSON.parse(res.content[0].text)
+    expect(body.status).toBe('cancelled')
+    expect(body.warning).toBeUndefined()
+  })
+
   it('tasks.update forwards the MCP caller attribution to updateTask', async () => {
     const deps = fakeDeps({
       getTask: vi.fn(() => fakeTask({ id: 't1', status: 'active' })),
@@ -379,8 +411,8 @@ describe('tasks.* write tools', () => {
     expect(options).toEqual({ caller: 'mcp' })
   })
 
-  it('tasks.cancel returns structured NotFound when cancelTask returns null', async () => {
-    const deps = fakeDeps({ cancelTask: vi.fn(() => null) })
+  it('tasks.cancel returns structured NotFound when cancelTask returns null row', async () => {
+    const deps = fakeDeps({ cancelTask: vi.fn(() => Promise.resolve({ row: null })) })
     const { server, call } = mockServer()
     registerTaskTools(server, deps)
     const res = await call('tasks.cancel', { id: 'missing' })

@@ -11,6 +11,7 @@ import {
   listTasks,
   updateTask
 } from '../services/sprint-service'
+import type { CancelTaskResult } from '../services/sprint-use-cases'
 import type { EpicGroupService } from '../services/epic-group-service'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { readOrCreateToken } from './token-store'
@@ -87,7 +88,7 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
     id: string,
     reason?: string,
     options?: { caller?: string }
-  ): ReturnType<typeof cancelTask> {
+  ): Promise<CancelTaskResult> {
     try {
       return await cancelTask(
         id,

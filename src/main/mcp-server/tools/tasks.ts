@@ -7,6 +7,7 @@ import {
   type CreateTaskWithValidationDeps,
   type CreateTaskWithValidationOpts
 } from '../../services/sprint-service'
+import type { CancelTaskResult } from '../../services/sprint-use-cases'
 import type { CreateTaskInput, ListTasksOptions } from '../../data/sprint-task-repository'
 import { McpDomainError, McpErrorCode, parseToolArgs } from '../errors'
 import {
@@ -76,7 +77,7 @@ export interface TaskCommandPort {
     id: string,
     reason?: string,
     options?: { caller?: string }
-  ) => Promise<SprintTask | null> | SprintTask | null
+  ) => Promise<CancelTaskResult> | CancelTaskResult
   /**
    * Fired when `tasks.update` drives a task into a terminal status from a
    * non-terminal one. Routes to `TaskTerminalService.onStatusTerminal` so
@@ -275,12 +276,22 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
       safeToolResponse(
         async () => {
           const { id, reason } = parseToolArgs(TaskCancelSchema, rawArgs)
-          const row = await deps.cancelTask(id, reason, { caller: MCP_CALLER })
-          if (!row) {
+          const result = await deps.cancelTask(id, reason, { caller: MCP_CALLER })
+          if (result.row === null) {
             deps.logger.debug(`mcp.tasks.cancel: task ${id} not found`)
             throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })
           }
-          return jsonContent(row)
+          if (result.sideEffectFailed) {
+            deps.logger.warn(
+              `mcp.tasks.cancel: task ${id} cancelled but terminal dispatch failed — dependents may need manual unblock`
+            )
+            return jsonContent({
+              ...result.row,
+              warning:
+                'terminal dispatch failed — dependents may need manual unblock'
+            })
+          }
+          return jsonContent(result.row)
         },
         { schema: TaskCancelSchema, logger: deps.logger }
       )

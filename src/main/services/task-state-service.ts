@@ -26,9 +26,28 @@ import {
 } from '../../shared/task-state-machine'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
+import { sleep } from '../lib/async-utils'
+import { DISPATCH_RETRY_DELAY_MS } from '../lib/retry-constants'
 
 export type { ValidationResult } from '../../shared/task-state-machine'
 export { validateTransition } from '../../shared/task-state-machine'
+
+// ---- TransitionResult -------------------------------------------------------
+
+/**
+ * Returned by `TaskStateService.transition()` to distinguish a clean
+ * success from a committed-but-degraded outcome where the DB write
+ * succeeded but `TerminalDispatcher.dispatch` failed after retries.
+ *
+ * `dependentsResolved: false` means dispatch failed — dependent tasks
+ * may remain stuck in `blocked` and require manual intervention.
+ * `dispatchError` carries the error from the second (final) attempt.
+ */
+export interface TransitionResult {
+  committed: true
+  dependentsResolved: boolean
+  dispatchError?: Error
+}
 
 // ---- TerminalDispatcher port -----------------------------------------------
 
@@ -92,7 +111,7 @@ export class TaskStateService {
     taskId: string,
     targetStatus: TaskStatus,
     ctx: { fields?: Record<string, unknown>; caller?: string } = {}
-  ): Promise<void> {
+  ): Promise<TransitionResult> {
     const currentTask = getTask(taskId)
     if (!currentTask) {
       throw new Error(`[TaskStateService] Task ${taskId} not found`)
@@ -113,14 +132,38 @@ export class TaskStateService {
     const callerAttribution = ctx.caller ?? 'task-state-service'
     updateTask(taskId, patch, { caller: callerAttribution })
 
-    if (isTerminal(targetStatus)) {
-      try {
-        await this.terminalDispatcher.dispatch(taskId, targetStatus)
-      } catch (err) {
-        this.logger.error(
-          `[TaskStateService] TerminalDispatcher.dispatch failed for ${taskId}: ${err}`
-        )
-      }
+    if (!isTerminal(targetStatus)) {
+      return { committed: true, dependentsResolved: true }
+    }
+
+    return this.dispatchTerminalWithRetry(taskId, targetStatus)
+  }
+
+  private async dispatchTerminalWithRetry(
+    taskId: string,
+    status: TaskStatus
+  ): Promise<TransitionResult> {
+    try {
+      await this.terminalDispatcher.dispatch(taskId, status)
+      return { committed: true, dependentsResolved: true }
+    } catch (firstError) {
+      this.logger.warn(
+        `[TaskStateService] dispatch failed for ${taskId} (attempt 1), retrying in ${DISPATCH_RETRY_DELAY_MS}ms: ${firstError}`
+      )
+    }
+
+    await sleep(DISPATCH_RETRY_DELAY_MS)
+
+    try {
+      await this.terminalDispatcher.dispatch(taskId, status)
+      return { committed: true, dependentsResolved: true }
+    } catch (secondError) {
+      const dispatchError = secondError instanceof Error ? secondError : new Error(String(secondError))
+      this.logger.error(
+        `[TaskStateService] dispatch failed for ${taskId} (attempt 2, giving up): ${dispatchError}`
+      )
+      appendDispatchFailureAnnotation(taskId, new Date().toISOString())
+      return { committed: true, dependentsResolved: false, dispatchError }
     }
   }
 }
@@ -131,6 +174,20 @@ export class TaskStateService {
  */
 export function createTaskStateService(deps: TaskStateServiceDeps): TaskStateService {
   return new TaskStateService(deps)
+}
+
+/**
+ * Appends a structured, timestamped warning to the task's `notes` field.
+ * Called when `TerminalDispatcher.dispatch` fails on both attempts so the
+ * degradation is visible in the UI and audit trail without a new IPC channel.
+ * Appends (never replaces) so existing notes survive.
+ */
+function appendDispatchFailureAnnotation(taskId: string, timestamp: string): void {
+  const task = getTask(taskId)
+  const existingNotes = typeof task?.notes === 'string' ? task.notes : null
+  const annotation = `[terminal-dispatch-failed ${timestamp}] Dependency resolution may not have run. Dependents may need manual unblock.`
+  const updatedNotes = existingNotes ? `${existingNotes}\n${annotation}` : annotation
+  updateTask(taskId, { notes: updatedNotes })
 }
 
 // ---- Types ----------------------------------------------------------------
