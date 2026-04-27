@@ -23,9 +23,9 @@ export interface LocalSpawnOptions {
 }
 
 export async function spawnLocalAgent(opts: LocalSpawnOptions): Promise<AgentHandle> {
-  let spawnFleetAgent: (typeof import('rbt-coding-agent/adapters/bde'))['spawnFleetAgent']
+  let spawnBdeAgent: (typeof import('rbt-coding-agent/adapters/bde'))['spawnBdeAgent']
   try {
-    ;({ spawnFleetAgent } = await import('rbt-coding-agent/adapters/bde'))
+    ;({ spawnBdeAgent } = await import('rbt-coding-agent/adapters/bde'))
   } catch (err) {
     throw new Error(
       'The "local" agent backend requires the optional rbt-coding-agent package, ' +
@@ -38,7 +38,7 @@ export async function spawnLocalAgent(opts: LocalSpawnOptions): Promise<AgentHan
   const previousBase = process.env.OPENAI_API_BASE
   process.env.OPENAI_API_BASE = opts.endpoint
   try {
-    const handle = await spawnFleetAgent({
+    const handle = await spawnBdeAgent({
       prompt: opts.prompt,
       cwd: opts.cwd,
       model: opts.model

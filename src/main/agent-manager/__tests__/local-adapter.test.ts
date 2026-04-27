@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 const spawnFleetAgentMock = vi.fn()
 
 vi.mock('rbt-coding-agent/adapters/bde', () => ({
-  spawnFleetAgent: spawnFleetAgentMock
+  spawnBdeAgent: spawnFleetAgentMock
 }))
 
 import { spawnLocalAgent } from '../local-adapter'
