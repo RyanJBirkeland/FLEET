@@ -6,10 +6,14 @@ export { TaskDependencySchema }
 
 /**
  * Validates the shape of `sprint:create` IPC payloads.
- * Identical to `TaskWriteFieldsSchema` — the field sets are the same;
- * aliasing avoids a second source of truth while naming the intent clearly.
+ * Extends TaskWriteFieldsSchema with IPC-only fields (model) and overrides
+ * error messages to match the human-readable format callers expect.
  */
-export const CreateTaskInputSchema = TaskWriteFieldsSchema
+export const CreateTaskInputSchema = TaskWriteFieldsSchema.extend({
+  title: z.string().min(1, 'task.title must be a non-empty string'),
+  repo: z.string().min(1, 'task.repo must be a non-empty string'),
+  model: z.string().optional()
+})
 
 // --- Workflow schemas -------------------------------------------------------
 

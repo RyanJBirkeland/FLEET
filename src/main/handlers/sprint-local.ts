@@ -9,6 +9,7 @@ import type { SprintTask } from '../../shared/types'
 import type { WorkflowTemplate } from '../../shared/workflow-types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { validateDependencyGraph } from '../services/dependency-service'
+import { z } from 'zod'
 import { CreateTaskInputSchema, WorkflowTemplateSchema } from './sprint-ipc-schemas'
 import {
   generatePrompt,
@@ -67,7 +68,12 @@ function parseSprintCreateArgs(args: unknown[]): [CreateTaskInput] {
     throw new Error(`expected [task]; got ${args.length} args`)
   }
   const [task] = args
-  return [CreateTaskInputSchema.parse(task) as CreateTaskInput]
+  try {
+    return [CreateTaskInputSchema.parse(task) as CreateTaskInput]
+  } catch (err) {
+    if (err instanceof z.ZodError) throw new Error(err.issues[0]?.message ?? String(err))
+    throw err
+  }
 }
 
 export function parseCreateWorkflowArgs(args: unknown[]): [WorkflowTemplate] {
