@@ -128,6 +128,39 @@ describe('evaluateAutoMergePolicy', () => {
       )
     })
 
+    it('line with no tab delimiter — evaluateAutoReviewRules is called once without throwing', async () => {
+      mockNumstat('notabshere\n')
+      vi.mocked(evaluateAutoReviewRules).mockReturnValue(null)
+
+      await expect(evaluateAutoMergePolicy([makeRule()], '/tmp/worktree')).resolves.not.toThrow()
+
+      expect(evaluateAutoReviewRules).toHaveBeenCalledTimes(1)
+    })
+
+    it('non-numeric additions — evaluateAutoReviewRules receives NaN additions with correct path', async () => {
+      mockNumstat('abc\t2\tsrc/foo.ts\n')
+      vi.mocked(evaluateAutoReviewRules).mockReturnValue(null)
+
+      await evaluateAutoMergePolicy([makeRule()], '/tmp/worktree')
+
+      expect(evaluateAutoReviewRules).toHaveBeenCalledWith(
+        [makeRule()],
+        [expect.objectContaining({ path: 'src/foo.ts', additions: NaN })]
+      )
+    })
+
+    it('path with spaces — evaluateAutoReviewRules receives the full space-containing path', async () => {
+      mockNumstat('3\t1\tsrc/my component.ts\n')
+      vi.mocked(evaluateAutoReviewRules).mockReturnValue(null)
+
+      await evaluateAutoMergePolicy([makeRule()], '/tmp/worktree')
+
+      expect(evaluateAutoReviewRules).toHaveBeenCalledWith(
+        [makeRule()],
+        [{ path: 'src/my component.ts', additions: 3, deletions: 1 }]
+      )
+    })
+
     it('passes the worktree path as cwd to git', async () => {
       mockNumstat('1\t0\tsrc/x.ts\n')
       vi.mocked(evaluateAutoReviewRules).mockReturnValue(null)
@@ -218,5 +251,35 @@ describe('isCssOnlyChange', () => {
   it('returns false when any path is not a stylesheet', async () => {
     const { isCssOnlyChange } = await import('../auto-merge-policy')
     expect(isCssOnlyChange(['src/theme.css', 'src/index.ts'])).toBe(false)
+  })
+
+  it('returns true for uppercase .CSS extension', async () => {
+    const { isCssOnlyChange } = await import('../auto-merge-policy')
+    expect(isCssOnlyChange(['src/theme.CSS'])).toBe(true)
+  })
+
+  it('returns true for uppercase .SCSS extension', async () => {
+    const { isCssOnlyChange } = await import('../auto-merge-policy')
+    expect(isCssOnlyChange(['src/vars.SCSS'])).toBe(true)
+  })
+
+  it('returns true for mixed-case .Css extension', async () => {
+    const { isCssOnlyChange } = await import('../auto-merge-policy')
+    expect(isCssOnlyChange(['src/theme.Css'])).toBe(true)
+  })
+
+  it('returns true for double-extension .min.css', async () => {
+    const { isCssOnlyChange } = await import('../auto-merge-policy')
+    expect(isCssOnlyChange(['dist/bundle.min.css'])).toBe(true)
+  })
+
+  it('returns false when stem contains "css" but extension is .ts', async () => {
+    const { isCssOnlyChange } = await import('../auto-merge-policy')
+    expect(isCssOnlyChange(['src/somecss.ts'])).toBe(false)
+  })
+
+  it('returns false when uppercase .CSS is mixed with a .ts file', async () => {
+    const { isCssOnlyChange } = await import('../auto-merge-policy')
+    expect(isCssOnlyChange(['src/theme.CSS', 'src/index.ts'])).toBe(false)
   })
 })

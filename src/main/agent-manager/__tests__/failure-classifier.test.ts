@@ -185,6 +185,26 @@ describe('classifyFailureReason', () => {
     })
   })
 
+  describe('incomplete_files pattern matching', () => {
+    it('matches files to change checklist not satisfied', () => {
+      expect(classifyFailureReason('files to change checklist not satisfied')).toBe(
+        'incomplete_files'
+      )
+    })
+
+    it('matches missing: <path>', () => {
+      expect(classifyFailureReason('missing: src/foo.ts')).toBe('incomplete_files')
+    })
+
+    it('matches incomplete files detected', () => {
+      expect(classifyFailureReason('incomplete files detected')).toBe('incomplete_files')
+    })
+
+    it('matches case-insensitively', () => {
+      expect(classifyFailureReason('MISSING: src/foo.ts')).toBe('incomplete_files')
+    })
+  })
+
   describe('unknown fallback', () => {
     it('returns unknown for empty string', () => {
       expect(classifyFailureReason('')).toBe('unknown')
@@ -228,6 +248,16 @@ describe('classifyFailureReason', () => {
       expect(classifyFailureReason('first pattern')).toBe('first_custom')
       expect(classifyFailureReason('second pattern')).toBe('second_custom')
     })
+
+    it('built-in pattern wins over custom pattern registered after builtins on shared keyword', () => {
+      // Register a custom pattern that claims the 'timeout' keyword
+      registerFailurePattern({
+        type: 'custom_timeout',
+        keywords: ['timeout']
+      })
+      // The built-in 'timeout' pattern was registered first, so it wins
+      expect(classifyFailureReason('timeout occurred')).toBe('timeout')
+    })
   })
 
   describe('pattern precedence', () => {
@@ -250,6 +280,25 @@ describe('classifyFailureReason', () => {
       const msg = 'timeout: invalid token'
       expect(classifyFailureReason(msg, logger)).toBe('auth')
       expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('"auth"'))
+    })
+
+    it('environmental beats auth — environmental is registered first', () => {
+      // 'credential unavailable' matches environmental; 'invalid token' matches auth
+      // environmental is registered before auth in the registry
+      const logger = makeTracingLogger()
+      expect(classifyFailureReason('credential unavailable: invalid token', logger)).toBe(
+        'environmental'
+      )
+      expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('"environmental"'))
+    })
+
+    it('environmental beats timeout — environmental is registered first', () => {
+      // 'refusing to proceed' matches environmental; 'timeout' matches timeout
+      const logger = makeTracingLogger()
+      expect(classifyFailureReason('refusing to proceed due to timeout', logger)).toBe(
+        'environmental'
+      )
+      expect(logger.debug).toHaveBeenCalledWith(expect.stringContaining('"environmental"'))
     })
   })
 
