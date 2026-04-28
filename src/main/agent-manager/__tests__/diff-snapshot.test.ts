@@ -46,8 +46,10 @@ describe('diff-snapshot', () => {
         } else if (args.includes('--name-status')) {
           callback(null, { stdout: 'M\tsrc/main/index.ts\n' })
         } else {
+          // Combined diff call — includes --- a/<path> for path matching.
           callback(null, {
-            stdout: 'diff --git a/src/main/index.ts b/src/main/index.ts\n+added line\n'
+            stdout:
+              'diff --git a/src/main/index.ts b/src/main/index.ts\n--- a/src/main/index.ts\n+++ b/src/main/index.ts\n+added line\n'
           })
         }
       }
@@ -77,6 +79,51 @@ describe('diff-snapshot', () => {
 
     expect(result?.files[0].patch).toContain('diff --git')
     expect(result?.files[0].patch).toContain('+added line')
+  })
+
+  it('should call execFileAsync at most 3 times regardless of file count', async () => {
+    // numstat → 5 files, name-status → 5 files, combined diff → 1 call. Total = 3, not 5+2.
+    mockExecFile = vi.fn(
+      (
+        cmd: string,
+        args: string[],
+        _opts: unknown,
+        callback: (err: Error | null, result?: { stdout: string }) => void
+      ) => {
+        if (args.includes('--numstat')) {
+          callback(null, {
+            stdout: [
+              '10\t5\ta.ts',
+              '2\t1\tb.ts',
+              '3\t0\tc.ts',
+              '1\t1\td.ts',
+              '4\t2\te.ts'
+            ]
+              .join('\n')
+              .concat('\n')
+          })
+        } else if (args.includes('--name-status')) {
+          callback(null, {
+            stdout: 'M\ta.ts\nM\tb.ts\nM\tc.ts\nM\td.ts\nM\te.ts\n'
+          })
+        } else {
+          // Combined diff — no -- path filter
+          callback(null, {
+            stdout: [
+              'diff --git a/a.ts b/a.ts\n--- a/a.ts\n+++ b/a.ts\n+a',
+              'diff --git a/b.ts b/b.ts\n--- a/b.ts\n+++ b/b.ts\n+b',
+              'diff --git a/c.ts b/c.ts\n--- a/c.ts\n+++ b/c.ts\n+c',
+              'diff --git a/d.ts b/d.ts\n--- a/d.ts\n+++ b/d.ts\n+d',
+              'diff --git a/e.ts b/e.ts\n--- a/e.ts\n+++ b/e.ts\n+e'
+            ].join('\n')
+          })
+        }
+      }
+    )
+
+    await captureDiffSnapshot('/path/to/worktree', 'main', mockLogger)
+
+    expect(mockExecFile).toHaveBeenCalledTimes(3)
   })
 
   it('should return null if no files changed', async () => {
@@ -124,7 +171,11 @@ describe('diff-snapshot', () => {
   })
 
   it('should skip oversized patches but keep file stats', async () => {
-    const largeContent = 'x'.repeat(600_000)
+    const largeBlock = 'x'.repeat(600_000)
+    // Combined diff returns both files in one output; large.ts patch exceeds budget.
+    const combinedDiff =
+      `diff --git a/large.ts b/large.ts\n--- a/large.ts\n+++ b/large.ts\n${largeBlock}` +
+      `\ndiff --git a/small.ts b/small.ts\n--- a/small.ts\n+++ b/small.ts\nsmall patch`
     mockExecFile = vi.fn(
       (
         cmd: string,
@@ -136,10 +187,9 @@ describe('diff-snapshot', () => {
           callback(null, { stdout: '100\t50\tlarge.ts\n5\t2\tsmall.ts\n' })
         } else if (args.includes('--name-status')) {
           callback(null, { stdout: 'M\tlarge.ts\nM\tsmall.ts\n' })
-        } else if (args.includes('large.ts')) {
-          callback(null, { stdout: largeContent })
         } else {
-          callback(null, { stdout: 'small patch' })
+          // Combined diff call (no -- path filter)
+          callback(null, { stdout: combinedDiff })
         }
       }
     )
@@ -148,11 +198,11 @@ describe('diff-snapshot', () => {
 
     expect(result?.files).toHaveLength(2)
     expect(result?.files[0].patch).toBeUndefined()
-    expect(result?.files[1].patch).toBe('small patch')
+    expect(result?.files[1].patch).toContain('small patch')
     expect(result?.truncated).toBe(true)
   })
 
-  it('should log warning and skip file if patch fetch fails', async () => {
+  it('should log warning and return unpatchted files if combined diff fetch fails', async () => {
     mockExecFile = vi.fn(
       (
         cmd: string,
@@ -165,6 +215,7 @@ describe('diff-snapshot', () => {
         } else if (args.includes('--name-status')) {
           callback(null, { stdout: 'M\tfoo.ts\n' })
         } else {
+          // Combined diff fails
           callback(new Error('Git error'))
         }
       }
@@ -172,7 +223,9 @@ describe('diff-snapshot', () => {
 
     const result = await captureDiffSnapshot('/path/to/worktree', 'main', mockLogger)
 
+    // File stats are still present; patch is absent because combined diff failed.
     expect(result?.files[0].patch).toBeUndefined()
+    expect(result?.files[0]).toMatchObject({ path: 'foo.ts', additions: 10, deletions: 5 })
     expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('[diff-snapshot]'))
   })
 

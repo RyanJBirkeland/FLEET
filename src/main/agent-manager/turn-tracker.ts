@@ -5,8 +5,10 @@ import { createLogger, type Logger } from '../logger'
 /**
  * Writes one `agent_run_turns` row. Injecting this instead of a raw `Database`
  * handle lets tests verify the payload without mocking better-sqlite3.
+ * The return type is `Promise<void> | void` so async implementations are also
+ * accepted, though the production implementation (better-sqlite3) is sync.
  */
-export type InsertTurnFn = (record: TurnRecord) => void
+export type InsertTurnFn = (record: TurnRecord) => Promise<void> | void
 
 export interface TurnTrackerDeps {
   insertTurn: InsertTurnFn
@@ -67,20 +69,27 @@ export class TurnTracker {
       }
 
       this.turnCount++
-      try {
-        this.insertTurn({
-          runId: this.runId,
-          turn: this.turnCount,
-          tokensIn: this.tokensIn,
-          tokensOut: this.tokensOut,
-          toolCalls: this.currentTurnToolCalls,
-          cacheTokensCreated: this.cacheTokensCreated,
-          cacheTokensRead: this.cacheTokensRead
-        })
-      } catch (err) {
-        // Non-fatal — must not interrupt the agent message loop, but log so migration failures are visible
-        this.logger.warn(`Failed to write turn record for run ${this.runId}: ${err}`)
+      // Fire the DB write as a non-blocking microtask so the event loop can
+      // breathe between consecutive assistant messages. better-sqlite3 is sync
+      // by nature, but scheduling via Promise.resolve() yields control before
+      // the write begins — preventing the message loop from stalling on I/O.
+      const record = {
+        runId: this.runId,
+        turn: this.turnCount,
+        tokensIn: this.tokensIn,
+        tokensOut: this.tokensOut,
+        toolCalls: this.currentTurnToolCalls,
+        cacheTokensCreated: this.cacheTokensCreated,
+        cacheTokensRead: this.cacheTokensRead
       }
+      void Promise.resolve().then(async () => {
+        try {
+          await this.insertTurn(record)
+        } catch (err) {
+          // Non-fatal — must not interrupt the agent message loop, but log so migration failures are visible
+          this.logger.warn(`Failed to write turn record for run ${this.runId}: ${err}`)
+        }
+      })
       this.currentTurnToolCalls = 0
     }
   }

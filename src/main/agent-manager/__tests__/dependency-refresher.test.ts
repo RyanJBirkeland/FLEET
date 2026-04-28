@@ -124,3 +124,61 @@ describe('refreshDependencyIndex (dirty-set hint)', () => {
     expect(fingerprints.has('task-done')).toBe(false)
   })
 })
+
+describe('refreshDependencyIndex (clean-tick skip)', () => {
+  it('skips DB read when empty dirty set and fingerprint is unchanged', () => {
+    const rows = [{ id: 'task-a', depends_on: null, status: 'queued' }]
+    const repo = makeRepo(rows)
+    const depIndex = makeDepIndex()
+    const fingerprints = seedFingerprints(rows)
+
+    // First call populates the global hash cache.
+    refreshDependencyIndex(depIndex, fingerprints, repo, makeLogger(), new Set<string>())
+
+    const callCountAfterFirst = vi.mocked(repo.getTasksWithDependencies).mock.calls.length
+
+    // Second call with the same empty dirty set and unchanged fingerprints —
+    // should short-circuit without calling getTasksWithDependencies again.
+    refreshDependencyIndex(depIndex, fingerprints, repo, makeLogger(), new Set<string>())
+
+    expect(vi.mocked(repo.getTasksWithDependencies).mock.calls.length).toBe(callCountAfterFirst)
+  })
+
+  it('does NOT skip DB read when dirty set is non-empty', () => {
+    const rows = [{ id: 'task-a', depends_on: null, status: 'queued' }]
+    const repo = makeRepo(rows)
+    const depIndex = makeDepIndex()
+    const fingerprints = seedFingerprints(rows)
+
+    // Warm up the hash cache.
+    refreshDependencyIndex(depIndex, fingerprints, repo, makeLogger(), new Set<string>())
+
+    const callCountAfterFirst = vi.mocked(repo.getTasksWithDependencies).mock.calls.length
+
+    // Non-empty dirty set — must proceed to DB even if global hash matches.
+    refreshDependencyIndex(depIndex, fingerprints, repo, makeLogger(), new Set(['task-a']))
+
+    expect(vi.mocked(repo.getTasksWithDependencies).mock.calls.length).toBeGreaterThan(
+      callCountAfterFirst
+    )
+  })
+
+  it('does NOT skip DB read when dirty set is undefined (no hint)', () => {
+    const rows = [{ id: 'task-a', depends_on: null, status: 'queued' }]
+    const repo = makeRepo(rows)
+    const depIndex = makeDepIndex()
+    const fingerprints = seedFingerprints(rows)
+
+    // Warm up the hash cache.
+    refreshDependencyIndex(depIndex, fingerprints, repo, makeLogger(), new Set<string>())
+
+    const callCountAfterFirst = vi.mocked(repo.getTasksWithDependencies).mock.calls.length
+
+    // No hint at all — full scan must always proceed.
+    refreshDependencyIndex(depIndex, fingerprints, repo, makeLogger())
+
+    expect(vi.mocked(repo.getTasksWithDependencies).mock.calls.length).toBeGreaterThan(
+      callCountAfterFirst
+    )
+  })
+})

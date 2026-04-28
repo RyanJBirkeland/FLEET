@@ -72,41 +72,99 @@ export async function captureDiffSnapshot(
       files: files.length
     }
 
-    // Try to attach per-file patches. If a single file's patch would push us
-    // over the budget, we *skip that file's patch* but keep going so smaller
-    // files later in the list still get their patches attached. Previously
-    // a single oversized file would drop every patch in the snapshot.
-    let budget = MAX_SNAPSHOT_CHARS
-    let truncated = false
-    for (const file of files) {
-      try {
-        const { stdout: patch } = await execFileAsync(
-          'git',
-          ['diff', `${base}...HEAD`, '--', file.path],
-          { cwd: worktreePath, env, maxBuffer: 10 * 1024 * 1024 }
-        )
-        if (patch.length > budget) {
-          // Skip this file's patch — file-level stats remain available.
-          truncated = true
-          continue
-        }
-        file.patch = patch
-        budget -= patch.length
-      } catch (err) {
-        logger.warn(
-          `[diff-snapshot] Failed to capture patch for ${file.path}: ${getErrorMessage(err)}`
-        )
-      }
-    }
+    // Fetch all per-file patches in a single git call, then distribute them.
+    // A loop of N per-file diffs costs N+2 subprocesses; this collapses to 3.
+    const { truncated, patchedFiles } = await fetchAndDistributePatches(
+      files,
+      base,
+      worktreePath,
+      env,
+      logger
+    )
 
     return {
       capturedAt: nowIso(),
       totals,
-      files,
+      files: patchedFiles,
       ...(truncated ? { truncated: true } : {})
     }
   } catch (err) {
     logger.warn(`[diff-snapshot] capture failed: ${getErrorMessage(err)}`)
     return null
   }
+}
+
+/**
+ * Fetches all file patches in a single `git diff` call and distributes them
+ * to the matching file entries by path. Splitting on `diff --git` headers
+ * avoids the N+2 subprocess cost of the previous per-file loop.
+ *
+ * Budget accounting mirrors the original: files whose patch would exceed the
+ * remaining character budget are skipped (stats kept), and `truncated` is set.
+ */
+async function fetchAndDistributePatches(
+  files: ReviewDiffSnapshot['files'],
+  base: string,
+  worktreePath: string,
+  env: NodeJS.ProcessEnv,
+  logger: Logger
+): Promise<{ truncated: boolean; patchedFiles: ReviewDiffSnapshot['files'] }> {
+  let combinedDiff: string
+  try {
+    const { stdout } = await execFileAsync('git', ['diff', `${base}...HEAD`], {
+      cwd: worktreePath,
+      env,
+      maxBuffer: 50 * 1024 * 1024
+    })
+    combinedDiff = stdout
+  } catch (err) {
+    logger.warn(`[diff-snapshot] Combined diff failed: ${getErrorMessage(err)}`)
+    return { truncated: false, patchedFiles: files }
+  }
+
+  const patchByPath = splitCombinedDiffByFile(combinedDiff)
+
+  let budget = MAX_SNAPSHOT_CHARS
+  let truncated = false
+
+  for (const file of files) {
+    const patch = patchByPath.get(file.path)
+    if (patch === undefined) continue
+    if (patch.length > budget) {
+      truncated = true
+      continue
+    }
+    file.patch = patch
+    budget -= patch.length
+  }
+
+  return { truncated, patchedFiles: files }
+}
+
+/**
+ * Splits a combined `git diff` output into a map of file path → patch block.
+ * Each block starts at `diff --git a/<path> b/<path>` and runs to the next
+ * such header (or end of string). The file path is extracted from the
+ * `--- a/<path>` line within the block, which matches the unescaped path that
+ * `numstat` and `name-status` report.
+ */
+function splitCombinedDiffByFile(combinedDiff: string): Map<string, string> {
+  const result = new Map<string, string>()
+  if (!combinedDiff) return result
+
+  // Split on the `diff --git` header — keep the delimiter by using a lookahead.
+  const blocks = combinedDiff.split(/(?=^diff --git )/m).filter(Boolean)
+
+  for (const block of blocks) {
+    // The `--- a/<path>` line gives us the path that matches numstat output.
+    // New files show `--- /dev/null`; in that case fall back to the `+++ b/` line.
+    const minusMatch = block.match(/^--- a\/(.+)$/m)
+    const plusMatch = block.match(/^\+\+\+ b\/(.+)$/m)
+    const path = minusMatch?.[1] ?? plusMatch?.[1]
+    if (path) {
+      result.set(path, block)
+    }
+  }
+
+  return result
 }

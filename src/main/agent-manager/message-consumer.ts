@@ -43,7 +43,20 @@ export function __resetStallTimeoutForTesting(): void {
 const STALL_SENTINEL = Symbol('stall')
 
 /**
+ * Mutable holder for the stall timer, passed across `nextOrStall` calls so a
+ * single timer object is reused rather than allocating a new one per message.
+ */
+interface StallTimerState {
+  handle: ReturnType<typeof nodeSetTimeout> | undefined
+}
+
+/**
  * Races `iter.next()` against a per-message deadline.
+ *
+ * Accepts a `timerState` holder that is shared across calls — on each
+ * invocation the previous timer is cleared and the handle is rescheduled,
+ * avoiding one `nodeSetTimeout` allocation per message (T-41).
+ *
  * Uses `node:timers` `setTimeout` (bypasses Vitest fake-timer patching) so the
  * stall clock runs on real wall time and does not fire when test suites advance
  * fake timers for drain-loop polling intervals.
@@ -51,20 +64,27 @@ const STALL_SENTINEL = Symbol('stall')
  * Returns the iterator result, or `STALL_SENTINEL` if no message arrives in time.
  */
 async function nextOrStall(
-  iter: AsyncIterator<unknown>
+  iter: AsyncIterator<unknown>,
+  timerState: StallTimerState
 ): Promise<IteratorResult<unknown> | typeof STALL_SENTINEL> {
-  let stallTimer: ReturnType<typeof nodeSetTimeout>
+  // Clear any timer from the previous iteration before rescheduling.
+  if (timerState.handle !== undefined) {
+    nodeClearTimeout(timerState.handle)
+  }
+
   const stallPromise: Promise<typeof STALL_SENTINEL> = new Promise<typeof STALL_SENTINEL>(
     (resolve) => {
-      stallTimer = nodeSetTimeout(() => resolve(STALL_SENTINEL), stallTimeoutMs)
+      timerState.handle = nodeSetTimeout(() => resolve(STALL_SENTINEL), stallTimeoutMs)
     }
   )
   try {
     const result = await Promise.race([iter.next(), stallPromise])
-    nodeClearTimeout(stallTimer!)
+    nodeClearTimeout(timerState.handle)
+    timerState.handle = undefined
     return result
   } catch (err) {
-    nodeClearTimeout(stallTimer!)
+    nodeClearTimeout(timerState.handle)
+    timerState.handle = undefined
     throw err
   }
 }
@@ -130,11 +150,14 @@ function trackAgentCosts(msg: unknown, agent: ActiveAgent, turnTracker: TurnTrac
 
 /**
  * Processes a single message: tracks costs, emits events.
+ * Accepts a pre-parsed `sdkMsg` to avoid calling `asSDKMessage` more than
+ * once per loop iteration.
  * Playground detection lives in the calling loop because it needs
  * per-session state (tool_use / tool_result pairing).
  */
 function processSDKMessage(
   msg: unknown,
+  sdkMsg: ReturnType<typeof asSDKMessage>,
   agent: ActiveAgent,
   agentRunId: string,
   turnTracker: TurnTracker,
@@ -158,9 +181,8 @@ function processSDKMessage(
     emitAgentEvent(agentRunId, event)
   }
 
-  const m = asSDKMessage(msg)
-  if (m?.type === 'assistant' && typeof m.text === 'string') {
-    lastAgentOutput = m.text.slice(-LAST_OUTPUT_MAX_LENGTH)
+  if (sdkMsg?.type === 'assistant' && typeof sdkMsg.text === 'string') {
+    lastAgentOutput = sdkMsg.text.slice(-LAST_OUTPUT_MAX_LENGTH)
   }
 
   return { exitCode, lastAgentOutput }
@@ -192,6 +214,8 @@ export async function consumeMessages(
   let turnCount = 0
   let messagesConsumed = 0
   let lastEventType = 'none'
+  // Shared timer state reused across nextOrStall calls (T-41).
+  const stallTimer: StallTimerState = { handle: undefined }
 
   const iter = handle.messages[Symbol.asyncIterator]()
   try {
@@ -200,7 +224,7 @@ export async function consumeMessages(
     // within MESSAGE_STALL_TIMEOUT_MS the stream is declared stalled and
     // the loop exits early with a structured streamError.
     while (true) {
-      const raceResult = await nextOrStall(iter)
+      const raceResult = await nextOrStall(iter, stallTimer)
 
       if (raceResult === STALL_SENTINEL) {
         logger.event('agent.stream.error', {
@@ -226,12 +250,15 @@ export async function consumeMessages(
 
       const msg = raceResult.value
       messagesConsumed++
+      // Parse once per message — reused for lastEventType tracking, processSDKMessage,
+      // and the hard turn-limit check below (T-42: eliminate duplicate asSDKMessage calls).
       const sdkMsg = asSDKMessage(msg)
       if (sdkMsg?.type) {
         lastEventType = sdkMsg.type
       }
       const result = processSDKMessage(
         msg,
+        sdkMsg,
         agent,
         agentRunId,
         turnTracker,
@@ -247,8 +274,7 @@ export async function consumeMessages(
       }
 
       // Hard turn limit: abort if agent exceeds maxTurns (SDK soft limit may not enforce)
-      const m = asSDKMessage(msg)
-      if (m?.type === 'assistant') {
+      if (sdkMsg?.type === 'assistant') {
         turnCount++
         if (turnCount > maxTurns) {
           logger.warn(

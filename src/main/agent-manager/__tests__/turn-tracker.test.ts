@@ -82,7 +82,7 @@ describe('turn-tracker', () => {
       expect(totals.turnCount).toBe(2)
     })
 
-    it('should count tool_use blocks in content', () => {
+    it('should count tool_use blocks in content', async () => {
       tracker.processMessage({
         type: 'assistant',
         message: {
@@ -95,6 +95,9 @@ describe('turn-tracker', () => {
         }
       })
 
+      // insertTurn is scheduled as a microtask — flush before asserting.
+      await Promise.resolve()
+
       expect(insertTurnSpy).toHaveBeenCalledWith({
         runId: 'run-123',
         turn: 1,
@@ -106,7 +109,7 @@ describe('turn-tracker', () => {
       })
     })
 
-    it('should reset tool call count after each turn', () => {
+    it('should reset tool call count after each turn', async () => {
       tracker.processMessage({
         type: 'assistant',
         message: {
@@ -126,6 +129,9 @@ describe('turn-tracker', () => {
         }
       })
 
+      // insertTurn is scheduled as a microtask — flush before asserting.
+      await Promise.resolve()
+
       expect(insertTurnSpy).toHaveBeenNthCalledWith(1, expect.objectContaining({ toolCalls: 1 }))
       expect(insertTurnSpy).toHaveBeenNthCalledWith(2, expect.objectContaining({ toolCalls: 2 }))
     })
@@ -142,7 +148,7 @@ describe('turn-tracker', () => {
       expect(totals.turnCount).toBe(1)
     })
 
-    it('should call insertTurn on assistant messages', () => {
+    it('should call insertTurn on assistant messages', async () => {
       tracker.processMessage({
         type: 'assistant',
         message: {
@@ -150,6 +156,9 @@ describe('turn-tracker', () => {
           content: []
         }
       })
+
+      // insertTurn is scheduled as a microtask — flush before asserting.
+      await Promise.resolve()
 
       expect(insertTurnSpy).toHaveBeenCalledWith({
         runId: 'run-123',
@@ -162,7 +171,7 @@ describe('turn-tracker', () => {
       })
     })
 
-    it('should log warning but not throw when insertTurn fails', () => {
+    it('should log warning but not throw when insertTurn fails', async () => {
       const loggerWarnSpy = vi.fn()
       const trackerWithLogger = new TurnTracker('run-123', {
         insertTurn: insertTurnSpy as InsertTurnFn,
@@ -178,6 +187,9 @@ describe('turn-tracker', () => {
           message: { usage: { input_tokens: 100, output_tokens: 50 }, content: [] }
         })
       }).not.toThrow()
+
+      // insertTurn is scheduled as a microtask — flush before asserting the warning.
+      await Promise.resolve()
 
       expect(loggerWarnSpy).toHaveBeenCalledWith(
         expect.stringContaining('Failed to write turn record')

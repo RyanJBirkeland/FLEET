@@ -6,6 +6,27 @@ import { isTerminal, isTaskStatus } from '../../shared/task-state-machine'
 export type DepsFingerprint = Map<string, { deps: TaskDependency[] | null; hash: string }>
 
 /**
+ * Stable summary of the full fingerprint map used to detect global changes.
+ * Joining all task-id/hash pairs lets us skip the DB read entirely when
+ * nothing has changed and no tasks are dirty.
+ */
+function computeGlobalFingerprintHash(fingerprints: DepsFingerprint): string {
+  const parts: string[] = []
+  for (const [id, entry] of fingerprints) {
+    parts.push(`${id}=${entry.hash}`)
+  }
+  // Sort so insertion order doesn't matter.
+  return parts.sort().join('|')
+}
+
+/**
+ * Per-fingerprint-map cache of the last global hash seen.
+ * WeakMap keyed on the `DepsFingerprint` instance so each drain-loop instance
+ * gets its own cache without sharing state across tests or instances.
+ */
+const lastGlobalHash = new WeakMap<DepsFingerprint, string>()
+
+/**
  * The minimum repository surface that `refreshDependencyIndex` needs.
  * Callers holding a full `IAgentTaskRepository` satisfy this structurally;
  * callers that only have `getTasksWithDependencies` can pass a plain object
@@ -61,6 +82,17 @@ export function refreshDependencyIndex(
   logger: Logger,
   dirtyTaskIds?: Set<string>
 ): Map<string, string> {
+  // Skip the DB read entirely when the caller signals an empty dirty set AND
+  // the global fingerprint hasn't changed since the last full scan. This is the
+  // common path on quiet drain ticks where no tasks were claimed or mutated.
+  if (dirtyTaskIds !== undefined && dirtyTaskIds.size === 0) {
+    const currentHash = computeGlobalFingerprintHash(fingerprints)
+    const knownHash = lastGlobalHash.get(fingerprints)
+    if (currentHash === knownHash) {
+      return new Map()
+    }
+  }
+
   try {
     const allTasks = repo.getTasksWithDependencies()
     const currentTaskIds = new Set(allTasks.map((t) => t.id))
@@ -104,7 +136,12 @@ export function refreshDependencyIndex(
       }
     }
 
-    return new Map(allTasks.map((t) => [t.id, t.status]))
+    const statusMap = new Map(allTasks.map((t) => [t.id, t.status]))
+
+    // Record the post-update hash so the next clean tick can skip the DB.
+    lastGlobalHash.set(fingerprints, computeGlobalFingerprintHash(fingerprints))
+
+    return statusMap
   } catch (err) {
     logger.warn(`[agent-manager] Failed to refresh dependency index: ${err}`)
     return new Map()
