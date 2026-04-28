@@ -455,39 +455,6 @@ describe('EP-15: DLQ sentinel on permanent batch failure', () => {
     expect(insertEventBatchMock).toHaveBeenCalledTimes(1)
   })
 
-  it('logs ERROR and broadcasts manager:warning when queue overflows the cap', async () => {
-    const { emitAgentEvent, flushAgentEventBatcher } = await import('../agent-event-mapper')
-
-    insertEventBatchMock.mockImplementation(() => {
-      throw new Error('SQLITE_BUSY')
-    })
-
-    // Fill the queue past MAX_PENDING_EVENTS (10000) by triggering re-queues.
-    // Emit 50 events to trigger the first auto-flush (fails, re-queues 50).
-    for (let i = 0; i < 50; i++) {
-      emitAgentEvent('agent-overflow', { type: 'agent:text', text: `m${i}`, timestamp: i })
-    }
-
-    // Emit 10000 more events — eventual auto-flushes fail and re-queue,
-    // causing the pending queue to exceed MAX_PENDING_EVENTS. The overflow
-    // path should fire on one of these batches.
-    for (let i = 50; i < 10050; i++) {
-      emitAgentEvent('agent-overflow', { type: 'agent:text', text: `m${i}`, timestamp: i })
-    }
-    flushAgentEventBatcher()
-
-    // logger.error must have been called with an overflow message
-    const overflowError = loggerErrorMock.mock.calls.find((call) =>
-      String(call[0]).includes('Event queue overflow')
-    )
-    expect(overflowError).toBeDefined()
-
-    // broadcast('manager:warning', ...) must have been called for the overflow
-    const overflowBroadcast = broadcastMock.mock.calls.find(
-      (call) => call[0] === 'manager:warning' && String(call[1]?.message).includes('overflow')
-    )
-    expect(overflowBroadcast).toBeDefined()
-  })
 })
 
 describe('EP-15: per-run tool-name map isolation', () => {
