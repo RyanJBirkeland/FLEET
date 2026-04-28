@@ -61,17 +61,69 @@ export const MUTABLE_TASK_FIELDS = [
   'updated_at'
 ] as const satisfies ReadonlyArray<keyof SprintTask>
 
-/**
- * Copy one typed field from the local (optimistic) task onto a server-merged task.
- * Generic K keeps the assignment type-safe: `target[field] = source[field]` only
- * compiles when both sides agree on the field's type.
- */
-function preserveField<K extends SprintTaskField>(
-  target: SprintTask,
-  source: SprintTask,
-  field: K
-): void {
-  target[field] = source[field]
+function withoutPendingUpdate(
+  pendingUpdates: PendingUpdates,
+  taskId: string,
+  shouldClear: boolean
+): PendingUpdates {
+  if (!shouldClear) return pendingUpdates
+  const { [taskId]: _, ...rest } = pendingUpdates
+  return rest
+}
+
+function sanitizeIncomingTasks(raw: unknown[]): SprintTask[] {
+  return (Array.isArray(raw) ? raw : []).map((t) => ({
+    ...(t as SprintTask),
+    depends_on: sanitizeDependsOn((t as SprintTask).depends_on)
+  }))
+}
+
+function buildFingerprint(tasks: SprintTask[]): string {
+  return tasks
+    .map((task) => `${task.id}:${task.updated_at}`)
+    .sort()
+    .join('|')
+}
+
+function hasNoPendingOps(state: {
+  pendingUpdates: PendingUpdates
+  pendingCreates: string[]
+}): boolean {
+  return Object.keys(state.pendingUpdates).length === 0 && state.pendingCreates.length === 0
+}
+
+function mergeTasksWithPendingState(
+  incoming: SprintTask[],
+  state: { tasks: SprintTask[]; pendingUpdates: PendingUpdates; pendingCreates: string[] },
+  now: number
+): { tasks: SprintTask[]; pendingUpdates: PendingUpdates } {
+  const nextPending = expirePendingUpdates(state.pendingUpdates, PENDING_UPDATE_TTL)
+  // Constructed here — not at poll entry — so it is only built when a merge is actually needed.
+  const currentTaskMap = new Map(state.tasks.map((task) => [task.id, task]))
+
+  const mergedById = new Map<string, SprintTask>()
+  for (const task of incoming) {
+    const merged = mergePendingFields(
+      task,
+      currentTaskMap.get(task.id),
+      nextPending[task.id],
+      now,
+      PENDING_UPDATE_TTL
+    )
+    mergedById.set(task.id, stableTaskRef(merged, currentTaskMap.get(task.id)))
+  }
+
+  for (const tempId of state.pendingCreates) {
+    if (!mergedById.has(tempId)) {
+      const tempTask = currentTaskMap.get(tempId)
+      if (tempTask) mergedById.set(tempId, tempTask)
+    }
+  }
+
+  return {
+    tasks: Array.from(mergedById.values()),
+    pendingUpdates: nextPending
+  }
 }
 
 interface SprintTasksState {
@@ -147,72 +199,15 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   loadData: async (): Promise<void> => {
     set({ loadError: null, pollError: null, loading: true })
     try {
-      const result = await listTasks()
-      const incoming = (Array.isArray(result) ? result : []).map((t) => ({
-        ...t,
-        depends_on: sanitizeDependsOn(t.depends_on)
-      }))
-
+      const incoming = sanitizeIncomingTasks(await listTasks())
       const currentState = get()
 
-      // Build fingerprints to detect if tasks have changed
-      const currentFingerprint = currentState.tasks
-        .map((task) => `${task.id}:${task.updated_at}`)
-        .sort()
-        .join('|')
-      const incomingFingerprint = incoming
-        .map((task) => `${task.id}:${task.updated_at}`)
-        .sort()
-        .join('|')
-
-      // Skip set() if tasks haven't changed and there are no pending operations
-      const hasPendingOps =
-        Object.keys(currentState.pendingUpdates).length > 0 ||
-        currentState.pendingCreates.length > 0
-
-      if (currentFingerprint === incomingFingerprint && !hasPendingOps) {
+      if (buildFingerprint(currentState.tasks) === buildFingerprint(incoming) && hasNoPendingOps(currentState)) {
         set({ loading: false })
         return
       }
 
-      set((state) => {
-        const now = Date.now()
-
-        const nextPending = expirePendingUpdates(state.pendingUpdates, PENDING_UPDATE_TTL)
-
-        // Build a map of current optimistic tasks by ID for quick lookup
-        const currentTaskMap = new Map(state.tasks.map((task) => [task.id, task]))
-
-        // Merge incoming data, preserving only pending FIELDS from local version
-        const mergedById = new Map<string, SprintTask>()
-        for (const task of incoming) {
-          const merged = mergePendingFields(
-            task,
-            currentTaskMap.get(task.id),
-            nextPending[task.id],
-            now,
-            PENDING_UPDATE_TTL
-          )
-          mergedById.set(task.id, stableTaskRef(merged, currentTaskMap.get(task.id)))
-        }
-
-        // Preserve pending-create temp tasks that aren't in the DB yet
-        for (const tempId of state.pendingCreates) {
-          if (!mergedById.has(tempId)) {
-            const tempTask = currentTaskMap.get(tempId)
-            if (tempTask) mergedById.set(tempId, tempTask)
-          }
-        }
-
-        const nextTasksArr = Array.from(mergedById.values())
-        const unchanged =
-          nextTasksArr.length === state.tasks.length &&
-          nextTasksArr.every((t, i) => t === state.tasks[i])
-        return {
-          tasks: unchanged ? state.tasks : nextTasksArr,
-          pendingUpdates: nextPending
-        }
-      })
+      set((state) => mergeTasksWithPendingState(incoming, state, Date.now()))
     } catch (e) {
       const message = 'Failed to load tasks — ' + (e instanceof Error ? e.message : String(e))
       set({ loadError: message, pollError: message })
@@ -242,12 +237,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         const shouldClear = !current || current.ts === updateId
 
         return {
-          pendingUpdates: shouldClear
-            ? (() => {
-                const { [taskId]: _, ...rest } = state.pendingUpdates
-                return rest
-              })()
-            : state.pendingUpdates,
+          pendingUpdates: withoutPendingUpdate(state.pendingUpdates, taskId, shouldClear),
           tasks: serverTask?.id
             ? state.tasks.map((t) =>
                 t.id === taskId
@@ -264,12 +254,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         const shouldClear = !current || current.ts === updateId
 
         return {
-          pendingUpdates: shouldClear
-            ? (() => {
-                const { [taskId]: _, ...rest } = state.pendingUpdates
-                return rest
-              })()
-            : state.pendingUpdates
+          pendingUpdates: withoutPendingUpdate(state.pendingUpdates, taskId, shouldClear)
         }
       })
       toast.error(e instanceof Error ? e.message : 'Failed to update task')
@@ -282,9 +267,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       await deleteTask(taskId)
       set((state) => ({
         tasks: state.tasks.filter((t) => t.id !== taskId),
-        pendingUpdates: Object.fromEntries(
-          Object.entries(state.pendingUpdates).filter(([id]) => id !== taskId)
-        ),
+        pendingUpdates: withoutPendingUpdate(state.pendingUpdates, taskId, true),
         pendingCreates: state.pendingCreates.filter((id) => id !== taskId)
       }))
       toast.success('Task deleted')
@@ -435,7 +418,11 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         const pending = state.pendingUpdates[t.id]
         if (pending && Date.now() - pending.ts <= PENDING_UPDATE_TTL) {
           for (const field of pending.fields) {
-            preserveField(merged, t, field)
+            // The generic K in the original preserveField kept this type-safe at the
+            // function boundary. The cast through unknown is the minimal equivalent
+            // that satisfies strict TypeScript when iterating a union-typed key.
+            ;(merged as unknown as Record<string, unknown>)[field] =
+              (t as unknown as Record<string, unknown>)[field]
           }
         }
         return merged

@@ -1,8 +1,9 @@
 import { GitMerge, HeartPulse, LayoutGrid, List, Network, Download } from 'lucide-react'
 import { useSprintUI } from '../../stores/sprintUI'
 import type { SprintTask } from '../../../../shared/types'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { toast } from '../../stores/toasts'
+import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 
 import './PipelineHeader.css'
 
@@ -64,23 +65,19 @@ export function PipelineHeader({
     return () => document.removeEventListener('click', handleClickOutside)
   }, [showExportMenu])
 
-  // Poll agent manager status for WIP slot capacity
-  useEffect(() => {
-    const fetchStatus = async (): Promise<void> => {
-      try {
-        const status = await window.api.agentManager.status()
-        setWipSlots({
-          active: status.concurrency.activeCount,
-          max: status.concurrency.maxSlots
-        })
-      } catch {
-        // agent manager may not be running — badge stays hidden
-      }
+  const fetchStatus = useCallback(async (): Promise<void> => {
+    try {
+      const status = await window.api.agentManager.status()
+      setWipSlots({
+        active: status.concurrency.activeCount,
+        max: status.concurrency.maxSlots
+      })
+    } catch {
+      // agent manager may not be running — badge stays hidden
     }
-    void fetchStatus()
-    const interval = setInterval(() => void fetchStatus(), 5000)
-    return () => clearInterval(interval)
   }, [])
+
+  useBackoffInterval(fetchStatus, 5000)
 
   return (
     <header className="sprint-pipeline__header">

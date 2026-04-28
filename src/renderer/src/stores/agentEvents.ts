@@ -12,24 +12,45 @@ let unsubscribe: (() => void) | null = null
  * already in the store. History is authoritative up to its query time;
  * live events may carry newer messages that haven't been flushed to SQLite
  * yet. We union the two and de-duplicate equivalent events so a replay
- * from SQLite doesn't produce duplicate cards. Chronology is preserved by
- * sorting on `timestamp`; `Array.prototype.sort` is stable since ES2019,
- * so events sharing a millisecond keep their emit order.
+ * from SQLite doesn't produce duplicate cards.
+ *
+ * Both input arrays must be pre-sorted by `timestamp` ascending — the two-pointer
+ * merge exploits that invariant for O(n+m) output without an additional sort pass.
  *
  * The dedup key is built from each event's distinguishing primitive fields
  * rather than `JSON.stringify(event)` — `agent:tool_result` events can carry
  * 10KB+ of tool output, and stringifying them on every merge was causing
  * agent-console stutter when an agent streamed many tool calls per second.
  */
-function mergeHistoryWithLiveEvents(history: AgentEvent[], live: AgentEvent[]): AgentEvent[] {
-  const seen = new Map<string, AgentEvent>()
-  for (const event of [...history, ...live]) {
+export function mergeHistoryWithLiveEvents(history: AgentEvent[], live: AgentEvent[]): AgentEvent[] {
+  const result: AgentEvent[] = []
+  const seen = new Set<string>()
+  let h = 0
+  let l = 0
+
+  function appendIfNew(event: AgentEvent): void {
     const key = dedupKey(event)
-    if (!seen.has(key)) seen.set(key, event)
+    if (!seen.has(key)) {
+      seen.add(key)
+      result.push(event)
+    }
   }
-  const merged = [...seen.values()]
-  merged.sort((a, b) => a.timestamp - b.timestamp)
-  return merged
+
+  while (h < history.length && l < live.length) {
+    const hEvent = history[h]!
+    const lEvent = live[l]!
+    if (hEvent.timestamp <= lEvent.timestamp) {
+      appendIfNew(hEvent)
+      h++
+    } else {
+      appendIfNew(lEvent)
+      l++
+    }
+  }
+  while (h < history.length) appendIfNew(history[h++]!)
+  while (l < live.length) appendIfNew(live[l++]!)
+
+  return result
 }
 
 function dedupKey(event: AgentEvent): string {

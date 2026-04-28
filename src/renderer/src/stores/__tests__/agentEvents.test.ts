@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { useAgentEventsStore } from '../agentEvents'
+import { useAgentEventsStore, mergeHistoryWithLiveEvents } from '../agentEvents'
 import type { AgentEvent } from '../../../../shared/types'
 
 const initialState = {
@@ -204,6 +204,38 @@ describe('clear', () => {
     // Should not throw
     useAgentEventsStore.getState().clear('nonexistent')
     expect(useAgentEventsStore.getState().events).toEqual({})
+  })
+})
+
+describe('mergeHistoryWithLiveEvents', () => {
+  it('merges two ordered arrays, preserving chronological order', () => {
+    const history: AgentEvent[] = [makeEvent('h1', 1), makeEvent('h3', 3)]
+    const live: AgentEvent[] = [makeEvent('l2', 2), makeEvent('l4', 4)]
+
+    const result = mergeHistoryWithLiveEvents(history, live)
+
+    expect(result.map((e) => e.timestamp)).toEqual([1, 2, 3, 4])
+  })
+
+  it('deduplicates events with the same dedup key', () => {
+    const shared: AgentEvent = { type: 'agent:started', timestamp: 100, model: 'claude-3' }
+    const history: AgentEvent[] = [shared]
+    const live: AgentEvent[] = [shared]
+
+    const result = mergeHistoryWithLiveEvents(history, live)
+
+    expect(result).toHaveLength(1)
+  })
+
+  it('appends live-only events that are newer than all history', () => {
+    const shared = makeEvent('shared', 1)
+    const history: AgentEvent[] = [shared]
+    const live: AgentEvent[] = [shared, makeEvent('l5', 5)]
+
+    const result = mergeHistoryWithLiveEvents(history, live)
+
+    expect(result).toHaveLength(2)
+    expect(result[result.length - 1].timestamp).toBe(5)
   })
 })
 

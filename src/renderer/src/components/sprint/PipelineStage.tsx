@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react'
+import React, { useRef, useState, useMemo } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import { TaskPill } from './TaskPill'
 import { TaskRow } from './TaskRow'
@@ -34,7 +34,10 @@ function PipelineStageInner({
   const cardsRef = useRef<HTMLDivElement>(null)
   const pipelineDensity = useSprintUI((s) => s.pipelineDensity)
   const [expanded, setExpanded] = useState(false)
-  const visibleTasks = expanded ? tasks : tasks.slice(0, STAGE_VISIBLE_LIMIT)
+  const visibleTasks = useMemo(
+    () => (expanded ? tasks : tasks.slice(0, STAGE_VISIBLE_LIMIT)),
+    [tasks, expanded]
+  )
   const hiddenCount = tasks.length - STAGE_VISIBLE_LIMIT
 
   const handleStageKeyDown = (e: React.KeyboardEvent): void => {
