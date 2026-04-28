@@ -193,12 +193,15 @@ function isRevisionFeedback(value: unknown): value is RevisionFeedback {
 }
 
 /**
- * Escapes `</` sequences in content destined for an XML boundary tag.
- * Mirrors the same escape used throughout prompt-sections.ts — extracted here
- * so the builder has no dependency on prompt-sections.ts (avoiding circular imports).
+ * Escapes XML tag sequences in content destined for an XML boundary tag.
+ * Kept local to avoid a circular import with prompt-sections.ts (which imports
+ * from this file). Matches the canonical escapeXmlContent in prompt-sections.ts:
+ *   `</` and `<[a-zA-Z]` → `<\` (closing-tag and opening-tag injection)
+ *   `>` → `&gt;` (prevents tag-close sequences after escaped content)
+ * `<` before digits, spaces, or end-of-string is left untouched to preserve diff output.
  */
-function escapeXml(content: string): string {
-  return content.replace(/<\//g, '<\\/')
+function escapeXmlContent(content: string): string {
+  return content.replace(/<(?=[a-zA-Z/])/g, '<\\').replace(/>/g, '&gt;')
 }
 
 /**
@@ -209,12 +212,12 @@ function escapeXml(content: string): string {
 export function renderRevisionFeedbackBlock(feedback: RevisionFeedback): string {
   const diagnosticLines = feedback.diagnostics.map((d) => {
     const location = d.file ? `${d.file}${d.line !== undefined ? `:${d.line}` : ''}` : '<unknown>'
-    const fix = d.suggestedFix ? `\n  Fix: ${escapeXml(d.suggestedFix)}` : ''
-    return `- ${location} [${d.kind}]: ${escapeXml(d.message)}${fix}`
+    const fix = d.suggestedFix ? `\n  Fix: ${escapeXmlContent(d.suggestedFix)}` : ''
+    return `- ${location} [${d.kind}]: ${escapeXmlContent(d.message)}${fix}`
   })
 
   const body =
-    `Previous attempt failed: ${escapeXml(feedback.summary)}\n\n` +
+    `Previous attempt failed: ${escapeXmlContent(feedback.summary)}\n\n` +
     `Diagnostics:\n${diagnosticLines.join('\n')}`
 
   return `<revision_feedback>\n${body}\n</revision_feedback>`

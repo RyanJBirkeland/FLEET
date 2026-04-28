@@ -22,6 +22,6 @@ describe('prompt-pipeline boundary-tag escaping', () => {
     // The slice between the open and (real) close tags is the user region.
     const userRegion = afterOpen.slice(0, endOfSpec)
     expect(userRegion).not.toContain('</user_spec>')
-    expect(userRegion).toContain('<\\/user_spec>')
+    expect(userRegion).toContain('<\\/user_spec&gt;')
   })
 })

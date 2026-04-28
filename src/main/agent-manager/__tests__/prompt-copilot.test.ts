@@ -21,7 +21,7 @@ describe('buildCopilotPrompt — boundary-tag injection prevention', () => {
       makeInput({ formContext: { title: maliciousTitle, repo: 'fleet', spec: '' } })
     )
     expect(prompt).not.toContain('</task_title><injected>')
-    expect(prompt).toContain('<\\/task_title>')
+    expect(prompt).toContain('<\\/task_title&gt;')
   })
 
   it('escapes closing boundary tags in the spec draft', () => {

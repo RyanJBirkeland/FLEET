@@ -124,13 +124,14 @@ export function truncateSpec(spec: string, maxChars: number): string {
 /**
  * Escapes XML tag sequences that could break boundary tag containment.
  * Full XML entity encoding is intentionally avoided — it would corrupt diff content
- * (e.g. `<` in diff hunks becoming `&lt;`). Two patterns are escaped:
+ * (e.g. `<` in diff hunks becoming `&lt;`). Three patterns are escaped:
  *   `</` → `<\/`  (closing-tag injection)
  *   `<[a-zA-Z]` → `<\[a-zA-Z]`  (opening-tag construction)
+ *   `>` → `&gt;`  (prevents tag-close sequence after escaped content)
  * `<` before digits, spaces, or end-of-string is left untouched to preserve diff output.
  */
 export function escapeXmlContent(content: string): string {
-  return content.replace(/<(?=[a-zA-Z/])/g, '<\\')
+  return content.replace(/<(?=[a-zA-Z/])/g, '<\\').replace(/>/g, '&gt;')
 }
 
 /**
@@ -151,7 +152,7 @@ export function buildUpstreamContextSection(
     const cappedSpec = escapeXmlContent(
       truncateSpec(upstream.spec, PROMPT_TRUNCATION.UPSTREAM_SPEC_CHARS)
     )
-    section += `### ${upstream.title}\n\n<upstream_spec>\n${cappedSpec}\n</upstream_spec>\n\n`
+    section += `### Upstream Task\n\n<upstream_title>${escapeXmlContent(upstream.title)}</upstream_title>\n\n<upstream_spec>\n${cappedSpec}\n</upstream_spec>\n\n`
 
     if (upstream.partial_diff) {
       const truncated = upstream.partial_diff.length > PROMPT_TRUNCATION.UPSTREAM_DIFF_CHARS
@@ -178,7 +179,7 @@ export function buildCrossRepoContractSection(contract?: string | null): string 
     '\n\n## Cross-Repo Contract\n\n' +
     'This task involves API contracts with other repositories. ' +
     'Follow these contract specifications exactly:\n\n' +
-    `<cross_repo_contract>\n${truncateSpec(contract, PROMPT_TRUNCATION.CROSS_REPO_CONTRACT_CHARS)}\n</cross_repo_contract>`
+    `<cross_repo_contract>\n${escapeXmlContent(truncateSpec(contract, PROMPT_TRUNCATION.CROSS_REPO_CONTRACT_CHARS))}\n</cross_repo_contract>`
   )
 }
 

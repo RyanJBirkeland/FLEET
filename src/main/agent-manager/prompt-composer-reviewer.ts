@@ -83,7 +83,7 @@ export function buildInteractiveReviewPrompt(input: BuildPromptInput): string {
   const seedBlock = reviewSeed
     ? `## Prior Review Summary
 Quality Score: ${reviewSeed.qualityScore}/100
-Opening: ${reviewSeed.openingMessage}
+Opening: <opening_message>${escapeXmlContent(reviewSeed.openingMessage)}</opening_message>
 `
     : ''
 
