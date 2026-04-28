@@ -23,8 +23,10 @@ vi.mock('../dependency-service', () => ({
   buildBlockedNotes: vi.fn().mockReturnValue('blocked note')
 }))
 
-import { updateTaskFromUi, createTaskWithValidation } from '../sprint-use-cases'
+import { updateTaskFromUi, createTaskWithValidation, initSprintUseCases } from '../sprint-use-cases'
+import { initTaskStateService } from '../task-state-service'
 import { getTask, updateTask, createTask as mockCreateTask } from '../sprint-mutations'
+import * as sprintMutationsMock from '../sprint-mutations'
 
 const TASK = { id: 't1', status: 'queued', title: 'Test', repo: 'fleet', spec: '## Overview\n## Steps', depends_on: null }
 
@@ -39,6 +41,10 @@ function makeDeps() {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Bind the module-level mutations singletons so sprint-use-cases and
+  // task-state-service never throw "Not initialised". The mock above stubs all methods.
+  initSprintUseCases(sprintMutationsMock as any)
+  initTaskStateService(sprintMutationsMock as any)
   vi.mocked(getTask).mockReturnValue(TASK as never)
   vi.mocked(updateTask).mockReturnValue(TASK as never)
 })

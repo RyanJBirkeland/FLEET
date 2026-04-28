@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { TaskTransitionError, cancelTask } from '../sprint-service'
+import { initSprintUseCases } from '../sprint-use-cases'
+import * as sprintMutationsMock from '../sprint-mutations'
 
 vi.mock('../../lib/async-utils', () => ({
   sleep: vi.fn().mockResolvedValue(undefined)
@@ -43,6 +45,9 @@ const cancelledRow = { id: 't1', status: 'cancelled', notes: null }
 describe('cancelTask', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    // Bind the module-level mutations singleton so sprint-use-cases never throws
+    // "Not initialised" when cancelTask reaches the getTask fallback on the error path.
+    initSprintUseCases(sprintMutationsMock as any)
   })
 
   // ---- 6.1 onStatusTerminal succeeds → clean result ----------------------------

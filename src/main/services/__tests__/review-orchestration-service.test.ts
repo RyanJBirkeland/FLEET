@@ -49,7 +49,10 @@ import * as reviewPr from '../review-pr-service'
 import * as sprintService from '../sprint-service'
 import * as postMergeDedup from '../../lib/post-merge-dedup'
 import * as gitOps from '../../lib/git-operations'
-import { setReviewOrchestrationRepo } from '../review-orchestration-service'
+import {
+  createReviewOrchestrationService,
+  type ReviewOrchestrationService
+} from '../review-orchestration-service'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 
 const execFileMock = vi.mocked(execFile)
@@ -62,19 +65,21 @@ function getCustomMock(): ReturnType<typeof vi.fn> {
 describe('review-orchestration-service', () => {
   const mockEnv = { PATH: '/usr/bin' }
   const mockOnStatusTerminal = vi.fn()
+  let orchestration: ReviewOrchestrationService
 
   beforeEach(() => {
     vi.clearAllMocks()
 
-    // Initialise the repo singleton introduced by T-133 so module-level getRepo()
-    // calls don't throw. The test mocks sprint-service, so a minimal stub suffices.
+    // Build a minimal stub repository and create the service via the factory.
+    // The test mocks sprint-service, so stub only what the factory itself uses
+    // (all data access routes through sprint-service mocks at runtime).
     const mockRepo = {
       getTask: vi.fn(),
       updateTask: vi.fn(),
       forceUpdateTask: vi.fn(),
       listTasks: vi.fn(),
     } as unknown as ISprintTaskRepository
-    setReviewOrchestrationRepo(mockRepo)
+    orchestration = createReviewOrchestrationService(mockRepo)
 
     // Default mock for getSettingJson (returns repo config)
     vi.mocked(getSettingJson).mockReturnValue([{ name: 'fleet', localPath: '/repo/fleet' }])

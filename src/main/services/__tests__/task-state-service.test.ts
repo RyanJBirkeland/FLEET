@@ -2,21 +2,15 @@
  * Tests for task-state-service: validateTransition (re-export) and TaskStateService.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { validateTransition, createTaskStateService, InvalidTransitionError } from '../task-state-service'
-
-// Mock sprint-mutations so TaskStateService never touches SQLite
-vi.mock('../sprint-mutations', () => ({
-  getTask: vi.fn(),
-  updateTask: vi.fn()
-}))
+import { validateTransition, createTaskStateService, initTaskStateService, InvalidTransitionError } from '../task-state-service'
 
 // Mock sleep so retry tests don't actually wait 200ms
 vi.mock('../../lib/async-utils', () => ({
   sleep: vi.fn().mockResolvedValue(undefined)
 }))
 
-// sprint-mutations is mocked, but we need to import after mock registration
-import { getTask, updateTask } from '../sprint-mutations'
+const mockGetTask = vi.fn()
+const mockUpdateTask = vi.fn()
 
 const fakeLogger = {
   info: vi.fn(),
@@ -119,13 +113,34 @@ describe('validateTransition', () => {
 // ---- TaskStateService -------------------------------------------------------
 
 describe('TaskStateService', () => {
-  const mockGetTask = vi.mocked(getTask)
-  const mockUpdateTask = vi.mocked(updateTask)
-
   beforeEach(() => {
     vi.clearAllMocks()
+    // Bind the module-level mutations singleton before each test so the
+    // "Not initialised" guard never fires.
+    initTaskStateService({
+      getTask: mockGetTask,
+      updateTask: mockUpdateTask,
+      forceUpdateTask: vi.fn(),
+      listTasks: vi.fn(),
+      listTasksRecent: vi.fn(),
+      getQueueStats: vi.fn(),
+      getDoneTodayCount: vi.fn(),
+      listTasksWithOpenPrs: vi.fn(),
+      getHealthCheckTasks: vi.fn(),
+      getSuccessRateBySpecType: vi.fn(),
+      getDailySuccessRate: vi.fn(),
+      createTask: vi.fn(),
+      claimTask: vi.fn(),
+      deleteTask: vi.fn(),
+      releaseTask: vi.fn(),
+      markTaskDoneByPrNumber: vi.fn(),
+      markTaskCancelledByPrNumber: vi.fn(),
+      updateTaskMergeableState: vi.fn(),
+      flagStuckTasks: vi.fn(),
+      createReviewTaskFromAdhoc: vi.fn(),
+    } as any)
     // Default: getTask returns a task for re-fetch (used by annotation helper)
-    mockUpdateTask.mockReturnValue({ id: 't1', status: 'done', notes: null } as ReturnType<typeof updateTask>)
+    mockUpdateTask.mockReturnValue({ id: 't1', status: 'done', notes: null } as any)
   })
 
   function makeService(dispatchFn: (id: string, status: string) => Promise<void> = vi.fn().mockResolvedValue(undefined)) {
@@ -134,7 +149,7 @@ describe('TaskStateService', () => {
   }
 
   it('performs a valid transition and writes the status field', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' })
 
     const { service } = makeService()
     await service.transition('t1', 'review')
@@ -147,7 +162,7 @@ describe('TaskStateService', () => {
   })
 
   it('merges extra fields from ctx.fields into the DB patch', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' })
 
     const { service } = makeService()
     await service.transition('t1', 'done', { fields: { completed_at: '2026-01-01' } })
@@ -160,7 +175,7 @@ describe('TaskStateService', () => {
   })
 
   it('throws InvalidTransitionError for a forbidden transition without writing to the DB', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'done' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'done' })
 
     const { service } = makeService()
     await expect(service.transition('t1', 'active')).rejects.toBeInstanceOf(InvalidTransitionError)
@@ -170,7 +185,7 @@ describe('TaskStateService', () => {
   })
 
   it('calls TerminalDispatcher.dispatch exactly once after a terminal write', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' })
 
     const dispatchFn = vi.fn().mockResolvedValue(undefined)
     const { service } = makeService(dispatchFn)
@@ -183,7 +198,7 @@ describe('TaskStateService', () => {
   // ---- 5.5 Non-terminal transition → clean result, dispatch not called --------
 
   it('does not call TerminalDispatcher for a non-terminal transition and returns { committed: true, dependentsResolved: true }', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'queued' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'queued' })
 
     const dispatchFn = vi.fn().mockResolvedValue(undefined)
     const { service } = makeService(dispatchFn)
@@ -204,7 +219,7 @@ describe('TaskStateService', () => {
   // ---- 5.1 dispatch succeeds on first attempt → clean result, no retry -------
 
   it('returns { committed: true, dependentsResolved: true } when dispatch succeeds on first attempt', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' })
 
     const dispatchFn = vi.fn().mockResolvedValue(undefined)
     const { service } = makeService(dispatchFn)
@@ -217,7 +232,7 @@ describe('TaskStateService', () => {
   // ---- 5.2 dispatch throws once, succeeds on retry ----------------------------
 
   it('returns { committed: true, dependentsResolved: true } when dispatch succeeds on retry', async () => {
-    mockGetTask.mockReturnValue({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
+    mockGetTask.mockReturnValue({ id: 't1', status: 'active' })
 
     const dispatchFn = vi.fn()
       .mockRejectedValueOnce(new Error('transient'))
@@ -233,8 +248,8 @@ describe('TaskStateService', () => {
 
   it('returns { committed: true, dependentsResolved: false, dispatchError } when dispatch fails both attempts', async () => {
     mockGetTask
-      .mockReturnValueOnce({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
-      .mockReturnValue({ id: 't1', status: 'done', notes: null } as ReturnType<typeof getTask>)
+      .mockReturnValueOnce({ id: 't1', status: 'active' })
+      .mockReturnValue({ id: 't1', status: 'done', notes: null })
 
     const dispatchError = new Error('dep-index offline')
     const dispatchFn = vi.fn().mockRejectedValue(dispatchError)
@@ -247,8 +262,8 @@ describe('TaskStateService', () => {
 
   it('calls updateTask with notes containing "terminal-dispatch-failed" when dispatch fails persistently', async () => {
     mockGetTask
-      .mockReturnValueOnce({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
-      .mockReturnValue({ id: 't1', status: 'done', notes: null } as ReturnType<typeof getTask>)
+      .mockReturnValueOnce({ id: 't1', status: 'active' })
+      .mockReturnValue({ id: 't1', status: 'done', notes: null })
 
     const dispatchFn = vi.fn().mockRejectedValue(new Error('boom'))
     const { service } = makeService(dispatchFn)
@@ -264,8 +279,8 @@ describe('TaskStateService', () => {
 
   it('appends annotation to existing notes instead of replacing them', async () => {
     mockGetTask
-      .mockReturnValueOnce({ id: 't1', status: 'active' } as ReturnType<typeof getTask>)
-      .mockReturnValue({ id: 't1', status: 'done', notes: 'some existing notes' } as ReturnType<typeof getTask>)
+      .mockReturnValueOnce({ id: 't1', status: 'active' })
+      .mockReturnValue({ id: 't1', status: 'done', notes: 'some existing notes' })
 
     const dispatchFn = vi.fn().mockRejectedValue(new Error('boom'))
     const { service } = makeService(dispatchFn)

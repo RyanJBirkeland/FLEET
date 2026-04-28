@@ -82,12 +82,17 @@ vi.mock('../../data/sprint-queries', () => ({
 import { registerAgentManagerHandlers } from '../agent-manager-handlers'
 import { safeHandle } from '../../ipc-utils'
 import { getTask } from '../../data/sprint-queries'
+import { initSprintService } from '../../services/sprint-service'
+import * as sprintMutationsMock from '../../services/sprint-mutations'
 
 describe('Agent manager handlers', () => {
   const mockEvent = {} as IpcMainInvokeEvent
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Bind the module-level mutations singleton so sprint-service never throws
+    // "Not initialised" when the checkpoint handler calls getTask.
+    initSprintService(sprintMutationsMock as any)
   })
 
   it('registers all 5 agent-manager channels', () => {

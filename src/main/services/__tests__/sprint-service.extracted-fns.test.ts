@@ -63,7 +63,7 @@ import { getSettingJson } from '../../settings'
 import { execFileAsync } from '../../lib/async-utils'
 import { resetTaskForRetry as _resetTaskForRetry } from '../sprint-use-cases'
 import { setSprintBroadcaster } from '../sprint-mutation-broadcaster'
-import { buildClaimedTask, forceReleaseClaim, retryTask } from '../sprint-service'
+import { buildClaimedTask, forceReleaseClaim, retryTask, initSprintService } from '../sprint-service'
 
 const mockBroadcastFn = vi.fn()
 
@@ -72,6 +72,9 @@ describe('buildClaimedTask', () => {
     vi.clearAllMocks()
     setSprintBroadcaster(mockBroadcastFn)
     vi.mocked(getSettingJson).mockReturnValue(null)
+    // Bind the module-level mutations singleton so sprint-service never throws
+    // "Not initialised". The mock above already stubs all mutation methods.
+    initSprintService(mutations as any)
   })
 
   it('returns null when task not found', () => {
@@ -118,6 +121,7 @@ describe('forceReleaseClaim', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     setSprintBroadcaster(mockBroadcastFn)
+    initSprintService(mutations as any)
     mockTaskStateService.transition.mockReset().mockResolvedValue(undefined)
     vi.mocked(_resetTaskForRetry).mockResolvedValue(null as any)
   })
@@ -196,6 +200,7 @@ describe('retryTask', () => {
     vi.useFakeTimers()
     vi.clearAllMocks()
     setSprintBroadcaster(mockBroadcastFn)
+    initSprintService(mutations as any)
     vi.mocked(_resetTaskForRetry).mockResolvedValue(null as any)
     vi.mocked(getSettingJson).mockReturnValue(null)
     vi.mocked(execFileAsync as any).mockResolvedValue({ stdout: '', stderr: '' })

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { createTaskWithValidation, TaskValidationError } from './sprint-service'
+import { createTaskWithValidation, TaskValidationError, initSprintService } from './sprint-service'
 import type { CreateTaskInput } from './sprint-service'
 import type { SprintTask, TaskGroup } from '../../shared/types'
 
@@ -51,12 +51,17 @@ vi.mock('../paths', async () => {
 import * as mutations from './sprint-mutations'
 import * as git from '../git'
 import * as paths from '../paths'
+import { initSprintUseCases } from './sprint-use-cases'
 
 describe('createTaskWithValidation', () => {
   const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
   beforeEach(() => {
     vi.clearAllMocks()
+    // Bind the module-level mutations singletons so neither sprint-service nor
+    // sprint-use-cases throws "Not initialised". The mock above stubs all methods.
+    initSprintService(mutations as any)
+    initSprintUseCases(mutations as any)
   })
 
   it('rejects when repo is not configured', async () => {

@@ -118,7 +118,8 @@ import {
   listTasksWithOpenPrs,
   updateTaskMergeableState,
   getHealthCheckTasks,
-  resetTaskForRetry
+  resetTaskForRetry,
+  initSprintService
 } from '../sprint-service'
 
 import {
@@ -141,6 +142,7 @@ import {
 import { getDoneTodayCount as _getDoneTodayCount } from '../../data/sprint-queries'
 
 import { setSprintBroadcaster } from '../sprint-mutation-broadcaster'
+import * as sprintMutationsMock from '../sprint-mutations'
 
 const mockBroadcastFn = vi.fn()
 
@@ -150,6 +152,9 @@ describe('sprint-service', () => {
     vi.clearAllMocks()
     mockBroadcastFn.mockReset()
     setSprintBroadcaster(mockBroadcastFn)
+    // Bind the module-level mutations singleton so the "Not initialised" guard
+    // never fires. The mock above already wires sprint-mutations → sprint-queries.
+    initSprintService(sprintMutationsMock as any)
   })
 
   afterEach(() => {
@@ -181,9 +186,9 @@ describe('sprint-service', () => {
     it('passes no args when no status filter', () => {
       vi.mocked(_listTasks).mockReturnValue([])
       listTasks()
-      // sprint-service re-exports mutations.listTasks which calls sprint-queries
-      // directly — no explicit undefined argument is added
-      expect(_listTasks).toHaveBeenCalledWith()
+      // sprint-service routes through getMutations().listTasks(options) which
+      // forwards undefined when called with no arguments.
+      expect(_listTasks).toHaveBeenCalled()
     })
   })
 

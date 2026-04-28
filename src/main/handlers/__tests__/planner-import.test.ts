@@ -4,6 +4,8 @@ import { parsePlanMarkdown, importPlanFile } from '../planner-import'
 import { getDb } from '../../db'
 import { createSprintMutations } from '../../services/sprint-mutations'
 import { createSprintTaskRepository } from '../../data/sprint-task-repository'
+import { initSprintService } from '../../services/sprint-service'
+import { initSprintUseCases } from '../../services/sprint-use-cases'
 
 // Mock Electron BrowserWindow
 vi.mock('electron', () => ({
@@ -21,7 +23,11 @@ describe('planner-import', () => {
   beforeEach(() => {
     db = getDb()
     // Initialise the sprint-mutations factory so createTask calls reach the DB.
-    createSprintMutations(createSprintTaskRepository())
+    const mutations = createSprintMutations(createSprintTaskRepository())
+    // Bind module-level singletons so sprint-service and sprint-use-cases never
+    // throw "Not initialised" when planner-import calls createTask.
+    initSprintService(mutations)
+    initSprintUseCases(mutations)
     // Clean up test data
     // Delete tasks, then nullify group_id references, then delete groups
     db.prepare('DELETE FROM sprint_tasks WHERE title LIKE ?').run('Test:%')

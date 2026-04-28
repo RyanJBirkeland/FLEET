@@ -236,6 +236,10 @@ vi.mock('fs/promises', () => ({
 
 import { registerSprintLocalHandlers } from '../../handlers/sprint-local'
 import type { SprintTask } from '../../../shared/types'
+import { initSprintService } from '../../services/sprint-service'
+import { initSprintUseCases } from '../../services/sprint-use-cases'
+import { initTaskStateService } from '../../services/task-state-service'
+import * as sprintMutationsMock from '../../services/sprint-mutations'
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -290,6 +294,11 @@ describe('Sprint IPC handlers — integration', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     registeredHandlers.clear()
+    // Bind the module-level mutations singletons so sprint-service, sprint-use-cases,
+    // and task-state-service never throw "Not initialised".
+    initSprintService(sprintMutationsMock as any)
+    initSprintUseCases(sprintMutationsMock as any)
+    initTaskStateService(sprintMutationsMock as any)
     const mockDeps = {
       onStatusTerminal: vi.fn(),
       dialog: { showSaveDialog: vi.fn(), showOpenDialog: vi.fn() },

@@ -128,6 +128,10 @@ vi.mock('../data/sprint-queries', () => ({
 import { getSettingJson } from '../settings'
 import type { TaskTemplate, ClaimedTask } from '../../shared/types'
 import { DEFAULT_TASK_TEMPLATES } from '../../shared/constants'
+import { initSprintService } from '../services/sprint-service'
+import { initSprintUseCases } from '../services/sprint-use-cases'
+import { initTaskStateService } from '../services/task-state-service'
+import * as sprintMutationsMock from '../services/sprint-mutations'
 
 // Capture handlers registered via ipcMain.handle
 const handlers = new Map<string, Function>()
@@ -142,6 +146,11 @@ const fakeEvent = {} as Electron.IpcMainInvokeEvent
 describe('task template resolution in claimTask', () => {
   beforeEach(() => {
     handlers.clear()
+    // Bind the module-level mutations singletons so sprint-service,
+    // sprint-use-cases, and task-state-service never throw "Not initialised".
+    initSprintService(sprintMutationsMock as any)
+    initSprintUseCases(sprintMutationsMock as any)
+    initTaskStateService(sprintMutationsMock as any)
     db = new Database(':memory:')
     db.pragma('journal_mode = WAL')
     db.pragma('foreign_keys = ON')
