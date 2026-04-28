@@ -672,15 +672,9 @@ describe('AgentManagerImpl — class internals', () => {
     it('updates only the just-claimed task in the map (targeted reload)', async () => {
       // EP-9 targeted-data-queries: a successful claim should refresh ONLY the
       // claimed task's status — a full-catalog rescan is wasted I/O.
-      // First getTask call (fresh-status guard before claim) sees 'queued';
-      // second call (post-claim targeted refresh) sees 'active'.
-      let getTaskCalls = 0
+      // getTask is called once (post-claim targeted refresh) and returns 'active'.
       const mockRepo = {
-        getTask: vi.fn().mockImplementation(() => {
-          getTaskCalls++
-          if (getTaskCalls === 1) return { id: 'task-1', status: 'queued' }
-          return { id: 'task-1', status: 'active' }
-        }),
+        getTask: vi.fn().mockReturnValue({ id: 'task-1', status: 'active' }),
         updateTask: vi.fn(),
         getQueuedTasks: vi.fn(),
         getOrphanedTasks: vi.fn(),

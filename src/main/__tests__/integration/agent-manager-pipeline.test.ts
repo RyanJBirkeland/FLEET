@@ -390,7 +390,7 @@ describe('AgentManager pipeline integration', () => {
     vi.useRealTimers()
   })
 
-  it('skips task when already claimed by another executor', async () => {
+  it('skips task when could not be claimed by another executor', async () => {
     vi.useFakeTimers()
     const logger = makeLogger()
     const task = makeTask()
@@ -406,7 +406,7 @@ describe('AgentManager pipeline integration', () => {
     for (let i = 0; i < 20; i++) await vi.advanceTimersByTimeAsync(1)
 
     expect(vi.mocked(spawnAgent)).not.toHaveBeenCalled()
-    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('already claimed'))
+    expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('could not be claimed'))
 
     mgr.stop(0).catch(() => {})
     vi.useRealTimers()

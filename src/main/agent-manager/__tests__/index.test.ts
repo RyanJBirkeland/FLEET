@@ -1586,7 +1586,7 @@ describe('createAgentManager', () => {
       for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
       await vi.advanceTimersByTimeAsync(6_000)
       for (let i = 0; i < 10; i++) await vi.advanceTimersByTimeAsync(1)
-      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('already claimed'))
+      expect(logger.info).toHaveBeenCalledWith(expect.stringContaining('could not be claimed'))
       mgr.stop(0).catch(() => {})
       vi.useRealTimers()
     })
