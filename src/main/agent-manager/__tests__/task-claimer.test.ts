@@ -144,24 +144,6 @@ describe('validateAndClaimTask', () => {
     expect(result).toBeNull()
   })
 
-  it('returns null when task status changed since fetch', async () => {
-    const repo = makeRepo({ status: 'active' })
-    const deps = makeClaimerDeps({ repo })
-    const result = await validateAndClaimTask({}, new Map(), deps)
-    expect(result).toBeNull()
-    expect(deps.logger.info).toHaveBeenCalledWith(
-      expect.stringContaining('status changed since fetch')
-    )
-  })
-
-  it('returns null when task is not found', async () => {
-    const repo = makeRepo()
-    vi.mocked(repo.getTask).mockReturnValue(null)
-    const deps = makeClaimerDeps({ repo })
-    const result = await validateAndClaimTask({}, new Map(), deps)
-    expect(result).toBeNull()
-  })
-
   it('returns null when deps are blocked', async () => {
     vi.mocked(checkAndBlockDeps).mockReturnValue(true)
     const raw = { depends_on: [{ id: 'dep-1', type: 'hard' }] }
@@ -182,12 +164,12 @@ describe('validateAndClaimTask', () => {
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'error')
   })
 
-  it('returns null when claimTask returns null (already claimed)', async () => {
+  it('returns null when claimTask returns null (concurrent claim or status change)', async () => {
     const repo = makeRepo({ claimResult: null })
     const deps = makeClaimerDeps({ repo })
     const result = await validateAndClaimTask({}, new Map(), deps)
     expect(result).toBeNull()
-    expect(deps.logger.info).toHaveBeenCalledWith(expect.stringContaining('already claimed'))
+    expect(deps.logger.info).toHaveBeenCalledWith(expect.stringContaining('could not be claimed'))
   })
 
   it('returns task and repoPath on successful claim', async () => {

@@ -52,7 +52,10 @@ export async function verifyBranchTipOrFail(
   _onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   taskStateService: TaskStateService
 ): Promise<boolean> {
-  if (!repoPath) return true
+  if (!repoPath) {
+    logger.warn('[verification-gate] branch-tip check skipped — repoPath absent')
+    return true
+  }
 
   const task = repo.getTask(taskId)
   if (!task) {

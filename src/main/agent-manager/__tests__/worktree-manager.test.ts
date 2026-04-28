@@ -5,8 +5,26 @@ vi.mock('../worktree', () => ({
   pruneStaleWorktrees: vi.fn()
 }))
 
+vi.mock('../../lib/async-utils', () => ({
+  execFileAsync: vi.fn()
+}))
+
+vi.mock('../../env-utils', () => ({
+  buildAgentEnv: vi.fn().mockReturnValue({})
+}))
+
 import { checkIsReviewTask, runPruneLoop, type WorktreeManagerDeps } from '../worktree-manager'
 import { pruneStaleWorktrees } from '../worktree'
+import { execFileAsync } from '../../lib/async-utils'
+import {
+  listWorktrees,
+  addWorktree,
+  removeWorktreeForce,
+  pruneWorktrees,
+  deleteBranch,
+  forceDeleteBranchRef,
+  cleanupWorktreeAndBranch
+} from '../worktree-lifecycle'
 
 function makeRepo(taskStatus?: string): IAgentTaskRepository {
   return {
@@ -78,5 +96,57 @@ describe('runPruneLoop', () => {
     const err = new Error('prune failed')
     vi.mocked(pruneStaleWorktrees).mockRejectedValue(err)
     await expect(runPruneLoop(deps)).rejects.toThrow('prune failed')
+  })
+})
+
+// ---------------------------------------------------------------------------
+// worktree-lifecycle timeout propagation
+// ---------------------------------------------------------------------------
+
+describe('worktree-lifecycle git timeout propagation', () => {
+  const env = {}
+  const timeoutError = Object.assign(new Error('Command timed out'), { code: 'ETIMEDOUT', killed: true })
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('listWorktrees propagates timeout error from execFileAsync', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    await expect(listWorktrees('/repo', env)).rejects.toThrow('Command timed out')
+  })
+
+  it('addWorktree propagates timeout error from execFileAsync', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    await expect(addWorktree('/repo', 'agent/task-1', '/wt', env)).rejects.toThrow('Command timed out')
+  })
+
+  it('removeWorktreeForce propagates timeout error from execFileAsync', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    await expect(removeWorktreeForce('/repo', '/wt', env)).rejects.toThrow('Command timed out')
+  })
+
+  it('pruneWorktrees propagates timeout error from execFileAsync', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    await expect(pruneWorktrees('/repo', env)).rejects.toThrow('Command timed out')
+  })
+
+  it('deleteBranch propagates timeout error from execFileAsync', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    await expect(deleteBranch('/repo', 'agent/task-1', env)).rejects.toThrow('Command timed out')
+  })
+
+  it('forceDeleteBranchRef propagates timeout error from execFileAsync', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    await expect(forceDeleteBranchRef('/repo', 'agent/task-1', env)).rejects.toThrow('Command timed out')
+  })
+
+  it('cleanupWorktreeAndBranch swallows timeout errors on both worktree remove and branch delete (best-effort cleanup)', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(timeoutError)
+    const logger = makeLogger()
+    // Should not throw — cleanup is best-effort
+    await expect(cleanupWorktreeAndBranch('/wt', 'agent/task-1', '/repo', logger)).resolves.toBeUndefined()
+    // Both failures should produce warn logs
+    expect(logger.warn).toHaveBeenCalledTimes(2)
   })
 })

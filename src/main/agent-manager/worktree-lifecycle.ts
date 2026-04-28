@@ -8,6 +8,9 @@ import type { Logger } from '../logger'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 
+/** Hard timeout for git subprocess calls to prevent hangs in lifecycle operations. */
+const GIT_EXEC_TIMEOUT_MS = 30_000
+
 /**
  * List all worktrees in porcelain format.
  * Returns stdout containing worktree metadata.
@@ -15,7 +18,8 @@ import { buildAgentEnv } from '../env-utils'
 export async function listWorktrees(repoPath: string, env: NodeJS.ProcessEnv): Promise<string> {
   const { stdout } = await execFileAsync('git', ['worktree', 'list', '--porcelain'], {
     cwd: repoPath,
-    env
+    env,
+    timeout: GIT_EXEC_TIMEOUT_MS
   })
   return stdout
 }
@@ -30,7 +34,8 @@ export async function removeWorktreeForce(
 ): Promise<void> {
   await execFileAsync('git', ['worktree', 'remove', '--force', worktreePath], {
     cwd: repoPath,
-    env
+    env,
+    timeout: GIT_EXEC_TIMEOUT_MS
   })
 }
 
@@ -38,7 +43,7 @@ export async function removeWorktreeForce(
  * Prune stale worktree administrative files.
  */
 export async function pruneWorktrees(repoPath: string, env: NodeJS.ProcessEnv): Promise<void> {
-  await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath, env })
+  await execFileAsync('git', ['worktree', 'prune'], { cwd: repoPath, env, timeout: GIT_EXEC_TIMEOUT_MS })
 }
 
 /**
@@ -49,7 +54,7 @@ export async function deleteBranch(
   branch: string,
   env: NodeJS.ProcessEnv
 ): Promise<void> {
-  await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env })
+  await execFileAsync('git', ['branch', '-D', branch], { cwd: repoPath, env, timeout: GIT_EXEC_TIMEOUT_MS })
 }
 
 /**
@@ -62,7 +67,8 @@ export async function forceDeleteBranchRef(
 ): Promise<void> {
   await execFileAsync('git', ['update-ref', '-d', `refs/heads/${branch}`], {
     cwd: repoPath,
-    env
+    env,
+    timeout: GIT_EXEC_TIMEOUT_MS
   })
 }
 
@@ -77,7 +83,8 @@ export async function addWorktree(
 ): Promise<void> {
   await execFileAsync('git', ['worktree', 'add', '-b', branch, worktreePath], {
     cwd: repoPath,
-    env
+    env,
+    timeout: GIT_EXEC_TIMEOUT_MS
   })
 }
 
@@ -95,7 +102,8 @@ export async function cleanupWorktreeAndBranch(
   try {
     await execFileAsync('git', ['worktree', 'remove', worktreePath, '--force'], {
       cwd: repoPath,
-      env
+      env,
+      timeout: GIT_EXEC_TIMEOUT_MS
     })
   } catch (err) {
     logger.warn(`[completion] Failed to remove worktree ${worktreePath}: ${err}`)
@@ -104,7 +112,8 @@ export async function cleanupWorktreeAndBranch(
   try {
     await execFileAsync('git', ['branch', '-D', branch], {
       cwd: repoPath,
-      env
+      env,
+      timeout: GIT_EXEC_TIMEOUT_MS
     })
   } catch (err) {
     logger.warn(`[completion] Failed to delete branch ${branch}: ${err}`)

@@ -68,16 +68,6 @@ export async function validateAndClaimTask(
   const task = mapQueuedTask(rawTask, deps.logger)
   if (!task) return null
 
-  // Fresh-status guard — the task may have been claimed by another drain tick
-  // or changed status externally between the batch fetch and this point.
-  const freshTask = deps.repo.getTask(task.id)
-  if (!freshTask || freshTask.status !== 'queued') {
-    deps.logger.info(
-      `[agent-manager] Task ${task.id} status changed since fetch (was queued, now ${freshTask?.status ?? 'not found'}) — skipping`
-    )
-    return null
-  }
-
   if (
     rawTask.depends_on &&
     checkAndBlockDeps(
@@ -120,7 +110,9 @@ export async function validateAndClaimTask(
 
   const claimed = (await deps.repo.claimTask(task.id, EXECUTOR_ID, deps.config.maxConcurrent)) !== null
   if (!claimed) {
-    deps.logger.info(`[agent-manager] Task ${task.id} already claimed — skipping`)
+    deps.logger.info(
+      `[agent-manager] Task ${task.id} could not be claimed (status may have changed or WIP limit reached) — skipping`
+    )
     return null
   }
 

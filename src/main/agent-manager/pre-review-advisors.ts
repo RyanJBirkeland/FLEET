@@ -62,11 +62,26 @@ const unverifiedFactsAdvisor: PreReviewAdvisor = {
   name: 'unverifiedFacts',
   async advise(ctx) {
     const env = buildAgentEnv()
-    const { stdout: diff } = await execFileAsync('git', ['diff', 'HEAD~1', 'HEAD'], {
-      cwd: ctx.worktreePath,
-      env,
-      timeout: GIT_EXEC_TIMEOUT_MS
-    })
+
+    let diff: string
+    try {
+      const result = await execFileAsync('git', ['diff', 'HEAD~1', 'HEAD'], {
+        cwd: ctx.worktreePath,
+        env,
+        timeout: GIT_EXEC_TIMEOUT_MS
+      })
+      diff = result.stdout
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err)
+      if (message.includes('unknown revision') || message.includes('ambiguous argument')) {
+        ctx.logger.info(
+          '[pre-review-advisors] first-commit branch — unverified-facts advisory skipped'
+        )
+      } else {
+        throw err
+      }
+      return null
+    }
 
     const packageJsonPath = join(ctx.worktreePath, 'package.json')
     const packageJsonContent = await readFile(packageJsonPath, 'utf8').catch(() => '{}')

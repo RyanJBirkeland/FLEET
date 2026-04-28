@@ -90,7 +90,7 @@ describe('verifyBranchTipOrFail', () => {
     onTaskTerminal = vi.fn().mockResolvedValue(undefined)
   })
 
-  it('returns true immediately when repoPath is undefined, without calling assertBranchTipMatches', async () => {
+  it('returns true and emits a warn when repoPath is undefined, without calling assertBranchTipMatches', async () => {
     const repo = makeRepo()
 
     const result = await verifyBranchTipOrFail(
@@ -99,6 +99,9 @@ describe('verifyBranchTipOrFail', () => {
 
     expect(result).toBe(true)
     expect(assertBranchTipMatches).not.toHaveBeenCalled()
+    expect(logger.warn).toHaveBeenCalledWith(
+      '[verification-gate] branch-tip check skipped — repoPath absent'
+    )
   })
 
   it('returns false when repo.getTask returns null, without calling assertBranchTipMatches', async () => {

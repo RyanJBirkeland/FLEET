@@ -7,6 +7,8 @@
  *   - Errors thrown by individual advisors are caught, logged, and do not
  *     stall the pipeline — remaining advisors still run
  *   - All advisors returning null produces no appendAdvisoryNote calls
+ *   - unverifiedFactsAdvisor logs a specific message (not a generic one) for
+ *     single-commit branches where HEAD~1 is invalid
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
@@ -19,12 +21,35 @@ vi.mock('../verification-gate', () => ({
   appendAdvisoryNote: vi.fn()
 }))
 
+vi.mock('../../lib/async-utils', () => ({
+  execFileAsync: vi.fn()
+}))
+
+vi.mock('../env-utils', () => ({
+  buildAgentEnv: vi.fn().mockReturnValue({})
+}))
+
+vi.mock('../test-touch-check', () => ({
+  listChangedFiles: vi.fn().mockResolvedValue([]),
+  detectUntouchedTests: vi.fn().mockReturnValue([]),
+  formatAdvisory: vi.fn().mockReturnValue('')
+}))
+
+vi.mock('../unverified-facts-scanner', () => ({
+  scanForUnverifiedFacts: vi.fn().mockReturnValue([])
+}))
+
+vi.mock('node:fs/promises', () => ({
+  readFile: vi.fn().mockResolvedValue('{}')
+}))
+
 // ---------------------------------------------------------------------------
 // Imports (after vi.mock declarations)
 // ---------------------------------------------------------------------------
 
 import { runPreReviewAdvisors, preReviewAdvisors, type PreReviewAdvisor } from '../pre-review-advisors'
 import { appendAdvisoryNote } from '../verification-gate'
+import { execFileAsync } from '../../lib/async-utils'
 import { makeLogger } from './test-helpers'
 
 // ---------------------------------------------------------------------------
@@ -134,5 +159,66 @@ describe('runPreReviewAdvisors', () => {
     await runPreReviewAdvisors(makeAdvisorContext(), makeRepo())
 
     expect(appendAdvisoryNote).not.toHaveBeenCalled()
+  })
+})
+
+// ---------------------------------------------------------------------------
+// unverifiedFactsAdvisor — single-commit branch handling
+// ---------------------------------------------------------------------------
+
+describe('unverifiedFactsAdvisor single-commit branch', () => {
+  let originalAdvisors: PreReviewAdvisor[]
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    originalAdvisors = [...preReviewAdvisors]
+  })
+
+  afterEach(() => {
+    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
+  })
+
+  it('logs the first-commit message (not a generic skip) and returns null when git diff fails with unknown revision', async () => {
+    // Simulate git refusing to diff HEAD~1 on a single-commit branch
+    vi.mocked(execFileAsync).mockRejectedValue(
+      new Error("unknown revision or path not in the working tree: HEAD~1 'HEAD'")
+    )
+
+    // Use the real unverifiedFactsAdvisor by restoring advisors to original
+    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
+
+    const ctx = makeAdvisorContext()
+    const repo = makeRepo()
+
+    // runPreReviewAdvisors swallows advisor errors — check the log directly
+    await runPreReviewAdvisors(ctx, repo)
+
+    // The specific first-commit message must appear on the logger
+    expect(ctx.logger.info).toHaveBeenCalledWith(
+      '[pre-review-advisors] first-commit branch — unverified-facts advisory skipped'
+    )
+
+    // The generic skip warning must NOT appear
+    expect(ctx.logger.warn).not.toHaveBeenCalledWith(
+      expect.stringContaining('unverifiedFacts')
+    )
+  })
+
+  it('propagates non-single-commit errors as a generic advisor skip warning', async () => {
+    vi.mocked(execFileAsync).mockRejectedValue(new Error('git: command not found'))
+
+    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
+
+    const ctx = makeAdvisorContext()
+    await runPreReviewAdvisors(ctx, makeRepo())
+
+    // A non-single-commit error should NOT emit the first-commit message
+    expect(ctx.logger.info).not.toHaveBeenCalledWith(
+      '[pre-review-advisors] first-commit branch — unverified-facts advisory skipped'
+    )
+    // The orchestrator's generic warn should fire instead
+    expect(ctx.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('unverifiedFacts')
+    )
   })
 })
