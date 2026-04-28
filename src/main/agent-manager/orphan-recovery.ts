@@ -16,12 +16,6 @@ export interface OrphanRecoveryResult {
   exhausted: string[]
 }
 
-/**
- * True once per process lifetime: suppresses the repetitive "has PR, clearing
- * claimed_by" log after the first occurrence so it does not drown other signals.
- */
-let prClearingAlreadyLogged = false
-
 export async function recoverOrphans(
   isAgentActive: (taskId: string) => boolean,
   repo: IAgentTaskRepository,
@@ -36,12 +30,9 @@ export async function recoverOrphans(
     if (isAgentActive(task.id)) continue
 
     if (task.pr_url || task.pr_status === 'branch_only') {
-      if (!prClearingAlreadyLogged) {
-        logger.info(
-          `[agent-manager] Task ${task.id} "${task.title}" has PR ${task.pr_url} — not orphaned, clearing claimed_by`
-        )
-        prClearingAlreadyLogged = true
-      }
+      logger.info(
+        `[agent-manager] Task ${task.id} "${task.title}" has PR ${task.pr_url} — not orphaned, clearing claimed_by`
+      )
       await repo.updateTask(task.id, { claimed_by: null })
       continue
     }

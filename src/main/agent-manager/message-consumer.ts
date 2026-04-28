@@ -188,6 +188,204 @@ function processSDKMessage(
   return { exitCode, lastAgentOutput }
 }
 
+/** Shared context threaded through the message loop sub-functions. */
+interface MessageLoopContext {
+  handle: AgentHandle
+  agent: ActiveAgent
+  task: AgentRunClaim
+  agentRunId: string
+  logger: Logger
+  maxTurns: number
+  exitCode: number | undefined
+  lastAgentOutput: string
+  pendingPlaygroundPaths: PlaygroundWriteResult[]
+  messagesConsumed: number
+  lastEventType: string
+}
+
+/**
+ * Handles the stream-stalled sentinel: emits a structured log event, emits
+ * an agent:error event, and returns the stall result to the caller.
+ */
+function buildStalledStreamResult(ctx: MessageLoopContext): ConsumeMessagesResult {
+  ctx.logger.event('agent.stream.error', {
+    reason: 'stalled',
+    taskId: ctx.task.id,
+    messagesConsumed: ctx.messagesConsumed,
+    lastEventType: ctx.lastEventType
+  })
+  const stallError = new Error('stream_stalled')
+  emitAgentEvent(ctx.agentRunId, {
+    type: 'agent:error',
+    message: `Stream interrupted: stream stalled — no message in ${MESSAGE_STALL_TIMEOUT_MS / 1000}s`,
+    timestamp: Date.now(),
+    taskId: ctx.task.id,
+    messagesConsumed: ctx.messagesConsumed,
+    lastEventType: ctx.lastEventType
+  })
+  flushAgentEventBatcher()
+  return {
+    exitCode: ctx.exitCode,
+    lastAgentOutput: ctx.lastAgentOutput,
+    streamError: stallError,
+    pendingPlaygroundPaths: ctx.pendingPlaygroundPaths
+  }
+}
+
+/**
+ * Enforces the hard turn limit. If the limit is exceeded, aborts the handle,
+ * emits an agent:error event, and returns the abort result. Returns null when
+ * the turn count is within the limit (loop should continue).
+ */
+function enforceMaxTurns(
+  turnCount: number,
+  ctx: MessageLoopContext
+): ConsumeMessagesResult | null {
+  if (turnCount <= ctx.maxTurns) return null
+
+  ctx.logger.warn(
+    `[agent-manager] maxTurns (${ctx.maxTurns}) reached for task ${ctx.task.id} — aborting`
+  )
+  ctx.handle.abort()
+  const turnsError = new Error('max_turns_exceeded')
+  emitAgentEvent(ctx.agentRunId, {
+    type: 'agent:error',
+    message: turnsError.message,
+    timestamp: Date.now(),
+    taskId: ctx.task.id
+  })
+  flushAgentEventBatcher()
+  return {
+    exitCode: ctx.exitCode,
+    lastAgentOutput: ctx.lastAgentOutput,
+    streamError: turnsError,
+    pendingPlaygroundPaths: ctx.pendingPlaygroundPaths
+  }
+}
+
+/**
+ * Enforces the per-turn cost budget. If spending exceeds the cap, aborts the
+ * handle, emits an agent:error event, and returns the abort result. Returns
+ * null when spending is within budget (loop should continue).
+ */
+function enforceCostBudget(ctx: MessageLoopContext): ConsumeMessagesResult | null {
+  if (ctx.agent.maxCostUsd === null || ctx.agent.costUsd < ctx.agent.maxCostUsd) return null
+
+  ctx.logger.warn(
+    `[agent-manager] Cost budget $${ctx.agent.maxCostUsd.toFixed(2)} exceeded ($${ctx.agent.costUsd.toFixed(2)} spent) — aborting task ${ctx.task.id}`
+  )
+  ctx.handle.abort()
+  const budgetError = new Error(
+    `Cost budget $${ctx.agent.maxCostUsd.toFixed(2)} exceeded ($${ctx.agent.costUsd.toFixed(2)} spent)`
+  )
+  emitAgentEvent(ctx.agentRunId, {
+    type: 'agent:error',
+    message: budgetError.message,
+    timestamp: Date.now(),
+    taskId: ctx.task.id
+  })
+  flushAgentEventBatcher()
+  return {
+    exitCode: ctx.exitCode,
+    lastAgentOutput: ctx.lastAgentOutput,
+    streamError: budgetError,
+    pendingPlaygroundPaths: ctx.pendingPlaygroundPaths
+  }
+}
+
+/**
+ * Handles an auth error thrown during stream iteration.
+ *
+ * Invalidates the cached OAuth token and attempts a Keychain refresh. When the
+ * refresh succeeds, returns a clean result so the caller can retry. When it
+ * fails, aborts the handle and returns an `OAuthRefreshFailedError` so the
+ * caller can distinguish "auth failure already handled" from generic errors.
+ */
+async function handleAuthError(
+  ctx: MessageLoopContext,
+  onOAuthRefreshStart?: (promise: Promise<unknown>) => void
+): Promise<ConsumeMessagesResult> {
+  const refreshSucceeded = await handleOAuthRefresh(ctx.logger, onOAuthRefreshStart)
+  if (refreshSucceeded) {
+    // Token is fresh — caller can retry cleanly; no streamError.
+    flushAgentEventBatcher()
+    return {
+      exitCode: ctx.exitCode,
+      lastAgentOutput: ctx.lastAgentOutput,
+      pendingPlaygroundPaths: ctx.pendingPlaygroundPaths
+    }
+  }
+
+  // Refresh failed: abort the handle and surface a typed error.
+  ctx.handle.abort()
+  const refreshError = new OAuthRefreshFailedError()
+  emitAgentEvent(ctx.agentRunId, {
+    type: 'agent:error',
+    message: `Stream interrupted: OAuth refresh failed after auth error — stream aborted`,
+    timestamp: Date.now(),
+    taskId: ctx.task.id,
+    messagesConsumed: ctx.messagesConsumed,
+    lastEventType: ctx.lastEventType
+  })
+  flushAgentEventBatcher()
+  return {
+    exitCode: ctx.exitCode,
+    lastAgentOutput: ctx.lastAgentOutput,
+    streamError: refreshError,
+    pendingPlaygroundPaths: ctx.pendingPlaygroundPaths
+  }
+}
+
+/**
+ * Handles an unexpected error thrown during stream iteration.
+ *
+ * Detects auth errors (by message content) and delegates to `handleAuthError`
+ * for token refresh. For all other errors, emits a structured log event and an
+ * agent:error event, then returns the error as `streamError`.
+ */
+async function handleStreamError(
+  err: unknown,
+  ctx: MessageLoopContext,
+  onOAuthRefreshStart?: (promise: Promise<unknown>) => void
+): Promise<ConsumeMessagesResult> {
+  const errMsg = err instanceof Error ? err.message : String(err)
+  ctx.logger.event('agent.stream.error', {
+    taskId: ctx.task.id,
+    messagesConsumed: ctx.messagesConsumed,
+    lastEventType: ctx.lastEventType,
+    error: errMsg
+  })
+  logError(ctx.logger, `[agent-manager] Error consuming messages for task ${ctx.task.id}`, err)
+
+  const isAuthError =
+    errMsg.includes('Invalid API key') ||
+    errMsg.includes('invalid_api_key') ||
+    errMsg.includes('authentication')
+
+  if (isAuthError) {
+    return handleAuthError(ctx, onOAuthRefreshStart)
+  }
+
+  emitAgentEvent(ctx.agentRunId, {
+    type: 'agent:error',
+    message: `Stream interrupted: ${errMsg}`,
+    timestamp: Date.now(),
+    taskId: ctx.task.id,
+    messagesConsumed: ctx.messagesConsumed,
+    lastEventType: ctx.lastEventType
+  })
+  // Flush immediately: the batcher's 100ms timer may not fire before the
+  // next drain tick or process shutdown, so the stream-error event would
+  // be lost. Flushing here guarantees it reaches SQLite.
+  flushAgentEventBatcher()
+  return {
+    exitCode: ctx.exitCode,
+    lastAgentOutput: ctx.lastAgentOutput,
+    streamError: err instanceof Error ? err : new Error(errMsg),
+    pendingPlaygroundPaths: ctx.pendingPlaygroundPaths
+  }
+}
+
 /**
  * Consumes SDK message stream, tracking costs, emitting events, and accumulating playground paths.
  * Playground HTML paths are collected but not emitted — the caller awaits emission
@@ -207,54 +405,49 @@ export async function consumeMessages(
   maxTurns: number,
   onOAuthRefreshStart?: (promise: Promise<unknown>) => void
 ): Promise<ConsumeMessagesResult> {
-  let exitCode: number | undefined
-  let lastAgentOutput = ''
   const pendingPlaygroundPaths: PlaygroundWriteResult[] = []
   const playgroundDetector = createPlaygroundDetector()
   let turnCount = 0
-  let messagesConsumed = 0
-  let lastEventType = 'none'
+
+  const ctx: MessageLoopContext = {
+    handle,
+    agent,
+    task,
+    agentRunId,
+    logger,
+    maxTurns,
+    exitCode: undefined,
+    lastAgentOutput: '',
+    pendingPlaygroundPaths,
+    messagesConsumed: 0,
+    lastEventType: 'none'
+  }
+
   // Shared timer state reused across nextOrStall calls (T-41).
   const stallTimer: StallTimerState = { handle: undefined }
-
   const iter = handle.messages[Symbol.asyncIterator]()
+
   try {
     // Manual iteration instead of `for await` so each `iter.next()` call
-    // can be raced against a per-message deadline.  If no message arrives
+    // can be raced against a per-message deadline. If no message arrives
     // within MESSAGE_STALL_TIMEOUT_MS the stream is declared stalled and
     // the loop exits early with a structured streamError.
     while (true) {
       const raceResult = await nextOrStall(iter, stallTimer)
 
       if (raceResult === STALL_SENTINEL) {
-        logger.event('agent.stream.error', {
-          reason: 'stalled',
-          taskId: task.id,
-          messagesConsumed,
-          lastEventType
-        })
-        const stallError = new Error('stream_stalled')
-        emitAgentEvent(agentRunId, {
-          type: 'agent:error',
-          message: `Stream interrupted: stream stalled — no message in ${MESSAGE_STALL_TIMEOUT_MS / 1000}s`,
-          timestamp: Date.now(),
-          taskId: task.id,
-          messagesConsumed,
-          lastEventType
-        })
-        flushAgentEventBatcher()
-        return { exitCode, lastAgentOutput, streamError: stallError, pendingPlaygroundPaths }
+        return buildStalledStreamResult(ctx)
       }
 
       if (raceResult.done) break
 
       const msg = raceResult.value
-      messagesConsumed++
+      ctx.messagesConsumed++
       // Parse once per message — reused for lastEventType tracking, processSDKMessage,
       // and the hard turn-limit check below (T-42: eliminate duplicate asSDKMessage calls).
       const sdkMsg = asSDKMessage(msg)
       if (sdkMsg?.type) {
-        lastEventType = sdkMsg.type
+        ctx.lastEventType = sdkMsg.type
       }
       const result = processSDKMessage(
         msg,
@@ -262,11 +455,11 @@ export async function consumeMessages(
         agent,
         agentRunId,
         turnTracker,
-        exitCode,
-        lastAgentOutput
+        ctx.exitCode,
+        ctx.lastAgentOutput
       )
-      exitCode = result.exitCode
-      lastAgentOutput = result.lastAgentOutput
+      ctx.exitCode = result.exitCode
+      ctx.lastAgentOutput = result.lastAgentOutput
 
       if (task.playground_enabled) {
         const playgroundHit = playgroundDetector.onMessage(msg)
@@ -276,104 +469,20 @@ export async function consumeMessages(
       // Hard turn limit: abort if agent exceeds maxTurns (SDK soft limit may not enforce)
       if (sdkMsg?.type === 'assistant') {
         turnCount++
-        if (turnCount > maxTurns) {
-          logger.warn(
-            `[agent-manager] maxTurns (${maxTurns}) reached for task ${task.id} — aborting`
-          )
-          handle.abort()
-          const turnsError = new Error('max_turns_exceeded')
-          emitAgentEvent(agentRunId, {
-            type: 'agent:error',
-            message: turnsError.message,
-            timestamp: Date.now(),
-            taskId: task.id
-          })
-          flushAgentEventBatcher()
-          return { exitCode, lastAgentOutput, streamError: turnsError, pendingPlaygroundPaths }
-        }
+        const turnsResult = enforceMaxTurns(turnCount, ctx)
+        if (turnsResult) return turnsResult
       }
 
-      // Per-turn budget check: abort immediately if cost exceeds limit
-      if (agent.maxCostUsd !== null && agent.costUsd >= agent.maxCostUsd) {
-        logger.warn(
-          `[agent-manager] Cost budget $${agent.maxCostUsd.toFixed(2)} exceeded ($${agent.costUsd.toFixed(2)} spent) — aborting task ${task.id}`
-        )
-        handle.abort()
-        const budgetError = new Error(
-          `Cost budget $${agent.maxCostUsd.toFixed(2)} exceeded ($${agent.costUsd.toFixed(2)} spent)`
-        )
-        emitAgentEvent(agentRunId, {
-          type: 'agent:error',
-          message: budgetError.message,
-          timestamp: Date.now(),
-          taskId: task.id
-        })
-        flushAgentEventBatcher()
-        return {
-          exitCode,
-          lastAgentOutput,
-          streamError: budgetError,
-          pendingPlaygroundPaths
-        }
-      }
+      const budgetResult = enforceCostBudget(ctx)
+      if (budgetResult) return budgetResult
     }
   } catch (err) {
-    const errMsg = err instanceof Error ? err.message : String(err)
-    logger.event('agent.stream.error', {
-      taskId: task.id,
-      messagesConsumed,
-      lastEventType,
-      error: errMsg
-    })
-    logError(logger, `[agent-manager] Error consuming messages for task ${task.id}`, err)
-
-    const isAuthError =
-      errMsg.includes('Invalid API key') ||
-      errMsg.includes('invalid_api_key') ||
-      errMsg.includes('authentication')
-
-    if (isAuthError) {
-      const refreshSucceeded = await handleOAuthRefresh(logger, onOAuthRefreshStart)
-      if (refreshSucceeded) {
-        // Token is fresh — caller can retry cleanly; no streamError.
-        flushAgentEventBatcher()
-        return { exitCode, lastAgentOutput, pendingPlaygroundPaths }
-      }
-      // Refresh failed: abort the handle and return a typed error so the caller
-      // can distinguish "auth failure we already handled" from generic stream errors.
-      handle.abort()
-      const refreshError = new OAuthRefreshFailedError()
-      emitAgentEvent(agentRunId, {
-        type: 'agent:error',
-        message: `Stream interrupted: OAuth refresh failed after auth error — stream aborted`,
-        timestamp: Date.now(),
-        taskId: task.id,
-        messagesConsumed,
-        lastEventType
-      })
-      flushAgentEventBatcher()
-      return { exitCode, lastAgentOutput, streamError: refreshError, pendingPlaygroundPaths }
-    }
-
-    emitAgentEvent(agentRunId, {
-      type: 'agent:error',
-      message: `Stream interrupted: ${errMsg}`,
-      timestamp: Date.now(),
-      taskId: task.id,
-      messagesConsumed,
-      lastEventType
-    })
-    // Flush immediately: the batcher's 100ms timer may not fire before the
-    // next drain tick or process shutdown, so the stream-error event would
-    // be lost. Flushing here guarantees it reaches SQLite.
-    flushAgentEventBatcher()
-    return {
-      exitCode,
-      lastAgentOutput,
-      streamError: err instanceof Error ? err : new Error(errMsg),
-      pendingPlaygroundPaths
-    }
+    return handleStreamError(err, ctx, onOAuthRefreshStart)
   }
 
-  return { exitCode, lastAgentOutput, pendingPlaygroundPaths }
+  return {
+    exitCode: ctx.exitCode,
+    lastAgentOutput: ctx.lastAgentOutput,
+    pendingPlaygroundPaths
+  }
 }

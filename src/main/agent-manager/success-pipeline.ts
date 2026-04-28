@@ -18,7 +18,7 @@ import {
   detectAgentBranch,
   autoCommitPendingChanges,
   performRebaseOntoMain,
-  hasCommitsAheadOfMain,
+  failTaskIfNoCommitsAheadOfMain,
   transitionTaskToReview
 } from './resolve-success-phases'
 import { resolveFailure as resolveFailurePhase } from './resolve-failure-phases'
@@ -152,7 +152,7 @@ const rebasePhase: SuccessPhase = {
 const verifyCommitsPhase: SuccessPhase = {
   name: 'verifyCommits',
   async run(ctx) {
-    const hasCommits = await hasCommitsAheadOfMain({
+    const result = await failTaskIfNoCommitsAheadOfMain({
       taskId: ctx.taskId,
       branch: ctx.branch,
       worktreePath: ctx.worktreePath,
@@ -164,7 +164,7 @@ const verifyCommitsPhase: SuccessPhase = {
       taskStateService: ctx.taskStateService,
       resolveFailure: resolveFailurePhase
     })
-    if (!hasCommits) throw new PipelineAbortError()
+    if (!result.committed) throw new PipelineAbortError()
   }
 }
 
@@ -194,7 +194,6 @@ const branchTipVerifyPhase: SuccessPhase = {
       ctx.repoPath,
       ctx.repo,
       ctx.logger,
-      ctx.onTaskTerminal,
       ctx.taskStateService
     )
     if (!verified) throw new PipelineAbortError()

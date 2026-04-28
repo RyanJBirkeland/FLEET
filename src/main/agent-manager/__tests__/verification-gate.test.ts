@@ -81,20 +81,18 @@ function makeTaskStateService(): TaskStateService {
 describe('verifyBranchTipOrFail', () => {
   let logger: ReturnType<typeof makeLogger>
   let taskStateService: ReturnType<typeof makeTaskStateService>
-  let onTaskTerminal: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     vi.clearAllMocks()
     logger = makeLogger()
     taskStateService = makeTaskStateService()
-    onTaskTerminal = vi.fn().mockResolvedValue(undefined)
   })
 
   it('returns true and emits a warn when repoPath is undefined, without calling assertBranchTipMatches', async () => {
     const repo = makeRepo()
 
     const result = await verifyBranchTipOrFail(
-      'task-1', 'agent/task-1', undefined, repo, logger, onTaskTerminal, taskStateService
+      'task-1', 'agent/task-1', undefined, repo, logger, taskStateService
     )
 
     expect(result).toBe(true)
@@ -108,7 +106,7 @@ describe('verifyBranchTipOrFail', () => {
     const repo = makeRepo(null)
 
     const result = await verifyBranchTipOrFail(
-      'task-1', 'agent/task-1', '/repo', repo, logger, onTaskTerminal, taskStateService
+      'task-1', 'agent/task-1', '/repo', repo, logger, taskStateService
     )
 
     expect(result).toBe(false)
@@ -120,7 +118,7 @@ describe('verifyBranchTipOrFail', () => {
     const repo = makeRepo()
 
     const result = await verifyBranchTipOrFail(
-      'task-1', 'agent/task-1', '/repo', repo, logger, onTaskTerminal, taskStateService
+      'task-1', 'agent/task-1', '/repo', repo, logger, taskStateService
     )
 
     expect(result).toBe(true)
@@ -136,7 +134,7 @@ describe('verifyBranchTipOrFail', () => {
     const repo = makeRepo()
 
     const result = await verifyBranchTipOrFail(
-      'task-1', 'agent/task-1', '/repo', repo, logger, onTaskTerminal, taskStateService
+      'task-1', 'agent/task-1', '/repo', repo, logger, taskStateService
     )
 
     expect(result).toBe(false)
@@ -152,7 +150,7 @@ describe('verifyBranchTipOrFail', () => {
     const repo = makeRepo()
 
     const result = await verifyBranchTipOrFail(
-      'task-1', 'agent/task-1', '/repo', repo, logger, onTaskTerminal, taskStateService
+      'task-1', 'agent/task-1', '/repo', repo, logger, taskStateService
     )
 
     expect(result).toBe(true)

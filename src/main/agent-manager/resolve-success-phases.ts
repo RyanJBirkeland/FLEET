@@ -11,8 +11,6 @@
  * transitionTaskToReview is called by resolveSuccess() after all guards pass.
  */
 
-/** Hard timeout for all git subprocess calls in the success-path phases. */
-const GIT_EXEC_TIMEOUT_MS = 30_000
 import { existsSync } from 'node:fs'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { IUnitOfWork } from '../data/unit-of-work'
@@ -25,6 +23,7 @@ import type { AgentEvent } from '../../shared/types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { nowIso } from '../../shared/time'
 import { rebaseOntoMain, autoCommitIfDirty } from '../lib/git-operations'
+import { GIT_EXEC_TIMEOUT_MS } from './worktree-lifecycle'
 import { transitionToReview } from './review-transition'
 import type { SprintTask } from '../../shared/types/task-types'
 import { buildCommitMessage } from './commit-message'
@@ -373,10 +372,14 @@ async function logUncommittedWorktreeState(
 }
 
 /**
- * Check if branch has any commits ahead of origin/main.
- * Returns true if commits exist, false if none (triggers retry/failure).
+ * Verify the agent branch has commits ahead of origin/main.
+ * When zero commits exist: logs the worktree state, emits structured events,
+ * and routes the task to failure or retry. When commits exist: returns normally.
+ *
+ * Returns `{ committed: true }` when commits are present (pipeline continues).
+ * Returns `{ committed: false }` when no commits exist and failure handling ran.
  */
-export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<boolean> {
+export async function failTaskIfNoCommitsAheadOfMain(opts: CommitCheckContext): Promise<{ committed: boolean }> {
   const {
     taskId,
     branch,
@@ -406,7 +409,7 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
 
       if (retryCount >= MAX_NO_COMMITS_RETRIES) {
         await failTaskExhaustedNoCommits(taskId, branch, repo, logger, onTaskTerminal, taskStateService)
-        return false
+        return { committed: false }
       }
 
       const failureResult = await resolveFailure({ taskId, retryCount, notes: summaryNote, repo, taskStateService }, logger)
@@ -414,7 +417,7 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
         logger.warn(
           `[completion] Task ${taskId}: no-commits failure DB write failed — skipping terminal notification`
         )
-        return false
+        return { committed: false }
       }
       if (failureResult.isTerminal) {
         logger.warn(
@@ -426,7 +429,7 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
           `[completion] Task ${taskId}: no commits on branch ${branch} — requeuing (retry ${retryCount + 1}/${MAX_RETRIES})`
         )
       }
-      return false
+      return { committed: false }
     }
   } catch (err) {
     // rev-list failure is a hard failure: promoting a task to review without
@@ -441,9 +444,9 @@ export async function hasCommitsAheadOfMain(opts: CommitCheckContext): Promise<b
       caller: 'resolve-success.rev-list'
     })
     await onTaskTerminal(taskId, 'failed')
-    return false
+    return { committed: false }
   }
-  return true
+  return { committed: true }
 }
 
 /**

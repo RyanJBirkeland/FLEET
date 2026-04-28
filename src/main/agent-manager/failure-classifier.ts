@@ -9,110 +9,107 @@ export type FailurePattern = {
   keywords: string[]
 }
 
-const failurePatternRegistry: FailurePattern[] = []
-
-/** The index past the last built-in pattern, recorded after all builtin registrations complete. */
-let builtinRegistryLength = 0
-
-export function registerFailurePattern(entry: FailurePattern): void {
-  failurePatternRegistry.push(entry)
-}
+/**
+ * Built-in failure patterns in priority order. The first matching pattern wins.
+ * Frozen so callers cannot mutate the default set — pass `additionalPatterns`
+ * to `classifyFailureReason` for test overrides or custom extensions.
+ */
+export const BUILTIN_FAILURE_PATTERNS: readonly FailurePattern[] = Object.freeze([
+  {
+    type: 'environmental' as FailureReason,
+    keywords: [
+      'main repo has uncommitted changes',
+      'refusing to proceed',
+      'is not configured in fleet settings',
+      'credential unavailable',
+      'no claude subscription token',
+      'unable to access https://',
+      'unable to access http://',
+      'could not resolve host',
+      'getaddrinfo enotfound',
+      'enetunreach',
+      'econnrefused',
+      'model not found',
+      'failed to connect to ollama',
+      'cannot connect to ollama',
+      'ollama server',
+      'failed to pull model'
+    ]
+  },
+  {
+    type: 'auth' as FailureReason,
+    keywords: [
+      'invalid api key',
+      'authentication failed',
+      'unauthorized',
+      'token expired',
+      'invalid token',
+      'invalid_api_key',
+      'token_expired',
+      'invalid_token',
+      'authentication_failed'
+    ]
+  },
+  {
+    type: 'no_commits' as FailureReason,
+    keywords: [
+      'no commits',
+      'produced no commits',
+      'no output captured',
+      'agent produced no commits',
+      'produced only scratch files'
+    ]
+  },
+  {
+    type: 'timeout' as FailureReason,
+    keywords: ['exceeded maximum runtime', 'timeout', 'timed out', 'watchdog', 'max_turns_exceeded']
+  },
+  {
+    type: 'test_failure' as FailureReason,
+    keywords: ['npm test failed', 'test failed', 'vitest failed', 'jest failed', 'tests failed']
+  },
+  {
+    type: 'compilation' as FailureReason,
+    keywords: [
+      'compilation error',
+      'compilation failed',
+      'tsc failed',
+      'typescript error',
+      'type error',
+      'build failed'
+    ]
+  },
+  {
+    type: 'spawn' as FailureReason,
+    keywords: ['spawn failed', 'failed to spawn', 'enoent', 'command not found']
+  },
+  {
+    type: 'incomplete_files' as FailureReason,
+    keywords: ['missing:', 'incomplete files', 'files to change checklist']
+  }
+])
 
 /**
- * Truncates any test-registered patterns, leaving only the built-in patterns.
- * Call in `afterEach` when tests add custom patterns via `registerFailurePattern`
- * to prevent cross-test pollution.
+ * Classifies an agent failure by matching keywords against the built-in
+ * pattern set, followed by any `additionalPatterns` supplied by the caller.
+ *
+ * `additionalPatterns` is the test-safe extension point — pass custom entries
+ * here instead of mutating module-level state.
  */
-export function resetRegistryToBuiltins(): void {
-  failurePatternRegistry.splice(builtinRegistryLength)
-}
-
-registerFailurePattern({
-  type: 'environmental',
-  keywords: [
-    'main repo has uncommitted changes',
-    'refusing to proceed',
-    'is not configured in fleet settings',
-    'credential unavailable',
-    'no claude subscription token',
-    'unable to access https://',
-    'unable to access http://',
-    'could not resolve host',
-    'getaddrinfo enotfound',
-    'enetunreach',
-    'econnrefused',
-    'model not found',
-    'failed to connect to ollama',
-    'cannot connect to ollama',
-    'ollama server',
-    'failed to pull model'
-  ]
-})
-registerFailurePattern({
-  type: 'auth',
-  keywords: [
-    'invalid api key',
-    'authentication failed',
-    'unauthorized',
-    'token expired',
-    'invalid token',
-    'invalid_api_key',
-    'token_expired',
-    'invalid_token',
-    'authentication_failed'
-  ]
-})
-registerFailurePattern({
-  type: 'no_commits',
-  keywords: [
-    'no commits',
-    'produced no commits',
-    'no output captured',
-    'agent produced no commits',
-    'produced only scratch files'
-  ]
-})
-registerFailurePattern({
-  type: 'timeout',
-  keywords: ['exceeded maximum runtime', 'timeout', 'timed out', 'watchdog', 'max_turns_exceeded']
-})
-registerFailurePattern({
-  type: 'test_failure',
-  keywords: ['npm test failed', 'test failed', 'vitest failed', 'jest failed', 'tests failed']
-})
-registerFailurePattern({
-  type: 'compilation',
-  keywords: [
-    'compilation error',
-    'compilation failed',
-    'tsc failed',
-    'typescript error',
-    'type error',
-    'build failed'
-  ]
-})
-registerFailurePattern({
-  type: 'spawn',
-  keywords: ['spawn failed', 'failed to spawn', 'enoent', 'command not found']
-})
-registerFailurePattern({
-  type: 'incomplete_files',
-  keywords: ['missing:', 'incomplete files', 'files to change checklist']
-})
-
-// Record the length after all built-in registrations so resetRegistryToBuiltins
-// knows how many entries to preserve.
-builtinRegistryLength = failurePatternRegistry.length
-
 export function classifyFailureReason(
   notes: string | undefined,
   logger?: Logger,
-  taskId?: string
+  taskId?: string,
+  additionalPatterns?: FailurePattern[]
 ): FailureReason {
   if (!notes) return 'unknown'
 
   const lower = notes.toLowerCase()
-  const matched = failurePatternRegistry.find((p) => p.keywords.some((k) => lower.includes(k)))
+  const allPatterns = additionalPatterns
+    ? ([...BUILTIN_FAILURE_PATTERNS, ...additionalPatterns] as FailurePattern[])
+    : (BUILTIN_FAILURE_PATTERNS as FailurePattern[])
+
+  const matched = allPatterns.find((p) => p.keywords.some((k) => lower.includes(k)))
   if (!matched) return 'unknown'
 
   logger?.debug(

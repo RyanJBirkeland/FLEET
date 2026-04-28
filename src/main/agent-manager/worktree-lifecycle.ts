@@ -9,7 +9,7 @@ import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 
 /** Hard timeout for git subprocess calls to prevent hangs in lifecycle operations. */
-const GIT_EXEC_TIMEOUT_MS = 30_000
+export const GIT_EXEC_TIMEOUT_MS = 30_000
 
 /**
  * List all worktrees in porcelain format.

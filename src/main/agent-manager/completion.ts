@@ -12,12 +12,10 @@
  * All existing imports from other files pointing to completion.ts remain valid.
  */
 
-/** Hard timeout for all git subprocess calls in the completion path. */
-const GIT_EXEC_TIMEOUT_MS = 30_000
-
 import type { Logger } from '../logger'
 import { buildAgentEnv } from '../env-utils'
 import { execFileAsync } from '../lib/async-utils'
+import { GIT_EXEC_TIMEOUT_MS } from './worktree-lifecycle'
 import { findOrCreatePR as findOrCreatePRUtil } from '../lib/git-operations'
 import { resolveFailure as resolveFailurePhase, type ResolveFailureResult, type ResolveFailureContext } from './resolve-failure-phases'
 
@@ -28,7 +26,7 @@ export type { SuccessPhaseContext, SuccessPhase } from './success-pipeline'
 export { PipelineAbortError } from './success-pipeline'
 
 export type { PreReviewAdvisor, PreReviewAdvisorContext } from './pre-review-advisors'
-export { preReviewAdvisors, runPreReviewAdvisors } from './pre-review-advisors'
+export { DEFAULT_PRE_REVIEW_ADVISORS, runPreReviewAdvisors } from './pre-review-advisors'
 
 export { appendAdvisoryNote, verifyBranchTipOrFail, verifyWorktreeOrFail } from './verification-gate'
 

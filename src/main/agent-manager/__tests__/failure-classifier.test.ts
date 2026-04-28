@@ -1,9 +1,5 @@
-import { describe, it, expect, vi, afterEach } from 'vitest'
-import { classifyFailureReason, registerFailurePattern, resetRegistryToBuiltins } from '../failure-classifier'
-
-afterEach(() => {
-  resetRegistryToBuiltins()
-})
+import { describe, it, expect, vi } from 'vitest'
+import { classifyFailureReason, type FailurePattern } from '../failure-classifier'
 
 describe('classifyFailureReason', () => {
   describe('auth pattern matching', () => {
@@ -227,36 +223,25 @@ describe('classifyFailureReason', () => {
     })
   })
 
-  describe('registerFailurePattern API', () => {
-    it('allows registering custom failure patterns', () => {
-      registerFailurePattern({
-        type: 'custom',
-        keywords: ['custom error pattern']
-      })
-      expect(classifyFailureReason('custom error pattern occurred')).toBe('custom')
+  describe('additionalPatterns parameter', () => {
+    it('allows classifying with a custom failure pattern', () => {
+      const extra: FailurePattern[] = [{ type: 'custom', keywords: ['custom error pattern'] }]
+      expect(classifyFailureReason('custom error pattern occurred', undefined, undefined, extra)).toBe('custom')
     })
 
-    it('matches multiple custom patterns in order of registration', () => {
-      registerFailurePattern({
-        type: 'first_custom',
-        keywords: ['first pattern']
-      })
-      registerFailurePattern({
-        type: 'second_custom',
-        keywords: ['second pattern']
-      })
-      expect(classifyFailureReason('first pattern')).toBe('first_custom')
-      expect(classifyFailureReason('second pattern')).toBe('second_custom')
+    it('matches multiple additional patterns in order', () => {
+      const extra: FailurePattern[] = [
+        { type: 'first_custom', keywords: ['first pattern'] },
+        { type: 'second_custom', keywords: ['second pattern'] }
+      ]
+      expect(classifyFailureReason('first pattern', undefined, undefined, extra)).toBe('first_custom')
+      expect(classifyFailureReason('second pattern', undefined, undefined, extra)).toBe('second_custom')
     })
 
-    it('built-in pattern wins over custom pattern registered after builtins on shared keyword', () => {
-      // Register a custom pattern that claims the 'timeout' keyword
-      registerFailurePattern({
-        type: 'custom_timeout',
-        keywords: ['timeout']
-      })
-      // The built-in 'timeout' pattern was registered first, so it wins
-      expect(classifyFailureReason('timeout occurred')).toBe('timeout')
+    it('built-in pattern wins over additional pattern on shared keyword — builtins searched first', () => {
+      const extra: FailurePattern[] = [{ type: 'custom_timeout', keywords: ['timeout'] }]
+      // The built-in 'timeout' pattern is searched before additionalPatterns, so it wins
+      expect(classifyFailureReason('timeout occurred', undefined, undefined, extra)).toBe('timeout')
     })
   })
 

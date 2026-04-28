@@ -11,7 +11,7 @@
  *     single-commit branches where HEAD~1 is invalid
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 // ---------------------------------------------------------------------------
 // Module mocks — hoisted before imports
@@ -47,7 +47,7 @@ vi.mock('node:fs/promises', () => ({
 // Imports (after vi.mock declarations)
 // ---------------------------------------------------------------------------
 
-import { runPreReviewAdvisors, preReviewAdvisors, type PreReviewAdvisor } from '../pre-review-advisors'
+import { runPreReviewAdvisors, DEFAULT_PRE_REVIEW_ADVISORS, type PreReviewAdvisor } from '../pre-review-advisors'
 import { appendAdvisoryNote } from '../verification-gate'
 import { execFileAsync } from '../../lib/async-utils'
 import { makeLogger } from './test-helpers'
@@ -78,44 +78,31 @@ function makeRepo() {
 // ---------------------------------------------------------------------------
 
 describe('runPreReviewAdvisors', () => {
-  let originalAdvisors: PreReviewAdvisor[]
-
   beforeEach(() => {
     vi.clearAllMocks()
-    // Snapshot original advisors so we can restore them after each test
-    originalAdvisors = [...preReviewAdvisors]
-    // Clear the array so only our stub advisors run
-    preReviewAdvisors.splice(0)
-  })
-
-  afterEach(() => {
-    // Restore original advisors to prevent pollution
-    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
   })
 
   it('calls appendAdvisoryNote once with the advisory string when an advisor returns a non-null warning', async () => {
     const warning = 'Test files not updated by this change'
-    preReviewAdvisors.push({
-      name: 'testAdvisor',
-      advise: vi.fn().mockResolvedValue(warning)
-    })
+    const advisors: PreReviewAdvisor[] = [
+      { name: 'testAdvisor', advise: vi.fn().mockResolvedValue(warning) }
+    ]
 
     const ctx = makeAdvisorContext()
     const repo = makeRepo()
 
-    await runPreReviewAdvisors(ctx, repo)
+    await runPreReviewAdvisors(ctx, repo, advisors)
 
     expect(appendAdvisoryNote).toHaveBeenCalledOnce()
     expect(appendAdvisoryNote).toHaveBeenCalledWith('task-1', warning, repo, ctx.logger)
   })
 
   it('does not call appendAdvisoryNote when the advisor returns null', async () => {
-    preReviewAdvisors.push({
-      name: 'quietAdvisor',
-      advise: vi.fn().mockResolvedValue(null)
-    })
+    const advisors: PreReviewAdvisor[] = [
+      { name: 'quietAdvisor', advise: vi.fn().mockResolvedValue(null) }
+    ]
 
-    await runPreReviewAdvisors(makeAdvisorContext(), makeRepo())
+    await runPreReviewAdvisors(makeAdvisorContext(), makeRepo(), advisors)
 
     expect(appendAdvisoryNote).not.toHaveBeenCalled()
   })
@@ -131,13 +118,12 @@ describe('runPreReviewAdvisors', () => {
       name: 'secondAdvisor',
       advise: vi.fn().mockResolvedValue(secondAdvisoryResult)
     }
-    preReviewAdvisors.push(throwingAdvisor, secondAdvisor)
 
     const ctx = makeAdvisorContext()
     const repo = makeRepo()
 
     // Must not throw
-    await expect(runPreReviewAdvisors(ctx, repo)).resolves.toBeUndefined()
+    await expect(runPreReviewAdvisors(ctx, repo, [throwingAdvisor, secondAdvisor])).resolves.toBeUndefined()
 
     // First advisor error was logged with the advisor name
     expect(ctx.logger.warn).toHaveBeenCalledWith(
@@ -151,12 +137,12 @@ describe('runPreReviewAdvisors', () => {
   })
 
   it('never calls appendAdvisoryNote when all advisors return null', async () => {
-    preReviewAdvisors.push(
+    const advisors: PreReviewAdvisor[] = [
       { name: 'a1', advise: vi.fn().mockResolvedValue(null) },
       { name: 'a2', advise: vi.fn().mockResolvedValue(null) }
-    )
+    ]
 
-    await runPreReviewAdvisors(makeAdvisorContext(), makeRepo())
+    await runPreReviewAdvisors(makeAdvisorContext(), makeRepo(), advisors)
 
     expect(appendAdvisoryNote).not.toHaveBeenCalled()
   })
@@ -167,15 +153,8 @@ describe('runPreReviewAdvisors', () => {
 // ---------------------------------------------------------------------------
 
 describe('unverifiedFactsAdvisor single-commit branch', () => {
-  let originalAdvisors: PreReviewAdvisor[]
-
   beforeEach(() => {
     vi.clearAllMocks()
-    originalAdvisors = [...preReviewAdvisors]
-  })
-
-  afterEach(() => {
-    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
   })
 
   it('logs the first-commit message (not a generic skip) and returns null when git diff fails with unknown revision', async () => {
@@ -184,14 +163,11 @@ describe('unverifiedFactsAdvisor single-commit branch', () => {
       new Error("unknown revision or path not in the working tree: HEAD~1 'HEAD'")
     )
 
-    // Use the real unverifiedFactsAdvisor by restoring advisors to original
-    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
-
     const ctx = makeAdvisorContext()
     const repo = makeRepo()
 
     // runPreReviewAdvisors swallows advisor errors — check the log directly
-    await runPreReviewAdvisors(ctx, repo)
+    await runPreReviewAdvisors(ctx, repo, DEFAULT_PRE_REVIEW_ADVISORS)
 
     // The specific first-commit message must appear on the logger
     expect(ctx.logger.info).toHaveBeenCalledWith(
@@ -207,10 +183,8 @@ describe('unverifiedFactsAdvisor single-commit branch', () => {
   it('propagates non-single-commit errors as a generic advisor skip warning', async () => {
     vi.mocked(execFileAsync).mockRejectedValue(new Error('git: command not found'))
 
-    preReviewAdvisors.splice(0, preReviewAdvisors.length, ...originalAdvisors)
-
     const ctx = makeAdvisorContext()
-    await runPreReviewAdvisors(ctx, makeRepo())
+    await runPreReviewAdvisors(ctx, makeRepo(), DEFAULT_PRE_REVIEW_ADVISORS)
 
     // A non-single-commit error should NOT emit the first-commit message
     expect(ctx.logger.info).not.toHaveBeenCalledWith(

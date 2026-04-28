@@ -13,11 +13,9 @@ import { execFileAsync } from '../lib/async-utils'
 import { detectUntouchedTests, listChangedFiles, formatAdvisory } from './test-touch-check'
 import { scanForUnverifiedFacts } from './unverified-facts-scanner'
 import { appendAdvisoryNote } from './verification-gate'
+import { GIT_EXEC_TIMEOUT_MS } from './worktree-lifecycle'
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
-
-/** Hard timeout for git subprocess calls in the advisory path. */
-const GIT_EXEC_TIMEOUT_MS = 30_000
 
 /**
  * Context passed to each PreReviewAdvisor. Advisory checks read these fields
@@ -91,19 +89,26 @@ const unverifiedFactsAdvisor: PreReviewAdvisor = {
   }
 }
 
-/** Registered pre-review advisors — extend by appending to this array. */
-export const preReviewAdvisors: PreReviewAdvisor[] = [untouchedTestsAdvisor, unverifiedFactsAdvisor]
+/** Default set of pre-review advisors run before every review transition. */
+export const DEFAULT_PRE_REVIEW_ADVISORS: readonly PreReviewAdvisor[] = [
+  untouchedTestsAdvisor,
+  unverifiedFactsAdvisor
+]
 
 /**
- * Runs each registered PreReviewAdvisor. Non-null warnings are appended to the
- * task's notes. Errors in individual advisors are caught and logged so a
+ * Runs each advisor in the supplied list. Non-null warnings are appended to
+ * the task's notes. Errors in individual advisors are caught and logged so a
  * single flaky check cannot stall the success path.
+ *
+ * Pass `DEFAULT_PRE_REVIEW_ADVISORS` for the standard set, or a custom list
+ * in tests to control which advisors run without mutating global state.
  */
 export async function runPreReviewAdvisors(
   ctx: PreReviewAdvisorContext,
-  repo: IAgentTaskRepository
+  repo: IAgentTaskRepository,
+  advisors: readonly PreReviewAdvisor[] = DEFAULT_PRE_REVIEW_ADVISORS
 ): Promise<void> {
-  for (const advisor of preReviewAdvisors) {
+  for (const advisor of advisors) {
     try {
       const warning = await advisor.advise(ctx)
       if (warning) {

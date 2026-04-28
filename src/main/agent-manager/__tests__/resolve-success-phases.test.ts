@@ -23,7 +23,7 @@ import {
   branchMatchesTask,
   assertBranchTipMatches,
   BranchTipMismatchError,
-  hasCommitsAheadOfMain
+  failTaskIfNoCommitsAheadOfMain
 } from '../resolve-success-phases'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 
@@ -252,7 +252,7 @@ describe('legitimate tip-mismatch still rejected', () => {
   })
 })
 
-describe('hasCommitsAheadOfMain — no-commits structured event', () => {
+describe('failTaskIfNoCommitsAheadOfMain — no-commits structured event', () => {
   function makeLogger() {
     return { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
   }
@@ -273,7 +273,7 @@ describe('hasCommitsAheadOfMain — no-commits structured event', () => {
     } as unknown as IAgentTaskRepository
   }
 
-  function makeBaseOpts(overrides: Partial<Parameters<typeof hasCommitsAheadOfMain>[0]> = {}) {
+  function makeBaseOpts(overrides: Partial<Parameters<typeof failTaskIfNoCommitsAheadOfMain>[0]> = {}) {
     const logger = makeLogger()
     const repo = makeRepo()
     const resolveFailure = vi.fn().mockResolvedValue({ isTerminal: false, writeFailed: false })
@@ -301,7 +301,7 @@ describe('hasCommitsAheadOfMain — no-commits structured event', () => {
     mockExecFileAsync.mockResolvedValue({ stdout: '0\n', stderr: '' })
 
     const opts = makeBaseOpts({ retryCount: 0 })
-    await hasCommitsAheadOfMain(opts)
+    await failTaskIfNoCommitsAheadOfMain(opts)
 
     expect(opts.logger.event).toHaveBeenCalledWith(
       'completion.no_commits',
@@ -314,7 +314,7 @@ describe('hasCommitsAheadOfMain — no-commits structured event', () => {
 
     // MAX_NO_COMMITS_RETRIES is 3 — pass retryCount at or above to trigger exhausted path
     const opts = makeBaseOpts({ retryCount: 3 })
-    await hasCommitsAheadOfMain(opts)
+    await failTaskIfNoCommitsAheadOfMain(opts)
 
     expect(opts.logger.event).toHaveBeenCalledWith(
       'completion.no_commits',
@@ -326,7 +326,7 @@ describe('hasCommitsAheadOfMain — no-commits structured event', () => {
     mockExecFileAsync.mockResolvedValue({ stdout: '3\n', stderr: '' })
 
     const opts = makeBaseOpts()
-    await hasCommitsAheadOfMain(opts)
+    await failTaskIfNoCommitsAheadOfMain(opts)
 
     expect(opts.logger.event).not.toHaveBeenCalledWith('completion.no_commits', expect.anything())
   })

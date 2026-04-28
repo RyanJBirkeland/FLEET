@@ -49,7 +49,6 @@ export async function verifyBranchTipOrFail(
   repoPath: string | undefined,
   repo: IAgentTaskRepository,
   logger: Logger,
-  _onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   taskStateService: TaskStateService
 ): Promise<boolean> {
   if (!repoPath) {
