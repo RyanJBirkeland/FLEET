@@ -23,6 +23,20 @@ describe('migration v055', () => {
     db.close()
   })
 
+  it('is idempotent — running twice does not throw or corrupt data', () => {
+    const db = new Database(':memory:')
+    db.prepare('CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, repo TEXT)').run()
+    db.prepare("INSERT INTO sprint_tasks VALUES ('t1', 'bde')").run()
+    db.prepare("INSERT INTO sprint_tasks VALUES ('t2', 'other')").run()
+
+    expect(() => { up(db); up(db) }).not.toThrow()
+
+    const rows = db.prepare('SELECT id, repo FROM sprint_tasks ORDER BY id').all() as Array<{id: string; repo: string}>
+    expect(rows.find(r => r.id === 't1')!.repo).toBe('fleet')
+    expect(rows.find(r => r.id === 't2')!.repo).toBe('other')
+    db.close()
+  })
+
   it('is a no-op when no bde rows exist', () => {
     const db = new Database(':memory:')
     db.prepare('CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, repo TEXT)').run()

@@ -9,7 +9,8 @@ import {
   isValidTransition,
   isTerminal,
   isFailure,
-  isHardSatisfied
+  isHardSatisfied,
+  isTaskStatus
 } from '../task-state-machine'
 import { type BucketKey, STATUS_METADATA } from '../task-statuses'
 
@@ -298,6 +299,46 @@ describe('task-state-machine', () => {
         // Every status should appear in STATUS_METADATA
         expect(STATUS_METADATA[status]).toBeDefined()
       }
+    })
+  })
+
+  describe('isTaskStatus', () => {
+    it('returns true for valid statuses', () => {
+      expect(isTaskStatus('queued')).toBe(true)
+      expect(isTaskStatus('active')).toBe(true)
+      expect(isTaskStatus('done')).toBe(true)
+    })
+
+    it('returns false for null', () => {
+      expect(isTaskStatus(null as unknown as string)).toBe(false)
+    })
+
+    it('returns false for undefined', () => {
+      expect(isTaskStatus(undefined as unknown as string)).toBe(false)
+    })
+
+    it('returns false for empty string', () => {
+      expect(isTaskStatus('')).toBe(false)
+    })
+
+    it('returns false for numeric 0', () => {
+      expect(isTaskStatus(0 as unknown as string)).toBe(false)
+    })
+
+    it('returns false for plain object', () => {
+      expect(isTaskStatus({} as unknown as string)).toBe(false)
+    })
+
+    it('returns false for wrong-case DONE', () => {
+      expect(isTaskStatus('DONE')).toBe(false)
+    })
+
+    it('returns false for wrong-case Active', () => {
+      expect(isTaskStatus('Active')).toBe(false)
+    })
+
+    it('returns false for unknown string pending', () => {
+      expect(isTaskStatus('pending')).toBe(false)
     })
   })
 })

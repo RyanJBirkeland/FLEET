@@ -175,4 +175,39 @@ describe('validateTaskCreation', () => {
       })
     )
   })
+
+  it('sets task status to blocked when computeBlockState returns shouldBlock: true', () => {
+    const validSpec = `${'x'.repeat(60)}\n## Problem\nDescription\n## Solution\nFix it`
+    vi.mocked(computeBlockState).mockReturnValueOnce({ shouldBlock: true, blockedBy: ['upstream-1'] })
+    const result = validateTaskCreation(
+      { title: 'Downstream', repo: 'fleet', status: 'queued', spec: validSpec, depends_on: [{ id: 'upstream-1', type: 'hard' }] } as any,
+      { logger: mockLogger, listTasks: mockListTasks, listGroups: mockListGroups }
+    )
+    expect(result.valid).toBe(true)
+    expect(result.task.status).toBe('blocked')
+  })
+
+  it('leaves status unchanged when computeBlockState returns shouldBlock: false', () => {
+    const validSpec = `${'x'.repeat(60)}\n## Problem\nDescription\n## Solution\nFix it`
+    vi.mocked(computeBlockState).mockReturnValueOnce({ shouldBlock: false, blockedBy: [] })
+    const result = validateTaskCreation(
+      { title: 'Ready', repo: 'fleet', status: 'queued', spec: validSpec, depends_on: [{ id: 'dep-1', type: 'hard' }] } as any,
+      { logger: mockLogger, listTasks: mockListTasks, listGroups: mockListGroups }
+    )
+    expect(result.valid).toBe(true)
+    expect(result.task.status).toBe('queued')
+  })
+
+  it('propagates errors thrown by computeBlockState', () => {
+    const validSpec = `${'x'.repeat(60)}\n## Problem\nDescription\n## Solution\nFix it`
+    vi.mocked(computeBlockState).mockImplementationOnce(() => {
+      throw new Error('dep service unavailable')
+    })
+    expect(() =>
+      validateTaskCreation(
+        { title: 'Task', repo: 'fleet', status: 'queued', spec: validSpec, depends_on: [{ id: 'dep-1', type: 'hard' }] } as any,
+        { logger: mockLogger, listTasks: mockListTasks, listGroups: mockListGroups }
+      )
+    ).toThrow('dep service unavailable')
+  })
 })

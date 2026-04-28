@@ -25,6 +25,14 @@ describe('migration v054', () => {
     db.close()
   })
 
+  it('throws on second run — ALTER TABLE has no IF NOT EXISTS guard', () => {
+    const db = new Database(':memory:')
+    db.prepare('CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, title TEXT)').run()
+    up(db)
+    expect(() => up(db)).toThrow()
+    db.close()
+  })
+
   it('stores an ISO8601 timestamp and reads it back unchanged', () => {
     const db = new Database(':memory:')
     db.prepare('CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, title TEXT)').run()
