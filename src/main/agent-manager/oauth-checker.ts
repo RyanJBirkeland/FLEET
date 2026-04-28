@@ -10,14 +10,17 @@
  * service uses the same values internally.
  */
 import { getDefaultCredentialService } from '../services/credential-service'
+import { createLogger } from '../logger'
 import type { Logger } from '../logger'
 
 export const OAUTH_CHECK_CACHE_TTL_MS = 5 * 60 * 1000 // 5 minutes
 export const OAUTH_CHECK_FAIL_CACHE_TTL_MS = 30_000 // 30 seconds
 
+const moduleLogger = createLogger('oauth-checker')
+
 export function invalidateCheckOAuthTokenCache(): void {
   // Delegated invalidation — drops the service's Claude cache entry.
-  getDefaultCredentialService(console as unknown as Logger).invalidateCache('claude')
+  getDefaultCredentialService(moduleLogger).invalidateCache('claude')
 }
 
 export async function checkOAuthToken(logger: Logger): Promise<boolean> {

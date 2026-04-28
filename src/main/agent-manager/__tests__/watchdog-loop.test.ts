@@ -133,8 +133,7 @@ describe('forceKillAgent', () => {
   it('falls back to subprocess SIGKILL when handle.forceKill is not implemented', () => {
     const agent = makeAgent('task-fk2')
     const procKill = vi.fn()
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ;(agent.handle as any).process = { kill: procKill }
+    agent.handle = { ...agent.handle, process: { kill: procKill } as unknown as import('child_process').ChildProcess }
     const logger = makeLogger()
 
     forceKillAgent(agent, logger)

@@ -49,31 +49,33 @@ export function wrapServerWithSafeToolHandlers(
   return server
 }
 
+interface McpServerRegistrar {
+  tool: (...args: unknown[]) => unknown
+  registerTool: (...args: unknown[]) => unknown
+}
+
 function wrapRegistrationMethod(
   server: McpServer,
   methodName: 'tool' | 'registerTool',
   logger: Pick<Logger, 'error'>
 ): void {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const existing = (server as any)[methodName]
+  const registrar = server as unknown as McpServerRegistrar
+  const existing = registrar[methodName]
   if (typeof existing !== 'function') return
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const original = (existing as (...args: any[]) => unknown).bind(server)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const wrapped = (...args: any[]): unknown => {
+  const original = existing.bind(server)
+  const wrapped = (...args: unknown[]): unknown => {
     if (args.length === 0) return original()
     const name = args[0]
     const cbIndex = args.length - 1
     const cb = args[cbIndex]
     if (typeof cb !== 'function' || typeof name !== 'string') {
-      return original.apply(server, args)
+      return original(...args)
     }
     const wrappedCb = safeToolHandler(name, logger, cb as ToolHandlerFn<unknown, unknown>)
     const nextArgs = [...args.slice(0, cbIndex), wrappedCb]
-    return original.apply(server, nextArgs)
+    return original(...nextArgs)
   }
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  ;(server as any)[methodName] = wrapped
+  registrar[methodName] = wrapped
 }
 
 function formatError(err: unknown): string {

@@ -43,7 +43,8 @@ export async function spawnLocalAgent(opts: LocalSpawnOptions): Promise<AgentHan
       cwd: opts.cwd,
       model: opts.model
     })
-    return handle as unknown as AgentHandle
+    // spawnBdeAgent returns a structurally compatible handle — messages iterable, abort(), steer() all present.
+    return handle as AgentHandle
   } finally {
     if (previousBase === undefined) {
       delete process.env.OPENAI_API_BASE

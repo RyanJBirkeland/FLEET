@@ -21,7 +21,10 @@
 import http from 'node:http'
 import { randomBytes } from 'node:crypto'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
+import {
+  StreamableHTTPServerTransport,
+  type StreamableHTTPServerTransportOptions
+} from '@modelcontextprotocol/sdk/server/streamableHttp.js'
 import {
   cancelTask,
   createTaskWithValidation,
@@ -107,12 +110,13 @@ async function handleRequest(
 
   const port = (req.socket.localPort ?? 0).toString()
   const mcp = buildMcpServer(epicService, logger)
-  const transport = new StreamableHTTPServerTransport({
-    sessionIdGenerator: undefined,
+  // sessionIdGenerator is omitted to use stateless mode (no session resumption).
+  const transportOptions: StreamableHTTPServerTransportOptions = {
     enableDnsRebindingProtection: true,
     allowedHosts: ['127.0.0.1', 'localhost', `127.0.0.1:${port}`, `localhost:${port}`],
     allowedOrigins: [`http://127.0.0.1:${port}`, `http://localhost:${port}`]
-  } as unknown as ConstructorParameters<typeof StreamableHTTPServerTransport>[0])
+  }
+  const transport = new StreamableHTTPServerTransport(transportOptions)
 
   try {
     await mcp.connect(transport as Parameters<typeof mcp.connect>[0])

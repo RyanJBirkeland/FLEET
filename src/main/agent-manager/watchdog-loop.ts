@@ -88,8 +88,7 @@ export function forceKillAgent(agent: ActiveAgent, logger: Logger): void {
       agent.handle.forceKill()
       return
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const proc = (agent.handle as any).process
+    const proc = agent.handle.process
     if (proc && typeof proc.kill === 'function') {
       proc.kill('SIGKILL')
       return
@@ -130,8 +129,7 @@ export function killAgentWithEscalation(
  */
 export function abortAgent(agent: ActiveAgent, logger: Logger): void {
   softKillAgent(agent, logger)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const proc = (agent.handle as any).process
+  const proc = agent.handle.process
   if (proc && typeof proc.kill === 'function') {
     try {
       proc.kill('SIGKILL')

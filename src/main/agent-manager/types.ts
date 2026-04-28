@@ -85,6 +85,8 @@ export interface AgentHandle {
   steer(message: string): Promise<SteerResult>
   /** Optional callback invoked with each line of stderr output. */
   onStderr?: (line: string) => void
+  /** Subprocess handle exposed by CLI and opencode adapters; undefined on SDK paths. */
+  readonly process?: import('child_process').ChildProcess | null
   /**
    * Populated by `spawnAgent` to record which backend actually ran this
    * session: `'claude'` for the built-in SDK/CLI path, `'local'` when
