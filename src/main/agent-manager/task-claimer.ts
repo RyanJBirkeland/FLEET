@@ -145,6 +145,9 @@ async function skipIfAlreadyOnMain(
     return false
   }
   deps.logger.event('task.auto-complete', { taskId: task.id, sha: match.sha, matchedOn: match.matchedOn })
+  await deps
+    .onTaskTerminal(task.id, 'done')
+    .catch((err) => deps.logger.warn(`[agent-manager] onTerminal failed for ${task.id}: ${err}`))
   return true
 }
 
