@@ -19,7 +19,7 @@
  * and gives every opencode agent its own isolated, ephemeral endpoint.
  */
 import http from 'node:http'
-import { randomBytes } from 'node:crypto'
+import { randomBytes, timingSafeEqual } from 'node:crypto'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import {
   StreamableHTTPServerTransport,
@@ -53,6 +53,14 @@ export interface OpencodeSessionMcpHandle {
 
 const MCP_PATH = '/mcp'
 const UNAUTHORIZED_BODY = JSON.stringify({ error: 'Unauthorized' })
+
+function isValidBearerToken(authHeader: string | undefined, expected: string): boolean {
+  if (!authHeader) return false
+  const presented = Buffer.from(authHeader)
+  const target = Buffer.from(`Bearer ${expected}`)
+  if (presented.length !== target.length) return false
+  return timingSafeEqual(presented, target)
+}
 
 /**
  * Starts a per-session MCP HTTP server for an opencode agent.
@@ -102,7 +110,7 @@ async function handleRequest(
     return
   }
 
-  if (req.headers.authorization !== `Bearer ${token}`) {
+  if (!isValidBearerToken(req.headers.authorization, token)) {
     res.writeHead(401, { 'Content-Type': 'application/json' })
     res.end(UNAUTHORIZED_BODY)
     return

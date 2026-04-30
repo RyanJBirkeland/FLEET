@@ -1,8 +1,17 @@
 import http from 'node:http'
+import { timingSafeEqual } from 'node:crypto'
 import type { AgentManagerStatusReader } from './ports/agent-manager-status'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
 import { createLogger } from '../logger'
 import { nowIso } from '../../shared/time'
+
+function isValidBearerToken(authHeader: string | undefined, expected: string): boolean {
+  if (!authHeader) return false
+  const presented = Buffer.from(authHeader)
+  const target = Buffer.from(`Bearer ${expected}`)
+  if (presented.length !== target.length) return false
+  return timingSafeEqual(presented, target)
+}
 
 const logger = createLogger('status-server')
 
@@ -42,13 +51,10 @@ export function createStatusServer(
     }
 
     // Bearer token check
-    if (token) {
-      const auth = req.headers['authorization']
-      if (auth !== `Bearer ${token}`) {
-        res.writeHead(401, { 'Content-Type': 'application/json' })
-        res.end(JSON.stringify({ error: 'Unauthorized' }))
-        return
-      }
+    if (token && !isValidBearerToken(req.headers['authorization'], token)) {
+      res.writeHead(401, { 'Content-Type': 'application/json' })
+      res.end(JSON.stringify({ error: 'Unauthorized' }))
+      return
     }
 
     // Only handle GET /status
