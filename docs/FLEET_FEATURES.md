@@ -87,9 +87,8 @@ Each agent type uses a specific `settingSources` value when spawning via the SDK
 
 | Agent type | `settingSources` | Rationale |
 |---|---|---|
-| Pipeline | `['user', 'local']` | `'project'` excluded — FLEET conventions are injected via the composed prompt to avoid double-injecting CLAUDE.md |
-| Adhoc / Assistant / Reviewer | `[]` | Conventions injected via explicit prompt context |
-| Copilot / Synthesizer | `[]` | Conventions injected via explicit prompt context |
+| Pipeline / Adhoc / Assistant / Reviewer | `['user', 'local']` | Inherits the user's global Claude Code config (MCP servers, hooks, permissions from `~/.claude/settings.json`) so FLEET sessions see the same affordances as a normal `claude` CLI session. `'project'` is excluded — FLEET conventions are injected via the composed prompt, and re-loading repo CLAUDE.md via settings would double-inject the same context. |
+| Copilot / Synthesizer | `[]` | Text-only spec helpers — extra MCP tools and hooks just inflate cost without adding value. Conventions injected via explicit prompt context. |
 
 Prompts are composed by `buildAgentPrompt()` in `src/main/lib/prompt-composer.ts`. Reviewer prompts have dedicated builders in `src/main/agent-manager/prompt-composer-reviewer.ts`.
 

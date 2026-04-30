@@ -115,11 +115,12 @@ export async function handleChatStream(
           // keeps the chat streaming headless without human-in-the-loop prompts.
           permissionMode: 'bypassPermissions',
           allowDangerouslySkipPermissions: true,
-          // Skip CLAUDE.md at spawn — reviewer conventions come from the
-          // composed prompt (Option-A debranding policy). Without this, the
-          // SDK defaults to ['user','project','local'] and silently loads
-          // the project's CLAUDE.md into every chat session.
-          settingSources: [],
+          // Inherit user-scoped Claude Code config so reviewer chats see the
+          // same hooks and permissions a normal `claude` CLI session would.
+          // `'project'` is excluded because reviewer conventions come from the
+          // composed prompt — re-loading repo CLAUDE.md via settings would
+          // double-inject the same context.
+          settingSources: ['user', 'local'],
           maxBudgetUsd: REVIEWER_CHAT_MAX_BUDGET_USD,
           onToolUse: (event) => {
             const payload: ChatChunk = { streamId, toolUse: event }

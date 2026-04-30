@@ -261,13 +261,14 @@ describe('handleChatStream', () => {
     expect(capturedOptions?.model).toBe('claude-haiku-4-5-20251001')
   })
 
-  it('skips CLAUDE.md loading and enforces a budget cap', async () => {
-    // Reviewer chat must not inherit the SDK's default settingSources
-    // (['user','project','local']) — the Option-A debranding policy is that
-    // FLEET agents receive conventions via the composed prompt, not by
-    // reading CLAUDE.md at spawn. An unbounded user-triggered chat session
-    // also needs a hard spend ceiling so a prompt-injected tool-use loop
-    // cannot accumulate cost indefinitely.
+  it("inherits user-scoped settings, skips repo CLAUDE.md, and caps spend", async () => {
+    // Reviewer chat inherits ~/.claude/settings.json (user-scoped MCP servers,
+    // hooks, permissions) so chats inside FLEET have the same affordances as a
+    // normal `claude` CLI session. 'project' stays excluded — reviewer
+    // conventions come from the composed prompt, and re-loading repo CLAUDE.md
+    // via settings would double-inject the same context. An unbounded
+    // user-triggered chat also needs a hard spend ceiling so a prompt-injected
+    // tool-use loop cannot accumulate cost indefinitely.
     let capturedOptions: SdkStreamingOptions | null = null
     const deps: ChatStreamDeps = {
       taskRepo: { getTask: () => fakeTask() } as unknown as IAgentTaskRepository,
@@ -290,7 +291,8 @@ describe('handleChatStream', () => {
     const sender = { send: () => {} }
     await handleChatStream(deps, { taskId: 'task-1', messages: [] }, sender as any)
     await new Promise((r) => setImmediate(r))
-    expect(capturedOptions?.settingSources).toEqual([])
+    expect(capturedOptions?.settingSources).toEqual(['user', 'local'])
+    expect(capturedOptions?.settingSources).not.toContain('project')
     expect(capturedOptions?.maxBudgetUsd).toBe(2.0)
   })
 })

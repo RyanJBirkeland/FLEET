@@ -529,7 +529,13 @@ describe('spawnAdhocAgent — prompt composer integration', () => {
     expect(call.prompt).toBe('[PREAMBLE]\n\nuser task')
   })
 
-  it('uses empty settingSources and maxBudgetUsd cap', async () => {
+  it("inherits the user's Claude Code config and enforces a budget cap", async () => {
+    // Adhoc sessions need parity with a normal `claude` CLI session — global
+    // MCP servers, hooks, and permissions from ~/.claude/settings.json. Without
+    // 'user' in settingSources the SDK silently ignores them, so users see
+    // "I don't have access to <X> MCP" inside FLEET even though they have it
+    // wired up everywhere else. 'project' stays excluded because FLEET
+    // conventions are already injected via buildAgentPrompt().
     const handle = createMockQueryHandle([])
     mockQuery.mockReturnValue(handle)
 
@@ -541,14 +547,13 @@ describe('spawnAdhocAgent — prompt composer integration', () => {
     expect(mockQuery).toHaveBeenCalledWith(
       expect.objectContaining({
         options: expect.objectContaining({
-          // FLEET conventions injected via buildAgentPrompt() — 'project' source
-          // would double-inject CLAUDE.md, costing ~5-10KB extra per turn.
-          settingSources: [],
-          // Safety ceiling for interactive multi-turn sessions.
+          settingSources: ['user', 'local'],
           maxBudgetUsd: 5.0
         })
       })
     )
+    const call = mockQuery.mock.calls[0][0]
+    expect(call.options.settingSources).not.toContain('project')
   })
 
   it('provides a canUseTool hook so in-process MCP tools can run', async () => {

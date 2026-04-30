@@ -10,9 +10,11 @@
  * The v2 Session API (unstable_v2_createSession) doesn't support cwd, so agents
  * spawned with it can't operate in the worktree directory. We use v1 intentionally.
  *
- * `settingSources` is intentionally `[]` here — FLEET conventions are injected via
- * `buildAgentPrompt()`, so loading CLAUDE.md through the settings system would
- * double-inject the same context at ~5-10KB extra per turn.
+ * `settingSources` is `['user', 'local']` so the session inherits the user's
+ * Claude Code config — global MCP servers, hooks, and permissions defined in
+ * `~/.claude/settings.json`. `'project'` is excluded because FLEET conventions
+ * are already injected via `buildAgentPrompt()`, and pulling in repo CLAUDE.md
+ * through the settings system would double-inject the same context.
  *
  * **Worktree isolation**: each adhoc agent runs in its own git worktree under a
  * dedicated adhoc base (`~/.fleet/worktrees-adhoc/`) so concurrent sessions can't
@@ -22,6 +24,7 @@
  */
 import { randomUUID } from 'node:crypto'
 import { basename } from 'node:path'
+import type { SettingSource } from '@anthropic-ai/claude-agent-sdk'
 import { importAgent, updateAgentMeta, getAgentMeta } from './agent-history'
 import { ADHOC_WORKTREE_BASE, getRepoPaths } from './paths'
 import { updateAgentRunCost } from './data/agent-queries'
@@ -165,10 +168,12 @@ export async function spawnAdhocAgent(args: {
     cwd: worktreePath,
     env: env as Record<string, string>,
     pathToClaudeCodeExecutable: getClaudeCliPath(),
-    // Adhoc agents receive FLEET conventions via buildAgentPrompt() — loading
-    // CLAUDE.md via 'project' would double-inject conventions and cost ~5-10KB
-    // extra per turn. 'user' and 'local' kept for permission settings.
-    settingSources: [],
+    // Inherit user-scoped Claude Code config (~/.claude/settings.json) so the
+    // session sees the same MCP servers, hooks, and permissions a normal
+    // `claude` CLI session would. `'project'` excluded because FLEET conventions
+    // are already injected via buildAgentPrompt() and re-loading repo CLAUDE.md
+    // would double-inject the same context at ~5-10KB extra per turn.
+    settingSources: ['user', 'local'] satisfies SettingSource[],
     mcpServers: { fleet: plannerServer },
     // Without a canUseTool hook the SDK defaults to prompting the user for
     // every tool call — and adhoc agents have no interactive permission UI,
