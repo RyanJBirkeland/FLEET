@@ -83,11 +83,14 @@ describe('updateTaskFromUi', () => {
     )
   })
 
-  it('queued transition uses queued status when deps satisfied', async () => {
+  it('queued transition resets needs_review and skips state machine when already queued', async () => {
+    // TASK.status is 'queued'; re-saving as queued should not call transition (same-status skip),
+    // but prepareQueueTransition still runs and clears needs_review.
     const { computeBlockState } = await import('../dependency-service')
     vi.mocked(computeBlockState).mockReturnValue({ shouldBlock: false, blockedBy: [] })
     await updateTaskFromUi('t1', { status: 'queued' }, makeDeps())
-    expect(mockTransition).toHaveBeenCalledWith('t1', 'queued', expect.anything())
+    expect(mockTransition).not.toHaveBeenCalled()
+    expect(mockUpdateTask).toHaveBeenCalledWith('t1', { needs_review: false })
   })
 
   it('strips disallowed fields from patch', async () => {
@@ -143,6 +146,29 @@ describe('updateTaskFromUi', () => {
       caller: 'ui'
     })
     expect(mockUpdateTask).not.toHaveBeenCalled()
+  })
+
+  it('skips state machine when status matches current status (same-status save)', async () => {
+    vi.mocked(getTask).mockReturnValue({ ...TASK, status: 'backlog' } as never)
+    await updateTaskFromUi('t1', { status: 'backlog', title: 'Renamed' }, makeDeps())
+    expect(mockTransition).not.toHaveBeenCalled()
+    expect(mockUpdateTask).toHaveBeenCalledWith('t1', { title: 'Renamed' })
+  })
+
+  it('returns current task when same-status patch has no other fields', async () => {
+    const backlogTask = { ...TASK, status: 'backlog' }
+    vi.mocked(getTask).mockReturnValue(backlogTask as never)
+    const result = await updateTaskFromUi('t1', { status: 'backlog' }, makeDeps())
+    expect(mockTransition).not.toHaveBeenCalled()
+    expect(mockUpdateTask).not.toHaveBeenCalled()
+    expect(result).toBe(backlogTask)
+  })
+
+  it('backlog-to-backlog save updates other fields without state machine error', async () => {
+    vi.mocked(getTask).mockReturnValue({ ...TASK, status: 'backlog' } as never)
+    await updateTaskFromUi('t1', { status: 'backlog', title: 'Updated title' }, makeDeps())
+    expect(mockTransition).not.toHaveBeenCalled()
+    expect(mockUpdateTask).toHaveBeenCalledWith('t1', { title: 'Updated title' })
   })
 })
 

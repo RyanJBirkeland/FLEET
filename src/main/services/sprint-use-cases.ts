@@ -394,15 +394,23 @@ export async function updateTaskFromUi(
   }
 
   if (workingPatch.status !== undefined) {
-    // Status is changing — route through TaskStateService for validation + terminal dispatch.
     const finalStatus = narrowStatus(workingPatch.status)
     if (!finalStatus) throw new Error('Status narrowing failed unexpectedly')
     const { status: _dropped, ...nonStatusFields } = workingPatch
+
+    const currentTask = mutations.getTask(id)
+    if (currentTask?.status === finalStatus) {
+      // Status is unchanged — skip the state machine and do a plain field update.
+      if (Object.keys(nonStatusFields).length === 0) return currentTask
+      const doUpdate = deps.updateTask ?? mutations.updateTask
+      return doUpdate(id, nonStatusFields)
+    }
+
+    // Status is actually changing — route through TaskStateService for validation + terminal dispatch.
     await deps.taskStateService.transition(id, finalStatus, {
       fields: nonStatusFields,
       caller: 'ui'
     })
-    // Return the updated task so callers get the full row as before.
     return mutations.getTask(id)
   }
 
