@@ -12,6 +12,7 @@ import { homedir, userInfo } from 'node:os'
 import { getErrorMessage } from '../shared/errors'
 import { createLogger } from './logger'
 import { broadcast } from './broadcast'
+import { resolveNodeExecutable } from './agent-manager/resolve-node'
 
 const logger = createLogger('env-utils')
 
@@ -107,9 +108,16 @@ export function buildAgentEnv(): Record<string, string | undefined> {
     }
   }
 
-  // Prepend extra paths to PATH
+  // Prepend extra paths to PATH, including the resolved node binary's directory
+  // so that cli.js's #!/usr/bin/env node shebang resolves in all spawn paths
+  // (adhoc, pipeline, workbench). Without this, packaged Electron apps launched
+  // from Finder inherit only /etc/paths and miss fnm/nvm node locations.
+  const resolvedNode = resolveNodeExecutable()
+  const resolvedNodeDir = resolvedNode ? [dirname(resolvedNode)] : []
   const currentPath = env.PATH ?? ''
-  env.PATH = [...EXTRA_PATHS, ...currentPath.split(':')].filter(Boolean).join(':')
+  env.PATH = [...resolvedNodeDir, ...EXTRA_PATHS, ...currentPath.split(':')]
+    .filter(Boolean)
+    .join(':')
 
   // Cap vitest worker parallelism for agent-spawned test runs. Each agent runs
   // its own test:coverage; at MAX_ACTIVE_TASKS > 1 the default (CPU-count) causes

@@ -36,7 +36,11 @@ export function resolveNodeExecutable(): string | undefined {
 
 function findElectronBundledNode(): string | undefined {
   if (!process.versions[ELECTRON_RUNTIME_KEY]) return undefined
-  return process.execPath
+  // process.execPath in a packaged Electron app is the app binary itself (e.g.
+  // "FLEET"), not a binary named "node". Prepending its directory to PATH does
+  // not help `#!/usr/bin/env node` shebang resolution — fall through to
+  // fnm/nvm/Homebrew probing instead.
+  return undefined
 }
 
 function findFnmDefaultNode(): string | undefined {

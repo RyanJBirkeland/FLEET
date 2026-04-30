@@ -23,11 +23,22 @@ afterEach(() => {
 })
 
 describe('resolveNodeExecutable', () => {
-  it('returns process.execPath when running inside Electron', () => {
+  it('falls through to fnm when running inside Electron (execPath is not a usable node)', () => {
+    ;(process.versions as Record<string, string>)['electron'] = '30.0.0'
+    mockExistsSync.mockImplementation((p: string) =>
+      p === '/home/user/.local/share/fnm/aliases/default/bin/node'
+    )
+    mockReaddirSync.mockReturnValue([])
+    const result = resolveNodeExecutable()
+    expect(result).toBe('/home/user/.local/share/fnm/aliases/default/bin/node')
+  })
+
+  it('returns undefined when running inside Electron with no node installation found', () => {
     ;(process.versions as Record<string, string>)['electron'] = '30.0.0'
     mockExistsSync.mockReturnValue(false)
+    mockReaddirSync.mockReturnValue([])
     const result = resolveNodeExecutable()
-    expect(result).toBe(process.execPath)
+    expect(result).toBeUndefined()
   })
 
   it('returns fnm node path when it exists', () => {

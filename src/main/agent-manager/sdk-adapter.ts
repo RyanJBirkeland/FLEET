@@ -8,11 +8,10 @@ import type { AgentHandle, SpawnStrategy } from './types'
 import type { Logger } from '../logger'
 import { createLogger } from '../logger'
 import type { AgentType } from '../agent-system/personality/types'
-import { dirname, resolve as resolvePath } from 'node:path'
+import { resolve as resolvePath } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { DEFAULT_CONFIG, SPAWN_TIMEOUT_MS } from './types'
 import { buildAgentEnv, getOAuthToken, getClaudeCliPath } from '../env-utils'
-import { resolveNodeExecutable } from './resolve-node'
 import { spawnViaSdk, type PipelineSpawnTuning } from './spawn-sdk'
 import { spawnViaCli } from './spawn-cli'
 import { loadBackendSettings, resolveAgentRuntime } from './backend-selector'
@@ -274,7 +273,6 @@ async function spawnClaudeAgent(opts: {
   tickId?: string | undefined
 }): Promise<AgentHandle> {
   const env = { ...buildAgentEnv() }
-  prependResolvedNodeDirToPath(env, opts.logger)
 
   const token = getOAuthToken()
   const strategy = await resolveSpawnStrategy()
@@ -320,27 +318,3 @@ export async function spawnWithTimeout(
   ]).finally(() => clearTimeout(timer!))
 }
 
-/**
- * Ensures the SDK's internal `spawn('node', …)` call can find a usable node.
- *
- * Packaged macOS `.app` bundles launched from Finder/Spotlight inherit only
- * `/etc/paths`, which omits fnm/nvm install locations. If the user's node is
- * not already on PATH, we prepend the directory holding the resolved node
- * binary so the SDK's shebang lookup succeeds.
- */
-function prependResolvedNodeDirToPath(
-  env: Record<string, string | undefined>,
-  logger: Logger | undefined
-): void {
-  const resolvedNode = resolveNodeExecutable()
-  if (!resolvedNode) {
-    ;(logger ?? moduleLogger).warn(
-      '[agent-manager] No node binary found at known locations — falling back to PATH lookup'
-    )
-    return
-  }
-  const nodeDir = dirname(resolvedNode)
-  const existingPath = env.PATH ?? ''
-  if (existingPath.split(':').includes(nodeDir)) return
-  env.PATH = existingPath ? `${nodeDir}:${existingPath}` : nodeDir
-}
