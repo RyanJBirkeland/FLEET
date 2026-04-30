@@ -153,7 +153,7 @@ export class TaskStateService {
 
     const patch: Record<string, unknown> = { status: targetStatus, ...ctx.fields }
     const callerAttribution = ctx.caller ?? 'task-state-service'
-    updateTask(taskId, patch, { caller: callerAttribution })
+    await updateTask(taskId, patch, { caller: callerAttribution })
     this.logger.info(
       `[task-state] task ${taskId}: ${currentStatus} → ${targetStatus} (caller=${callerAttribution})`
     )
@@ -188,7 +188,13 @@ export class TaskStateService {
       this.logger.error(
         `[TaskStateService] dispatch failed for ${taskId} (attempt 2, giving up): ${dispatchError}`
       )
-      appendDispatchFailureAnnotation(taskId, new Date().toISOString())
+      try {
+        await appendDispatchFailureAnnotation(taskId, new Date().toISOString())
+      } catch (annotationError) {
+        this.logger.warn(
+          `[TaskStateService] annotation write failed for ${taskId}: ${annotationError}`
+        )
+      }
       return { committed: true, dependentsResolved: false, dispatchError }
     }
   }
@@ -208,12 +214,12 @@ export function createTaskStateService(deps: TaskStateServiceDeps): TaskStateSer
  * degradation is visible in the UI and audit trail without a new IPC channel.
  * Appends (never replaces) so existing notes survive.
  */
-function appendDispatchFailureAnnotation(taskId: string, timestamp: string): void {
+async function appendDispatchFailureAnnotation(taskId: string, timestamp: string): Promise<void> {
   const task = getTask(taskId)
   const existingNotes = typeof task?.notes === 'string' ? task.notes : null
   const annotation = `[terminal-dispatch-failed ${timestamp}] Dependency resolution may not have run. Dependents may need manual unblock.`
   const updatedNotes = existingNotes ? `${existingNotes}\n${annotation}` : annotation
-  updateTask(taskId, { notes: updatedNotes })
+  await updateTask(taskId, { notes: updatedNotes })
 }
 
 // ---- Types ----------------------------------------------------------------
@@ -317,10 +323,10 @@ export interface ForceTerminalOverrideDeps {
  * caller passes `force: true`, build the patch, persist via `forceUpdateTask`,
  * and notify dependents.
  */
-export function forceTerminalOverride(
+export async function forceTerminalOverride(
   args: ForceTerminalOverrideArgs,
   deps: ForceTerminalOverrideDeps
-): { ok: true } {
+): Promise<{ ok: true }> {
   const task = getTask(args.taskId)
   if (!task) throw new Error(`Task ${args.taskId} not found`)
 
@@ -331,7 +337,7 @@ export function forceTerminalOverride(
   }
 
   const patch = buildForceTerminalPatch(args.targetStatus, args.reason)
-  const updated = forceUpdateTask(args.taskId, patch)
+  const updated = await forceUpdateTask(args.taskId, patch)
   if (!updated) throw new Error(`Failed to force ${args.targetStatus} on task ${args.taskId}`)
 
   deps.onStatusTerminal(args.taskId, args.targetStatus)
