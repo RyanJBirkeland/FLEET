@@ -24,10 +24,4 @@
 
 .stg-content__inner {
   width: 100%;
-  max-width: min(960px, 100%);
-  margin: 0 auto;
-}
-
-.stg-content__inner--wide {
-  max-width: none;
 }

@@ -232,19 +232,4 @@ describe('SettingsView', () => {
     fireEvent.click(screen.getByRole('link', { name: /Memory/ }))
     expect(screen.getByText('Memory settings')).toHaveAttribute('aria-live', 'polite')
   })
-
-  // ---------- Wide layout ----------
-
-  it('applies wide class for cost section', () => {
-    render(<SettingsView />)
-    fireEvent.click(screen.getByRole('link', { name: /Cost/ }))
-    const inner = screen.getByTestId('section-cost').parentElement
-    expect(inner?.className).toContain('stg-content__inner--wide')
-  })
-
-  it('does not apply wide class for connections section', () => {
-    render(<SettingsView />)
-    const inner = screen.getByTestId('section-connections').parentElement
-    expect(inner?.className).not.toContain('stg-content__inner--wide')
-  })
 })

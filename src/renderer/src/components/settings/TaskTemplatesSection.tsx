@@ -95,7 +95,7 @@ export function TaskTemplatesSection(): React.JSX.Element {
   }
 
   return (
-    <div className="settings-cards-list settings-templates-list">
+    <div className="settings-cards-list">
       {templates.length === 0 && (
         <span className="settings-repos__empty">No templates configured</span>
       )}

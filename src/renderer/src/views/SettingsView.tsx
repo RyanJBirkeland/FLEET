@@ -42,31 +42,27 @@ const SECTION_MAP: Record<string, () => React.JSX.Element> = {
   about: AboutSection
 }
 
-const SECTION_META: Record<string, { title: string; subtitle: string; wide: boolean }> = {
+const SECTION_META: Record<string, { title: string; subtitle: string }> = {
   connections: {
     title: 'Connections',
-    subtitle: 'Manage authentication tokens, API access, and webhooks',
-    wide: false
+    subtitle: 'Manage authentication tokens, API access, and webhooks'
   },
-  repositories: { title: 'Repositories', subtitle: 'Configure project repositories', wide: false },
-  templates: { title: 'Templates', subtitle: 'Task prompt templates', wide: true },
+  repositories: { title: 'Repositories', subtitle: 'Configure project repositories' },
+  templates: { title: 'Templates', subtitle: 'Task prompt templates' },
   agents: {
     title: 'Agents',
-    subtitle: 'Pipeline execution settings and agent permissions',
-    wide: false
+    subtitle: 'Pipeline execution settings and agent permissions'
   },
   models: {
     title: 'Models',
-    subtitle: 'Route each agent type to Claude or a local model',
-    wide: false
+    subtitle: 'Route each agent type to Claude or a local model'
   },
-  memory: { title: 'Memory', subtitle: 'Agent memory files', wide: true },
+  memory: { title: 'Memory', subtitle: 'Agent memory files' },
   appearance: {
     title: 'Appearance & Shortcuts',
-    subtitle: 'Theme, notifications, and keyboard shortcuts',
-    wide: false
+    subtitle: 'Theme, notifications, and keyboard shortcuts'
   },
-  about: { title: 'About & Usage', subtitle: 'Version info and API usage history', wide: true }
+  about: { title: 'About & Usage', subtitle: 'Version info and API usage history' }
 }
 
 export default function SettingsView(): React.JSX.Element {
@@ -105,7 +101,7 @@ export default function SettingsView(): React.JSX.Element {
             animate="animate"
             transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
           >
-            <div className={`stg-content__inner${meta.wide ? ' stg-content__inner--wide' : ''}`}>
+            <div className="stg-content__inner">
               <SettingsPageHeader title={meta.title} subtitle={meta.subtitle} />
               <ActiveSection />
             </div>
