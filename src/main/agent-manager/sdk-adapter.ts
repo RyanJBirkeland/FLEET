@@ -6,6 +6,7 @@
  */
 import type { AgentHandle, SpawnStrategy } from './types'
 import type { Logger } from '../logger'
+import { createLogger } from '../logger'
 import type { AgentType } from '../agent-system/personality/types'
 import { dirname, resolve as resolvePath } from 'node:path'
 import { realpathSync } from 'node:fs'
@@ -23,6 +24,8 @@ import {
   buildOpencodeFirstTurnPrompt
 } from './opencode-worktree-config'
 import { createEpicGroupService, type EpicGroupService } from '../services/epic-group-service'
+
+const moduleLogger = createLogger('sdk-adapter')
 
 /**
  * Pipeline agents must only spawn with a `cwd` inside a FLEET-managed worktree
@@ -59,7 +62,7 @@ function resolvePhysicalPath(path: string, logger?: Logger): string | null {
   try {
     return realpathSync(lexicalPath)
   } catch (err) {
-    ;(logger ?? console).warn(
+    ;(logger ?? moduleLogger).warn(
       `[agent-manager] realpath failed for "${lexicalPath}": ${err instanceof Error ? err.message : String(err)}`
     )
     return null
@@ -331,7 +334,7 @@ function prependResolvedNodeDirToPath(
 ): void {
   const resolvedNode = resolveNodeExecutable()
   if (!resolvedNode) {
-    ;(logger ?? console).warn(
+    ;(logger ?? moduleLogger).warn(
       '[agent-manager] No node binary found at known locations — falling back to PATH lookup'
     )
     return
