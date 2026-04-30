@@ -12,6 +12,21 @@ export interface TaskChange {
   changed_at: string
 }
 
+const INSERT_TASK_CHANGE_SQL =
+  'INSERT INTO task_changes (task_id, field, old_value, new_value, changed_by) VALUES (?, ?, ?, ?, ?)'
+
+// Keyed by db instance so injected connections don't share the singleton's statement.
+const insertStmtByDb = new WeakMap<Database.Database, Database.Statement>()
+
+function insertStmtFor(conn: Database.Database): Database.Statement {
+  let stmt = insertStmtByDb.get(conn)
+  if (stmt === undefined) {
+    stmt = conn.prepare(INSERT_TASK_CHANGE_SQL)
+    insertStmtByDb.set(conn, stmt)
+  }
+  return stmt
+}
+
 /**
  * Record field-level changes for a task.
  * Compares old and new values, only records actual changes.
@@ -25,12 +40,9 @@ export function recordTaskChanges(
   db?: Database.Database
 ): void {
   const conn = db ?? getDb()
+  const stmt = insertStmtFor(conn)
 
   const recordChanges = (): void => {
-    const stmt = conn.prepare(
-      'INSERT INTO task_changes (task_id, field, old_value, new_value, changed_by) VALUES (?, ?, ?, ?, ?)'
-    )
-
     for (const [field, newValue] of Object.entries(newPatch)) {
       const oldValue = oldTask[field]
       // Stringify for comparison (handles objects like depends_on)
