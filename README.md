@@ -238,7 +238,7 @@ graph TB
         end
 
         subgraph Renderer["Renderer Process (React)"]
-            Views["7 Views<br/>Dashboard · Agents · IDE<br/>Pipeline · Code Review<br/>Settings · Task Planner"]
+            Views["8 Views<br/>Dashboard · Agents · IDE · Pipeline<br/>Code Review · Source Control<br/>Settings · Task Planner"]
             Stores[Zustand Stores]
             Panels[Panel System<br/>Split panes · Drag-and-drop<br/>Tear-off windows]
         end
@@ -296,8 +296,9 @@ All state lives in a local SQLite database at `~/.fleet/fleet.db`. No cloud depe
 | `agent_runs`   | Agent execution audit trail — model, status, timing           |
 | `agent_events` | Streaming agent events (tool use, output, errors)             |
 | `cost_events`  | Token usage and cost tracking per agent run                   |
-| `task_changes` | Field-level audit trail on every task mutation                |
-| `settings`     | Key-value app configuration                                   |
+| `agent_run_turns` | Per-turn token breakdown (input, output, cache tokens)     |
+| `task_changes`    | Field-level audit trail on every task mutation             |
+| `settings`        | Key-value app configuration                                |
 
 ---
 
@@ -357,17 +358,18 @@ npm run lint         # ESLint
 
 ## Views at a Glance
 
-| View          | Shortcut | What it does                                                 |
-| ------------- | -------- | ------------------------------------------------------------ |
-| Dashboard     | `Cmd+1`  | Pipeline health, metrics, activity feed                      |
-| Agents        | `Cmd+2`  | Spawn and interact with AI agents                            |
-| IDE           | `Cmd+3`  | Monaco editor + file explorer + terminal                     |
-| Task Pipeline | `Cmd+4`  | Real-time task execution monitoring                          |
-| Code Review   | `Cmd+5`  | Review agent diffs before merging                            |
-| Settings      | `Cmd+6`  | 8 config tabs (connections, repos, templates, agents, models, memory, appearance, about) |
-| Task Planner  | `Cmd+7`  | Multi-task workflow planning, epics, Task Workbench          |
+| View           | Shortcut | What it does                                                 |
+| -------------- | -------- | ------------------------------------------------------------ |
+| Dashboard      | `Cmd+1`  | Pipeline health, metrics, activity feed                      |
+| Agents         | `Cmd+2`  | Spawn and interact with AI agents                            |
+| IDE            | `Cmd+3`  | Monaco editor + file explorer + terminal                     |
+| Task Pipeline  | `Cmd+4`  | Real-time task execution monitoring                          |
+| Code Review    | `Cmd+5`  | Review agent diffs before merging                            |
+| Source Control | `Cmd+6`  | Git staging, committing, and pushing                         |
+| Settings       | `Cmd+7`  | 8 config tabs (connections, repos, templates, agents, models, memory, appearance, about) |
+| Task Planner   | `Cmd+8`  | Multi-task workflow planning, epics, Task Workbench          |
 
-Source Control is available as a dockable panel (no keyboard shortcut). The panel system supports split panes, drag-and-drop docking, and tear-off windows for multi-monitor setups.
+The panel system supports split panes, drag-and-drop docking, and tear-off windows for multi-monitor setups.
 
 ---
 
@@ -375,13 +377,14 @@ Source Control is available as a dockable panel (no keyboard shortcut). The pane
 
 FLEET spawns Claude Code in five different modes, depending on the context:
 
-| Type            | Interactive      | Worktree | What it does                                     |
-| --------------- | ---------------- | -------- | ------------------------------------------------ |
-| **Pipeline**    | No               | Isolated | Autonomous task execution from the sprint queue  |
-| **Adhoc**       | Yes (multi-turn) | Repo dir | User-spawned one-off Claude Code sessions        |
-| **Assistant**   | Yes (multi-turn) | Repo dir | Conversational help and recommendations          |
-| **Copilot**     | Yes (chat)       | None     | Text-only spec drafting in Task Workbench        |
-| **Synthesizer** | No               | None     | Structured spec generation from codebase context |
+| Type            | Interactive      | Worktree  | What it does                                     |
+| --------------- | ---------------- | --------- | ------------------------------------------------ |
+| **Pipeline**    | No               | Isolated  | Autonomous task execution from the sprint queue  |
+| **Adhoc**       | Yes (multi-turn) | Repo dir  | User-spawned one-off Claude Code sessions        |
+| **Assistant**   | Yes (multi-turn) | Repo dir  | Conversational help and recommendations          |
+| **Reviewer**    | Configurable     | Read-only | Code review against a completed agent's worktree |
+| **Copilot**     | Yes (chat)       | None      | Text-only spec drafting in Task Workbench        |
+| **Synthesizer** | No               | None      | Structured spec generation from codebase context |
 
 All sessions inherit your project knowledge from `CLAUDE.md` files — same as running Claude Code in your terminal, but managed.
 
