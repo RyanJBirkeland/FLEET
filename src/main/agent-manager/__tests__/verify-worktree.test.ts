@@ -22,22 +22,41 @@ function buildRunner(responses: readonly CommandResult[]): RunCommand {
   }
 }
 
-/** Returns a readFile mock that serves a package.json with the given runner. */
-function makeReadFile(runner: 'vitest' | 'jest' | 'none'): (path: string) => string | null {
-  if (runner === 'none') return () => null
-  const pkg =
-    runner === 'vitest'
-      ? { scripts: { test: 'vitest' }, devDependencies: { vitest: '^1.0.0' } }
-      : { scripts: { test: 'jest' }, devDependencies: { jest: '^29.0.0' } }
-  return () => JSON.stringify(pkg)
+type PackageSpec = {
+  runner?: 'vitest' | 'jest' | 'none'
+  hasTypecheck?: boolean
 }
 
+/**
+ * Returns a readFile mock that serves a synthetic package.json matching
+ * the given spec. Pass `runner: 'none'` or omit `runner` to produce a
+ * package.json with no `scripts.test`. Pass `hasTypecheck: false` (default)
+ * to omit `scripts.typecheck`.
+ */
+function makeReadFile(spec: PackageSpec = {}): (path: string) => string | null {
+  const { runner = 'vitest', hasTypecheck = true } = spec
+
+  const scripts: Record<string, string> = {}
+  if (hasTypecheck) scripts.typecheck = 'tsc --noEmit'
+  if (runner === 'vitest') scripts.test = 'vitest'
+  if (runner === 'jest') scripts.test = 'jest'
+
+  const devDependencies: Record<string, string> = {}
+  if (runner === 'vitest') devDependencies.vitest = '^1.0.0'
+  if (runner === 'jest') devDependencies.jest = '^29.0.0'
+
+  return () => JSON.stringify({ scripts, devDependencies })
+}
+
+/** readFile that always returns null (simulates missing/unreadable package.json). */
+const noPackageJson = () => null
+
 describe('verifyWorktreeBuildsAndTests', () => {
-  it('returns ok when typecheck and tests both pass (vitest project)', async () => {
+  it('returns ok when typecheck and tests both pass', async () => {
     const runCommand = buildRunner([{ ok: true }, { ok: true }])
     const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile()
     })
     expect(result).toEqual({ ok: true })
   })
@@ -46,7 +65,7 @@ describe('verifyWorktreeBuildsAndTests', () => {
     const runCommand = buildRunner([{ ok: false, output: 'error TS2304: Cannot find name' }])
     const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile()
     })
 
     expect(result.ok).toBe(false)
@@ -63,7 +82,7 @@ describe('verifyWorktreeBuildsAndTests', () => {
     ])
     const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile()
     })
 
     expect(result.ok).toBe(false)
@@ -83,7 +102,7 @@ describe('verifyWorktreeBuildsAndTests', () => {
 
     await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile()
     })
 
     expect(calls).toEqual(['npm run typecheck'])
@@ -95,7 +114,7 @@ describe('verifyWorktreeBuildsAndTests', () => {
 
     const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile()
     })
 
     expect(result.ok).toBe(false)
@@ -106,7 +125,7 @@ describe('verifyWorktreeBuildsAndTests', () => {
     )
   })
 
-  it('passes the worktree path through to the command runner (vitest project)', async () => {
+  it('passes the worktree path through to the command runner', async () => {
     const receivedCwds: string[] = []
     const runCommand: RunCommand = async (_command, _args, cwd) => {
       receivedCwds.push(cwd)
@@ -115,10 +134,74 @@ describe('verifyWorktreeBuildsAndTests', () => {
 
     await verifyWorktreeBuildsAndTests('/custom/worktree/path', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile()
     })
 
     expect(receivedCwds).toEqual(['/custom/worktree/path', '/custom/worktree/path'])
+  })
+})
+
+describe('verifyWorktreeBuildsAndTests — typecheck detection', () => {
+  it('runs typecheck when scripts.typecheck is present', async () => {
+    const calls: Array<{ command: string; args: readonly string[] }> = []
+    const runCommand: RunCommand = async (command, args) => {
+      calls.push({ command, args })
+      return { ok: true }
+    }
+
+    await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
+      runCommand,
+      readFile: makeReadFile({ hasTypecheck: true, runner: 'none' })
+    })
+
+    expect(calls.some((c) => c.args.includes('typecheck'))).toBe(true)
+  })
+
+  it('skips typecheck when scripts.typecheck is absent', async () => {
+    const calls: Array<{ command: string; args: readonly string[] }> = []
+    const runCommand: RunCommand = async (command, args) => {
+      calls.push({ command, args })
+      return { ok: true }
+    }
+
+    await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
+      runCommand,
+      readFile: makeReadFile({ hasTypecheck: false, runner: 'none' })
+    })
+
+    expect(calls.some((c) => c.args.includes('typecheck'))).toBe(false)
+  })
+
+  it('skips typecheck when package.json is unreadable', async () => {
+    const calls: Array<{ command: string; args: readonly string[] }> = []
+    const runCommand: RunCommand = async (command, args) => {
+      calls.push({ command, args })
+      return { ok: true }
+    }
+
+    const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
+      runCommand,
+      readFile: noPackageJson
+    })
+
+    expect(result).toEqual({ ok: true })
+    expect(calls).toHaveLength(0)
+  })
+
+  it('skips both steps and returns ok when package.json is malformed', async () => {
+    let callCount = 0
+    const runCommand: RunCommand = async () => {
+      callCount++
+      return { ok: true }
+    }
+
+    const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
+      runCommand,
+      readFile: () => '{ not valid json'
+    })
+
+    expect(result).toEqual({ ok: true })
+    expect(callCount).toBe(0)
   })
 })
 
@@ -132,7 +215,7 @@ describe('verifyWorktreeBuildsAndTests — test runner detection', () => {
 
     await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('vitest')
+      readFile: makeReadFile({ runner: 'vitest' })
     })
 
     const testCall = calls.find((c) => c.command === 'npm' && c.args[0] === 'test')
@@ -148,7 +231,7 @@ describe('verifyWorktreeBuildsAndTests — test runner detection', () => {
 
     await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('jest')
+      readFile: makeReadFile({ runner: 'jest' })
     })
 
     const testCall = calls.find((c) => c.command === 'npm' && c.args[0] === 'test')
@@ -162,63 +245,28 @@ describe('verifyWorktreeBuildsAndTests — test runner detection', () => {
       return { ok: true }
     }
 
-    const readFile = () => JSON.stringify({ devDependencies: { vitest: '^1.0.0' } })
     const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile
+      readFile: makeReadFile({ hasTypecheck: false, runner: 'none' })
     })
 
     expect(result).toEqual({ ok: true })
-    // Only typecheck ran — no test command
-    expect(calls).toHaveLength(1)
-    expect(calls[0]?.command).toBe('npm')
-    expect(calls[0]?.args[0]).toBe('run')
+    expect(calls).toHaveLength(0)
   })
 
-  it('skips the test step when package.json is unreadable', async () => {
+  it('runs typecheck but skips test when only typecheck script exists', async () => {
     const calls: Array<{ command: string; args: readonly string[] }> = []
     const runCommand: RunCommand = async (command, args) => {
       calls.push({ command, args })
-      return { ok: true }
-    }
-
-    const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
-      runCommand,
-      readFile: makeReadFile('none')
-    })
-
-    expect(result).toEqual({ ok: true })
-    expect(calls).toHaveLength(1)
-  })
-
-  it('skips the test step when package.json is malformed JSON', async () => {
-    const calls: Array<{ command: string; args: readonly string[] }> = []
-    const runCommand: RunCommand = async (command, args) => {
-      calls.push({ command, args })
-      return { ok: true }
-    }
-
-    const result = await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
-      runCommand,
-      readFile: () => '{ not valid json'
-    })
-
-    expect(result).toEqual({ ok: true })
-    expect(calls).toHaveLength(1)
-  })
-
-  it('returns ok with only one command call when test step is skipped', async () => {
-    let callCount = 0
-    const runCommand: RunCommand = async () => {
-      callCount++
       return { ok: true }
     }
 
     await verifyWorktreeBuildsAndTests('/tmp/worktree', silentLogger, {
       runCommand,
-      readFile: makeReadFile('none')
+      readFile: makeReadFile({ hasTypecheck: true, runner: 'none' })
     })
 
-    expect(callCount).toBe(1)
+    expect(calls).toHaveLength(1)
+    expect(calls[0]?.args).toContain('typecheck')
   })
 })

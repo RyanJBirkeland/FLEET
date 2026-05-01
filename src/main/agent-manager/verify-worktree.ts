@@ -6,10 +6,16 @@
  * check fails, the task is requeued with the tool's stderr in the notes so
  * the retry agent sees exactly what went wrong.
  *
- * Test runner detection: reads `package.json` from the worktree to determine
- * the correct test flags. Vitest requires `--run` to exit after one pass;
- * other runners (Jest, Mocha, etc.) use plain `npm test`. If no `scripts.test`
- * exists, the test step is skipped entirely.
+ * Both steps are driven by the worktree's `package.json` so the verification
+ * works correctly across any repo:
+ *
+ *   Typecheck: runs `npm run typecheck` only when `scripts.typecheck` exists.
+ *   Tests:     runs `npm test -- --run` for Vitest, plain `npm test` for all
+ *              other runners. Skipped entirely when `scripts.test` is absent.
+ *
+ * Skipping a step is not the same as passing it — it means the project has not
+ * opted into that check. The task still proceeds to `review` so the human
+ * reviewer can inspect the changes.
  */
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -48,6 +54,13 @@ export type CommandResult = { ok: true } | { ok: false; output: string }
 /** Which test runner is present in the project, or 'none' when absent/undetectable. */
 type TestRunner = 'vitest' | 'other' | 'none'
 
+interface ProjectScripts {
+  /** Whether `scripts.typecheck` exists in package.json. */
+  hasTypecheck: boolean
+  /** Which test runner is configured, based on devDependencies and scripts.test. */
+  testRunner: TestRunner
+}
+
 interface CommandAttempt {
   command: string
   args: readonly string[]
@@ -56,42 +69,39 @@ interface CommandAttempt {
   keywordHint: string
 }
 
-const TYPECHECK_ATTEMPT: CommandAttempt = {
-  command: 'npm',
-  args: ['run', 'typecheck'],
-  timeoutMs: TYPECHECK_TIMEOUT_MS,
-  failureKind: 'compilation',
-  keywordHint: 'typescript error'
-}
-
 /**
- * Reads `package.json` from the worktree and determines which test runner is
- * configured. Returns:
- * - `'vitest'`  — `vitest` found in dependencies/devDependencies
- * - `'other'`   — a `scripts.test` exists but vitest is not in deps
- * - `'none'`    — no `scripts.test`, unreadable file, or parse failure
+ * Reads `package.json` from the worktree and returns which verification steps
+ * are available. On any read/parse failure, all steps are reported absent so
+ * the verification gate skips gracefully rather than blocking the task.
  */
-function detectTestRunner(
+function detectProjectScripts(
   worktreePath: string,
   readFile: (path: string) => string | null
-): TestRunner {
+): ProjectScripts {
   const pkgPath = join(worktreePath, 'package.json')
   let pkg: Record<string, unknown>
   try {
     const raw = readFile(pkgPath)
-    if (!raw) return 'none'
+    if (!raw) return { hasTypecheck: false, testRunner: 'none' }
     pkg = JSON.parse(raw) as Record<string, unknown>
   } catch {
-    return 'none'
+    return { hasTypecheck: false, testRunner: 'none' }
   }
+
   const scripts = pkg.scripts as Record<string, string> | undefined
-  if (!scripts?.test) return 'none'
+  const hasTypecheck = !!scripts?.typecheck
+  const hasTestScript = !!scripts?.test
+
+  if (!hasTestScript) {
+    return { hasTypecheck, testRunner: 'none' }
+  }
+
   const allDeps = {
     ...(pkg.dependencies as object | undefined),
     ...(pkg.devDependencies as object | undefined)
   }
-  if ('vitest' in allDeps) return 'vitest'
-  return 'other'
+  const testRunner: TestRunner = 'vitest' in allDeps ? 'vitest' : 'other'
+  return { hasTypecheck, testRunner }
 }
 
 export async function verifyWorktreeBuildsAndTests(
@@ -99,29 +109,37 @@ export async function verifyWorktreeBuildsAndTests(
   logger: Logger,
   deps: VerificationDeps = defaultDeps()
 ): Promise<VerificationResult> {
-  const typecheck = await runVerificationAttempt(TYPECHECK_ATTEMPT, worktreePath, logger, deps)
-  if (!typecheck.ok) return typecheck
-
   const readFile = deps.readFile ?? defaultReadFile
-  const runner = detectTestRunner(worktreePath, readFile)
+  const scripts = detectProjectScripts(worktreePath, readFile)
 
-  if (runner === 'none') {
-    logger.info(`[verify-worktree] no test script detected at ${worktreePath} — skipping test step`)
+  if (!scripts.hasTypecheck) {
+    logger.info(`[verify-worktree] no typecheck script at ${worktreePath} — skipping typecheck`)
+  } else {
+    const typecheckAttempt: CommandAttempt = {
+      command: 'npm',
+      args: ['run', 'typecheck'],
+      timeoutMs: TYPECHECK_TIMEOUT_MS,
+      failureKind: 'compilation',
+      keywordHint: 'typescript error'
+    }
+    const typecheck = await runVerificationAttempt(typecheckAttempt, worktreePath, logger, deps)
+    if (!typecheck.ok) return typecheck
+  }
+
+  if (scripts.testRunner === 'none') {
+    logger.info(`[verify-worktree] no test script at ${worktreePath} — skipping test step`)
     return { ok: true }
   }
 
   const testAttempt: CommandAttempt = {
     command: 'npm',
-    args: runner === 'vitest' ? ['test', '--', '--run'] : ['test'],
+    args: scripts.testRunner === 'vitest' ? ['test', '--', '--run'] : ['test'],
     timeoutMs: TEST_TIMEOUT_MS,
     failureKind: 'test_failure',
     keywordHint: 'test run failed'
   }
 
-  const tests = await runVerificationAttempt(testAttempt, worktreePath, logger, deps)
-  if (!tests.ok) return tests
-
-  return { ok: true }
+  return runVerificationAttempt(testAttempt, worktreePath, logger, deps)
 }
 
 async function runVerificationAttempt(
