@@ -451,7 +451,8 @@ export class AgentManagerImpl implements AgentManager {
       logger: this.logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       taskStateService: this._taskStateService,
-      resolveRepoPath: (slug) => getRepoPaths()[slug.toLowerCase()] ?? null
+      resolveRepoPath: (slug) => getRepoPaths()[slug.toLowerCase()] ?? null,
+      onTaskClaimed: () => broadcast('sprint:externalChange')
     })
   }
 

@@ -34,6 +34,9 @@ export interface TaskClaimerDeps {
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   taskStateService: TaskStateService
   resolveRepoPath: (slug: string) => string | null
+  /** Called immediately after a task is successfully claimed so the renderer
+   *  can update without waiting for the file-watcher debounce cycle. */
+  onTaskClaimed?: (taskId: string) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -103,6 +106,7 @@ export async function validateAndClaimTask(
     return null
   }
 
+  deps.onTaskClaimed?.(task.id)
   return { task, repoPath }
 }
 
