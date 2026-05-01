@@ -8,6 +8,14 @@
   overflow: hidden;
 }
 
+/* view-layout wraps sidebar + content inside stg-layout but carries no
+   flex-grow, so it only sizes to its natural content width. Force it to
+   fill the remaining row space. */
+.stg-layout > .view-layout {
+  flex: 1;
+  min-width: 0;
+}
+
 .stg-sidebar {
   width: 220px;
   flex-shrink: 0;
