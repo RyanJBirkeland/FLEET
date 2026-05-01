@@ -1,7 +1,7 @@
 import { app, shell, BrowserWindow, dialog } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
-import { DEFAULT_PIPELINE_WORKTREE_BASE } from './paths'
+import { DEFAULT_PIPELINE_WORKTREE_BASE, validateWorktreeBase } from './paths'
 import { ProxyAgent, setGlobalDispatcher } from 'undici'
 import {
   startDbWatcher,
@@ -412,6 +412,26 @@ function initCoreServices(): CoreStartupServices {
 }
 
 /**
+ * Read the stored worktreeBase setting, validate it, and fall back to the
+ * default if the value is absent or invalid (e.g. a stale /tmp path written
+ * before path validation was enforced). Logs a warning on fallback so the
+ * issue is diagnosable from fleet.log.
+ */
+function resolveWorktreeBase(stored: string | null | undefined): string {
+  if (!stored) return DEFAULT_PIPELINE_WORKTREE_BASE
+  try {
+    validateWorktreeBase(stored)
+    return stored
+  } catch (err) {
+    logger.warn(
+      `[startup] agentManager.worktreeBase "${stored}" is invalid (${err instanceof Error ? err.message : String(err)}) — ` +
+        `falling back to ${DEFAULT_PIPELINE_WORKTREE_BASE}. Update Settings → Agents to set a valid path.`
+    )
+    return DEFAULT_PIPELINE_WORKTREE_BASE
+  }
+}
+
+/**
  * Starts the agent manager (when autoStart is enabled), the read-only
  * status server, and the opt-in MCP server. Wires the setting-change
  * listener so `mcp.enabled` / `mcp.port` toggles hot-swap the server
@@ -425,7 +445,7 @@ function wireAgentManagerAndMcp(
 ): ReturnType<typeof createAgentManager> | undefined {
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
-    worktreeBase: getSetting('agentManager.worktreeBase') ?? DEFAULT_PIPELINE_WORKTREE_BASE,
+    worktreeBase: resolveWorktreeBase(getSetting('agentManager.worktreeBase')),
     maxRuntimeMs: getSettingJson<number>('agentManager.maxRuntimeMs') ?? 3_600_000,
     maxTurns: getSettingJson<number>('agentManager.maxTurns') ?? 1000,
     idleTimeoutMs: 900_000,

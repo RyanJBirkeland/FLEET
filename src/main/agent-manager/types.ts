@@ -41,7 +41,7 @@ export const DEFAULT_MODEL = 'claude-sonnet-4-5'
 
 export const DEFAULT_CONFIG: AgentManagerConfig = {
   maxConcurrent: 2,
-  worktreeBase: join(homedir(), 'worktrees', 'fleet'),
+  worktreeBase: join(homedir(), '.fleet', 'worktrees'),
   maxRuntimeMs: 60 * 60 * 1000,
   maxTurns: 1000,
   idleTimeoutMs: 15 * 60 * 1000,
