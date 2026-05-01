@@ -215,6 +215,7 @@ export class AgentManagerImpl implements AgentManager {
       metrics: this._metrics,
       taskStateService: this._taskStateService,
       worktreeBase: config.worktreeBase,
+      maxTurns: config.maxTurns,
       resolveGhRepo: getGhRepo,
       getAutoReviewRules: () => {
         const isAutoReviewRulesArray = (u: unknown): u is AutoReviewRule[] => Array.isArray(u)

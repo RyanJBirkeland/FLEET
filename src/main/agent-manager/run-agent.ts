@@ -70,6 +70,8 @@ export interface RunAgentSpawnDeps {
    * rejected by a module-scope snapshot of DEFAULT_CONFIG.
    */
   worktreeBase: string
+  /** Maximum turns allowed per pipeline agent run. */
+  maxTurns: number
   /** Optional — called when agent process successfully spawns. */
   onSpawnSuccess?: () => void
   /**

@@ -20,6 +20,7 @@ export interface AgentManagerConfig {
   maxConcurrent: number
   worktreeBase: string
   maxRuntimeMs: number
+  maxTurns: number
   idleTimeoutMs: number
   pollIntervalMs: number
   defaultModel: string
@@ -41,6 +42,7 @@ export const DEFAULT_CONFIG: AgentManagerConfig = {
   maxConcurrent: 2,
   worktreeBase: join(homedir(), 'worktrees', 'fleet'),
   maxRuntimeMs: 60 * 60 * 1000,
+  maxTurns: 1000,
   idleTimeoutMs: 15 * 60 * 1000,
   pollIntervalMs: 30_000,
   defaultModel: 'claude-sonnet-4-5'

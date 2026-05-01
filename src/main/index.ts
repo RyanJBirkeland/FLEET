@@ -427,6 +427,7 @@ function wireAgentManagerAndMcp(
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
     worktreeBase: getSetting('agentManager.worktreeBase') ?? DEFAULT_PIPELINE_WORKTREE_BASE,
     maxRuntimeMs: getSettingJson<number>('agentManager.maxRuntimeMs') ?? 3_600_000,
+    maxTurns: getSettingJson<number>('agentManager.maxTurns') ?? 1000,
     idleTimeoutMs: 900_000,
     pollIntervalMs: 30_000,
     defaultModel: getSetting('agentManager.defaultModel') ?? 'claude-sonnet-4-5'

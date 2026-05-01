@@ -16,7 +16,7 @@ import { emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
 import { nowIso } from '../../shared/time'
 import { TurnTracker } from './turn-tracker'
 import { getDefaultCredentialService } from '../services/credential-service'
-import { computeMaxTurns, PIPELINE_DISALLOWED_TOOLS } from './turn-budget'
+import { PIPELINE_DISALLOWED_TOOLS } from './turn-budget'
 import { PipelineAbortError } from './pipeline-abort-error'
 
 /**
@@ -114,9 +114,8 @@ export async function spawnAndWireAgent(
     throw new Error(message) // unreachable
   }
 
-  const specForTurnBudget = task.spec ?? task.prompt ?? task.title ?? ''
   const pipelineTuning = {
-    maxTurns: computeMaxTurns(specForTurnBudget),
+    maxTurns: deps.maxTurns,
     disallowedTools: PIPELINE_DISALLOWED_TOOLS
   }
 
