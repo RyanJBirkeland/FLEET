@@ -267,6 +267,7 @@ export class SprintPrPoller implements SprintPrPollerInstance {
           this.log.info(`[sprint-pr-poller] Calling onTaskTerminal(${id}, 'done')`)
         )
         await this.notifyTaskTerminalBatch(ids, 'done')
+        if (ids.length > 0) broadcast('sprint:externalChange')
         mergedCount++
       } else if (result.state === 'CLOSED') {
         const ids = await this.deps.markTaskCancelledByPrNumber(prNumber)
@@ -275,6 +276,7 @@ export class SprintPrPoller implements SprintPrPollerInstance {
             `[sprint-pr-poller] PR #${prNumber} closed — cancelled ${ids.length} task(s): ${ids.join(', ')}`
           )
           await this.notifyTaskTerminalBatch(ids, 'cancelled')
+          broadcast('sprint:externalChange')
         }
         cancelledCount++
       } else {

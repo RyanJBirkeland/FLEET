@@ -41,6 +41,8 @@ interface CodeReviewState {
   toggleBatchId: (id: string) => void
   selectAllBatch: (ids: string[]) => void
   clearBatch: () => void
+  /** Remove any batch-selected IDs that are no longer in the given valid set. */
+  pruneBatch: (validIds: string[]) => void
   setReviewSummary: (summary: string | null) => void
   setSummaryLoading: (loading: boolean) => void
   setSelectedDiffFile: (path: string | null) => void
@@ -89,6 +91,12 @@ export const useCodeReviewStore = create<CodeReviewState>((set) => ({
     }),
   selectAllBatch: (ids): void => set({ selectedBatchIds: new Set(ids) }),
   clearBatch: (): void => set({ selectedBatchIds: new Set() }),
+  pruneBatch: (validIds): void =>
+    set((s) => {
+      const valid = new Set(validIds)
+      const next = new Set([...s.selectedBatchIds].filter((id) => valid.has(id)))
+      return next.size === s.selectedBatchIds.size ? {} : { selectedBatchIds: next }
+    }),
   setReviewSummary: (summary): void => set({ reviewSummary: summary }),
   setSummaryLoading: (loading): void => set({ summaryLoading: loading }),
   setSelectedDiffFile: (path): void => set({ selectedDiffFile: path }),

@@ -204,8 +204,13 @@ describe('review-orchestration-service', () => {
           body: 'PR body'
         })
       )
-      // Task stays in review — worktree_path cleared, no done transition
-      expect(sprintService.updateTask).toHaveBeenCalledWith('task2', { worktree_path: null })
+      // Task stays in review — PR fields + worktree_path cleared in one write, no done transition
+      expect(sprintService.updateTask).toHaveBeenCalledWith('task2', {
+        pr_url: 'https://github.com/org/repo/pull/123',
+        pr_number: 123,
+        pr_status: 'open',
+        worktree_path: null
+      })
       expect(mockOnStatusTerminal).not.toHaveBeenCalled()
     })
 

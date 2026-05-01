@@ -142,6 +142,14 @@ async function finalizeAutoMergeStatus(
       `[auto-merge] COMMIT LANDED ON MAIN but status update failed — task ${taskId} may need manual status reconciliation: ${err}`
     )
     logger.event('auto-merge.status-update-failed', { taskId, error: String(err) })
+    // Fallback: bypass the state machine and force the row to done so the task
+    // does not stay stuck in review after the merge has already landed on main.
+    try {
+      await repo.updateTask(taskId, { status: 'done', completed_at: nowIso(), worktree_path: null })
+      logger.warn(`[auto-merge] Fallback force-write succeeded for task ${taskId}`)
+    } catch (fallbackErr) {
+      logger.error(`[auto-merge] Fallback also failed for task ${taskId}: ${fallbackErr}`)
+    }
     throw err
   }
 }

@@ -212,15 +212,18 @@ export function createReviewOrchestrationService(
       throw new Error(pr.error || 'PR creation failed')
     }
 
-    await updateTask(taskId, { pr_url: pr.prUrl, pr_number: pr.prNumber ?? null, pr_status: 'open' })
-
     const cfg = getRepoConfig(task.repo)
     if (cfg) await cleanupWorktree(task.worktree_path, branch, cfg.localPath, env)
 
-    // Keep the task in `review` — the sprint PR poller watches pr_status='open' tasks
-    // and marks them done when GitHub reports the PR as merged. Marking done here would
-    // transition before the merge event and bypass the poller's cancelled-on-close path.
-    const updated = await updateTask(taskId, { worktree_path: null })
+    // Write PR fields and clear worktree_path in one pass so a single
+    // notifySprintMutation fires — previously the PR-URL write was a
+    // separate un-notified call that left the renderer blind to the new PR.
+    const updated = await updateTask(taskId, {
+      pr_url: pr.prUrl,
+      pr_number: pr.prNumber ?? null,
+      pr_status: 'open',
+      worktree_path: null
+    })
     if (updated) notifySprintMutation('updated', updated)
 
     return { prUrl: pr.prUrl }

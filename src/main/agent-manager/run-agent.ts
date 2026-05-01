@@ -375,6 +375,9 @@ async function handleFastFailRequeue(ctx: ResolveAgentExitContext): Promise<void
     })
   } catch (err) {
     ctx.logger.error(`[agent-manager] Failed to requeue fast-fail task ${ctx.task.id}: ${err}`)
+    // DB write failed — task still marked active. Skip terminal notification so
+    // dependents are not unblocked against a task that remains active in SQLite.
+    return
   }
   // Fast-fail-requeue means the next drain tick will recreate the worktree.
   // Delete the agent branch so the new worktree starts from a clean ref.

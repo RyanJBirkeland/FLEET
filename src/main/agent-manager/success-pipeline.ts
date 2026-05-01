@@ -203,16 +203,24 @@ const branchTipVerifyPhase: SuccessPhase = {
 const advisoryAnnotationsPhase: SuccessPhase = {
   name: 'advisoryAnnotations',
   async run(ctx) {
-    await runPreReviewAdvisors(
-      {
-        taskId: ctx.taskId,
-        branch: ctx.branch,
-        worktreePath: ctx.worktreePath,
-        repoPath: ctx.repoPath,
-        logger: ctx.logger
-      },
-      ctx.repo
-    )
+    // Best-effort: a DB hiccup writing a non-critical advisory must never
+    // abort an otherwise successful pipeline run and requeue the task.
+    try {
+      await runPreReviewAdvisors(
+        {
+          taskId: ctx.taskId,
+          branch: ctx.branch,
+          worktreePath: ctx.worktreePath,
+          repoPath: ctx.repoPath,
+          logger: ctx.logger
+        },
+        ctx.repo
+      )
+    } catch (err) {
+      ctx.logger.warn(
+        `[completion] Advisory annotations failed for task ${ctx.taskId} (non-fatal): ${err}`
+      )
+    }
   }
 }
 

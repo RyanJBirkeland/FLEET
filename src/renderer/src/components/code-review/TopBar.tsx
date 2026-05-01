@@ -20,6 +20,7 @@ export function TopBar(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
   const selectedBatchIds = useCodeReviewStore((s) => s.selectedBatchIds)
   const clearBatch = useCodeReviewStore((s) => s.clearBatch)
+  const pruneBatch = useCodeReviewStore((s) => s.pruneBatch)
   const tasks = useSprintTasks((s) => s.tasks)
   const task = tasks.find((t) => t.id === selectedTaskId)
   const panelOpen = useReviewPartnerStore((s) => s.panelOpen)
@@ -48,6 +49,12 @@ export function TopBar(): React.JSX.Element {
 
   // Auto-select review tasks when current selection becomes invalid
   useTaskAutoSelect()
+
+  // Prune batch selection of IDs that have since left review status
+  // (shipped, discarded, auto-merged) so batch toolbar counts stay accurate.
+  useEffect(() => {
+    pruneBatch(tasks.filter((t) => t.status === 'review').map((t) => t.id))
+  }, [tasks, pruneBatch])
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent): void => {

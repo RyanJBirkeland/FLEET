@@ -31,6 +31,7 @@ vi.mock('../../stores/codeReview', () => {
     toggleBatchId: vi.fn(),
     selectAllBatch: vi.fn(),
     clearBatch: vi.fn(),
+    pruneBatch: vi.fn(),
     setReviewSummary: vi.fn(),
     setSummaryLoading: vi.fn(),
     setSelectedDiffFile: vi.fn(),
