@@ -402,7 +402,7 @@ export async function consumeMessages(
   agentRunId: string,
   turnTracker: TurnTracker,
   logger: Logger,
-  maxTurns = 20,
+  maxTurns = 1000,
   onOAuthRefreshStart?: (promise: Promise<unknown>) => void
 ): Promise<ConsumeMessagesResult> {
   const pendingPlaygroundPaths: PlaygroundWriteResult[] = []

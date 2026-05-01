@@ -20,7 +20,7 @@ import { createWorktreeIsolationHook } from './worktree-isolation-hook'
  * Kept exported for callers (e.g. `message-consumer.ts`) that defend against
  * runaway loops independently of the SDK-level cap.
  */
-export const MAX_TURNS = 20
+export const MAX_TURNS = 1000
 
 /**
  * Pipeline-agent-only SDK tuning. These values are computed from the task spec

@@ -119,10 +119,10 @@ describe('spawnViaSdk', () => {
     )
   })
 
-  it('passes maxTurns: 20 to SDK', () => {
+  it('passes maxTurns: 1000 to SDK', () => {
     spawnViaSdk(sdk, { prompt: 'test', cwd: '/tmp', model: 'sonnet' }, mockEnv, mockToken, SDK_STRATEGY)
     const callArgs = mockQuery.mock.calls[0]?.[0]
-    expect(callArgs?.options?.maxTurns).toBe(20)
+    expect(callArgs?.options?.maxTurns).toBe(1000)
   })
 
   it('uses settingSources [user, local]', () => {

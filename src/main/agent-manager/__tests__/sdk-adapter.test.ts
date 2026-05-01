@@ -24,10 +24,10 @@ describe('pipeline agent SDK options', () => {
     vi.mocked(sdk.query).mockClear()
   })
 
-  it('passes maxTurns: 20 to SDK query', async () => {
+  it('passes maxTurns: 1000 to SDK query', async () => {
     await spawnAgent({ prompt: 'test', cwd: '/tmp', model: DEFAULT_CONFIG.defaultModel })
     const callArgs = vi.mocked(sdk.query).mock.calls[0]?.[0]
-    expect(callArgs?.options?.maxTurns).toBe(20)
+    expect(callArgs?.options?.maxTurns).toBe(1000)
   })
 
   it('uses settingSources [user, local] — not project', async () => {
