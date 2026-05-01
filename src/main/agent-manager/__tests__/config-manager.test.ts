@@ -18,7 +18,6 @@ function makeConfig(overrides: Partial<AgentManagerConfig> = {}): AgentManagerCo
     maxRuntimeMs: 3_600_000,
     idleTimeoutMs: 900_000,
     pollIntervalMs: 30_000,
-    defaultModel: DEFAULT_CONFIG.defaultModel,
     ...overrides
   }
 }
@@ -31,7 +30,7 @@ function makeDeps(overrides: Partial<ConfigManagerDeps> = {}): ConfigManagerDeps
   return {
     config: makeConfig(),
     concurrency: makeConcurrencyState(2),
-    runAgentDeps: { defaultModel: DEFAULT_CONFIG.defaultModel },
+    runAgentDeps: { maxTurns: 1000 },
     logger: makeLogger(),
     ...overrides
   }
@@ -79,17 +78,6 @@ describe('reloadConfiguration', () => {
     const result = reloadConfiguration(deps)
     expect(result.updated).toContain('maxRuntimeMs')
     expect(deps.config.maxRuntimeMs).toBe(7_200_000)
-  })
-
-  it('hot-reloads defaultModel when changed', () => {
-    const deps = makeDeps()
-    vi.mocked(getSetting).mockImplementation((key) =>
-      key === 'agentManager.defaultModel' ? 'claude-opus-4-5' : undefined
-    )
-    const result = reloadConfiguration(deps)
-    expect(result.updated).toContain('defaultModel')
-    expect(deps.config.defaultModel).toBe('claude-opus-4-5')
-    expect(deps.runAgentDeps.defaultModel).toBe('claude-opus-4-5')
   })
 
   it('flags worktreeBase as requiresRestart when changed', () => {

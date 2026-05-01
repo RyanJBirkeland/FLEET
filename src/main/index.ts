@@ -429,8 +429,7 @@ function wireAgentManagerAndMcp(
     maxRuntimeMs: getSettingJson<number>('agentManager.maxRuntimeMs') ?? 3_600_000,
     maxTurns: getSettingJson<number>('agentManager.maxTurns') ?? 1000,
     idleTimeoutMs: 900_000,
-    pollIntervalMs: 30_000,
-    defaultModel: getSetting('agentManager.defaultModel') ?? 'claude-sonnet-4-5'
+    pollIntervalMs: 30_000
   }
 
   const autoStart = getSettingJson<boolean>('agentManager.autoStart') ?? true

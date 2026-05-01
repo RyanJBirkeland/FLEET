@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 
 // ---------- mocks ----------
 
@@ -60,12 +60,12 @@ import { spawnAgent } from '../sdk-adapter'
 // ---------- helpers ----------
 
 const CLAUDE_SETTINGS = {
-  pipeline: { backend: 'claude' as const, model: DEFAULT_CONFIG.defaultModel },
-  synthesizer: { backend: 'claude' as const, model: DEFAULT_CONFIG.defaultModel },
-  copilot: { backend: 'claude' as const, model: DEFAULT_CONFIG.defaultModel },
-  assistant: { backend: 'claude' as const, model: DEFAULT_CONFIG.defaultModel },
-  adhoc: { backend: 'claude' as const, model: DEFAULT_CONFIG.defaultModel },
-  reviewer: { backend: 'claude' as const, model: DEFAULT_CONFIG.defaultModel },
+  pipeline: { backend: 'claude' as const, model: DEFAULT_MODEL },
+  synthesizer: { backend: 'claude' as const, model: DEFAULT_MODEL },
+  copilot: { backend: 'claude' as const, model: DEFAULT_MODEL },
+  assistant: { backend: 'claude' as const, model: DEFAULT_MODEL },
+  adhoc: { backend: 'claude' as const, model: DEFAULT_MODEL },
+  reviewer: { backend: 'claude' as const, model: DEFAULT_MODEL },
   opencodeExecutable: 'opencode'
 }
 
@@ -109,7 +109,7 @@ describe('spawnAgent — backend selection', () => {
     await spawnAgent({
       prompt: 'task',
       cwd: '/tmp/work',
-      model: DEFAULT_CONFIG.defaultModel
+      model: DEFAULT_MODEL
     })
 
     expect(mockResolveBackend).toHaveBeenCalledWith('pipeline', CLAUDE_SETTINGS)

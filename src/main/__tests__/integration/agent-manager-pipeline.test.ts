@@ -165,7 +165,7 @@ vi.mock('../../services/credential-service', () => ({
 
 import { createAgentManager } from '../../agent-manager/index'
 import type { AgentManagerConfig, AgentHandle } from '../../agent-manager/types'
-import { DEFAULT_CONFIG } from '../../agent-manager/types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../../agent-manager/types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import {
   getQueuedTasks,
@@ -190,7 +190,7 @@ const baseConfig: AgentManagerConfig = {
   maxRuntimeMs: 60 * 60 * 1000,
   idleTimeoutMs: 15 * 60 * 1000,
   pollIntervalMs: 600_000,
-  defaultModel: DEFAULT_CONFIG.defaultModel
+  defaultModel: DEFAULT_MODEL
 }
 
 function makeLogger() {
@@ -334,7 +334,7 @@ describe('AgentManager pipeline integration', () => {
       expect.objectContaining({
         prompt: expect.stringContaining('Build the feature'),
         cwd: '/tmp/wt/myrepo/task-pipeline-1',
-        model: DEFAULT_CONFIG.defaultModel
+        model: DEFAULT_MODEL
       })
     )
 

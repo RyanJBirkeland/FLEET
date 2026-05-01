@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import { PipelineAbortError } from '../pipeline-abort-error'
 
 vi.mock('../../lib/prompt-composer', () => ({
@@ -70,7 +70,7 @@ function makeLogger() {
 function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
   return {
     activeAgents: new Map(),
-    defaultModel: DEFAULT_CONFIG.defaultModel,
+    defaultModel: DEFAULT_MODEL,
     logger: makeLogger(),
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
     repo: mockRepo,

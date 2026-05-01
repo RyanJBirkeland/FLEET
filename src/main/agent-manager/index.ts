@@ -4,7 +4,7 @@ import type { SprintTask } from '../../shared/types/task-types'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { handleTaskTerminal } from './terminal-handler'
 import { createTaskStateService, type TaskStateService } from '../services/task-state-service'
-import { EXECUTOR_ID, INITIAL_DRAIN_DEFER_MS } from './types'
+import { EXECUTOR_ID, INITIAL_DRAIN_DEFER_MS, DEFAULT_MODEL } from './types'
 import { makeConcurrencyState, type ConcurrencyState } from './concurrency'
 import { recoverOrphans } from './orphan-recovery'
 import { createDependencyIndex } from '../services/dependency-service'
@@ -92,7 +92,7 @@ export interface AgentManager {
    * Re-read settings from the settings store and hot-update the in-memory
    * config for fields that are safe to change at runtime.
    *
-   * Hot-reloadable: maxConcurrent, maxRuntimeMs, idleTimeoutMs, defaultModel.
+   * Hot-reloadable: maxConcurrent, maxRuntimeMs, maxTurns.
    * NOT hot-reloadable: worktreeBase (requires restart — existing worktrees
    * would be orphaned). pollIntervalMs also requires restart.
    *
@@ -207,7 +207,7 @@ export class AgentManagerImpl implements AgentManager {
     // Build runAgentDeps with bound onTaskTerminal and taskStateService
     this.runAgentDeps = {
       spawnRegistry: this.spawnRegistry,
-      defaultModel: config.defaultModel,
+      defaultModel: DEFAULT_MODEL,
       logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       repo,

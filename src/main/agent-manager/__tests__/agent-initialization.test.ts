@@ -14,7 +14,7 @@ vi.mock('../../agent-event-mapper', () => ({
 
 import { initializeAgentTracking } from '../agent-initialization'
 import type { AgentHandle } from '../types'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { AgentRunClaim } from '../run-agent'
 import type { TurnTracker } from '../turn-tracker'
@@ -91,7 +91,7 @@ describe('initializeAgentTracking', () => {
     const result = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -108,7 +108,7 @@ describe('initializeAgentTracking', () => {
     initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -123,7 +123,7 @@ describe('initializeAgentTracking', () => {
     const { agent } = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -131,7 +131,7 @@ describe('initializeAgentTracking', () => {
       makeLogger()
     )
     expect(agent.taskId).toBe('task-1')
-    expect(agent.model).toBe(DEFAULT_CONFIG.defaultModel)
+    expect(agent.model).toBe(DEFAULT_MODEL)
     expect(agent.costUsd).toBe(0)
     expect(agent.rateLimitCount).toBe(0)
   })
@@ -141,7 +141,7 @@ describe('initializeAgentTracking', () => {
     const { agent, agentRunId } = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -156,7 +156,7 @@ describe('initializeAgentTracking', () => {
     const { agentRunId } = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -171,7 +171,7 @@ describe('initializeAgentTracking', () => {
     initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -195,7 +195,7 @@ describe('initializeAgentTracking', () => {
     const { agentRunId } = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -214,7 +214,7 @@ describe('initializeAgentTracking', () => {
     const { agentRunId } = initializeAgentTracking(
       makeTask(),
       handle,
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -238,7 +238,7 @@ describe('initializeAgentTracking', () => {
     initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -257,7 +257,7 @@ describe('initializeAgentTracking', () => {
     const { agent } = initializeAgentTracking(
       makeTask({ max_runtime_ms: 120000 }),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -272,7 +272,7 @@ describe('initializeAgentTracking', () => {
     const { agent } = initializeAgentTracking(
       makeTask({ max_cost_usd: 3.0 }),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -287,7 +287,7 @@ describe('initializeAgentTracking', () => {
     const { turnTracker } = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,
@@ -305,7 +305,7 @@ describe('initializeAgentTracking', () => {
     const { agentRunId } = initializeAgentTracking(
       makeTask(),
       makeHandle(),
-      DEFAULT_CONFIG.defaultModel,
+      DEFAULT_MODEL,
       worktree,
       'prompt text',
       spawnRegistry,

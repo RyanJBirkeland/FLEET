@@ -14,7 +14,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { ActiveAgent } from '../types'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { SpawnRegistry } from '../spawn-registry'
 
@@ -72,7 +72,7 @@ const baseConfig: AgentManagerConfig = {
   maxRuntimeMs: 3_600_000,
   idleTimeoutMs: 900_000,
   pollIntervalMs: 30_000,
-  defaultModel: DEFAULT_CONFIG.defaultModel
+  defaultModel: DEFAULT_MODEL
 }
 
 function makeAgent(taskId: string): ActiveAgent {
@@ -80,7 +80,7 @@ function makeAgent(taskId: string): ActiveAgent {
     taskId,
     agentRunId: `run-${taskId}`,
     handle: { abort: vi.fn(), messages: (async function* () {})(), sessionId: 's', steer: vi.fn() },
-    model: DEFAULT_CONFIG.defaultModel,
+    model: DEFAULT_MODEL,
     startedAt: 0,
     lastOutputAt: 0,
     rateLimitCount: 0,

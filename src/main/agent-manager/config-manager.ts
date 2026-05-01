@@ -26,7 +26,7 @@ function isValidMaxConcurrent(u: unknown): u is number {
 export interface ConfigManagerDeps {
   config: AgentManagerConfig
   concurrency: ConcurrencyState
-  runAgentDeps: Pick<RunAgentDeps, 'defaultModel' | 'maxTurns'>
+  runAgentDeps: Pick<RunAgentDeps, 'maxTurns'>
   logger: Logger
 }
 
@@ -68,14 +68,6 @@ export function reloadConfiguration(deps: ConfigManagerDeps): {
     deps.config.maxTurns = newMaxTurns
     deps.runAgentDeps.maxTurns = newMaxTurns
     updated.push('maxTurns')
-  }
-
-  const newDefaultModel = getSetting('agentManager.defaultModel')
-  if (newDefaultModel && newDefaultModel !== deps.config.defaultModel) {
-    deps.config.defaultModel = newDefaultModel
-    // Also update runAgentDeps.defaultModel so newly spawned agents see it.
-    deps.runAgentDeps.defaultModel = newDefaultModel
-    updated.push('defaultModel')
   }
 
   const newWorktreeBase = getSetting('agentManager.worktreeBase')

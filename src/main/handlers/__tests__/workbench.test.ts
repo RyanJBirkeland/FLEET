@@ -349,7 +349,7 @@ describe('Workbench handlers', () => {
       expect(runSdkStreamingCalls.length).toBeGreaterThanOrEqual(1)
       const opts = runSdkStreamingCalls[0].options as Record<string, unknown>
       // Sentinel chosen to be distinct from the Sonnet fallback defaults in
-      // runSdkStreaming, DEFAULT_CONFIG.defaultModel, and DEFAULT_SETTINGS.
+      // runSdkStreaming, DEFAULT_MODEL, and DEFAULT_SETTINGS.
       expect(opts.model).toBe('claude-haiku-4-5-20251001')
     })
 

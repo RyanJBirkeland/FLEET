@@ -16,7 +16,7 @@ import type {
   AgentBackendConfig,
   BackendSettings
 } from '../../shared/types/backend-settings'
-import { DEFAULT_CONFIG } from './types'
+import { DEFAULT_MODEL } from './types'
 import { getSettingJson, setSettingJson } from '../settings'
 
 export type { BackendKind, AgentBackendConfig, BackendSettings }
@@ -24,12 +24,12 @@ export type { BackendKind, AgentBackendConfig, BackendSettings }
 export const SETTING_BACKEND_CONFIG = 'agents.backendConfig'
 
 export const DEFAULT_SETTINGS: BackendSettings = {
-  pipeline: { backend: 'claude', model: DEFAULT_CONFIG.defaultModel },
-  synthesizer: { backend: 'claude', model: DEFAULT_CONFIG.defaultModel },
-  copilot: { backend: 'claude', model: DEFAULT_CONFIG.defaultModel },
-  assistant: { backend: 'claude', model: DEFAULT_CONFIG.defaultModel },
-  adhoc: { backend: 'claude', model: DEFAULT_CONFIG.defaultModel },
-  reviewer: { backend: 'claude', model: DEFAULT_CONFIG.defaultModel },
+  pipeline: { backend: 'claude', model: DEFAULT_MODEL },
+  synthesizer: { backend: 'claude', model: DEFAULT_MODEL },
+  copilot: { backend: 'claude', model: DEFAULT_MODEL },
+  assistant: { backend: 'claude', model: DEFAULT_MODEL },
+  adhoc: { backend: 'claude', model: DEFAULT_MODEL },
+  reviewer: { backend: 'claude', model: DEFAULT_MODEL },
   opencodeExecutable: 'opencode'
 }
 

@@ -49,7 +49,7 @@ import { cleanupWorktree } from '../worktree'
 import { PipelineAbortError } from '../pipeline-abort-error'
 import type { RunAgentDeps, AgentRunClaim } from '../run-agent'
 import type { ActiveAgent, AgentHandle } from '../types'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { TaskStateService } from '../../services/task-state-service'
 
@@ -97,7 +97,7 @@ function makeTaskStateService(): TaskStateService {
 function makeDeps(overrides: Partial<RunAgentDeps> = {}): RunAgentDeps {
   return {
     activeAgents: new Map(),
-    defaultModel: DEFAULT_CONFIG.defaultModel,
+    defaultModel: DEFAULT_MODEL,
     logger: makeLogger(),
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
     repo: mockRepo,

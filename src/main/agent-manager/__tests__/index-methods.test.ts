@@ -120,7 +120,7 @@ vi.mock('../oauth-checker', () => ({
 
 import { AgentManagerImpl } from '../index'
 import type { AgentManagerConfig, ActiveAgent, AgentHandle } from '../types'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import { getRepoPaths } from '../../paths'
 import { setupWorktree, pruneStaleWorktrees } from '../worktree'
@@ -149,7 +149,7 @@ const baseConfig: AgentManagerConfig = {
   maxRuntimeMs: 60 * 60 * 1000,
   idleTimeoutMs: 15 * 60 * 1000,
   pollIntervalMs: 600_000,
-  defaultModel: DEFAULT_CONFIG.defaultModel
+  defaultModel: DEFAULT_MODEL
 }
 
 function makeLogger() {
@@ -185,7 +185,7 @@ function makeActiveAgent(taskId: string): ActiveAgent {
       abort: vi.fn(),
       steer: vi.fn().mockResolvedValue({ delivered: true })
     } as AgentHandle,
-    model: DEFAULT_CONFIG.defaultModel,
+    model: DEFAULT_MODEL,
     startedAt: Date.now(),
     lastOutputAt: Date.now(),
     rateLimitCount: 0,

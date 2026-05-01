@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
 import type { DependencyIndex } from '../../services/dependency-service'
 
@@ -96,7 +96,7 @@ function makeClaimerDeps(overrides: Partial<TaskClaimerDeps> = {}): TaskClaimerD
       maxRuntimeMs: 3_600_000,
       idleTimeoutMs: 900_000,
       pollIntervalMs: 30_000,
-      defaultModel: DEFAULT_CONFIG.defaultModel
+      defaultModel: DEFAULT_MODEL
     },
     repo,
     depIndex: makeDepIndex(),

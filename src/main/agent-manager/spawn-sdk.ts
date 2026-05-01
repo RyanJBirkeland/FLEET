@@ -12,14 +12,7 @@ import { getRepoPaths, FLEET_MEMORY_DIR } from '../paths'
 import { getSessionId } from './sdk-message-protocol'
 import { createWorktreeIsolationHook } from './worktree-isolation-hook'
 
-/**
- * Baseline turn limit used when a caller does not supply a spec-aware override.
- * Set to 20 as a defense against runaway loops in pipeline agents — balances
- * reasonable task completion (most audited tasks finish in 8–12 turns) with
- * cost containment (20 turns × ~$0.10/turn = ~$2 ceiling before human review).
- * Kept exported for callers (e.g. `message-consumer.ts`) that defend against
- * runaway loops independently of the SDK-level cap.
- */
+/** Fallback turn limit when no pipelineTuning is supplied. Configurable via Settings → Agents. */
 export const MAX_TURNS = 1000
 
 /**
@@ -99,10 +92,8 @@ export function spawnViaSdk(
       // costs ~5-10KB extra per spawn. User hooks kept for permission settings;
       // local overrides kept for dev convenience.
       settingSources: ['user', 'local'],
-      // Spec-aware turn cap: 30 default, 50 for mixed-stack, 75 for explicitly
-      // multi-file specs. Falls back to MAX_TURNS when no tuning is supplied.
-      // See turn-budget.ts for the rule tree. Watchdog still provides an
-      // independent time ceiling.
+      // Configurable via Settings → Agents (default 1000). Watchdog provides
+      // an independent time ceiling via maxRuntimeMs.
       maxTurns: effectiveMaxTurns,
       // Pipeline agents are autonomous with no human at stdin. Cap spend per spawn
       // to prevent runaway cost on loops. Default 2.0 USD covers complex multi-file

@@ -31,7 +31,7 @@ import { checkOAuthToken } from '../oauth-checker'
 import { refreshDependencyIndex } from '../dependency-refresher'
 import { makeConcurrencyState } from '../concurrency'
 import type { AgentManagerConfig } from '../types'
-import { DEFAULT_CONFIG } from '../types'
+import { DEFAULT_CONFIG, DEFAULT_MODEL } from '../types'
 import { getConfiguredRepos } from '../../paths'
 
 const baseConfig: AgentManagerConfig = {
@@ -40,7 +40,7 @@ const baseConfig: AgentManagerConfig = {
   maxRuntimeMs: 3_600_000,
   idleTimeoutMs: 900_000,
   pollIntervalMs: 30_000,
-  defaultModel: DEFAULT_CONFIG.defaultModel
+  defaultModel: DEFAULT_MODEL
 }
 
 function makeRepo(): IAgentTaskRepository {
