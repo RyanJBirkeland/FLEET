@@ -28,9 +28,9 @@ import {
 } from '../services/review-query-service'
 import {
   validateWorktreePath,
-  validateFilePath,
-  validateGitRef
+  validateFilePath
 } from '../lib/review-paths'
+import { resolveDefaultBranch } from '../lib/default-branch'
 import type { TaskStatus } from '../../shared/task-state-machine'
 
 export function parseReviewWorktreeArgs(
@@ -62,12 +62,8 @@ export function parseReviewFileDiffArgs(
   if (typeof p.filePath !== 'string') {
     throw new Error('payload.filePath must be a string')
   }
-  if (typeof p.base !== 'string') {
-    throw new Error('payload.base must be a string')
-  }
   validateWorktreePath(p.worktreePath)
   validateFilePath(p.filePath)
-  validateGitRef(p.base)
   return [p as IpcChannelMap['review:getFileDiff']['args'][0]]
 }
 
@@ -86,16 +82,20 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
   // Query Handlers (delegate to review-query-service)
   // ============================================================================
 
-  safeHandle('review:getDiff', async (_e, payload) => getReviewDiff(payload.worktreePath, payload.base, { env }),
-    parseReviewWorktreeArgs as IpcArgsParser<'review:getDiff'>)
+  safeHandle('review:getDiff', async (_e, payload) => {
+    const branch = await resolveDefaultBranch(payload.worktreePath)
+    return getReviewDiff(payload.worktreePath, `origin/${branch}`, { env })
+  }, parseReviewWorktreeArgs as IpcArgsParser<'review:getDiff'>)
 
-  safeHandle('review:getCommits', async (_e, payload) => getReviewCommits(payload.worktreePath, payload.base, { env }),
-    parseReviewWorktreeArgs as IpcArgsParser<'review:getCommits'>)
+  safeHandle('review:getCommits', async (_e, payload) => {
+    const branch = await resolveDefaultBranch(payload.worktreePath)
+    return getReviewCommits(payload.worktreePath, `origin/${branch}`, { env })
+  }, parseReviewWorktreeArgs as IpcArgsParser<'review:getCommits'>)
 
-  safeHandle('review:getFileDiff', async (_e, payload) =>
-      getReviewFileDiff(payload.worktreePath, payload.filePath, payload.base, { env }),
-    parseReviewFileDiffArgs
-  )
+  safeHandle('review:getFileDiff', async (_e, payload) => {
+    const branch = await resolveDefaultBranch(payload.worktreePath)
+    return getReviewFileDiff(payload.worktreePath, payload.filePath, `origin/${branch}`, { env })
+  }, parseReviewFileDiffArgs)
 
   // review:checkFreshness — check if task's rebase is current with origin/main
   safeHandle('review:checkFreshness', async (_e, payload) => {

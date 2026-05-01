@@ -84,8 +84,7 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
 
       try {
         const result = await window.api.review.getDiff({
-          worktreePath: task.worktree_path,
-          base: 'origin/main'
+          worktreePath: task.worktree_path
         })
         if (cancelled) return
         setDiffFiles(result.files)
@@ -140,8 +139,7 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
       try {
         const result = await window.api.review.getFileDiff({
           worktreePath: task.worktree_path,
-          filePath: selectedDiffFile,
-          base: 'origin/main'
+          filePath: selectedDiffFile
         })
         if (!cancelled) setFileDiff(result.diff)
       } catch {

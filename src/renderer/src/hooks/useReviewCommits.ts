@@ -34,8 +34,7 @@ export function useReviewCommits(taskId: string | null): ReviewCommitsResult {
 
       try {
         const result = await window.api.review.getCommits({
-          worktreePath,
-          base: 'origin/main'
+          worktreePath
         })
         if (!cancelled) setCommits(result.commits)
       } catch (err) {

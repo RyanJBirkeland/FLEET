@@ -8,6 +8,9 @@ vi.mock('../../lib/review-paths', () => ({
   getAllowedWorktreeBases: vi.fn().mockReturnValue(['/home/user/.fleet/worktrees']),
   getWorktreeBase: vi.fn().mockReturnValue('/home/user/.fleet/worktrees')
 }))
+vi.mock('../../lib/default-branch', () => ({
+  resolveDefaultBranch: vi.fn().mockResolvedValue('main')
+}))
 
 // Minimal mocks to allow the module to load without Electron
 vi.mock('../../ipc-utils', () => ({
@@ -48,8 +51,8 @@ describe('parseReviewWorktreeArgs', () => {
   })
 
   it('accepts a valid payload and calls validateWorktreePath', () => {
-    const result = parseReviewWorktreeArgs([{ worktreePath: '/safe/worktree', base: 'main' }])
-    expect(result).toEqual([{ worktreePath: '/safe/worktree', base: 'main' }])
+    const result = parseReviewWorktreeArgs([{ worktreePath: '/safe/worktree' }])
+    expect(result).toEqual([{ worktreePath: '/safe/worktree' }])
     expect(mockValidateWorktreePath).toHaveBeenCalledWith('/safe/worktree')
   })
 
@@ -62,11 +65,11 @@ describe('parseReviewWorktreeArgs', () => {
   })
 
   it('throws when worktreePath is missing', () => {
-    expect(() => parseReviewWorktreeArgs([{ base: 'main' }])).toThrow('worktreePath must be a string')
+    expect(() => parseReviewWorktreeArgs([{}])).toThrow('worktreePath must be a string')
   })
 
   it('throws when worktreePath is not a string', () => {
-    expect(() => parseReviewWorktreeArgs([{ worktreePath: 42, base: 'main' }])).toThrow(
+    expect(() => parseReviewWorktreeArgs([{ worktreePath: 42 }])).toThrow(
       'worktreePath must be a string'
     )
   })
@@ -76,7 +79,7 @@ describe('parseReviewWorktreeArgs', () => {
       throw new Error('not inside an allowed worktree base')
     })
     expect(() =>
-      parseReviewWorktreeArgs([{ worktreePath: '/etc/passwd', base: 'main' }])
+      parseReviewWorktreeArgs([{ worktreePath: '/etc/passwd' }])
     ).toThrow('not inside an allowed worktree base')
   })
 })
@@ -86,16 +89,16 @@ describe('parseReviewFileDiffArgs', () => {
     vi.clearAllMocks()
   })
 
-  it('accepts a valid payload and calls all validators', () => {
+  it('accepts a valid payload and calls path validators', () => {
     const result = parseReviewFileDiffArgs([
-      { worktreePath: '/safe/worktree', filePath: 'src/foo.ts', base: 'main' }
+      { worktreePath: '/safe/worktree', filePath: 'src/foo.ts' }
     ])
     expect(result).toEqual([
-      { worktreePath: '/safe/worktree', filePath: 'src/foo.ts', base: 'main' }
+      { worktreePath: '/safe/worktree', filePath: 'src/foo.ts' }
     ])
     expect(mockValidateWorktreePath).toHaveBeenCalledWith('/safe/worktree')
     expect(mockValidateFilePath).toHaveBeenCalledWith('src/foo.ts')
-    expect(mockValidateGitRef).toHaveBeenCalledWith('main')
+    expect(mockValidateGitRef).not.toHaveBeenCalled()
   })
 
   it('throws when payload is not an object', () => {
@@ -104,20 +107,14 @@ describe('parseReviewFileDiffArgs', () => {
 
   it('throws when worktreePath is missing', () => {
     expect(() =>
-      parseReviewFileDiffArgs([{ filePath: 'src/foo.ts', base: 'main' }])
+      parseReviewFileDiffArgs([{ filePath: 'src/foo.ts' }])
     ).toThrow('worktreePath must be a string')
   })
 
   it('throws when filePath is missing', () => {
     expect(() =>
-      parseReviewFileDiffArgs([{ worktreePath: '/safe/worktree', base: 'main' }])
+      parseReviewFileDiffArgs([{ worktreePath: '/safe/worktree' }])
     ).toThrow('filePath must be a string')
-  })
-
-  it('throws when base is missing', () => {
-    expect(() =>
-      parseReviewFileDiffArgs([{ worktreePath: '/safe/worktree', filePath: 'src/foo.ts' }])
-    ).toThrow('base must be a string')
   })
 
   it('propagates validateFilePath rejection for path traversal', () => {
@@ -126,19 +123,8 @@ describe('parseReviewFileDiffArgs', () => {
     })
     expect(() =>
       parseReviewFileDiffArgs([
-        { worktreePath: '/safe/worktree', filePath: '../../../etc/shadow', base: 'main' }
+        { worktreePath: '/safe/worktree', filePath: '../../../etc/shadow' }
       ])
     ).toThrow('must not contain path traversal')
-  })
-
-  it('propagates validateGitRef rejection for invalid git ref', () => {
-    mockValidateGitRef.mockImplementationOnce(() => {
-      throw new Error('Invalid git ref')
-    })
-    expect(() =>
-      parseReviewFileDiffArgs([
-        { worktreePath: '/safe/worktree', filePath: 'src/foo.ts', base: '; rm -rf ~' }
-      ])
-    ).toThrow('Invalid git ref')
   })
 })

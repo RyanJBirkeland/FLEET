@@ -475,16 +475,13 @@ declare global {
       review: {
         getDiff: (payload: {
           worktreePath: string
-          base: string
         }) => Promise<IpcResult<'review:getDiff'>>
         getCommits: (payload: {
           worktreePath: string
-          base: string
         }) => Promise<IpcResult<'review:getCommits'>>
         getFileDiff: (payload: {
           worktreePath: string
           filePath: string
-          base: string
         }) => Promise<IpcResult<'review:getFileDiff'>>
         mergeLocally: (payload: {
           taskId: string

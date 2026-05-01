@@ -113,8 +113,7 @@ describe('CommitsTab', () => {
     render(<CommitsTab />)
     await waitFor(() => {
       expect(window.api.review.getCommits).toHaveBeenCalledWith({
-        worktreePath: '/tmp/wt',
-        base: 'origin/main'
+        worktreePath: '/tmp/wt'
       })
     })
   })

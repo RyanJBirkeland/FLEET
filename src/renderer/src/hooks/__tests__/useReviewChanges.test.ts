@@ -73,8 +73,7 @@ describe('useReviewChanges', () => {
     })
 
     expect(mockGetDiff).toHaveBeenCalledWith({
-      worktreePath: '/path/to/worktree',
-      base: 'origin/main'
+      worktreePath: '/path/to/worktree'
     })
     expect(result.current.files).toHaveLength(2)
     expect(result.current.isSnapshot).toBe(false)
@@ -234,8 +233,7 @@ describe('useReviewChanges', () => {
 
     expect(mockGetFileDiff).toHaveBeenCalledWith({
       worktreePath: '/path/to/worktree',
-      filePath: 'file1.ts',
-      base: 'origin/main'
+      filePath: 'file1.ts'
     })
   })
 

@@ -198,6 +198,9 @@ vi.mock('fs', async () => {
 vi.mock('util', () => ({
   promisify: vi.fn(() => mockExecFileAsync)
 }))
+vi.mock('../../lib/default-branch', () => ({
+  resolveDefaultBranch: vi.fn().mockResolvedValue('main')
+}))
 
 import { homedir } from 'os'
 import { registerReviewHandlers } from '../review'
@@ -998,91 +1001,6 @@ describe('Review handlers', () => {
     })
   })
 
-  describe('input validation — base ref', () => {
-    function captureHandlers(): Record<string, (...args: unknown[]) => unknown> {
-      const handlers: Record<string, (...args: unknown[]) => unknown> = {}
-      vi.mocked(safeHandle).mockImplementation((channel: string, handler: unknown) => {
-        handlers[channel] = handler as (...args: unknown[]) => unknown
-      })
-      registerReviewHandlers({ onStatusTerminal: vi.fn(), reviewOrchestration, taskStateService: mockTaskStateService })
-      return handlers
-    }
-
-    const _mockEvent = {} as IpcMainInvokeEvent
-    const VALID_WORKTREE = `${homedir()}/.fleet/worktrees/Users-ryan-projects-FLEET/some-task-id`
-
-    it.each([
-      ['main', true],
-      ['abc123def456abc1', true], // 16-char hex SHA prefix
-      ['a'.repeat(40), true], // full SHA
-      ['feat/my-branch', true],
-      ['origin/main', true],
-      ['HEAD~1', false], // tilde not allowed
-      ['--format=%(body)', false], // flag injection
-      ['../../etc/passwd', false], // path traversal
-      ['', false], // empty
-      ['; rm -rf /', false], // shell metachar
-      ['a'.repeat(201), false] // too long
-    ])('review:getDiff base="%s" → valid=%s', async (base, shouldPass) => {
-      const handlers = captureHandlers()
-      if (shouldPass) {
-        // Should not throw validation error — git call may fail but that's fine in unit test
-        await expect(
-          handlers['review:getDiff'](_mockEvent, { worktreePath: VALID_WORKTREE, base })
-        ).resolves.not.toThrow()
-      } else {
-        await expect(
-          handlers['review:getDiff'](_mockEvent, { worktreePath: VALID_WORKTREE, base })
-        ).rejects.toThrow(/invalid git ref/i)
-      }
-    })
-
-    it.each([
-      ['main', true],
-      ['abc123def456abc1', true],
-      ['--format=%(body)', false],
-      ['../../etc', false],
-      ['', false]
-    ])('review:getCommits base="%s" → valid=%s', async (base, shouldPass) => {
-      const handlers = captureHandlers()
-      if (shouldPass) {
-        await expect(
-          handlers['review:getCommits'](_mockEvent, { worktreePath: VALID_WORKTREE, base })
-        ).resolves.not.toThrow()
-      } else {
-        await expect(
-          handlers['review:getCommits'](_mockEvent, { worktreePath: VALID_WORKTREE, base })
-        ).rejects.toThrow(/invalid git ref/i)
-      }
-    })
-
-    it.each([
-      ['main', true],
-      ['abc123def456abc1', true],
-      ['--format=%(body)', false],
-      ['', false]
-    ])('review:getFileDiff base="%s" → valid=%s', async (base, shouldPass) => {
-      const handlers = captureHandlers()
-      if (shouldPass) {
-        await expect(
-          handlers['review:getFileDiff'](_mockEvent, {
-            worktreePath: VALID_WORKTREE,
-            base,
-            filePath: 'src/foo.ts'
-          })
-        ).resolves.not.toThrow()
-      } else {
-        await expect(
-          handlers['review:getFileDiff'](_mockEvent, {
-            worktreePath: VALID_WORKTREE,
-            base,
-            filePath: 'src/foo.ts'
-          })
-        ).rejects.toThrow(/invalid git ref/i)
-      }
-    })
-  })
-
   describe('input validation — worktreePath', () => {
     function captureHandlers(): Record<string, (...args: unknown[]) => unknown> {
       const handlers: Record<string, (...args: unknown[]) => unknown> = {}
@@ -1094,7 +1012,6 @@ describe('Review handlers', () => {
     }
 
     const _mockEvent = {} as IpcMainInvokeEvent
-    const VALID_BASE = 'main'
     const VALID_WORKTREE = `${homedir()}/.fleet/worktrees/Users-ryan-projects-FLEET/abc123`
 
     it.each([
@@ -1108,11 +1025,11 @@ describe('Review handlers', () => {
       const handlers = captureHandlers()
       if (shouldPass) {
         await expect(
-          handlers['review:getDiff'](_mockEvent, { worktreePath, base: VALID_BASE })
+          handlers['review:getDiff'](_mockEvent, { worktreePath })
         ).resolves.not.toThrow()
       } else {
         await expect(
-          handlers['review:getDiff'](_mockEvent, { worktreePath, base: VALID_BASE })
+          handlers['review:getDiff'](_mockEvent, { worktreePath })
         ).rejects.toThrow(/invalid worktree path/i)
       }
     })
@@ -1123,7 +1040,7 @@ describe('Review handlers', () => {
       const handlers = captureHandlers()
       const adhocPath = `${homedir()}/.fleet/worktrees-adhoc/Users-ryan-projects-FLEET/abc123`
       await expect(
-        handlers['review:getDiff'](_mockEvent, { worktreePath: adhocPath, base: VALID_BASE })
+        handlers['review:getDiff'](_mockEvent, { worktreePath: adhocPath })
       ).resolves.not.toThrow()
     })
 
@@ -1134,7 +1051,7 @@ describe('Review handlers', () => {
       mockExistsSync.mockReturnValue(false)
       const handlers = captureHandlers()
       await expect(
-        handlers['review:getDiff'](_mockEvent, { worktreePath: VALID_WORKTREE, base: VALID_BASE })
+        handlers['review:getDiff'](_mockEvent, { worktreePath: VALID_WORKTREE })
       ).rejects.toThrow(/worktree directory no longer exists/i)
     })
 
@@ -1142,10 +1059,7 @@ describe('Review handlers', () => {
       mockExistsSync.mockReturnValue(false)
       const handlers = captureHandlers()
       await expect(
-        handlers['review:getCommits'](_mockEvent, {
-          worktreePath: VALID_WORKTREE,
-          base: VALID_BASE
-        })
+        handlers['review:getCommits'](_mockEvent, { worktreePath: VALID_WORKTREE })
       ).rejects.toThrow(/worktree directory no longer exists/i)
     })
 
@@ -1155,7 +1069,6 @@ describe('Review handlers', () => {
       await expect(
         handlers['review:getFileDiff'](_mockEvent, {
           worktreePath: VALID_WORKTREE,
-          base: VALID_BASE,
           filePath: 'src/foo.ts'
         })
       ).rejects.toThrow(/worktree directory no longer exists/i)
@@ -1169,11 +1082,11 @@ describe('Review handlers', () => {
       const handlers = captureHandlers()
       if (shouldPass) {
         await expect(
-          handlers['review:getCommits'](_mockEvent, { worktreePath, base: VALID_BASE })
+          handlers['review:getCommits'](_mockEvent, { worktreePath })
         ).resolves.not.toThrow()
       } else {
         await expect(
-          handlers['review:getCommits'](_mockEvent, { worktreePath, base: VALID_BASE })
+          handlers['review:getCommits'](_mockEvent, { worktreePath })
         ).rejects.toThrow(/invalid worktree path/i)
       }
     })
@@ -1191,7 +1104,6 @@ describe('Review handlers', () => {
 
     const _mockEvent = {} as IpcMainInvokeEvent
     const VALID_WORKTREE = `${homedir()}/.fleet/worktrees/Users-ryan-projects-FLEET/abc123`
-    const VALID_BASE = 'main'
 
     it.each([
       ['src/main/foo.ts', true],
@@ -1207,7 +1119,6 @@ describe('Review handlers', () => {
         await expect(
           handlers['review:getFileDiff'](_mockEvent, {
             worktreePath: VALID_WORKTREE,
-            base: VALID_BASE,
             filePath
           })
         ).resolves.not.toThrow()
@@ -1215,7 +1126,6 @@ describe('Review handlers', () => {
         await expect(
           handlers['review:getFileDiff'](_mockEvent, {
             worktreePath: VALID_WORKTREE,
-            base: VALID_BASE,
             filePath
           })
         ).rejects.toThrow(/invalid file path/i)

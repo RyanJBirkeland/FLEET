@@ -67,8 +67,7 @@ describe('useReviewCommits', () => {
     })
 
     expect(mockGetCommits).toHaveBeenCalledWith({
-      worktreePath: '/path/to/worktree',
-      base: 'origin/main'
+      worktreePath: '/path/to/worktree'
     })
     expect(result.current.commits).toHaveLength(2)
     expect(result.current.error).toBeNull()

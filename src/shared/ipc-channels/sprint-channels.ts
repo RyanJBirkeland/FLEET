@@ -146,7 +146,7 @@ export interface SprintChannels {
 
 export interface ReviewChannels {
   'review:getDiff': {
-    args: [payload: { worktreePath: string; base: string }]
+    args: [payload: { worktreePath: string }]
     result: {
       files: Array<{
         path: string
@@ -158,13 +158,13 @@ export interface ReviewChannels {
     }
   }
   'review:getCommits': {
-    args: [payload: { worktreePath: string; base: string }]
+    args: [payload: { worktreePath: string }]
     result: {
       commits: Array<{ hash: string; message: string; author: string; date: string }>
     }
   }
   'review:getFileDiff': {
-    args: [payload: { worktreePath: string; filePath: string; base: string }]
+    args: [payload: { worktreePath: string; filePath: string }]
     result: { diff: string }
   }
   'review:mergeLocally': {
