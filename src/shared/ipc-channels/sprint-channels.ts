@@ -176,7 +176,7 @@ export interface ReviewChannels {
     result: { prUrl: string }
   }
   'review:requestRevision': {
-    args: [payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh' }]
+    args: [payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh'; revisionFeedback?: unknown[] }]
     result: { success: boolean }
   }
   'review:discard': {

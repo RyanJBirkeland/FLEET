@@ -75,7 +75,7 @@ interface ExecutionContext {
 type ReviewActionInput =
   | { action: 'mergeLocally'; strategy: 'merge' | 'squash' | 'rebase' }
   | { action: 'createPr'; title: string; body: string }
-  | { action: 'requestRevision'; feedback: string; mode: 'resume' | 'fresh' }
+  | { action: 'requestRevision'; feedback: string; mode: 'resume' | 'fresh'; revisionFeedback?: unknown[] | null }
   | { action: 'discard' }
   | { action: 'shipIt'; strategy: 'merge' | 'squash' | 'rebase' }
   | { action: 'rebase' }
@@ -109,7 +109,7 @@ export function buildGitOpPlan(validated: ReviewActionInput): ReviewGitOp {
     case 'createPr':
       return { type: 'createPr', title: validated.title, body: validated.body }
     case 'requestRevision':
-      return { type: 'requestRevision', feedback: validated.feedback, mode: validated.mode }
+      return { type: 'requestRevision', feedback: validated.feedback, mode: validated.mode, revisionFeedback: validated.revisionFeedback ?? null }
     case 'discard':
       return { type: 'discard' }
     case 'shipIt':
@@ -297,7 +297,8 @@ export function createReviewOrchestrationService(
             task,
             repoConfig: null,
             feedback: op.feedback,
-            revisionMode: op.mode
+            revisionMode: op.mode,
+            revisionFeedback: op.revisionFeedback ?? null
           },
           ctx.env,
           () => {}
@@ -371,7 +372,8 @@ export function createReviewOrchestrationService(
     const op = buildReviewGitOpPlan({
       action: 'requestRevision',
       feedback: i.feedback,
-      mode: i.mode
+      mode: i.mode,
+      revisionFeedback: i.revisionFeedback ?? null
     })
     await executeReviewGitOp(op, {
       taskId: i.taskId,

@@ -65,6 +65,7 @@ export interface ReviewActionInput {
   prBody?: string
   feedback?: string
   revisionMode?: 'resume' | 'fresh'
+  revisionFeedback?: unknown[] | null
 }
 
 // ============================================================================
@@ -128,7 +129,7 @@ export function classifyReviewAction(input: ReviewActionInput): ReviewActionPlan
 }
 
 function buildRequestRevisionPlan(input: ReviewActionInput): ReviewActionPlan {
-  const { task, feedback, revisionMode } = input
+  const { task, feedback, revisionMode, revisionFeedback } = input
   if (!feedback) throw new Error('feedback required for requestRevision')
 
   const patch: Record<string, unknown> = {
@@ -141,6 +142,9 @@ function buildRequestRevisionPlan(input: ReviewActionInput): ReviewActionPlan {
     needs_review: false,
     spec: task.spec ? `${task.spec}\n\n## Revision Feedback\n\n${feedback}` : feedback
   }
+  // Write revision_feedback atomically with the transition so a failed
+  // transition never leaves a stale entry in the audit array.
+  if (revisionFeedback != null) patch.revision_feedback = revisionFeedback
   // Fresh mode: clear agent_run_id to start a new session.
   if (revisionMode === 'fresh') patch.agent_run_id = null
 

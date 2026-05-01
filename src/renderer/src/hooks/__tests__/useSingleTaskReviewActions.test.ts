@@ -88,7 +88,7 @@ describe('useSingleTaskReviewActions — requestRevision', () => {
     } as any
   })
 
-  it('saves revision_feedback entry then calls review.requestRevision when user submits feedback', async () => {
+  it('passes revision_feedback atomically to review.requestRevision (no separate sprint.update)', async () => {
     mockPrompt.mockResolvedValue('fix the button color')
 
     const { result } = renderHook(() => useSingleTaskReviewActions())
@@ -97,21 +97,19 @@ describe('useSingleTaskReviewActions — requestRevision', () => {
       await result.current.requestRevision()
     })
 
-    // First update: revision_feedback array with the new entry
-    expect(window.api.sprint.update).toHaveBeenCalledWith('task-1', {
-      revision_feedback: [
+    // revision_feedback is now sent atomically with the state transition —
+    // no separate sprint.update call that could persist on failure.
+    expect(window.api.sprint.update).not.toHaveBeenCalled()
+    expect(window.api.review.requestRevision).toHaveBeenCalledWith({
+      taskId: 'task-1',
+      feedback: 'fix the button color',
+      mode: 'fresh',
+      revisionFeedback: [
         expect.objectContaining({
           feedback: 'fix the button color',
           attempt: 1
         })
       ]
-    })
-
-    // Second call: review orchestration handles status transition + spec append
-    expect(window.api.review.requestRevision).toHaveBeenCalledWith({
-      taskId: 'task-1',
-      feedback: 'fix the button color',
-      mode: 'fresh'
     })
   })
 
@@ -131,12 +129,15 @@ describe('useSingleTaskReviewActions — requestRevision', () => {
       await result.current.requestRevision()
     })
 
-    expect(window.api.sprint.update).toHaveBeenCalledWith('task-1', {
-      revision_feedback: expect.arrayContaining([
-        expect.objectContaining({ attempt: 1, feedback: 'prior note' }),
-        expect.objectContaining({ attempt: 2, feedback: 'second round of changes' })
-      ])
-    })
+    expect(window.api.sprint.update).not.toHaveBeenCalled()
+    expect(window.api.review.requestRevision).toHaveBeenCalledWith(
+      expect.objectContaining({
+        revisionFeedback: expect.arrayContaining([
+          expect.objectContaining({ attempt: 1, feedback: 'prior note' }),
+          expect.objectContaining({ attempt: 2, feedback: 'second round of changes' })
+        ])
+      })
+    )
   })
 
   it('does not call sprint.update when user cancels the prompt', async () => {
@@ -168,9 +169,9 @@ describe('useSingleTaskReviewActions — requestRevision', () => {
     })
   })
 
-  it('shows error toast when sprint.update rejects', async () => {
+  it('shows error toast when review.requestRevision rejects', async () => {
     mockPrompt.mockResolvedValue('some feedback')
-    window.api.sprint.update = vi.fn().mockRejectedValue(new Error('DB write failed'))
+    window.api.review.requestRevision = vi.fn().mockRejectedValue(new Error('revision failed'))
 
     const { result } = renderHook(() => useSingleTaskReviewActions())
 
@@ -179,7 +180,7 @@ describe('useSingleTaskReviewActions — requestRevision', () => {
     })
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('DB write failed')
+      expect(toast.error).toHaveBeenCalledWith('revision failed')
     })
   })
 })

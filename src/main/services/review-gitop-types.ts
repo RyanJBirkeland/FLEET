@@ -10,7 +10,7 @@
 export type ReviewGitOp =
   | { readonly type: 'mergeLocally'; readonly strategy: 'merge' | 'squash' | 'rebase' }
   | { readonly type: 'createPr'; readonly title: string; readonly body: string }
-  | { readonly type: 'requestRevision'; readonly feedback: string; readonly mode: 'resume' | 'fresh' }
+  | { readonly type: 'requestRevision'; readonly feedback: string; readonly mode: 'resume' | 'fresh'; readonly revisionFeedback?: unknown[] | null }
   | { readonly type: 'discard' }
   | { readonly type: 'shipIt'; readonly strategy: 'merge' | 'squash' | 'rebase' }
   | { readonly type: 'rebase' }

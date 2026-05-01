@@ -65,6 +65,16 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
       logger.error(`[completion] Task ${taskId} not found`)
       return
     }
+    // Re-read status immediately before the destructive git operation. A user
+    // action (revision request, discard) in the narrow window between
+    // transitionToReview and here would have changed the status; proceeding with
+    // a squash merge against a task no longer in review would corrupt state.
+    if (task.status !== 'review') {
+      logger.warn(
+        `[completion] Task ${taskId} is no longer in review (status=${task.status}) — skipping auto-merge`
+      )
+      return
+    }
     const repoLocalPath = resolveRepoLocalPath(task.repo)
     if (!repoLocalPath) {
       logger.error(`[completion] Repo "${task.repo}" not found in settings`)

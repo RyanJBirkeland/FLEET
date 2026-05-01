@@ -239,7 +239,7 @@ export const review = {
     typedInvoke('review:mergeLocally', payload),
   createPr: (payload: { taskId: string; title: string; body: string }) =>
     typedInvoke('review:createPr', payload),
-  requestRevision: (payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh' }) =>
+  requestRevision: (payload: { taskId: string; feedback: string; mode: 'resume' | 'fresh'; revisionFeedback?: unknown[] }) =>
     typedInvoke('review:requestRevision', payload),
   discard: (payload: { taskId: string }) => typedInvoke('review:discard', payload),
   shipIt: (payload: { taskId: string; strategy: 'squash' | 'merge' | 'rebase' }) =>

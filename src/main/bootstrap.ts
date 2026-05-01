@@ -2,6 +2,7 @@
  * Bootstrap utilities extracted from index.ts — DB initialization, watchers, CSP, and periodic tasks.
  */
 import { watch, existsSync, type FSWatcher } from 'fs'
+import { dirname, basename } from 'path'
 import { app, BrowserWindow, session } from 'electron'
 import { is } from '@electron-toolkit/utils'
 import { FLEET_DB_PATH } from './paths'
@@ -83,7 +84,9 @@ export function emitStartupWarnings(): void {
 
 export function startDbWatcher(): () => void {
   const dbPath = FLEET_DB_PATH
-  const walPath = dbPath + '-wal'
+  const dbDir = dirname(dbPath)
+  const dbName = basename(dbPath)
+  const walName = dbName + '-wal'
   let debounceTimer: ReturnType<typeof setTimeout> | null = null
 
   const notify = (): void => {
@@ -95,13 +98,25 @@ export function startDbWatcher(): () => void {
     }, DEBOUNCE_MS)
   }
 
+  // Watch the parent directory and filter to fleet.db / fleet.db-wal changes.
+  // A directory watcher fires even when the WAL file is created after startup
+  // (the old per-file approach silently dropped the watcher if the WAL file
+  // didn't exist yet, leaving the renderer dependent on the 120s poll).
   const watchers: FSWatcher[] = []
-
-  for (const path of [dbPath, walPath]) {
-    try {
-      watchers.push(watch(path, notify))
-    } catch {
-      // File may not exist yet — task runner creates it on first write
+  try {
+    watchers.push(
+      watch(dbDir, (_, filename) => {
+        if (filename === dbName || filename === walName) notify()
+      })
+    )
+  } catch {
+    // Directory may not exist in test environments — fall back to file watchers
+    for (const filePath of [dbPath, dbPath + '-wal']) {
+      try {
+        watchers.push(watch(filePath, notify))
+      } catch {
+        // best-effort
+      }
     }
   }
 

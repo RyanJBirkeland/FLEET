@@ -169,7 +169,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
     setActionInFlight('revise')
     try {
       const priorEntries = Array.isArray(task.revision_feedback) ? task.revision_feedback : []
-      const nextEntries = [
+      const revisionFeedback = [
         ...priorEntries,
         {
           timestamp: nowIso(),
@@ -177,12 +177,13 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
           attempt: priorEntries.length + 1
         }
       ]
-      // revision_feedback is an internal field outside SprintTaskPatch but accepted by UPDATE_ALLOWLIST at runtime.
-      await window.api.sprint.update(task.id, { revision_feedback: nextEntries } as Parameters<typeof window.api.sprint.update>[1])
+      // Pass revisionFeedback to the server so it is written atomically with
+      // the status transition — no longer a separate pre-write that persists on failure.
       await window.api.review.requestRevision({
         taskId: task.id,
         feedback,
-        mode: 'fresh'
+        mode: 'fresh',
+        revisionFeedback
       })
       toast.success('Revision requested — agent will re-run with your feedback')
       const nextTaskId = getNextReviewTaskId(task.id, tasks)

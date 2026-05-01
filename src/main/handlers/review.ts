@@ -157,7 +157,8 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     return reviewOrchestration.requestRevision({
       taskId: payload.taskId,
       feedback: payload.feedback,
-      mode: payload.mode
+      mode: payload.mode,
+      ...(Array.isArray(payload.revisionFeedback) ? { revisionFeedback: payload.revisionFeedback as import('../services/review-orchestration-types').RevisionFeedbackEntry[] } : {})
     })
   })
 

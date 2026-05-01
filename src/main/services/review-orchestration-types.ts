@@ -71,11 +71,19 @@ export interface CreatePrInput {
   onStatusTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
 }
 
+export interface RevisionFeedbackEntry {
+  feedback: string
+  timestamp: string
+  mode: 'resume' | 'fresh'
+}
+
 export interface RequestRevisionInput {
   taskId: string
   feedback: string
   mode: 'resume' | 'fresh'
   env?: NodeJS.ProcessEnv
+  /** Pre-computed revision_feedback array from the renderer; written atomically with the status transition. */
+  revisionFeedback?: RevisionFeedbackEntry[]
 }
 
 export interface DiscardInput {

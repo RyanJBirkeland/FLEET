@@ -499,6 +499,7 @@ declare global {
           taskId: string
           feedback: string
           mode: 'resume' | 'fresh'
+          revisionFeedback?: unknown[]
         }) => Promise<IpcResult<'review:requestRevision'>>
         discard: (payload: { taskId: string }) => Promise<IpcResult<'review:discard'>>
         shipIt: (payload: {
