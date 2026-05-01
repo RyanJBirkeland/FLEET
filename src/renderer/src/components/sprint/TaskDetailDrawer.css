@@ -470,7 +470,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   border-left: 3px solid var(--fleet-danger);
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--fleet-surface-high);
   border-radius: var(--fleet-radius-sm);
 }
 

@@ -60,6 +60,12 @@
   text-transform: uppercase;
 }
 
+html.theme-pro-light .cost-view__title {
+  background: none;
+  -webkit-text-fill-color: var(--fleet-accent);
+  color: var(--fleet-accent);
+}
+
 .cost-view__header-actions {
   display: flex;
   gap: var(--fleet-space-1);

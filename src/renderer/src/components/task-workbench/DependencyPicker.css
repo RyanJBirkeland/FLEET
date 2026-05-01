@@ -14,7 +14,7 @@
 }
 
 .wb-deps__more {
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--fleet-border);
 }
 
 .wb-deps__show-all {
