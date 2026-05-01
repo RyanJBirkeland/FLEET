@@ -42,17 +42,13 @@ export class RequiredSectionsValidator implements ISpecValidator {
 // FilePathsValidator
 // ---------------------------------------------------------------------------
 
-const FILE_PATH_PATTERN = /(?:\/src\/|^src\/|\.ts$|\.tsx$|\.css$|\.json$)/m
+// Matches any token that looks like a file path: contains a slash, or ends
+// with an extension (word chars, dot, word chars). Language-agnostic so
+// .java, .py, .go, .rb, etc. all qualify alongside TypeScript/CSS/JSON.
+const FILE_PATH_PATTERN = /(?:\/|\.\w+$)/m
 
 function hasFilePath(token: string): boolean {
-  return (
-    token.includes('/src/') ||
-    token.startsWith('src/') ||
-    token.endsWith('.ts') ||
-    token.endsWith('.tsx') ||
-    token.endsWith('.css') ||
-    token.endsWith('.json')
-  )
+  return token.includes('/') || /\.\w+$/.test(token)
 }
 
 export class FilePathsValidator implements ISpecValidator {
@@ -71,7 +67,7 @@ export class FilePathsValidator implements ISpecValidator {
           code: 'FILES_SECTION_NO_PATHS',
           severity: 'error',
           message:
-            'The "Files to Change" section exists but contains no file paths (expected tokens with src/, .ts, .tsx, .css, or .json)'
+            'The "Files to Change" section exists but contains no file paths (expected paths with a / or file extension like .ts, .java, .py, .go)'
         }
       ]
     }

@@ -104,6 +104,20 @@ Run tests.
     expect(issues.some((i) => i.code === 'FILES_SECTION_NO_PATHS')).toBe(false)
   })
 
+  it('returns no issues for non-TypeScript paths (.java, .py, .go)', () => {
+    const cases = [
+      'com/example/MyService.java',
+      'app/models/user.py',
+      'cmd/server/main.go',
+      'lib/auth/session.rb'
+    ]
+    for (const path of cases) {
+      const spec = parser.parse(`## Files to Change\n- ${path}`)
+      const issues = validator.validate(spec)
+      expect(issues.some((i) => i.code === 'FILES_SECTION_NO_PATHS')).toBe(false)
+    }
+  })
+
   it('skips validation when "Files to Change" section is absent', () => {
     const spec = parser.parse(
       `
