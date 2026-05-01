@@ -1,9 +1,8 @@
 /**
  * Config manager — hot-reload settings and update in-memory AgentManagerConfig.
  *
- * Hot-reloadable: maxConcurrent, maxRuntimeMs, idleTimeoutMs, defaultModel.
- * NOT hot-reloadable: worktreeBase (requires restart — existing worktrees
- * would be orphaned). pollIntervalMs also requires restart.
+ * Hot-reloadable: maxConcurrent, maxRuntimeMs, maxTurns.
+ * NOT hot-reloadable: worktreeBase, pollIntervalMs (require restart).
  *
  * Extracted from AgentManagerImpl.reloadConfig() so the logic is unit-testable
  * without a full manager instance.
