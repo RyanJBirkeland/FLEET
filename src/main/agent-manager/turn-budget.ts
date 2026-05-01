@@ -1,47 +1,9 @@
 /**
- * turn-budget.ts — Spec-aware turn budget and tool policy for pipeline agents.
+ * turn-budget.ts — Tool policy for pipeline agents.
  *
- * Pipeline tasks routinely need 50-75 turns: read the affected files, make the
- * edit, write the test, run the test, fix what the test surfaces, commit. The
- * Phase-B 2026-04-24 measurement showed that a 30-turn cap exhausted on every
- * task tested — including a 2-line change with one regression test — because
- * test-writing alone consumes 15-25 turns. A higher floor is the simpler fix.
- *
- * Multi-file refactors and god-class breakups need more headroom: Phase-B's
- * single Arm B run (T-47, with the header) hit max_turns at 76, and the audit
- * showed many recent successes clustered at exactly 71-76 turns — meaning 75
- * is the binding operating point, not a margin. The header now resolves to
- * 100 turns to give those tasks real headroom.
- *
- * The pipeline tool policy lives here too so it stays co-located with the rest
- * of the spec-aware spawn tuning.
+ * The maxTurns limit is now configured via Settings → Agents → Max turns (Pipeline)
+ * and defaults to 1000. Turn budget is no longer computed per-spec.
  */
-
-const DEFAULT_MAX_TURNS = 75
-const MULTI_FILE_MAX_TURNS = 100
-
-/**
- * Explicit opt-in header that authors can add to a spec to request a higher
- * turn budget. Case-sensitive on purpose — the spec format itself is informal,
- * and we don't want to accidentally match prose like "multi-file" inside a
- * sentence.
- */
-const MULTI_FILE_HEADER = '## Multi-File: true'
-
-/**
- * Returns the pipeline agent `maxTurns` budget for a given spec.
- *
- * 75 by default; 100 when the spec opts in via the explicit header. The
- * header is the only signal — substring heuristics (file-path density,
- * mixed-stack detection) were removed in the Phase-B 2026-04-24 cleanup
- * because they downgraded specs below the new default.
- */
-export function computeMaxTurns(spec: string): number {
-  if (spec.includes(MULTI_FILE_HEADER)) {
-    return MULTI_FILE_MAX_TURNS
-  }
-  return DEFAULT_MAX_TURNS
-}
 
 /**
  * Tools blocked for pipeline agents.

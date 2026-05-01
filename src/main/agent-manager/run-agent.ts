@@ -29,7 +29,6 @@ import { consumeMessages } from './message-consumer'
 import type { ConsumeMessagesResult } from './message-consumer'
 import { persistAgentRunTelemetry } from './agent-telemetry'
 import { spawnAndWireAgent } from './spawn-and-wire'
-import { computeMaxTurns } from './turn-budget'
 import { sleep } from '../lib/async-utils'
 import { NOTES_MAX_LENGTH } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
@@ -768,7 +767,7 @@ async function runStreamingPhase(ctx: StreamingContext): Promise<StreamResult> {
     agentRunId,
     turnTracker,
     logger,
-    computeMaxTurns(task.spec ?? task.prompt ?? task.title ?? ''),
+    deps.maxTurns,
     deps.onOAuthRefreshStart
   )
 
