@@ -48,6 +48,18 @@ export interface PlannerAssistantProps {
   onOpenWorkbench: () => void
 }
 
+// Per-task spec budget when serialising the epic into LLM context. Specs longer
+// than this are truncated with a marker so the assistant can still see the
+// constraint sections (## Out of scope, role guards, Files-to-Change list)
+// it must preserve verbatim.
+const SPEC_CONTEXT_CHARS = 8000
+
+function truncateSpec(spec: string): string {
+  const trimmed = spec.trim()
+  if (trimmed.length <= SPEC_CONTEXT_CHARS) return trimmed
+  return `${trimmed.slice(0, SPEC_CONTEXT_CHARS)}\n\n[...truncated for context]`
+}
+
 // ---------------------------------------------------------------------------
 // parseActionMarkers
 // ---------------------------------------------------------------------------
@@ -233,7 +245,7 @@ function PlannerAssistantInner({
           id: t.id,
           title: t.title,
           status: t.status,
-          hasSpec: (t.spec ?? '').trim().length > 0
+          spec: truncateSpec(t.spec ?? '')
         }))
       },
       null,
@@ -270,7 +282,28 @@ function PlannerAssistantInner({
     setInput('')
     setIsStreaming(true)
 
-    const systemPrefix = `You are a planning assistant for the FLEET software development environment. Help the user brainstorm and plan tasks for their epic.\n\nEpic context:\n${epicContext}\n\nWhen you propose creating a task, use this exact format:\n[ACTION:create-task]{"title":"...","spec":"..."}[/ACTION]\n\nWhen you propose creating an epic, use:\n[ACTION:create-epic]{"name":"...","goal":"..."}[/ACTION]\n\nWhen you propose updating a task spec, use:\n[ACTION:update-spec]{"taskId":"<existing task id>","spec":"..."}[/ACTION]\n\nKeep responses concise and actionable.`
+    const systemPrefix = `You are a planning assistant for the FLEET software development environment. Help the user brainstorm and plan tasks for their epic.
+
+Epic context (each task includes its current spec verbatim, truncated only if oversized):
+${epicContext}
+
+When you propose creating a task, use this exact format:
+[ACTION:create-task]{"title":"...","spec":"..."}[/ACTION]
+
+When you propose creating an epic, use:
+[ACTION:create-epic]{"name":"...","goal":"..."}[/ACTION]
+
+When you propose updating a task spec, use:
+[ACTION:update-spec]{"taskId":"<existing task id>","spec":"..."}[/ACTION]
+
+Rules for update-spec on tasks that already have a spec:
+1. If the user reports a validation error, request the exact validator error message before proposing changes. Do not guess what the validator rejected.
+2. Identify the specific sentence, section, or clause that triggers each error. Change ONLY those clauses.
+3. Preserve verbatim: every \`## Out of scope\` section, every role-guard list, every "Do NOT…" directive, every numbered entry in the Files-to-Change list, every code block. If a constraint exists in the input spec, it must exist in the output spec — even if you think it is irrelevant to the validation issue.
+4. If the validator error is structural (e.g. "missing ## How to Test"), ADD the missing section without touching anything else.
+5. Never regenerate a spec from scratch when an existing spec is present. The user has invested effort in the existing content; your job is to make the smallest change that resolves the stated issue.
+
+Keep responses concise and actionable.`
 
     const apiMessages = [
       ...messages.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
