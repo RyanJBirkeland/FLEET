@@ -335,8 +335,15 @@ export async function setupWorktree(
         // The repo's .gitignore uses a trailing slash (node_modules/) which matches
         // directories but not symlinks. Writing to .git/info/exclude (no trailing slash)
         // ensures git never stages the symlink regardless of .gitignore behaviour.
+        // In a git worktree, `.git` is a pointer file — use --git-common-dir to resolve
+        // the real gitdir where info/exclude actually lives.
         try {
-          const excludePath = path.join(worktreePath, '.git', 'info', 'exclude')
+          const { stdout: gitDirOut } = await execFileAsync(
+            'git',
+            ['rev-parse', '--git-common-dir'],
+            { cwd: worktreePath }
+          )
+          const excludePath = path.join(gitDirOut.trim(), 'info', 'exclude')
           appendFileSync(excludePath, '\nnode_modules\n')
         } catch (excludeErr) {
           log.warn(`[worktree] Failed to write .git/info/exclude for task ${taskId}: ${excludeErr}`)
