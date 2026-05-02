@@ -97,6 +97,7 @@ import { listChangedFiles } from '../test-touch-check'
 import { verifyBranchTipOrFail, verifyWorktreeOrFail } from '../verification-gate'
 import { runPreReviewAdvisors } from '../pre-review-advisors'
 import type { IAgentTaskRepository } from '../../data/sprint-task-repository'
+import type { IReviewRepository } from '../../data/review-repository'
 import type { IUnitOfWork } from '../../data/unit-of-work'
 import type { TaskStateService } from '../../services/task-state-service'
 import { makeLogger } from './test-helpers'
@@ -139,6 +140,14 @@ function makeTaskStateService(): TaskStateService {
   } as unknown as TaskStateService
 }
 
+function makeReviewRepo(): IReviewRepository {
+  return {
+    getCached: vi.fn().mockReturnValue(null),
+    setCached: vi.fn(),
+    invalidate: vi.fn()
+  } as unknown as IReviewRepository
+}
+
 function makeBaseOpts() {
   return {
     taskId: 'task-1',
@@ -148,6 +157,7 @@ function makeBaseOpts() {
     onTaskTerminal: vi.fn().mockResolvedValue(undefined),
     retryCount: 0,
     repo: makeRepo(),
+    reviewRepo: makeReviewRepo(),
     unitOfWork: makeUnitOfWork(),
     taskStateService: makeTaskStateService(),
     repoPath: '/repo'

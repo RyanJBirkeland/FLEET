@@ -5,6 +5,7 @@
  * show changes even after the worktree is eventually cleaned up.
  */
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { IReviewRepository } from '../data/review-repository'
 import type { Logger } from '../logger'
 import { captureDiffSnapshot } from './diff-snapshot'
 import { nowIso } from '../../shared/time'
@@ -51,6 +52,7 @@ export interface TransitionToReviewOpts {
   rebaseBaseSha: string | undefined
   rebaseSucceeded: boolean
   repo: IAgentTaskRepository
+  reviewRepo: IReviewRepository
   logger: Logger
   taskStateService: TaskStateService
 }
@@ -67,9 +69,16 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
     rebaseBaseSha,
     rebaseSucceeded,
     repo,
+    reviewRepo,
     logger,
     taskStateService
   } = opts
+
+  try {
+    reviewRepo.invalidate(taskId)
+  } catch (err) {
+    logger.warn(`[completion] reviewRepo.invalidate failed for task ${taskId}: ${err}`)
+  }
 
   const commitsAhead = await countCommitsAheadOfMain(worktreePath, logger)
   logger.event('completion.review_transition', {

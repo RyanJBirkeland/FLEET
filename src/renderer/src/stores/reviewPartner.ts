@@ -26,6 +26,7 @@ export interface ReviewPartnerStore {
   activeStreamByTask: Record<string, string | null>
 
   clearMessages: (taskId: string) => void
+  invalidate: (taskId: string) => void
 }
 
 function loadMessages(): PersistedMessages {
@@ -95,6 +96,18 @@ export const useReviewPartnerStore = create<ReviewPartnerStore>((set, get) => ({
       const nextMsgs = { ...s.messagesByTask, [taskId]: [] }
       saveMessages(nextMsgs)
       return { messagesByTask: nextMsgs }
+    })
+  },
+
+  invalidate(taskId) {
+    set((s) => {
+      const nextMsgs = { ...s.messagesByTask, [taskId]: [] }
+      saveMessages(nextMsgs)
+      return {
+        reviewByTask: { ...s.reviewByTask, [taskId]: { status: 'idle' } },
+        messagesByTask: nextMsgs,
+        activeStreamByTask: { ...s.activeStreamByTask, [taskId]: null }
+      }
     })
   }
 }))

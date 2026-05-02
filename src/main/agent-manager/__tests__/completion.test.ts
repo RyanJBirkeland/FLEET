@@ -226,6 +226,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git rm --cached coverage/
       { stdout: '' }, // git rm --cached *.log
       { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: '' }, // git rm --cached node_modules
       { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
@@ -372,6 +373,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git rm --cached coverage/
       { stdout: '' }, // git rm --cached *.log
       { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: '' }, // git rm --cached node_modules
       { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
@@ -478,6 +480,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git rm --cached coverage/
       { stdout: '' }, // git rm --cached *.log
       { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: '' }, // git rm --cached node_modules
       { stdout: 'src/file.ts\n' }, // git diff --cached --name-only (changes remain)
       { stdout: '' }, // git commit
       { stdout: '' }, // git fetch origin main
@@ -494,7 +497,7 @@ describe('resolveSuccess', () => {
     const rmCalls = calls.filter(
       (c) => c[0] === 'git' && Array.isArray(c[1]) && c[1].includes('rm')
     )
-    expect(rmCalls).toHaveLength(4)
+    expect(rmCalls).toHaveLength(5)
 
     // Verify each artifact path was unstaged
     const rmArgs = rmCalls.map((c) => c[1])
@@ -502,6 +505,7 @@ describe('resolveSuccess', () => {
     expect(rmArgs.some((args) => args.includes('coverage/'))).toBe(true)
     expect(rmArgs.some((args) => args.includes('*.log'))).toBe(true)
     expect(rmArgs.some((args) => args.includes('playwright-report/'))).toBe(true)
+    expect(rmArgs.some((args) => args.includes('node_modules'))).toBe(true)
 
     // All rm calls should use --cached and --ignore-unmatch
     rmCalls.forEach((call) => {
@@ -519,6 +523,7 @@ describe('resolveSuccess', () => {
       { stdout: '' }, // git rm --cached coverage/
       { stdout: '' }, // git rm --cached *.log
       { stdout: '' }, // git rm --cached playwright-report/
+      { stdout: '' }, // git rm --cached node_modules
       { stdout: '' }, // git diff --cached --name-only (empty — no changes remain after unstaging)
       { stdout: '' }, // git fetch origin main
       { stdout: '' }, // git rebase origin/main

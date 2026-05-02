@@ -87,14 +87,15 @@ export function createMcpServer(deps: McpServerDeps, config: McpServerConfig): M
   async function cancelTaskForMcp(
     id: string,
     reason?: string,
-    options?: { caller?: string }
+    options?: { caller?: string; force?: boolean }
   ): Promise<CancelTaskResult> {
     try {
       return await cancelTask(
         id,
         {
           ...(reason !== undefined ? { reason } : {}),
-          ...(options?.caller !== undefined ? { caller: options.caller } : {})
+          ...(options?.caller !== undefined ? { caller: options.caller } : {}),
+          ...(options?.force !== undefined ? { force: options.force } : {})
         },
         { onStatusTerminal: deps.onStatusTerminal, logger }
       )

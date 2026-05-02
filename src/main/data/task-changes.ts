@@ -28,6 +28,14 @@ function insertStmtFor(conn: Database.Database): Database.Statement {
 }
 
 /**
+ * Serialize a value for storage in task_changes.
+ * Strings are stored as-is; objects and arrays are JSON-encoded.
+ * Note: rows written before 2026-05-02 may contain JSON-encoded strings
+ * (e.g. `"\"old spec\""`) — unwrap with JSON.parse if the value starts with `"`.
+ */
+const serialize = (v: unknown): string => (typeof v === 'string' ? v : JSON.stringify(v))
+
+/**
  * Record field-level changes for a task.
  * Compares old and new values, only records actual changes.
  * DL-20: Wraps in transaction if db not provided (transactional for multi-field patches).
@@ -45,9 +53,8 @@ export function recordTaskChanges(
   const recordChanges = (): void => {
     for (const [field, newValue] of Object.entries(newPatch)) {
       const oldValue = oldTask[field]
-      // Stringify for comparison (handles objects like depends_on)
-      const oldStr = oldValue != null ? JSON.stringify(oldValue) : null
-      const newStr = newValue != null ? JSON.stringify(newValue) : null
+      const oldStr = oldValue != null ? serialize(oldValue) : null
+      const newStr = newValue != null ? serialize(newValue) : null
 
       // Only record actual changes
       if (oldStr !== newStr) {
@@ -91,8 +98,8 @@ export function recordTaskChangesBulk(
   for (const { taskId, oldTask, newPatch } of entries) {
     for (const [field, newValue] of Object.entries(newPatch)) {
       const oldValue = oldTask[field]
-      const oldStr = oldValue != null ? JSON.stringify(oldValue) : null
-      const newStr = newValue != null ? JSON.stringify(newValue) : null
+      const oldStr = oldValue != null ? serialize(oldValue) : null
+      const newStr = newValue != null ? serialize(newValue) : null
       if (oldStr !== newStr) {
         stmt.run(taskId, field, oldStr, newStr, changedBy)
       }

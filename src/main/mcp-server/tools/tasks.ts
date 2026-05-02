@@ -17,6 +17,7 @@ import {
   TaskIdSchema,
   TaskListSchema,
   TaskUpdateSchema,
+  TaskValidateSpecSchema,
   TASK_HISTORY_DEFAULT_LIMIT,
   TASK_HISTORY_MAX_WINDOW,
   TASK_LIST_DEFAULT_LIMIT,
@@ -25,6 +26,7 @@ import {
 import { TERMINAL_STATUSES, isTaskStatus } from '../../../shared/task-state-machine'
 import type { TaskStatus } from '../../../shared/task-state-machine'
 import { jsonContent, safeToolResponse } from './response'
+import { createSpecQualityService } from '../../services/spec-quality/factory'
 
 /**
  * Precise patch shape derived from the MCP write schema. Replaces the
@@ -76,7 +78,7 @@ export interface TaskCommandPort {
   cancelTask: (
     id: string,
     reason?: string,
-    options?: { caller?: string }
+    options?: { caller?: string; force?: boolean }
   ) => Promise<CancelTaskResult> | CancelTaskResult
   /**
    * Fired when `tasks.update` drives a task into a terminal status from a
@@ -193,6 +195,36 @@ export function registerTaskTools(server: McpServer, deps: TaskToolsDeps): void 
       )
   )
 
+  server.registerTool(
+    'tasks.validateSpec',
+    {
+      description:
+        'Validate a spec before creating or updating a task. Returns validation issues with codes and messages. Use this before tasks.create to catch formatting problems early.',
+      inputSchema: TaskValidateSpecSchema
+    },
+    async (rawArgs) =>
+      safeToolResponse(
+        async () => {
+          const { spec, spec_type } = parseToolArgs(TaskValidateSpecSchema, rawArgs)
+          if (spec_type === 'prompt' || spec_type === 'freeform') {
+            return jsonContent({ valid: true, issues: [] })
+          }
+          const service = createSpecQualityService()
+          const result = await service.validateFull(spec)
+          return jsonContent({
+            valid: result.valid,
+            issues: result.issues.map((i) => ({
+              code: i.code,
+              severity: i.severity,
+              message: i.message,
+              ...(i.location ? { location: i.location } : {})
+            }))
+          })
+        },
+        { schema: TaskValidateSpecSchema, logger: deps.logger }
+      )
+  )
+
   registerTaskWriteTools(server, deps)
 }
 
@@ -269,14 +301,17 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
     'tasks.cancel',
     {
       description:
-        'Cancel a task. Runs through the terminal-status path so dependents are re-evaluated.',
+        "Cancel a task. Runs through the terminal-status path so dependents are re-evaluated. Cancelling a task in 'review' or 'done' status requires force:true — these tasks have completed work that will be lost.",
       inputSchema: TaskCancelSchema
     },
     async (rawArgs) =>
       safeToolResponse(
         async () => {
-          const { id, reason } = parseToolArgs(TaskCancelSchema, rawArgs)
-          const result = await deps.cancelTask(id, reason, { caller: MCP_CALLER })
+          const { id, reason, force } = parseToolArgs(TaskCancelSchema, rawArgs)
+          const result = await deps.cancelTask(id, reason, {
+            caller: MCP_CALLER,
+            ...(force !== undefined ? { force } : {})
+          })
           if (result.row === null) {
             deps.logger.debug(`mcp.tasks.cancel: task ${id} not found`)
             throw new McpDomainError(`Task ${id} not found`, McpErrorCode.NotFound, { id })

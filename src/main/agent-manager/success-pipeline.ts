@@ -8,6 +8,7 @@
  */
 
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { IReviewRepository } from '../data/review-repository'
 import type { IUnitOfWork } from '../data/unit-of-work'
 import type { Logger } from '../logger'
 import type { TaskStatus } from '../../shared/task-state-machine'
@@ -43,6 +44,7 @@ export interface ResolveSuccessContext {
   agentSummary?: string | null
   retryCount: number
   repo: IAgentTaskRepository
+  reviewRepo: IReviewRepository
   unitOfWork: IUnitOfWork
   taskStateService: TaskStateService
   /**
@@ -256,6 +258,7 @@ const reviewTransitionPhase: SuccessPhase = {
       ctx.title,
       ctx.rebaseOutcome,
       ctx.repo,
+      ctx.reviewRepo,
       ctx.unitOfWork,
       ctx.logger,
       ctx.onTaskTerminal,

@@ -20,6 +20,11 @@ function makeOpts(overrides: Partial<TransitionToReviewOpts> = {}): TransitionTo
     repo: {
       getTask: vi.fn().mockReturnValue({ id: 'task-1', started_at: '2026-04-25T17:00:00.000Z' })
     } as never,
+    reviewRepo: {
+      getCached: vi.fn().mockReturnValue(null),
+      setCached: vi.fn(),
+      invalidate: vi.fn()
+    } as never,
     logger: {
       info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn()
     } as never,
@@ -74,6 +79,25 @@ describe('transitionToReview — diff snapshot failure', () => {
     expect(opts.taskStateService.transition).toHaveBeenCalledWith(
       'task-1', 'review', expect.anything()
     )
+  })
+})
+
+describe('transitionToReview — DB cache invalidation', () => {
+  it('calls reviewRepo.invalidate before transitioning to review', async () => {
+    const opts = makeOpts()
+    const callOrder: string[] = []
+    vi.mocked(opts.reviewRepo.invalidate).mockImplementation(() => { callOrder.push('invalidate') })
+    vi.mocked(opts.taskStateService.transition).mockImplementation(async () => { callOrder.push('transition') })
+    await transitionToReview(opts)
+    expect(callOrder[0]).toBe('invalidate')
+    expect(callOrder[1]).toBe('transition')
+  })
+
+  it('proceeds with the transition even when reviewRepo.invalidate throws', async () => {
+    const opts = makeOpts()
+    vi.mocked(opts.reviewRepo.invalidate).mockImplementation(() => { throw new Error('db error') })
+    await transitionToReview(opts)
+    expect(opts.taskStateService.transition).toHaveBeenCalledWith('task-1', 'review', expect.anything())
   })
 })
 

@@ -371,6 +371,23 @@ describe('tasks.* write tools', () => {
     expect(JSON.parse(res.content[0].text).status).toBe('cancelled')
   })
 
+  it('tasks.cancel forwards force:true to cancelTask when supplied', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.cancel', { id: 't1', force: true })
+    expect(deps.cancelTask).toHaveBeenCalledWith('t1', undefined, { caller: 'mcp', force: true })
+  })
+
+  it('tasks.cancel does not include force in options when omitted', async () => {
+    const deps = fakeDeps()
+    const { server, call } = mockServer()
+    registerTaskTools(server, deps)
+    await call('tasks.cancel', { id: 't1' })
+    const options = (deps.cancelTask as any).mock.calls[0][2]
+    expect(options).not.toHaveProperty('force')
+  })
+
   it('tasks.cancel includes warning field when sideEffectFailed is true', async () => {
     const deps = fakeDeps({
       cancelTask: vi.fn(() =>

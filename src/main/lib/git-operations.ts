@@ -38,7 +38,13 @@ export {
  * Test artifact patterns to exclude from agent commits.
  * These paths are unstaged during auto-commit to prevent polluting the diff with test outputs.
  */
-const GIT_ARTIFACT_PATTERNS = ['test-results/', 'coverage/', '*.log', 'playwright-report/'] as const
+const GIT_ARTIFACT_PATTERNS = [
+  'test-results/',
+  'coverage/',
+  '*.log',
+  'playwright-report/',
+  'node_modules',
+] as const
 
 /**
  * Rebase the agent's branch onto the repo's default branch (origin/<default>) to

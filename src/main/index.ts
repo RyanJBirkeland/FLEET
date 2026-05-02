@@ -442,7 +442,8 @@ function resolveWorktreeBase(stored: string | null | undefined): string {
  * consumption, or undefined when autoStart is disabled.
  */
 function wireAgentManagerAndMcp(
-  core: CoreStartupServices
+  core: CoreStartupServices,
+  reviewRepo: ReturnType<typeof createReviewRepository>
 ): ReturnType<typeof createAgentManager> | undefined {
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
@@ -469,7 +470,8 @@ function wireAgentManagerAndMcp(
     amLogger,
     core.epicGroupService,
     undefined,
-    { onStatusTerminal: core.terminalService.onStatusTerminal }
+    { onStatusTerminal: core.terminalService.onStatusTerminal },
+    reviewRepo
   )
   agentManager.start()
 
@@ -546,6 +548,7 @@ function wireAgentManagerAndMcp(
 function buildReviewWiring(repo: ReturnType<typeof createSprintTaskRepository>): {
   reviewService: ReturnType<typeof createReviewService>
   reviewChatStreamDeps: ReturnType<typeof buildChatStreamDeps>
+  reviewRepo: ReturnType<typeof createReviewRepository>
 } {
   const reviewDb = getDb()
   const reviewRepo = createReviewRepository(reviewDb)
@@ -610,7 +613,7 @@ function buildReviewWiring(repo: ReturnType<typeof createSprintTaskRepository>):
     activeStreams: reviewActiveStreams
   })
 
-  return { reviewService, reviewChatStreamDeps }
+  return { reviewService, reviewChatStreamDeps, reviewRepo }
 }
 
 app.whenReady().then(async () => {
@@ -620,8 +623,8 @@ app.whenReady().then(async () => {
 
   initDatabaseOrExit()
   const core = initCoreServices()
-  const agentManager = wireAgentManagerAndMcp(core)
   const review = buildReviewWiring(core.repo)
+  const agentManager = wireAgentManagerAndMcp(core, review.reviewRepo)
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)

@@ -13,6 +13,7 @@
 
 import { existsSync } from 'node:fs'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { IReviewRepository } from '../data/review-repository'
 import type { IUnitOfWork } from '../data/unit-of-work'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
@@ -529,6 +530,7 @@ export async function transitionTaskToReview(
   title: string,
   rebaseOutcome: RebaseOutcome,
   repo: IAgentTaskRepository,
+  reviewRepo: IReviewRepository,
   unitOfWork: IUnitOfWork,
   logger: Logger,
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
@@ -556,6 +558,7 @@ export async function transitionTaskToReview(
     rebaseBaseSha: rebaseOutcome.rebaseBaseSha,
     rebaseSucceeded: rebaseOutcome.rebaseSucceeded,
     repo,
+    reviewRepo,
     logger,
     taskStateService
   })

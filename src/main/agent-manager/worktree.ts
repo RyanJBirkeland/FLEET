@@ -1,5 +1,5 @@
 import fs from 'node:fs'
-import { mkdirSync, existsSync, rmSync, symlinkSync } from 'node:fs'
+import { mkdirSync, existsSync, rmSync, symlinkSync, appendFileSync } from 'node:fs'
 import path from 'node:path'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
@@ -330,6 +330,16 @@ export async function setupWorktree(
           log.warn(
             `[worktree] Failed to symlink node_modules (agents will npm install): ${symlinkErr}`
           )
+        }
+        // Exclude the node_modules symlink from git tracking in this worktree.
+        // The repo's .gitignore uses a trailing slash (node_modules/) which matches
+        // directories but not symlinks. Writing to .git/info/exclude (no trailing slash)
+        // ensures git never stages the symlink regardless of .gitignore behaviour.
+        try {
+          const excludePath = path.join(worktreePath, '.git', 'info', 'exclude')
+          appendFileSync(excludePath, '\nnode_modules\n')
+        } catch (excludeErr) {
+          log.warn(`[worktree] Failed to write .git/info/exclude for task ${taskId}: ${excludeErr}`)
         }
       }
     } catch (err) {

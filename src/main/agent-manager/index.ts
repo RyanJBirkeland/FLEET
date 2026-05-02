@@ -11,6 +11,7 @@ import { createDependencyIndex } from '../services/dependency-service'
 import { createEpicDependencyIndex, type EpicDepsReader } from '../services/epic-dependency-service'
 import { runAgent as _runAgent, type RunAgentDeps, type AgentRunClaim } from './run-agent'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
+import type { IReviewRepository } from '../data/review-repository'
 import { createUnitOfWork, type IUnitOfWork } from '../data/unit-of-work'
 import { createMetricsCollector, type MetricsCollector, type MetricsSnapshot } from './metrics'
 import { CircuitBreaker, type CircuitObserver } from './circuit-breaker'
@@ -177,7 +178,8 @@ export class AgentManagerImpl implements AgentManager {
     readonly logger: Logger = defaultLogger,
     epicDepsReader: EpicDepsReader = createEpicDependencyIndex(),
     unitOfWork: IUnitOfWork = createUnitOfWork(),
-    terminalResolution?: TerminalResolutionStrategy
+    terminalResolution?: TerminalResolutionStrategy,
+    reviewRepo?: IReviewRepository
   ) {
     this.config = config
     this._terminalResolution = terminalResolution
@@ -211,6 +213,7 @@ export class AgentManagerImpl implements AgentManager {
       logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       repo,
+      reviewRepo: reviewRepo ?? { getCached: () => null, setCached: () => undefined, invalidate: () => undefined },
       unitOfWork,
       metrics: this._metrics,
       taskStateService: this._taskStateService,
@@ -850,9 +853,10 @@ export function createAgentManager(
   logger: Logger = defaultLogger,
   epicDepsReader?: EpicDepsReader,
   unitOfWork?: IUnitOfWork,
-  terminalResolution?: TerminalResolutionStrategy
+  terminalResolution?: TerminalResolutionStrategy,
+  reviewRepo?: IReviewRepository
 ): AgentManager {
-  return new AgentManagerImpl(config, repo, logger, epicDepsReader, unitOfWork, terminalResolution)
+  return new AgentManagerImpl(config, repo, logger, epicDepsReader, unitOfWork, terminalResolution, reviewRepo)
 }
 
 // Re-export killActiveAgent for callers that need to kill agents directly

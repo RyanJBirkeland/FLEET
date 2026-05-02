@@ -105,6 +105,12 @@ export interface CancelTaskOptions {
    * do not specify.
    */
   caller?: string
+  /**
+   * Required when cancelling a task in `review` or `done` status. Without
+   * `force: true`, attempting to cancel completed work throws a
+   * `TaskTransitionError` to prevent accidental data loss.
+   */
+  force?: boolean
 }
 
 /**
@@ -134,6 +140,15 @@ function isInvalidTransitionError(err: unknown): err is Error {
 }
 
 /**
+ * Returns true for statuses that indicate the agent has completed work worth
+ * preserving. Cancelling a task in these states without `force:true` risks
+ * destroying a worktree or branch that the human has not yet reviewed.
+ */
+function isCompletedWorkStatus(status: string): boolean {
+  return status === 'review' || status === 'done'
+}
+
+/**
  * Cancel a task — sets status to 'cancelled' with an optional reason in
  * notes, then awaits the terminal-status handler so dependents unblock.
  *
@@ -154,6 +169,14 @@ export async function cancelTask(
   opts: { reason?: string } & CancelTaskOptions,
   deps: CancelTaskDeps
 ): Promise<CancelTaskResult> {
+  const current = mutations.getTask(id)
+  if (current && isCompletedWorkStatus(current.status) && opts.force !== true) {
+    throw new TaskTransitionError(
+      `Cannot cancel task in '${current.status}' status without force:true — this task has completed work. Pass force:true to confirm.`,
+      { taskId: id, fromStatus: current.status, toStatus: 'cancelled' }
+    )
+  }
+
   const patch: Record<string, unknown> = { status: 'cancelled' }
   if (opts.reason) patch.notes = opts.reason
   const doUpdate = deps.updateTask ?? mutations.updateTask

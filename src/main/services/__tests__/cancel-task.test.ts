@@ -208,4 +208,101 @@ describe('cancelTask', () => {
       cancelTask('t1', {}, { onStatusTerminal, logger: fakeLogger, updateTask })
     ).rejects.toBe(boom)
   })
+
+  // ---- guard: completed-work statuses require force:true ---------------------
+
+  it('throws TaskTransitionError when cancelling a review-state task without force', async () => {
+    const reviewTask = { id: 't1', status: 'review' }
+    vi.mocked(sprintMutationsMock.getTask).mockReturnValue(reviewTask as any)
+    const updateTask = vi.fn().mockReturnValue(cancelledRow)
+    const onStatusTerminal = vi.fn()
+
+    await expect(
+      cancelTask('t1', {}, { onStatusTerminal, logger: fakeLogger, updateTask })
+    ).rejects.toBeInstanceOf(TaskTransitionError)
+
+    expect(updateTask).not.toHaveBeenCalled()
+    expect(onStatusTerminal).not.toHaveBeenCalled()
+  })
+
+  it('throws TaskTransitionError when cancelling a done-state task without force', async () => {
+    const doneTask = { id: 't1', status: 'done' }
+    vi.mocked(sprintMutationsMock.getTask).mockReturnValue(doneTask as any)
+    const updateTask = vi.fn().mockReturnValue(cancelledRow)
+    const onStatusTerminal = vi.fn()
+
+    await expect(
+      cancelTask('t1', {}, { onStatusTerminal, logger: fakeLogger, updateTask })
+    ).rejects.toBeInstanceOf(TaskTransitionError)
+
+    expect(updateTask).not.toHaveBeenCalled()
+  })
+
+  it('error message names the current status and force requirement', async () => {
+    const reviewTask = { id: 't1', status: 'review' }
+    vi.mocked(sprintMutationsMock.getTask).mockReturnValue(reviewTask as any)
+    const updateTask = vi.fn()
+    const onStatusTerminal = vi.fn()
+
+    let caught: unknown
+    try {
+      await cancelTask('t1', {}, { onStatusTerminal, logger: fakeLogger, updateTask })
+    } catch (err) {
+      caught = err
+    }
+
+    expect(caught).toBeInstanceOf(TaskTransitionError)
+    expect((caught as TaskTransitionError).message).toMatch(/review/)
+    expect((caught as TaskTransitionError).message).toMatch(/force:true/)
+    expect((caught as TaskTransitionError).fromStatus).toBe('review')
+    expect((caught as TaskTransitionError).toStatus).toBe('cancelled')
+  })
+
+  it('proceeds when cancelling a review-state task with force:true', async () => {
+    const reviewTask = { id: 't1', status: 'review' }
+    vi.mocked(sprintMutationsMock.getTask).mockReturnValue(reviewTask as any)
+    const updateTask = vi.fn().mockReturnValue(cancelledRow)
+    const onStatusTerminal = vi.fn().mockResolvedValue(undefined)
+
+    const result = await cancelTask(
+      't1',
+      { force: true },
+      { onStatusTerminal, logger: fakeLogger, updateTask }
+    )
+
+    expect(updateTask).toHaveBeenCalledWith('t1', { status: 'cancelled' }, undefined)
+    expect(result).toMatchObject({ sideEffectFailed: false })
+  })
+
+  it('proceeds when cancelling a done-state task with force:true', async () => {
+    const doneTask = { id: 't1', status: 'done' }
+    vi.mocked(sprintMutationsMock.getTask).mockReturnValue(doneTask as any)
+    const updateTask = vi.fn().mockReturnValue(cancelledRow)
+    const onStatusTerminal = vi.fn().mockResolvedValue(undefined)
+
+    const result = await cancelTask(
+      't1',
+      { force: true },
+      { onStatusTerminal, logger: fakeLogger, updateTask }
+    )
+
+    expect(updateTask).toHaveBeenCalledWith('t1', { status: 'cancelled' }, undefined)
+    expect(result).toMatchObject({ sideEffectFailed: false })
+  })
+
+  it('does not guard active-state tasks (only review and done require force)', async () => {
+    const activeTask = { id: 't1', status: 'active' }
+    vi.mocked(sprintMutationsMock.getTask).mockReturnValue(activeTask as any)
+    const updateTask = vi.fn().mockReturnValue(cancelledRow)
+    const onStatusTerminal = vi.fn().mockResolvedValue(undefined)
+
+    const result = await cancelTask(
+      't1',
+      {},
+      { onStatusTerminal, logger: fakeLogger, updateTask }
+    )
+
+    expect(updateTask).toHaveBeenCalled()
+    expect(result).toMatchObject({ sideEffectFailed: false })
+  })
 })

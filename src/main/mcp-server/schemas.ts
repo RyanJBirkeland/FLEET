@@ -39,10 +39,15 @@ export const TaskWriteFieldsSchema = z
       .string()
       .max(200_000)
       .optional()
-      .describe('Structured markdown spec with ## headings (max 200000 chars)'),
+      .describe(
+        "Structured markdown spec. Must contain four ## sections: ## Overview (what and why), ## Files to Change (one file path per bullet, max 10), ## Implementation Steps (numbered directives only, max 15; banned words: research/investigate/explore/decide/choose/consider/determine/figure out/think about/evaluate/analyze/assess), ## How to Test (concrete steps). Target <500 words; hard limit 1000. Use spec_type='prompt' for freeform tasks."
+      ),
     spec_type: z
       .enum(['feature', 'bug-fix', 'refactor', 'test-coverage', 'freeform', 'prompt'])
-      .optional(),
+      .optional()
+      .describe(
+        "Spec type: 'feature'/'bug-fix'/'refactor'/'test-coverage' require the four-section spec format above; 'prompt' accepts freeform text (no section validation); 'freeform' requires no spec"
+      ),
     notes: z.string().max(10_000).optional().describe('Operator notes (max 10000 chars)'),
     priority: z
       .number()
@@ -128,10 +133,26 @@ export const TaskListSchema = z
 
 export const TaskIdSchema = z.object({ id: z.string().min(1).describe('Task id') }).strict()
 
+export const TaskValidateSpecSchema = z
+  .object({
+    spec: z.string().describe('The spec text to validate'),
+    spec_type: z
+      .enum(['feature', 'bug-fix', 'refactor', 'test-coverage', 'freeform', 'prompt'])
+      .optional()
+      .describe('Spec type — defaults to feature')
+  })
+  .strict()
+
 export const TaskCancelSchema = z
   .object({
     id: z.string().min(1).describe('Task id to cancel'),
-    reason: z.string().max(500).optional().describe('Cancellation reason (max 500 chars)')
+    reason: z.string().max(500).optional().describe('Cancellation reason (max 500 chars)'),
+    force: z
+      .boolean()
+      .optional()
+      .describe(
+        "Required when cancelling a task in 'review' or 'done' status. Without force:true, cancelling completed work returns an error."
+      )
   })
   .strict()
 

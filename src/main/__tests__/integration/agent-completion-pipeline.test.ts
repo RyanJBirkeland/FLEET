@@ -228,6 +228,7 @@ describe('Agent completion pipeline integration', () => {
         { stdout: '' }, // git rm --cached coverage/
         { stdout: '' }, // git rm --cached *.log
         { stdout: '' }, // git rm --cached playwright-report/
+        { stdout: '' }, // git rm --cached node_modules
         { stdout: 'src/file.ts\n' }, // git diff --cached --name-only
         { stdout: '' }, // git commit
         { stdout: '' }, // git fetch origin main

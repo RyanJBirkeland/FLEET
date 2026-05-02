@@ -99,6 +99,7 @@ export interface RunAgentSpawnDeps {
 /** Sprint task data access and status transition service. */
 export interface RunAgentDataDeps {
   repo: IAgentTaskRepository
+  reviewRepo: import('../data/review-repository').IReviewRepository
   unitOfWork: IUnitOfWork
   logger: Logger
   metrics: MetricsCollector
@@ -309,6 +310,7 @@ interface ResolveAgentExitContext {
   worktree: { worktreePath: string; branch: string }
   repoPath: string
   repo: IAgentTaskRepository
+  reviewRepo: import('../data/review-repository').IReviewRepository
   unitOfWork: IUnitOfWork
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   taskStateService: TaskStateService
@@ -415,6 +417,7 @@ async function detectMissingSpecFiles(
   if (task.spec_type === 'prompt' || !task.spec) return { kind: 'skip' }
 
   const requiredFiles = extractFilesToChange(task.spec)
+  logger.debug(`detectMissingSpecFiles: spec required files = [${requiredFiles.join(', ')}]`)
   if (requiredFiles.length === 0) return { kind: 'skip' }
 
   const env = buildAgentEnv()
@@ -422,6 +425,7 @@ async function detectMissingSpecFiles(
   let defaultBranch: string
   try {
     defaultBranch = await resolveDefaultBranch(worktreePath)
+    logger.debug(`detectMissingSpecFiles: resolved default branch = "${defaultBranch}"`)
     const { stdout } = await execFileAsync(
       'git',
       ['diff', '--name-only', `${defaultBranch}..HEAD`],
@@ -445,6 +449,7 @@ async function detectMissingSpecFiles(
       .map((line) => line.trim())
       .filter(Boolean)
   )
+  logger.debug(`detectMissingSpecFiles: git diff changed files = [${[...changedFiles].join(', ')}]`)
 
   const candidateMissing = requiredFiles.filter((required) => !changedFiles.has(required))
   if (candidateMissing.length === 0) return { kind: 'ok' }
@@ -452,13 +457,16 @@ async function detectMissingSpecFiles(
   // Only enforce files that already exist on the base branch. Files the spec
   // lists as "new" (not present on origin/main) are created by the agent —
   // we can't dictate the exact naming convention the agent will choose.
-  const missingFiles = await filterToExistingBaseFiles(
+  const existingBaseFiles = await filterToExistingBaseFiles(
     candidateMissing,
     worktreePath,
     defaultBranch,
-    env
+    env,
+    logger
   )
-  return missingFiles.length > 0 ? { kind: 'missing', files: missingFiles } : { kind: 'ok' }
+  logger.debug(`detectMissingSpecFiles: existing base files = [${existingBaseFiles.join(', ')}], dropped = [${candidateMissing.filter((f) => !existingBaseFiles.includes(f)).join(', ')}]`)
+  logger.debug(`detectMissingSpecFiles: missing files = [${existingBaseFiles.join(', ')}]`)
+  return existingBaseFiles.length > 0 ? { kind: 'missing', files: existingBaseFiles } : { kind: 'ok' }
 }
 
 /**
@@ -470,7 +478,8 @@ async function filterToExistingBaseFiles(
   files: string[],
   worktreePath: string,
   defaultBranch: string,
-  env: NodeJS.ProcessEnv
+  env: NodeJS.ProcessEnv,
+  logger: Logger
 ): Promise<string[]> {
   const results = await Promise.all(
     files.map(async (file) => {
@@ -481,7 +490,8 @@ async function filterToExistingBaseFiles(
           timeout: GIT_EXEC_TIMEOUT_MS
         })
         return file
-      } catch {
+      } catch (err) {
+        logger.warn(`filterToExistingBaseFiles: git cat-file failed for "${file}", excluding from check — ${err}`)
         return null
       }
     })
@@ -546,6 +556,7 @@ async function resolveNormalExit(ctx: ResolveAgentExitContext): Promise<void> {
         agentSummary: ctx.lastAgentOutput || null,
         retryCount: ctx.task.retry_count ?? 0,
         repo: ctx.repo,
+        reviewRepo: ctx.reviewRepo,
         unitOfWork: ctx.unitOfWork,
         repoPath: ctx.repoPath,
         taskStateService: ctx.taskStateService,
@@ -673,6 +684,7 @@ async function finalizeAgentRun(
     worktree,
     repoPath,
     repo: deps.repo,
+    reviewRepo: deps.reviewRepo,
     unitOfWork: deps.unitOfWork,
     onTaskTerminal: deps.onTaskTerminal,
     taskStateService: deps.taskStateService,

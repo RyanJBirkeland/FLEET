@@ -1,7 +1,7 @@
 import Database from 'better-sqlite3'
 import { describe, it, expect, beforeEach, afterEach } from 'vitest'
 import { runMigrations } from '../../db'
-import { recordTaskChanges, getTaskChanges, pruneOldChanges } from '../task-changes'
+import { recordTaskChanges, recordTaskChangesBulk, getTaskChanges, pruneOldChanges } from '../task-changes'
 
 let db: Database.Database
 
@@ -28,8 +28,8 @@ describe('recordTaskChanges', () => {
     expect(fields).toEqual(['priority', 'status'])
 
     const statusChange = changes.find((c) => c.field === 'status')!
-    expect(statusChange.old_value).toBe('"backlog"')
-    expect(statusChange.new_value).toBe('"queued"')
+    expect(statusChange.old_value).toBe('backlog')
+    expect(statusChange.new_value).toBe('queued')
     expect(statusChange.changed_by).toBe('user')
   })
 
@@ -52,7 +52,7 @@ describe('recordTaskChanges', () => {
     const changes = getTaskChanges('task-3', 50, db)
     expect(changes).toHaveLength(1)
     expect(changes[0].old_value).toBeNull()
-    expect(changes[0].new_value).toBe('"Added notes"')
+    expect(changes[0].new_value).toBe('Added notes')
   })
 
   it('handles value to null transitions', () => {
@@ -63,7 +63,7 @@ describe('recordTaskChanges', () => {
 
     const changes = getTaskChanges('task-4', 50, db)
     expect(changes).toHaveLength(1)
-    expect(changes[0].old_value).toBe('"Had notes"')
+    expect(changes[0].old_value).toBe('Had notes')
     expect(changes[0].new_value).toBeNull()
   })
 
@@ -163,6 +163,46 @@ describe('getTaskChanges — offset pagination (T-3)', () => {
     seedRows('task-offset-5', 3)
     const page = getTaskChanges('task-offset-5', { limit: 10, offset: 10 }, db)
     expect(page).toEqual([])
+  })
+})
+
+describe('serialize behavior', () => {
+  it('stores string values as raw text, not JSON-encoded', () => {
+    recordTaskChanges('task-ser-1', { title: 'old' }, { title: 'new' }, 'user', db)
+    const changes = getTaskChanges('task-ser-1', 10, db)
+    expect(changes).toHaveLength(1)
+    expect(changes[0].old_value).toBe('old')
+    expect(changes[0].new_value).toBe('new')
+  })
+
+  it('stores objects and arrays as JSON strings', () => {
+    const oldDeps = [{ id: 'a', type: 'hard' }]
+    const newDeps = [{ id: 'a', type: 'hard' }, { id: 'b', type: 'soft' }]
+    recordTaskChanges('task-ser-2', { depends_on: oldDeps }, { depends_on: newDeps }, 'user', db)
+    const changes = getTaskChanges('task-ser-2', 10, db)
+    expect(changes).toHaveLength(1)
+    expect(changes[0].old_value).toBe(JSON.stringify(oldDeps))
+    expect(changes[0].new_value).toBe(JSON.stringify(newDeps))
+  })
+
+  it('bulk variant stores string values as raw text', () => {
+    recordTaskChangesBulk(
+      [{ taskId: 'task-ser-3', oldTask: { status: 'queued' }, newPatch: { status: 'active' } }],
+      'agent',
+      db
+    )
+    const changes = getTaskChanges('task-ser-3', 10, db)
+    expect(changes).toHaveLength(1)
+    expect(changes[0].old_value).toBe('queued')
+    expect(changes[0].new_value).toBe('active')
+  })
+
+  it('stores numeric values as JSON-serialized strings', () => {
+    recordTaskChanges('task-ser-4', { priority: 1 }, { priority: 2 }, 'user', db)
+    const changes = getTaskChanges('task-ser-4', 10, db)
+    expect(changes).toHaveLength(1)
+    expect(changes[0].old_value).toBe('1')
+    expect(changes[0].new_value).toBe('2')
   })
 })
 
