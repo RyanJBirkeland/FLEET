@@ -7,6 +7,7 @@ import { CommandPalette } from './components/layout/CommandPalette'
 import { QuickCreateBar } from './components/sprint/QuickCreateBar'
 import { ToastContainer } from './components/layout/ToastContainer'
 import { TaskWorkbenchModal } from './components/task-workbench/TaskWorkbenchModal'
+import { PreflightWarningModal } from './components/sprint/PreflightWarningModal'
 import { UnifiedHeader } from './components/layout/UnifiedHeader'
 import { Sidebar } from './components/layout/Sidebar'
 import { Onboarding } from './components/Onboarding'
@@ -278,6 +279,7 @@ function App(): React.JSX.Element {
         <FeatureGuideModal open={featureGuideOpen} onClose={() => setFeatureGuideOpen(false)} />
         <ToastContainer />
         <TaskWorkbenchModal />
+        <PreflightWarningModal />
         <FloatingAgentButton />
         <CrossWindowDropOverlay
           active={crossDrop.active}
