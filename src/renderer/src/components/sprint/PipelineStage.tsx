@@ -8,7 +8,7 @@ import type { SprintTask } from '../../../../shared/types'
 import './PipelineStage.css'
 
 interface PipelineStageProps {
-  name: 'queued' | 'blocked' | 'active' | 'review' | 'done'
+  name: 'queued' | 'blocked' | 'active' | 'review' | 'open-prs' | 'done'
   label: string
   tasks: SprintTask[]
   count: string

@@ -6,7 +6,8 @@ export type StatusFilter =
   | 'todo'
   | 'blocked'
   | 'in-progress'
-  | 'awaiting-review'
+  | 'review'
+  | 'open-prs'
   | 'done'
   | 'failed'
 

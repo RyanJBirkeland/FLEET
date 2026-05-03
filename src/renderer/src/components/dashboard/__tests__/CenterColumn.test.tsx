@@ -61,7 +61,8 @@ describe('CenterColumn', () => {
     partitions: {
       todo: [],
       inProgress: [],
-      awaitingReview: [],
+      pendingReview: [],
+      openPrs: [],
       done: [],
       blocked: [],
       failed: []
@@ -86,7 +87,8 @@ describe('CenterColumn', () => {
       partitions: {
         todo: [1, 2],
         inProgress: [1],
-        awaitingReview: [1, 2, 3],
+        pendingReview: [1, 2],
+        openPrs: [1],
         done: [1, 2, 3, 4],
         blocked: [1],
         failed: [1, 2]

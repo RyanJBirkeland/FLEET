@@ -39,8 +39,8 @@ describe('useSprintPipelineCommands', () => {
     expect(mockRegisterCommands).toHaveBeenCalledTimes(1)
     const commands = mockRegisterCommands.mock.calls[0][0]
 
-    // Verify all 11 commands are registered (3 task + 8 filter)
-    expect(commands).toHaveLength(11)
+    // Verify all 12 commands are registered (3 task + 9 filter)
+    expect(commands).toHaveLength(12)
 
     // Verify task commands
     const taskCommandIds = commands.filter((c: any) => c.category === 'task').map((c: any) => c.id)
@@ -57,6 +57,7 @@ describe('useSprintPipelineCommands', () => {
       'filter-blocked',
       'filter-active',
       'filter-review',
+      'filter-open-prs',
       'filter-done',
       'filter-failed'
     ])
@@ -77,8 +78,8 @@ describe('useSprintPipelineCommands', () => {
     expect(mockUnregisterCommands).toHaveBeenCalledTimes(1)
     const commandIds = mockUnregisterCommands.mock.calls[0][0]
 
-    // Verify all 11 command IDs are unregistered
-    expect(commandIds).toHaveLength(11)
+    // Verify all 12 command IDs are unregistered
+    expect(commandIds).toHaveLength(12)
     expect(commandIds).toContain('task-create')
     expect(commandIds).toContain('task-stop-active')
     expect(commandIds).toContain('task-retry-failed')
@@ -88,6 +89,7 @@ describe('useSprintPipelineCommands', () => {
     expect(commandIds).toContain('filter-blocked')
     expect(commandIds).toContain('filter-active')
     expect(commandIds).toContain('filter-review')
+    expect(commandIds).toContain('filter-open-prs')
     expect(commandIds).toContain('filter-done')
     expect(commandIds).toContain('filter-failed')
   })

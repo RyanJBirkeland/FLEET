@@ -7,41 +7,46 @@ export interface SprintPartition {
   todo: SprintTask[]
   blocked: SprintTask[]
   inProgress: SprintTask[]
-  awaitingReview: SprintTask[]
+  /** Tasks with status 'review' — agent done, awaiting human action in Code Review Station. */
+  pendingReview: SprintTask[]
+  /** Tasks with status 'active' and pr_status 'open'|'branch_only' — open GitHub PRs. */
+  openPrs: SprintTask[]
   done: SprintTask[]
   failed: SprintTask[]
 }
 
 /**
- * Partition sprint tasks into 7 mutually exclusive buckets.
+ * Partition sprint tasks into 8 mutually exclusive buckets.
  * Every task lands in exactly one bucket — no overlap.
  *
  * Status mapping:
- *   backlog              → Backlog
- *   queued               → Todo
- *   blocked              → Blocked
- *   active               → In Progress (max 5 enforced at UI layer)
- *   active/done + pr_status=open|branch_only → Awaiting Review
- *   done + pr_status=merged|closed|null|draft → Done
- *   cancelled            → Failed (dimmed at bottom of Done column)
+ *   backlog              → backlog
+ *   queued               → todo
+ *   blocked              → blocked
+ *   active               → inProgress (max 5 enforced at UI layer)
+ *   active + pr_status=open|branch_only → openPrs
+ *   review               → pendingReview
+ *   done + pr_status=merged|closed|null|draft → done
+ *   cancelled            → failed (dimmed at bottom of Done column)
  */
 export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
   const backlog: SprintTask[] = []
   const todo: SprintTask[] = []
   const blocked: SprintTask[] = []
   const inProgress: SprintTask[] = []
-  const awaitingReview: SprintTask[] = []
+  const pendingReview: SprintTask[] = []
+  const openPrs: SprintTask[] = []
   const done: SprintTask[] = []
   const failed: SprintTask[] = []
 
   for (const task of tasks) {
-    // Special case: active tasks with PR override go to awaitingReview
+    // Special case: active tasks with an open PR go to openPrs
     // (depends on both status and pr_status — can't be metadata-driven)
     if (
       task.status === 'active' &&
       (task.pr_status === PR_STATUS.OPEN || task.pr_status === PR_STATUS.BRANCH_ONLY)
     ) {
-      awaitingReview.push(task)
+      openPrs.push(task)
       continue
     }
 
@@ -61,7 +66,7 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
         inProgress.push(task)
         break
       case 'awaitingReview':
-        awaitingReview.push(task)
+        pendingReview.push(task)
         break
       case 'done':
         done.push(task)
@@ -79,5 +84,5 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
     return tb.localeCompare(ta)
   })
 
-  return { backlog, todo, blocked, inProgress, awaitingReview, done, failed }
+  return { backlog, todo, blocked, inProgress, pendingReview, openPrs, done, failed }
 }

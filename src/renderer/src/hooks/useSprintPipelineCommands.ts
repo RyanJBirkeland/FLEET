@@ -111,10 +111,17 @@ export function useSprintPipelineCommands({
       },
       {
         id: 'filter-review',
-        label: 'Filter: Awaiting Review',
+        label: 'Filter: Pending Review',
         category: 'filter',
-        keywords: ['filter', 'review', 'pr'],
-        action: () => setStatusFilter('awaiting-review')
+        keywords: ['filter', 'review', 'code review'],
+        action: () => setStatusFilter('review')
+      },
+      {
+        id: 'filter-open-prs',
+        label: 'Filter: Open PRs',
+        category: 'filter',
+        keywords: ['filter', 'pr', 'open', 'pull request'],
+        action: () => setStatusFilter('open-prs')
       },
       {
         id: 'filter-done',

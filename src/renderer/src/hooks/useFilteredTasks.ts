@@ -57,7 +57,8 @@ export function useFilteredTasks(): FilteredTasksResult {
           todo: emptyBucket,
           blocked: emptyBucket,
           inProgress: emptyBucket,
-          awaitingReview: emptyBucket,
+          pendingReview: emptyBucket,
+          openPrs: emptyBucket,
           done: emptyBucket,
           failed: emptyBucket
         }
@@ -67,7 +68,8 @@ export function useFilteredTasks(): FilteredTasksResult {
           backlog: emptyBucket,
           blocked: emptyBucket,
           inProgress: emptyBucket,
-          awaitingReview: emptyBucket,
+          pendingReview: emptyBucket,
+          openPrs: emptyBucket,
           done: emptyBucket,
           failed: emptyBucket
         }
@@ -77,7 +79,8 @@ export function useFilteredTasks(): FilteredTasksResult {
           backlog: emptyBucket,
           todo: emptyBucket,
           inProgress: emptyBucket,
-          awaitingReview: emptyBucket,
+          pendingReview: emptyBucket,
+          openPrs: emptyBucket,
           done: emptyBucket,
           failed: emptyBucket
         }
@@ -87,17 +90,30 @@ export function useFilteredTasks(): FilteredTasksResult {
           backlog: emptyBucket,
           todo: emptyBucket,
           blocked: emptyBucket,
-          awaitingReview: emptyBucket,
+          pendingReview: emptyBucket,
+          openPrs: emptyBucket,
           done: emptyBucket,
           failed: emptyBucket
         }
-      case 'awaiting-review':
+      case 'review':
         return {
           ...partition,
           backlog: emptyBucket,
           todo: emptyBucket,
           blocked: emptyBucket,
           inProgress: emptyBucket,
+          openPrs: emptyBucket,
+          done: emptyBucket,
+          failed: emptyBucket
+        }
+      case 'open-prs':
+        return {
+          ...partition,
+          backlog: emptyBucket,
+          todo: emptyBucket,
+          blocked: emptyBucket,
+          inProgress: emptyBucket,
+          pendingReview: emptyBucket,
           done: emptyBucket,
           failed: emptyBucket
         }
@@ -108,7 +124,8 @@ export function useFilteredTasks(): FilteredTasksResult {
           todo: emptyBucket,
           blocked: emptyBucket,
           inProgress: emptyBucket,
-          awaitingReview: emptyBucket,
+          pendingReview: emptyBucket,
+          openPrs: emptyBucket,
           failed: emptyBucket
         }
       case 'failed':
@@ -118,7 +135,8 @@ export function useFilteredTasks(): FilteredTasksResult {
           todo: emptyBucket,
           blocked: emptyBucket,
           inProgress: emptyBucket,
-          awaitingReview: emptyBucket,
+          pendingReview: emptyBucket,
+          openPrs: emptyBucket,
           done: emptyBucket
         }
       default:

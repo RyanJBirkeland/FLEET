@@ -38,7 +38,7 @@ describe('PipelineHeader', () => {
     { label: 'active', count: 2, filter: 'in-progress' as const },
     { label: 'queued', count: 1, filter: 'todo' as const },
     { label: 'blocked', count: 0, filter: 'blocked' as const },
-    { label: 'review', count: 0, filter: 'awaiting-review' as const },
+    { label: 'review', count: 0, filter: 'review' as const },
     { label: 'failed', count: 0, filter: 'failed' as const },
     { label: 'done', count: 3, filter: 'done' as const }
   ]

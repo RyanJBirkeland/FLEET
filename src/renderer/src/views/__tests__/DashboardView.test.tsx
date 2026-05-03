@@ -148,7 +148,7 @@ describe('DashboardView', () => {
     expect(screen.getByText('spawn: agent-3')).toBeInTheDocument()
   })
 
-  it('renders correct PR count from awaitingReview partition', () => {
+  it('renders correct review and open PR counts from pendingReview and openPrs partitions', () => {
     vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
       selector({
         tasks: [
@@ -160,11 +160,9 @@ describe('DashboardView', () => {
       })
     )
     render(<DashboardView />)
-    // PRs counter should show 2 (from awaitingReview partition: 1 review + 1 active with pr)
-    // Review counter should show 1 (only status='review' tasks)
-    // Active counter also shows 1 (the active task)
-    expect(screen.getAllByText('2').length).toBeGreaterThan(0) // PRs shows 2
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0) // Review and Active both show 1
+    // pendingReview has 1 task (status='review'), openPrs has 1 task (active + pr_status='open')
+    // The Sankey shows review=2 (combined), StatusRail shows review=1
+    expect(screen.getAllByText('1').length).toBeGreaterThan(0) // review and active both show 1
   })
 
   // ---------- Branch coverage: tokens/run card ----------

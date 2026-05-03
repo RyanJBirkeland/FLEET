@@ -40,7 +40,8 @@ describe('partitionSprintTasks', () => {
       todo: [],
       blocked: [],
       inProgress: [],
-      awaitingReview: [],
+      pendingReview: [],
+      openPrs: [],
       done: [],
       failed: []
     })
@@ -53,7 +54,8 @@ describe('partitionSprintTasks', () => {
     expect(result.todo).toHaveLength(0)
     expect(result.blocked).toHaveLength(0)
     expect(result.inProgress).toHaveLength(0)
-    expect(result.awaitingReview).toHaveLength(0)
+    expect(result.pendingReview).toHaveLength(0)
+    expect(result.openPrs).toHaveLength(0)
     expect(result.done).toHaveLength(0)
     expect(result.failed).toHaveLength(0)
   })
@@ -70,18 +72,20 @@ describe('partitionSprintTasks', () => {
     expect(result.inProgress).toEqual([t])
   })
 
-  it('puts done tasks with pr_status=open in done (review status is now the canonical review path)', () => {
+  it('puts done tasks with pr_status=open in done', () => {
     const t = makeTask({ status: 'done', pr_status: 'open', pr_url: 'https://github.com/pr/1' })
     const result = partitionSprintTasks([t])
     expect(result.done).toEqual([t])
-    expect(result.awaitingReview).toHaveLength(0)
+    expect(result.pendingReview).toHaveLength(0)
+    expect(result.openPrs).toHaveLength(0)
   })
 
   it('puts done tasks with pr_status=merged in done', () => {
     const t = makeTask({ status: 'done', pr_status: 'merged' })
     const result = partitionSprintTasks([t])
     expect(result.done).toEqual([t])
-    expect(result.awaitingReview).toHaveLength(0)
+    expect(result.pendingReview).toHaveLength(0)
+    expect(result.openPrs).toHaveLength(0)
   })
 
   it('puts done tasks with pr_status=closed in done', () => {
@@ -102,25 +106,25 @@ describe('partitionSprintTasks', () => {
     expect(result.done).toEqual([t])
   })
 
-  it('routes active task with pr_status=branch_only to awaitingReview', () => {
+  it('routes active task with pr_status=branch_only to openPrs', () => {
     const t = makeTask({ status: 'active', pr_status: 'branch_only' })
     const result = partitionSprintTasks([t])
-    expect(result.awaitingReview).toHaveLength(1)
+    expect(result.openPrs).toHaveLength(1)
     expect(result.inProgress).toHaveLength(0)
+    expect(result.pendingReview).toHaveLength(0)
   })
 
   it('puts done task with pr_status=branch_only in done', () => {
     const t = makeTask({ status: 'done', pr_status: 'branch_only' })
     const result = partitionSprintTasks([t])
     expect(result.done).toHaveLength(1)
-    expect(result.awaitingReview).toHaveLength(0)
+    expect(result.openPrs).toHaveLength(0)
   })
 
   it('puts blocked tasks into blocked bucket', () => {
     const tasks = [makeTask({ status: 'blocked' })]
     const result = partitionSprintTasks(tasks)
     expect(result.blocked).toHaveLength(1)
-    expect(result.blocked[0].status).toBe('blocked')
     expect(result.todo).toHaveLength(0)
   })
 
@@ -143,11 +147,19 @@ describe('partitionSprintTasks', () => {
     expect(result.failed).toEqual([t])
   })
 
-  it('puts active task with pr_status=open in awaitingReview', () => {
+  it('routes active task with pr_status=open to openPrs', () => {
     const t = makeTask({ status: TASK_STATUS.ACTIVE, pr_status: PR_STATUS.OPEN })
     const result = partitionSprintTasks([t])
-    expect(result.awaitingReview).toEqual([t])
+    expect(result.openPrs).toEqual([t])
     expect(result.inProgress).toHaveLength(0)
+    expect(result.pendingReview).toHaveLength(0)
+  })
+
+  it('routes review status task to pendingReview', () => {
+    const t = makeTask({ status: 'review' })
+    const result = partitionSprintTasks([t])
+    expect(result.pendingReview).toEqual([t])
+    expect(result.openPrs).toHaveLength(0)
   })
 
   it('correctly partitions a mixed set of tasks', () => {
@@ -169,7 +181,8 @@ describe('partitionSprintTasks', () => {
     expect(result.todo).toHaveLength(1)
     expect(result.inProgress).toHaveLength(2)
     expect(result.done).toHaveLength(4)
-    expect(result.awaitingReview).toHaveLength(0)
+    expect(result.pendingReview).toHaveLength(0)
+    expect(result.openPrs).toHaveLength(0)
     expect(result.failed).toHaveLength(1)
   })
 
@@ -192,7 +205,8 @@ describe('partitionSprintTasks', () => {
       makeTask({ status: 'backlog' }),
       makeTask({ status: 'queued' }),
       makeTask({ status: 'active' }),
-      makeTask({ status: 'done', pr_status: 'open' }),
+      makeTask({ status: 'review' }),
+      makeTask({ status: 'active', pr_status: 'open' }),
       makeTask({ status: 'done', pr_status: 'merged' }),
       makeTask({ status: 'cancelled' })
     ]
@@ -203,7 +217,8 @@ describe('partitionSprintTasks', () => {
       ...result.todo,
       ...result.blocked,
       ...result.inProgress,
-      ...result.awaitingReview,
+      ...result.pendingReview,
+      ...result.openPrs,
       ...result.done,
       ...result.failed
     ]

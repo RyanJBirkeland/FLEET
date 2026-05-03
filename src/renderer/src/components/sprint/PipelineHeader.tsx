@@ -10,7 +10,7 @@ import './PipelineHeader.css'
 interface StatBadge {
   label: string
   count: number
-  filter: 'in-progress' | 'todo' | 'blocked' | 'awaiting-review' | 'failed' | 'done'
+  filter: 'in-progress' | 'todo' | 'blocked' | 'review' | 'open-prs' | 'failed' | 'done'
 }
 
 interface PipelineHeaderProps {

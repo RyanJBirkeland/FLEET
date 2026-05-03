@@ -237,11 +237,8 @@ export function SprintPipeline(): React.JSX.Element {
       { label: 'active', count: partition.inProgress.length, filter: 'in-progress' as const },
       { label: 'queued', count: partition.todo.length, filter: 'todo' as const },
       { label: 'blocked', count: partition.blocked.length, filter: 'blocked' as const },
-      {
-        label: 'review',
-        count: partition.awaitingReview.length,
-        filter: 'awaiting-review' as const
-      },
+      { label: 'review', count: partition.pendingReview.length, filter: 'review' as const },
+      { label: 'PRs', count: partition.openPrs.length, filter: 'open-prs' as const },
       { label: 'failed', count: partition.failed.length, filter: 'failed' as const },
       { label: 'done', count: partition.done.length, filter: 'done' as const }
     ],
@@ -420,8 +417,17 @@ export function SprintPipeline(): React.JSX.Element {
               <PipelineStage
                 name="review"
                 label="Review"
-                tasks={filteredPartition.awaitingReview}
-                count={`${filteredPartition.awaitingReview.length}`}
+                tasks={filteredPartition.pendingReview}
+                count={`${filteredPartition.pendingReview.length}`}
+                selectedTaskId={selectedTaskId}
+                selectedTaskIds={selectedTaskIds}
+                onTaskClick={handleTaskClick}
+              />
+              <PipelineStage
+                name="open-prs"
+                label="PRs"
+                tasks={filteredPartition.openPrs}
+                count={`${filteredPartition.openPrs.length}`}
                 selectedTaskId={selectedTaskId}
                 selectedTaskIds={selectedTaskIds}
                 onTaskClick={handleTaskClick}

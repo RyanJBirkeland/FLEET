@@ -16,7 +16,7 @@ import './CenterColumn.css'
 const STAGE_TO_FILTER: Record<SankeyStageKey, StatusFilter> = {
   queued: 'todo',
   active: 'in-progress',
-  review: 'awaiting-review',
+  review: 'review',
   done: 'done',
   blocked: 'blocked',
   failed: 'failed'
@@ -38,7 +38,8 @@ interface CenterColumnProps {
   partitions: {
     todo: unknown[]
     inProgress: unknown[]
-    awaitingReview: unknown[]
+    pendingReview: unknown[]
+    openPrs: unknown[]
     done: unknown[]
     blocked: unknown[]
     failed: unknown[]
@@ -90,7 +91,7 @@ export function CenterColumn({
           stages={{
             queued: partitions.todo.length,
             active: partitions.inProgress.length,
-            review: partitions.awaitingReview.length,
+            review: partitions.pendingReview.length + partitions.openPrs.length,
             done: partitions.done.length,
             blocked: partitions.blocked.length,
             failed: partitions.failed.length
