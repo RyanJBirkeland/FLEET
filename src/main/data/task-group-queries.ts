@@ -45,6 +45,8 @@ export interface UpdateGroupInput {
   goal?: string | null | undefined
   status?: 'draft' | 'ready' | 'in-pipeline' | 'completed' | undefined
   depends_on?: EpicDependency[] | null | undefined
+  /** When true, drain loop skips this epic's queued tasks. */
+  is_paused?: boolean | undefined
 }
 
 const VALID_GROUP_STATUSES: ReadonlySet<string> = new Set([
@@ -83,7 +85,8 @@ function sanitizeGroup(row: Record<string, unknown>): TaskGroup {
     status,
     created_at: String(row.created_at),
     updated_at: String(row.updated_at),
-    depends_on
+    depends_on,
+    is_paused: row.is_paused === 1
   }
 }
 
@@ -165,7 +168,7 @@ export function updateGroup(
   return withDataLayerError(
     () => {
       const conn = db ?? getDb()
-      const allowed = new Set(['name', 'icon', 'accent_color', 'goal', 'status', 'depends_on'])
+      const allowed = new Set(['name', 'icon', 'accent_color', 'goal', 'status', 'depends_on', 'is_paused'])
       // Treat `undefined` as "leave this column alone" so callers can omit
       // fields; `null` is a deliberate clear-to-SQL-NULL signal.
       const fields = Object.keys(patch).filter(
@@ -179,6 +182,9 @@ export function updateGroup(
         // Serialize depends_on to JSON if present
         if (f === 'depends_on') {
           return value && Array.isArray(value) && value.length > 0 ? JSON.stringify(value) : null
+        }
+        if (f === 'is_paused') {
+          return value ? 1 : 0
         }
         return value
       })

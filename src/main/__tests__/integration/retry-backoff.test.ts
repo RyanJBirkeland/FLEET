@@ -57,6 +57,20 @@ vi.mock('../../db', () => {
             changed_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
           )
         `)
+        _db.exec(`
+          CREATE TABLE task_groups (
+            id TEXT PRIMARY KEY DEFAULT (lower(hex(randomblob(16)))),
+            name TEXT NOT NULL,
+            icon TEXT NOT NULL DEFAULT 'G',
+            accent_color TEXT NOT NULL DEFAULT '#00ffcc',
+            goal TEXT,
+            status TEXT NOT NULL DEFAULT 'draft',
+            depends_on TEXT,
+            is_paused INTEGER NOT NULL DEFAULT 0,
+            created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+            updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+          )
+        `)
       }
       return _db
     }

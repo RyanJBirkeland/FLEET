@@ -172,14 +172,24 @@ export function getActiveTaskCount(db?: Database.Database): number {
 
 export function getQueuedTasks(limit: number, db?: Database.Database): SprintTask[] {
   const conn = db ?? getDb()
+  // Qualify every column with the table name to avoid ambiguity after the LEFT JOIN
+  // (task_groups also has id, created_at, updated_at).
+  const qualifiedColumns = SPRINT_TASK_COLUMNS.split(',')
+    .map((col) => `sprint_tasks.${col.trim()}`)
+    .join(', ')
+
   return withDataLayerError(
     () => {
       const rows = conn
         .prepare(
-          `SELECT ${SPRINT_TASK_COLUMNS}
+          `SELECT ${qualifiedColumns}
            FROM sprint_tasks
-           WHERE status = 'queued' AND claimed_by IS NULL AND (next_eligible_at IS NULL OR next_eligible_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
-           ORDER BY priority ASC, created_at ASC
+           LEFT JOIN task_groups tg ON sprint_tasks.group_id = tg.id
+           WHERE sprint_tasks.status = 'queued'
+             AND sprint_tasks.claimed_by IS NULL
+             AND (sprint_tasks.next_eligible_at IS NULL OR sprint_tasks.next_eligible_at <= strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+             AND (tg.id IS NULL OR tg.is_paused = 0)
+           ORDER BY sprint_tasks.priority ASC, sprint_tasks.created_at ASC
            LIMIT ?`
         )
         .all(limit) as Record<string, unknown>[]
