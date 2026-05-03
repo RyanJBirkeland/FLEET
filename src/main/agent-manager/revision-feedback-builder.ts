@@ -21,12 +21,10 @@ export { parseRevisionFeedback } from '../../shared/types/revision'
 // ---------------------------------------------------------------------------
 
 // Matches "src/foo.ts(10,5): error TS2304: message" (tsc modern format)
-const MODERN_TS_ERROR_RE =
-  /^([^\s(]+)\((\d+),\d+\):\s+(?:error|warning)\s+TS\d+:\s+(.+)$/
+const MODERN_TS_ERROR_RE = /^([^\s(]+)\((\d+),\d+\):\s+(?:error|warning)\s+TS\d+:\s+(.+)$/
 
 // Matches "src/foo.ts:10:5 - error TS2304: message" (tsc legacy format)
-const LEGACY_TS_ERROR_RE =
-  /^([^\s:]+):(\d+):\d+\s+-\s+(?:error|warning)\s+TS\d+:\s+(.+)$/
+const LEGACY_TS_ERROR_RE = /^([^\s:]+):(\d+):\d+\s+-\s+(?:error|warning)\s+TS\d+:\s+(.+)$/
 
 // Matches "FAIL src/foo.test.ts" (vitest/jest test suite failure header)
 const TEST_SUITE_FAIL_RE = /^(?:FAIL|×)\s+(\S+\.test\.[jt]sx?)(?:\s|$)/
@@ -125,7 +123,8 @@ export function buildVerificationRevisionFeedback(
         : 'TypeScript compilation failed. See diagnostics for details.'
     return {
       summary,
-      diagnostics: diagnostics.length > 0 ? diagnostics : [{ file: '', kind: 'typecheck', message: stderr }]
+      diagnostics:
+        diagnostics.length > 0 ? diagnostics : [{ file: '', kind: 'typecheck', message: stderr }]
     }
   }
 
@@ -137,7 +136,8 @@ export function buildVerificationRevisionFeedback(
       : 'Test suite failed. See diagnostics for details.'
   return {
     summary,
-    diagnostics: diagnostics.length > 0 ? diagnostics : [{ file: '', kind: 'test', message: stderr }]
+    diagnostics:
+      diagnostics.length > 0 ? diagnostics : [{ file: '', kind: 'test', message: stderr }]
   }
 }
 
@@ -168,7 +168,6 @@ export function buildNoCommitsRevisionFeedback(lastAgentOutput: string): Revisio
     diagnostics: [{ file: '', kind: 'other', message }]
   }
 }
-
 
 /**
  * Escapes XML tag sequences in content destined for an XML boundary tag.

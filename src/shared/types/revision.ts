@@ -25,10 +25,7 @@ export interface RevisionDiagnostic {
 function isRevisionFeedback(value: unknown): value is RevisionFeedback {
   if (!value || typeof value !== 'object') return false
   const candidate = value as Record<string, unknown>
-  return (
-    typeof candidate.summary === 'string' &&
-    Array.isArray(candidate.diagnostics)
-  )
+  return typeof candidate.summary === 'string' && Array.isArray(candidate.diagnostics)
 }
 
 /**
