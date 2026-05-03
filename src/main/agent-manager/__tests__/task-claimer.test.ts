@@ -16,6 +16,7 @@ vi.mock('../worktree', () => ({
 vi.mock('../../../shared/time', () => ({
   nowIso: vi.fn().mockReturnValue('2026-01-01T00:00:00.000Z')
 }))
+vi.mock('../preflight-check', () => ({ runPreflightChecks: vi.fn() }))
 
 import {
   validateAndClaimTask,
@@ -30,6 +31,8 @@ import { setupWorktree } from '../worktree'
 import type { MappedTask } from '../task-mapper'
 import { SpawnRegistry } from '../spawn-registry'
 import type { TaskStateService } from '../../services/task-state-service'
+import type { PreflightGate } from '../preflight-gate'
+import { runPreflightChecks } from '../preflight-check'
 
 function makeTask(overrides: Partial<MappedTask> = {}): MappedTask {
   return {
@@ -232,6 +235,7 @@ describe('processQueuedTask', () => {
       ...makeClaimerDeps(),
       spawnRegistry: new SpawnRegistry(),
       spawnAgent: vi.fn(),
+      preflightGate: null,
       ...overrides
     }
   }
@@ -286,5 +290,67 @@ describe('processQueuedTask', () => {
     expect(deps.logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('already has an active agent')
     )
+  })
+})
+
+describe('processQueuedTask — pre-flight', () => {
+  function makeGate(proceed: boolean): PreflightGate {
+    return {
+      requestConfirmation: vi.fn().mockResolvedValue(proceed),
+      resolveConfirmation: vi.fn()
+    }
+  }
+
+  function makeProcessDeps(overrides: Partial<ProcessQueuedTaskDeps> = {}): ProcessQueuedTaskDeps {
+    const repo = overrides.repo ?? makeRepo()
+    return {
+      ...makeClaimerDeps({ repo }),
+      spawnRegistry: new SpawnRegistry(),
+      spawnAgent: vi.fn(),
+      preflightGate: null,
+      ...overrides
+    }
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(mapQueuedTask).mockReturnValue(makeTask())
+    vi.mocked(checkAndBlockDeps).mockReturnValue(false)
+    vi.mocked(getRepoPaths).mockReturnValue({ fleet: '/Users/ryan/projects/FLEET' })
+    vi.mocked(setupWorktree).mockResolvedValue({ worktreePath: '/tmp/wt', branch: 'agent/task-1' })
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: true })
+  })
+
+  it('proceeds normally when pre-flight passes', async () => {
+    const deps = makeProcessDeps({ preflightGate: makeGate(true) })
+    await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
+    expect(deps.spawnAgent).toHaveBeenCalled()
+  })
+
+  it('moves task to backlog when pre-flight fails and user cancels', async () => {
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'] })
+    const gate = makeGate(false)
+    const deps = makeProcessDeps({ preflightGate: gate })
+    await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
+    expect(deps.spawnAgent).not.toHaveBeenCalled()
+    expect(deps.repo.updateTask).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ status: 'backlog' })
+    )
+  })
+
+  it('spawns when pre-flight fails but user confirms', async () => {
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'] })
+    const gate = makeGate(true)
+    const deps = makeProcessDeps({ preflightGate: gate })
+    await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
+    expect(deps.spawnAgent).toHaveBeenCalled()
+  })
+
+  it('skips pre-flight when preflightGate is null', async () => {
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'] })
+    const deps = makeProcessDeps({ preflightGate: null })
+    await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
+    expect(deps.spawnAgent).toHaveBeenCalled()
   })
 })

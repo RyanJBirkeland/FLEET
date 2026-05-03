@@ -21,6 +21,9 @@ import { taskHasMatchingCommitOnMain } from './already-done-check'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import type { TaskStateService } from '../services/task-state-service'
 import type { SpawnRegistry } from './spawn-registry'
+import type { PreflightGate } from './preflight-gate'
+import { runPreflightChecks } from './preflight-check'
+import { buildAgentEnv } from '../env-utils'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -226,6 +229,11 @@ export interface ProcessQueuedTaskDeps extends TaskClaimerDeps {
     repoPath: string
   ) => Promise<void>
   /**
+   * Pre-flight gate for toolchain binary checks. Pass null to disable
+   * (used in tests and non-pipeline spawn paths).
+   */
+  preflightGate: PreflightGate | null
+  /**
    * Optional sink for IDs of tasks successfully claimed in this tick. Read by
    * the next drain tick's dependency refresh as a dirty-set hint.
    */
@@ -257,6 +265,34 @@ export async function processQueuedTask(
   }
   deps.spawnRegistry.markProcessing(taskId)
   try {
+    // Pre-flight: check required toolchain binaries before claiming.
+    // After markProcessing so subsequent drain ticks skip this task while
+    // the modal is open. unmarkProcessing/re-markProcessing around the
+    // await is safe because SpawnRegistry.unmarkProcessing is idempotent.
+    if (deps.preflightGate) {
+      const repoPath = deps.resolveRepoPath(rawTask.repo ?? '')
+      if (repoPath) {
+        const preflightResult = await runPreflightChecks(repoPath, buildAgentEnv())
+        if (!preflightResult.ok) {
+          deps.spawnRegistry.unmarkProcessing(taskId)
+          const proceed = await deps.preflightGate.requestConfirmation(
+            taskId,
+            preflightResult.missing,
+            rawTask.repo ?? '',
+            rawTask.title ?? taskId
+          )
+          if (!proceed) {
+            await deps.repo.updateTask(taskId, {
+              status: 'backlog',
+              notes: `Moved to backlog: pre-flight detected missing binaries: ${preflightResult.missing.join(', ')}.`
+            })
+            return
+          }
+          deps.spawnRegistry.markProcessing(taskId)
+        }
+      }
+    }
+
     const claimed = await validateAndClaimTask(rawTask, taskStatusMap, deps)
     if (!claimed) return
 

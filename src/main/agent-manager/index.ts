@@ -1,4 +1,5 @@
 import type { AgentManagerConfig, TerminalResolutionStrategy, SteerResult } from './types'
+import type { PreflightGate } from './preflight-gate'
 import type { Logger } from '../logger'
 import type { SprintTask } from '../../shared/types/task-types'
 import type { TaskStatus } from '../../shared/task-state-machine'
@@ -167,6 +168,7 @@ export class AgentManagerImpl implements AgentManager {
   private readonly _taskStateService: TaskStateService
   /** Optional external hook that replaces the default dep-resolution path when set. */
   private readonly _terminalResolution: TerminalResolutionStrategy | undefined
+  private readonly _preflightGate: PreflightGate | null
 
   // `config` is mutable so `reloadConfig()` can hot-update runtime-safe fields.
   // `worktreeBase` is never mutated after construction.
@@ -179,10 +181,12 @@ export class AgentManagerImpl implements AgentManager {
     epicDepsReader: EpicDepsReader = createEpicDependencyIndex(),
     unitOfWork: IUnitOfWork = createUnitOfWork(),
     terminalResolution?: TerminalResolutionStrategy,
-    reviewRepo?: IReviewRepository
+    reviewRepo?: IReviewRepository,
+    preflightGate?: PreflightGate
   ) {
     this.config = config
     this._terminalResolution = terminalResolution
+    this._preflightGate = preflightGate ?? null
     this._depIndex = createDependencyIndex()
     this._epicIndex = epicDepsReader
     this._metrics = createMetricsCollector()
@@ -497,6 +501,7 @@ export class AgentManagerImpl implements AgentManager {
       resolveRepoPath: (slug) => getRepoPaths()[slug.toLowerCase()] ?? null,
       spawnRegistry: this.spawnRegistry,
       spawnAgent: (task, wt, repoPath) => this._spawnAgent(task, wt, repoPath, tickId),
+      preflightGate: this._preflightGate,
       recentlyProcessedTaskIds: this._drainLoopInstance.recentlyProcessedTaskIds
     })
   }
@@ -854,9 +859,10 @@ export function createAgentManager(
   epicDepsReader?: EpicDepsReader,
   unitOfWork?: IUnitOfWork,
   terminalResolution?: TerminalResolutionStrategy,
-  reviewRepo?: IReviewRepository
+  reviewRepo?: IReviewRepository,
+  preflightGate?: PreflightGate
 ): AgentManager {
-  return new AgentManagerImpl(config, repo, logger, epicDepsReader, unitOfWork, terminalResolution, reviewRepo)
+  return new AgentManagerImpl(config, repo, logger, epicDepsReader, unitOfWork, terminalResolution, reviewRepo, preflightGate)
 }
 
 // Re-export killActiveAgent for callers that need to kill agents directly

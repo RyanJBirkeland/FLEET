@@ -9,6 +9,7 @@ import type { TaskStateService } from '../services/task-state-service'
 import type { ReviewOrchestrationService } from '../services/review-orchestration-service'
 import type { ReviewShipBatchService } from '../services/review-ship-batch'
 import type { ReviewRollupService } from '../services/review-rollup-service'
+import type { PreflightGate } from '../agent-manager/preflight-gate'
 
 import { registerAgentHandlers } from './agent-handlers'
 import { registerGitHandlers } from './git-handlers'
@@ -47,6 +48,7 @@ export interface TerminalDeps {
 
 export interface AppHandlerDeps {
   agentManager?: AgentManager | undefined
+  preflightGate?: PreflightGate | undefined
   terminalDeps: TerminalDeps
   reviewService?: ReviewService | undefined
   reviewChatStreamDeps?: ChatStreamDeps | undefined
@@ -64,6 +66,7 @@ export interface AppHandlerDeps {
 export function registerAllHandlers(deps: AppHandlerDeps): void {
   const {
     agentManager,
+    preflightGate,
     terminalDeps,
     reviewService,
     reviewChatStreamDeps,
@@ -75,9 +78,9 @@ export function registerAllHandlers(deps: AppHandlerDeps): void {
   } = deps
 
   // Agent-related handlers (conditional on agentManager presence)
-  const preflightGate = createPreflightGate()
+  const gate = preflightGate ?? createPreflightGate()
   if (agentManager) {
-    registerAgentHandlers(agentManager, repo, preflightGate)
+    registerAgentHandlers(agentManager, repo, gate)
     registerAgentManagerHandlers(agentManager)
     registerWorkbenchHandlers(agentManager)
   } else {

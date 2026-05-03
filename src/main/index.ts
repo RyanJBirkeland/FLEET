@@ -68,6 +68,7 @@ import {
 import { clearAnthropicEnvVars } from './auth-guard'
 import { broadcast } from './broadcast'
 import { migrateRuntimeDir } from './startup-migration'
+import { createPreflightGate } from './agent-manager/preflight-gate'
 
 // Side-effecting startup steps run before any whenReady-time work touches
 // process.env, the network, or the singleton lock. Order matters: PATH first,
@@ -449,7 +450,9 @@ function resolveWorktreeBase(stored: string | null | undefined): string {
 function wireAgentManagerAndMcp(
   core: CoreStartupServices,
   reviewRepo: ReturnType<typeof createReviewRepository>
-): ReturnType<typeof createAgentManager> | undefined {
+): { agentManager: ReturnType<typeof createAgentManager> | undefined; preflightGate: ReturnType<typeof createPreflightGate> } {
+  const preflightGate = createPreflightGate()
+
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
     worktreeBase: resolveWorktreeBase(getSetting('agentManager.worktreeBase')),
@@ -460,7 +463,7 @@ function wireAgentManagerAndMcp(
   }
 
   const autoStart = getSettingJson<boolean>('agentManager.autoStart') ?? true
-  if (!autoStart) return undefined
+  if (!autoStart) return { agentManager: undefined, preflightGate }
 
   getOAuthToken()
 
@@ -476,7 +479,8 @@ function wireAgentManagerAndMcp(
     core.epicGroupService,
     undefined,
     { onStatusTerminal: core.terminalService.onStatusTerminal },
-    reviewRepo
+    reviewRepo,
+    preflightGate
   )
   agentManager.start()
 
@@ -541,7 +545,7 @@ function wireAgentManagerAndMcp(
     stopMcpServer().catch(() => {})
   })
 
-  return agentManager
+  return { agentManager, preflightGate }
 }
 
 /**
@@ -629,7 +633,7 @@ app.whenReady().then(async () => {
   initDatabaseOrExit()
   const core = initCoreServices()
   const review = buildReviewWiring(core.repo)
-  const agentManager = wireAgentManagerAndMcp(core, review.reviewRepo)
+  const { agentManager, preflightGate } = wireAgentManagerAndMcp(core, review.reviewRepo)
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -637,6 +641,7 @@ app.whenReady().then(async () => {
 
   const handlerDeps: AppHandlerDeps = {
     agentManager,
+    preflightGate,
     terminalDeps: core.terminalDeps,
     reviewService: review.reviewService,
     reviewChatStreamDeps: review.reviewChatStreamDeps,
