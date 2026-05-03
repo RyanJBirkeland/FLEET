@@ -195,11 +195,40 @@ describe('DependencyPicker', () => {
     expect(screen.getByText(/Soft = unblocks regardless/i)).toBeInTheDocument()
   })
 
+  it('renders "Unblock when:" label for each dependency condition select', () => {
+    const deps: TaskDependency[] = [{ id: '1', type: 'hard' }]
+    render(
+      <DependencyPicker
+        dependencies={deps}
+        availableTasks={mockTasks}
+        onChange={vi.fn()}
+        currentTaskId={undefined}
+      />
+    )
+    expect(screen.getByText('Unblock when:')).toBeInTheDocument()
+  })
+
+  it('shows updated placeholder text in the condition select', () => {
+    const deps: TaskDependency[] = [{ id: '1', type: 'hard' }]
+    render(
+      <DependencyPicker
+        dependencies={deps}
+        availableTasks={mockTasks}
+        onChange={vi.fn()}
+        currentTaskId={undefined}
+      />
+    )
+    expect(
+      screen.getByRole('option', { name: /Default — follows Hard\/Soft rule above/ })
+    ).toBeInTheDocument()
+  })
+
   describe('show-all results', () => {
     const makeTasks = (count: number): SprintTask[] =>
       Array.from(
         { length: count },
-        (_, i) => ({ id: `t${i}`, title: `Task ${i}`, status: 'queued', repo: 'fleet' }) as SprintTask
+        (_, i) =>
+          ({ id: `t${i}`, title: `Task ${i}`, status: 'queued', repo: 'fleet' }) as SprintTask
       )
 
     it('shows footer when matches exceed window of 30', async () => {

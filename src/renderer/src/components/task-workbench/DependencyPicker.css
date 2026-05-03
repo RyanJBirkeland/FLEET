@@ -243,3 +243,10 @@
   color: var(--fleet-text-muted);
   font-style: italic;
 }
+
+.wb-deps__condition-label {
+  font-size: var(--fleet-size-xs);
+  color: var(--fleet-text-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+}

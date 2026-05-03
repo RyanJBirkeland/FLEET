@@ -161,7 +161,14 @@ export function DependencyPicker({
                   label={(dep.type || 'hard').toUpperCase()}
                 />
               </button>
+              <label
+                className="wb-deps__condition-label"
+                htmlFor={`dep-condition-${dep.id}`}
+              >
+                Unblock when:
+              </label>
               <select
+                id={`dep-condition-${dep.id}`}
                 className="wb-deps__condition fleet-select"
                 value={dep.condition ?? ''}
                 onChange={(e) =>
@@ -175,7 +182,7 @@ export function DependencyPicker({
                 aria-label="Dependency condition"
                 title="When should this dependency be satisfied?"
               >
-                <option value="">Default (type-based)</option>
+                <option value="">Default — follows Hard/Soft rule above</option>
                 <option value="on_success">On Success</option>
                 <option value="on_failure">On Failure</option>
                 <option value="always">Always (any terminal status)</option>
