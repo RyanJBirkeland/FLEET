@@ -92,6 +92,14 @@ export interface BroadcastChannels {
   // Orphan recovery
   'orphan:recovered': { recovered: string[]; exhausted: string[] }
 
+  // Pre-flight toolchain warnings (main → renderer)
+  'agent:preflightWarning': {
+    taskId: string
+    repoName: string
+    taskTitle: string
+    missing: string[]
+  }
+
   // Task terminal
   'task-terminal:resolution-error': { error: string }
 

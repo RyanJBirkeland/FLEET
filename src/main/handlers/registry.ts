@@ -37,6 +37,7 @@ import { registerGroupHandlers } from './group-handlers'
 import { registerPlannerImportHandlers } from './planner-import'
 import { registerRepoDiscoveryHandlers } from './repo-discovery'
 import { registerTearoffHandlers } from '../tearoff-manager'
+import { createPreflightGate } from '../agent-manager/preflight-gate'
 
 export interface TerminalDeps {
   onStatusTerminal: TaskTerminalService['onStatusTerminal']
@@ -74,8 +75,9 @@ export function registerAllHandlers(deps: AppHandlerDeps): void {
   } = deps
 
   // Agent-related handlers (conditional on agentManager presence)
+  const preflightGate = createPreflightGate()
   if (agentManager) {
-    registerAgentHandlers(agentManager, repo)
+    registerAgentHandlers(agentManager, repo, preflightGate)
     registerAgentManagerHandlers(agentManager)
     registerWorkbenchHandlers(agentManager)
   } else {

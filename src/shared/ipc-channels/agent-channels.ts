@@ -80,6 +80,14 @@ export interface AgentEventChannels {
   }
 }
 
+/** Pre-flight toolchain confirmation */
+export interface PreflightChannels {
+  'agent:preflightResponse': {
+    args: [{ taskId: string; proceed: boolean }]
+    result: void
+  }
+}
+
 /** Agent manager orchestration */
 export interface AgentManagerChannels {
   'agent-manager:status': {

@@ -34,7 +34,6 @@ export function createPreflightGate(): PreflightGate {
         }, CONFIRMATION_TIMEOUT_MS)
 
         pending.set(taskId, { resolve, timer })
-        // @ts-expect-error — channel added in Task 6
         broadcast('agent:preflightWarning', { taskId, repoName, taskTitle, missing })
       })
     },

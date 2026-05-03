@@ -173,4 +173,5 @@ export type IpcChannelMap = import('./settings-channels').SettingsChannels &
   import('./system-channels').SystemChannels &
   import('./system-channels').RepoDiscoveryChannels &
   import('./settings-channels').OnboardingChannels &
-  import('./settings-channels').McpChannels
+  import('./settings-channels').McpChannels &
+  import('./agent-channels').PreflightChannels

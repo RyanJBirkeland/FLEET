@@ -79,7 +79,10 @@ export const agentManager = {
   onDrainPaused: onBroadcast<BroadcastChannels['agentManager:drainPaused']>(
     'agentManager:drainPaused'
   ),
-  onOrphanRecovered: onBroadcast<BroadcastChannels['orphan:recovered']>('orphan:recovered')
+  onOrphanRecovered: onBroadcast<BroadcastChannels['orphan:recovered']>('orphan:recovered'),
+  onPreflightWarning: onBroadcast<BroadcastChannels['agent:preflightWarning']>('agent:preflightWarning'),
+  respondToPreflight: (taskId: string, proceed: boolean): Promise<void> =>
+    typedInvoke('agent:preflightResponse', { taskId, proceed })
 }
 
 export const agentEvents = {

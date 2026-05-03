@@ -211,7 +211,9 @@ vi.stubGlobal('api', {
     onWarning: vi.fn().mockReturnValue(() => {}),
     onCircuitBreakerOpen: vi.fn().mockReturnValue(() => {}),
     onDrainPaused: vi.fn().mockReturnValue(() => {}),
-    onOrphanRecovered: vi.fn().mockReturnValue(() => {})
+    onOrphanRecovered: vi.fn().mockReturnValue(() => {}),
+    onPreflightWarning: vi.fn().mockReturnValue(() => {}),
+    respondToPreflight: vi.fn().mockResolvedValue(undefined)
   },
 
   // Cost analytics

@@ -16,6 +16,7 @@ import type { AgentEvent, SpawnLocalAgentArgs } from '../../shared/types'
 import type { AgentManager } from '../agent-manager'
 import { createSprintTaskRepository } from '../data/sprint-task-repository'
 import type { IDashboardRepository } from '../data/sprint-task-repository'
+import type { PreflightGate } from '../agent-manager/preflight-gate'
 import { promoteAdhocToTask } from '../services/adhoc-promotion-service'
 import { flushAgentEventBatcher } from '../agent-event-mapper'
 
@@ -168,7 +169,11 @@ function parseAgentsImportArgs(args: unknown[]): [{ meta: Partial<AgentMeta>; co
   return [arg as unknown as { meta: Partial<AgentMeta>; content: string }]
 }
 
-export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardRepository): void {
+export function registerAgentHandlers(
+  am?: AgentManager,
+  repo?: IDashboardRepository,
+  preflightGate?: PreflightGate
+): void {
   const effectiveRepo = repo ?? createSprintTaskRepository()
 
   safeHandle('local:getAgentProcesses', async () => {
@@ -290,4 +295,10 @@ export function registerAgentHandlers(am?: AgentManager, repo?: IDashboardReposi
   })
 
   pruneOldAgents()
+
+  if (preflightGate) {
+    safeHandle('agent:preflightResponse', (_e, { taskId, proceed }: { taskId: string; proceed: boolean }) => {
+      preflightGate.resolveConfirmation(taskId, proceed)
+    })
+  }
 }
