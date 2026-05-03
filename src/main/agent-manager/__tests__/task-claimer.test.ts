@@ -8,7 +8,8 @@ vi.mock('../task-mapper', () => ({
   checkAndBlockDeps: vi.fn().mockReturnValue(false)
 }))
 vi.mock('../../paths', () => ({
-  getRepoPaths: vi.fn().mockReturnValue({ fleet: '/Users/ryan/projects/FLEET' })
+  getRepoPaths: vi.fn().mockReturnValue({ fleet: '/Users/ryan/projects/FLEET' }),
+  getRepoConfig: vi.fn().mockReturnValue(null)
 }))
 vi.mock('../worktree', () => ({
   setupWorktree: vi.fn()
@@ -328,7 +329,7 @@ describe('processQueuedTask — pre-flight', () => {
   })
 
   it('moves task to backlog when pre-flight fails and user cancels', async () => {
-    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'] })
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'], missingEnvVars: [] })
     const gate = makeGate(false)
     const deps = makeProcessDeps({ preflightGate: gate })
     await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
@@ -340,7 +341,7 @@ describe('processQueuedTask — pre-flight', () => {
   })
 
   it('spawns when pre-flight fails but user confirms', async () => {
-    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'] })
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'], missingEnvVars: [] })
     const gate = makeGate(true)
     const deps = makeProcessDeps({ preflightGate: gate })
     await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
@@ -348,7 +349,7 @@ describe('processQueuedTask — pre-flight', () => {
   })
 
   it('skips pre-flight when preflightGate is null', async () => {
-    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'] })
+    vi.mocked(runPreflightChecks).mockResolvedValue({ ok: false, missing: ['turbo'], missingEnvVars: [] })
     const deps = makeProcessDeps({ preflightGate: null })
     await processQueuedTask({ id: 'task-1', title: 'T', repo: 'fleet' } as import('../types').SprintTask, new Map(), deps)
     expect(deps.spawnAgent).toHaveBeenCalled()

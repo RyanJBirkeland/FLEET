@@ -108,7 +108,7 @@ describe('runPreflightChecks', () => {
     mockFs(['/repo/turbo.json'])
     vi.mocked(execFileAsync).mockRejectedValue(new Error('not found'))
     const result = await runPreflightChecks('/repo', env)
-    expect(result).toEqual({ ok: false, missing: ['turbo'] })
+    expect(result).toEqual({ ok: false, missing: ['turbo'], missingEnvVars: [] })
   })
 
   it('returns ok:true (fail-open) when detection itself throws', async () => {

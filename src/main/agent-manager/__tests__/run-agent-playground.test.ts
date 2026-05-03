@@ -56,6 +56,7 @@ vi.mock('../../data/sprint-queries', () => ({
 
 vi.mock('../../paths', () => ({
   getGhRepo: vi.fn().mockReturnValue('owner/repo'),
+  getRepoConfig: vi.fn().mockReturnValue(null),
   FLEET_TASK_MEMORY_DIR: '/tmp/fleet-test/tasks'
 }))
 

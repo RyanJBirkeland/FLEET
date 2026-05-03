@@ -32,7 +32,8 @@ describe('PreflightGate', () => {
       taskId: 'task-1',
       repoName: 'my-repo',
       taskTitle: 'My Task',
-      missing: ['turbo']
+      missing: ['turbo'],
+      missingEnvVars: []
     })
   })
 

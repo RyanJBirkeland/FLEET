@@ -55,6 +55,7 @@ vi.mock('../../broadcast', () => ({
 vi.mock('../../paths', () => ({
   getRepoPaths: vi.fn(),
   getConfiguredRepos: vi.fn().mockReturnValue([{ name: 'myrepo', localPath: '/repos/myrepo' }]),
+  getRepoConfig: vi.fn().mockReturnValue(null),
   getGhRepo: vi.fn(),
   FLEET_DIR: '/tmp/fleet-test',
   FLEET_DB_PATH: '/tmp/fleet-test/fleet.db',

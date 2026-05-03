@@ -50,6 +50,7 @@ vi.mock('../../lib/resolve-dependents', () => ({
 vi.mock('../../paths', () => ({
   getRepoPaths: vi.fn(),
   getConfiguredRepos: vi.fn().mockReturnValue([{ name: 'myrepo', localPath: '/repos/myrepo' }]),
+  getRepoConfig: vi.fn().mockReturnValue(null),
   getGhRepo: vi.fn(),
   FLEET_AGENT_LOG_PATH: '/tmp/fleet-agent-integration-test.log',
   FLEET_TASK_MEMORY_DIR: '/tmp/fleet-test/tasks'
