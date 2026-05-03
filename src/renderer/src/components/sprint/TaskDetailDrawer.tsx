@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { SprintTask } from '../../../../shared/types'
+import { parseRevisionFeedback } from '../../../../shared/types/revision'
+import type { RevisionFeedback } from '../../../../shared/types/revision'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintSelection } from '../../stores/sprintSelection'
 import { useAgentEventsStore } from '../../stores/agentEvents'
@@ -37,6 +39,33 @@ export interface TaskDetailDrawerProps {
   onRetry?: ((task: SprintTask) => void) | undefined
   onReviewChanges?: ((task: SprintTask) => void) | undefined
   onExport?: ((task: SprintTask) => void) | undefined
+}
+
+function VerificationDiagnostics({ feedback }: { feedback: RevisionFeedback }): React.JSX.Element {
+  return (
+    <div
+      className="task-drawer__verification-diagnostics"
+      data-testid="task-drawer-verification-diagnostics"
+    >
+      <p className="task-drawer__diag-summary">{feedback.summary}</p>
+      {feedback.diagnostics.length > 0 && (
+        <ul className="task-drawer__diag-list">
+          {feedback.diagnostics.map((d, i) => (
+            <li key={i} className="task-drawer__diag-item">
+              <span className="task-drawer__diag-location">
+                {d.file}
+                {d.line !== undefined ? `:${d.line}` : ''} [{d.kind}]
+              </span>
+              <span className="task-drawer__diag-message">{d.message}</span>
+              {d.suggestedFix && (
+                <span className="task-drawer__diag-fix">Fix: {d.suggestedFix}</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 function formatTimestamp(iso: string): string {
@@ -307,17 +336,18 @@ export function TaskDetailDrawer({
             >
               {task.status === 'cancelled' ? 'Cancellation details' : 'Failure details'}
             </h4>
-            {task.failure_reason && (() => {
-              const chip = failureCategoryForReason(task.failure_reason)
-              return (
-                <span
-                  className={`task-drawer__failure-chip ${chip.colorClass}`}
-                  data-testid="task-drawer-failure-chip"
-                >
-                  {chip.label}
-                </span>
-              )
-            })()}
+            {task.failure_reason &&
+              (() => {
+                const chip = failureCategoryForReason(task.failure_reason)
+                return (
+                  <span
+                    className={`task-drawer__failure-chip ${chip.colorClass}`}
+                    data-testid="task-drawer-failure-chip"
+                  >
+                    {chip.label}
+                  </span>
+                )
+              })()}
             {task.failure_reason && (
               <pre className="task-drawer__failure-reason" data-testid="task-drawer-failure-reason">
                 {task.failure_reason}
@@ -335,15 +365,22 @@ export function TaskDetailDrawer({
                 </div>
               )}
             {task.notes ? (
-              <pre
-                className="task-drawer__failure-notes"
-                data-testid="task-drawer-failure-notes"
-                style={{
-                  color: 'var(--fleet-text, rgba(255,255,255,0.85))'
-                }}
-              >
-                {task.notes}
-              </pre>
+              (() => {
+                const feedback = parseRevisionFeedback(task.notes)
+                return feedback ? (
+                  <VerificationDiagnostics feedback={feedback} />
+                ) : (
+                  <pre
+                    className="task-drawer__failure-notes"
+                    data-testid="task-drawer-failure-notes"
+                    style={{
+                      color: 'var(--fleet-text, rgba(255,255,255,0.85))'
+                    }}
+                  >
+                    {task.notes}
+                  </pre>
+                )
+              })()
             ) : (
               <div className="task-drawer__status-text">
                 No diagnostic notes captured. Check the Agents view for details.

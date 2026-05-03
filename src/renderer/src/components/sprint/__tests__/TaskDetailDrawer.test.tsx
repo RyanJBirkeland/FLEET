@@ -714,5 +714,40 @@ describe('TaskDetailDrawer - Review Changes button', () => {
       render(<TaskDetailDrawer {...makeProps({ task })} />)
       expect(screen.getByText(/No diagnostic notes captured/)).toBeInTheDocument()
     })
+
+    it('renders structured diagnostics when notes is a RevisionFeedback JSON', () => {
+      const feedback = {
+        summary: 'TypeScript compilation failed',
+        diagnostics: [
+          { file: 'src/foo.ts', line: 42, kind: 'typecheck', message: "Property 'bar' does not exist" }
+        ]
+      }
+      render(
+        <TaskDetailDrawer
+          {...makeProps({
+            task: { ...baseTask, status: 'failed', notes: JSON.stringify(feedback) }
+          })}
+        />
+      )
+      expect(screen.getByTestId('task-drawer-verification-diagnostics')).toBeInTheDocument()
+      expect(screen.getByText('TypeScript compilation failed')).toBeInTheDocument()
+      expect(screen.getByText(/src\/foo\.ts:42/)).toBeInTheDocument()
+      expect(screen.getByText(/Property 'bar' does not exist/)).toBeInTheDocument()
+    })
+
+    it('falls back to pre block when notes is a freeform string', () => {
+      render(
+        <TaskDetailDrawer
+          {...makeProps({
+            task: { ...baseTask, status: 'failed', notes: 'npm test exited with code 1' }
+          })}
+        />
+      )
+      expect(screen.queryByTestId('task-drawer-verification-diagnostics')).not.toBeInTheDocument()
+      expect(screen.getByTestId('task-drawer-failure-notes')).toBeInTheDocument()
+      expect(screen.getByTestId('task-drawer-failure-notes').textContent).toContain(
+        'npm test exited with code 1'
+      )
+    })
   })
 })
