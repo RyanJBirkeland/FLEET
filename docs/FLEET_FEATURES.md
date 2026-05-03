@@ -31,8 +31,9 @@ Planning and spec creation interface, presented as a centered modal (`TaskWorkbe
 Execution monitoring view. Shows tasks flowing through stages as a vertical pipeline with real-time status updates.
 
 - **Task statuses**: `backlog` | `queued` | `blocked` | `active` | `review` | `done` | `cancelled` | `failed` | `error`
-- **UI partitions** (7 buckets): `backlog`, `todo`, `blocked`, `inProgress`, `awaitingReview`, `done`, `failed`. All UI components must use `partitionSprintTasks()` from the sprint tasks store — never map raw statuses directly
-- **awaitingReview**: Tasks that are `active` or `done` with `pr_status=open` — shown separately so users can see what needs human review
+- **UI partitions** (8 buckets): `backlog`, `todo`, `blocked`, `inProgress`, `pendingReview`, `openPrs`, `done`, `failed`. All UI components must use `partitionSprintTasks()` from the sprint tasks store — never map raw statuses directly
+- **pendingReview**: Tasks with `status='review'` — agent done, awaiting human action in Code Review Station
+- **openPrs**: Tasks with `status='active'` and `pr_status='open'|'branch_only'` — open GitHub PRs in progress
 - **failed bucket**: Combines `failed` + `error` + `cancelled` statuses
 - **done sorting**: Most recent `completed_at` first
 - Related: Task Workbench, Agent Manager, Code Review Station
