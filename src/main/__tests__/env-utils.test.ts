@@ -22,9 +22,11 @@ import {
   invalidateOAuthToken,
   refreshOAuthTokenFromKeychain,
   buildAgentEnv,
+  buildWorktreeEnv,
   _resetEnvCache
 } from '../env-utils'
 import { readFileSync, existsSync, writeFileSync, lstatSync } from 'node:fs'
+import * as fs from 'node:fs'
 import { execFile } from 'node:child_process'
 
 describe('OAuth token cache', () => {
@@ -538,5 +540,35 @@ describe('FLEET_EXTRA_PATHS', () => {
     // An empty segment would appear as a leading colon or "::" in the path
     expect(env.PATH).not.toMatch(/(^:|::|:\s*:)/)
     expect(env.PATH?.split(':').every(Boolean)).toBe(true)
+  })
+})
+
+describe('buildWorktreeEnv', () => {
+  beforeEach(() => {
+    _resetEnvCache()
+    vi.restoreAllMocks()
+  })
+
+  it('prepends node_modules/.bin to PATH when it exists', () => {
+    vi.spyOn(fs, 'existsSync').mockImplementation((p) =>
+      String(p).endsWith('node_modules/.bin') ? true : false
+    )
+    const env = buildWorktreeEnv('/repo/worktree')
+    expect(env.PATH).toMatch(/^\/repo\/worktree\/node_modules\/.bin:/)
+  })
+
+  it('returns base env unchanged when node_modules/.bin does not exist', () => {
+    vi.spyOn(fs, 'existsSync').mockReturnValue(false)
+    const base = buildAgentEnv()
+    const env = buildWorktreeEnv('/repo/worktree')
+    expect(env.PATH).toBe(base.PATH)
+  })
+
+  it('does not mutate the cached base env', () => {
+    vi.spyOn(fs, 'existsSync').mockReturnValue(true)
+    const base = buildAgentEnv()
+    const originalPath = base.PATH
+    buildWorktreeEnv('/repo/worktree')
+    expect(buildAgentEnv().PATH).toBe(originalPath)
   })
 })

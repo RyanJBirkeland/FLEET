@@ -133,6 +133,22 @@ export function buildAgentEnv(): Record<string, string | undefined> {
   return { ..._cachedEnv }
 }
 
+/**
+ * Like buildAgentEnv but prepends <worktreePath>/node_modules/.bin to PATH
+ * when that directory exists. Fixes "turbo: command not found" in repos where
+ * node_modules is a symlink and npm's workspace-root detection does not
+ * augment PATH reliably.
+ *
+ * Not cached — each call site supplies its own worktreePath.
+ */
+export function buildWorktreeEnv(worktreePath: string): Record<string, string | undefined> {
+  const base = buildAgentEnv()
+  const binDir = join(worktreePath, 'node_modules', '.bin')
+  if (!existsSync(binDir)) return base
+  const current = base.PATH ?? ''
+  return { ...base, PATH: [binDir, ...current.split(':').filter(Boolean)].join(':') }
+}
+
 let _cachedOAuthToken: string | null = null
 let _tokenLoadedAt = 0
 const TOKEN_TTL_MS = 30 * 1000 // 30 seconds — short enough to respect token rotation
