@@ -21,3 +21,28 @@ export interface RevisionDiagnostic {
   message: string
   suggestedFix?: string
 }
+
+function isRevisionFeedback(value: unknown): value is RevisionFeedback {
+  if (!value || typeof value !== 'object') return false
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.summary === 'string' &&
+    Array.isArray(candidate.diagnostics)
+  )
+}
+
+/**
+ * Attempts to parse a task's notes field as RevisionFeedback.
+ * Returns the parsed object on success, or null if the notes are not valid
+ * RevisionFeedback JSON (e.g. legacy freeform strings).
+ */
+export function parseRevisionFeedback(notes: string | null | undefined): RevisionFeedback | null {
+  if (!notes) return null
+  try {
+    const parsed: unknown = JSON.parse(notes)
+    if (isRevisionFeedback(parsed)) return parsed
+    return null
+  } catch {
+    return null
+  }
+}
