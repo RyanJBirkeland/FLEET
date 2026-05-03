@@ -75,11 +75,35 @@ function packageScriptsReferenceTurbo(repoPath: string): boolean {
   }
 }
 
-export type PreflightResult = { ok: true } | { ok: false; missing: string[] }
+export type PreflightResult =
+  | { ok: true }
+  | { ok: false; missing: string[]; missingEnvVars: string[] }
 
 /**
- * Runs toolchain detection and probes each required binary.
- * Returns ok:true if all binaries present, ok:false with missing list otherwise.
+ * Reads the repo's .npmrc and returns the names of ${VAR_NAME} references
+ * that are not present in the supplied env. Returns an empty array when .npmrc
+ * is absent or cannot be read (fail-open — a broken scanner must not block spawning).
+ */
+export function detectNpmrcMissingVars(
+  repoPath: string,
+  env: Record<string, string | undefined>
+): string[] {
+  try {
+    const npmrcPath = join(repoPath, '.npmrc')
+    if (!nodeFs.existsSync(npmrcPath)) return []
+    const content = nodeFs.readFileSync(npmrcPath, 'utf-8')
+    const matches = [...content.matchAll(/\$\{([A-Z_][A-Z0-9_]*)\}/g)]
+    const referenced = new Set(matches.map((m) => m[1]).filter((n): n is string => n != null))
+    return [...referenced].filter((name) => !env[name])
+  } catch {
+    return []
+  }
+}
+
+/**
+ * Runs toolchain detection and probes each required binary, and scans .npmrc
+ * for env vars that are missing from the agent environment.
+ * Returns ok:true if all checks pass, ok:false with missing lists otherwise.
  * Returns ok:true on any detection error — a broken detector must not block spawning.
  */
 export async function runPreflightChecks(
@@ -87,7 +111,9 @@ export async function runPreflightChecks(
   env: Record<string, string | undefined>
 ): Promise<PreflightResult> {
   const signals = detectToolchain(repoPath)
-  if (signals.length === 0) return { ok: true }
+  const missingEnvVars = detectNpmrcMissingVars(repoPath, env)
+
+  if (signals.length === 0 && missingEnvVars.length === 0) return { ok: true }
 
   const missing: string[] = []
   for (const signal of signals) {
@@ -95,7 +121,9 @@ export async function runPreflightChecks(
     if (!found) missing.push(signal.binary)
   }
 
-  return missing.length === 0 ? { ok: true } : { ok: false, missing }
+  return missing.length === 0 && missingEnvVars.length === 0
+    ? { ok: true }
+    : { ok: false, missing, missingEnvVars }
 }
 
 async function probeBinary(

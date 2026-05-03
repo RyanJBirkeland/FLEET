@@ -5,6 +5,7 @@ interface PreflightWarning {
   repoName: string
   taskTitle: string
   missing: string[]
+  missingEnvVars: string[]
 }
 
 interface PreflightStore {

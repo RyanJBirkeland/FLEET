@@ -9,7 +9,8 @@ export interface PreflightGate {
     taskId: string,
     missing: string[],
     repoName: string,
-    taskTitle: string
+    taskTitle: string,
+    missingEnvVars?: string[]
   ): Promise<boolean>
   resolveConfirmation(taskId: string, proceed: boolean): void
 }
@@ -23,7 +24,7 @@ export function createPreflightGate(): PreflightGate {
   const pending = new Map<string, PendingEntry>()
 
   return {
-    requestConfirmation(taskId, missing, repoName, taskTitle) {
+    requestConfirmation(taskId, missing, repoName, taskTitle, missingEnvVars = []) {
       return new Promise<boolean>((resolve) => {
         const timer = setTimeout(() => {
           if (pending.has(taskId)) {
@@ -34,7 +35,7 @@ export function createPreflightGate(): PreflightGate {
         }, CONFIRMATION_TIMEOUT_MS)
 
         pending.set(taskId, { resolve, timer })
-        broadcast('agent:preflightWarning', { taskId, repoName, taskTitle, missing })
+        broadcast('agent:preflightWarning', { taskId, repoName, taskTitle, missing, missingEnvVars })
       })
     },
 

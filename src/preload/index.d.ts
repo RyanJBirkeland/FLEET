@@ -352,7 +352,7 @@ declare global {
         onDrainPaused: (cb: (event: AgentManagerDrainPausedEvent) => void) => () => void
         onOrphanRecovered: (cb: (payload: { recovered: string[]; exhausted: string[] }) => void) => () => void
         onPreflightWarning: (
-          cb: (payload: { taskId: string; repoName: string; taskTitle: string; missing: string[] }) => void
+          cb: (payload: { taskId: string; repoName: string; taskTitle: string; missing: string[]; missingEnvVars: string[] }) => void
         ) => () => void
         respondToPreflight: (taskId: string, proceed: boolean) => Promise<void>
       }

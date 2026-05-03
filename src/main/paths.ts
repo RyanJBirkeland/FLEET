@@ -132,6 +132,13 @@ export interface RepoConfig {
    *   findings). Keeps the spec + success criteria; drops the boilerplate.
    */
   promptProfile?: 'fleet' | 'minimal'
+  /**
+   * Per-repo environment variables injected into the agent's spawn environment.
+   * Use for credentials not present in the shell env when FLEET launches
+   * (e.g. NODE_AUTH_TOKEN for private npm registries). Stored in plain text in
+   * the local SQLite settings table — not a secrets manager.
+   */
+  envVars?: Record<string, string>
 }
 
 function isRepoConfig(item: unknown): item is RepoConfig {

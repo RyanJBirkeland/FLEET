@@ -69,6 +69,56 @@
   align-items: center;
 }
 
+/* ─── Environment Variables Editor ─────────────────────────────────────── */
+
+.settings-env-vars {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fleet-space-3);
+}
+
+.settings-env-vars__hint {
+  font-size: var(--fleet-size-sm);
+  color: var(--fleet-text-muted);
+  margin: 0;
+}
+
+.settings-env-vars__warning {
+  font-size: var(--fleet-size-xs);
+  color: var(--fleet-text-dim);
+  margin: 0;
+  opacity: 0.8;
+}
+
+.settings-env-vars__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--fleet-space-2);
+}
+
+.settings-env-vars__row {
+  display: flex;
+  gap: var(--fleet-space-2);
+  align-items: center;
+}
+
+.settings-env-vars__key {
+  flex: 0 0 180px;
+  font-family: var(--fleet-font-code);
+}
+
+.settings-env-vars__value {
+  flex: 1;
+  min-width: 0;
+}
+
+.settings-env-vars__actions {
+  display: flex;
+  gap: var(--fleet-space-2);
+  justify-content: flex-end;
+  align-items: center;
+}
+
 /* ── Repo Discovery Modal ───────────────────────────────────────────────── */
 
 .settings-discovery-backdrop {

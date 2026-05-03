@@ -66,6 +66,9 @@ const ENV_ALLOWLIST = [
   // GitHub auth — required for gh CLI subprocesses (pr create, pr list, etc.)
   'GH_TOKEN',
   'GITHUB_TOKEN',
+  // npm registry auth — required for private registries (e.g. GitHub Packages, Artifactory)
+  'NODE_AUTH_TOKEN',
+  'NPM_TOKEN',
   // Corporate CA certificates — required when network uses SSL inspection (MITM proxy)
   'NODE_EXTRA_CA_CERTS',
   'GIT_SSL_CAINFO',

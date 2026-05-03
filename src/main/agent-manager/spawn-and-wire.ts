@@ -10,6 +10,7 @@ import type { Logger } from '../logger'
 import { logError } from '../logger'
 import type { AgentRunClaim, RunAgentDeps } from './run-agent'
 import { spawnWithTimeout } from './sdk-adapter'
+import { getRepoConfig } from '../paths'
 import { initializeAgentTracking } from './agent-initialization'
 import { cleanupWorktree } from './worktree'
 import { emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
@@ -132,7 +133,8 @@ export async function spawnAndWireAgent(
       worktree.branch,
       deps.tickId,
       undefined,             // epicGroupService — not used by pipeline agents here
-      worktree.worktreePath  // worktreePath — for buildWorktreeEnv in spawnClaudeAgent
+      worktree.worktreePath, // worktreePath — for buildWorktreeEnv in spawnClaudeAgent
+      getRepoConfig(task.repo)?.envVars
     )
     try {
       onSpawnSuccess?.()

@@ -24,6 +24,7 @@ import type { SpawnRegistry } from './spawn-registry'
 import type { PreflightGate } from './preflight-gate'
 import { runPreflightChecks } from './preflight-check'
 import { buildAgentEnv } from '../env-utils'
+import { getRepoConfig } from '../paths'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -272,19 +273,26 @@ export async function processQueuedTask(
     if (deps.preflightGate) {
       const repoPath = deps.resolveRepoPath(rawTask.repo ?? '')
       if (repoPath) {
-        const preflightResult = await runPreflightChecks(repoPath, buildAgentEnv())
+        const repoEnvVars = getRepoConfig(rawTask.repo ?? '')?.envVars ?? {}
+        const combinedEnv = { ...buildAgentEnv(), ...repoEnvVars }
+        const preflightResult = await runPreflightChecks(repoPath, combinedEnv)
         if (!preflightResult.ok) {
           deps.spawnRegistry.unmarkProcessing(taskId)
           const proceed = await deps.preflightGate.requestConfirmation(
             taskId,
             preflightResult.missing,
             rawTask.repo ?? '',
-            rawTask.title ?? taskId
+            rawTask.title ?? taskId,
+            preflightResult.missingEnvVars
           )
           if (!proceed) {
+            const allMissing = [
+              ...preflightResult.missing.map((b) => `binary:${b}`),
+              ...preflightResult.missingEnvVars.map((v) => `env:${v}`)
+            ]
             await deps.repo.updateTask(taskId, {
               status: 'backlog',
-              notes: `Moved to backlog: pre-flight detected missing binaries: ${preflightResult.missing.join(', ')}.`
+              notes: `Moved to backlog: pre-flight detected missing items: ${allMissing.join(', ')}.`
             })
             return
           }

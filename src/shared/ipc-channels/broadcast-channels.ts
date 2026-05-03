@@ -98,6 +98,7 @@ export interface BroadcastChannels {
     repoName: string
     taskTitle: string
     missing: string[]
+    missingEnvVars: string[]
   }
 
   // Task terminal
