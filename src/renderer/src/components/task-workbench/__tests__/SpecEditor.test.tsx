@@ -257,6 +257,11 @@ describe('SpecEditor', () => {
     expect(button).toBeDisabled()
   })
 
+  it('renders a hint that the spec is executed verbatim', () => {
+    render(<SpecEditor {...defaultProps} />)
+    expect(screen.getByText(/Agent executes this spec verbatim/)).toBeInTheDocument()
+  })
+
   it('maintains textarea value through re-renders', () => {
     const { rerender } = render(<SpecEditor {...defaultProps} />)
     const textarea = screen.getByPlaceholderText(/Describe what the agent should do/)

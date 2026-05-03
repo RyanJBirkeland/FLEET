@@ -101,6 +101,9 @@ export function SpecEditor({
         </button>
         <SpecQualityHints spec={spec} />
       </div>
+      <p className="wb-spec__hint">
+        Agent executes this spec verbatim — use <code>##</code> headings (Goal, Files to Change, How to Test).
+      </p>
       <textarea
         id="wb-form-spec"
         value={spec}
