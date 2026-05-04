@@ -156,47 +156,59 @@ describe('bootstrap', () => {
 
   describe('warnPlaintextSensitiveSettings', () => {
     it('should not warn when all sensitive settings return null', async () => {
-      vi.useRealTimers()
-      vi.mocked(settingsQueries.getSetting).mockReturnValue(null)
+      try {
+        vi.useRealTimers()
+        vi.mocked(settingsQueries.getSetting).mockReturnValue(null)
 
-      warnPlaintextSensitiveSettings()
-      await new Promise(setImmediate)
+        warnPlaintextSensitiveSettings()
+        await new Promise(setImmediate)
 
-      expect(mockLogger.warn).not.toHaveBeenCalled()
+        expect(mockLogger.warn).not.toHaveBeenCalled()
+      } finally {
+        vi.useFakeTimers()
+      }
     })
 
     it('should re-encrypt a plaintext sensitive setting at startup', async () => {
-      vi.useRealTimers()
-      vi.mocked(settingsQueries.getSetting).mockImplementation((_db, key) => {
-        if (key === 'github.token') return 'ghp_plaintext'
-        return null
-      })
+      try {
+        vi.useRealTimers()
+        vi.mocked(settingsQueries.getSetting).mockImplementation((_db, key) => {
+          if (key === 'github.token') return 'ghp_plaintext'
+          return null
+        })
 
-      warnPlaintextSensitiveSettings()
-      await new Promise(setImmediate)
+        warnPlaintextSensitiveSettings()
+        await new Promise(setImmediate)
 
-      expect(settingsQueries.setSetting).toHaveBeenCalledWith(
-        mockDb,
-        'github.token',
-        'ENC:ghp_plaintext'
-      )
-      expect(mockLogger.warn).not.toHaveBeenCalled()
+        expect(settingsQueries.setSetting).toHaveBeenCalledWith(
+          mockDb,
+          'github.token',
+          'ENC:ghp_plaintext'
+        )
+        expect(mockLogger.warn).not.toHaveBeenCalled()
+      } finally {
+        vi.useFakeTimers()
+      }
     })
 
     it('should warn when re-encryption fails', async () => {
-      vi.useRealTimers()
-      vi.mocked(settingsQueries.getSetting).mockImplementation((_db, key) => {
-        if (key === 'github.token') return 'ghp_plaintext'
-        return null
-      })
-      vi.mocked(settingsQueries.setSetting).mockImplementation(() => {
-        throw new Error('disk full')
-      })
+      try {
+        vi.useRealTimers()
+        vi.mocked(settingsQueries.getSetting).mockImplementation((_db, key) => {
+          if (key === 'github.token') return 'ghp_plaintext'
+          return null
+        })
+        vi.mocked(settingsQueries.setSetting).mockImplementation(() => {
+          throw new Error('disk full')
+        })
 
-      warnPlaintextSensitiveSettings()
-      await new Promise(setImmediate)
+        warnPlaintextSensitiveSettings()
+        await new Promise(setImmediate)
 
-      expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('github.token'))
+        expect(mockLogger.warn).toHaveBeenCalledWith(expect.stringContaining('github.token'))
+      } finally {
+        vi.useFakeTimers()
+      }
     })
 
     it('should skip re-encryption when safeStorage is unavailable', () => {
@@ -211,24 +223,28 @@ describe('bootstrap', () => {
     })
 
     it('does not call encryptSetting synchronously — defers to setImmediate', async () => {
-      vi.useRealTimers()
-      vi.mocked(settingsQueries.getSetting).mockImplementation((_db, key) => {
-        if (key === 'github.token') return 'ghp_plaintext'
-        return null
-      })
+      try {
+        vi.useRealTimers()
+        vi.mocked(settingsQueries.getSetting).mockImplementation((_db, key) => {
+          if (key === 'github.token') return 'ghp_plaintext'
+          return null
+        })
 
-      warnPlaintextSensitiveSettings()
+        warnPlaintextSensitiveSettings()
 
-      // Immediately after the synchronous return, encryptSetting must NOT have been called yet
-      expect(settingsQueries.setSetting).not.toHaveBeenCalled()
+        // Immediately after the synchronous return, encryptSetting must NOT have been called yet
+        expect(settingsQueries.setSetting).not.toHaveBeenCalled()
 
-      // After flushing setImmediate, the encryption should have run
-      await new Promise(setImmediate)
-      expect(settingsQueries.setSetting).toHaveBeenCalledWith(
-        mockDb,
-        'github.token',
-        'ENC:ghp_plaintext'
-      )
+        // After flushing setImmediate, the encryption should have run
+        await new Promise(setImmediate)
+        expect(settingsQueries.setSetting).toHaveBeenCalledWith(
+          mockDb,
+          'github.token',
+          'ENC:ghp_plaintext'
+        )
+      } finally {
+        vi.useFakeTimers()
+      }
     })
   })
 

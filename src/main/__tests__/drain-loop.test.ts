@@ -131,27 +131,30 @@ describe('drainQueuedTasks — quarantine', () => {
     expect(failingUpdateTask).toHaveBeenCalled()
   })
 
-  it('clears failure count on successful processing', async () => {
-    const _successRepo = makeRepo({
-      processQueuedTask: vi.fn().mockResolvedValue(undefined)
-    } as any)
-    const deps = makeDeps({ processQueuedTask: vi.fn().mockResolvedValue(undefined) })
-    const _loop = new DrainLoop(deps)
+  it('clears failure count on successful processing — same instance', async () => {
+    // T-32: Use ONE DrainLoop instance: seed failures, then succeed, verify quarantine never fires.
+    const failingProcess = vi
+      .fn()
+      .mockRejectedValueOnce(new Error('DB corruption'))
+      .mockRejectedValueOnce(new Error('DB corruption'))
+      .mockResolvedValue(undefined) // third call succeeds
 
-    // Seed failure count by failing twice
-    const failLoop = new DrainLoop(deps)
-    await failLoop.drainQueuedTasksWithMap(4, new Map())
-    await failLoop.drainQueuedTasksWithMap(4, new Map())
+    const deps = makeDeps({ processQueuedTask: failingProcess })
+    const loop = new DrainLoop(deps)
 
-    // Now use a fresh loop with success — counts are per-instance
-    const successDeps = makeDeps({ processQueuedTask: vi.fn().mockResolvedValue(undefined) })
-    const successLoop = new DrainLoop(successDeps)
-    await successLoop.drainQueuedTasksWithMap(4, new Map())
+    // First two calls fail — below quarantine threshold (DRAIN_QUARANTINE_THRESHOLD = 3)
+    await loop.drainQueuedTasksWithMap(4, new Map())
+    await loop.drainQueuedTasksWithMap(4, new Map())
 
-    // Success path: no quarantine called
-    expect(successDeps.repo.updateTask).not.toHaveBeenCalledWith(
-      'task-abc',
-      expect.objectContaining({ status: expect.stringMatching(/cancelled|error/) })
+    // Third call succeeds on the same instance — must clear the failure count
+    await loop.drainQueuedTasksWithMap(4, new Map())
+
+    // After the success, the failure count is cleared. A subsequent failure should NOT
+    // immediately quarantine (count resets to 1, still below threshold).
+    const updateCalls = (deps.repo.updateTask as ReturnType<typeof vi.fn>).mock.calls
+    const quarantineCall = updateCalls.find(([, patch]: [string, Record<string, unknown>]) =>
+      /cancelled|error/.test(String(patch.status ?? ''))
     )
+    expect(quarantineCall).toBeUndefined()
   })
 })

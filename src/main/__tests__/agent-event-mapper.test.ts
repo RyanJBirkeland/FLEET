@@ -603,3 +603,118 @@ describe('mapRawMessage rate-limits unrecognized message-type logs', () => {
     expect(loggerInfoMock).toHaveBeenCalledTimes(2)
   })
 })
+
+// ---------------------------------------------------------------------------
+// T-63 — mapRawMessage type-guard hardening (migrated from agent-message-classifier.test.ts)
+// ---------------------------------------------------------------------------
+
+describe('mapRawMessage — type guard hardening (T-63)', () => {
+  it('returns [] for a non-object message', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    expect(mapRawMessage(null)).toEqual([])
+    expect(mapRawMessage(undefined)).toEqual([])
+    expect(mapRawMessage('string')).toEqual([])
+    expect(mapRawMessage(42)).toEqual([])
+  })
+
+  it('returns [] for a message with undefined type', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    expect(mapRawMessage({})).toEqual([])
+    expect(mapRawMessage({ type: undefined })).toEqual([])
+  })
+
+  it('classifies a well-formed assistant text message', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    const raw = {
+      type: 'assistant',
+      message: {
+        content: [{ type: 'text', text: 'Hello world' }]
+      }
+    }
+    const events = mapRawMessage(raw)
+    expect(events).toHaveLength(1)
+    expect(events[0].type).toBe('agent:text')
+    expect((events[0] as { text: string }).text).toBe('Hello world')
+  })
+
+  it('classifies a tool_use block and validates input shape', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    const raw = {
+      type: 'assistant',
+      message: {
+        content: [
+          {
+            type: 'tool_use',
+            name: 'Read',
+            input: { path: '/foo/bar.ts' }
+          }
+        ]
+      }
+    }
+    const events = mapRawMessage(raw)
+    expect(events).toHaveLength(1)
+    expect(events[0].type).toBe('agent:tool_call')
+    const toolCall = events[0] as { tool: string; input: Record<string, unknown> | null }
+    expect(toolCall.tool).toBe('Read')
+    expect(toolCall.input).toEqual({ path: '/foo/bar.ts' })
+  })
+
+  it('emits agent:tool_call even when tool_use has a non-object input (passes it through as-is)', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    const raw = {
+      type: 'assistant',
+      message: {
+        content: [
+          {
+            type: 'tool_use',
+            name: 'Bash',
+            input: 'not-an-object'
+          }
+        ]
+      }
+    }
+    const events = mapRawMessage(raw)
+    expect(events).toHaveLength(1)
+    expect(events[0].type).toBe('agent:tool_call')
+    // agent-event-mapper passes input through without nulling it out
+    const toolCall = events[0] as { input: unknown }
+    expect(toolCall.input).toBe('not-an-object')
+  })
+
+  it('skips non-object content blocks gracefully', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    const raw = {
+      type: 'assistant',
+      message: {
+        content: [null, 'string-block', 42, { type: 'text', text: 'valid' }]
+      }
+    }
+    const events = mapRawMessage(raw)
+    expect(events).toHaveLength(1)
+    expect(events[0].type).toBe('agent:text')
+  })
+
+  it('handles assistant message with missing message field', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    const raw = { type: 'assistant' }
+    const events = mapRawMessage(raw)
+    expect(events).toEqual([])
+  })
+
+  it('classifies a tool_result message', async () => {
+    const { mapRawMessage } = await import('../agent-event-mapper')
+    const raw = {
+      type: 'tool_result',
+      tool_name: 'Read',
+      content: 'file contents here',
+      is_error: false
+    }
+    const events = mapRawMessage(raw)
+    expect(events).toHaveLength(1)
+    expect(events[0].type).toBe('agent:tool_result')
+    const result = events[0] as { tool: string; success: boolean; summary: string }
+    expect(result.tool).toBe('Read')
+    expect(result.success).toBe(true)
+    expect(result.summary).toBe('file contents here')
+  })
+})
