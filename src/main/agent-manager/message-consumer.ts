@@ -24,21 +24,6 @@ import { invalidateOAuthToken, refreshOAuthTokenFromKeychain } from '../env-util
  */
 export const MESSAGE_STALL_TIMEOUT_MS = 120_000
 
-/**
- * Module-level override for the stall timeout — settable only in tests.
- * Uses `node:timers` (not the global `setTimeout`) so the stall deadline runs
- * on the real system clock and is not disturbed by `vi.useFakeTimers()` in
- * unrelated test suites. Production code never calls `__setStallTimeoutMsForTesting`.
- */
-let stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
-export function __setStallTimeoutMsForTesting(ms: number): void {
-  stallTimeoutMs = ms
-}
-
-export function __resetStallTimeoutForTesting(): void {
-  stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
-}
-
 /** Sentinel returned by the per-iteration race when the deadline fires. */
 const STALL_SENTINEL = Symbol('stall')
 
@@ -65,7 +50,8 @@ interface StallTimerState {
  */
 async function nextOrStall(
   iter: AsyncIterator<unknown>,
-  timerState: StallTimerState
+  timerState: StallTimerState,
+  stallTimeoutMs: number
 ): Promise<IteratorResult<unknown> | typeof STALL_SENTINEL> {
   // Clear any timer from the previous iteration before rescheduling.
   if (timerState.handle !== undefined) {
@@ -405,7 +391,8 @@ export async function consumeMessages(
   turnTracker: TurnTracker,
   logger: Logger,
   maxTurns = 1000,
-  onOAuthRefreshStart?: (promise: Promise<unknown>) => void
+  onOAuthRefreshStart?: (promise: Promise<unknown>) => void,
+  stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
 ): Promise<ConsumeMessagesResult> {
   const pendingPlaygroundPaths: PlaygroundWriteResult[] = []
   const playgroundDetector = createPlaygroundDetector()
@@ -435,7 +422,7 @@ export async function consumeMessages(
     // within MESSAGE_STALL_TIMEOUT_MS the stream is declared stalled and
     // the loop exits early with a structured streamError.
     while (true) {
-      const raceResult = await nextOrStall(iter, stallTimer)
+      const raceResult = await nextOrStall(iter, stallTimer, stallTimeoutMs)
 
       if (raceResult === STALL_SENTINEL) {
         return buildStalledStreamResult(ctx)

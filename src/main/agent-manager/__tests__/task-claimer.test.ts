@@ -162,14 +162,16 @@ describe('validateAndClaimTask', () => {
     expect(result).toBeNull()
   })
 
-  it('sets task to error when repo path cannot be resolved', async () => {
+  it('sets task to error via taskStateService.transition when repo path cannot be resolved', async () => {
     vi.mocked(getRepoPaths).mockReturnValue({})
     const deps = makeClaimerDeps()
     const result = await validateAndClaimTask({}, new Map(), deps)
     expect(result).toBeNull()
-    expect(deps.repo.updateTask).toHaveBeenCalledWith(
+    // Should route through taskStateService.transition, NOT raw repo.updateTask
+    expect(deps.taskStateService.transition).toHaveBeenCalledWith(
       'task-1',
-      expect.objectContaining({ status: 'error' })
+      'error',
+      expect.objectContaining({ caller: expect.stringContaining('repo-not-configured') })
     )
     expect(deps.onTaskTerminal).toHaveBeenCalledWith('task-1', 'error')
   })

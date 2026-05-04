@@ -23,6 +23,21 @@ vi.mock('../../broadcast', () => ({
   broadcastCoalesced: vi.fn()
 }))
 
+vi.mock('../../settings', () => ({
+  getSetting: vi.fn().mockReturnValue(null),
+  getSettingJson: vi.fn().mockReturnValue(null),
+  setSetting: vi.fn(),
+  setSettingJson: vi.fn()
+}))
+
+vi.mock('../../services/sprint-mutation-broadcaster', () => ({
+  notifySprintMutation: vi.fn(),
+  onSprintMutation: vi.fn().mockReturnValue(() => undefined),
+  setSprintBroadcaster: vi.fn(),
+  registerBroadcastCallback: vi.fn(),
+  registerWebhookCallback: vi.fn()
+}))
+
 vi.mock('../../paths', () => ({
   getRepoPaths: vi.fn().mockReturnValue({}),
   getGhRepo: vi.fn(),

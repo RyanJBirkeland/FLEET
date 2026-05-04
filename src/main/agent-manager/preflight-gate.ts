@@ -1,4 +1,3 @@
-import { broadcast } from '../broadcast'
 import { createLogger } from '../logger'
 
 const log = createLogger('preflight-gate')
@@ -20,7 +19,7 @@ interface PendingEntry {
   timer: ReturnType<typeof setTimeout>
 }
 
-export function createPreflightGate(): PreflightGate {
+export function createPreflightGate(emit: (channel: string, payload: unknown) => void): PreflightGate {
   const pending = new Map<string, PendingEntry>()
 
   return {
@@ -35,7 +34,7 @@ export function createPreflightGate(): PreflightGate {
         }, CONFIRMATION_TIMEOUT_MS)
 
         pending.set(taskId, { resolve, timer })
-        broadcast('agent:preflightWarning', { taskId, repoName, taskTitle, missing, missingEnvVars })
+        emit('agent:preflightWarning', { taskId, repoName, taskTitle, missing, missingEnvVars })
       })
     },
 

@@ -533,7 +533,8 @@ export async function transitionTaskToReview(
     onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
     taskStateService: TaskStateService
   }) => Promise<void>,
-  taskStateService: TaskStateService
+  taskStateService: TaskStateService,
+  onMutation: (event: string, task: unknown) => void
 ): Promise<void> {
   logger.info(
     `[completion] Task ${taskId}: agent finished with commits on branch ${branch} — transitioning to review`
@@ -548,7 +549,8 @@ export async function transitionTaskToReview(
     repo,
     reviewRepo,
     logger,
-    taskStateService
+    taskStateService,
+    onMutation
   })
 
   await attemptAutoMerge({

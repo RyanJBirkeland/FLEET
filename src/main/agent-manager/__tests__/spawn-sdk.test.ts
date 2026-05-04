@@ -7,7 +7,6 @@ vi.mock('../../env-utils', () => ({
 }))
 
 vi.mock('../../paths', () => ({
-  getRepoPaths: vi.fn(() => ({ fleet: '/Users/test/projects/FLEET' })),
   FLEET_MEMORY_DIR: '/Users/test/.fleet/memory'
 }))
 
@@ -222,7 +221,8 @@ describe('spawnViaSdk wires worktree-isolation hook for pipeline agents', () => 
         prompt: 'test',
         cwd: '/Users/test/worktrees/fleet/abc',
         model: 'sonnet',
-        pipelineTuning: { maxTurns: 20 }
+        pipelineTuning: { maxTurns: 20 },
+        mainRepoPaths: ['/Users/test/projects/FLEET']
       },
       mockEnv,
       mockToken,

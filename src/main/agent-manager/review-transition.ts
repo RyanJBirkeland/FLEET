@@ -13,7 +13,6 @@ import type { TaskStateService } from '../services/task-state-service'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { resolveDefaultBranch } from '../lib/default-branch'
-import { notifySprintMutation } from '../services/sprint-mutation-broadcaster'
 
 /** Hard timeout for git subprocess calls in the review transition. */
 const GIT_EXEC_TIMEOUT_MS = 30_000
@@ -55,6 +54,8 @@ export interface TransitionToReviewOpts {
   reviewRepo: IReviewRepository
   logger: Logger
   taskStateService: TaskStateService
+  /** Called with the updated task after a successful transition to review. */
+  onMutation: (event: string, task: unknown) => void
 }
 
 /**
@@ -71,7 +72,8 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
     repo,
     reviewRepo,
     logger,
-    taskStateService
+    taskStateService,
+    onMutation
   } = opts
 
   try {
@@ -123,7 +125,7 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
       caller: 'review-transition'
     })
     const updated = repo.getTask(taskId)
-    if (updated) notifySprintMutation('updated', updated)
+    if (updated) onMutation('updated', updated)
   } catch (err) {
     logger.event('review-transition.fallback', { taskId, error: String(err) })
     logger.error(`[completion] Failed to transition task ${taskId} to review status: ${err}`)

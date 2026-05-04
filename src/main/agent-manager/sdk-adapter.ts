@@ -145,6 +145,12 @@ export async function spawnAgent(opts: {
   worktreePath?: string | undefined
   /** Per-repo env vars to merge after buildWorktreeEnv (e.g. NODE_AUTH_TOKEN for private npm registries). */
   extraEnv?: Record<string, string> | undefined
+  /**
+   * Absolute paths of all configured main repository checkouts.
+   * Forwarded to the worktree isolation hook for pipeline agents.
+   * Ignored for non-pipeline agents (those without pipelineTuning).
+   */
+  mainRepoPaths?: readonly string[] | undefined
 }): Promise<AgentHandle> {
   // Worktree-base cwd assertion applies only to pipeline agents — adhoc,
   // assistant, copilot, and synthesizer agents run in the user's repo or
@@ -163,7 +169,7 @@ export async function spawnAgent(opts: {
     return spawnOpencodeWithMcp(opts, resolved.model, settings.opencodeExecutable, opts.epicGroupService)
   }
 
-  const claudeHandle = await spawnClaudeAgent({ ...opts, model: resolved.model })
+  const claudeHandle = await spawnClaudeAgent({ ...opts, model: resolved.model, mainRepoPaths: opts.mainRepoPaths })
   return annotateHandle(claudeHandle, resolved.model)
 }
 
@@ -247,6 +253,7 @@ async function spawnClaudeAgent(opts: {
   tickId?: string | undefined
   worktreePath?: string | undefined
   extraEnv?: Record<string, string> | undefined
+  mainRepoPaths?: readonly string[] | undefined
 }): Promise<AgentHandle> {
   const baseEnv = opts.worktreePath ? buildWorktreeEnv(opts.worktreePath) : { ...buildAgentEnv() }
   const env = opts.extraEnv ? { ...baseEnv, ...opts.extraEnv } : baseEnv
@@ -282,7 +289,8 @@ export async function spawnWithTimeout(
   tickId?: string,
   epicGroupService?: EpicGroupService,
   worktreePath?: string,
-  extraEnv?: Record<string, string>
+  extraEnv?: Record<string, string>,
+  mainRepoPaths?: readonly string[]
 ): Promise<AgentHandle> {
   let timer: ReturnType<typeof setTimeout>
   const timeoutPromise = new Promise<never>((_, reject) => {
@@ -292,7 +300,7 @@ export async function spawnWithTimeout(
     )
   })
   return await Promise.race([
-    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase, branch, tickId, epicGroupService, worktreePath, extraEnv }),
+    spawnAgent({ prompt, cwd, model, logger, maxBudgetUsd, pipelineTuning, worktreeBase, branch, tickId, epicGroupService, worktreePath, extraEnv, mainRepoPaths }),
     timeoutPromise
   ]).finally(() => clearTimeout(timer!))
 }

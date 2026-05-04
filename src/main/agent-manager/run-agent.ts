@@ -121,6 +121,18 @@ export interface RunAgentDataDeps {
    * Optional — when omitted, auto-merge is skipped.
    */
   resolveRepoLocalPath?: (repoSlug: string) => string | null
+  /**
+   * Called after a successful task transition to review status.
+   * Informs the broadcaster so the renderer sees the update immediately.
+   * Optional — when omitted, no broadcast fires.
+   */
+  onMutation?: (event: string, task: unknown) => void
+  /**
+   * Returns the absolute paths of all configured main repository checkouts.
+   * Forwarded to the worktree isolation hook so pipeline agents cannot write
+   * to the main checkout path. Optional — when omitted, an empty list is used.
+   */
+  resolveMainRepoPaths?: () => string[]
 }
 
 /** Terminal status notification. */
@@ -320,6 +332,7 @@ interface ResolveAgentExitContext {
   resolveRepoLocalPath?: (repoSlug: string) => string | null
   onFastFailRecorded?: (taskId: string, reason: string) => void
   isFastFailExhausted?: (taskId: string) => boolean
+  onMutation?: (event: string, task: unknown) => void
 }
 
 async function resolveAgentExit(ctx: ResolveAgentExitContext): Promise<void> {
@@ -577,7 +590,8 @@ async function resolveNormalExit(ctx: ResolveAgentExitContext): Promise<void> {
         repoPath: ctx.repoPath,
         taskStateService: ctx.taskStateService,
         ...(ctx.getAutoReviewRules && { getAutoReviewRules: ctx.getAutoReviewRules }),
-        ...(ctx.resolveRepoLocalPath && { resolveRepoLocalPath: ctx.resolveRepoLocalPath })
+        ...(ctx.resolveRepoLocalPath && { resolveRepoLocalPath: ctx.resolveRepoLocalPath }),
+        ...(ctx.onMutation && { onMutation: ctx.onMutation })
       },
       ctx.logger
     )
@@ -709,7 +723,8 @@ async function finalizeAgentRun(
     ...(deps.getAutoReviewRules && { getAutoReviewRules: deps.getAutoReviewRules }),
     ...(deps.resolveRepoLocalPath && { resolveRepoLocalPath: deps.resolveRepoLocalPath }),
     ...(deps.onFastFailRecorded && { onFastFailRecorded: deps.onFastFailRecorded }),
-    ...(deps.isFastFailExhausted && { isFastFailExhausted: deps.isFastFailExhausted })
+    ...(deps.isFastFailExhausted && { isFastFailExhausted: deps.isFastFailExhausted }),
+    ...(deps.onMutation && { onMutation: deps.onMutation })
   })
 
   const finalTask = deps.repo.getTask(task.id)

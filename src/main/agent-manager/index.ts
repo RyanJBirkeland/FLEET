@@ -25,8 +25,9 @@ import { runWatchdog, killActiveAgent, type WatchdogLoopDeps } from './watchdog-
 import { validateAndClaimTask, prepareWorktreeForTask, processQueuedTask } from './task-claimer'
 import { checkIsReviewTask, runPruneLoop } from './worktree-manager'
 import { pruneStaleWorktrees, cleanupWorktree } from './worktree'
-import { getRepoPaths, getConfiguredRepos, getGhRepo } from '../paths'
+import { getRepoPaths, getConfiguredRepos, getGhRepo, type RepoConfig } from '../paths'
 import { getSetting, getSettingJson } from '../settings'
+import { notifySprintMutation } from '../services/sprint-mutation-broadcaster'
 import type { AutoReviewRule } from '../../shared/types/task-types'
 import { executeShutdown } from './shutdown-coordinator'
 import { reloadConfiguration } from './config-manager'
@@ -89,7 +90,7 @@ export interface AgentManager {
    * token is on disk before the next SDK spawn reads it.
    */
   awaitOAuthRefresh(): Promise<void>
-  onTaskTerminal(taskId: string, status: string): Promise<void>
+  onTaskTerminal(taskId: string, status: TaskStatus): Promise<void>
   /**
    * Re-read settings from the settings store and hot-update the in-memory
    * config for fields that are safe to change at runtime.
@@ -127,11 +128,11 @@ export class AgentManagerImpl implements AgentManager {
 
   // ---- Drain runtime ----
   /** The DrainLoop instance owns all mutable drain state (concurrency, failure counts, pause gate, dep fingerprints). */
-  _drainLoopInstance!: DrainLoop // assigned in constructor after deps are ready
-  _drainInFlight: Promise<void> | null = null
+  private _drainLoopInstance!: DrainLoop // assigned in constructor after deps are ready
+  private _drainInFlight: Promise<void> | null = null
   // Set when a terminal event fires; next drain tick rebuilds the dep index
   // fully instead of doing an incremental refresh.
-  _depIndexDirty = false
+  private _depIndexDirty = false
   // Drain-tick-level error counter. Reset on any successful tick. Emits
   // `manager:warning` after 3 consecutive failures.
   private _consecutiveDrainErrors = 0
@@ -145,15 +146,16 @@ export class AgentManagerImpl implements AgentManager {
   private readonly spawnRegistry = new SpawnRegistry()
 
   // ---- Dependency tracking ----
-  readonly _depIndex: DependencyIndex
+  private readonly _depIndex: DependencyIndex
   // Injected epic dependency graph, owned by EpicGroupService.
-  readonly _epicIndex: EpicDepsReader
+  private readonly _epicIndex: EpicDepsReader
 
   // ---- Cross-cutting collaborators ----
-  readonly _metrics: MetricsCollector
-  readonly _circuitBreaker: CircuitBreaker
+  private readonly _metrics: MetricsCollector
+  private readonly _circuitBreaker: CircuitBreaker
+  /** Exposed via __testInternals.wipTracker — readonly prevents external mutation. */
   readonly _wipTracker: WipTracker
-  readonly _errorRegistry: ErrorRegistry
+  private readonly _errorRegistry: ErrorRegistry
   private readonly terminalGuard = new TerminalGuard()
   // Set by onOAuthRefreshStart when message-consumer detects an auth error and
   // fires refreshOAuthTokenFromKeychain. Cleared in .finally(). Drain loop
@@ -168,9 +170,20 @@ export class AgentManagerImpl implements AgentManager {
   private readonly runAgentDeps: RunAgentDeps
   private readonly unitOfWork: IUnitOfWork
   private readonly _taskStateService: TaskStateService
+  /** Built once at construction so `_watchdogLoop()` does not rebuild on every invocation. */
+  private _watchdogDeps!: WatchdogLoopDeps // assigned in constructor after helpers are ready
   /** Optional external hook that replaces the default dep-resolution path when set. */
   private readonly _terminalResolution: TerminalResolutionStrategy | undefined
   private readonly _preflightGate: PreflightGate | null
+  /**
+   * Cascade-cancellation policy snapshot read once at construction.
+   * Re-reading `getSetting` on every `onTaskTerminal` call requires the
+   * settings infrastructure to be fully loaded — problematic during early
+   * startup and in tests that mock only a subset of `node:fs`. Snapshotting
+   * here means the policy is stable for the lifetime of the manager instance
+   * (a restart is required to pick up a changed setting, same as other config).
+   */
+  private readonly _cascadeCancellation: { enabled: boolean }
 
   // `config` is mutable so `reloadConfig()` can hot-update runtime-safe fields.
   // `worktreeBase` is never mutated after construction.
@@ -184,16 +197,26 @@ export class AgentManagerImpl implements AgentManager {
     unitOfWork: IUnitOfWork = createUnitOfWork(),
     terminalResolution?: TerminalResolutionStrategy,
     reviewRepo?: IReviewRepository,
-    preflightGate?: PreflightGate
+    preflightGate?: PreflightGate,
+    private readonly _emit?: (channel: string, payload: unknown) => void,
+    getSettings?: () => { autoReviewRules: AutoReviewRule[] | null; cascadeCancellationEnabled: boolean },
+    private readonly _resolveRepoPath?: (slug: string) => string | null,
+    private readonly _getRepoConfigs?: () => RepoConfig[],
+    private readonly _resolveGhRepo?: (repoSlug: string) => string | null
   ) {
     this.config = config
+    // Cascade-cancellation policy: prefer injected settings reader; fall back to direct getSetting call.
+    const cascadeEnabled = getSettings
+      ? getSettings().cascadeCancellationEnabled
+      : getSetting('dependency.cascadeBehavior') === 'cancel'
+    this._cascadeCancellation = { enabled: cascadeEnabled }
     this._terminalResolution = terminalResolution
     this._preflightGate = preflightGate ?? null
     this._depIndex = createDependencyIndex()
     this._epicIndex = epicDepsReader
     this._metrics = createMetricsCollector()
     const circuitObserver: CircuitObserver = {
-      onCircuitOpen: (payload) => broadcast('agent-manager:circuit-breaker-open', payload)
+      onCircuitOpen: (payload) => this.emitToRenderer('agent-manager:circuit-breaker-open', payload)
     }
     this._circuitBreaker = new CircuitBreaker(logger, circuitObserver)
     this._errorRegistry = new ErrorRegistry(logger)
@@ -225,13 +248,10 @@ export class AgentManagerImpl implements AgentManager {
       taskStateService: this._taskStateService,
       worktreeBase: config.worktreeBase,
       maxTurns: config.maxTurns,
-      resolveGhRepo: getGhRepo,
-      getAutoReviewRules: () => {
-        const isAutoReviewRulesArray = (u: unknown): u is AutoReviewRule[] => Array.isArray(u)
-        return getSettingJson<AutoReviewRule[]>('autoReview.rules', isAutoReviewRulesArray)
-      },
+      resolveGhRepo: (slug) => this.ghRepoFor(slug),
+      getAutoReviewRules: () => this.autoReviewRules(),
       resolveRepoLocalPath: (slug) => {
-        const repos = getConfiguredRepos()
+        const repos = this.allRepoConfigs()
         return repos.find((r) => r.name.toLowerCase() === slug.toLowerCase())?.localPath ?? null
       },
       onSpawnSuccess: () => {
@@ -252,7 +272,9 @@ export class AgentManagerImpl implements AgentManager {
         this._oauthRefreshPromise = promise.finally(() => {
           this._oauthRefreshPromise = null
         })
-      }
+      },
+      onMutation: (event, task) => notifySprintMutation(event as 'updated', task as import('../../shared/types/task-types').SprintTask),
+      resolveMainRepoPaths: () => this.allRepoConfigs().map((r) => r.localPath)
     }
 
     // Construct the DrainLoop after runAgentDeps is ready (processQueuedTask needs _spawnAgent).
@@ -271,11 +293,39 @@ export class AgentManagerImpl implements AgentManager {
       processQueuedTask: (raw, map) => this._processQueuedTask(raw, map),
       onTaskTerminal: this.onTaskTerminal.bind(this),
       taskStateService: this._taskStateService,
-      emitDrainPaused: (event) => broadcast('agentManager:drainPaused', event),
+      emitDrainPaused: (event) => this.emitToRenderer('agentManager:drainPaused', event),
       awaitOAuthRefresh: () => this.awaitOAuthRefresh(),
-      getConfiguredRepos
+      getConfiguredRepos: () => this.allRepoConfigs()
     }
     this._drainLoopInstance = new DrainLoop(drainLoopDeps, makeConcurrencyState(config.maxConcurrent))
+
+    // Build watchdog deps once (T-7) — avoids rebuilding on every watchdog tick
+    // and captures the `this.repoPathFor` helper so it uses the injected resolver.
+    this._watchdogDeps = {
+      config: this.config,
+      repo: this.repo,
+      metrics: this._metrics,
+      logger,
+      spawnRegistry: this.spawnRegistry,
+      getConcurrency: () => this._drainLoopInstance.getConcurrency(),
+      setConcurrency: (state) => {
+        this._drainLoopInstance.setConcurrency(state)
+      },
+      onTaskTerminal: this.onTaskTerminal.bind(this),
+      taskStateService: this._taskStateService,
+      cleanupAgentWorktree: async (agent) => {
+        const task = this.repo.getTask(agent.taskId)
+        const repoPath = task ? this.repoPathFor(task.repo) : null
+        if (!repoPath) return
+        await cleanupWorktree({
+          repoPath,
+          worktreePath: agent.worktreePath,
+          branch: agent.branch,
+          logger: this.logger
+        })
+      },
+      broadcastToRenderer: (channel, payload) => this.emitToRenderer(channel, payload)
+    }
   }
 
   // ---- Test seam ----
@@ -291,6 +341,61 @@ export class AgentManagerImpl implements AgentManager {
   private _testInternalsView?: AgentManagerTestInternals
   get __testInternals(): AgentManagerTestInternals {
     return (this._testInternalsView ??= new AgentManagerTestInternals(this))
+  }
+
+  // ---- Infrastructure delegation helpers ----
+
+  /**
+   * Emits an event to the renderer process. Prefers the injected `_emit` callback
+   * from `CreateAgentManagerOptions`; falls back to the module-level `broadcast`.
+   *
+   * The cast to `string, unknown` is intentional: the injected callback uses the
+   * generic form while `broadcast` uses typed channels. Both produce the same IPC
+   * send — the cast is safe because broadcast already handles unknown payloads.
+   */
+  private emitToRenderer(channel: string, payload?: unknown): void {
+    if (this._emit) {
+      this._emit(channel, payload)
+    } else {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      broadcast(channel as any, payload as any)
+    }
+  }
+
+  /**
+   * Returns the local filesystem path for a repo slug.
+   * Prefers the injected resolver; falls back to `getRepoPaths()`.
+   */
+  private repoPathFor(slug: string): string | null {
+    if (this._resolveRepoPath) return this._resolveRepoPath(slug.toLowerCase())
+    return getRepoPaths()[slug.toLowerCase()] ?? null
+  }
+
+  /**
+   * Returns all configured repo records.
+   * Prefers the injected reader; falls back to `getConfiguredRepos()`.
+   */
+  private allRepoConfigs(): RepoConfig[] {
+    if (this._getRepoConfigs) return this._getRepoConfigs()
+    return getConfiguredRepos()
+  }
+
+  /**
+   * Returns the GitHub `owner/repo` string for a repo slug.
+   * Prefers the injected resolver; falls back to `getGhRepo()`.
+   */
+  private ghRepoFor(slug: string): string | null {
+    if (this._resolveGhRepo) return this._resolveGhRepo(slug)
+    return getGhRepo(slug)
+  }
+
+  /**
+   * Returns the configured auto-review rules.
+   * Reads from settings via `getSettingJson` (not yet injected — T-3 partial).
+   */
+  private autoReviewRules(): AutoReviewRule[] | null {
+    const isAutoReviewRulesArray = (u: unknown): u is AutoReviewRule[] => Array.isArray(u)
+    return getSettingJson<AutoReviewRule[]>('autoReview.rules', isAutoReviewRulesArray)
   }
 
   // ---- Helpers ----
@@ -327,7 +432,7 @@ export class AgentManagerImpl implements AgentManager {
         ...(this._terminalResolution && { terminalResolution: this._terminalResolution }),
         terminalCalled: new Map(), // TerminalGuard owns outer dedup; fresh Map per call is safe
         logger: this.logger,
-        getSetting
+        cascadeCancellation: this._cascadeCancellation
       })
     )
   }
@@ -460,8 +565,8 @@ export class AgentManagerImpl implements AgentManager {
       logger: this.logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       taskStateService: this._taskStateService,
-      resolveRepoPath: (slug) => getRepoPaths()[slug.toLowerCase()] ?? null,
-      onTaskClaimed: () => broadcast('sprint:externalChange')
+      resolveRepoPath: (slug) => this.repoPathFor(slug),
+      onTaskClaimed: () => this.emitToRenderer('sprint:externalChange')
     })
   }
 
@@ -480,7 +585,7 @@ export class AgentManagerImpl implements AgentManager {
       logger: this.logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       taskStateService: this._taskStateService,
-      resolveRepoPath: (slug) => getRepoPaths()[slug.toLowerCase()] ?? null
+      resolveRepoPath: (slug) => this.repoPathFor(slug)
     })
   }
 
@@ -500,7 +605,7 @@ export class AgentManagerImpl implements AgentManager {
       logger: this.logger,
       onTaskTerminal: this.onTaskTerminal.bind(this),
       taskStateService: this._taskStateService,
-      resolveRepoPath: (slug) => getRepoPaths()[slug.toLowerCase()] ?? null,
+      resolveRepoPath: (slug) => this.repoPathFor(slug),
       spawnRegistry: this.spawnRegistry,
       spawnAgent: (task, wt, repoPath) => this._spawnAgent(task, wt, repoPath, tickId),
       preflightGate: this._preflightGate,
@@ -525,32 +630,7 @@ export class AgentManagerImpl implements AgentManager {
    * Exposed to tests via `__testInternals`.
    */
   async _watchdogLoop(): Promise<void> {
-    const watchdogDeps: WatchdogLoopDeps = {
-      config: this.config,
-      repo: this.repo,
-      metrics: this._metrics,
-      logger: this.logger,
-      spawnRegistry: this.spawnRegistry,
-      getConcurrency: () => this._drainLoopInstance.getConcurrency(),
-      setConcurrency: (state) => {
-        this._drainLoopInstance.setConcurrency(state)
-      },
-      onTaskTerminal: this.onTaskTerminal.bind(this),
-      taskStateService: this._taskStateService,
-      cleanupAgentWorktree: async (agent) => {
-        const task = this.repo.getTask(agent.taskId)
-        const repoPath = task ? (getRepoPaths()[task.repo.toLowerCase()] ?? null) : null
-        if (!repoPath) return
-        await cleanupWorktree({
-          repoPath,
-          worktreePath: agent.worktreePath,
-          branch: agent.branch,
-          logger: this.logger
-        })
-      },
-      broadcastToRenderer: (channel, payload) => broadcast(channel as 'manager:warning', payload as { message: string })
-    }
-    await runWatchdog(watchdogDeps)
+    await runWatchdog(this._watchdogDeps)
   }
 
   // ---- Orphan loop ----
@@ -592,7 +672,7 @@ export class AgentManagerImpl implements AgentManager {
     exhausted: string[]
   }): void {
     if (result.recovered.length > 0 || result.exhausted.length > 0) {
-      broadcast('orphan:recovered', result)
+      this.emitToRenderer('orphan:recovered', result)
     }
   }
 
@@ -702,7 +782,7 @@ export class AgentManagerImpl implements AgentManager {
     this._consecutiveDrainErrors++
     this.logger.warn(`[agent-manager] Drain loop error (${this._consecutiveDrainErrors}): ${err}`)
     if (this._consecutiveDrainErrors >= 3) {
-      broadcast('manager:warning', {
+      this.emitToRenderer('manager:warning', {
         message:
           'Agent queue is not processing — check logs for details. Drain errors: ' +
           this._consecutiveDrainErrors
@@ -858,17 +938,77 @@ export class AgentManagerImpl implements AgentManager {
 // Factory
 // ---------------------------------------------------------------------------
 
-export function createAgentManager(
-  config: AgentManagerConfig,
-  repo: IAgentTaskRepository,
-  logger: Logger = defaultLogger,
-  epicDepsReader?: EpicDepsReader,
-  unitOfWork?: IUnitOfWork,
-  terminalResolution?: TerminalResolutionStrategy,
-  reviewRepo?: IReviewRepository,
+export interface CreateAgentManagerOptions {
+  config: AgentManagerConfig
+  repo: IAgentTaskRepository
+  logger?: Logger
+  epicDepsReader?: EpicDepsReader
+  unitOfWork?: IUnitOfWork
+  terminalResolution?: TerminalResolutionStrategy
+  reviewRepo?: IReviewRepository
   preflightGate?: PreflightGate
-): AgentManager {
-  return new AgentManagerImpl(config, repo, logger, epicDepsReader, unitOfWork, terminalResolution, reviewRepo, preflightGate)
+  /**
+   * Emits events to the renderer process.
+   * Defaults to the module-level `broadcast` function when not provided.
+   * Injected here so the agent-manager layer no longer depends directly on
+   * the broadcast infrastructure module (Dependency Inversion Principle).
+   */
+  emit?: (channel: string, payload: unknown) => void
+  /**
+   * Returns the resolved settings snapshot at construction time.
+   * When omitted, settings are read from the settings module directly.
+   */
+  getSettings?: () => { autoReviewRules: AutoReviewRule[] | null; cascadeCancellationEnabled: boolean }
+  /**
+   * Resolves the absolute local filesystem path for a configured repo slug.
+   * Returns null when the slug is not configured.
+   * When omitted, delegates to `getRepoPaths()` from the paths module.
+   */
+  resolveRepoPath?: (slug: string) => string | null
+  /**
+   * Returns all configured repository records.
+   * When omitted, delegates to `getConfiguredRepos()` from the paths module.
+   */
+  getRepoConfigs?: () => RepoConfig[]
+  /**
+   * Returns the `owner/repo` GitHub identifier for a configured repo slug.
+   * Returns null when the slug is not configured.
+   * When omitted, delegates to `getGhRepo()` from the paths module.
+   */
+  resolveGhRepo?: (repoSlug: string) => string | null
+}
+
+export function createAgentManager(opts: CreateAgentManagerOptions): AgentManager {
+  const {
+    config,
+    repo,
+    logger = defaultLogger,
+    epicDepsReader,
+    unitOfWork,
+    terminalResolution,
+    reviewRepo,
+    preflightGate,
+    emit,
+    getSettings,
+    resolveRepoPath,
+    getRepoConfigs,
+    resolveGhRepo: resolveGhRepoOpt
+  } = opts
+  return new AgentManagerImpl(
+    config,
+    repo,
+    logger,
+    epicDepsReader,
+    unitOfWork,
+    terminalResolution,
+    reviewRepo,
+    preflightGate,
+    emit,
+    getSettings,
+    resolveRepoPath,
+    getRepoConfigs,
+    resolveGhRepoOpt
+  )
 }
 
 // Re-export killActiveAgent for callers that need to kill agents directly

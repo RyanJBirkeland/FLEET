@@ -68,6 +68,12 @@ export interface ResolveSuccessContext {
    * Optional — when omitted, auto-merge is skipped.
    */
   resolveRepoLocalPath?: (repoSlug: string) => string | null
+  /**
+   * Called after a successful task transition to review status.
+   * Informs the broadcaster so the renderer sees the update immediately.
+   * Optional — when omitted, no broadcast fires.
+   */
+  onMutation?: (event: string, task: unknown) => void
 }
 
 /**
@@ -249,7 +255,8 @@ const reviewTransitionPhase: SuccessPhase = {
       ctx.logger,
       ctx.onTaskTerminal,
       attemptAutoMerge,
-      ctx.taskStateService
+      ctx.taskStateService,
+      ctx.onMutation ?? ((_event, _task) => { /* no-op when not injected */ })
     )
   }
 }

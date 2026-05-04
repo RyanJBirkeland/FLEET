@@ -63,8 +63,8 @@ export class AgentManagerTestInternals {
     return this.p._concurrency
   }
   get lastTaskDeps(): Map<string, { deps: TaskDependency[] | null; hash: string }> {
-    // lastTaskDeps moved to DrainLoop in T-58 — delegate through the test-accessible DrainLoop.
-    return this.mgr._drainLoopInstance['lastTaskDeps'] as Map<string, { deps: TaskDependency[] | null; hash: string }>
+    // lastTaskDeps moved to DrainLoop in T-58 — delegate through the DrainLoop via private access.
+    return this.p._drainLoopInstance['lastTaskDeps'] as Map<string, { deps: TaskDependency[] | null; hash: string }>
   }
   get depIndexDirty(): boolean {
     return this.p._depIndexDirty
@@ -123,41 +123,41 @@ export class AgentManagerTestInternals {
     return this.p.terminalGuard as TerminalGuard
   }
 
-  // ---- Cross-cutting (readonly, typed access) ----
+  // ---- Cross-cutting (private — accessed via p) ----
   get depIndex(): DependencyIndex {
-    return this.mgr._depIndex
+    return this.p._depIndex as DependencyIndex
   }
   get circuitBreaker(): CircuitBreaker {
-    return this.mgr._circuitBreaker
+    return this.p._circuitBreaker as CircuitBreaker
   }
   get wipTracker(): WipTracker {
     return this.mgr._wipTracker
   }
   get errorRegistry(): ErrorRegistry {
-    return this.mgr._errorRegistry
+    return this.p._errorRegistry as ErrorRegistry
   }
 
   // ---- Methods (delegated via _-prefixed names on the instance) ----
   drainLoop(): Promise<void> {
-    return this.mgr._drainLoop()
+    return this.p._drainLoop()
   }
   drainQueuedTasks(available: number, taskStatusMap: Map<string, TaskStatus>): Promise<void> {
-    return this.mgr._drainLoopInstance.drainQueuedTasksWithMap(available, taskStatusMap)
+    return this.p._drainLoopInstance.drainQueuedTasksWithMap(available, taskStatusMap)
   }
   processQueuedTask(rawTask: SprintTask, taskStatusMap: Map<string, TaskStatus>): Promise<void> {
-    return this.mgr._processQueuedTask(rawTask, taskStatusMap)
+    return this.p._processQueuedTask(rawTask, taskStatusMap)
   }
   refreshDependencyIndex(): Map<string, TaskStatus> {
-    return this.mgr._refreshDependencyIndex()
+    return this.p._refreshDependencyIndex()
   }
   spawnAgent(
     task: AgentRunClaim,
     worktree: { worktreePath: string; branch: string },
     repoPath: string
   ): Promise<void> {
-    return this.mgr._spawnAgent(task, worktree, repoPath)
+    return this.p._spawnAgent(task, worktree, repoPath)
   }
   watchdogLoop(): Promise<void> {
-    return this.mgr._watchdogLoop()
+    return this.p._watchdogLoop()
   }
 }

@@ -136,7 +136,8 @@ export async function spawnAndWireAgent(
       deps.tickId,
       undefined,             // epicGroupService — not used by pipeline agents here
       worktree.worktreePath, // worktreePath — for buildWorktreeEnv in spawnClaudeAgent
-      extraEnv
+      extraEnv,
+      deps.resolveMainRepoPaths?.()
     )
     try {
       onSpawnSuccess?.()

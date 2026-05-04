@@ -284,5 +284,26 @@ describe('evaluateAutoMerge', () => {
         expect.anything()
       )
     })
+
+    it('does NOT call repo.updateTask as a raw fallback when taskStateService.transition fails', async () => {
+      const dbError = new Error('db write failed')
+      const failingStateService = {
+        transition: vi.fn().mockRejectedValue(dbError)
+      }
+      const repo = makeRepo()
+      const ctx = makeContext({
+        repo: repo as unknown as AutoMergeContext['repo'],
+        taskStateService: failingStateService as unknown as AutoMergeContext['taskStateService']
+      })
+
+      await evaluateAutoMerge(ctx)
+
+      // The raw repo.updateTask bypass should NOT be called — only taskStateService.transition
+      expect(repo.updateTask).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ status: 'done' })
+      )
+      expect(failingStateService.transition).toHaveBeenCalledWith('task-1', 'done', expect.anything())
+    })
   })
 })

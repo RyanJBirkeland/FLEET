@@ -24,9 +24,7 @@ vi.mock('../../env-utils', () => ({
 
 import {
   consumeMessages,
-  OAuthRefreshFailedError,
-  __setStallTimeoutMsForTesting,
-  __resetStallTimeoutForTesting
+  OAuthRefreshFailedError
 } from '../message-consumer'
 import type { ActiveAgent, AgentHandle } from '../types'
 import type { AgentRunClaim } from '../run-agent'
@@ -456,11 +454,8 @@ describe('consumeMessages', () => {
 
   describe('stall detection', () => {
     // Use the real system clock — stall detection uses `node:timers` (bypasses
-    // fake-timer patching) so we inject a very small timeout and wait on real time.
+    // fake-timer patching) so we pass a very small timeout directly to consumeMessages.
     const FAST_STALL_MS = 50
-
-    beforeEach(() => __setStallTimeoutMsForTesting(FAST_STALL_MS))
-    afterEach(() => __resetStallTimeoutForTesting())
 
     it(
       'resolves with streamError reason stalled when stream yields no message within deadline',
@@ -492,7 +487,9 @@ describe('consumeMessages', () => {
           'run-1',
           makeTurnTracker(),
           logger,
-          20
+          20,
+          undefined,
+          FAST_STALL_MS
         )
 
         expect(result.streamError).toBeInstanceOf(Error)

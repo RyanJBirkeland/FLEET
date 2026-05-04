@@ -451,7 +451,7 @@ function wireAgentManagerAndMcp(
   core: CoreStartupServices,
   reviewRepo: ReturnType<typeof createReviewRepository>
 ): { agentManager: ReturnType<typeof createAgentManager> | undefined; preflightGate: ReturnType<typeof createPreflightGate> } {
-  const preflightGate = createPreflightGate()
+  const preflightGate = createPreflightGate(broadcast as (channel: string, payload: unknown) => void)
 
   const amConfig = {
     maxConcurrent: getSettingJson<number>('agentManager.maxConcurrent') ?? 2,
@@ -472,16 +472,15 @@ function wireAgentManagerAndMcp(
   setTaskGroupQueriesLogger(createLogger('task-group-queries'))
   setSettingsQueriesLogger(createLogger('settings-queries'))
 
-  const agentManager = createAgentManager(
-    amConfig,
-    core.repo,
-    amLogger,
-    core.epicGroupService,
-    undefined,
-    { onStatusTerminal: core.terminalService.onStatusTerminal },
+  const agentManager = createAgentManager({
+    config: amConfig,
+    repo: core.repo,
+    logger: amLogger,
+    epicDepsReader: core.epicGroupService,
+    terminalResolution: { onStatusTerminal: core.terminalService.onStatusTerminal },
     reviewRepo,
     preflightGate
-  )
+  })
   agentManager.start()
 
   const statusServer = createStatusServer(

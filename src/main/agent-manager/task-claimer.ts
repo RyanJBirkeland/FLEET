@@ -82,14 +82,16 @@ export async function validateAndClaimTask(
       `[agent-manager] No repo path for "${task.repo}" — setting task ${task.id} to error`
     )
     try {
-      await deps.repo.updateTask(task.id, {
-        status: 'error',
-        notes: `Repo "${task.repo}" is not configured in FLEET settings. Add it in Settings > Repos, then reset this task to queued.`,
-        claimed_by: null
+      await deps.taskStateService.transition(task.id, 'error', {
+        fields: {
+          notes: `Repo "${task.repo}" is not configured in FLEET settings. Add it in Settings > Repos, then reset this task to queued.`,
+          claimed_by: null
+        },
+        caller: 'task-claimer:repo-not-configured'
       })
     } catch (err) {
       deps.logger.warn(
-        `[agent-manager] Failed to update task ${task.id} after repo resolution failure: ${err}`
+        `[agent-manager] Failed to transition task ${task.id} to error after repo resolution failure: ${err}`
       )
     }
     await deps

@@ -8,7 +8,7 @@ import type { AgentHandle, SteerResult, SpawnStrategy } from './types'
 import type { Logger } from '../logger'
 import { randomUUID } from 'node:crypto'
 import { getClaudeCliPath } from '../env-utils'
-import { getRepoPaths, FLEET_MEMORY_DIR } from '../paths'
+import { FLEET_MEMORY_DIR } from '../paths'
 import { getSessionId } from './sdk-message-protocol'
 import { createWorktreeIsolationHook } from './worktree-isolation-hook'
 
@@ -38,6 +38,12 @@ export function spawnViaSdk(
     taskId?: string | undefined
     agentType?: string | undefined
     tickId?: string | undefined
+    /**
+     * Absolute paths of the main repository checkouts on disk.
+     * Used by the worktree isolation hook to deny agent writes to main repo paths.
+     * Required when `pipelineTuning` is set; ignored otherwise.
+     */
+    mainRepoPaths?: readonly string[] | undefined
   },
   env: NodeJS.ProcessEnv,
   token: string | null,
@@ -82,7 +88,7 @@ export function spawnViaSdk(
       canUseTool: opts.pipelineTuning
         ? createWorktreeIsolationHook({
             worktreePath: opts.cwd,
-            mainRepoPaths: Object.values(getRepoPaths()),
+            mainRepoPaths: opts.mainRepoPaths ? [...opts.mainRepoPaths] : [],
             extraAllowedPaths: [FLEET_MEMORY_DIR],
             logger
           })

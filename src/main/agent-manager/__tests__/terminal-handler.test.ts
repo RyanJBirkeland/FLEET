@@ -206,3 +206,40 @@ describe('handleTaskTerminal — onStatusTerminal routing', () => {
     expect(resolveDependents).not.toHaveBeenCalled()
   })
 })
+
+// ---------------------------------------------------------------------------
+// cascadeCancellation typed policy
+// ---------------------------------------------------------------------------
+
+describe('handleTaskTerminal — cascadeCancellation policy', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(resolveDependents).mockImplementation(() => undefined)
+  })
+
+  it('passes a getSetting that returns cancel when cascadeCancellation.enabled is true', async () => {
+    const deps = makeTerminalHandlerDeps({
+      cascadeCancellation: { enabled: true }
+    })
+    const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
+
+    await handleTaskTerminal('task-1', 'done', onTaskTerminal, deps)
+
+    const getSettingArg = vi.mocked(resolveDependents).mock.calls[0]?.[6]
+    expect(typeof getSettingArg).toBe('function')
+    expect(getSettingArg?.('dependency.cascadeBehavior')).toBe('cancel')
+  })
+
+  it('passes a getSetting that returns continue when cascadeCancellation.enabled is false', async () => {
+    const deps = makeTerminalHandlerDeps({
+      cascadeCancellation: { enabled: false }
+    })
+    const onTaskTerminal = vi.fn().mockResolvedValue(undefined)
+
+    await handleTaskTerminal('task-1', 'done', onTaskTerminal, deps)
+
+    const getSettingArg = vi.mocked(resolveDependents).mock.calls[0]?.[6]
+    expect(typeof getSettingArg).toBe('function')
+    expect(getSettingArg?.('dependency.cascadeBehavior')).toBe('continue')
+  })
+})

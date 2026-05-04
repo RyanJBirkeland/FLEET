@@ -40,7 +40,7 @@ export interface AutoMergeContext {
 
 export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
   const {
-    taskId, title, branch, worktreePath, repo, unitOfWork, logger, taskStateService,
+    taskId, title, branch, worktreePath, repo, logger, taskStateService,
     getAutoReviewRules, resolveRepoLocalPath
   } = opts
   const rules = getAutoReviewRules()
@@ -91,7 +91,7 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
     })
 
     if (mergeResult === 'merged') {
-      await finalizeAutoMergeStatus(taskId, repo, unitOfWork, logger, taskStateService)
+      await finalizeAutoMergeStatus(taskId, repo, logger, taskStateService)
       logger.info(`[completion] Task ${taskId} auto-merged successfully`)
     } else if (mergeResult === 'dirty-main') {
       logger.warn(
@@ -127,7 +127,6 @@ export async function evaluateAutoMerge(opts: AutoMergeContext): Promise<void> {
 async function finalizeAutoMergeStatus(
   taskId: string,
   repo: IAgentTaskRepository,
-  _unitOfWork: IUnitOfWork,
   logger: Logger,
   taskStateService: TaskStateService
 ): Promise<void> {
@@ -152,14 +151,10 @@ async function finalizeAutoMergeStatus(
       `[auto-merge] COMMIT LANDED ON MAIN but status update failed — task ${taskId} may need manual status reconciliation: ${err}`
     )
     logger.event('auto-merge.status-update-failed', { taskId, error: String(err) })
-    // Fallback: bypass the state machine and force the row to done so the task
-    // does not stay stuck in review after the merge has already landed on main.
-    try {
-      await repo.updateTask(taskId, { status: 'done', completed_at: nowIso(), worktree_path: null })
-      logger.warn(`[auto-merge] Fallback force-write succeeded for task ${taskId}`)
-    } catch (fallbackErr) {
-      logger.error(`[auto-merge] Fallback also failed for task ${taskId}: ${fallbackErr}`)
-    }
+    // Re-throw so the outer catch in evaluateAutoMerge leaves the task in review
+    // for human action. Raw repo.updateTask bypasses were removed (T-40) — the
+    // state machine is the single write path; a raw bypass would skip dependency
+    // resolution, audit trail, and renderer broadcast.
     throw err
   }
 }

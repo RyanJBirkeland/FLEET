@@ -38,6 +38,15 @@ function recordTerminalMetrics(
   logger.event('agent.terminal', { taskId, status, source: 'terminal-handler' })
 }
 
+function buildGetSettingFromPolicy(cascadeCancellation: { enabled: boolean } | undefined): (key: string) => string | null {
+  return (key) => {
+    if (key === 'dependency.cascadeBehavior') {
+      return cascadeCancellation?.enabled ? 'cancel' : 'continue'
+    }
+    return null
+  }
+}
+
 async function resolveTerminalDependents(
   taskId: string,
   status: TaskStatus,
@@ -47,9 +56,10 @@ async function resolveTerminalDependents(
   unitOfWork: IUnitOfWork,
   onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
   logger: Logger,
-  getSetting: (key: string) => string | null,
+  cascadeCancellation: { enabled: boolean } | undefined,
   taskStateService?: TaskStateService
 ): Promise<void> {
+  const getSetting = buildGetSettingFromPolicy(cascadeCancellation)
   // DESIGN: Inline resolution for immediate drain loop feedback.
   // When a pipeline agent completes, we resolve dependents synchronously
   // so the drain loop can claim newly-unblocked tasks in the same tick.
@@ -112,11 +122,12 @@ export interface TerminalHandlerDeps {
   logger: Logger
   taskStateService?: TaskStateService
   /**
-   * Reads a persisted setting by key. Forwarded to `resolveDependents` so
-   * cascade-cancellation policy is read from settings without the handler
-   * importing the settings infrastructure directly.
+   * Typed cascade-cancellation policy. When `enabled` is true, failing tasks
+   * with hard dependents cancel those dependents rather than leaving them blocked.
+   * Replaces the raw `getSetting` callback — callers resolve the setting once at
+   * the composition root and pass the resulting boolean.
    */
-  getSetting: (key: string) => string | null
+  cascadeCancellation?: { enabled: boolean }
 }
 
 async function executeTerminal(
@@ -139,7 +150,7 @@ async function executeTerminal(
       unitOfWork,
       onTaskTerminal,
       logger,
-      deps.getSetting,
+      deps.cascadeCancellation,
       deps.taskStateService
     )
   }

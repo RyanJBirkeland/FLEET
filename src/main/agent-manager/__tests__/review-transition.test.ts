@@ -29,6 +29,7 @@ function makeOpts(overrides: Partial<TransitionToReviewOpts> = {}): TransitionTo
       info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn()
     } as never,
     taskStateService: { transition: vi.fn().mockResolvedValue(undefined) } as never,
+    onMutation: vi.fn(),
     ...overrides
   }
 }
@@ -68,6 +69,19 @@ describe('transitionToReview — happy path', () => {
     await transitionToReview(opts)
     const call = vi.mocked(opts.taskStateService.transition).mock.calls[0]
     expect(call[2]?.fields?.rebased_at).toBeNull()
+  })
+
+  it('calls the injected onMutation callback with the updated task after transition', async () => {
+    const updatedTask = { id: 'task-1', status: 'review' }
+    const onMutation = vi.fn()
+    const opts = makeOpts({
+      onMutation,
+      repo: {
+        getTask: vi.fn().mockReturnValue(updatedTask)
+      } as never
+    })
+    await transitionToReview(opts)
+    expect(onMutation).toHaveBeenCalledWith('updated', updatedTask)
   })
 })
 
