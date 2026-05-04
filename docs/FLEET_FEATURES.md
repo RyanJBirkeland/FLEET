@@ -130,7 +130,8 @@ Inline HTML rendering for visual prototyping, UI exploration, and interactive to
 Human-in-the-loop review interface for agent work before integration. Agents complete tasks by transitioning to `review` status instead of automatically opening PRs.
 
 - **Review queue**: List of tasks in `review` status awaiting human inspection. Shows task title, branch name, and last commit message
-- **Diff inspection**: ChangesTab displays git diff of all modified files with syntax highlighting. Side-by-side view showing additions (green), deletions (red), and context
+- **Header**: Shows branch name, cost + duration (`$0.97 · 5m 50s`), and retry count for the selected task. "View Prompt" button opens the exact rendered prompt passed to the SDK on the last run — primary debugging tool for prompt-related issues
+- **Diff inspection**: ChangesTab displays git diff of all modified files with syntax highlighting. Side-by-side view showing additions (green), deletions (red), and context. "Since last review" toggle (visible on revision passes) diffs only the changes made since the prior review snapshot
 - **Commit history**: CommitsTab shows all commits in the agent's branch with messages, timestamps, and file change counts
 - **Conversation**: ConversationTab displays the full agent chat log for context on decisions made during execution
 - **Review actions**:
@@ -184,9 +185,9 @@ Opt-in HTTP server that exposes FLEET's task and epic CRUD to local MCP-speaking
 - **Auth**: bearer token stored in `~/.fleet/mcp-token` (mode `0600`). Set `Authorization: Bearer <token>` on every request.
 - **Enable**: Settings → Connections → Local MCP Server → toggle "Enable MCP server".
 - **Tools**:
-  - `tasks.list` / `tasks.get` / `tasks.create` / `tasks.update` / `tasks.cancel` / `tasks.history` / `tasks.requestRevision`
-  - `epics.list` / `epics.get` / `epics.create` / `epics.update` / `epics.delete` / `epics.addTask` / `epics.removeTask` / `epics.setDependencies`
-  - `meta.repos` / `meta.taskStatuses` / `meta.dependencyConditions`
+  - `tasks.list` / `tasks.get` / `tasks.create` / `tasks.update` / `tasks.cancel` / `tasks.history` / `tasks.requestRevision` / `tasks.lastPrompt`
+  - `epics.list` / `epics.get` / `epics.create` / `epics.update` / `epics.delete` / `epics.addTask` / `epics.removeTask` / `epics.setDependencies` / `epics.bulkQueueTasks`
+  - `meta.repos` / `meta.taskStatuses` / `meta.dependencyConditions` / `meta.reloadSettings`
 - **Out of scope**: agent orchestration (claim/cancel/retry) and review-station actions. Local-only — binds to `127.0.0.1`.
 - **Example Claude Code config**:
 
