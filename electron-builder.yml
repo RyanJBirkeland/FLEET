@@ -14,7 +14,7 @@ mac:
   target:
     - target: dmg
       arch: arm64
-  identity: "Developer ID Application: Ryan Birkeland (DWK5AJJ5WY)"
+  identity: "Ryan Birkeland (DWK5AJJ5WY)"
   hardenedRuntime: true
   gatekeeperAssess: true
   entitlements: resources/entitlements.mac.plist
