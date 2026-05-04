@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { startTransition, useCallback, useEffect, useRef, useState } from 'react'
 import type { SprintTask } from '../../../shared/types'
 
 const LAST_CLOSE_KEY = 'fleet:last-window-close'
@@ -41,7 +41,9 @@ export function useWindowSession(tasks: SprintTask[]): WindowSession {
     })
 
     if (newCompletions.length > 0) {
-      setBriefing({ showBriefing: true, briefingTasks: newCompletions })
+      startTransition(() => {
+        setBriefing({ showBriefing: true, briefingTasks: newCompletions })
+      })
     }
   }, [tasks])
 

@@ -67,6 +67,7 @@ export function initSprintService(mutations: SprintMutations): void {
  * Production code continues to use the free-function exports which delegate
  * to the module-level singleton set by `initSprintService`.
  */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createSprintService(mutations: SprintMutations) {
   return {
     getTask: (id: string) => mutations.getTask(id),

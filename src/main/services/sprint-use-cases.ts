@@ -47,6 +47,7 @@ export function initSprintUseCases(mutations: SprintMutations): void {
  * Production code continues to use the free-function exports, which delegate
  * to the singleton set by `initSprintUseCases`.
  */
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function createSprintUseCases(boundMutations: SprintMutations) {
   initSprintUseCases(boundMutations)
   return {

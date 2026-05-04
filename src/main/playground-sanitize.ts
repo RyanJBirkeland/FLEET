@@ -273,7 +273,7 @@ const PLAYGROUND_ALLOWED_ATTR = [
  * to external URLs from taking effect.
  */
 const PLAYGROUND_ALLOWED_URI_REGEXP =
-  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i
+  /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.-]+(?:[^a-z+.-:]|$))/i
 
 export function sanitizePlaygroundHtml(rawHtml: string): string {
   return purify.sanitize(rawHtml, {
