@@ -49,6 +49,7 @@ import {
   pruneOldDiffSnapshots,
   DIFF_SNAPSHOT_RETENTION_DAYS,
   UPDATE_ALLOWLIST,
+  UPDATE_ALLOWLIST_SET,
   COLUMN_MAP
 } from '../sprint-queries'
 
@@ -89,25 +90,26 @@ function insertTask(overrides: Record<string, unknown> = {}) {
 
 describe('UPDATE_ALLOWLIST', () => {
   it('contains expected fields', async () => {
-    expect(UPDATE_ALLOWLIST.has('title')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('status')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('pr_url')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('agent_run_id')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('depends_on')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('playground_enabled')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('needs_review')).toBe(true)
-    expect(UPDATE_ALLOWLIST.has('max_runtime_ms')).toBe(true)
+    // Use UPDATE_ALLOWLIST_SET for fast membership checks (UPDATE_ALLOWLIST is a typed array)
+    expect(UPDATE_ALLOWLIST_SET.has('title')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('status')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('pr_url')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('agent_run_id')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('depends_on')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('playground_enabled')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('needs_review')).toBe(true)
+    expect(UPDATE_ALLOWLIST_SET.has('max_runtime_ms')).toBe(true)
   })
 
   it('does not contain protected fields', async () => {
-    expect(UPDATE_ALLOWLIST.has('id')).toBe(false)
-    expect(UPDATE_ALLOWLIST.has('created_at')).toBe(false)
-    expect(UPDATE_ALLOWLIST.has('updated_at')).toBe(false)
+    expect(UPDATE_ALLOWLIST_SET.has('id')).toBe(false)
+    expect(UPDATE_ALLOWLIST_SET.has('created_at')).toBe(false)
+    expect(UPDATE_ALLOWLIST_SET.has('updated_at')).toBe(false)
   })
 
   // COLUMN_MAP whitelist validation tests
   it('COLUMN_MAP contains all UPDATE_ALLOWLIST entries', async () => {
-    expect(COLUMN_MAP.size).toBe(UPDATE_ALLOWLIST.size)
+    expect(COLUMN_MAP.size).toBe(UPDATE_ALLOWLIST.length)
     for (const col of UPDATE_ALLOWLIST) {
       expect(COLUMN_MAP.has(col)).toBe(true)
       expect(COLUMN_MAP.get(col)).toBe(col)

@@ -10,6 +10,15 @@ import { getSprintQueriesLogger } from './sprint-query-logger'
 import { withDataLayerError } from './data-utils'
 import { validateTransition } from '../../shared/task-state-machine'
 
+/**
+ * Qualified column list for queries that JOIN sprint_tasks with other tables
+ * (e.g. task_groups). Computed once at module load so the string manipulation
+ * does not repeat on every drain-loop tick.
+ */
+const QUALIFIED_SPRINT_TASK_COLUMNS = SPRINT_TASK_COLUMNS.split(',')
+  .map((col) => `sprint_tasks.${col.trim()}`)
+  .join(', ')
+
 /** Module-private: read one task by id within an open transaction. */
 function fetchTask(id: string, db: Database.Database): SprintTask | null {
   const row = db.prepare(`SELECT ${SPRINT_TASK_COLUMNS} FROM sprint_tasks WHERE id = ?`).get(id) as
@@ -28,10 +37,22 @@ function toAuditableTask(task: SprintTask): Record<string, unknown> {
   return Object.fromEntries(Object.entries(task))
 }
 
-function checkWipLimit(db: Database.Database, maxActive: number): boolean {
-  const { count } = db
-    .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'active'")
-    .get() as { count: number }
+/**
+ * Returns true when the active-task count is below the configured limit.
+ * Accepts an optional pre-computed `currentActiveCount` to avoid a redundant
+ * DB round-trip when the drain loop already holds a fresh count. Falls back to
+ * querying the DB when no count is provided (legacy callers).
+ */
+function checkWipLimit(
+  db: Database.Database,
+  maxActive: number,
+  currentActiveCount?: number
+): boolean {
+  const count =
+    currentActiveCount ??
+    (db
+      .prepare("SELECT COUNT(*) as count FROM sprint_tasks WHERE status = 'active'")
+      .get() as { count: number }).count
   return count < maxActive
 }
 
@@ -39,7 +60,8 @@ export async function claimTask(
   id: string,
   claimedBy: string,
   maxActive?: number,
-  db?: Database.Database
+  db?: Database.Database,
+  activeCount?: number
 ): Promise<SprintTaskExecution | null> {
   const conn = db ?? getDb()
   const now = nowIso()
@@ -52,7 +74,7 @@ export async function claimTask(
     const result = await withRetryAsync(
       () =>
         conn.transaction(() => {
-          if (maxActive !== undefined && !checkWipLimit(conn, maxActive)) {
+          if (maxActive !== undefined && !checkWipLimit(conn, maxActive, activeCount)) {
             return null
           }
 
@@ -172,17 +194,13 @@ export function getActiveTaskCount(db?: Database.Database): number {
 
 export function getQueuedTasks(limit: number, db?: Database.Database): SprintTask[] {
   const conn = db ?? getDb()
-  // Qualify every column with the table name to avoid ambiguity after the LEFT JOIN
-  // (task_groups also has id, created_at, updated_at).
-  const qualifiedColumns = SPRINT_TASK_COLUMNS.split(',')
-    .map((col) => `sprint_tasks.${col.trim()}`)
-    .join(', ')
-
   return withDataLayerError(
     () => {
+      // QUALIFIED_SPRINT_TASK_COLUMNS prefixes each column with sprint_tasks. to avoid
+      // ambiguity with the LEFT-JOINed task_groups table (which also has id, created_at, etc.).
       const rows = conn
         .prepare(
-          `SELECT ${qualifiedColumns}
+          `SELECT ${QUALIFIED_SPRINT_TASK_COLUMNS}
            FROM sprint_tasks
            LEFT JOIN task_groups tg ON sprint_tasks.group_id = tg.id
            WHERE sprint_tasks.status = 'queued'

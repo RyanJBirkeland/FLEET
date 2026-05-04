@@ -44,7 +44,7 @@ function row(overrides: Record<string, unknown> = {}): Record<string, unknown> {
     tags: JSON.stringify(['urgent', 'backend']),
     playground_enabled: 1,
     needs_review: 0,
-    revision_feedback: JSON.stringify([{ at: '2026-01-01', note: 'redo' }]),
+    revision_feedback: JSON.stringify([{ timestamp: '2026-01-01T00:00:00Z', feedback: 'redo', attempt: 1 }]),
     created_at: '2026-01-01T00:00:00Z',
     updated_at: '2026-01-01T00:00:00Z'
   }
@@ -74,7 +74,7 @@ describe('mapRowToTask — happy path', () => {
     expect(task.tags).toEqual(['urgent', 'backend'])
     expect(task.playground_enabled).toBe(true)
     expect(task.needs_review).toBe(false)
-    expect(task.revision_feedback).toEqual([{ at: '2026-01-01', note: 'redo' }])
+    expect(task.revision_feedback).toEqual([{ timestamp: '2026-01-01T00:00:00Z', feedback: 'redo', attempt: 1 }])
   })
 
   it('hydrates promoted_to_review_at as a plain string (TEXT column)', () => {

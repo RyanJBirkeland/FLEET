@@ -5,7 +5,7 @@
  * These are intentionally NOT on the ISprintTaskRepository interface because they
  * are operational/maintenance concerns, not domain query methods.
  */
-export { UPDATE_ALLOWLIST } from './sprint-task-types'
+export { UPDATE_ALLOWLIST, UPDATE_ALLOWLIST_SET } from './sprint-task-types'
 export {
   pruneOldDiffSnapshots,
   DIFF_SNAPSHOT_RETENTION_DAYS,

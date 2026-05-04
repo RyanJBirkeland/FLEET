@@ -6,16 +6,12 @@
 import type Database from 'better-sqlite3'
 import type { AgentRunSummary, AgentCostRecord, CostSummary } from '../../shared/types'
 
-interface SummaryCountRow {
-  cnt: number
-}
-
-interface SummaryTokenRow {
-  total: number
-}
-
-interface SummaryAvgRow {
-  avg: number | null
+interface CostSummaryAggregateRow {
+  tasksToday: number
+  tasksThisWeek: number
+  tasksAllTime: number
+  totalTokensThisWeek: number
+  avgTokensPerTask: number | null
 }
 
 interface MostTokenIntensiveRow {
@@ -116,56 +112,41 @@ export function getAgentHistory(db: Database.Database, limit = 100, offset = 0):
 }
 
 export function getCostSummary(db: Database.Database): CostSummary {
-  const tasksToday = (
-    db
-      .prepare(
-        "SELECT COUNT(*) as cnt FROM agent_runs WHERE status = 'done' AND started_at >= date('now', 'start of day')"
-      )
-      .get() as SummaryCountRow
-  ).cnt
-
-  const tasksThisWeek = (
-    db
-      .prepare(
-        "SELECT COUNT(*) as cnt FROM agent_runs WHERE status = 'done' AND started_at >= date('now', '-7 days')"
-      )
-      .get() as SummaryCountRow
-  ).cnt
-
-  const tasksAllTime = (
-    db
-      .prepare("SELECT COUNT(*) as cnt FROM agent_runs WHERE status = 'done'")
-      .get() as SummaryCountRow
-  ).cnt
-
-  const totalTokensThisWeek = (
-    db
-      .prepare(
-        "SELECT COALESCE(SUM(COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0)), 0) as total FROM agent_runs WHERE started_at >= date('now', '-7 days')"
-      )
-      .get() as SummaryTokenRow
-  ).total
-
-  const avgTokensPerTask = (
-    db
-      .prepare(
-        "SELECT AVG(COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0)) as avg FROM agent_runs WHERE status = 'done' AND (tokens_in IS NOT NULL OR tokens_out IS NOT NULL)"
-      )
-      .get() as SummaryAvgRow
-  ).avg
+  // Single query aggregates all counters and token sums using FILTER (WHERE ...) so SQLite
+  // scans agent_runs once instead of once per metric (previously 5 separate SELECT statements).
+  const agg = db
+    .prepare(
+      `SELECT
+         COUNT(*) FILTER (WHERE status = 'done' AND started_at >= date('now', 'start of day')) AS tasksToday,
+         COUNT(*) FILTER (WHERE status = 'done' AND started_at >= date('now', '-7 days'))       AS tasksThisWeek,
+         COUNT(*) FILTER (WHERE status = 'done')                                                AS tasksAllTime,
+         COALESCE(
+           SUM(COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0))
+             FILTER (WHERE started_at >= date('now', '-7 days')), 0)                            AS totalTokensThisWeek,
+         AVG(COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0))
+           FILTER (WHERE status = 'done' AND (tokens_in IS NOT NULL OR tokens_out IS NOT NULL)) AS avgTokensPerTask
+       FROM agent_runs`
+    )
+    .get() as CostSummaryAggregateRow
 
   const mostTokenIntensiveRow = db
     .prepare(
-      "SELECT task, (COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0)) as total_tokens FROM agent_runs WHERE status = 'done' AND (tokens_in IS NOT NULL OR tokens_out IS NOT NULL) AND started_at >= date('now', '-7 days') ORDER BY total_tokens DESC LIMIT 1"
+      `SELECT task, (COALESCE(tokens_in, 0) + COALESCE(tokens_out, 0)) AS total_tokens
+       FROM agent_runs
+       WHERE status = 'done'
+         AND (tokens_in IS NOT NULL OR tokens_out IS NOT NULL)
+         AND started_at >= date('now', '-7 days')
+       ORDER BY total_tokens DESC
+       LIMIT 1`
     )
     .get() as MostTokenIntensiveRow | undefined
 
   return {
-    tasksToday,
-    tasksThisWeek,
-    tasksAllTime,
-    totalTokensThisWeek,
-    avgTokensPerTask: avgTokensPerTask ?? null,
+    tasksToday: agg.tasksToday,
+    tasksThisWeek: agg.tasksThisWeek,
+    tasksAllTime: agg.tasksAllTime,
+    totalTokensThisWeek: agg.totalTokensThisWeek,
+    avgTokensPerTask: agg.avgTokensPerTask ?? null,
     mostTokenIntensiveTask: mostTokenIntensiveRow
       ? { task: mostTokenIntensiveRow.task, totalTokens: mostTokenIntensiveRow.total_tokens }
       : null

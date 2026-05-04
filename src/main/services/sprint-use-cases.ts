@@ -55,7 +55,7 @@ import {
 } from '../../shared/task-state-machine'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { isValidTaskId } from '../lib/validation'
-import { UPDATE_ALLOWLIST } from '../data/sprint-maintenance-facade'
+import { UPDATE_ALLOWLIST_SET } from '../data/sprint-maintenance-facade'
 import { validateAndFilterPatch } from '../lib/patch-validation'
 import { prepareQueueTransition, type TaskStateService } from './task-state-service'
 import { sleep } from '../lib/async-utils'
@@ -401,7 +401,7 @@ export async function updateTaskFromUi(
 ): Promise<SprintTask | null> {
   if (!isValidTaskId(id)) throw new Error('Invalid task ID format')
 
-  const filtered = validateAndFilterPatch(patch, UPDATE_ALLOWLIST)
+  const filtered = validateAndFilterPatch(patch, UPDATE_ALLOWLIST_SET)
   if (filtered === null) throw new Error('No valid fields to update')
   let workingPatch = filtered
 

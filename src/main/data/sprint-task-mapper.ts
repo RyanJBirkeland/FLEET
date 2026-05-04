@@ -89,15 +89,15 @@ const VALID_FAILURE_REASONS: ReadonlySet<string> = new Set([
   'unknown'
 ] satisfies FailureReason[])
 
-function optStr(value: unknown): string | null {
+function toOptionalString(value: unknown): string | null {
   return typeof value === 'string' ? value : null
 }
 
-function optInt(value: unknown): number | null {
+function toOptionalInt(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? Math.trunc(value) : null
 }
 
-function optNum(value: unknown): number | null {
+function toOptionalNumber(value: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) ? value : null
 }
 
@@ -105,6 +105,15 @@ function nullableUnion<T extends string>(value: unknown, validSet: ReadonlySet<s
   if (value === null || value === undefined) return null
   if (typeof value === 'string' && validSet.has(value)) return value as T
   return null
+}
+
+function isRevisionFeedbackEntry(item: unknown): item is RevisionFeedbackEntry {
+  return (
+    typeof item === 'object' &&
+    item !== null &&
+    typeof (item as Record<string, unknown>).timestamp === 'string' &&
+    typeof (item as Record<string, unknown>).feedback === 'string'
+  )
 }
 
 function parseRevisionFeedback(value: unknown): RevisionFeedbackEntry[] | null {
@@ -117,7 +126,13 @@ function parseRevisionFeedback(value: unknown): RevisionFeedbackEntry[] | null {
     }
   }
   if (!Array.isArray(parsed)) return null
-  return parsed
+  const validEntries = parsed.filter(isRevisionFeedbackEntry)
+  if (validEntries.length < parsed.length) {
+    getSprintQueriesLogger().warn(
+      `[sprint-task-mapper] parseRevisionFeedback: filtered out ${parsed.length - validEntries.length} malformed entries`
+    )
+  }
+  return validEntries
 }
 
 /**
@@ -132,52 +147,52 @@ export function mapRowToTask(row: Record<string, unknown>): SprintTask {
     repo: validateRepo(row.repo),
     status: validateStatus(row.status),
     priority: validatePriority(row.priority),
-    prompt: optStr(row.prompt),
-    notes: optStr(row.notes),
-    spec: optStr(row.spec),
-    retry_count: optInt(row.retry_count) ?? 0,
-    fast_fail_count: optInt(row.fast_fail_count) ?? 0,
-    agent_run_id: optStr(row.agent_run_id),
-    pr_number: optInt(row.pr_number),
+    prompt: toOptionalString(row.prompt),
+    notes: toOptionalString(row.notes),
+    spec: toOptionalString(row.spec),
+    retry_count: toOptionalInt(row.retry_count) ?? 0,
+    fast_fail_count: toOptionalInt(row.fast_fail_count) ?? 0,
+    agent_run_id: toOptionalString(row.agent_run_id),
+    pr_number: toOptionalInt(row.pr_number),
     pr_status: nullableUnion<NonNullable<SprintTask['pr_status']>>(row.pr_status, VALID_PR_STATUSES),
     pr_mergeable_state: nullableUnion<NonNullable<SprintTask['pr_mergeable_state']>>(
       row.pr_mergeable_state,
       VALID_MERGEABLE_STATES
     ),
-    pr_url: optStr(row.pr_url),
-    claimed_by: optStr(row.claimed_by),
-    started_at: optStr(row.started_at),
-    completed_at: optStr(row.completed_at),
-    template_name: optStr(row.template_name),
+    pr_url: toOptionalString(row.pr_url),
+    claimed_by: toOptionalString(row.claimed_by),
+    started_at: toOptionalString(row.started_at),
+    completed_at: toOptionalString(row.completed_at),
+    template_name: toOptionalString(row.template_name),
     depends_on: sanitizeDependsOn(row.depends_on),
     playground_enabled: !!row.playground_enabled,
     needs_review: !!row.needs_review,
-    max_runtime_ms: optInt(row.max_runtime_ms),
-    duration_ms: optInt(row.duration_ms),
-    spec_type: optStr(row.spec_type),
-    worktree_path: optStr(row.worktree_path),
-    session_id: optStr(row.session_id),
-    next_eligible_at: optStr(row.next_eligible_at),
-    model: optStr(row.model),
-    retry_context: optStr(row.retry_context),
+    max_runtime_ms: toOptionalInt(row.max_runtime_ms),
+    duration_ms: toOptionalInt(row.duration_ms),
+    spec_type: toOptionalString(row.spec_type),
+    worktree_path: toOptionalString(row.worktree_path),
+    session_id: toOptionalString(row.session_id),
+    next_eligible_at: toOptionalString(row.next_eligible_at),
+    model: toOptionalString(row.model),
+    retry_context: toOptionalString(row.retry_context),
     failure_reason: nullableUnion<NonNullable<SprintTask['failure_reason']>>(
       row.failure_reason,
       VALID_FAILURE_REASONS
     ),
-    max_cost_usd: optNum(row.max_cost_usd),
-    partial_diff: optStr(row.partial_diff),
+    max_cost_usd: toOptionalNumber(row.max_cost_usd),
+    partial_diff: toOptionalString(row.partial_diff),
     tags: sanitizeTags(row.tags),
-    group_id: optStr(row.group_id),
-    sprint_id: optStr(row.sprint_id),
-    cross_repo_contract: optStr(row.cross_repo_contract),
-    rebase_base_sha: optStr(row.rebase_base_sha),
-    rebased_at: optStr(row.rebased_at),
+    group_id: toOptionalString(row.group_id),
+    sprint_id: toOptionalString(row.sprint_id),
+    cross_repo_contract: toOptionalString(row.cross_repo_contract),
+    rebase_base_sha: toOptionalString(row.rebase_base_sha),
+    rebased_at: toOptionalString(row.rebased_at),
     revision_feedback: parseRevisionFeedback(row.revision_feedback),
-    review_diff_snapshot: optStr(row.review_diff_snapshot),
-    promoted_to_review_at: optStr(row.promoted_to_review_at),
-    orphan_recovery_count: optInt(row.orphan_recovery_count) ?? 0,
-    updated_at: optStr(row.updated_at) ?? '',
-    created_at: optStr(row.created_at) ?? ''
+    review_diff_snapshot: toOptionalString(row.review_diff_snapshot),
+    promoted_to_review_at: toOptionalString(row.promoted_to_review_at),
+    orphan_recovery_count: toOptionalInt(row.orphan_recovery_count) ?? 0,
+    updated_at: toOptionalString(row.updated_at) ?? '',
+    created_at: toOptionalString(row.created_at) ?? ''
   }
 }
 

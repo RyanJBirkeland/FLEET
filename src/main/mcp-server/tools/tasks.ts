@@ -244,7 +244,7 @@ function registerTaskWriteTools(server: McpServer, deps: TaskToolsDeps): void {
           try {
             const row = await runCreateWithValidation(
               deps,
-              createInput as CreateTaskInput,
+              createInput satisfies CreateTaskInput,
               skipReadinessCheck
             )
             return jsonContent(row)

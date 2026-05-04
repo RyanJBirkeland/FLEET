@@ -11,7 +11,7 @@ import { SPRINT_TASK_COLUMNS, SPRINT_TASK_LIST_COLUMNS } from './sprint-query-co
 import { validateTransition, isTaskStatus } from '../../shared/task-state-machine'
 import { getSprintQueriesLogger } from './sprint-query-logger'
 import { mapRowToTask, mapRowsToTasks, serializeFieldForStorage } from './sprint-task-mapper'
-import { UPDATE_ALLOWLIST, COLUMN_MAP } from './sprint-task-types'
+import { UPDATE_ALLOWLIST_SET, COLUMN_MAP } from './sprint-task-types'
 import type { CreateTaskInput } from './sprint-task-types'
 import { withDataLayerError } from './data-utils'
 
@@ -364,7 +364,8 @@ function readTaskField(task: SprintTask, key: SprintTaskFieldKey): SprintTask[Sp
 
 /** Convert a typed task into an indexable record for the audit writer. */
 function toAuditableTask(task: SprintTask): Record<string, unknown> {
-  return { ...task } as Record<string, unknown>
+  const auditable: Record<string, unknown> = { ...task }
+  return auditable
 }
 
 async function writeTaskUpdate(
@@ -397,6 +398,8 @@ function runUpdate(
   if (!oldTask) return null
 
   if (options.enforceTransitionCheck) {
+    // TODO(arch): State-machine validation belongs in TaskStateService, not the data layer.
+    // Tracked: move enforceTransitionOrThrow to task-state-service.ts and inject as a policy.
     enforceTransitionOrThrow(id, oldTask.status, patch.status)
   }
 
@@ -422,7 +425,7 @@ function filterAllowlistedEntries(
   patch: Record<string, unknown>
 ): Array<[SprintTaskFieldKey, unknown]> {
   return Object.entries(patch)
-    .filter(([k]) => UPDATE_ALLOWLIST.has(k))
+    .filter(([k]) => UPDATE_ALLOWLIST_SET.has(k))
     .map(([k, v]) => [asSprintTaskField(k), v])
 }
 

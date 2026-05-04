@@ -76,7 +76,7 @@ export function getRecentEvents(limit: number = 20, db?: Database.Database): Das
     FROM agent_events ae
     LEFT JOIN agent_runs ar ON ae.agent_id = ar.id
     LEFT JOIN sprint_tasks st ON ar.sprint_task_id = st.id
-    ORDER BY ae.timestamp DESC
+    ORDER BY ae.timestamp DESC -- uses idx_agent_events_timestamp (migration v057)
     LIMIT ?
   `
   return (database.prepare(sql).all(limit) as AgentEventRow[]).map(rowToEvent)

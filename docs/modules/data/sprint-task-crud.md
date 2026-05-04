@@ -19,7 +19,12 @@ CRUD operations for sprint tasks. Owns single-row reads, the filter+pagination l
 ## Key Dependencies
 - `sprint-query-constants.ts` — `SPRINT_TASK_COLUMNS` (full row reads), `SPRINT_TASK_LIST_COLUMNS` (poll-path reads)
 - `sprint-task-mapper.ts` — `mapRowToTask`/`mapRowsToTasks` row hydration, `serializeFieldForStorage` write encoding
-- `sprint-task-types.ts` — `UPDATE_ALLOWLIST`, `COLUMN_MAP`, `CreateTaskInput`
+- `sprint-task-types.ts` — `UPDATE_ALLOWLIST` (typed `ReadonlyArray<keyof SprintTask>`), `UPDATE_ALLOWLIST_SET` (derived `ReadonlySet<string>` for fast membership), `COLUMN_MAP`, `CreateTaskInput`
 - `task-changes.ts` — `recordTaskChanges` audit-trail writer
 - `task-state-machine.ts` — `validateTransition`, `isTaskStatus`
 - `data-utils.ts` — `withDataLayerError` error wrapper
+
+## Epic 6 Changes
+- **T-50:** `UPDATE_ALLOWLIST` is now `ReadonlyArray<keyof SprintTask>` — compiler catches invalid entries. Lookup uses `UPDATE_ALLOWLIST_SET`.
+- **T-51:** `toAuditableTask` uses an explicit typed local instead of `as Record<string, unknown>` cast.
+- **T-52:** `enforceTransitionOrThrow` call site has a `TODO(arch)` comment documenting the arch debt.

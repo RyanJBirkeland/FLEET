@@ -197,10 +197,9 @@ function queryTasksByIds(
   conn: Database.Database,
   ids: Set<string>
 ): Array<{ id: string; depends_on: string | null; status: string }> {
-  const placeholders = Array.from(ids)
-    .map(() => '?')
-    .join(', ')
+  const idArray = Array.from(ids)
+  const placeholders = idArray.map(() => '?').join(', ')
   return conn
     .prepare(`SELECT id, depends_on, status FROM sprint_tasks WHERE id IN (${placeholders})`)
-    .all(...Array.from(ids)) as Array<{ id: string; depends_on: string | null; status: string }>
+    .all(...idArray) as Array<{ id: string; depends_on: string | null; status: string }>
 }

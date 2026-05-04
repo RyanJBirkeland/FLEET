@@ -4,7 +4,7 @@
  */
 export function validateAndFilterPatch(
   patch: Record<string, unknown>,
-  allowlist: Set<string>
+  allowlist: ReadonlySet<string>
 ): Record<string, unknown> | null {
   const filtered: Record<string, unknown> = {}
   for (const [key, value] of Object.entries(patch)) {

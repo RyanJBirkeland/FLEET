@@ -72,9 +72,12 @@ export function buildBlockedNotes(blockedBy: string[], existingNotes?: string | 
  *
  * When `depIndex` is provided, it is used directly — skipping the
  * `createDependencyIndex()` allocation. The caller is responsible for ensuring
- * the index was built from current task data. `listTasks` is still called to
- * build the status map; pass a cached result via closure to avoid repeated
- * table scans across multiple `checkTaskDependencies` calls.
+ * the index was built from current task data.
+ *
+ * When `taskStatusMap` is provided, it is used directly instead of calling
+ * `listTasks()`. This eliminates a full table scan when the caller already
+ * holds a fresh status snapshot (e.g. the drain loop or `resolveDependents`).
+ * If neither is provided, `listTasks` is called to build the map.
  *
  * Returns { shouldBlock: true, blockedBy: [...] } if deps are unsatisfied.
  */
@@ -83,11 +86,11 @@ export function checkTaskDependencies(
   deps: TaskDependency[],
   logger: Logger,
   listTasks: () => SprintTask[],
-  depIndex?: DependencyIndex
+  depIndex?: DependencyIndex,
+  taskStatusMap?: Map<string, TaskStatus>
 ): { shouldBlock: boolean; blockedBy: string[]; reason?: string } {
   try {
-    const allTasks = listTasks()
-    const statusMap = new Map(allTasks.map((t) => [t.id, t.status]))
+    const statusMap = taskStatusMap ?? new Map(listTasks().map((t) => [t.id, t.status]))
     const idx = depIndex ?? createDependencyIndex()
     const { satisfied, blockedBy } = idx.areDependenciesSatisfied(taskId, deps, (depId: string) =>
       statusMap.get(depId)
@@ -163,6 +166,12 @@ export interface ComputeBlockStateContext {
   listGroups: () => TaskGroup[]
   /** Pre-built dependency graph. When provided, threads through to `checkTaskDependencies` to skip `createDependencyIndex()`. */
   depIndex?: DependencyIndex
+  /**
+   * Pre-built task status map. When provided, threads through to `checkTaskDependencies`
+   * to skip the `listTasks()` call (avoids a second full table scan in `computeBlockState`
+   * when `checkEpicDependencies` also calls `listTasks`).
+   */
+  taskStatusMap?: Map<string, TaskStatus>
 }
 
 export function computeBlockState(
@@ -170,7 +179,7 @@ export function computeBlockState(
   ctx: ComputeBlockStateContext
 ): { shouldBlock: boolean; blockedBy: string[]; reason?: string } {
   const taskDeps = task.depends_on ?? []
-  const taskResult = checkTaskDependencies(task.id, taskDeps, ctx.logger, ctx.listTasks, ctx.depIndex)
+  const taskResult = checkTaskDependencies(task.id, taskDeps, ctx.logger, ctx.listTasks, ctx.depIndex, ctx.taskStatusMap)
 
   // Get epic deps from the task's group (if any)
   let epicDeps: EpicDependency[] = []

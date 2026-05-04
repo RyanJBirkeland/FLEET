@@ -126,6 +126,7 @@ describe('db schema migrations', () => {
     expect(indexes).toEqual([
       'idx_agent_events_agent',
       'idx_agent_events_agent_id',
+      'idx_agent_events_timestamp',
       'idx_agent_run_turns_run',
       'idx_agent_runs_finished',
       'idx_agent_runs_pid',

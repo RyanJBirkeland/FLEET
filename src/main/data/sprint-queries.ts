@@ -26,7 +26,7 @@ export { setSprintQueriesLogger, withErrorLogging } from './sprint-query-logger'
 export { mapRowToTask, mapRowsToTasks } from './sprint-task-mapper'
 
 // Types and constants
-export { UPDATE_ALLOWLIST, COLUMN_MAP } from './sprint-task-types'
+export { UPDATE_ALLOWLIST, UPDATE_ALLOWLIST_SET, COLUMN_MAP } from './sprint-task-types'
 export type { QueueStats, CreateTaskInput } from './sprint-task-types'
 
 // CRUD operations

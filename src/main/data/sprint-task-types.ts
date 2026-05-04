@@ -1,6 +1,8 @@
+import type { SprintTask } from '../../shared/types'
+
 // --- Field allowlist for updates ---
 
-export const UPDATE_ALLOWLIST = new Set([
+export const UPDATE_ALLOWLIST: ReadonlyArray<keyof SprintTask> = [
   'title',
   'prompt',
   'repo',
@@ -42,15 +44,18 @@ export const UPDATE_ALLOWLIST = new Set([
   'rebase_base_sha',
   'rebased_at',
   'orphan_recovery_count'
-])
+]
+
+/** Fast membership check — derived from UPDATE_ALLOWLIST so the two stay in sync. */
+export const UPDATE_ALLOWLIST_SET: ReadonlySet<string> = new Set(UPDATE_ALLOWLIST)
 
 // Whitelist Map for defense-in-depth column validation
 export const COLUMN_MAP = new Map<string, string>(
-  Array.from(UPDATE_ALLOWLIST).map((col) => [col, col])
+  UPDATE_ALLOWLIST.map((col) => [col, col])
 )
 
 // Module-load assertion: COLUMN_MAP must match UPDATE_ALLOWLIST exactly
-if (COLUMN_MAP.size !== UPDATE_ALLOWLIST.size) {
+if (COLUMN_MAP.size !== UPDATE_ALLOWLIST.length) {
   throw new Error('COLUMN_MAP/UPDATE_ALLOWLIST mismatch')
 }
 
