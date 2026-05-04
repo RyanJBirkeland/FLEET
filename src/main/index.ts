@@ -67,6 +67,8 @@ import {
 } from './tearoff-manager'
 import { clearAnthropicEnvVars } from './auth-guard'
 import { broadcast } from './broadcast'
+import { UpdaterService } from './services/updater-service'
+import { registerUpdateHandlers } from './handlers/update-handlers'
 import { migrateRuntimeDir } from './startup-migration'
 import { createPreflightGate } from './agent-manager/preflight-gate'
 
@@ -651,6 +653,13 @@ app.whenReady().then(async () => {
     reviewRollup: core.reviewRollup
   }
   registerAllHandlers(handlerDeps)
+
+  // Auto-updater — only in production (app.isPackaged is false in dev)
+  if (app.isPackaged) {
+    const updaterService = new UpdaterService(createLogger('updater'))
+    registerUpdateHandlers(updaterService)
+    updaterService.scheduleInitialCheck()
+  }
 
   setupCSP()
 
