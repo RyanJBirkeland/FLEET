@@ -34,3 +34,8 @@ dmg:
   window:
     width: 540
     height: 380
+
+publish:
+  provider: github
+  owner: RyanJBirkeland
+  repo: FLEET
