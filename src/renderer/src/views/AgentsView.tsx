@@ -21,6 +21,17 @@ import { useAgentViewLifecycle } from '../hooks/useAgentViewLifecycle'
 import { useAgentViewCommands } from '../hooks/useAgentViewCommands'
 import { useAgentSlashCommands } from '../hooks/useAgentSlashCommands'
 
+function ScratchpadDescription(): React.JSX.Element {
+  return (
+    <>
+      <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents here run in
+      isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an agent finishes,
+      click <em>Promote to Code Review</em> in its console header to flow the work into the review
+      queue. For tracked sprint work, queue tasks from <em>Task Workbench</em>.
+    </>
+  )
+}
+
 export function AgentsView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const activeView = usePanelLayoutStore((s) => s.activeView)
@@ -56,20 +67,15 @@ export function AgentsView(): React.JSX.Element {
     setShowScratchpadBanner
   })
 
-  const handleSpawnAgent = useCallback(() => {
-    openLaunchpad()
-  }, [openLaunchpad])
-
   const handleClearConsole = useCallback(() => {
     if (!activeId) {
       toast.info('No agent selected')
       return
     }
-    // Emit event for AgentConsole to handle
-    window.dispatchEvent(new CustomEvent('agent:clear-console', { detail: { agentId: activeId } }))
+    useAgentEventsStore.getState().clear(activeId)
   }, [activeId])
 
-  useAgentViewCommands({ handleSpawnAgent, handleClearConsole })
+  useAgentViewCommands({ onSpawnAgent: openLaunchpad, handleClearConsole })
 
   const handleDismissBanner = useCallback(() => {
     setShowScratchpadBanner(false)
@@ -124,26 +130,26 @@ export function AgentsView(): React.JSX.Element {
             <div className="agents-view__sidebar-header">
               <div className="agents-view__title-wrapper">
                 <span className="text-gradient-aurora agents-view__title">Fleet</span>
-                <div
+                <button
                   className="agents-view__info-wrapper"
+                  aria-label="About scratchpad agents"
+                  aria-describedby="scratchpad-tooltip"
                   onMouseEnter={() => setShowTooltip(true)}
                   onMouseLeave={() => setShowTooltip(false)}
+                  onFocus={() => setShowTooltip(true)}
+                  onBlur={() => setShowTooltip(false)}
                 >
                   <Info
                     size={14}
                     className="agents-view__info-icon"
-                    aria-describedby="scratchpad-tooltip"
+                    aria-hidden="true"
                   />
                   {showTooltip && (
                     <div id="scratchpad-tooltip" role="tooltip" className="agents-view__tooltip">
-                      <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents
-                      here run in isolated worktrees and aren&apos;t tracked in the sprint pipeline.
-                      When an agent finishes, click <em>Promote to Code Review</em> in its console
-                      header to flow the work into the review queue. For tracked sprint work, queue
-                      tasks from <em>Task Workbench</em>.
+                      <ScratchpadDescription />
                     </div>
                   )}
-                </div>
+                </button>
               </div>
               <button onClick={openLaunchpad} title="New Agent" className="agents-view__spawn-btn">
                 <Plus size={12} />
@@ -154,11 +160,7 @@ export function AgentsView(): React.JSX.Element {
             {showScratchpadBanner && (
               <div role="status" className="agents-view__scratchpad-banner">
                 <div className="agents-view__scratchpad-banner-text">
-                  <strong className="agents-view__tooltip-strong">Scratchpad.</strong> Agents here
-                  run in isolated worktrees and aren&apos;t tracked in the sprint pipeline. When an
-                  agent finishes, click <em>Promote to Code Review</em> in its console header to
-                  flow the work into the review queue. For tracked sprint work, queue tasks from{' '}
-                  <em>Task Workbench</em>.
+                  <ScratchpadDescription />
                 </div>
                 <button
                   onClick={handleDismissBanner}

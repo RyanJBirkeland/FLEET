@@ -2,21 +2,24 @@ import './ConsoleCard.css'
 import { useState } from 'react'
 import { ChevronRight } from 'lucide-react'
 
+const THINKING_PREVIEW_MAX_CHARS = 120
+
 interface ThinkingCardProps {
   tokenCount: number
   text?: string | undefined
-  timestamp: number
-  searchClass: string
 }
 
 export function ThinkingCard({ tokenCount, text }: ThinkingCardProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
-  const preview = text ? text.slice(0, 120) + (text.length > 120 ? '...' : '') : ''
+  const preview = text
+    ? text.slice(0, THINKING_PREVIEW_MAX_CHARS) +
+      (text.length > THINKING_PREVIEW_MAX_CHARS ? '...' : '')
+    : ''
 
   return (
     <div className="console-card console-card--reasoning" data-testid="console-line-thinking">
       <div className="console-card__header">
-        💭 Reasoning · {tokenCount.toLocaleString()} tokens
+        <span aria-hidden="true">💭</span> Reasoning · {tokenCount.toLocaleString()} tokens
         {text && (
           <button
             onClick={() => setExpanded(!expanded)}

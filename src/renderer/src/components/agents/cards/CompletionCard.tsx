@@ -25,7 +25,7 @@ export function CompletionCard({
       <div
         className={`console-completion-card__header ${success ? 'console-completion-card__header--success' : 'console-completion-card__header--failed'}`}
       >
-        <span>{success ? '\u2713' : '\u2717'}</span>
+        <span aria-hidden="true">{success ? '\u2713' : '\u2717'}</span>
         <span>
           {success ? 'Agent completed successfully' : `Agent failed (exit code ${exitCode})`}
         </span>

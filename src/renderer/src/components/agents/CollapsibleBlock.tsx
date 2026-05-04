@@ -7,15 +7,19 @@ interface CollapsibleBlockProps {
   expandedContent: React.ReactNode
   searchClass?: string | undefined
   testId?: string | undefined
+  /** When provided, the expand/collapse button aria-label includes this context (e.g. the tool name). */
+  label?: string | undefined
 }
 
 export function CollapsibleBlock({
   header,
   expandedContent,
   searchClass = '',
-  testId
+  testId,
+  label
 }: CollapsibleBlockProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(false)
+  const expandLabel = label ? `${expanded ? 'Collapse' : 'Expand'} ${label}` : expanded ? 'Collapse' : 'Expand'
 
   return (
     <div
@@ -25,7 +29,7 @@ export function CollapsibleBlock({
       <button
         onClick={() => setExpanded(!expanded)}
         className="console-collapsible-button"
-        aria-label={expanded ? 'Collapse' : 'Expand'}
+        aria-label={expandLabel}
       >
         <ChevronRight
           size={14}

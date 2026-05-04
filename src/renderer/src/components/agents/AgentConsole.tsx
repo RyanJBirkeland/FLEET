@@ -100,12 +100,13 @@ export function AgentConsole({
     }
   }, [])
 
-  // Compute matching block indices
-  const matchingIndices = useMemo(() => {
-    if (!searchQuery) return []
-    return blocks
+  // Compute matching block indices — array for ordered navigation, Set for O(1) per-row lookup.
+  const { matchingIndicesArray, matchingIndicesSet } = useMemo(() => {
+    if (!searchQuery) return { matchingIndicesArray: [], matchingIndicesSet: new Set<number>() }
+    const arr = blocks
       .map((block, i) => (blockMatchesQuery(block, searchQuery) ? i : -1))
       .filter((i) => i !== -1)
+    return { matchingIndicesArray: arr, matchingIndicesSet: new Set(arr) }
   }, [blocks, searchQuery, blockMatchesQuery])
 
   const virtualizer = useVirtualizer({
@@ -117,8 +118,8 @@ export function AgentConsole({
 
   // Remove pending messages when real user_message events arrive
   useEffect(() => {
-    const userMessageCount = events.filter((e) => e.type === 'agent:user_message').length
-    if (userMessageCount > 0 && pendingMessages.length > 0) {
+    const hasUserMessage = events.some((e) => e.type === 'agent:user_message')
+    if (hasUserMessage && pendingMessages.length > 0) {
       setPendingMessages((prev) => prev.slice(1))
     }
   }, [events, pendingMessages.length])
@@ -159,18 +160,19 @@ export function AgentConsole({
   }
 
   const handleSearchNext = (): void => {
-    if (matchingIndices.length === 0) return
-    const nextIndex = (activeMatchIndex + 1) % matchingIndices.length
+    if (matchingIndicesArray.length === 0) return
+    const nextIndex = (activeMatchIndex + 1) % matchingIndicesArray.length
     setActiveMatchIndex(nextIndex)
-    const target = matchingIndices[nextIndex]
+    const target = matchingIndicesArray[nextIndex]
     if (target !== undefined) virtualizer.scrollToIndex(target, { align: 'center' })
   }
 
   const handleSearchPrev = (): void => {
-    if (matchingIndices.length === 0) return
-    const prevIndex = activeMatchIndex === 0 ? matchingIndices.length - 1 : activeMatchIndex - 1
+    if (matchingIndicesArray.length === 0) return
+    const prevIndex =
+      activeMatchIndex === 0 ? matchingIndicesArray.length - 1 : activeMatchIndex - 1
     setActiveMatchIndex(prevIndex)
-    const target = matchingIndices[prevIndex]
+    const target = matchingIndicesArray[prevIndex]
     if (target !== undefined) virtualizer.scrollToIndex(target, { align: 'center' })
   }
 
@@ -221,8 +223,8 @@ export function AgentConsole({
           value={searchQuery}
           onSearch={handleSearchChange}
           onClose={handleSearchClose}
-          matchCount={matchingIndices.length}
-          activeMatch={matchingIndices.length > 0 ? activeMatchIndex + 1 : 0}
+          matchCount={matchingIndicesArray.length}
+          activeMatch={matchingIndicesArray.length > 0 ? activeMatchIndex + 1 : 0}
           onNext={handleSearchNext}
           onPrev={handleSearchPrev}
         />
@@ -246,8 +248,9 @@ export function AgentConsole({
             >
               {virtualizer.getVirtualItems().map((virtualRow) => {
                 const blockIndex = virtualRow.index
-                const isMatch = matchingIndices.includes(blockIndex)
-                const isActiveMatch = isMatch && matchingIndices[activeMatchIndex] === blockIndex
+                const isMatch = matchingIndicesSet.has(blockIndex)
+                const isActiveMatch =
+                  isMatch && matchingIndicesArray[activeMatchIndex] === blockIndex
                 const searchHighlight = isActiveMatch ? 'active' : isMatch ? 'match' : undefined
                 const block = blocks[blockIndex]
                 if (!block) return null
@@ -275,10 +278,10 @@ export function AgentConsole({
               })}
             </div>
           ) : (
-            <div className="console-empty-state">
+            <div className="console-empty-state" role="status">
               {agent.status === 'running' ? (
                 <>
-                  <Loader size={20} className="console-empty-state__spinner" />
+                  <Loader size={20} className="console-empty-state__spinner" aria-hidden="true" />
                   <span>Waiting for agent output…</span>
                 </>
               ) : (

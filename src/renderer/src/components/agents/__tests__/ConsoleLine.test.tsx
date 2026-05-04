@@ -189,7 +189,9 @@ describe('ConsoleCard', () => {
       timestamp: Date.now()
     }
     render(<ConsoleCard block={block} />)
-    expect(screen.getByText(/💭 Reasoning.*1,234 tokens/)).toBeInTheDocument()
+    // The emoji is in an aria-hidden <span>, so we match on the header's textContent.
+    const header = screen.getByTestId('console-line-thinking').querySelector('.console-card__header')
+    expect(header?.textContent).toMatch(/Reasoning.*1,234 tokens/)
   })
 
   it('renders thinking block with preview visible by default', () => {

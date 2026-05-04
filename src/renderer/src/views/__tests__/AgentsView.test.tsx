@@ -36,7 +36,7 @@ vi.mock('../../stores/agentEvents', () => ({
   useAgentEventsStore: vi.fn((selector: any) =>
     selector({
       init: vi.fn(() => vi.fn()),
-      loadHistory: vi.fn()
+      loadHistory: vi.fn().mockResolvedValue(undefined)
     })
   )
 }))

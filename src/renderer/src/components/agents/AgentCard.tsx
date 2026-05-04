@@ -20,7 +20,9 @@ interface AgentCardProps {
   onKill?: (() => void) | undefined
 }
 
-const STATUS_ACCENTS: Record<string, NeonAccent> = {
+const KILL_REFRESH_DELAY_MS = 500
+
+const STATUS_ACCENTS: Record<AgentMeta['status'], NeonAccent> = {
   running: 'cyan',
   done: 'purple',
   failed: 'red',
@@ -95,7 +97,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps):
       await window.api.agents.kill(killId)
       toast.success('Agent stopped')
       // Give the backend a moment to update DB status, then refresh the list
-      setTimeout(() => onKill?.(), 500)
+      setTimeout(() => onKill?.(), KILL_REFRESH_DELAY_MS)
     } catch (err) {
       toast.error(`Failed to stop agent: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
@@ -109,6 +111,7 @@ export function AgentCard({ agent, selected, onClick, onKill }: AgentCardProps):
       <button
         onClick={onClick}
         className="agent-card__button-reset"
+        aria-label={`${agent.task} — ${agent.status}`}
         data-accent={accent}
         data-selected={selected}
       >

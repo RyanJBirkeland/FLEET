@@ -4,7 +4,7 @@ interface UseAgentViewLifecycleParams {
   activeView: string
   activeId: string | null
   fetchAgents: () => void
-  loadHistory: (agentId: string) => void
+  loadHistory: (agentId: string) => Promise<void>
   setShowLaunchpad: (show: boolean) => void
   setShowScratchpadBanner: (show: boolean) => void
 }
@@ -30,7 +30,7 @@ export function useAgentViewLifecycle({
 
   useEffect(() => {
     if (activeId) {
-      loadHistory(activeId)
+      loadHistory(activeId).catch((err) => console.error('Failed to load agent history:', err))
     }
   }, [activeId, loadHistory])
 
@@ -41,10 +41,13 @@ export function useAgentViewLifecycle({
   }, [setShowLaunchpad])
 
   useEffect(() => {
-    window.api.settings.get('scratchpad.noticeDismissed').then((val) => {
-      if (!val) {
-        setShowScratchpadBanner(true)
-      }
-    })
+    window.api.settings
+      .get('scratchpad.noticeDismissed')
+      .then((val) => {
+        if (!val) {
+          setShowScratchpadBanner(true)
+        }
+      })
+      .catch((err) => console.error('Failed to get scratchpad setting:', err))
   }, [setShowScratchpadBanner])
 }

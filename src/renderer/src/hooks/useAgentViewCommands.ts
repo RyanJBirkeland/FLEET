@@ -2,12 +2,12 @@ import { useEffect } from 'react'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 
 interface UseAgentViewCommandsParams {
-  handleSpawnAgent: () => void
+  onSpawnAgent: () => void
   handleClearConsole: () => void
 }
 
 export function useAgentViewCommands({
-  handleSpawnAgent,
+  onSpawnAgent,
   handleClearConsole
 }: UseAgentViewCommandsParams): void {
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands)
@@ -20,7 +20,7 @@ export function useAgentViewCommands({
         label: 'Spawn Agent',
         category: 'action',
         keywords: ['spawn', 'new', 'agent', 'create', 'launch'],
-        action: handleSpawnAgent
+        action: onSpawnAgent
       },
       {
         id: 'agent-clear-console',
@@ -36,5 +36,5 @@ export function useAgentViewCommands({
     return () => {
       unregisterCommands(commands.map((c) => c.id))
     }
-  }, [handleSpawnAgent, handleClearConsole, registerCommands, unregisterCommands])
+  }, [onSpawnAgent, handleClearConsole, registerCommands, unregisterCommands])
 }

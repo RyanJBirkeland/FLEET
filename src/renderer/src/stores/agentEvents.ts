@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { toast } from './toasts'
 import type { AgentEvent } from '../../../shared/types'
 import { subscribeToAgentEvents, getAgentEventHistory } from '../services/agents'
 
@@ -81,6 +82,7 @@ function dedupKey(event: AgentEvent): string {
 interface AgentEventsState {
   events: Record<string, AgentEvent[]>
   evictedAgents: Record<string, boolean>
+  historyLoadErrors: Record<string, string>
   init: () => () => void
   destroy: () => void
   loadHistory: (agentId: string) => Promise<void>
@@ -100,27 +102,35 @@ export function useAgentEvents(agentId: string | null): AgentEvent[] {
 export const useAgentEventsStore = create<AgentEventsState>((set) => ({
   events: {},
   evictedAgents: {},
+  historyLoadErrors: {},
 
   init() {
     if (unsubscribe) {
       return unsubscribe // already subscribed
     }
-    unsubscribe = subscribeToAgentEvents(({ agentId, event }) => {
-      set((state) => {
-        const existing = state.events[agentId] ?? []
-        const updated = [...existing, event]
-        const wasEvicted = updated.length > MAX_EVENTS_PER_AGENT
-        return {
-          events: {
-            ...state.events,
-            [agentId]: wasEvicted ? updated.slice(-MAX_EVENTS_PER_AGENT) : updated
-          },
-          evictedAgents: wasEvicted
-            ? { ...state.evictedAgents, [agentId]: true }
-            : state.evictedAgents
-        }
+    try {
+      unsubscribe = subscribeToAgentEvents(({ agentId, event }) => {
+        set((state) => {
+          const existing = state.events[agentId] ?? []
+          const updated = [...existing, event]
+          const wasEvicted = updated.length > MAX_EVENTS_PER_AGENT
+          return {
+            events: {
+              ...state.events,
+              [agentId]: wasEvicted ? updated.slice(-MAX_EVENTS_PER_AGENT) : updated
+            },
+            evictedAgents: wasEvicted
+              ? { ...state.evictedAgents, [agentId]: true }
+              : state.evictedAgents
+          }
+        })
       })
-    })
+    } catch (err) {
+      console.error('Failed to subscribe to agent events:', err)
+      toast.error('Live agent events unavailable — reload the app if this persists.')
+      unsubscribe = null
+      return () => {}
+    }
     return unsubscribe
   },
 
@@ -130,21 +140,32 @@ export const useAgentEventsStore = create<AgentEventsState>((set) => ({
   },
 
   async loadHistory(agentId: string) {
-    const history = await getAgentEventHistory(agentId)
-    set((state) => {
-      const liveEvents = state.events[agentId] ?? []
-      const merged = mergeHistoryWithLiveEvents(history, liveEvents)
-      const wasEvicted = merged.length > MAX_EVENTS_PER_AGENT
-      return {
-        events: {
-          ...state.events,
-          [agentId]: wasEvicted ? merged.slice(-MAX_EVENTS_PER_AGENT) : merged
-        },
-        evictedAgents: wasEvicted
-          ? { ...state.evictedAgents, [agentId]: true }
-          : state.evictedAgents
-      }
-    })
+    try {
+      const history = await getAgentEventHistory(agentId)
+      set((state) => {
+        const liveEvents = state.events[agentId] ?? []
+        const merged = mergeHistoryWithLiveEvents(history, liveEvents)
+        const wasEvicted = merged.length > MAX_EVENTS_PER_AGENT
+        const nextErrors = { ...state.historyLoadErrors }
+        delete nextErrors[agentId]
+        return {
+          events: {
+            ...state.events,
+            [agentId]: wasEvicted ? merged.slice(-MAX_EVENTS_PER_AGENT) : merged
+          },
+          evictedAgents: wasEvicted
+            ? { ...state.evictedAgents, [agentId]: true }
+            : state.evictedAgents,
+          historyLoadErrors: nextErrors
+        }
+      })
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Unknown error'
+      console.error(`Failed to load event history for agent ${agentId}:`, err)
+      set((state) => ({
+        historyLoadErrors: { ...state.historyLoadErrors, [agentId]: message }
+      }))
+    }
   },
 
   clear(agentId: string) {

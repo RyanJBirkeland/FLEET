@@ -21,7 +21,20 @@ interface ToolGroupCardProps {
   searchHighlight?: 'match' | 'active' | undefined
 }
 
-function renderToolBlock(tool: ToolBlock, searchHighlight?: 'match' | 'active'): React.JSX.Element {
+type OnPlaygroundClick =
+  | ((block: {
+      filename: string
+      html: string
+      contentType: PlaygroundContentType
+      sizeBytes: number
+    }) => void)
+  | undefined
+
+function renderToolBlock(
+  tool: ToolBlock,
+  searchHighlight?: 'match' | 'active',
+  onPlaygroundClick?: OnPlaygroundClick
+): React.JSX.Element {
   const searchClass = !searchHighlight
     ? ''
     : searchHighlight === 'active'
@@ -36,6 +49,7 @@ function renderToolBlock(tool: ToolBlock, searchHighlight?: 'match' | 'active'):
         input={tool.input}
         timestamp={tool.timestamp}
         searchClass={searchClass}
+        onPlaygroundClick={onPlaygroundClick}
       />
     )
   }
@@ -48,6 +62,7 @@ function renderToolBlock(tool: ToolBlock, searchHighlight?: 'match' | 'active'):
       result={tool.result}
       timestamp={tool.timestamp}
       searchClass={searchClass}
+      onPlaygroundClick={onPlaygroundClick}
     />
   )
 }
@@ -56,12 +71,13 @@ export function ToolGroupCard({
   tools,
   timestamp,
   searchClass,
+  onPlaygroundClick,
   searchHighlight
 }: ToolGroupCardProps): React.JSX.Element {
   const total = tools.length
 
   if (total === 1 && tools[0]) {
-    return renderToolBlock(tools[0], searchHighlight)
+    return renderToolBlock(tools[0], searchHighlight, onPlaygroundClick)
   }
 
   const counts: Record<string, number> = {}
@@ -76,6 +92,7 @@ export function ToolGroupCard({
       <CollapsibleBlock
         testId="console-line-tool-group"
         searchClass=""
+        label={`${total} tool calls`}
         header={
           <div className="console-card__header">
             <div className="console-tool-group__icons">
@@ -99,7 +116,7 @@ export function ToolGroupCard({
         expandedContent={
           <div className="console-tool-group__items">
             {tools.map((tool, i) => (
-              <div key={i}>{renderToolBlock(tool, searchHighlight)}</div>
+              <div key={i}>{renderToolBlock(tool, searchHighlight, onPlaygroundClick)}</div>
             ))}
           </div>
         }

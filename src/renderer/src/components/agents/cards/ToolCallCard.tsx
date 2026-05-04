@@ -1,15 +1,25 @@
+import { useMemo } from 'react'
 import './ConsoleCard.css'
 import { formatTime, getToolMeta } from './util'
 import { formatToolSummary } from '../../../lib/tool-summaries'
 import { CollapsibleBlock } from '../CollapsibleBlock'
 import { EditDiffCard } from './EditDiffCard'
+import type { PlaygroundContentType } from '../../../../../shared/types'
 
 interface ToolCallCardProps {
   tool: string
   summary: string
-  input?: unknown | undefined
+  input?: unknown
   timestamp: number
   searchClass: string
+  onPlaygroundClick?:
+    | ((block: {
+        filename: string
+        html: string
+        contentType: PlaygroundContentType
+        sizeBytes: number
+      }) => void)
+    | undefined
 }
 
 function renderExpandedContent(tool: string, input: unknown): React.JSX.Element | null {
@@ -30,7 +40,8 @@ function renderExpandedContent(tool: string, input: unknown): React.JSX.Element 
 
   // Bash: show command + output as code block
   if (toolLower === 'bash') {
-    const inputObj = input as Record<string, unknown>
+    const inputObj =
+      typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : undefined
     const command = inputObj?.command
     return (
       <div className="console-line__detail">
@@ -67,9 +78,12 @@ export function ToolCallCard({
   input,
   timestamp,
   searchClass
+  // onPlaygroundClick reserved for future tool types that produce playground output
 }: ToolCallCardProps): React.JSX.Element {
   const meta = getToolMeta(tool)
-  const expandedContent = renderExpandedContent(tool, input)
+  // Memoised so JSON.stringify (and other serialisation) only runs when input or tool changes,
+  // not on every parent re-render triggered by new events in the virtualised list.
+  const expandedContent = useMemo(() => renderExpandedContent(tool, input), [tool, input])
 
   // If there's no expanded content, render a simple one-line card
   if (!expandedContent) {
@@ -92,6 +106,7 @@ export function ToolCallCard({
       <CollapsibleBlock
         testId="console-line-tool-call"
         searchClass=""
+        label={tool}
         header={
           <div className="console-card__header">
             <meta.Icon size={16} style={{ color: meta.color }} />

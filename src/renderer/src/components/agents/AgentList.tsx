@@ -62,7 +62,8 @@ function GroupHeader({
   open,
   onToggle,
   showPulse,
-  collapsible = true
+  collapsible = true,
+  controlsId
 }: {
   label: string
   count: number
@@ -70,11 +71,12 @@ function GroupHeader({
   onToggle: () => void
   showPulse?: boolean | undefined
   collapsible?: boolean | undefined
+  controlsId?: string | undefined
 }): React.JSX.Element {
   const Tag = collapsible ? 'button' : 'div'
   return (
     <Tag
-      {...(collapsible ? { onClick: onToggle } : {})}
+      {...(collapsible ? { onClick: onToggle, 'aria-expanded': open, 'aria-controls': controlsId } : {})}
       className={`agent-list__section-header ${!collapsible ? 'agent-list__section-header--static' : ''}`}
       style={{
         color: neonVar('purple', 'color')
@@ -222,6 +224,7 @@ export function AgentList({
         <div className="agent-list__repo-chips">
           <button
             className={`agent-list__repo-chip ${!selectedRepo ? 'agent-list__repo-chip--active' : ''}`}
+            aria-pressed={!selectedRepo}
             onClick={() => setSelectedRepo(null)}
           >
             All
@@ -230,6 +233,7 @@ export function AgentList({
             <button
               key={repo}
               className={`agent-list__repo-chip ${selectedRepo === repo ? 'agent-list__repo-chip--active' : ''}`}
+              aria-pressed={selectedRepo === repo}
               onClick={() => setSelectedRepo(repo)}
             >
               {repo}
@@ -248,7 +252,11 @@ export function AgentList({
       >
         {fetchError && agents.length === 0 && (
           <div className="agent-list__empty-message">
-            <span style={{ color: neonVar('red', 'color') }}>{fetchError}</span>
+            <span style={{ color: neonVar('red', 'color') }}>
+              {fetchError.length > 200
+                ? `${fetchError.slice(0, 200)}… (see ~/.fleet/fleet.log for details)`
+                : fetchError}
+            </span>
             {onRetry && (
               <button
                 onClick={onRetry}
@@ -362,24 +370,27 @@ export function AgentList({
               count={groups.history.length}
               open={historyOpen}
               onToggle={() => setHistoryOpen((v) => !v)}
+              controlsId="agent-history-section"
             />
-            {historyOpen &&
-              groups.history.map((a) => (
-                <div
-                  key={a.id}
-                  ref={a.id === selectedId ? selectedRef : null}
-                  role="option"
-                  aria-selected={a.id === selectedId}
-                  tabIndex={-1}
-                >
-                  <AgentCard
-                    agent={a}
-                    selected={a.id === selectedId}
-                    onClick={() => onSelect(a.id)}
-                    onKill={onKill}
-                  />
-                </div>
-              ))}
+            <div id="agent-history-section">
+              {historyOpen &&
+                groups.history.map((a) => (
+                  <div
+                    key={a.id}
+                    ref={a.id === selectedId ? selectedRef : null}
+                    role="option"
+                    aria-selected={a.id === selectedId}
+                    tabIndex={-1}
+                  >
+                    <AgentCard
+                      agent={a}
+                      selected={a.id === selectedId}
+                      onClick={() => onSelect(a.id)}
+                      onKill={onKill}
+                    />
+                  </div>
+                ))}
+            </div>
           </div>
         )}
 

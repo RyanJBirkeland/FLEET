@@ -1,16 +1,26 @@
+import { useMemo } from 'react'
 import './ConsoleCard.css'
 import { formatTime, getToolMeta } from './util'
 import { formatToolSummary } from '../../../lib/tool-summaries'
 import { CollapsibleBlock } from '../CollapsibleBlock'
 import { EditDiffCard } from './EditDiffCard'
+import type { PlaygroundContentType } from '../../../../../shared/types'
 
 interface ToolPairCardProps {
   tool: string
   summary: string
-  input?: unknown | undefined
+  input?: unknown
   result: { success: boolean; summary: string; output?: unknown }
   timestamp: number
   searchClass: string
+  onPlaygroundClick?:
+    | ((block: {
+        filename: string
+        html: string
+        contentType: PlaygroundContentType
+        sizeBytes: number
+      }) => void)
+    | undefined
 }
 
 function renderExpandedContent(
@@ -41,9 +51,13 @@ function renderExpandedContent(
 
   // Bash: show command + output as code block
   if (toolLower === 'bash') {
-    const inputObj = input as Record<string, unknown>
+    const inputObj =
+      typeof input === 'object' && input !== null ? (input as Record<string, unknown>) : undefined
     const command = inputObj?.command
-    const outputObj = result.output as Record<string, unknown> | undefined
+    const outputObj =
+      typeof result.output === 'object' && result.output !== null
+        ? (result.output as Record<string, unknown>)
+        : undefined
     const stdout = outputObj?.stdout
 
     return (
@@ -100,14 +114,21 @@ export function ToolPairCard({
   result,
   timestamp,
   searchClass
+  // onPlaygroundClick reserved for future tool types that produce playground output
 }: ToolPairCardProps): React.JSX.Element {
   const meta = getToolMeta(tool)
+  // Memoised so JSON.stringify only runs when input/result changes, not on every parent re-render.
+  const expandedContent = useMemo(
+    () => renderExpandedContent(tool, input, result),
+    [tool, input, result]
+  )
 
   return (
     <div className={`console-card ${searchClass}`}>
       <CollapsibleBlock
         testId="console-line-tool-pair"
         searchClass=""
+        label={tool}
         header={
           <div className="console-card__header">
             <meta.Icon size={16} style={{ color: meta.color }} />
@@ -123,7 +144,7 @@ export function ToolPairCard({
             <span className="console-line__timestamp">{formatTime(timestamp)}</span>
           </div>
         }
-        expandedContent={renderExpandedContent(tool, input, result)}
+        expandedContent={expandedContent}
       />
     </div>
   )

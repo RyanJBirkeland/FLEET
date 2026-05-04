@@ -3,8 +3,6 @@ import { renderAgentMarkdown } from '../render-agent-markdown'
 
 interface TextCardProps {
   text: string
-  timestamp: number
-  searchClass: string
 }
 
 export function TextCard({ text }: TextCardProps): React.JSX.Element {

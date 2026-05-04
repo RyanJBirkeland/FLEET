@@ -51,9 +51,7 @@ export function ConsoleCard({
       )
 
     case 'text':
-      return (
-        <TextCard text={block.text} timestamp={block.timestamp} searchClass={getSearchClass()} />
-      )
+      return <TextCard text={block.text} />
 
     case 'user_message':
       return (
@@ -66,14 +64,7 @@ export function ConsoleCard({
       )
 
     case 'thinking':
-      return (
-        <ThinkingCard
-          tokenCount={block.tokenCount}
-          text={block.text}
-          timestamp={block.timestamp}
-          searchClass={getSearchClass()}
-        />
-      )
+      return <ThinkingCard tokenCount={block.tokenCount} text={block.text} />
 
     case 'tool_call':
       return (
@@ -115,13 +106,7 @@ export function ConsoleCard({
       )
 
     case 'error':
-      return (
-        <ErrorCard
-          message={block.message}
-          timestamp={block.timestamp}
-          searchClass={getSearchClass()}
-        />
-      )
+      return <ErrorCard message={block.message} />
 
     case 'rate_limited':
       return (
