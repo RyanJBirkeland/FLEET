@@ -23,9 +23,7 @@ import { getDb, closeDb } from './db'
 import { flushAgentEventBatcher } from './agent-event-mapper'
 import { createAgentManager } from './agent-manager'
 import { createSprintTaskRepository } from './data/sprint-task-repository'
-import { execFileAsync } from './lib/async-utils'
-import { getOAuthToken, ensureExtraPathsOnProcessEnv, buildAgentEnv } from './env-utils'
-import { resolveGitExecutable } from './agent-manager/resolve-git'
+import { getOAuthToken, ensureExtraPathsOnProcessEnv } from './env-utils'
 import { createLogger, logError } from './logger'
 import { setSprintQueriesLogger } from './data/sprint-queries'
 import { setTaskGroupQueriesLogger } from './data/task-group-queries'
@@ -45,7 +43,7 @@ import { createTaskTerminalService, createPollerTerminalDispatcher } from './ser
 import { createTaskStateService } from './services/task-state-service'
 import { createStatusServer } from './services/status-server'
 import { createElectronDialogService } from './dialog-service'
-import { getTask, updateTask } from './services/sprint-service'
+import { getTask, updateTask, notifySprintMutation } from './services/sprint-service'
 import { createSprintMutations } from './services/sprint-mutations'
 import { initSprintService } from './services/sprint-service'
 import { initSprintUseCases } from './services/sprint-use-cases'
@@ -55,6 +53,7 @@ import { createWebhookService } from './services/webhook-service'
 import { getWebhooks } from './data/webhook-queries'
 import { createReviewOrchestrationService } from './services/review-orchestration-service'
 import type { ReviewOrchestrationService } from './services/review-orchestration-service'
+import { createReviewGitAdapter } from './lib/review-git-adapter'
 import { createReviewShipBatchService } from './services/review-ship-batch'
 import type { ReviewShipBatchService } from './services/review-ship-batch'
 import { createReviewRollupService } from './services/review-rollup-service'
@@ -347,7 +346,11 @@ function wireReviewServices(repo: ReturnType<typeof createSprintTaskRepository>)
   reviewShipBatch: ReviewShipBatchService
   reviewRollup: ReviewRollupService
 } {
-  const reviewOrchestration = createReviewOrchestrationService(repo)
+  const reviewOrchestration = createReviewOrchestrationService(repo, {
+    getTask,
+    updateTask,
+    notifySprintMutation
+  })
   const reviewShipBatch = createReviewShipBatchService(repo)
   const reviewRollup = createReviewRollupService(repo)
   return { reviewOrchestration, reviewShipBatch, reviewRollup }
@@ -573,33 +576,7 @@ function buildReviewWiring(repo: ReturnType<typeof createSprintTaskRepository>):
     return task.worktree_path
   }
 
-  const getHeadCommitSha = async (worktreePath: string): Promise<string> => {
-    const gitBin = resolveGitExecutable() ?? 'git'
-    const { stdout } = await execFileAsync(gitBin, ['-C', worktreePath, 'rev-parse', 'HEAD'], {
-      env: buildAgentEnv()
-    })
-    return stdout.trim()
-  }
-
-  const getBranch = async (worktreePath: string): Promise<string> => {
-    const gitBin = resolveGitExecutable() ?? 'git'
-    const { stdout } = await execFileAsync(
-      gitBin,
-      ['-C', worktreePath, 'rev-parse', '--abbrev-ref', 'HEAD'],
-      { env: buildAgentEnv() }
-    )
-    return stdout.trim()
-  }
-
-  const getDiff = async (worktreePath: string): Promise<string> => {
-    const gitBin = resolveGitExecutable() ?? 'git'
-    const { stdout } = await execFileAsync(
-      gitBin,
-      ['-C', worktreePath, 'diff', 'main...HEAD'],
-      { maxBuffer: 10 * 1024 * 1024, env: buildAgentEnv() }
-    )
-    return stdout
-  }
+  const { getHeadCommitSha, getBranch, getDiff } = createReviewGitAdapter()
 
   const reviewService = createReviewService({
     repo: reviewRepo,

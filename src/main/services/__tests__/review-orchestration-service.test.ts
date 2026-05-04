@@ -32,7 +32,15 @@ vi.mock('../../settings', () => ({
 }))
 vi.mock('../review-merge-service')
 vi.mock('../review-pr-service')
-vi.mock('../sprint-service')
+// sprint-service is no longer imported by the service under test — its
+// operations are injected as deps. The mock below keeps the import alive for
+// tests that reference sprintService.* — those references now drive the injected
+// deps instead of module-level mocks.
+vi.mock('../sprint-service', () => ({
+  getTask: vi.fn(),
+  updateTask: vi.fn(),
+  notifySprintMutation: vi.fn()
+}))
 vi.mock('../../lib/post-merge-dedup')
 vi.mock('../../lib/git-operations')
 vi.mock('../../handlers/sprint-listeners')
@@ -70,15 +78,20 @@ describe('review-orchestration-service', () => {
     vi.clearAllMocks()
 
     // Build a minimal stub repository and create the service via the factory.
-    // The test mocks sprint-service, so stub only what the factory itself uses
-    // (all data access routes through sprint-service mocks at runtime).
+    // sprint-service operations are now injected as deps — the module-level
+    // sprintService.* mocks are wired through to the injected callbacks so
+    // all existing test assertions continue to work.
     const mockRepo = {
       getTask: vi.fn(),
       updateTask: vi.fn(),
       forceUpdateTask: vi.fn(),
       listTasks: vi.fn(),
     } as unknown as ISprintTaskRepository
-    orchestration = createReviewOrchestrationService(mockRepo)
+    orchestration = createReviewOrchestrationService(mockRepo, {
+      getTask: (id) => sprintService.getTask(id),
+      updateTask: (id, patch) => sprintService.updateTask(id, patch) as any,
+      notifySprintMutation: (type, task) => sprintService.notifySprintMutation(type, task)
+    })
 
     // Default mock for getSettingJson (returns repo config)
     vi.mocked(getSettingJson).mockReturnValue([{ name: 'fleet', localPath: '/repo/fleet' }])

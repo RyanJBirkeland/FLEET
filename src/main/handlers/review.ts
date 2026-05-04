@@ -78,23 +78,25 @@ export interface ReviewHandlersDeps {
 
 export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
   const { reviewOrchestration, reviewShipBatch, reviewRollup } = deps
-  const env = buildAgentEnv()
 
   // ============================================================================
   // Query Handlers (delegate to review-query-service)
   // ============================================================================
 
   safeHandle('review:getDiff', async (_e, payload) => {
+    const env = buildAgentEnv()
     const branch = await resolveDefaultBranch(payload.worktreePath)
     return getReviewDiff(payload.worktreePath, `origin/${branch}`, { env })
   }, parseReviewWorktreeArgs as IpcArgsParser<'review:getDiff'>)
 
   safeHandle('review:getCommits', async (_e, payload) => {
+    const env = buildAgentEnv()
     const branch = await resolveDefaultBranch(payload.worktreePath)
     return getReviewCommits(payload.worktreePath, `origin/${branch}`, { env })
   }, parseReviewWorktreeArgs as IpcArgsParser<'review:getCommits'>)
 
   safeHandle('review:getFileDiff', async (_e, payload) => {
+    const env = buildAgentEnv()
     const branch = await resolveDefaultBranch(payload.worktreePath)
     return getReviewFileDiff(payload.worktreePath, payload.filePath, `origin/${branch}`, { env })
   }, parseReviewFileDiffArgs)
@@ -103,7 +105,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
   safeHandle('review:checkFreshness', async (_e, payload) => {
     const { taskId } = payload
     if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
-    return reviewOrchestration.checkReviewFreshness(taskId, env)
+    return reviewOrchestration.checkReviewFreshness(taskId, buildAgentEnv())
   })
 
   // review:checkAutoReview — check if task qualifies for auto-review
@@ -122,7 +124,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       return { shouldAutoMerge: false, shouldAutoApprove: false, matchedRule: null }
     }
 
-    return checkAutoReview({ worktreePath: task.worktree_path, rules, env })
+    return checkAutoReview({ worktreePath: task.worktree_path, rules, env: buildAgentEnv() })
   })
 
   // ============================================================================
@@ -134,7 +136,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     return reviewOrchestration.mergeLocally({
       taskId: payload.taskId,
       strategy: payload.strategy,
-      env,
+      env: buildAgentEnv(),
       onStatusTerminal: deps.onStatusTerminal
     })
   })
@@ -145,7 +147,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       taskId: payload.taskId,
       title: payload.title,
       body: payload.body,
-      env,
+      env: buildAgentEnv(),
       onStatusTerminal: deps.onStatusTerminal
     })
     if (!result.success || !result.prUrl) {
@@ -168,7 +170,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     if (!isValidTaskId(payload.taskId)) throw new Error('Invalid task ID format')
     return reviewOrchestration.discard({
       taskId: payload.taskId,
-      env,
+      env: buildAgentEnv(),
       onStatusTerminal: deps.onStatusTerminal
     })
   })
@@ -178,7 +180,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     return reviewOrchestration.shipIt({
       taskId: payload.taskId,
       strategy: payload.strategy,
-      env,
+      env: buildAgentEnv(),
       onStatusTerminal: deps.onStatusTerminal
     })
   })
@@ -194,7 +196,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     return reviewShipBatch.shipBatch({
       taskIds: payload.taskIds,
       strategy: payload.strategy,
-      env,
+      env: buildAgentEnv(),
       onStatusTerminal: deps.onStatusTerminal
     })
   })
@@ -203,7 +205,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
     if (!isValidTaskId(payload.taskId)) throw new Error('Invalid task ID format')
     return reviewOrchestration.rebase({
       taskId: payload.taskId,
-      env
+      env: buildAgentEnv()
     })
   })
 
@@ -226,7 +228,7 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       branchName: payload.branchName,
       prTitle: payload.prTitle,
       prBody: payload.prBody,
-      env
+      env: buildAgentEnv()
     })
   })
 }

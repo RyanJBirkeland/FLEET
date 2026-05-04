@@ -212,6 +212,7 @@ import {
   getTask as _getTask,
   updateTask as _updateTask
 } from '../../data/sprint-queries'
+import { notifySprintMutation as _notifySprintMutation } from '../../services/sprint-service'
 import type { ISprintTaskRepository } from '../../data/sprint-task-repository'
 
 let reviewOrchestration: ReviewOrchestrationService
@@ -229,13 +230,20 @@ describe('Review handlers', () => {
     // mockExistsSync.mockReturnValueOnce(false) to simulate cleanup.
     mockExistsSync.mockReturnValue(true)
     // Build a ReviewOrchestrationService bound to the mocked repository.
+    // sprint-service operations are injected via deps so the service no longer
+    // imports sprint-service directly. Thread through the same mock-backed
+    // functions that the existing assertions expect.
     const mockRepo = {
       getTask: (...a: unknown[]) => (_getTask as Function)(...a),
       updateTask: (...a: unknown[]) => (_updateTask as Function)(...a),
       forceUpdateTask: vi.fn(),
       listTasks: vi.fn(),
     } as unknown as ISprintTaskRepository
-    reviewOrchestration = createReviewOrchestrationService(mockRepo)
+    reviewOrchestration = createReviewOrchestrationService(mockRepo, {
+      getTask: (id) => (_getTask as Function)(id),
+      updateTask: (id, patch) => (_updateTask as Function)(id, patch),
+      notifySprintMutation: (type, task) => (_notifySprintMutation as Function)(type, task)
+    })
   })
 
   it('registers all 14 review channels', () => {

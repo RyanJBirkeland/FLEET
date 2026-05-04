@@ -6,8 +6,8 @@
  * exhaustive switch inside `executeReviewGitOp` ensures a compile error when a
  * new `ReviewGitOp` variant is added without a corresponding execution path.
  *
- * Use `createReviewOrchestrationService(repo)` at the composition root. The
- * old setter-based API (`setReviewOrchestrationRepo`) has been removed.
+ * Use `createReviewOrchestrationService(repo, deps)` at the composition root.
+ * The old setter-based API (`setReviewOrchestrationRepo`) has been removed.
  */
 import { execFileAsync } from '../lib/async-utils'
 import { resolveDefaultBranch } from '../lib/default-branch'
@@ -21,7 +21,6 @@ import type { ReviewGitOp } from './review-gitop-types'
 import { assertNeverGitOp } from './review-gitop-types'
 
 export { parseNumstat }
-import { getTask, updateTask, notifySprintMutation } from './sprint-service'
 import { getErrorMessage } from '../../shared/errors'
 import { nowIso } from '../../shared/time'
 import type { ISprintTaskRepository } from '../data/sprint-task-repository'
@@ -63,6 +62,16 @@ export type {
 const logger = createLogger('review-orchestration')
 
 // ============================================================================
+// ReviewOrchestrationDeps — injected sprint-service operations
+// ============================================================================
+
+export interface ReviewOrchestrationDeps {
+  getTask: (id: string) => SprintTask | null
+  updateTask: (id: string, patch: Record<string, unknown>) => Promise<SprintTask | null>
+  notifySprintMutation: (type: 'created' | 'updated' | 'deleted', task: SprintTask) => void
+}
+
+// ============================================================================
 // ReviewGitOp builder + exhaustive executor
 // ============================================================================
 
@@ -79,6 +88,25 @@ type ReviewActionInput =
   | { action: 'discard' }
   | { action: 'shipIt'; strategy: 'merge' | 'squash' | 'rebase' }
   | { action: 'rebase' }
+
+// ============================================================================
+// Discriminated result types for executeReviewGitOp
+// ============================================================================
+
+interface ExecutorStateResult {
+  kind: 'executorState'
+  branch?: string | undefined
+  baseSha?: string | undefined
+  conflicts?: string[] | undefined
+  cssWarnings?: string[] | undefined
+}
+
+interface PrCreationResult {
+  kind: 'prCreation'
+  prUrl: string
+}
+
+type ReviewGitOpResult = ExecutorStateResult | PrCreationResult
 
 /**
  * Validates the raw action input and narrows it to the correct discriminated
@@ -155,22 +183,30 @@ export interface ReviewOrchestrationService {
 
 /**
  * Create the review orchestration service bound to the given repository.
+ * Sprint-service operations (`getTask`, `updateTask`, `notifySprintMutation`)
+ * are injected via `deps` to eliminate the lateral peer import.
  * Call once at the composition root; pass the returned object to handler deps.
  */
 export function createReviewOrchestrationService(
-  repo: ISprintTaskRepository
+  repo: ISprintTaskRepository,
+  deps: ReviewOrchestrationDeps
 ): ReviewOrchestrationService {
+  const { getTask, updateTask, notifySprintMutation } = deps
+
   // ============================================================================
-  // Internal helpers — close over `repo`
+  // Internal helpers — close over `repo` and injected deps
   // ============================================================================
 
-  function makeBroadcast(): (event: string, payload: unknown) => void {
+  function makeSprintMutationNotifier(): (event: string, payload: unknown) => void {
     return (event, payload) => {
       if (event !== 'sprint:mutation' || typeof payload !== 'object' || payload === null) return
-      const { type, task } = payload as {
-        type: 'created' | 'updated' | 'deleted'
-        task: SprintTask
-      }
+      if (
+        !('type' in payload) ||
+        !['created', 'updated', 'deleted'].includes((payload as Record<string, unknown>).type as string) ||
+        !('task' in payload) ||
+        (payload as Record<string, unknown>).task === null
+      ) return
+      const { type, task } = payload as { type: 'created' | 'updated' | 'deleted'; task: SprintTask }
       notifySprintMutation(type, task)
     }
   }
@@ -180,14 +216,15 @@ export function createReviewOrchestrationService(
     input: Parameters<typeof classifyReviewAction>[0],
     env: NodeJS.ProcessEnv,
     onTerminal: (taskId: string, status: TaskStatus) => void | Promise<void>
-  ): Promise<ReturnType<typeof executeReviewAction>> {
-    return executeReviewAction(classifyReviewAction(input), taskId, {
+  ): Promise<ExecutorStateResult> {
+    const state = await executeReviewAction(classifyReviewAction(input), taskId, {
       repo,
-      broadcast: makeBroadcast(),
+      broadcast: makeSprintMutationNotifier(),
       onStatusTerminal: onTerminal,
       env,
       logger
     })
+    return { kind: 'executorState', ...state }
   }
 
   async function executePrCreation(
@@ -199,7 +236,7 @@ export function createReviewOrchestrationService(
     title: string,
     body: string,
     env: NodeJS.ProcessEnv
-  ): Promise<{ prUrl: string }> {
+  ): Promise<PrCreationResult> {
     if (!task.worktree_path) throw new Error(`Task ${taskId} has no worktree path`)
 
     const { stdout } = await execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
@@ -233,7 +270,7 @@ export function createReviewOrchestrationService(
     })
     if (updated) notifySprintMutation('updated', updated)
 
-    return { prUrl: pr.prUrl }
+    return { kind: 'prCreation', prUrl: pr.prUrl }
   }
 
   async function executeRebaseAction(
@@ -243,13 +280,13 @@ export function createReviewOrchestrationService(
       'id' | 'title' | 'repo' | 'worktree_path' | 'spec' | 'notes' | 'agent_run_id'
     >,
     env: NodeJS.ProcessEnv
-  ): Promise<ReturnType<typeof executeReviewAction>> {
+  ): Promise<ExecutorStateResult> {
     const state = await executeReviewAction(
       classifyReviewAction({ action: 'rebase', taskId, task, repoConfig: null }),
       taskId,
       {
         repo,
-        broadcast: makeBroadcast(),
+        broadcast: makeSprintMutationNotifier(),
         onStatusTerminal: () => {},
         env,
         logger
@@ -259,13 +296,13 @@ export function createReviewOrchestrationService(
       const u = await updateTask(taskId, { rebase_base_sha: state.baseSha, rebased_at: nowIso() })
       if (u) notifySprintMutation('updated', u)
     }
-    return state
+    return { kind: 'executorState', ...state }
   }
 
   async function executeReviewGitOp(
     op: ReviewGitOp,
     ctx: ExecutionContext
-  ): Promise<ReturnType<typeof executeReviewAction> | { prUrl?: string }> {
+  ): Promise<ReviewGitOpResult> {
     const task = getTask(ctx.taskId)
     if (!task) throw new Error(`Task ${ctx.taskId} not found`)
 
@@ -348,8 +385,9 @@ export function createReviewOrchestrationService(
       })
       return { success: true }
     } catch (err: unknown) {
-      const e = err as Error & { conflicts?: string[] }
-      return { success: false, error: getErrorMessage(err), conflicts: e.conflicts }
+      const error = err instanceof Error ? err : new Error(String(err))
+      const conflicts = (err as { conflicts?: string[] }).conflicts
+      return { success: false, error: error.message, conflicts }
     }
   }
 
@@ -361,8 +399,8 @@ export function createReviewOrchestrationService(
         env: i.env,
         onStatusTerminal: i.onStatusTerminal
       })
-      const prUrl = (result as { prUrl?: string }).prUrl
-      return { success: true, prUrl: prUrl ?? '' }
+      const prUrl = result.kind === 'prCreation' ? result.prUrl : ''
+      return { success: true, prUrl }
     } catch (err: unknown) {
       return { success: false, error: getErrorMessage(err) }
     }
@@ -403,23 +441,26 @@ export function createReviewOrchestrationService(
       })
       return { success: true, pushed: true }
     } catch (err: unknown) {
-      const e = err as Error & { conflicts?: string[] }
-      return { success: false, error: getErrorMessage(err), conflicts: e.conflicts }
+      const error = err instanceof Error ? err : new Error(String(err))
+      const conflicts = (err as { conflicts?: string[] }).conflicts
+      return { success: false, error: error.message, conflicts }
     }
   }
 
   async function rebase(i: RebaseInput): Promise<RebaseResult> {
     const op = buildReviewGitOpPlan({ action: 'rebase' })
     try {
-      const state = await executeReviewGitOp(op, {
+      const result = await executeReviewGitOp(op, {
         taskId: i.taskId,
         env: i.env,
         onStatusTerminal: () => {}
       })
-      return { success: true, baseSha: (state as { baseSha?: string }).baseSha }
+      const baseSha = result.kind === 'executorState' ? result.baseSha : undefined
+      return { success: true, baseSha }
     } catch (err: unknown) {
-      const e = err as Error & { conflicts?: string[] }
-      return { success: false, error: getErrorMessage(err), conflicts: e.conflicts }
+      const error = err instanceof Error ? err : new Error(String(err))
+      const conflicts = (err as { conflicts?: string[] }).conflicts
+      return { success: false, error: error.message, conflicts }
     }
   }
 
@@ -467,7 +508,7 @@ export function createReviewOrchestrationService(
 
   async function markShippedOutsideFleet(
     taskId: string,
-    deps: { taskStateService: TaskStateService }
+    markDeps: { taskStateService: TaskStateService }
   ): Promise<{ success: true }> {
     const task = getTask(taskId)
     if (!task) throw new Error(`Task ${taskId} not found`)
@@ -476,7 +517,7 @@ export function createReviewOrchestrationService(
     }
 
     logger.info(`markShippedOutsideFleet task=${taskId}`)
-    await deps.taskStateService.transition(taskId, 'done', {
+    await markDeps.taskStateService.transition(taskId, 'done', {
       fields: { completed_at: nowIso() },
       caller: 'review:markShippedOutsideFleet'
     })
