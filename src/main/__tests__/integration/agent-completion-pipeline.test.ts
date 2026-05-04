@@ -508,7 +508,7 @@ describe('Agent completion pipeline integration', () => {
         return null
       })
 
-      await resolveDependents('task-A', 'done', depIndex, getTask as any, updateTask, logger)
+      await resolveDependents({ completedTaskId: 'task-A', completedStatus: 'done', index: depIndex, getTask: getTask as any, updateTask, logger })
 
       expect(updateTaskMock).toHaveBeenCalledWith('task-B', { status: 'queued' })
     })
@@ -527,7 +527,7 @@ describe('Agent completion pipeline integration', () => {
         return null
       })
 
-      await resolveDependents('task-A', 'failed', depIndex, getTask as any, updateTask, logger)
+      await resolveDependents({ completedTaskId: 'task-A', completedStatus: 'failed', index: depIndex, getTask: getTask as any, updateTask, logger })
 
       const queueCall = updateTaskMock.mock.calls.find(
         (c) => c[0] === 'task-B' && (c[1] as Record<string, unknown>).status === 'queued'
@@ -552,7 +552,7 @@ describe('Agent completion pipeline integration', () => {
         return null
       })
 
-      await resolveDependents('task-A', 'failed', depIndex, getTask as any, updateTask, logger)
+      await resolveDependents({ completedTaskId: 'task-A', completedStatus: 'failed', index: depIndex, getTask: getTask as any, updateTask, logger })
 
       expect(updateTaskMock).toHaveBeenCalledWith('task-B', { status: 'queued' })
     })
@@ -585,7 +585,7 @@ describe('Agent completion pipeline integration', () => {
         return null
       })
 
-      await resolveDependents('task-A', 'done', depIndex, getTask as any, updateTask, logger)
+      await resolveDependents({ completedTaskId: 'task-A', completedStatus: 'done', index: depIndex, getTask: getTask as any, updateTask, logger })
 
       const queueCall = updateTaskMock.mock.calls.find(
         (c) => c[0] === 'task-C' && (c[1] as Record<string, unknown>).status === 'queued'
@@ -627,7 +627,7 @@ describe('Agent completion pipeline integration', () => {
         return null
       })
 
-      await resolveDependents('task-B', 'done', depIndex, getTask as any, updateTask, logger)
+      await resolveDependents({ completedTaskId: 'task-B', completedStatus: 'done', index: depIndex, getTask: getTask as any, updateTask, logger })
 
       expect(updateTaskMock).toHaveBeenCalledWith('task-C', { status: 'queued' })
     })
@@ -651,7 +651,7 @@ describe('Agent completion pipeline integration', () => {
 
       // Wire the real onTaskTerminal that triggers resolveDependents
       const onTerminal = vi.fn(async (taskId: string, status: string) => {
-        await resolveDependents(taskId, status, depIndex, getTask as any, updateTask, logger)
+        await resolveDependents({ completedTaskId: taskId, completedStatus: status as any, index: depIndex, getTask: getTask as any, updateTask, logger })
       })
 
       // Parent task produced no commits (triggers error path)
@@ -705,7 +705,7 @@ describe('Agent completion pipeline integration', () => {
         return null
       })
 
-      await resolveDependents('task-A', 'done', depIndex, getTask as any, updateTask, logger)
+      await resolveDependents({ completedTaskId: 'task-A', completedStatus: 'done', index: depIndex, getTask: getTask as any, updateTask, logger })
 
       const taskBCalls = updateTaskMock.mock.calls.filter((c) => c[0] === 'task-B')
       expect(taskBCalls).toHaveLength(0)

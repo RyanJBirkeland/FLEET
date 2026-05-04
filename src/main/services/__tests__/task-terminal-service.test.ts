@@ -1,11 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { createTaskTerminalService } from '../task-terminal-service'
 import type { TaskTerminalServiceDeps } from '../task-terminal-service'
+import type { ResolveDependentsContext } from '../../lib/resolve-dependents'
 
 // Controllable mock for resolveDependents — used in the consolidated error test
 const mockResolveDependents = vi.fn()
 vi.mock('../../lib/resolve-dependents', () => ({
-  resolveDependents: (...args: unknown[]) => mockResolveDependents(...args)
+  resolveDependents: (ctx: ResolveDependentsContext) => mockResolveDependents(ctx)
 }))
 
 // Controllable mock for refreshDependencyIndex — used to trigger the outer catch
@@ -67,21 +68,23 @@ describe('createTaskTerminalService', () => {
 
     vi.runAllTimers()
 
-    // resolveDependents should have been called for t1
+    // resolveDependents should have been called for t1 with a context object
     expect(mockResolveDependents).toHaveBeenCalledWith(
-      't1',
-      'done',
-      expect.anything(), // depIndex
-      deps.getTask,
-      deps.updateTask,
-      deps.logger,
-      deps.getSetting,
-      expect.anything(), // epicIndex
-      deps.getGroup,
-      deps.listGroupTasks,
-      undefined, // runInTransaction (not provided by default)
-      undefined, // onTaskTerminal
-      undefined  // taskStateService
+      expect.objectContaining({
+        completedTaskId: 't1',
+        completedStatus: 'done',
+        index: expect.anything(),
+        getTask: deps.getTask,
+        updateTask: deps.updateTask,
+        logger: deps.logger,
+        getSetting: deps.getSetting,
+        epicIndex: expect.anything(),
+        getGroup: deps.getGroup,
+        listGroupTasks: deps.listGroupTasks,
+        runInTransaction: undefined,
+        onTaskTerminal: undefined,
+        taskStateService: undefined
+      })
     )
   })
 
@@ -192,19 +195,19 @@ describe('createTaskTerminalService', () => {
     // resolveDependents should be called exactly once for t1 (Map deduplicates)
     expect(mockResolveDependents).toHaveBeenCalledTimes(1)
     expect(mockResolveDependents).toHaveBeenCalledWith(
-      't1',
-      'done', // last status wins
-      expect.anything(),
-      deps.getTask,
-      deps.updateTask,
-      deps.logger,
-      deps.getSetting,
-      expect.anything(),
-      deps.getGroup,
-      deps.listGroupTasks,
-      undefined, // runInTransaction (not provided by default)
-      undefined, // onTaskTerminal
-      undefined  // taskStateService
+      expect.objectContaining({
+        completedTaskId: 't1',
+        completedStatus: 'done', // last status wins
+        getTask: deps.getTask,
+        updateTask: deps.updateTask,
+        logger: deps.logger,
+        getSetting: deps.getSetting,
+        getGroup: deps.getGroup,
+        listGroupTasks: deps.listGroupTasks,
+        runInTransaction: undefined,
+        onTaskTerminal: undefined,
+        taskStateService: undefined
+      })
     )
   })
 
@@ -222,19 +225,19 @@ describe('createTaskTerminalService', () => {
     vi.runAllTimers()
 
     expect(mockResolveDependents).toHaveBeenCalledWith(
-      't1',
-      'done',
-      expect.anything(), // depIndex
-      deps.getTask,
-      deps.updateTask,
-      deps.logger,
-      deps.getSetting,
-      expect.anything(), // epicIndex
-      deps.getGroup,
-      deps.listGroupTasks,
-      runInTransaction,
-      undefined, // onTaskTerminal
-      undefined  // taskStateService
+      expect.objectContaining({
+        completedTaskId: 't1',
+        completedStatus: 'done',
+        getTask: deps.getTask,
+        updateTask: deps.updateTask,
+        logger: deps.logger,
+        getSetting: deps.getSetting,
+        getGroup: deps.getGroup,
+        listGroupTasks: deps.listGroupTasks,
+        runInTransaction,
+        onTaskTerminal: undefined,
+        taskStateService: undefined
+      })
     )
   })
 
@@ -260,8 +263,8 @@ describe('createTaskTerminalService', () => {
 
     // Capture which taskIds resolveDependents was called with
     const resolvedIds: string[] = []
-    mockResolveDependents.mockImplementation((id: string) => {
-      resolvedIds.push(id)
+    mockResolveDependents.mockImplementation((ctx: ResolveDependentsContext) => {
+      resolvedIds.push(ctx.completedTaskId)
     })
 
     const service = createTaskTerminalService(deps)
@@ -284,19 +287,17 @@ describe('createTaskTerminalService', () => {
 
     // runInTransaction was forwarded to resolveDependents for both calls
     expect(mockResolveDependents).toHaveBeenCalledWith(
-      expect.any(String),
-      expect.any(String),
-      expect.anything(),
-      deps.getTask,
-      deps.updateTask,
-      deps.logger,
-      deps.getSetting,
-      expect.anything(),
-      deps.getGroup,
-      deps.listGroupTasks,
-      runInTransaction,
-      undefined, // onTaskTerminal
-      undefined  // taskStateService
+      expect.objectContaining({
+        getTask: deps.getTask,
+        updateTask: deps.updateTask,
+        logger: deps.logger,
+        getSetting: deps.getSetting,
+        getGroup: deps.getGroup,
+        listGroupTasks: deps.listGroupTasks,
+        runInTransaction,
+        onTaskTerminal: undefined,
+        taskStateService: undefined
+      })
     )
   })
 
@@ -305,10 +306,10 @@ describe('createTaskTerminalService', () => {
     // Use the module-level mockResolveDependents to control which resolution throws.
     // Call 1 (for 'ta') throws; call 2 (for 'tb') succeeds.
     let callCount = 0
-    mockResolveDependents.mockImplementation((id: string) => {
+    mockResolveDependents.mockImplementation((ctx: ResolveDependentsContext) => {
       callCount++
       if (callCount === 1) {
-        throw new Error(`resolution failure for ${id}`)
+        throw new Error(`resolution failure for ${ctx.completedTaskId}`)
       }
     })
 
@@ -343,10 +344,10 @@ describe('createTaskTerminalService', () => {
   it('logs info with correct resolved/total counts on a partial-failure batch', () => {
     // Two tasks: ta fails, tb succeeds → resolved = 1, total = 2
     let callCount = 0
-    mockResolveDependents.mockImplementation((id: string) => {
+    mockResolveDependents.mockImplementation(() => {
       callCount++
       if (callCount === 1) {
-        throw new Error(`resolution failure for ${id}`)
+        throw new Error(`resolution failure`)
       }
     })
 

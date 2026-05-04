@@ -1,4 +1,4 @@
-import { resolveDependents } from '../lib/resolve-dependents'
+import { resolveDependents, type ResolveDependentsContext } from '../lib/resolve-dependents'
 import { sleep } from '../lib/async-utils'
 import type { TaskStateService } from './task-state-service'
 import {
@@ -79,6 +79,28 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
     // Epic dependency graph is owned by EpicGroupService — read via deps.epicDepsReader.
   }
 
+  function buildResolveDependentsContext(id: string, terminalStatus: TaskStatus): ResolveDependentsContext {
+    return {
+      completedTaskId: id,
+      completedStatus: terminalStatus,
+      index: depIndex,
+      getTask: deps.getTask,
+      updateTask: deps.updateTask,
+      logger: deps.logger,
+      getSetting: deps.getSetting,
+      epicIndex: deps.epicDepsReader,
+      getGroup: deps.getGroup,
+      listGroupTasks: deps.listGroupTasks,
+      runInTransaction: deps.runInTransaction,
+      onTaskTerminal: undefined,
+      taskStateService: deps.taskStateService
+    }
+  }
+
+  function resolveOneDependentTerminal(id: string, terminalStatus: TaskStatus): void {
+    resolveDependents(buildResolveDependentsContext(id, terminalStatus))
+  }
+
   function scheduleDependencyResolution(taskId: string, status: TaskStatus): void {
     // DESIGN: Batched resolution via setTimeout(0) for bulk PR merges.
     // When multiple PRs merge simultaneously (e.g., sprint PR poller tick),
@@ -96,21 +118,7 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
       const totalCount = pending.size
       for (const [id, terminalStatus] of pending) {
         try {
-          resolveDependents(
-            id,
-            terminalStatus,
-            depIndex,
-            deps.getTask,
-            deps.updateTask,
-            deps.logger,
-            deps.getSetting,
-            deps.epicDepsReader,
-            deps.getGroup,
-            deps.listGroupTasks,
-            deps.runInTransaction,
-            undefined,
-            deps.taskStateService
-          )
+          resolveOneDependentTerminal(id, terminalStatus)
         } catch (err) {
           failedTaskIds.push(id)
           deps.logger.error(`[task-terminal-service] resolveDependents failed for ${id}: ${err}`)
@@ -126,23 +134,13 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
       )
       await sleep(500)
       for (const id of failedTaskIds) {
-        const terminalStatus = pending.get(id)!
+        const terminalStatus = pending.get(id)
+        if (terminalStatus === undefined) {
+          deps.logger.warn(`[task-terminal] No context for task ${id} in retry loop — skipping`)
+          continue
+        }
         try {
-          resolveDependents(
-            id,
-            terminalStatus,
-            depIndex,
-            deps.getTask,
-            deps.updateTask,
-            deps.logger,
-            deps.getSetting,
-            deps.epicDepsReader,
-            deps.getGroup,
-            deps.listGroupTasks,
-            deps.runInTransaction,
-            undefined,
-            deps.taskStateService
-          )
+          resolveOneDependentTerminal(id, terminalStatus)
         } catch (retryErr) {
           deps.logger.error(
             `[task-terminal-service] resolveDependents retry failed for ${id} — dependents may need manual unblock: ${retryErr}`

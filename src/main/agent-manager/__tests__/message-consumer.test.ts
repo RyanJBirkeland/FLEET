@@ -116,15 +116,15 @@ describe('consumeMessages', () => {
   it('returns exitCode from exit_code message', async () => {
     const handle = makeHandle([{ type: 'exit_code', exit_code: 0 }])
     const agent = makeAgent()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger(),
-      20
-    )
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20
+    })
     expect(result.exitCode).toBe(0)
     expect(result.streamError).toBeUndefined()
     expect(result.pendingPlaygroundPaths).toEqual([])
@@ -133,15 +133,15 @@ describe('consumeMessages', () => {
   it('returns undefined exitCode when no exit_code message', async () => {
     const handle = makeHandle([{ type: 'assistant', text: 'hello' }])
     const agent = makeAgent()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger(),
-      20
-    )
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20
+    })
     expect(result.exitCode).toBeUndefined()
   })
 
@@ -150,14 +150,14 @@ describe('consumeMessages', () => {
     const handle = makeErrorHandle(err)
     const agent = makeAgent()
     const logger = makeLogger()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
       logger
-    )
+    })
     expect(result.streamError).toBeInstanceOf(Error)
     expect(result.streamError?.message).toBe('Stream broke')
   })
@@ -165,7 +165,7 @@ describe('consumeMessages', () => {
   it('emits agent:error event on stream error', async () => {
     const handle = makeErrorHandle(new Error('Connection reset'))
     const agent = makeAgent()
-    await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 100)
+    await consumeMessages({ handle, agent, task: makeTask(), agentRunId: 'run-1', turnTracker: makeTurnTracker(), logger: makeLogger(), maxTurns: 100 })
     expect(emitAgentEvent).toHaveBeenCalledWith(
       'run-1',
       expect.objectContaining({
@@ -178,21 +178,21 @@ describe('consumeMessages', () => {
   it('flushes event batcher on stream error', async () => {
     const handle = makeErrorHandle(new Error('Broken'))
     const agent = makeAgent()
-    await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 100)
+    await consumeMessages({ handle, agent, task: makeTask(), agentRunId: 'run-1', turnTracker: makeTurnTracker(), logger: makeLogger(), maxTurns: 100 })
     expect(flushAgentEventBatcher).toHaveBeenCalled()
   })
 
   it('invalidates OAuth token on Invalid API key error', async () => {
     const handle = makeErrorHandle(new Error('Invalid API key'))
     const agent = makeAgent()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger()
-    )
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger()
+    })
     expect(invalidateOAuthToken).toHaveBeenCalled()
     expect(refreshOAuthTokenFromKeychain).toHaveBeenCalled()
     // Result is fully settled before assertions — refresh was awaited in-band.
@@ -204,14 +204,14 @@ describe('consumeMessages', () => {
       vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(true)
       const handle = makeErrorHandle(new Error('Invalid API key'))
       const agent = makeAgent()
-      const result = await consumeMessages(
+      const result = await consumeMessages({
         handle,
         agent,
-        makeTask(),
-        'run-1',
-        makeTurnTracker(),
-        makeLogger()
-      )
+        task: makeTask(),
+        agentRunId: 'run-1',
+        turnTracker: makeTurnTracker(),
+        logger: makeLogger()
+      })
       expect(result.streamError).toBeUndefined()
     })
 
@@ -219,14 +219,14 @@ describe('consumeMessages', () => {
       vi.mocked(refreshOAuthTokenFromKeychain).mockResolvedValue(false)
       const handle = makeErrorHandle(new Error('Invalid API key'))
       const agent = makeAgent()
-      const result = await consumeMessages(
+      const result = await consumeMessages({
         handle,
         agent,
-        makeTask(),
-        'run-1',
-        makeTurnTracker(),
-        makeLogger()
-      )
+        task: makeTask(),
+        agentRunId: 'run-1',
+        turnTracker: makeTurnTracker(),
+        logger: makeLogger()
+      })
       expect(handle.abort).toHaveBeenCalledTimes(1)
       expect(result.streamError).toBeInstanceOf(OAuthRefreshFailedError)
       expect(emitAgentEvent).toHaveBeenCalledWith(
@@ -240,14 +240,14 @@ describe('consumeMessages', () => {
       vi.mocked(refreshOAuthTokenFromKeychain).mockRejectedValue(new Error('Keychain unavailable'))
       const handle = makeErrorHandle(new Error('Invalid API key'))
       const agent = makeAgent()
-      const result = await consumeMessages(
+      const result = await consumeMessages({
         handle,
         agent,
-        makeTask(),
-        'run-1',
-        makeTurnTracker(),
-        makeLogger()
-      )
+        task: makeTask(),
+        agentRunId: 'run-1',
+        turnTracker: makeTurnTracker(),
+        logger: makeLogger()
+      })
       expect(handle.abort).toHaveBeenCalledTimes(1)
       expect(result.streamError).toBeInstanceOf(OAuthRefreshFailedError)
       expect(emitAgentEvent).toHaveBeenCalledWith(
@@ -262,16 +262,16 @@ describe('consumeMessages', () => {
       const handle = makeErrorHandle(new Error('Invalid API key'))
       const agent = makeAgent()
       const onOAuthRefreshStart = vi.fn()
-      await consumeMessages(
+      await consumeMessages({
         handle,
         agent,
-        makeTask(),
-        'run-1',
-        makeTurnTracker(),
-        makeLogger(),
-        20,
+        task: makeTask(),
+        agentRunId: 'run-1',
+        turnTracker: makeTurnTracker(),
+        logger: makeLogger(),
+        maxTurns: 20,
         onOAuthRefreshStart
-      )
+      })
       expect(onOAuthRefreshStart).toHaveBeenCalledTimes(1)
       // Callback receives a pre-settled promise.
       const receivedPromise = onOAuthRefreshStart.mock.calls[0][0]
@@ -283,16 +283,16 @@ describe('consumeMessages', () => {
       const handle = makeErrorHandle(new Error('Invalid API key'))
       const agent = makeAgent()
       const onOAuthRefreshStart = vi.fn()
-      await consumeMessages(
+      await consumeMessages({
         handle,
         agent,
-        makeTask(),
-        'run-1',
-        makeTurnTracker(),
-        makeLogger(),
-        20,
+        task: makeTask(),
+        agentRunId: 'run-1',
+        turnTracker: makeTurnTracker(),
+        logger: makeLogger(),
+        maxTurns: 20,
         onOAuthRefreshStart
-      )
+      })
       expect(onOAuthRefreshStart).toHaveBeenCalledTimes(1)
       const receivedPromise = onOAuthRefreshStart.mock.calls[0][0]
       await expect(receivedPromise).resolves.toBeUndefined()
@@ -303,7 +303,7 @@ describe('consumeMessages', () => {
       const handle = makeErrorHandle(new Error('Invalid API key'))
       const agent = makeAgent()
       await expect(
-        consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 20)
+        consumeMessages({ handle, agent, task: makeTask(), agentRunId: 'run-1', turnTracker: makeTurnTracker(), logger: makeLogger(), maxTurns: 20 })
       ).resolves.toBeDefined()
     })
   })
@@ -311,7 +311,7 @@ describe('consumeMessages', () => {
   it('increments rateLimitCount on rate_limit messages', async () => {
     const handle = makeHandle([{ type: 'system', subtype: 'rate_limit' }])
     const agent = makeAgent()
-    await consumeMessages(handle, agent, makeTask(), 'run-1', makeTurnTracker(), makeLogger(), 100)
+    await consumeMessages({ handle, agent, task: makeTask(), agentRunId: 'run-1', turnTracker: makeTurnTracker(), logger: makeLogger(), maxTurns: 100 })
     expect(agent.rateLimitCount).toBe(1)
   })
 
@@ -322,14 +322,14 @@ describe('consumeMessages', () => {
     })
     const handle = makeHandle([{ type: 'tool_result', tool_name: 'write_file' }])
     const agent = makeAgent()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask({ playground_enabled: true }),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger()
-    )
+      task: makeTask({ playground_enabled: true }),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger()
+    })
     expect(result.pendingPlaygroundPaths).toContainEqual({
       path: '/worktree/output.html',
       contentType: 'html'
@@ -343,29 +343,29 @@ describe('consumeMessages', () => {
     })
     const handle = makeHandle([{ type: 'tool_result', tool_name: 'write_file' }])
     const agent = makeAgent()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask({ playground_enabled: false }),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger()
-    )
+      task: makeTask({ playground_enabled: false }),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger()
+    })
     expect(result.pendingPlaygroundPaths).toHaveLength(0)
   })
 
   it('updates lastAgentOutput from assistant text messages', async () => {
     const handle = makeHandle([{ type: 'assistant', text: 'I have completed the task.' }])
     const agent = makeAgent()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger(),
-      20
-    )
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20
+    })
     expect(result.lastAgentOutput).toBe('I have completed the task.')
   })
 
@@ -377,14 +377,14 @@ describe('consumeMessages', () => {
     ])
     const agent = makeAgent({ maxCostUsd: 2.0 })
     const logger = makeLogger()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
       logger
-    )
+    })
     expect(handle.abort).toHaveBeenCalled()
     expect(result.streamError).toBeInstanceOf(Error)
     expect(result.streamError?.message).toContain('Cost budget $2.00 exceeded')
@@ -407,15 +407,15 @@ describe('consumeMessages', () => {
       { type: 'assistant', text: 'Turn 2', cost_usd: 10.0 }
     ])
     const agent = makeAgent({ maxCostUsd: null })
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
-      makeLogger(),
-      20
-    )
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20
+    })
     expect(handle.abort).not.toHaveBeenCalled()
     expect(result.streamError).toBeUndefined()
     expect(agent.costUsd).toBe(10.0)
@@ -429,15 +429,15 @@ describe('consumeMessages', () => {
     const handle = makeHandle(messages)
     const agent = makeAgent({ maxCostUsd: null })
     const logger = makeLogger()
-    const result = await consumeMessages(
+    const result = await consumeMessages({
       handle,
       agent,
-      makeTask(),
-      'run-1',
-      makeTurnTracker(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: makeTurnTracker(),
       logger,
-      20
-    )
+      maxTurns: 20
+    })
     expect(handle.abort).toHaveBeenCalled()
     expect(result.streamError).toBeInstanceOf(Error)
     expect(result.streamError?.message).toBe('max_turns_exceeded')
@@ -480,17 +480,16 @@ describe('consumeMessages', () => {
         const logger = makeLogger()
         const task = makeTask()
 
-        const result = await consumeMessages(
-          hangingHandle,
+        const result = await consumeMessages({
+          handle: hangingHandle,
           agent,
           task,
-          'run-1',
-          makeTurnTracker(),
+          agentRunId: 'run-1',
+          turnTracker: makeTurnTracker(),
           logger,
-          20,
-          undefined,
-          FAST_STALL_MS
-        )
+          maxTurns: 20,
+          stallTimeoutMs: FAST_STALL_MS
+        })
 
         expect(result.streamError).toBeInstanceOf(Error)
         expect(result.streamError?.message).toBe('stream_stalled')

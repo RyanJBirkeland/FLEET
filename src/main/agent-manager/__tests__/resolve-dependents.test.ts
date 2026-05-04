@@ -48,7 +48,7 @@ describe('resolveDependents terminal-status guard', () => {
     const getTask = vi.fn()
     const updateTask = vi.fn()
 
-    resolveDependents('A', 'active', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'active', index, getTask, updateTask })
 
     expect(getTask).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -59,7 +59,7 @@ describe('resolveDependents terminal-status guard', () => {
     const getTask = vi.fn()
     const updateTask = vi.fn()
 
-    resolveDependents('A', 'queued', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'queued', index, getTask, updateTask })
 
     expect(getTask).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -73,7 +73,7 @@ describe('resolveDependents terminal-status guard', () => {
     const getTask = vi.fn((id: string) => tasks[id] ?? null)
     const updateTask = vi.fn()
 
-    resolveDependents('A', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'done', index, getTask, updateTask })
 
     expect(getTask).toHaveBeenCalledWith('B')
   })
@@ -90,7 +90,7 @@ describe('resolveDependents', () => {
     const index = makeIndex({})
     const getTask = vi.fn()
 
-    resolveDependents('A', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'done', index, getTask, updateTask })
 
     expect(getTask).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -104,7 +104,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('A', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).toHaveBeenCalledWith('B', { status: 'queued' })
   })
@@ -117,7 +117,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('A', 'failed', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask })
 
     // Task stays blocked but auto-block notes are updated
     expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
@@ -131,7 +131,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('A', 'cancelled', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'cancelled', index, getTask, updateTask })
 
     // Task stays blocked but auto-block notes are updated
     expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
@@ -145,7 +145,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('A', 'failed', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask })
 
     expect(updateTask).toHaveBeenCalledWith('B', { status: 'queued' })
   })
@@ -158,7 +158,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('A', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).not.toHaveBeenCalled()
   })
@@ -173,7 +173,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('A', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'A', completedStatus: 'done', index, getTask, updateTask })
 
     // C stays blocked but auto-block notes are updated with remaining blocker
     expect(updateTask).toHaveBeenCalledWith('C', { notes: '[auto-block] Blocked by: B' })
@@ -189,7 +189,7 @@ describe('resolveDependents', () => {
     }
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
-    resolveDependents('B', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'B', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).toHaveBeenCalledWith('C', { status: 'queued' })
   })
@@ -204,7 +204,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
     // Completing B (soft, failed) is the final trigger
-    resolveDependents('B', 'failed', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'B', completedStatus: 'failed', index, getTask, updateTask })
 
     expect(updateTask).toHaveBeenCalledWith('C', { status: 'queued' })
   })
@@ -214,7 +214,7 @@ describe('resolveDependents', () => {
     // getTask returns null for B (task not found)
     const getTask = vi.fn().mockReturnValue(null)
 
-    expect(() => resolveDependents('A', 'done', index, getTask, updateTask)).not.toThrow()
+    expect(() => resolveDependents({ completedTaskId: 'A', completedStatus: 'done', index, getTask, updateTask })).not.toThrow()
 
     expect(updateTask).not.toHaveBeenCalled()
   })
@@ -227,7 +227,7 @@ describe('resolveDependents', () => {
       .mockReturnValue({ id: 'A', status: 'done', depends_on: [{ id: 'B', type: 'hard' }] })
     const update = vi.fn()
 
-    resolveDependents('B', 'done', index, getTask, update)
+    resolveDependents({ completedTaskId: 'B', completedStatus: 'done', index, getTask, updateTask: update })
     expect(update).not.toHaveBeenCalled() // A is 'done', not 'blocked'
   })
 
@@ -239,7 +239,7 @@ describe('resolveDependents', () => {
     })
     const update = vi.fn()
 
-    resolveDependents('B', 'done', index, getTask, update)
+    resolveDependents({ completedTaskId: 'B', completedStatus: 'done', index, getTask, updateTask: update })
     expect(update).not.toHaveBeenCalled()
   })
 
@@ -265,7 +265,7 @@ describe('resolveDependents', () => {
       })
     const update = vi.fn().mockRejectedValueOnce(new Error('DB error')).mockReturnValueOnce(null)
 
-    resolveDependents('B', 'done', index, getTask, update)
+    resolveDependents({ completedTaskId: 'B', completedStatus: 'done', index, getTask, updateTask: update })
     expect(update).toHaveBeenCalledTimes(2)
   })
 
@@ -295,7 +295,7 @@ describe('resolveDependents', () => {
     })
     const update = vi.fn()
 
-    resolveDependents('B', 'done', index, getTask, update)
+    resolveDependents({ completedTaskId: 'B', completedStatus: 'done', index, getTask, updateTask: update })
     expect(update).toHaveBeenCalledWith('A', { status: 'queued' })
   })
 
@@ -309,7 +309,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
 
       // No getSetting provided, should default to 'continue'
-      resolveDependents('A', 'failed', index, getTask, updateTask)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask })
 
       // Task stays blocked with updated notes (no cancellation)
       expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
@@ -328,7 +328,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('continue')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       expect(updateTask).toHaveBeenCalledWith('B', { notes: '[auto-block] Blocked by: A' })
       expect(updateTask).not.toHaveBeenCalledWith(
@@ -346,7 +346,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       expect(updateTask).toHaveBeenCalledWith('B', {
         status: 'cancelled',
@@ -363,7 +363,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'error', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'error', index, getTask, updateTask, getSetting })
 
       expect(updateTask).toHaveBeenCalledWith('B', {
         status: 'cancelled',
@@ -380,7 +380,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'cancelled', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'cancelled', index, getTask, updateTask, getSetting })
 
       expect(updateTask).toHaveBeenCalledWith('B', {
         status: 'cancelled',
@@ -398,7 +398,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       // B should be cancelled due to A failing
       expect(updateTask).toHaveBeenCalledWith('B', {
@@ -422,7 +422,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       // Soft deps unblock on failure, not cancel
       expect(updateTask).toHaveBeenCalledWith('B', { status: 'queued' })
@@ -439,7 +439,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       // B (hard) cancelled
       expect(updateTask).toHaveBeenCalledWith('B', {
@@ -460,7 +460,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       // B is already active, not blocked, so no cancellation
       expect(updateTask).not.toHaveBeenCalled()
@@ -477,7 +477,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       // C should be cancelled because it has a hard dep on failed A
       expect(updateTask).toHaveBeenCalledWith('C', {
@@ -500,7 +500,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       // Should NOT cascade-cancel — condition 'always' unblocks on failure too
       expect(updateTask).not.toHaveBeenCalledWith(
@@ -523,7 +523,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       expect(updateTask).toHaveBeenCalledWith('B', {
         status: 'cancelled',
@@ -540,7 +540,7 @@ describe('resolveDependents', () => {
       const getTask = vi.fn().mockImplementation((id: string) => tasks[id] ?? null)
       const getSetting = vi.fn().mockReturnValue('cancel')
 
-      resolveDependents('A', 'failed', index, getTask, updateTask, undefined, getSetting)
+      resolveDependents({ completedTaskId: 'A', completedStatus: 'failed', index, getTask, updateTask, getSetting })
 
       expect(updateTask).toHaveBeenCalledWith('B', {
         status: 'cancelled',
@@ -566,20 +566,15 @@ describe('resolveDependents', () => {
       const onTaskTerminal = vi.fn()
       const getSetting = vi.fn().mockReturnValue('cancel') // cascade enabled
 
-      resolveDependents(
-        'A',
-        'failed',
+      resolveDependents({
+        completedTaskId: 'A',
+        completedStatus: 'failed',
         index,
         getTask,
-        updateTask2,
-        undefined,
+        updateTask: updateTask2,
         getSetting,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
         onTaskTerminal
-      )
+      })
 
       // B and C should both be cancelled and notified
       expect(updateTask2).toHaveBeenCalledWith(

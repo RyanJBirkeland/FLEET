@@ -1132,7 +1132,7 @@ describe('consumeMessages', () => {
     const turnTracker = new TurnTracker('run-1')
     const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
 
-    const result = await consumeMessages(handle as any, agent, task, 'run-1', turnTracker, logger)
+    const result = await consumeMessages({ handle: handle as any, agent, task, agentRunId: 'run-1', turnTracker, logger })
 
     expect(result.streamError).toBeInstanceOf(Error)
     expect(result.streamError?.message).toBe('Stream closed unexpectedly')

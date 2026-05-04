@@ -29,7 +29,7 @@ describe('resolveDependents', () => {
     const updateTask = vi.fn()
     const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
-    resolveDependents('task-1', 'queued', index, getTask, updateTask, logger as any)
+    resolveDependents({ completedTaskId: 'task-1', completedStatus: 'queued', index, getTask, updateTask, logger: logger as any })
 
     expect(logger.warn).toHaveBeenCalledWith(
       expect.stringContaining('non-terminal status "queued"')
@@ -44,7 +44,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn()
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     expect(getTask).not.toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -59,7 +59,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).toHaveBeenCalledWith('task-1', expect.objectContaining({ status: 'queued' }))
   })
@@ -75,7 +75,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     // Should update notes (blockedBy), but NOT set status to queued
     const statusCalls = updateTask.mock.calls.filter(
@@ -95,7 +95,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     // Should have called updateTask with notes (from buildBlockedNotes)
     expect(updateTask).toHaveBeenCalled()
@@ -113,7 +113,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).not.toHaveBeenCalled()
   })
@@ -125,7 +125,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(null)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).not.toHaveBeenCalled()
   })
@@ -138,7 +138,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).not.toHaveBeenCalled()
   })
@@ -151,7 +151,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     expect(updateTask).not.toHaveBeenCalled()
   })
@@ -172,7 +172,7 @@ describe('resolveDependents', () => {
       .mockReturnValueOnce(mockTask({ id: 'task-2', status: 'blocked' }))
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     // task-1 should be unblocked
     const queuedCalls = updateTask.mock.calls.filter(
@@ -192,7 +192,7 @@ describe('resolveDependents', () => {
     const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
 
     // Should not throw
-    resolveDependents('dep-1', 'done', index, getTask, updateTask, logger as any)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask, logger: logger as any })
 
     expect(logger.warn).toHaveBeenCalled()
     expect(updateTask).not.toHaveBeenCalled()
@@ -211,7 +211,7 @@ describe('resolveDependents', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'done', index, getTask, updateTask)
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'done', index, getTask, updateTask })
 
     // areDependenciesSatisfied should have been called with a getTaskStatus
     // that returns 'done' for dep-1 without needing to call getTask for it
@@ -252,19 +252,15 @@ describe('cascade cancellation atomicity', () => {
     })
     const updateTask = vi.fn()
 
-    resolveDependents(
-      'dep-1',
-      'failed', // trigger cascade
+    resolveDependents({
+      completedTaskId: 'dep-1',
+      completedStatus: 'failed', // trigger cascade
       index,
       getTask,
       updateTask,
-      undefined,
-      () => 'cancel', // getSetting returns 'cancel'
-      undefined,
-      undefined,
-      undefined,
-      transactionFn // new parameter
-    )
+      getSetting: () => 'cancel', // getSetting returns 'cancel'
+      runInTransaction: transactionFn
+    })
 
     // Transaction wrapper should be called once for the entire cascade
     expect(transactionFn).toHaveBeenCalledTimes(1)
@@ -302,19 +298,15 @@ describe('cascade cancellation atomicity', () => {
     })
 
     expect(() =>
-      resolveDependents(
-        'dep-1',
-        'failed',
+      resolveDependents({
+        completedTaskId: 'dep-1',
+        completedStatus: 'failed',
         index,
         getTask,
         updateTask,
-        undefined,
-        () => 'cancel',
-        undefined,
-        undefined,
-        undefined,
-        transactionFn
-      )
+        getSetting: () => 'cancel',
+        runInTransaction: transactionFn
+      })
     ).toThrow('Transaction rolled back')
 
     expect(rollbackCalled.value).toBe(true)
@@ -334,7 +326,7 @@ describe('cascade cancellation atomicity', () => {
     const getTask = vi.fn().mockReturnValue(task)
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'failed', index, getTask, updateTask, undefined, () => 'cancel')
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'failed', index, getTask, updateTask, getSetting: () => 'cancel' })
 
     expect(updateTask).not.toHaveBeenCalledWith(
       'task-1',
@@ -365,7 +357,7 @@ describe('cascade cancellation atomicity', () => {
     })
     const updateTask = vi.fn()
 
-    resolveDependents('dep-1', 'failed', index, getTask, updateTask, undefined, () => 'cancel')
+    resolveDependents({ completedTaskId: 'dep-1', completedStatus: 'failed', index, getTask, updateTask, getSetting: () => 'cancel' })
 
     expect(updateTask).toHaveBeenCalledWith(
       'task-1',
@@ -409,20 +401,15 @@ describe('cascade cancellation atomicity', () => {
     const updateTask = vi.fn()
     const onTaskTerminal = vi.fn()
 
-    resolveDependents(
-      'task-a',
-      'failed',
+    resolveDependents({
+      completedTaskId: 'task-a',
+      completedStatus: 'failed',
       index,
       getTask,
       updateTask,
-      undefined,
-      () => 'cancel', // cascade behavior
-      undefined,
-      undefined,
-      undefined,
-      undefined,
+      getSetting: () => 'cancel', // cascade behavior
       onTaskTerminal
-    )
+    })
 
     // Verify both B and C were cancelled
     expect(updateTask).toHaveBeenCalledWith(

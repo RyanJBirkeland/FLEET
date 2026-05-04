@@ -373,17 +373,17 @@ async function failTaskExhaustedNoCommits(
   await onTaskTerminal(taskId, 'failed')
 }
 
-export async function transitionTaskToReview(
-  taskId: string,
-  branch: string,
-  worktreePath: string,
-  title: string,
-  rebaseOutcome: RebaseOutcome,
-  repo: IAgentTaskRepository,
-  reviewRepo: IReviewRepository,
-  unitOfWork: IUnitOfWork,
-  logger: Logger,
-  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>,
+export interface ReviewTransitionContext {
+  taskId: string
+  branch: string
+  worktreePath: string
+  title: string
+  rebaseOutcome: RebaseOutcome
+  repo: IAgentTaskRepository
+  reviewRepo: IReviewRepository
+  unitOfWork: IUnitOfWork
+  logger: Logger
+  onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
   attemptAutoMerge: (opts: {
     taskId: string
     title: string
@@ -394,10 +394,27 @@ export async function transitionTaskToReview(
     logger: Logger
     onTaskTerminal: (taskId: string, status: TaskStatus) => Promise<void>
     taskStateService: TaskStateService
-  }) => Promise<void>,
-  taskStateService: TaskStateService,
+  }) => Promise<void>
+  taskStateService: TaskStateService
   onMutation: (event: string, task: unknown) => void
-): Promise<void> {
+}
+
+export async function transitionTaskToReview(ctx: ReviewTransitionContext): Promise<void> {
+  const {
+    taskId,
+    branch,
+    worktreePath,
+    title,
+    rebaseOutcome,
+    repo,
+    reviewRepo,
+    unitOfWork,
+    logger,
+    onTaskTerminal,
+    attemptAutoMerge,
+    taskStateService,
+    onMutation
+  } = ctx
   logger.info(
     `[completion] Task ${taskId}: agent finished with commits on branch ${branch} — transitioning to review`
   )

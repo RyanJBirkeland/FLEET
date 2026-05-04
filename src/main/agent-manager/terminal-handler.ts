@@ -8,6 +8,7 @@ import type { AgentManagerConfig, TerminalResolutionStrategy } from './types'
 import type { Logger } from '../logger'
 import type { TaskStatus } from '../../shared/task-state-machine'
 import { resolveDependents } from '../lib/resolve-dependents'
+import type { ResolveDependentsContext } from '../lib/resolve-dependents'
 import type { TerminalDispatcher, TaskStateService } from '../services/task-state-service'
 
 function wrapTransactionWithLogging(
@@ -72,22 +73,23 @@ async function resolveTerminalDependents(
   // drain tick. The caller sets _depIndexDirty=true so the next tick performs
   // a full rebuild before processing queued tasks.
   const runInTransactionSafe = wrapTransactionWithLogging(unitOfWork, logger)
+  const ctx: ResolveDependentsContext = {
+    completedTaskId: taskId,
+    completedStatus: status,
+    index: depIndex,
+    getTask: repo.getTask,
+    updateTask: repo.updateTask,
+    logger,
+    getSetting,
+    epicIndex,
+    getGroup: repo.getGroup,
+    listGroupTasks: repo.getGroupTasks,
+    runInTransaction: runInTransactionSafe,
+    onTaskTerminal,
+    taskStateService
+  }
   try {
-    resolveDependents(
-      taskId,
-      status,
-      depIndex,
-      repo.getTask,
-      repo.updateTask,
-      logger,
-      getSetting,
-      epicIndex,
-      repo.getGroup,
-      repo.getGroupTasks,
-      runInTransactionSafe,
-      onTaskTerminal,
-      taskStateService
-    )
+    resolveDependents(ctx)
   } catch (err) {
     const errMsg = err instanceof Error ? err.message : String(err)
     logger.error(`[agent-manager] resolveDependents failed for ${taskId}: ${errMsg}`)

@@ -27,7 +27,7 @@ import { tryEmitPlaygroundEvent } from './playground-handler'
 import { capturePartialDiff } from './partial-diff-capture'
 import { validateTaskForRun, assembleRunContext } from './prompt-assembly'
 import { consumeMessages } from './message-consumer'
-import type { ConsumeMessagesResult } from './message-consumer'
+import type { ConsumeMessagesResult, ConsumptionContext } from './message-consumer'
 import { persistAgentRunTelemetry } from './agent-telemetry'
 import { spawnAndWireAgent } from './spawn-and-wire'
 import { sleep } from '../lib/async-utils'
@@ -848,16 +848,17 @@ async function runStreamingPhase(ctx: StreamingContext): Promise<StreamResult> {
   const { task, agent, agentRunId, turnTracker, worktree, deps } = ctx
   const { logger } = deps
 
-  const { exitCode, lastAgentOutput, streamError, pendingPlaygroundPaths } = await consumeMessages(
-    agent.handle,
+  const consumptionCtx: ConsumptionContext = {
+    handle: agent.handle,
     agent,
     task,
     agentRunId,
     turnTracker,
     logger,
-    deps.maxTurns,
-    deps.onOAuthRefreshStart
-  )
+    maxTurns: deps.maxTurns,
+    onOAuthRefreshStart: deps.onOAuthRefreshStart
+  }
+  const { exitCode, lastAgentOutput, streamError, pendingPlaygroundPaths } = await consumeMessages(consumptionCtx)
 
   // Await playground events before worktree cleanup so the worktree isn't
   // removed before file I/O from playground writes completes.

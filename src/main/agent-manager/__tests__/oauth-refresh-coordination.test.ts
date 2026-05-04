@@ -81,16 +81,16 @@ describe('oauth-refresh-coordination (T-55)', () => {
     const handle = makeThrowingHandle(new Error('Invalid API key'))
     const onOAuthRefreshStart = vi.fn()
 
-    await consumeMessages(
+    await consumeMessages({
       handle,
-      makeAgent(),
-      makeTask(),
-      'run-1',
-      new TurnTracker(),
-      makeLogger(),
-      20,
+      agent: makeAgent(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: new TurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20,
       onOAuthRefreshStart
-    )
+    })
 
     expect(invalidateOAuthToken).toHaveBeenCalled()
     expect(refreshOAuthTokenFromKeychain).toHaveBeenCalled()
@@ -102,16 +102,16 @@ describe('oauth-refresh-coordination (T-55)', () => {
     const handle = makeThrowingHandle(new Error('invalid_api_key — token expired'))
     const onOAuthRefreshStart = vi.fn()
 
-    await consumeMessages(
+    await consumeMessages({
       handle,
-      makeAgent(),
-      makeTask(),
-      'run-1',
-      new TurnTracker(),
-      makeLogger(),
-      20,
+      agent: makeAgent(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: new TurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20,
       onOAuthRefreshStart
-    )
+    })
 
     expect(onOAuthRefreshStart).toHaveBeenCalledOnce()
   })
@@ -120,16 +120,16 @@ describe('oauth-refresh-coordination (T-55)', () => {
     const handle = makeDoneHandle()
     const onOAuthRefreshStart = vi.fn()
 
-    await consumeMessages(
+    await consumeMessages({
       handle,
-      makeAgent(),
-      makeTask(),
-      'run-1',
-      new TurnTracker(),
-      makeLogger(),
-      20,
+      agent: makeAgent(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: new TurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20,
       onOAuthRefreshStart
-    )
+    })
 
     expect(onOAuthRefreshStart).not.toHaveBeenCalled()
     expect(invalidateOAuthToken).not.toHaveBeenCalled()
@@ -139,16 +139,16 @@ describe('oauth-refresh-coordination (T-55)', () => {
     const handle = makeThrowingHandle(new Error('network timeout'))
     const onOAuthRefreshStart = vi.fn()
 
-    await consumeMessages(
+    await consumeMessages({
       handle,
-      makeAgent(),
-      makeTask(),
-      'run-1',
-      new TurnTracker(),
-      makeLogger(),
-      20,
+      agent: makeAgent(),
+      task: makeTask(),
+      agentRunId: 'run-1',
+      turnTracker: new TurnTracker(),
+      logger: makeLogger(),
+      maxTurns: 20,
       onOAuthRefreshStart
-    )
+    })
 
     expect(onOAuthRefreshStart).not.toHaveBeenCalled()
     expect(invalidateOAuthToken).not.toHaveBeenCalled()

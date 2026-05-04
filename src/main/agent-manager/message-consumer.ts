@@ -370,6 +370,18 @@ async function handleStreamError(
   }
 }
 
+export interface ConsumptionContext {
+  handle: AgentHandle
+  agent: ActiveAgent
+  task: AgentRunClaim
+  agentRunId: string
+  turnTracker: TurnTracker
+  logger: Logger
+  maxTurns?: number | undefined
+  onOAuthRefreshStart?: ((promise: Promise<unknown>) => void) | undefined
+  stallTimeoutMs?: number | undefined
+}
+
 /**
  * Consumes SDK message stream, tracking costs, emitting events, and accumulating playground paths.
  * Playground HTML paths are collected but not emitted — the caller awaits emission
@@ -379,17 +391,18 @@ async function handleStreamError(
  * refresh promise so the drain loop can await token availability before the
  * next spawn (see `AgentManager.awaitOAuthRefresh`).
  */
-export async function consumeMessages(
-  handle: AgentHandle,
-  agent: ActiveAgent,
-  task: AgentRunClaim,
-  agentRunId: string,
-  turnTracker: TurnTracker,
-  logger: Logger,
-  maxTurns = 1000,
-  onOAuthRefreshStart?: (promise: Promise<unknown>) => void,
-  stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
-): Promise<ConsumeMessagesResult> {
+export async function consumeMessages(input: ConsumptionContext): Promise<ConsumeMessagesResult> {
+  const {
+    handle,
+    agent,
+    task,
+    agentRunId,
+    turnTracker,
+    logger,
+    maxTurns = 1000,
+    onOAuthRefreshStart,
+    stallTimeoutMs = MESSAGE_STALL_TIMEOUT_MS
+  } = input
   const pendingPlaygroundPaths: PlaygroundWriteResult[] = []
   const playgroundDetector = createPlaygroundDetector()
   let turnCount = 0

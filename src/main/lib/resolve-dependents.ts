@@ -12,6 +12,26 @@ import {
 } from '../services/dependency-service'
 import type { EpicDepsReader } from '../services/epic-dependency-service'
 
+export interface ResolveDependentsContext {
+  completedTaskId: string
+  completedStatus: TaskStatus
+  index: DependencyIndex
+  getTask: (id: string) =>
+    | (Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_id'> & {
+        depends_on: TaskDependency[] | null
+      })
+    | null
+  updateTask: (id: string, patch: Record<string, unknown>) => unknown
+  logger?: Logger | undefined
+  getSetting?: ((key: string) => string | null) | undefined
+  epicIndex?: EpicDepsReader | undefined
+  getGroup?: ((id: string) => TaskGroup | null) | undefined
+  listGroupTasks?: ((groupId: string) => SprintTask[]) | undefined
+  runInTransaction?: ((fn: () => void) => void) | undefined
+  onTaskTerminal?: ((taskId: string, status: TaskStatus) => void) | undefined
+  taskStateService?: TaskStateService | undefined
+}
+
 /**
  * When a task reaches a terminal status, check all tasks that depend on it.
  * Any dependent that is currently `blocked` and has all its deps satisfied
@@ -26,25 +46,22 @@ import type { EpicDepsReader } from '../services/epic-dependency-service'
  * Phase 2: After task-level resolution, checks if the completed task's epic has
  * any dependent epics whose dependencies are now satisfied, and unblocks their tasks.
  */
-export function resolveDependents(
-  completedTaskId: string,
-  completedStatus: TaskStatus,
-  index: DependencyIndex,
-  getTask: (id: string) =>
-    | (Pick<SprintTask, 'id' | 'status' | 'notes' | 'title' | 'group_id'> & {
-        depends_on: TaskDependency[] | null
-      })
-    | null,
-  updateTask: (id: string, patch: Record<string, unknown>) => unknown,
-  logger?: Logger,
-  getSetting?: (key: string) => string | null,
-  epicIndex?: EpicDepsReader,
-  getGroup?: (id: string) => TaskGroup | null,
-  listGroupTasks?: (groupId: string) => SprintTask[],
-  runInTransaction?: (fn: () => void) => void,
-  onTaskTerminal?: (taskId: string, status: TaskStatus) => void,
-  taskStateService?: TaskStateService
-): void {
+export function resolveDependents(ctx: ResolveDependentsContext): void {
+  const {
+    completedTaskId,
+    completedStatus,
+    index,
+    getTask,
+    updateTask,
+    logger,
+    getSetting,
+    epicIndex,
+    getGroup,
+    listGroupTasks,
+    runInTransaction,
+    onTaskTerminal,
+    taskStateService
+  } = ctx
   // Guard: only process terminal statuses — calling with active/queued/blocked
   // produces nonsensical cascade-cancel and satisfaction results.
   if (!TERMINAL_STATUSES.has(completedStatus)) {
@@ -124,9 +141,9 @@ export function resolveDependents(
       }
       // Recursively cancel this task's blocked dependents — pass runInTransaction
       // so nested cascades are also wrapped in the outer transaction
-      resolveDependents(
-        depId,
-        'cancelled',
+      resolveDependents({
+        completedTaskId: depId,
+        completedStatus: 'cancelled',
         index,
         getTask,
         updateTask,
@@ -138,7 +155,7 @@ export function resolveDependents(
         runInTransaction,
         onTaskTerminal,
         taskStateService
-      )
+      })
       return
     }
 

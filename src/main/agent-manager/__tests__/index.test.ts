@@ -1240,19 +1240,20 @@ describe('createAgentManager', () => {
       const mgr = createAgentManager({ config: baseConfig, repo: mockRepo, logger: logger })
       await mgr.onTaskTerminal('task-1', 'done')
       expect(vi.mocked(resolveDependents)).toHaveBeenCalledWith(
-        'task-1',
-        'done',
-        expect.anything(), // depIndex
-        expect.anything(), // getTask
-        expect.anything(), // updateTask
-        expect.anything(), // logger
-        expect.anything(), // getSetting
-        expect.anything(), // epicIndex
-        expect.anything(), // getGroup
-        expect.anything(), // listGroupTasks
-        expect.anything(), // runInTransaction
-        expect.anything(), // onTaskTerminal
-        undefined          // taskStateService (not wired in terminal-handler path)
+        expect.objectContaining({
+          completedTaskId: 'task-1',
+          completedStatus: 'done',
+          index: expect.anything(),
+          getTask: expect.anything(),
+          updateTask: expect.anything(),
+          logger: expect.anything(),
+          getSetting: expect.anything(),
+          epicIndex: expect.anything(),
+          getGroup: expect.anything(),
+          listGroupTasks: expect.anything(),
+          runInTransaction: expect.anything(),
+          onTaskTerminal: expect.anything()
+        })
       )
     })
 

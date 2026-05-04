@@ -79,26 +79,26 @@ describe('3-task cascading dependency chain', () => {
 
     // Step 1: complete task-a → task-b should unblock
     updateTaskStatus('task-a', 'done')
-    resolveDependents(
-      'task-a',
-      'done',
+    resolveDependents({
+      completedTaskId: 'task-a',
+      completedStatus: 'done',
       index,
-      getTaskForResolver,
-      (id, patch) => updateTaskStatus(id, patch.status as string)
-    )
+      getTask: getTaskForResolver,
+      updateTask: (id, patch) => updateTaskStatus(id, patch.status as string)
+    })
 
     expect(readTask('task-b').status).toBe('queued')
     expect(readTask('task-c').status).toBe('blocked')
 
     // Step 2: complete task-b → task-c should unblock
     updateTaskStatus('task-b', 'done')
-    resolveDependents(
-      'task-b',
-      'done',
+    resolveDependents({
+      completedTaskId: 'task-b',
+      completedStatus: 'done',
       index,
-      getTaskForResolver,
-      (id, patch) => updateTaskStatus(id, patch.status as string)
-    )
+      getTask: getTaskForResolver,
+      updateTask: (id, patch) => updateTaskStatus(id, patch.status as string)
+    })
 
     expect(readTask('task-c').status).toBe('queued')
   })
@@ -116,13 +116,13 @@ describe('3-task cascading dependency chain', () => {
     ] as SprintTask[])
 
     updateTaskStatus('task-a', 'failed')
-    resolveDependents(
-      'task-a',
-      'failed',
+    resolveDependents({
+      completedTaskId: 'task-a',
+      completedStatus: 'failed',
       index,
-      getTaskForResolver,
-      (id, patch) => updateTaskStatus(id, patch.status as string)
-    )
+      getTask: getTaskForResolver,
+      updateTask: (id, patch) => updateTaskStatus(id, patch.status as string)
+    })
 
     // task-b has hard dep on task-a — should remain blocked since task-a failed
     expect(readTask('task-b').status).toBe('blocked')
@@ -140,13 +140,13 @@ describe('3-task cascading dependency chain', () => {
     ] as SprintTask[])
 
     updateTaskStatus('task-a', 'failed')
-    resolveDependents(
-      'task-a',
-      'failed',
+    resolveDependents({
+      completedTaskId: 'task-a',
+      completedStatus: 'failed',
       index,
-      getTaskForResolver,
-      (id, patch) => updateTaskStatus(id, patch.status as string)
-    )
+      getTask: getTaskForResolver,
+      updateTask: (id, patch) => updateTaskStatus(id, patch.status as string)
+    })
 
     expect(readTask('task-b').status).toBe('queued')
   })

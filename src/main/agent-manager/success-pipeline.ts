@@ -20,7 +20,8 @@ import {
   autoCommitPendingChanges,
   performRebaseOntoMain,
   failTaskIfNoCommitsAheadOfMain,
-  transitionTaskToReview
+  transitionTaskToReview,
+  type ReviewTransitionContext
 } from './resolve-success-phases'
 import { resolveFailure as resolveFailurePhase } from './resolve-failure-phases'
 import { evaluateAutoMerge } from './auto-merge-coordinator'
@@ -235,14 +236,11 @@ const verifyWorktreeBuildPhase: SuccessPhase = {
   }
 }
 
-/**
- * A function that attempts to auto-merge a task after review transition.
- * Receives all required context except the rule-fetcher and path-resolver,
- * which are captured from the `SuccessPhaseContext` at construction time.
- */
 type AutoMergeStrategy = (
   opts: Omit<AutoMergeContext, 'getAutoReviewRules' | 'resolveRepoLocalPath'>
 ) => Promise<void>
+
+const noOpMutationCallback = (_event: string, _task: unknown): void => {}
 
 function buildAutoMergeStrategy(ctx: SuccessPhaseContext): AutoMergeStrategy {
   const { getAutoReviewRules, resolveRepoLocalPath } = ctx
@@ -256,21 +254,22 @@ const reviewTransitionPhase: SuccessPhase = {
   name: 'reviewTransition',
   async run(ctx) {
     const attemptAutoMerge = buildAutoMergeStrategy(ctx)
-    await transitionTaskToReview(
-      ctx.taskId,
-      ctx.branch,
-      ctx.worktreePath,
-      ctx.title,
-      ctx.rebaseOutcome,
-      ctx.repo,
-      ctx.reviewRepo,
-      ctx.unitOfWork,
-      ctx.logger,
-      ctx.onTaskTerminal,
+    const reviewTransitionCtx: ReviewTransitionContext = {
+      taskId: ctx.taskId,
+      branch: ctx.branch,
+      worktreePath: ctx.worktreePath,
+      title: ctx.title,
+      rebaseOutcome: ctx.rebaseOutcome,
+      repo: ctx.repo,
+      reviewRepo: ctx.reviewRepo,
+      unitOfWork: ctx.unitOfWork,
+      logger: ctx.logger,
+      onTaskTerminal: ctx.onTaskTerminal,
       attemptAutoMerge,
-      ctx.taskStateService,
-      ctx.onMutation ?? ((_event, _task) => { /* no-op when not injected */ })
-    )
+      taskStateService: ctx.taskStateService,
+      onMutation: ctx.onMutation ?? noOpMutationCallback
+    }
+    await transitionTaskToReview(reviewTransitionCtx)
   }
 }
 
