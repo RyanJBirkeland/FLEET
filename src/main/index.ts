@@ -48,7 +48,7 @@ import { createSprintMutations } from './services/sprint-mutations'
 import { initSprintService } from './services/sprint-service'
 import { initSprintUseCases } from './services/sprint-use-cases'
 import { initTaskStateService } from './services/task-state-service'
-import { setSprintBroadcaster, registerWebhookCallback } from './services/sprint-mutation-broadcaster'
+import { setSprintBroadcaster, registerWebhookCallback, notifySprintMutation } from './services/sprint-mutation-broadcaster'
 import { createWebhookService } from './services/webhook-service'
 import { getWebhooks } from './data/webhook-queries'
 import { createReviewOrchestrationService } from './services/review-orchestration-service'
@@ -484,7 +484,11 @@ function wireAgentManagerAndMcp(
     epicDepsReader: core.epicGroupService,
     terminalResolution: { onStatusTerminal: core.terminalService.onStatusTerminal },
     reviewRepo,
-    preflightGate
+    preflightGate,
+    onMutation: (event, task) => notifySprintMutation(
+      event as Parameters<typeof notifySprintMutation>[0],
+      task as Parameters<typeof notifySprintMutation>[1]
+    )
   })
   agentManager.start()
 

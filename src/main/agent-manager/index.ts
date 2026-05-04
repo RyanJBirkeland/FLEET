@@ -27,7 +27,6 @@ import { checkIsReviewTask, runPruneLoop } from './worktree-manager'
 import { pruneStaleWorktrees, cleanupWorktree } from './worktree'
 import { getRepoPaths, getConfiguredRepos, getGhRepo, type RepoConfig } from '../paths'
 import { getSetting, getSettingJson } from '../settings'
-import { notifySprintMutation } from '../services/sprint-mutation-broadcaster'
 import type { AutoReviewRule } from '../../shared/types/task-types'
 import { executeShutdown } from './shutdown-coordinator'
 import { reloadConfiguration } from './config-manager'
@@ -110,10 +109,55 @@ export interface AgentManager {
 }
 
 // ---------------------------------------------------------------------------
-// Class implementation
+// Stateless collaborator factory (T-46)
 // ---------------------------------------------------------------------------
 
 import type { DependencyIndex } from '../services/dependency-service'
+
+/**
+ * The purely-stateless collaborators that can be constructed before an
+ * `AgentManagerImpl` instance exists. These have no dependency on `this`.
+ * Instance-bound collaborators (circuit breaker, task-state service,
+ * runAgentDeps, drain/watchdog loops) are still built inside the constructor
+ * because they need `this.*` callbacks.
+ */
+interface AgentManagerCollaborators {
+  depIndex: DependencyIndex
+  epicIndex: EpicDepsReader
+  metrics: MetricsCollector
+  errorRegistry: ErrorRegistry
+  unitOfWork: IUnitOfWork
+  cascadeCancellation: { enabled: boolean }
+}
+
+/**
+ * Builds all collaborators that do not need a reference to the
+ * `AgentManagerImpl` instance. The constructor receives this object instead
+ * of constructing each collaborator inline.
+ */
+function buildStatelessCollaborators(
+  epicDepsReader: EpicDepsReader,
+  unitOfWork: IUnitOfWork,
+  logger: Logger,
+  getSettings?: () => { autoReviewRules: AutoReviewRule[] | null; cascadeCancellationEnabled: boolean }
+): AgentManagerCollaborators {
+  const cascadeEnabled = getSettings
+    ? getSettings().cascadeCancellationEnabled
+    : getSetting('dependency.cascadeBehavior') === 'cancel'
+
+  return {
+    depIndex: createDependencyIndex(),
+    epicIndex: epicDepsReader,
+    metrics: createMetricsCollector(),
+    errorRegistry: new ErrorRegistry(logger),
+    unitOfWork,
+    cascadeCancellation: { enabled: cascadeEnabled }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Class implementation
+// ---------------------------------------------------------------------------
 
 export class AgentManagerImpl implements AgentManager {
   // ---- Lifecycle flags ----
@@ -202,26 +246,26 @@ export class AgentManagerImpl implements AgentManager {
     getSettings?: () => { autoReviewRules: AutoReviewRule[] | null; cascadeCancellationEnabled: boolean },
     private readonly _resolveRepoPath?: (slug: string) => string | null,
     private readonly _getRepoConfigs?: () => RepoConfig[],
-    private readonly _resolveGhRepo?: (repoSlug: string) => string | null
+    private readonly _resolveGhRepo?: (repoSlug: string) => string | null,
+    private readonly _onMutation?: (event: string, task: unknown) => void
   ) {
     this.config = config
-    // Cascade-cancellation policy: prefer injected settings reader; fall back to direct getSetting call.
-    const cascadeEnabled = getSettings
-      ? getSettings().cascadeCancellationEnabled
-      : getSetting('dependency.cascadeBehavior') === 'cancel'
-    this._cascadeCancellation = { enabled: cascadeEnabled }
     this._terminalResolution = terminalResolution
     this._preflightGate = preflightGate ?? null
-    this._depIndex = createDependencyIndex()
-    this._epicIndex = epicDepsReader
-    this._metrics = createMetricsCollector()
+
+    const collaborators = buildStatelessCollaborators(epicDepsReader, unitOfWork, logger, getSettings)
+    this._depIndex = collaborators.depIndex
+    this._epicIndex = collaborators.epicIndex
+    this._metrics = collaborators.metrics
+    this._errorRegistry = collaborators.errorRegistry
+    this.unitOfWork = collaborators.unitOfWork
+    this._cascadeCancellation = collaborators.cascadeCancellation
+
     const circuitObserver: CircuitObserver = {
       onCircuitOpen: (payload) => this.emitToRenderer('agent-manager:circuit-breaker-open', payload)
     }
     this._circuitBreaker = new CircuitBreaker(logger, circuitObserver)
-    this._errorRegistry = new ErrorRegistry(logger)
     this._wipTracker = new WipTracker(() => this.spawnRegistry.activeAgentCount())
-    this.unitOfWork = unitOfWork
 
     // Build the agent-manager TaskStateService.
     // The dispatcher delegates to this.onTaskTerminal which sets _depIndexDirty
@@ -273,7 +317,7 @@ export class AgentManagerImpl implements AgentManager {
           this._oauthRefreshPromise = null
         })
       },
-      onMutation: (event, task) => notifySprintMutation(event as 'updated', task as import('../../shared/types/task-types').SprintTask),
+      ...(this._onMutation && { onMutation: this._onMutation }),
       resolveMainRepoPaths: () => this.allRepoConfigs().map((r) => r.localPath)
     }
 
@@ -976,6 +1020,14 @@ export interface CreateAgentManagerOptions {
    * When omitted, delegates to `getGhRepo()` from the paths module.
    */
   resolveGhRepo?: (repoSlug: string) => string | null
+  /**
+   * Called when a pipeline agent transitions a task to a new status.
+   * Notifies in-process mutation listeners and schedules a renderer broadcast.
+   * When omitted, no broadcast fires for agent-driven status changes.
+   * Inject `notifySprintMutation` from `sprint-mutation-broadcaster` in the
+   * composition root (`index.ts`) to keep this module free of that dependency.
+   */
+  onMutation?: (event: string, task: unknown) => void
 }
 
 export function createAgentManager(opts: CreateAgentManagerOptions): AgentManager {
@@ -992,7 +1044,8 @@ export function createAgentManager(opts: CreateAgentManagerOptions): AgentManage
     getSettings,
     resolveRepoPath,
     getRepoConfigs,
-    resolveGhRepo: resolveGhRepoOpt
+    resolveGhRepo: resolveGhRepoOpt,
+    onMutation
   } = opts
   return new AgentManagerImpl(
     config,
@@ -1007,7 +1060,8 @@ export function createAgentManager(opts: CreateAgentManagerOptions): AgentManage
     getSettings,
     resolveRepoPath,
     getRepoConfigs,
-    resolveGhRepoOpt
+    resolveGhRepoOpt,
+    onMutation
   )
 }
 

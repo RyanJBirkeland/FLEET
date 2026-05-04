@@ -12,6 +12,9 @@
  * still live here because they combine two concerns that callers currently
  * treat as a single operation. They may be moved to `sprint-use-cases.ts`
  * in a future cleanup.
+ *
+ * Tests can instantiate a self-contained service object via
+ * `createSprintService(mutations)` — no module initialization side effects.
  */
 import * as broadcaster from './sprint-mutation-broadcaster'
 import type {
@@ -54,6 +57,81 @@ function getMutations(): SprintMutations {
  */
 export function initSprintService(mutations: SprintMutations): void {
   _mutations = mutations
+}
+
+/**
+ * Factory that returns a self-contained sprint service object backed by the
+ * given mutations object. Use this in tests — no module-level initialization
+ * side effects, no shared state between instances.
+ *
+ * Production code continues to use the free-function exports which delegate
+ * to the module-level singleton set by `initSprintService`.
+ */
+export function createSprintService(mutations: SprintMutations) {
+  return {
+    getTask: (id: string) => mutations.getTask(id),
+    listTasks: (options?: string | ListTasksOptions) => mutations.listTasks(options),
+    listTasksRecent: () => mutations.listTasksRecent(),
+    getQueueStats: () => mutations.getQueueStats(),
+    getDoneTodayCount: () => mutations.getDoneTodayCount(),
+    listTasksWithOpenPrs: () => mutations.listTasksWithOpenPrs(),
+    getHealthCheckTasks: () => mutations.getHealthCheckTasks(),
+    getSuccessRateBySpecType: () => mutations.getSuccessRateBySpecType(),
+    getDailySuccessRate: (days?: number) => mutations.getDailySuccessRate(days),
+    markTaskDoneByPrNumber: (prNumber: number) => mutations.markTaskDoneByPrNumber(prNumber),
+    markTaskCancelledByPrNumber: (prNumber: number) => mutations.markTaskCancelledByPrNumber(prNumber),
+    updateTaskMergeableState: (prNumber: number, mergeableState: string | null) =>
+      mutations.updateTaskMergeableState(prNumber, mergeableState),
+    flagStuckTasks: () => mutations.flagStuckTasks(),
+    async createTask(input: CreateTaskInput): Promise<SprintTask | null> {
+      const row = await mutations.createTask(input)
+      if (row) broadcaster.notifySprintMutation('created', row)
+      return row
+    },
+    async claimTask(id: string, claimedBy: string): Promise<SprintTaskExecution | null> {
+      const result = await mutations.claimTask(id, claimedBy)
+      if (result) broadcaster.notifySprintMutation('updated', result satisfies SprintTask)
+      return result
+    },
+    async updateTask(
+      id: string,
+      patch: Record<string, unknown>,
+      options?: UpdateTaskOptions
+    ): Promise<SprintTask | null> {
+      const result = await mutations.updateTask(id, patch, options)
+      if (result) broadcaster.notifySprintMutation('updated', result)
+      return result
+    },
+    async forceUpdateTask(
+      id: string,
+      patch: Record<string, unknown>
+    ): Promise<SprintTask | null> {
+      const result = await mutations.forceUpdateTask(id, patch)
+      if (result) broadcaster.notifySprintMutation('updated', result)
+      return result
+    },
+    deleteTask(id: string): void {
+      const task = mutations.getTask(id)
+      mutations.deleteTask(id)
+      if (task) broadcaster.notifySprintMutation('deleted', task)
+    },
+    async releaseTask(id: string, claimedBy: string): Promise<SprintTask | null> {
+      const result = await mutations.releaseTask(id, claimedBy)
+      if (result) broadcaster.notifySprintMutation('updated', result)
+      return result
+    },
+    async createReviewTaskFromAdhoc(input: {
+      title: string
+      repo: string
+      spec: string
+      worktreePath: string
+      branch: string
+    }): Promise<SprintTask | null> {
+      const row = await mutations.createReviewTaskFromAdhoc(input)
+      if (row) broadcaster.notifySprintMutation('created', row)
+      return row
+    }
+  }
 }
 
 export type {
@@ -100,9 +178,10 @@ export async function createTask(input: CreateTaskInput): Promise<SprintTask | n
 
 export async function claimTask(id: string, claimedBy: string): Promise<SprintTaskExecution | null> {
   const result = await getMutations().claimTask(id, claimedBy)
-  // Broadcaster expects SprintTask (full shape) — the value IS a full task at runtime;
-  // the narrowed declared type is a contract hint, not a runtime shape change.
-  if (result) broadcaster.notifySprintMutation('updated', result as SprintTask)
+  // SprintTaskExecution satisfies SprintTask structurally — claimTask returns the full row
+  // with execution fields filled in, not a narrower shape. The declared return type is a
+  // contract hint to callers; at runtime the object carries all SprintTask fields.
+  if (result) broadcaster.notifySprintMutation('updated', result satisfies SprintTask)
   return result
 }
 
@@ -235,6 +314,37 @@ export async function forceReleaseClaim(
   return released
 }
 
+/**
+ * Deletes any stale agent branches matching the task's title slug so a fresh
+ * retry starts from a clean branch state. Pruning the worktree first ensures
+ * git won't refuse to delete a branch that's checked out elsewhere.
+ */
+async function deleteStaleAgentBranches(
+  repoPath: string,
+  taskTitle: string,
+  taskLogger: typeof logger
+): Promise<void> {
+  const slug = taskTitle
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .slice(0, 40)
+  const env = buildAgentEnv()
+  await pruneWorktrees(repoPath, env).catch(() => { /* best-effort */ })
+  const { stdout: branches } = await execFileAsync(
+    'git',
+    ['branch', '--list', `agent/${slug}*`],
+    { cwd: repoPath }
+  ).catch(() => ({ stdout: '' }))
+  for (const branch of branches
+    .split('\n')
+    .map((b) => b.trim())
+    .filter(Boolean)) {
+    await deleteBranch(repoPath, branch, env).catch((err) => {
+      taskLogger.warn(`retryTask: failed to delete branch ${branch}: ${getErrorMessage(err)}`)
+    })
+  }
+}
+
 export async function retryTask(taskId: string): Promise<SprintTask> {
   const task = getMutations().getTask(taskId)
   if (!task) throw new Error(`Task ${taskId} not found`)
@@ -243,30 +353,9 @@ export async function retryTask(taskId: string): Promise<SprintTask> {
   }
 
   const repos = getSettingJson<Array<{ name: string; localPath: string }>>('repos')
-  const repoConfig = repos?.find((r) => r.name === task.repo)
-  const repoPath = repoConfig?.localPath
-
+  const repoPath = repos?.find((r) => r.name === task.repo)?.localPath
   if (repoPath) {
-    const slug = task.title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .slice(0, 40)
-    const env = buildAgentEnv()
-    await pruneWorktrees(repoPath, env).catch(() => { /* best-effort */ })
-    // Branch-listing has no equivalent in worktree-lifecycle — stays inline.
-    const { stdout: branches } = await execFileAsync(
-      'git',
-      ['branch', '--list', `agent/${slug}*`],
-      { cwd: repoPath }
-    ).catch(() => ({ stdout: '' }))
-    for (const branch of branches
-      .split('\n')
-      .map((b) => b.trim())
-      .filter(Boolean)) {
-      await deleteBranch(repoPath, branch, env).catch((err) => {
-        logger.warn(`retryTask: failed to delete branch ${branch}: ${getErrorMessage(err)}`)
-      })
-    }
+    await deleteStaleAgentBranches(repoPath, task.title, logger)
   }
 
   await _resetTaskForRetry(taskId)

@@ -15,6 +15,9 @@
  * `createTaskWithValidation` and `updateTaskFromUi` accept an optional
  * `createTask` / `updateTask` dep so callers can wire broadcaster-wrapped
  * versions; the base defaults go to `sprint-mutations` directly.
+ *
+ * Tests can instantiate a self-contained use-case object via
+ * `createSprintUseCases(mutations)` — no module initialization side effects.
  */
 import type { SprintMutations, UpdateTaskOptions, CreateTaskInput } from './sprint-mutations'
 import type { SprintTask } from '../../shared/types'
@@ -36,13 +39,37 @@ export function initSprintUseCases(mutations: SprintMutations): void {
   _mutations = mutations
 }
 
-// Convenience alias so existing code that references `mutations.*` continues
-// to work without a full rename across the file.
-const mutations = new Proxy({} as SprintMutations, {
-  get(_target, prop: string) {
-    return (getMutations() as unknown as Record<string, unknown>)[prop]
+/**
+ * Factory that binds the given mutations object and returns a self-contained
+ * use-case object. Use this in tests — no manual `initSprintUseCases` call
+ * needed. Sets the module singleton for the lifetime of the returned object.
+ *
+ * Production code continues to use the free-function exports, which delegate
+ * to the singleton set by `initSprintUseCases`.
+ */
+export function createSprintUseCases(boundMutations: SprintMutations) {
+  initSprintUseCases(boundMutations)
+  return {
+    cancelTask: (
+      id: string,
+      opts: { reason?: string } & CancelTaskOptions,
+      deps: CancelTaskDeps
+    ) => cancelTask(id, opts, deps),
+    resetTaskForRetry: (id: string, deps: ResetTaskForRetryDeps = {}) =>
+      resetTaskForRetry(id, deps),
+    createTaskWithValidation: (
+      input: CreateTaskInput,
+      deps: CreateTaskWithValidationDeps,
+      opts?: CreateTaskWithValidationOpts
+    ) => createTaskWithValidation(input, deps, opts),
+    updateTaskFromUi: (
+      id: string,
+      patch: Record<string, unknown>,
+      deps: UpdateTaskFromUiDeps
+    ) => updateTaskFromUi(id, patch, deps)
   }
-})
+}
+
 import { validateTaskCreation } from './task-validation'
 import { SpecParser } from './spec-quality/spec-parser'
 import { RequiredSectionsValidator } from './spec-quality/validators/sync-validators'
@@ -169,7 +196,7 @@ export async function cancelTask(
   opts: { reason?: string } & CancelTaskOptions,
   deps: CancelTaskDeps
 ): Promise<CancelTaskResult> {
-  const current = mutations.getTask(id)
+  const current = getMutations().getTask(id)
   if (current && isCompletedWorkStatus(current.status) && opts.force !== true) {
     throw new TaskTransitionError(
       `Cannot cancel task in '${current.status}' status without force:true — this task has completed work. Pass force:true to confirm.`,
@@ -179,17 +206,17 @@ export async function cancelTask(
 
   const patch: Record<string, unknown> = { status: 'cancelled' }
   if (opts.reason) patch.notes = opts.reason
-  const doUpdate = deps.updateTask ?? mutations.updateTask
+  const doUpdate = deps.updateTask ?? getMutations().updateTask.bind(getMutations())
   const updateOptions = opts.caller ? { caller: opts.caller } : undefined
   let row: SprintTask | null
   try {
     row = await doUpdate(id, patch, updateOptions)
   } catch (err) {
     if (isInvalidTransitionError(err)) {
-      const current = mutations.getTask(id)
+      const retryRead = getMutations().getTask(id)
       throw new TaskTransitionError(err.message, {
         taskId: id,
-        fromStatus: current?.status ?? null,
+        fromStatus: retryRead?.status ?? null,
         toStatus: 'cancelled'
       })
     }
@@ -207,7 +234,7 @@ async function dispatchCancelWithRetry(
   row: SprintTask,
   deps: CancelTaskDeps
 ): Promise<CancelTaskResult> {
-  const doUpdate = deps.updateTask ?? mutations.updateTask
+  const doUpdate = deps.updateTask ?? getMutations().updateTask.bind(getMutations())
 
   try {
     await deps.onStatusTerminal(id, 'cancelled')
@@ -259,7 +286,7 @@ export interface ResetTaskForRetryDeps {
  * - next_eligible_at
  */
 export function resetTaskForRetry(id: string, deps: ResetTaskForRetryDeps = {}): Promise<SprintTask | null> {
-  const doUpdate = deps.updateTask ?? mutations.updateTask
+  const doUpdate = deps.updateTask ?? getMutations().updateTask.bind(getMutations())
   return doUpdate(id, {
     completed_at: null,
     failure_reason: null,
@@ -327,7 +354,7 @@ export async function createTaskWithValidation(
   const validationInput = opts.skipReadinessCheck ? { ...input, status: 'backlog' as const } : input
   const validation = validateTaskCreation(validationInput, {
     logger: { warn: (msg) => deps.logger.warn(msg as string) },
-    listTasks: mutations.listTasks,
+    listTasks: getMutations().listTasks.bind(getMutations()),
     listGroups
   })
   if (!validation.valid) {
@@ -367,7 +394,7 @@ export async function createTaskWithValidation(
     )
   }
 
-  const doCreate = deps.createTask ?? mutations.createTask
+  const doCreate = deps.createTask ?? getMutations().createTask.bind(getMutations())
   const row = await doCreate(validatedTask)
   if (!row) throw new Error('Failed to create task')
   return row
@@ -428,11 +455,11 @@ export async function updateTaskFromUi(
     if (!finalStatus) throw new Error('Status narrowing failed unexpectedly')
     const { status: _dropped, ...nonStatusFields } = workingPatch
 
-    const currentTask = mutations.getTask(id)
+    const currentTask = getMutations().getTask(id)
     if (currentTask?.status === finalStatus) {
       // Status is unchanged — skip the state machine and do a plain field update.
       if (Object.keys(nonStatusFields).length === 0) return currentTask
-      const doUpdate = deps.updateTask ?? mutations.updateTask
+      const doUpdate = deps.updateTask ?? getMutations().updateTask.bind(getMutations())
       return doUpdate(id, nonStatusFields)
     }
 
@@ -441,11 +468,11 @@ export async function updateTaskFromUi(
       fields: nonStatusFields,
       caller: 'ui'
     })
-    return mutations.getTask(id)
+    return getMutations().getTask(id)
   }
 
   // No status change — plain field update, no transition logic needed.
-  const doUpdate = deps.updateTask ?? mutations.updateTask
+  const doUpdate = deps.updateTask ?? getMutations().updateTask.bind(getMutations())
   return doUpdate(id, workingPatch)
 }
 
