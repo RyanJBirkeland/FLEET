@@ -5,6 +5,7 @@
  * stdin/stdout stream-json protocol, and caps V8 old-space heap.
  */
 import type { AgentHandle, SteerResult } from './types'
+import type { Logger } from '../logger'
 import { spawn } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 
@@ -45,7 +46,7 @@ export function spawnViaCli(
   opts: { prompt: string; cwd: string; model: string; maxBudgetUsd?: number | undefined },
   env: NodeJS.ProcessEnv,
   token: string | null,
-  _logger?: unknown
+  _logger?: Logger
 ): AgentHandle {
   if (!isValidModelId(opts.model)) {
     throw new Error(

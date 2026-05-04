@@ -15,6 +15,7 @@ import { handleWatchdogVerdict } from './watchdog-handler'
 import { flushAgentEventBatcher } from '../agent-event-mapper'
 import { nowIso } from '../../shared/time'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import { isTaskStatus } from '../../shared/task-state-machine'
 import { withRetryAsync } from '../data/sqlite-retry'
 import type { SpawnRegistry } from './spawn-registry'
 import type { TaskStateService } from '../services/task-state-service'
@@ -260,7 +261,14 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
     // a warning and return early — never call onTaskTerminal when the DB write
     // did not land, as that would unblock dependents against a task still `active`.
     if (result.taskUpdate) {
-      const targetStatus = result.taskUpdate.status as TaskStatus | undefined
+      const rawStatus = result.taskUpdate.status
+      if (rawStatus !== undefined && !isTaskStatus(String(rawStatus))) {
+        deps.logger.warn(
+          `[agent-manager] taskUpdate for task ${agent.taskId} carries unrecognised status "${rawStatus}" — skipping transition`
+        )
+      }
+      const targetStatus: TaskStatus | undefined =
+        typeof rawStatus === 'string' && isTaskStatus(rawStatus) ? rawStatus : undefined
       try {
         if (deps.taskStateService && targetStatus) {
           const { status: _status, ...remainingFields } = result.taskUpdate
@@ -288,8 +296,10 @@ export async function runWatchdog(deps: WatchdogLoopDeps): Promise<void> {
     // leaves the task stuck active with no worktree to recover from.
     removeAgentFromRegistry(agent, deps.spawnRegistry)
 
-    const targetStatus = result.taskUpdate?.status as TaskStatus | undefined
-    cleanupWorktreeIfNotInReview(agent, targetStatus, deps)
+    const rawStatus2 = result.taskUpdate?.status
+    const targetStatus2: TaskStatus | undefined =
+      typeof rawStatus2 === 'string' && isTaskStatus(rawStatus2) ? rawStatus2 : undefined
+    cleanupWorktreeIfNotInReview(agent, targetStatus2, deps)
 
     // Step 5: Notify terminal handler after map removal so downstream logic
     // (dep resolution, metrics) sees a consistent state.

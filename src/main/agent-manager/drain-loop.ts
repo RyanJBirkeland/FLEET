@@ -13,6 +13,7 @@
 import type { Logger } from '../logger'
 import type { AgentManagerConfig, ActiveAgent } from './types'
 import type { TaskStatus } from '../../shared/task-state-machine'
+import { isTaskStatus } from '../../shared/task-state-machine'
 import { NOTES_MAX_LENGTH, DRAIN_PAUSE_ON_ENV_ERROR_MS } from './types'
 import type { IAgentTaskRepository } from '../data/sprint-task-repository'
 import type { TaskStateService } from '../services/task-state-service'
@@ -66,6 +67,35 @@ function runInNextTick<T>(fn: () => T): Promise<T> {
       }
     })
   )
+}
+
+// ---------------------------------------------------------------------------
+// Status map helpers
+// ---------------------------------------------------------------------------
+
+/**
+ * Filters a raw string→string map down to entries with valid TaskStatus values.
+ *
+ * DB mapper validates statuses at read time, but the incremental refresh path
+ * returns raw strings from refreshDependencyIndex. Any value that does not match
+ * the TaskStatus union is dropped and warned about so a bad row never propagates
+ * into the dependency index as a trusted status.
+ */
+function filterToValidTaskStatuses(
+  map: Map<string, string>,
+  logger: Logger
+): Map<string, TaskStatus> {
+  const result = new Map<string, TaskStatus>()
+  for (const [id, status] of map) {
+    if (isTaskStatus(status)) {
+      result.set(id, status)
+    } else {
+      logger.warn(
+        `[drain] task ${id} has unrecognised status "${status}" — excluded from dependency index`
+      )
+    }
+  }
+  return result
 }
 
 // ---------------------------------------------------------------------------
@@ -267,8 +297,8 @@ export class DrainLoop {
         }
         this.deps.setDepIndexDirty(false)
         this._recentlyProcessedTaskIds.clear()
-        // DB mapper validates status before this point — cast is safe.
-        return new Map(allTasks.map((task) => [task.id, task.status])) as Map<string, TaskStatus>
+        const rawMap = new Map(allTasks.map((task) => [task.id, task.status]))
+        return filterToValidTaskStatuses(rawMap, this.deps.logger)
       } catch (err) {
         this.deps.logger.error(
           `[agent-manager] Dep-index full rebuild failed — falling back to incremental refresh: ${err}`
@@ -279,15 +309,14 @@ export class DrainLoop {
     }
     const dirty = new Set(this._recentlyProcessedTaskIds)
     this._recentlyProcessedTaskIds.clear()
-    // DB mapper validates status; refreshDependencyIndex returns raw string values.
-    // The cast is safe: all statuses flowing through this path are validated at the boundary.
-    return refreshDependencyIndex(
+    const rawMap = refreshDependencyIndex(
       this.deps.depIndex,
       this.lastTaskDeps,
       this.deps.repo,
       this.deps.logger,
       dirty
-    ) as Map<string, TaskStatus>
+    )
+    return filterToValidTaskStatuses(rawMap, this.deps.logger)
   }
 
   async drainQueuedTasksWithMap(

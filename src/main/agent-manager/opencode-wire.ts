@@ -53,11 +53,22 @@ interface OpencodeEvent {
   sessionID?: string
 }
 
+function isOpencodeEvent(value: unknown): value is OpencodeEvent {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'type' in value &&
+    typeof (value as { type: unknown }).type === 'string'
+  )
+}
+
 function parseOpencodeEvent(line: string): OpencodeEvent | undefined {
   const trimmed = line.trim()
   if (trimmed === '') return undefined
   try {
-    return JSON.parse(trimmed) as OpencodeEvent
+    const parsed: unknown = JSON.parse(trimmed)
+    if (!isOpencodeEvent(parsed)) return undefined
+    return parsed
   } catch {
     return undefined
   }
@@ -130,21 +141,35 @@ function translateErrorEvent(error: OpencodeError): SDKWireMessage[] {
 }
 
 function isOpencodeTextPart(part: unknown): part is OpencodeTextPart {
-  return typeof (part as OpencodeTextPart | undefined)?.text === 'string'
+  return (
+    typeof part === 'object' &&
+    part !== null &&
+    'text' in part &&
+    typeof (part as { text: unknown }).text === 'string'
+  )
 }
 
 function isOpencodeToolPart(part: unknown): part is OpencodeToolPart {
-  const p = part as OpencodeToolPart | undefined
   return (
-    typeof p?.tool === 'string' &&
-    typeof p?.callID === 'string' &&
-    p?.state !== null &&
-    typeof p?.state === 'object'
+    typeof part === 'object' &&
+    part !== null &&
+    'tool' in part &&
+    'callID' in part &&
+    'state' in part &&
+    typeof (part as { tool: unknown }).tool === 'string' &&
+    typeof (part as { callID: unknown }).callID === 'string' &&
+    typeof (part as { state: unknown }).state === 'object' &&
+    (part as { state: unknown }).state !== null
   )
 }
 
 function isOpencodeStepFinishPart(part: unknown): part is OpencodeStepFinishPart {
-  return typeof (part as OpencodeStepFinishPart | undefined)?.reason === 'string'
+  return (
+    typeof part === 'object' &&
+    part !== null &&
+    'reason' in part &&
+    typeof (part as { reason: unknown }).reason === 'string'
+  )
 }
 
 /**

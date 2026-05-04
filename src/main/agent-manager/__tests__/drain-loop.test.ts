@@ -180,7 +180,8 @@ describe('buildTaskStatusMap', () => {
     const deps = makeDeps({ isDepIndexDirty: () => false })
     const result = buildTaskStatusMap(deps)
     expect(refreshDependencyIndex).toHaveBeenCalled()
-    expect(result).toBe(statusMap)
+    // filterToValidTaskStatuses returns a new Map; verify the valid entries survive
+    expect(result.get('task-1')).toBe('active')
   })
 
   it('rebuilds from scratch when dep index is dirty', () => {
@@ -486,5 +487,61 @@ describe('drain-loop: environmental failure pauses drain', () => {
     expect(emitDrainPaused).not.toHaveBeenCalled()
     // First spec-level failure shouldn't update the task (count < threshold).
     expect(vi.mocked(repo.updateTask)).not.toHaveBeenCalled()
+  })
+})
+
+// ── T-18: filterToValidTaskStatuses excludes invalid statuses from the map ───
+
+describe('buildTaskStatusMap — T-18: invalid statuses excluded from dependency index', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    vi.mocked(checkOAuthToken).mockResolvedValue(true)
+  })
+
+  it('excludes a task with an unrecognised status from the rebuilt status map', () => {
+    const repo = makeRepo()
+    vi.mocked(repo.getTasksWithDependencies).mockReturnValue([
+      { id: 'task-valid', status: 'queued', depends_on: null } as any,
+      { id: 'task-bad', status: 'not_a_real_status', depends_on: null } as any
+    ])
+    const deps = makeDeps({ repo, isDepIndexDirty: () => true })
+
+    const result = buildTaskStatusMap(deps)
+
+    expect(result.has('task-valid')).toBe(true)
+    expect(result.has('task-bad')).toBe(false)
+  })
+
+  it('logs a warning for each task with an unrecognised status', () => {
+    const repo = makeRepo()
+    vi.mocked(repo.getTasksWithDependencies).mockReturnValue([
+      { id: 'task-weird', status: 'limbo', depends_on: null } as any
+    ])
+    const deps = makeDeps({ repo, isDepIndexDirty: () => true })
+
+    buildTaskStatusMap(deps)
+
+    expect(deps.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('task-weird')
+    )
+    expect(deps.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('limbo')
+    )
+  })
+
+  it('excludes invalid statuses from the incremental refresh path via filterToValidTaskStatuses', () => {
+    // The incremental path goes through refreshDependencyIndex which returns Map<string, string>.
+    // The filter should strip any value that is not a valid TaskStatus.
+    const rawMap = new Map<string, string>([
+      ['task-ok', 'active'],
+      ['task-unknown', 'unknownstatus']
+    ])
+    vi.mocked(refreshDependencyIndex).mockReturnValue(rawMap)
+    const deps = makeDeps({ isDepIndexDirty: () => false })
+
+    const result = buildTaskStatusMap(deps)
+
+    expect(result.has('task-ok')).toBe(true)
+    expect(result.has('task-unknown')).toBe(false)
   })
 })

@@ -547,6 +547,74 @@ describe('runWatchdog', () => {
   })
 })
 
+// ── T-16: isTaskStatus guard before taskUpdate.status casts ─────────────────
+
+describe('runWatchdog — T-16: invalid status in taskUpdate is rejected', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('calls taskStateService.transition with a valid TaskStatus', async () => {
+    const agent = makeAgent('task-valid-status')
+    const concurrency = makeConcurrencyState(2)
+    const taskStateService = { transition: vi.fn().mockResolvedValue({ committed: true }) }
+    const deps = makeDepsWithRegistry(registryWith(agent), {
+      getConcurrency: () => concurrency,
+      taskStateService: taskStateService as any
+    })
+    vi.mocked(checkAgent).mockReturnValue('idle')
+    vi.mocked(handleWatchdogVerdict).mockReturnValue({
+      taskUpdate: {
+        status: 'error',
+        completed_at: '2026-01-01T00:00:00.000Z',
+        claimed_by: null,
+        notes: 'idle',
+        needs_review: true
+      },
+      concurrency,
+      shouldNotifyTerminal: true,
+      terminalStatus: 'error'
+    })
+
+    await runWatchdog(deps)
+
+    expect(taskStateService.transition).toHaveBeenCalledWith(
+      'task-valid-status',
+      'error',
+      expect.objectContaining({ caller: 'watchdog' })
+    )
+  })
+
+  it('skips taskStateService.transition and logs a warning when status is invalid', async () => {
+    const agent = makeAgent('task-garbage-status')
+    const concurrency = makeConcurrencyState(2)
+    const taskStateService = { transition: vi.fn().mockResolvedValue({ committed: true }) }
+    const deps = makeDepsWithRegistry(registryWith(agent), {
+      getConcurrency: () => concurrency,
+      taskStateService: taskStateService as any
+    })
+    vi.mocked(checkAgent).mockReturnValue('idle')
+    vi.mocked(handleWatchdogVerdict).mockReturnValue({
+      taskUpdate: {
+        status: 'garbage',
+        completed_at: '2026-01-01T00:00:00.000Z',
+        claimed_by: null,
+        notes: 'idle'
+      },
+      concurrency,
+      shouldNotifyTerminal: false,
+      terminalStatus: undefined
+    })
+
+    await runWatchdog(deps)
+
+    expect(taskStateService.transition).not.toHaveBeenCalled()
+    expect(deps.logger.warn).toHaveBeenCalledWith(
+      expect.stringContaining('unrecognised status')
+    )
+  })
+})
+
 // ── T-38: cleanupWorktreeIfNotInReview review-status guard ──────────────────
 
 describe('cleanupWorktreeIfNotInReview (T-38)', () => {

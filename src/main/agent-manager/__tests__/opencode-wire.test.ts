@@ -198,6 +198,59 @@ describe('translateOpencodeEvent', () => {
   })
 })
 
+// ── T-43: isOpencodeEvent guard validates JSON.parse result ──────────────────
+
+describe('translateOpencodeEvent — T-43: isOpencodeEvent guard', () => {
+  it('returns empty array for valid JSON that has no type field', () => {
+    expect(translateOpencodeEvent('{"sessionID":"ses_abc","data":"hello"}')).toEqual([])
+  })
+
+  it('returns empty array for valid JSON where type is not a string', () => {
+    expect(translateOpencodeEvent('{"type":42,"sessionID":"ses_abc"}')).toEqual([])
+  })
+
+  it('returns empty array for JSON null', () => {
+    expect(translateOpencodeEvent('null')).toEqual([])
+  })
+
+  it('returns empty array for a JSON array', () => {
+    expect(translateOpencodeEvent('[1,2,3]')).toEqual([])
+  })
+
+  it('returns empty array for a JSON number', () => {
+    expect(translateOpencodeEvent('42')).toEqual([])
+  })
+})
+
+// ── T-44: isOpencodeTextPart / isOpencodeToolPart use in-operator guards ─────
+
+describe('translateOpencodeEvent — T-44: in-operator type guards', () => {
+  it('returns empty for a text event where part has a non-string text property', () => {
+    const line = '{"type":"text","sessionID":"ses","part":{"type":"text","text":null}}'
+    expect(translateOpencodeEvent(line)).toEqual([])
+  })
+
+  it('returns empty for a tool event where callID is a number, not a string', () => {
+    const line =
+      '{"type":"tool","sessionID":"ses","part":{"type":"tool","tool":"bash","callID":99,"state":{"status":"completed"}}}'
+    expect(translateOpencodeEvent(line)).toEqual([])
+  })
+
+  it('returns empty for a tool event where tool is missing but other fields present', () => {
+    const line =
+      '{"type":"tool","sessionID":"ses","part":{"type":"tool","callID":"call_1","state":{"status":"completed"}}}'
+    expect(translateOpencodeEvent(line)).toEqual([])
+  })
+
+  it('returns non-empty for a properly shaped text part', () => {
+    const line =
+      '{"type":"text","sessionID":"ses","part":{"type":"text","text":"hello world"}}'
+    const result = translateOpencodeEvent(line)
+    expect(result).toHaveLength(1)
+    expect(result[0]).toMatchObject({ message: { content: [{ text: 'hello world' }] } })
+  })
+})
+
 describe('extractOpencodeSessionId', () => {
   it('returns the sessionID from a valid event line', () => {
     expect(extractOpencodeSessionId(TEXT_LINE)).toBe('ses_abc')

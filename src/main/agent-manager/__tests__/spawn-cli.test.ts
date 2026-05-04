@@ -64,6 +64,23 @@ describe('AGENT_PROCESS_MAX_OLD_SPACE_MB', () => {
   })
 })
 
+// ── T-35: _logger param typed as Logger | undefined ──────────────────────────
+
+describe('spawnViaCli — T-35: accepts a Logger-shaped object without throwing', () => {
+  it('accepts a Logger-shaped object as the fourth argument', () => {
+    const logger = { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
+    expect(() =>
+      spawnViaCli({ prompt: 'test', cwd: '/tmp', model: 'claude-opus-4-5' }, {}, null, logger)
+    ).not.toThrow()
+  })
+
+  it('accepts undefined as the fourth argument', () => {
+    expect(() =>
+      spawnViaCli({ prompt: 'test', cwd: '/tmp', model: 'claude-opus-4-5' }, {}, null, undefined)
+    ).not.toThrow()
+  })
+})
+
 describe('spawnViaCli — model ID validation (T-34)', () => {
   it('does not throw for a valid claude-* model ID', () => {
     expect(() =>
