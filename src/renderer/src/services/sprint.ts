@@ -1,14 +1,14 @@
 import type { SprintTask } from '../../../shared/types'
 
 export async function listTasks(): Promise<SprintTask[]> {
-  return window.api.sprint.list() as Promise<SprintTask[]>
+  return window.api.sprint.list()
 }
 
 export async function updateTask(
   taskId: string,
   patch: Parameters<typeof window.api.sprint.update>[1]
 ): Promise<SprintTask | null> {
-  return window.api.sprint.update(taskId, patch) as Promise<SprintTask | null>
+  return window.api.sprint.update(taskId, patch)
 }
 
 export async function deleteTask(taskId: string): Promise<void> {
@@ -18,7 +18,7 @@ export async function deleteTask(taskId: string): Promise<void> {
 export async function createTask(
   input: Parameters<typeof window.api.sprint.create>[0]
 ): Promise<SprintTask> {
-  return window.api.sprint.create(input) as Promise<SprintTask>
+  return window.api.sprint.create(input)
 }
 
 export async function batchUpdate(

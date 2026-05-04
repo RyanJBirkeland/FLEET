@@ -15,6 +15,7 @@ export const sprint = {
     template_name?: string
     playground_enabled?: boolean
     group_id?: string | null
+    depends_on?: Array<{ id: string; type: 'hard' | 'soft' }> | null
   }) => typedInvoke('sprint:create', task),
   createWorkflow: (template: WorkflowTemplate) => typedInvoke('sprint:createWorkflow', template),
   claimTask: (taskId: string) => typedInvoke('sprint:claimTask', taskId),

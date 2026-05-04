@@ -39,6 +39,7 @@ export interface SprintChannels {
         template_name?: string | undefined
         playground_enabled?: boolean | undefined
         group_id?: string | undefined | null
+        depends_on?: Array<{ id: string; type: 'hard' | 'soft' }> | null | undefined
       }
     ]
     result: SprintTask

@@ -3,6 +3,7 @@ import type { SprintTask, TaskDependency } from '../../../shared/types'
 import { TASK_STATUS, PR_STATUS } from '../../../shared/constants'
 import { toast } from './toasts'
 import { sanitizeDependsOn } from '../../../shared/sanitize-depends-on'
+import { isTaskStatus } from '../../../shared/task-state-machine'
 import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
 import { canLaunchTask } from '../lib/wip-policy'
 import { nowIso } from '../../../shared/time'
@@ -75,18 +76,27 @@ function withoutPendingUpdate(
   return rest
 }
 
-function sanitizeIncomingTasks(raw: unknown[]): SprintTask[] {
+function sanitizeIncomingTasks(raw: SprintTask[]): SprintTask[] {
   return (Array.isArray(raw) ? raw : []).map((t) => ({
-    ...(t as SprintTask),
-    depends_on: sanitizeDependsOn((t as SprintTask).depends_on)
+    ...t,
+    depends_on: sanitizeDependsOn(t.depends_on)
   }))
 }
 
-function buildFingerprint(tasks: SprintTask[]): string {
-  return tasks
-    .map((task) => `${task.id}:${task.updated_at}`)
-    .sort()
-    .join('|')
+/**
+ * Detects whether the task list has changed since the last poll.
+ *
+ * Builds a Map<id, updated_at> for each input and does a two-pass key/value
+ * comparison — O(n) with no allocations beyond the two maps. This avoids
+ * sorting a fresh array on every 30s background poll.
+ */
+function taskListsAreEqual(a: SprintTask[], b: SprintTask[]): boolean {
+  if (a.length !== b.length) return false
+  const aMap = new Map(a.map((t) => [t.id, t.updated_at]))
+  for (const task of b) {
+    if (aMap.get(task.id) !== task.updated_at) return false
+  }
+  return true
 }
 
 function hasNoPendingOps(state: {
@@ -134,6 +144,16 @@ interface SprintTasksState {
   // --- Data ---
   tasks: SprintTask[]
   loading: boolean
+  /**
+   * True after the first successful `loadData()` completes. Use this to
+   * distinguish "initial load still in flight" from "background refresh
+   * in progress" — the latter should not show a full loading skeleton.
+   *
+   * TODO: Replace `loading`/`loadError`/`pollError` triple with a
+   * discriminated union (`{ phase: 'idle' | 'loading' | 'error' }`) once
+   * consuming components are refactored to use `hasLoadedOnce` consistently.
+   */
+  hasLoadedOnce: boolean
   loadError: string | null
   /** Non-null when the most recent `sprint:listTasks` IPC call failed. Cleared on success or manual dismiss. */
   pollError: string | null
@@ -190,9 +210,83 @@ function mutableFieldEqual(a: unknown, b: unknown): boolean {
   return false
 }
 
+/**
+ * Merges only validated fields from an SSE update payload into an existing task.
+ *
+ * The SSE payload is typed as `{ taskId: string; [key: string]: unknown }`, so
+ * any field could arrive with an unexpected type. This function validates each
+ * field before applying it — invalid values are silently dropped so a malformed
+ * SSE message cannot corrupt the task object in the store.
+ *
+ * Fields validated:
+ * - `status`: must pass `isTaskStatus()` (9-value union)
+ * - String/null fields: must be `typeof === 'string'` or `null`
+ * - `depends_on`: routed through `sanitizeDependsOn` (handles any input)
+ * - Numeric fields: must be `number` or `null`
+ * - `playground_enabled`: must be `boolean`
+ *
+ * Complex fields like `revision_feedback` (array of objects) are intentionally
+ * omitted — they are not part of normal SSE broadcast payloads.
+ */
+function applyValidatedSseFields(
+  task: SprintTask,
+  update: { taskId: string; [key: string]: unknown }
+): SprintTask {
+  const patch: Partial<SprintTask> = {}
+
+  const raw = update as Record<string, unknown>
+
+  if ('status' in raw) {
+    const s = raw.status
+    if (typeof s === 'string' && isTaskStatus(s)) patch.status = s
+  }
+
+  const stringOrNullFields: Array<keyof SprintTask> = [
+    'claimed_by', 'completed_at', 'started_at', 'failure_reason',
+    'pr_url', 'pr_status', 'pr_mergeable_state', 'notes', 'title',
+    'spec', 'prompt', 'worktree_path',
+    'promoted_to_review_at', 'updated_at', 'agent_run_id', 'template_name',
+    'cross_repo_contract'
+  ]
+  for (const field of stringOrNullFields) {
+    if (field in raw) {
+      const v = raw[field]
+      if (typeof v === 'string' || v === null) {
+        ;(patch as Record<string, unknown>)[field] = v
+      }
+    }
+  }
+
+  const numberOrNullFields: Array<keyof SprintTask> = [
+    'pr_number', 'retry_count', 'fast_fail_count', 'duration_ms', 'priority',
+    'max_runtime_ms', 'max_cost_usd'
+  ]
+  for (const field of numberOrNullFields) {
+    if (field in raw) {
+      const v = raw[field]
+      if (typeof v === 'number' || v === null) {
+        ;(patch as Record<string, unknown>)[field] = v
+      }
+    }
+  }
+
+  if ('playground_enabled' in raw) {
+    if (typeof raw.playground_enabled === 'boolean') {
+      patch.playground_enabled = raw.playground_enabled
+    }
+  }
+
+  return {
+    ...task,
+    ...patch,
+    depends_on: sanitizeDependsOn(raw.depends_on ?? task.depends_on)
+  }
+}
+
 export const useSprintTasks = create<SprintTasksState>((set, get) => ({
   tasks: [],
   loading: true,
+  hasLoadedOnce: false,
   loadError: null,
   pollError: null,
   pendingUpdates: {},
@@ -206,12 +300,12 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       const incoming = sanitizeIncomingTasks(await listTasks())
       const currentState = get()
 
-      if (buildFingerprint(currentState.tasks) === buildFingerprint(incoming) && hasNoPendingOps(currentState)) {
-        set({ loading: false })
+      if (taskListsAreEqual(currentState.tasks, incoming) && hasNoPendingOps(currentState)) {
+        set({ loading: false, hasLoadedOnce: true })
         return
       }
 
-      set((state) => mergeTasksWithPendingState(incoming, state, Date.now()))
+      set((state) => ({ ...mergeTasksWithPendingState(incoming, state, Date.now()), hasLoadedOnce: true }))
     } catch (e) {
       const message = 'Failed to load tasks — ' + (e instanceof Error ? e.message : String(e))
       set({ loadError: message, pollError: message })
@@ -324,7 +418,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
         playground_enabled: data.playground_enabled || undefined,
         ...(data.depends_on ? { depends_on: data.depends_on } : {}),
         ...(data.group_id ? { group_id: data.group_id } : {})
-      } as Parameters<typeof window.api.sprint.create>[0])
+      })
 
       if (result?.id) {
         set((state) => ({
@@ -408,13 +502,7 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     set((state) => {
       const nextTasks = state.tasks.map((t) => {
         if (t.id !== update.taskId) return t
-        const merged = {
-          ...t,
-          ...update,
-          depends_on: sanitizeDependsOn(
-            (update as Record<string, unknown>).depends_on ?? t.depends_on
-          )
-        } as SprintTask
+        const merged = applyValidatedSseFields(t, update)
         if (merged.status === TASK_STATUS.DONE && merged.pr_url && !merged.pr_status) {
           merged.pr_status = PR_STATUS.OPEN
         }
