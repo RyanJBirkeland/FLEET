@@ -157,7 +157,8 @@ describe('runAgent — playground prompt injection', () => {
     claimTask: vi.fn(),
     getGroup: vi.fn().mockReturnValue(null),
     getGroupTasks: vi.fn().mockReturnValue([]),
-    getGroupsWithDependencies: vi.fn().mockReturnValue([])
+    getGroupsWithDependencies: vi.fn().mockReturnValue([]),
+    persistRenderedPrompt: vi.fn().mockResolvedValue(undefined)
   }
 
   const createDeps = (): RunAgentDeps => ({
@@ -385,7 +386,8 @@ describe('runAgent — playground-before-cleanup ordering', () => {
     claimTask: vi.fn(),
     getGroup: vi.fn().mockReturnValue(null),
     getGroupTasks: vi.fn().mockReturnValue([]),
-    getGroupsWithDependencies: vi.fn().mockReturnValue([])
+    getGroupsWithDependencies: vi.fn().mockReturnValue([]),
+    persistRenderedPrompt: vi.fn().mockResolvedValue(undefined)
   }
 
   const createDeps = (): RunAgentDeps => ({

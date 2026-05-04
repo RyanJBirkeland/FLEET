@@ -190,7 +190,8 @@ const mockRepo: IAgentTaskRepository = {
   claimTask: vi.fn(),
   getGroup: vi.fn().mockReturnValue(null),
   getGroupTasks: vi.fn().mockReturnValue([]),
-  getGroupsWithDependencies: vi.fn().mockReturnValue([])
+  getGroupsWithDependencies: vi.fn().mockReturnValue([]),
+  persistRenderedPrompt: vi.fn().mockResolvedValue(undefined)
 }
 
 // TERMINAL_STATUSES for the mock dispatcher

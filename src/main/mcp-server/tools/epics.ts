@@ -182,7 +182,7 @@ export function registerEpicTools(server: McpServer, deps: EpicToolsDeps): void 
       )
   )
 
-  const BulkQueueSchema = z.object({ id: z.string().describe('Epic ID') })
+  const BulkQueueSchema = z.object({ id: z.string().describe('Epic ID') }).strict()
 
   server.registerTool(
     'epics.bulkQueueTasks',

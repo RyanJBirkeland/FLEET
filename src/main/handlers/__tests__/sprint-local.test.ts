@@ -307,9 +307,9 @@ describe('registerSprintLocalHandlers', () => {
     setSprintBroadcaster(mockBroadcastFn)
   })
 
-  it('registers 18 handlers', () => {
+  it('registers 19 handlers', () => {
     registerSprintLocalHandlers(makeMockDeps())
-    expect(safeHandle).toHaveBeenCalledTimes(18)
+    expect(safeHandle).toHaveBeenCalledTimes(19)
   })
 
   it('registers the expected channel names', () => {

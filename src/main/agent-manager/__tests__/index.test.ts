@@ -263,7 +263,8 @@ function makeMockRepo(): IAgentTaskRepository {
     claimTask: (...args: [string, string]) => (claimTask as any)(...args),
     getGroup: vi.fn().mockReturnValue(null),
     getGroupTasks: vi.fn().mockReturnValue([]),
-    getGroupsWithDependencies: vi.fn().mockReturnValue([])
+    getGroupsWithDependencies: vi.fn().mockReturnValue([]),
+    persistRenderedPrompt: vi.fn().mockResolvedValue(undefined)
   }
 }
 

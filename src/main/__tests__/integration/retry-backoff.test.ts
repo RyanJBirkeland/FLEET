@@ -44,6 +44,7 @@ vi.mock('../../db', () => {
             duration_ms INTEGER,
             rebase_base_sha TEXT, rebased_at TEXT,
             orphan_recovery_count INTEGER NOT NULL DEFAULT 0,
+            last_rendered_prompt TEXT,
             created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
             updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
           )

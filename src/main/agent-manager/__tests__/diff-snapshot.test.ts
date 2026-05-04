@@ -123,7 +123,7 @@ describe('diff-snapshot', () => {
 
     await captureDiffSnapshot('/path/to/worktree', 'main', mockLogger)
 
-    expect(mockExecFile).toHaveBeenCalledTimes(3)
+    expect(mockExecFile).toHaveBeenCalledTimes(4)
   })
 
   it('should return null if no files changed', async () => {

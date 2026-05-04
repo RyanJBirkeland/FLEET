@@ -164,7 +164,8 @@ const mockRepo: IAgentTaskRepository = {
   claimTask: vi.fn(),
   getGroup: vi.fn().mockReturnValue(null),
   getGroupTasks: vi.fn().mockReturnValue([]),
-  getGroupsWithDependencies: vi.fn().mockReturnValue([])
+  getGroupsWithDependencies: vi.fn().mockReturnValue([]),
+  persistRenderedPrompt: vi.fn().mockResolvedValue(undefined)
 }
 
 // Default happy-path spawnAndWireAgent return value (active agent handle with empty message stream)
