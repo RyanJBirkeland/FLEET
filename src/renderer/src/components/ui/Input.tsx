@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { HTMLInputTypeAttribute, ReactNode } from 'react'
 
 type InputProps = {
@@ -31,6 +32,10 @@ export function Input({
   required = false,
   'aria-describedby': ariaDescribedby
 }: InputProps): React.JSX.Element {
+  const generatedErrorId = useId()
+  const errorId = error ? generatedErrorId : undefined
+  const describedBy = [errorId, ariaDescribedby].filter(Boolean).join(' ') || undefined
+
   const classes = [
     'fleet-input',
     prefix && 'fleet-input--has-prefix',
@@ -55,11 +60,11 @@ export function Input({
           aria-label={ariaLabel}
           aria-invalid={invalid}
           aria-required={required}
-          aria-describedby={ariaDescribedby}
+          aria-describedby={describedBy}
         />
         {suffix && <span className="fleet-input__suffix">{suffix}</span>}
       </div>
-      {error && <span className="fleet-input__error">{error}</span>}
+      {error && <span id={errorId} className="fleet-input__error" role="alert">{error}</span>}
     </>
   )
 }

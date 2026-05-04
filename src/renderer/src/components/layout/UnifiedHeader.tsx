@@ -83,7 +83,7 @@ export function UnifiedHeader(): React.JSX.Element {
   }
 
   return (
-    <div className="unified-header">
+    <header className="unified-header">
       {/* Left zone — matches sidebar width (52px), contains logo + traffic light clearance */}
       <div className="unified-header__traffic-lights">
         <div
@@ -148,6 +148,6 @@ export function UnifiedHeader(): React.JSX.Element {
           {theme === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
         </button>
       </div>
-    </div>
+    </header>
   )
 }

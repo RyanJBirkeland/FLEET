@@ -23,6 +23,7 @@ import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/
 import './IDEView.css'
 import { useCommandPaletteStore, type Command } from '../stores/commandPalette'
 import { ErrorBoundary } from '../components/ui/ErrorBoundary'
+import { LoadingState } from '../components/ui/LoadingState'
 
 const IDE_SHORTCUTS = [
   { keys: '⌘B', desc: 'Toggle sidebar' },
@@ -235,9 +236,8 @@ export function IDEView(): React.JSX.Element {
                   <EditorBreadcrumb />
                   <EditorToolbar />
                   <div className="ide-editor-content">
-                    {/* IDE-9: Show loading indicator while file is being fetched */}
                     {activeTab && fileLoadingStates[activeTab.filePath] ? (
-                      <div className="ide-file-loading">Loading...</div>
+                      <LoadingState className="ide-file-loading" />
                     ) : (
                       <EditorPane
                         filePath={activeTab?.filePath ?? null}

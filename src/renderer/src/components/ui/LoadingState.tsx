@@ -8,5 +8,5 @@ export function LoadingState({
   className
 }: LoadingStateProps): React.JSX.Element {
   const cls = ['fleet-loading-state', className].filter(Boolean).join(' ')
-  return <div className={cls}>{message}</div>
+  return <div role="status" className={cls}>{message}</div>
 }

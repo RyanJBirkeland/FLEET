@@ -8,9 +8,16 @@ describe('Tooltip', () => {
     expect(screen.getByText('Hover me')).toBeInTheDocument()
   })
 
-  it('sets data-tooltip attribute', () => {
+  it('exposes tooltip content via role="tooltip"', () => {
+    render(<Tooltip content="Hint text">Child</Tooltip>)
+    expect(screen.getByRole('tooltip')).toHaveTextContent('Hint text')
+  })
+
+  it('links trigger to tooltip via aria-describedby', () => {
     const { container } = render(<Tooltip content="Hint text">Child</Tooltip>)
-    expect(container.firstChild).toHaveAttribute('data-tooltip', 'Hint text')
+    const trigger = container.firstChild as HTMLElement
+    const tooltip = screen.getByRole('tooltip')
+    expect(trigger.getAttribute('aria-describedby')).toBe(tooltip.id)
   })
 
   it('applies top side class by default', () => {
