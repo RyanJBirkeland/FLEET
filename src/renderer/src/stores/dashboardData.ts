@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { CompletionBucket, LoadSnapshot } from '../../../shared/ipc-channels'
+import type { CompletionBucket, LoadSnapshot, DailySuccessRate } from '../../../shared/ipc-channels'
 import type { FeedEvent } from '../lib/dashboard-types'
 import {
   getCompletionsPerHour,
@@ -8,13 +8,6 @@ import {
   getDailySuccessRate,
   getLoadAverage
 } from '../services/dashboard'
-
-interface DailySuccessRate {
-  date: string
-  successRate: number | null
-  doneCount: number
-  failedCount: number
-}
 
 interface DashboardDataState {
   throughputData: CompletionBucket[]
@@ -88,6 +81,7 @@ export const useDashboardDataStore = create<DashboardDataState>((set) => ({
   lastFetchedAt: null,
 
   fetchAll: async () => {
+    set({ loading: true })
     const errors: Record<string, string> = {}
 
     let throughputData: CompletionBucket[] = []

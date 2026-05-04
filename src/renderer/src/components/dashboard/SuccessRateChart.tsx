@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import type { DailySuccessRate } from '../../../../shared/ipc-channels'
 
 interface SuccessRateChartProps {
@@ -39,6 +40,59 @@ export function SuccessRateChart({ data, height = 140 }: SuccessRateChartProps):
   const delta =
     successRate7dAvg != null && prior7dAvg != null ? successRate7dAvg - prior7dAvg : null
 
+  // Build trend and fill paths — memoized so O(n) loops only rerun when data changes.
+  // Must appear before early returns to satisfy the rules-of-hooks ordering requirement.
+  const { trendPath, fillPath } = useMemo(() => {
+    const yCoord = (value: number): number => PAD.top + plotH - (value / 100) * plotH
+
+    let trend = ''
+    let inSegment = false
+    for (let i = 0; i < data.length; i++) {
+      const d = data[i]
+      if (!d) continue
+      const cx = data.length > 1 ? PAD.left + (i / (data.length - 1)) * plotW : PAD.left
+      if (d.successRate != null) {
+        const cy = yCoord(d.successRate)
+        if (!inSegment) {
+          trend += `M ${cx} ${cy} `
+          inSegment = true
+        } else {
+          trend += `L ${cx} ${cy} `
+        }
+      } else {
+        inSegment = false
+      }
+    }
+
+    let fill = ''
+    let fillInSegment = false
+    let segmentStartX = 0
+    for (let i = 0; i < data.length; i++) {
+      const d = data[i]
+      if (!d) continue
+      const cx = data.length > 1 ? PAD.left + (i / (data.length - 1)) * plotW : PAD.left
+      if (d.successRate != null) {
+        const cy = yCoord(d.successRate)
+        if (!fillInSegment) {
+          segmentStartX = cx
+          fill += `M ${cx} ${PAD.top + plotH} L ${cx} ${cy} `
+          fillInSegment = true
+        } else {
+          fill += `L ${cx} ${cy} `
+          // If next point is null or end, close the segment
+          if (i === data.length - 1 || data[i + 1]?.successRate == null) {
+            fill += `L ${cx} ${PAD.top + plotH} L ${segmentStartX} ${PAD.top + plotH} Z `
+            fillInSegment = false
+          }
+        }
+      } else {
+        fillInSegment = false
+      }
+    }
+
+    return { trendPath: trend, fillPath: fill }
+  }, [data, plotW, plotH])
+
   // Empty state
   if (nonNull.length === 0) {
     return (
@@ -59,54 +113,6 @@ export function SuccessRateChart({ data, height = 140 }: SuccessRateChartProps):
         No completed tasks in the last 14 days
       </div>
     )
-  }
-
-  // Build trend path with gaps for null values
-  // Multiple M commands when there are gaps
-  let trendPath = ''
-  let inSegment = false
-  for (let i = 0; i < data.length; i++) {
-    const d = data[i]
-    if (!d) continue
-    const cx = data.length > 1 ? PAD.left + (i / (data.length - 1)) * plotW : PAD.left
-    if (d.successRate != null) {
-      const cy = y(d.successRate)
-      if (!inSegment) {
-        trendPath += `M ${cx} ${cy} `
-        inSegment = true
-      } else {
-        trendPath += `L ${cx} ${cy} `
-      }
-    } else {
-      inSegment = false
-    }
-  }
-
-  // Build fill path for gradient (optional visual)
-  let fillPath = ''
-  let fillInSegment = false
-  let segmentStartX = 0
-  for (let i = 0; i < data.length; i++) {
-    const d = data[i]
-    if (!d) continue
-    const cx = data.length > 1 ? PAD.left + (i / (data.length - 1)) * plotW : PAD.left
-    if (d.successRate != null) {
-      const cy = y(d.successRate)
-      if (!fillInSegment) {
-        segmentStartX = cx
-        fillPath += `M ${cx} ${PAD.top + plotH} L ${cx} ${cy} `
-        fillInSegment = true
-      } else {
-        fillPath += `L ${cx} ${cy} `
-        // If next point is null or end, close the segment
-        if (i === data.length - 1 || data[i + 1]?.successRate == null) {
-          fillPath += `L ${cx} ${PAD.top + plotH} L ${segmentStartX} ${PAD.top + plotH} Z `
-          fillInSegment = false
-        }
-      }
-    } else {
-      fillInSegment = false
-    }
   }
 
   // X-axis labels: first, mid, last

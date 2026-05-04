@@ -13,6 +13,7 @@ interface MorningBriefingProps {
 }
 
 interface TaskWithTokens {
+  id: string
   title: string
   tokens: number | null
 }
@@ -34,6 +35,7 @@ export function MorningBriefing({
         localAgents.find((a) => a.id === task.agent_run_id)
       const tokens = agent ? (agent.tokensIn ?? 0) + (agent.tokensOut ?? 0) : null
       return {
+        id: task.id,
         title: task.title,
         tokens: tokens && tokens > 0 ? tokens : null
       }
@@ -61,8 +63,8 @@ export function MorningBriefing({
 
           {tasksWithTokens.length > 0 && (
             <div className="dashboard-briefing__tasks">
-              {tasksWithTokens.map((task, i) => (
-                <div key={i} className="dashboard-briefing__task-row">
+              {tasksWithTokens.map((task) => (
+                <div key={task.id} className="dashboard-briefing__task-row">
                   <span className="dashboard-briefing__task-title" title={task.title}>
                     {task.title}
                   </span>

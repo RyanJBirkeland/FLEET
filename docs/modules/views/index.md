@@ -7,7 +7,7 @@ All views listed below are wrapped in `<ErrorBoundary name="ViewName">` so a ren
 
 | Module | Purpose | Key Exports |
 |--------|---------|-------------|
-| `DashboardView.tsx` | Dashboard overview: status counters, pipeline flow, charts, activity feed. Polls dashboard data every 60s (`POLL_DASHBOARD_INTERVAL`) and load average every 5s (`POLL_LOAD_AVERAGE`). Both intervals start immediately on mount. ErrorBoundary protected. | `DashboardView` (default) |
+| `DashboardView.tsx` | Dashboard overview: status counters, pipeline flow, charts, activity feed. Reads from the `dashboardData` store (polling is owned by `PollingProvider` via `useDashboardPolling` — no polling setup in this view). Delegates localStorage to `useWindowSession`. Shows an error card when `sprintTasks.loadError` is truthy, otherwise shows onboarding or the full grid. Passes `onRetry`/`onRetryLoad` callbacks as props to child columns. ErrorBoundary protected. | `DashboardView` (default) |
 | `IDEView.tsx` | Monaco editor + file explorer sidebar + integrated terminal. Multi-tab interface with dirty-state tracking. ErrorBoundary protected. | `IDEView` (default) |
 | `GitTreeView.tsx` | Source control: staging, committing, and pushing across configured repositories. Polls git status every 30s. ErrorBoundary protected. | `GitTreeView` (default) |
 | `CodeReviewView.tsx` | Human-in-the-loop review interface: diff inspection, commit history, conversation log, and action buttons (merge, PR, revise, discard). ErrorBoundary protected. Renders `GitHubOptedOutBanner` above `TopBar` so users who chose read-only mode see why PR actions fail. | `CodeReviewView` (default) |

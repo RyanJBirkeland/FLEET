@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { motion, useReducedMotion } from 'framer-motion'
 import { useShallow } from 'zustand/react/shallow'
 import { useSprintTasks } from '../stores/sprintTasks'
@@ -8,10 +8,11 @@ import { useSprintFilters, type StatusFilter } from '../stores/sprintFilters'
 import { usePanelLayoutStore } from '../stores/panelLayout'
 import { useDashboardMetrics } from '../hooks/useDashboardMetrics'
 import { useBackoffInterval } from '../hooks/useBackoffInterval'
+import { useWindowSession } from '../hooks/useWindowSession'
 import { useDrainStatus } from '../hooks/useDrainStatus'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION } from '../lib/motion'
-import { POLL_DASHBOARD_INTERVAL, POLL_LOAD_AVERAGE } from '../lib/constants'
 import { StatusBar, NeonCard } from '../components/neon'
+import { AlertTriangle } from 'lucide-react'
 import { neonVar } from '../components/neon/types'
 import { partitionSprintTasks } from '../lib/partitionSprintTasks'
 import {
@@ -50,6 +51,7 @@ function FreshnessLabel({ lastFetchedAt }: { lastFetchedAt: number }): React.JSX
 export default function DashboardView(): React.JSX.Element {
   const reduced = useReducedMotion()
   const tasks = useSprintTasks((s) => s.tasks)
+  const loadError = useSprintTasks((s) => s.loadError)
   const loadSprintData = useSprintTasks((s) => s.loadData)
   const localAgents = useCostDataStore((s) => s.localAgents)
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
@@ -58,44 +60,14 @@ export default function DashboardView(): React.JSX.Element {
   const setTagFilter = useSprintFilters((s) => s.setTagFilter)
   const setView = usePanelLayoutStore((s) => s.setView)
   const fetchDashboardData = useDashboardDataStore((s) => s.fetchAll)
+  const fetchLoadAverage = useDashboardDataStore((s) => s.fetchLoad)
   const registerCommands = useCommandPaletteStore((s) => s.registerCommands)
   const unregisterCommands = useCommandPaletteStore((s) => s.unregisterCommands)
 
-  // Morning briefing state
-  const [showBriefing, setShowBriefing] = useState(false)
-  const [briefingTasks, setBriefingTasks] = useState<typeof tasks>([])
-  const briefingChecked = useRef(false)
+  // Morning briefing — localStorage access isolated to this hook
+  const { showBriefing, briefingTasks, dismissBriefing } = useWindowSession(tasks)
 
-  // Check for new completions when tasks load (runs once)
-  useEffect(() => {
-    if (briefingChecked.current || tasks.length === 0) return
-    briefingChecked.current = true
-
-    const lastClose = localStorage.getItem('fleet:last-window-close')
-    if (!lastClose) return
-
-    const lastCloseTime = parseInt(lastClose, 10)
-    if (isNaN(lastCloseTime)) return
-
-    const newCompletions = tasks.filter((task) => {
-      if (!task.completed_at) return false
-      return new Date(task.completed_at).getTime() > lastCloseTime
-    })
-
-    if (newCompletions.length > 0) {
-      // Safe to set state here - guarded by briefingChecked to prevent cascading renders
-
-      setBriefingTasks(newCompletions)
-      setShowBriefing(true)
-    }
-  }, [tasks])
-
-  const handleDismissBriefing = useCallback(() => {
-    localStorage.setItem('fleet:last-window-close', Date.now().toString())
-    setShowBriefing(false)
-  }, [])
-
-  // Dashboard data from centralized polling
+  // Dashboard data from centralized polling (PollingProvider owns the polling loop)
   const {
     throughputData,
     loadData,
@@ -115,21 +87,6 @@ export default function DashboardView(): React.JSX.Element {
       lastFetchedAt: s.lastFetchedAt
     }))
   )
-
-  // Dashboard data polling — 60s backoff interval
-  useEffect(() => {
-    fetchDashboardData()
-  }, [fetchDashboardData])
-  useBackoffInterval(fetchDashboardData, POLL_DASHBOARD_INTERVAL)
-
-  // Load average polling — 5s backoff interval
-  const fetchLoad = useDashboardDataStore((s) => s.fetchLoad)
-  useEffect(() => {
-    fetchLoad()
-  }, [fetchLoad])
-  useBackoffInterval(fetchLoad, POLL_LOAD_AVERAGE)
-
-  // `now` is owned by FreshnessLabel below — DashboardView no longer re-renders every 10s
 
   // Register dashboard commands in command palette
   const handleRefreshDashboard = useCallback(() => {
@@ -217,8 +174,6 @@ export default function DashboardView(): React.JSX.Element {
 
   const drainStatus = useDrainStatus()
 
-  // successTrendData now comes from useDashboardDataStore above
-
   const transition = reduced ? REDUCED_TRANSITION : SPRINGS.snappy
 
   return (
@@ -267,14 +222,26 @@ export default function DashboardView(): React.JSX.Element {
               localAgents={localAgents}
               onReviewAll={() => {
                 setView('code-review')
-                handleDismissBriefing()
+                dismissBriefing()
               }}
-              onDismiss={handleDismissBriefing}
+              onDismiss={dismissBriefing}
             />
           )}
 
-          {/* 3-column Ops Deck grid or onboarding */}
-          {tasks.length === 0 ? (
+          {/* 3-column Ops Deck grid, or error/onboarding state */}
+          {loadError ? (
+            <div className="dashboard-onboarding" role="alert">
+              <NeonCard accent="cyan" title="Sprint data unavailable">
+                <div className="dashboard-onboarding__content">
+                  <AlertTriangle size={16} style={{ color: 'var(--fleet-danger)' }} />
+                  <p className="dashboard-onboarding__text">{loadError}</p>
+                  <button className="dashboard-onboarding__cta" onClick={() => loadSprintData()}>
+                    Retry
+                  </button>
+                </div>
+              </NeonCard>
+            </div>
+          ) : tasks.length === 0 ? (
             <div className="dashboard-onboarding">
               <NeonCard accent="cyan" title="Welcome to FLEET">
                 <div className="dashboard-onboarding__content">
@@ -314,6 +281,8 @@ export default function DashboardView(): React.JSX.Element {
                   tokenAvg={tokenAvg}
                   cardErrors={cardErrors}
                   onFilterClick={navigateToSprintWithFilter}
+                  onRetry={fetchDashboardData}
+                  onRetryLoad={fetchLoadAverage}
                 />
 
                 <ActivitySection
@@ -326,6 +295,7 @@ export default function DashboardView(): React.JSX.Element {
                   taskTokenMap={taskTokenMap}
                   onFeedEventClick={() => setView('agents')}
                   onCompletionClick={handleCompletionClick}
+                  onRetry={fetchDashboardData}
                 />
               </div>
             </>

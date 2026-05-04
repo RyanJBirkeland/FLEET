@@ -2,14 +2,15 @@ import { NeonCard, SankeyPipeline, MiniChart, type ChartBar, type SankeyStageKey
 import { ThroughputChart } from './ThroughputChart'
 import { SuccessRateChart } from './SuccessRateChart'
 import { LoadAverageChart } from './LoadAverageChart'
+import { DashboardErrorCard } from './DashboardErrorCard'
 import type {
   CompletionBucket,
   LoadSnapshot,
   DailySuccessRate
 } from '../../../../shared/ipc-channels'
 import type { StatusFilter } from '../../stores/sprintFilters'
+import type { DashboardStats } from '../../lib/dashboard-types'
 import { Activity, Zap, TrendingUp, Cpu, Coins } from 'lucide-react'
-import { useDashboardDataStore } from '../../stores/dashboardData'
 import './CenterColumn.css'
 
 /** Translates Sankey stage keys to sprint domain StatusFilter values. */
@@ -20,17 +21,6 @@ const STAGE_TO_FILTER: Record<SankeyStageKey, StatusFilter> = {
   done: 'done',
   blocked: 'blocked',
   failed: 'failed'
-}
-
-interface DashboardStats {
-  active: number
-  queued: number
-  blocked: number
-  review: number
-  done: number
-  doneToday: number
-  failed: number
-  actualFailed: number
 }
 
 interface CenterColumnProps {
@@ -51,23 +41,8 @@ interface CenterColumnProps {
   tokenAvg: string | null
   cardErrors: Record<string, string | undefined>
   onFilterClick: (filter: StatusFilter) => void
-}
-
-function ErrorCard({
-  message,
-  onRetry
-}: {
-  message: string
   onRetry: () => void
-}): React.JSX.Element {
-  return (
-    <div className="dashboard-card-error">
-      <div className="dashboard-card-error__message">{message}</div>
-      <button className="dashboard-card-error__retry" onClick={onRetry}>
-        Retry
-      </button>
-    </div>
-  )
+  onRetryLoad: () => void
 }
 
 /** Center column with pipeline and charts. */
@@ -79,10 +54,10 @@ export function CenterColumn({
   tokenTrendData,
   tokenAvg,
   cardErrors,
-  onFilterClick
+  onFilterClick,
+  onRetry,
+  onRetryLoad
 }: CenterColumnProps): React.JSX.Element {
-  const retry = (): Promise<void> => useDashboardDataStore.getState().fetchAll()
-  const retryLoad = (): Promise<void> => useDashboardDataStore.getState().fetchLoad()
 
   return (
     <div className="dashboard-col dashboard-col--center">
@@ -102,7 +77,7 @@ export function CenterColumn({
 
       <NeonCard accent="cyan" title="Throughput · last 24h" icon={<Zap size={12} />}>
         {cardErrors.throughput ? (
-          <ErrorCard message={cardErrors.throughput} onRetry={retry} />
+          <DashboardErrorCard message={cardErrors.throughput} onRetry={onRetry} />
         ) : (
           <ThroughputChart data={throughputData} />
         )}
@@ -110,7 +85,7 @@ export function CenterColumn({
 
       <NeonCard accent="cyan" title="Success rate · last 14d" icon={<TrendingUp size={12} />}>
         {cardErrors.successTrend ? (
-          <ErrorCard message={cardErrors.successTrend} onRetry={retry} />
+          <DashboardErrorCard message={cardErrors.successTrend} onRetry={onRetry} />
         ) : (
           <SuccessRateChart data={successTrendData} />
         )}
@@ -119,11 +94,11 @@ export function CenterColumn({
       <div data-chart="load-average">
         <NeonCard accent="cyan" title="System load · last 10m" icon={<Cpu size={12} />}>
           {cardErrors.loadAverage ? (
-            <ErrorCard message={cardErrors.loadAverage} onRetry={retryLoad} />
+            <DashboardErrorCard message={cardErrors.loadAverage} onRetry={onRetryLoad} />
           ) : loadData ? (
             <LoadAverageChart samples={loadData.samples} cpuCount={loadData.cpuCount} />
           ) : (
-            <div style={{ color: 'var(--fleet-text-dim)', fontSize: 10, padding: 12 }}>
+            <div role="status" style={{ color: 'var(--fleet-text-dim)', fontSize: 10, padding: 12 }}>
               Loading...
             </div>
           )}

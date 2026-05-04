@@ -10,16 +10,20 @@ vi.mock('../useBackoffInterval', () => ({
 
 // Mock the dashboardData store
 const mockFetchAll = vi.fn().mockResolvedValue(undefined)
+const mockFetchLoad = vi.fn().mockResolvedValue(undefined)
 
 vi.mock('../../stores/dashboardData', () => {
-  const store = vi.fn((sel: (s: unknown) => unknown) => sel({ fetchAll: mockFetchAll }))
-  ;(store as any).getState = () => ({ fetchAll: mockFetchAll })
+  const store = vi.fn((sel: (s: unknown) => unknown) =>
+    sel({ fetchAll: mockFetchAll, fetchLoad: mockFetchLoad })
+  )
+  ;(store as any).getState = () => ({ fetchAll: mockFetchAll, fetchLoad: mockFetchLoad })
   return { useDashboardDataStore: store }
 })
 
 describe('useDashboardPolling', () => {
   beforeEach(() => {
     mockFetchAll.mockClear()
+    mockFetchLoad.mockClear()
     mockUseBackoffInterval.mockClear()
     vi.mocked(window.api.sprint.onExternalChange).mockReturnValue(() => {})
   })

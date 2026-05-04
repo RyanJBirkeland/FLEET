@@ -1,5 +1,6 @@
 export { ActivitySection } from './ActivitySection'
 export { CenterColumn } from './CenterColumn'
+export { DashboardErrorCard } from './DashboardErrorCard'
 export { MorningBriefing } from './MorningBriefing'
 export { ThroughputChart } from './ThroughputChart'
 export { SuccessRateChart } from './SuccessRateChart'

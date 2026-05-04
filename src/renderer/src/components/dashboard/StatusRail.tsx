@@ -1,16 +1,7 @@
 import type React from 'react'
+import type { DashboardStats } from '../../lib/dashboard-types'
+import { formatTokensCompact } from '../../lib/format'
 import './StatusRail.css'
-
-interface DashboardStats {
-  active: number
-  queued: number
-  blocked: number
-  review: number
-  done: number
-  doneToday: number
-  failed: number
-  actualFailed: number
-}
 
 type RailFilter = 'active' | 'queued' | 'done'
 
@@ -19,12 +10,6 @@ interface StatusRailProps {
   tokens24h: number
   onFilterClick: (filter: RailFilter) => void
   onNewTaskClick: () => void
-}
-
-function formatTokensCompact(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return n.toLocaleString()
 }
 
 interface Tile {
@@ -127,8 +112,8 @@ export function StatusRail({
         type="button"
         onClick={onNewTaskClick}
         style={{
-          background: 'rgba(56, 189, 248, 0.12)',
-          border: '1px dashed #38bdf8',
+          background: 'var(--fleet-accent-surface)',
+          border: '1px dashed var(--fleet-accent)',
           color: 'var(--fleet-accent)',
           padding: 8,
           borderRadius: 5,

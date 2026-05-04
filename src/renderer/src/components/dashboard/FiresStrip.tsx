@@ -97,7 +97,7 @@ export function FiresStrip({
 
   return (
     <div role="region" aria-label="Dashboard alerts" className="fires-strip">
-      <strong style={{ marginRight: 6 }}>⚠ ATTENTION</strong>
+      <strong style={{ marginRight: 6 }}><span aria-hidden="true">⚠</span> ATTENTION</strong>
       {withSeparators}
     </div>
   )

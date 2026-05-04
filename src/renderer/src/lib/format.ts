@@ -76,6 +76,16 @@ export function formatTokens(n: number | null | undefined): string {
 }
 
 /**
+ * Format token count to compact form without null-safety: 1234567 → "1.2M", 45200 → "45.2K".
+ * Intended for non-nullable values already known to be numbers (e.g. aggregated totals).
+ */
+export function formatTokensCompact(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
+  return n.toLocaleString()
+}
+
+/**
  * Short model badge label: "claude-sonnet-4-5-20250929" → "sonnet".
  */
 export function modelBadgeLabel(model: string): string {

@@ -5,27 +5,11 @@ import { useCostDataStore } from '../stores/costData'
 import { useDashboardDataStore } from '../stores/dashboardData'
 import type { ChartBar } from '../components/neon'
 import type { SprintTask } from '../../../shared/types'
+import type { DashboardStats } from '../lib/dashboard-types'
+import { formatTokensCompact } from '../lib/format'
 
 /** 1 hour — matches agent-manager watchdog default */
 export const DEFAULT_STUCK_MS = 60 * 60 * 1000
-
-interface DashboardStats {
-  active: number
-  queued: number
-  blocked: number
-  review: number
-  done: number
-  doneToday: number
-  failed: number
-  actualFailed: number
-}
-
-/** Format token count to compact form (e.g. 1.2M, 45.2K). */
-function formatTokensCompact(n: number): string {
-  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
-  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`
-  return n.toLocaleString()
-}
 
 interface DashboardMetrics {
   stats: DashboardStats
