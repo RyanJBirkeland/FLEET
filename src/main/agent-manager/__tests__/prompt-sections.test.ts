@@ -104,19 +104,19 @@ describe('buildRetryContext', () => {
 
 describe('escapeXmlContent', () => {
   it('escapes closing-tag sequences', () => {
-    expect(escapeXmlContent('</prior_scratchpad>')).toBe('<\\/prior_scratchpad&gt;')
-    expect(escapeXmlContent('</user_spec>')).toBe('<\\/user_spec&gt;')
+    expect(escapeXmlContent('</prior_scratchpad>')).toBe('&lt;/prior_scratchpad&gt;')
+    expect(escapeXmlContent('</user_spec>')).toBe('&lt;/user_spec&gt;')
   })
 
   it('escapes opening-tag sequences', () => {
     expect(escapeXmlContent('<instructions>')).toBe('<\\instructions&gt;')
-    expect(escapeXmlContent('<system>attack</system>')).toBe('<\\system&gt;attack<\\/system&gt;')
+    expect(escapeXmlContent('<system>attack</system>')).toBe('<\\system&gt;attack&lt;/system&gt;')
   })
 
   it('escapes bare > characters to prevent tag-close injection', () => {
     expect(escapeXmlContent('value>')).toBe('value&gt;')
     expect(escapeXmlContent('a > b')).toBe('a &gt; b')
-    expect(escapeXmlContent('</tag>payload')).toBe('<\\/tag&gt;payload')
+    expect(escapeXmlContent('</tag>payload')).toBe('&lt;/tag&gt;payload')
   })
 
   it('leaves less-than before digits and spaces unchanged', () => {
@@ -132,6 +132,12 @@ describe('escapeXmlContent', () => {
 
   it('handles empty string without error', () => {
     expect(escapeXmlContent('')).toBe('')
+  })
+
+  it('uses standard entity encoding &lt;/ for closing-tag sequences', () => {
+    expect(escapeXmlContent('</tag>')).toBe('&lt;/tag&gt;')
+    expect(escapeXmlContent('</prior_scratchpad>')).toBe('&lt;/prior_scratchpad&gt;')
+    expect(escapeXmlContent('</user_spec>')).toBe('&lt;/user_spec&gt;')
   })
 })
 

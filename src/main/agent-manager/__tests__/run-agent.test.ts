@@ -9,7 +9,8 @@ import {
   assembleRunContext,
   fetchUpstreamContext,
   readPriorScratchpad,
-  consumeMessages
+  consumeMessages,
+  filterToExistingBaseFiles as _filterToExistingBaseFiles
 } from '../run-agent'
 import {
   detectHtmlWrite,
@@ -1206,5 +1207,73 @@ describe('runAgent — stream error: structured event emission', () => {
       type: 'agent:error',
       message: 'Stream interrupted: EPIPE: broken pipe'
     })
+  })
+})
+
+describe('filterToExistingBaseFiles — T-11 path traversal validation', () => {
+  it('rejects paths containing ".." (path traversal attempt)', async () => {
+    const mockExecFileAsync = vi.mocked(
+      (await import('../../lib/async-utils')).execFileAsync
+    )
+    // If the path were allowed through, git cat-file would be called.
+    // It must NOT be called for traversal paths.
+    mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' })
+
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const result = await _filterToExistingBaseFiles(
+      ['../../../etc/passwd', 'src/valid-file.ts'],
+      '/some/worktree',
+      'main',
+      {},
+      logger
+    )
+
+    // The traversal path must be excluded from the result
+    expect(result).not.toContain('../../../etc/passwd')
+    // The logger must warn about the rejected path
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('../../../etc/passwd'))
+  })
+
+  it('rejects absolute paths (not relative to repo root)', async () => {
+    const mockExecFileAsync = vi.mocked(
+      (await import('../../lib/async-utils')).execFileAsync
+    )
+    mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' })
+
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const result = await _filterToExistingBaseFiles(
+      ['/etc/passwd', 'src/valid-file.ts'],
+      '/some/worktree',
+      'main',
+      {},
+      logger
+    )
+
+    expect(result).not.toContain('/etc/passwd')
+    expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('/etc/passwd'))
+  })
+
+  it('allows safe relative paths through to git cat-file', async () => {
+    const mockExecFileAsync = vi.mocked(
+      (await import('../../lib/async-utils')).execFileAsync
+    )
+    // git cat-file succeeds for safe path
+    mockExecFileAsync.mockResolvedValue({ stdout: '', stderr: '' })
+
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn() }
+    const result = await _filterToExistingBaseFiles(
+      ['src/components/Button.tsx'],
+      '/some/worktree',
+      'main',
+      {},
+      logger
+    )
+
+    expect(result).toContain('src/components/Button.tsx')
+    expect(mockExecFileAsync).toHaveBeenCalledWith(
+      'git',
+      expect.arrayContaining(['cat-file', '-e', expect.stringContaining('src/components/Button.tsx')]),
+      expect.anything()
+    )
   })
 })

@@ -100,4 +100,31 @@ describe('isInsideAllowedWorktreeBase symlink defense', () => {
     ).rejects.toThrow(/Refusing to spawn agent/)
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining('realpath failed'))
   })
+
+  it('T-27: error message for non-existent cwd mentions "does not exist" or "not accessible", not just "not inside"', async () => {
+    // Operators should know immediately whether the worktree was never set up
+    // vs whether a path-traversal attempt was blocked.
+    const worktreeBase = join(scratchRoot, 'worktrees')
+    mkdirSync(worktreeBase, { recursive: true })
+    const missingCwd = join(worktreeBase, 'never-created')
+
+    const logger = { warn: vi.fn(), info: vi.fn(), error: vi.fn(), debug: vi.fn(), event: vi.fn() }
+
+    let thrownError: Error | undefined
+    try {
+      await spawnAgent({
+        prompt: 'test',
+        cwd: missingCwd,
+        model: DEFAULT_MODEL,
+        pipelineTuning: { maxTurns: 20 },
+        worktreeBase,
+        logger
+      })
+    } catch (err) {
+      thrownError = err as Error
+    }
+
+    expect(thrownError).toBeDefined()
+    expect(thrownError!.message).toMatch(/does not exist|not accessible/)
+  })
 })

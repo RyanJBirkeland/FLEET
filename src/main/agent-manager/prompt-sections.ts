@@ -125,13 +125,16 @@ export function truncateSpec(spec: string, maxChars: number): string {
  * Escapes XML tag sequences that could break boundary tag containment.
  * Full XML entity encoding is intentionally avoided — it would corrupt diff content
  * (e.g. `<` in diff hunks becoming `&lt;`). Three patterns are escaped:
- *   `</` → `<\/`  (closing-tag injection)
- *   `<[a-zA-Z]` → `<\[a-zA-Z]`  (opening-tag construction)
+ *   `</` → `&lt;/`  (closing-tag injection — standard entity encoding, unambiguous)
+ *   `<[a-zA-Z]` → `<\[a-zA-Z]`  (opening-tag construction — backslash escape)
  *   `>` → `&gt;`  (prevents tag-close sequence after escaped content)
  * `<` before digits, spaces, or end-of-string is left untouched to preserve diff output.
  */
 export function escapeXmlContent(content: string): string {
-  return content.replace(/<(?=[a-zA-Z/])/g, '<\\').replace(/>/g, '&gt;')
+  return content
+    .replace(/<\//g, '&lt;/') // closing tags: entity-encoded (unambiguous regardless of tokenizer)
+    .replace(/<(?=[a-zA-Z])/g, '<\\') // opening tags: backslash escape
+    .replace(/>/g, '&gt;')
 }
 
 /**

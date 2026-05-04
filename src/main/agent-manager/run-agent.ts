@@ -470,11 +470,23 @@ async function detectMissingSpecFiles(
 }
 
 /**
+ * Returns true when `file` is a safe relative path — no `..` components
+ * (path traversal) and not an absolute path. Only relative paths rooted
+ * inside the repo can be safely passed to `git cat-file`.
+ */
+function isRelativeSafePath(file: string): boolean {
+  return !file.includes('..') && !file.startsWith('/')
+}
+
+/**
  * Filters a list of file paths to only those that exist on origin/<defaultBranch>.
  * Files absent from the base branch are new files the agent is creating —
  * we cannot enforce their exact names since the agent picks the convention.
+ *
+ * Paths containing `..` or starting with `/` are rejected before reaching git
+ * to prevent path traversal attacks via a maliciously crafted task spec.
  */
-async function filterToExistingBaseFiles(
+export async function filterToExistingBaseFiles(
   files: string[],
   worktreePath: string,
   defaultBranch: string,
@@ -483,6 +495,10 @@ async function filterToExistingBaseFiles(
 ): Promise<string[]> {
   const results = await Promise.all(
     files.map(async (file) => {
+      if (!isRelativeSafePath(file)) {
+        logger.warn(`filterToExistingBaseFiles: rejecting unsafe path "${file}" (contains ".." or is absolute) — skipping`)
+        return null
+      }
       try {
         await execFileAsync('git', ['cat-file', '-e', `origin/${defaultBranch}:${file}`], {
           cwd: worktreePath,

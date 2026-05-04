@@ -173,12 +173,16 @@ export function buildNoCommitsRevisionFeedback(lastAgentOutput: string): Revisio
  * Escapes XML tag sequences in content destined for an XML boundary tag.
  * Kept local to avoid a circular import with prompt-sections.ts (which imports
  * from this file). Matches the canonical escapeXmlContent in prompt-sections.ts:
- *   `</` and `<[a-zA-Z]` → `<\` (closing-tag and opening-tag injection)
+ *   `</` → `&lt;/`  (closing-tag injection — standard entity encoding)
+ *   `<[a-zA-Z]` → `<\[a-zA-Z]`  (opening-tag construction — backslash escape)
  *   `>` → `&gt;` (prevents tag-close sequences after escaped content)
  * `<` before digits, spaces, or end-of-string is left untouched to preserve diff output.
  */
 function escapeXmlContent(content: string): string {
-  return content.replace(/<(?=[a-zA-Z/])/g, '<\\').replace(/>/g, '&gt;')
+  return content
+    .replace(/<\//g, '&lt;/') // closing tags: entity-encoded
+    .replace(/<(?=[a-zA-Z])/g, '<\\') // opening tags: backslash escape
+    .replace(/>/g, '&gt;')
 }
 
 /**

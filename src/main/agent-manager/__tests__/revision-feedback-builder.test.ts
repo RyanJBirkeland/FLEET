@@ -280,7 +280,7 @@ describe('renderRevisionFeedbackBlock', () => {
     const block = renderRevisionFeedbackBlock(feedback)
 
     expect(block).not.toContain('</revision_feedback>INJECTED')
-    expect(block).toContain('<\\/revision_feedback&gt;')
+    expect(block).toContain('&lt;/revision_feedback&gt;')
   })
 
   it('escapes opening XML tags in diagnostic messages to prevent injection', () => {

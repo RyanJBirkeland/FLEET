@@ -32,12 +32,27 @@ export function withMaxOldSpaceOption(existing: string | undefined, maxOldSpaceM
   return `${existing} ${flag}`
 }
 
+/**
+ * Validates that `model` is a known safe claude-* identifier.
+ * Rejects empty strings, flag-like values (starting with --), and any
+ * identifier that doesn't match the expected Claude model naming convention.
+ */
+function isValidModelId(model: string): boolean {
+  return /^claude-[a-z0-9-]+$/.test(model)
+}
+
 export function spawnViaCli(
   opts: { prompt: string; cwd: string; model: string; maxBudgetUsd?: number | undefined },
   env: NodeJS.ProcessEnv,
   token: string | null,
   _logger?: unknown
 ): AgentHandle {
+  if (!isValidModelId(opts.model)) {
+    throw new Error(
+      `Invalid model ID "${opts.model}": expected a claude-* identifier (e.g. claude-opus-4-5)`
+    )
+  }
+
   // Set ANTHROPIC_API_KEY in env for CLI (CLI doesn't support auth parameter)
   if (token) {
     env = { ...env, ANTHROPIC_API_KEY: token }

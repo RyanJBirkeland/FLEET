@@ -98,7 +98,8 @@ function matchLegacyTopLevelToolResult(
   if (sdkMsg.type !== 'tool_result' && sdkMsg.type !== 'result') return null
   const toolName = sdkMsg.tool_name ?? sdkMsg.name ?? ''
   if (toolName.toLowerCase() !== 'write') return null
-  const filePath = sdkMsg.input?.file_path as string | undefined
+  const rawFilePath = sdkMsg.input?.file_path
+  const filePath = typeof rawFilePath === 'string' ? rawFilePath : undefined
   return buildWriteResult(filePath)
 }
 
@@ -132,14 +133,16 @@ function resolvePlaygroundWriteForTool(
   input: Record<string, unknown>
 ): PlaygroundWriteResult | null {
   if (toolName === 'write') {
-    return buildWriteResult(input.file_path as string | undefined)
+    const rawPath = input.file_path
+    return buildWriteResult(typeof rawPath === 'string' ? rawPath : undefined)
   }
   if (toolName === 'edit') {
-    const filePath = (input.filePath ?? input.file_path) as string | undefined
-    return buildWriteResult(filePath)
+    const raw = input.filePath ?? input.file_path
+    return buildWriteResult(typeof raw === 'string' ? raw : undefined)
   }
   if (toolName === 'apply_patch') {
-    return extractNewFileFromPatch(input.patchText as string | undefined)
+    const rawPatchText = input.patchText
+    return extractNewFileFromPatch(typeof rawPatchText === 'string' ? rawPatchText : undefined)
   }
   return null
 }
@@ -210,6 +213,13 @@ export interface PlaygroundEmitRequest {
   logger: Logger
   contentType?: PlaygroundContentType
   /**
+   * Pre-resolved canonical worktree path. When provided, the worktree
+   * `realpath()` call is skipped — callers that spawn many playground events
+   * per session can resolve once and pass the result here to avoid redundant
+   * syscalls.
+   */
+  resolvedWorktreePath?: string
+  /**
    * Skip the worktree containment check. Adhoc/assistant agents set this
    * because the user directly controls the session and may ask the agent to
    * render files outside the worktree (e.g. /tmp scratch files). DOMPurify
@@ -233,12 +243,16 @@ export async function tryEmitPlaygroundEvent(request: PlaygroundEmitRequest): Pr
     worktreePath,
     logger,
     contentType = 'html',
+    resolvedWorktreePath,
     allowAnyPath = false
   } = request
   try {
     // Resolve absolute path
     const absolutePath = filePath.startsWith('/') ? filePath : join(worktreePath, filePath)
 
+    // resolvedPath is the canonical path after following all symlinks — used for
+    // containment checks, stat, and readFile to close the TOCTOU race window
+    // between path resolution and I/O.
     const resolvedPath = await realpath(absolutePath).catch(() => null)
     if (!resolvedPath) {
       logger.warn(`[playground] Path does not exist: ${filePath}`)
@@ -246,7 +260,9 @@ export async function tryEmitPlaygroundEvent(request: PlaygroundEmitRequest): Pr
     }
 
     if (!allowAnyPath) {
-      const resolvedWorktree = await realpath(worktreePath).catch(() => null)
+      // Use pre-resolved worktree path when available to skip a redundant realpath call.
+      const resolvedWorktree =
+        resolvedWorktreePath ?? (await realpath(worktreePath).catch(() => null))
       if (!resolvedWorktree) {
         logger.warn(`[playground] Worktree path does not exist: ${worktreePath}`)
         return
@@ -259,9 +275,9 @@ export async function tryEmitPlaygroundEvent(request: PlaygroundEmitRequest): Pr
       }
     }
 
-    // Check file size — race against timeout in case of filesystem stall
+    // Check file size using the resolved path — avoids TOCTOU between resolution and I/O.
     const stats = await withTimeout(
-      stat(absolutePath),
+      stat(resolvedPath),
       PLAYGROUND_IO_TIMEOUT_MS,
       `stat(${filePath})`
     )
@@ -270,9 +286,9 @@ export async function tryEmitPlaygroundEvent(request: PlaygroundEmitRequest): Pr
       return
     }
 
-    // Read and sanitize file content — race against timeout
+    // Read and sanitize file content using the resolved path.
     const rawContent = await withTimeout(
-      readFile(absolutePath, 'utf-8'),
+      readFile(resolvedPath, 'utf-8'),
       PLAYGROUND_IO_TIMEOUT_MS,
       `readFile(${filePath})`
     )
@@ -288,7 +304,8 @@ export async function tryEmitPlaygroundEvent(request: PlaygroundEmitRequest): Pr
       return // Drop event — never broadcast unsanitized content
     }
 
-    const filename = basename(absolutePath)
+    // Use basename of the resolved (canonical) path — the file we actually read.
+    const filename = basename(resolvedPath)
 
     const event: AgentEvent = {
       type: 'agent:playground',

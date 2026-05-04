@@ -1,5 +1,14 @@
-import { describe, it, expect } from 'vitest'
-import { withMaxOldSpaceOption, AGENT_PROCESS_MAX_OLD_SPACE_MB } from '../spawn-cli'
+import { describe, it, expect, vi } from 'vitest'
+import { withMaxOldSpaceOption, AGENT_PROCESS_MAX_OLD_SPACE_MB, spawnViaCli } from '../spawn-cli'
+
+vi.mock('node:child_process', () => ({
+  spawn: vi.fn(() => ({
+    stderr: { on: vi.fn(), setMaxListeners: vi.fn() },
+    stdin: { write: vi.fn() },
+    stdout: { [Symbol.asyncIterator]: async function* () {} },
+    on: vi.fn()
+  }))
+}))
 
 describe('withMaxOldSpaceOption', () => {
   it('adds flag when NODE_OPTIONS is undefined', () => {
@@ -52,5 +61,67 @@ describe('withMaxOldSpaceOption', () => {
 describe('AGENT_PROCESS_MAX_OLD_SPACE_MB', () => {
   it('is 1024', () => {
     expect(AGENT_PROCESS_MAX_OLD_SPACE_MB).toBe(1024)
+  })
+})
+
+describe('spawnViaCli — model ID validation (T-34)', () => {
+  it('does not throw for a valid claude-* model ID', () => {
+    expect(() =>
+      spawnViaCli(
+        { prompt: 'test', cwd: '/tmp', model: 'claude-opus-4-5' },
+        {},
+        null
+      )
+    ).not.toThrow()
+  })
+
+  it('does not throw for claude-sonnet-4-6', () => {
+    expect(() =>
+      spawnViaCli(
+        { prompt: 'test', cwd: '/tmp', model: 'claude-sonnet-4-6' },
+        {},
+        null
+      )
+    ).not.toThrow()
+  })
+
+  it('throws for a model ID starting with -- (flag injection attempt)', () => {
+    expect(() =>
+      spawnViaCli(
+        { prompt: 'test', cwd: '/tmp', model: '--print /etc/passwd' },
+        {},
+        null
+      )
+    ).toThrow(/Invalid model ID/)
+  })
+
+  it('throws for an empty model ID', () => {
+    expect(() =>
+      spawnViaCli(
+        { prompt: 'test', cwd: '/tmp', model: '' },
+        {},
+        null
+      )
+    ).toThrow(/Invalid model ID/)
+  })
+
+  it('throws for a model ID that does not start with claude-', () => {
+    expect(() =>
+      spawnViaCli(
+        { prompt: 'test', cwd: '/tmp', model: 'gpt-4o' },
+        {},
+        null
+      )
+    ).toThrow(/Invalid model ID/)
+  })
+
+  it('throws for a model ID with spaces', () => {
+    expect(() =>
+      spawnViaCli(
+        { prompt: 'test', cwd: '/tmp', model: 'claude opus 4' },
+        {},
+        null
+      )
+    ).toThrow(/Invalid model ID/)
   })
 })

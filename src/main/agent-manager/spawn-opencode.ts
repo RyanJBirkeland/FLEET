@@ -53,10 +53,13 @@ export async function spawnOpencode(opts: OpencodeSpawnOptions): Promise<AgentHa
 }
 
 function buildArgs(opts: OpencodeSpawnOptions): string[] {
-  const args = ['run', opts.prompt, '--format', 'json', '--dir', opts.cwd, '--model', opts.model]
+  const args = ['run', '--format', 'json', '--dir', opts.cwd, '--model', opts.model]
   if (opts.sessionId) {
     args.push('--session', opts.sessionId)
   }
+  // -- terminates option parsing; prompt passed as positional data so
+  // flag-like content (e.g. "--model foo") cannot be misread as a CLI flag.
+  args.push('--', opts.prompt)
   return args
 }
 

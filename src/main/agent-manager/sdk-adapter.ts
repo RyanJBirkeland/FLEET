@@ -26,31 +26,6 @@ import { createEpicGroupService, type EpicGroupService } from '../services/epic-
 const moduleLogger = createLogger('sdk-adapter')
 
 /**
- * Pipeline agents must only spawn with a `cwd` inside a FLEET-managed worktree
- * base. Any other cwd — the main repo, /tmp, or the user's home — means the
- * agent would write directly to a location that should be isolated from the
- * main checkout. This is the last-chance check before the SDK / CLI actually
- * starts the process.
- *
- * The allowlist is derived from the caller's `AgentManagerConfig.worktreeBase`
- * (threaded through spawnAgent's options) so users who override the worktree
- * base in Settings are not rejected by a module-scope default snapshot.
- *
- * Defense-in-depth: both sides of the prefix compare are normalized via
- * `realpathSync` so a symlink anywhere along either path cannot smuggle a
- * physical location outside the base into a string that textually starts with
- * the base. A `realpathSync` failure (e.g. ENOENT for a not-yet-existent cwd)
- * fails closed — the spawn is refused.
- */
-function isInsideAllowedWorktreeBase(cwd: string, worktreeBase: string, logger?: Logger): boolean {
-  const physicalCwd = resolvePhysicalPath(cwd, logger)
-  if (physicalCwd === null) return false
-  const physicalBase = resolvePhysicalPath(worktreeBase, logger)
-  if (physicalBase === null) return false
-  return physicalCwd.startsWith(physicalBase + '/')
-}
-
-/**
  * Returns the canonical filesystem path for `path` (symlinks resolved), or
  * `null` if the path cannot be resolved. Logs the failure context so a
  * misconfigured worktree base is diagnosable.
@@ -67,8 +42,28 @@ function resolvePhysicalPath(path: string, logger?: Logger): string | null {
   }
 }
 
+/**
+ * Refuses to spawn when `cwd` is not inside the configured worktree base.
+ * Distinguishes two failure modes so operators know immediately whether the
+ * worktree was never set up (ENOENT) vs whether a path-traversal attempt was
+ * blocked (path outside base).
+ *
+ * Defense-in-depth: both sides of the prefix compare are normalized via
+ * `realpathSync` so a symlink whose target points outside the base cannot pass
+ * the lexical-prefix check. Allowlist derived from `AgentManagerConfig.worktreeBase`
+ * so users who override the path in Settings are not rejected by a stale default.
+ */
 function assertCwdIsInsideWorktreeBase(cwd: string, worktreeBase: string, logger?: Logger): void {
-  if (!isInsideAllowedWorktreeBase(cwd, worktreeBase, logger)) {
+  const physicalCwd = resolvePhysicalPath(cwd, logger)
+  if (physicalCwd === null) {
+    throw new Error(
+      `Refusing to spawn agent: cwd "${cwd}" could not be resolved — ` +
+        `the worktree does not exist or is not accessible. ` +
+        `Ensure the worktree was created before spawning.`
+    )
+  }
+  const physicalBase = resolvePhysicalPath(worktreeBase, logger)
+  if (physicalBase === null || !physicalCwd.startsWith(physicalBase + '/')) {
     throw new Error(
       `Refusing to spawn agent: cwd "${cwd}" is not inside the configured worktree base (${worktreeBase}). ` +
         `Pipeline agents must only run inside isolated worktrees.`
