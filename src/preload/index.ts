@@ -1,4 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
+import type { BroadcastChannels } from '../shared/ipc-channels/broadcast-channels'
+import { typedInvoke, onBroadcast } from './ipc-helpers'
 import { settings, claudeConfig } from './api-settings'
 import {
   checkInstalled,
@@ -233,6 +235,13 @@ const api = {
 
   // Repository discovery
   repoDiscovery,
+
+  // Auto-updater
+  updates: {
+    checkForUpdates: (): Promise<void> => typedInvoke('updates:checkForUpdates'),
+    install: (): Promise<void> => typedInvoke('updates:install'),
+    onStatus: onBroadcast<BroadcastChannels['updates:status']>('updates:status')
+  },
 
   // MCP server management
   mcp: {
