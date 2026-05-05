@@ -544,6 +544,34 @@ declare global {
         }) => Promise<{ streamId: string }>
         onChatChunk: (listener: (evt: unknown, chunk: ChatChunk) => void) => () => void
         abortChat: (streamId: string) => Promise<void>
+        approveTask: (payload: { taskId: string }) => Promise<IpcResult<'review:approveTask'>>
+      }
+
+      // PR Groups
+      prGroups: {
+        list: (payload: { repo?: string | undefined }) => Promise<IpcResult<'prGroups:list'>>
+        create: (payload: {
+          repo: string
+          title: string
+          branchName: string
+          description?: string | undefined
+        }) => Promise<IpcResult<'prGroups:create'>>
+        update: (payload: {
+          id: string
+          title?: string | undefined
+          branchName?: string | undefined
+          description?: string | undefined
+        }) => Promise<IpcResult<'prGroups:update'>>
+        addTask: (payload: {
+          groupId: string
+          taskId: string
+        }) => Promise<IpcResult<'prGroups:addTask'>>
+        removeTask: (payload: {
+          groupId: string
+          taskId: string
+        }) => Promise<IpcResult<'prGroups:removeTask'>>
+        build: (payload: { id: string }) => Promise<IpcResult<'prGroups:build'>>
+        delete: (payload: { id: string }) => Promise<IpcResult<'prGroups:delete'>>
       }
 
       // Repository discovery
