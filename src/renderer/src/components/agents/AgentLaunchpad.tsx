@@ -1,71 +1,45 @@
-import { useState, useCallback, useEffect } from 'react'
-import './AgentLaunchpad.css'
-import { useLocalAgentsStore } from '../../stores/localAgents'
-import { usePromptTemplatesStore } from '../../stores/promptTemplates'
-import { toast } from '../../stores/toasts'
-import { assemblePrompt } from '../../lib/prompt-assembly'
-import type { PromptTemplate } from '../../lib/launchpad-types'
 import { LaunchpadGrid } from './LaunchpadGrid'
 
 interface AgentLaunchpadProps {
   onAgentSpawned: () => void
+  onCancel?: (() => void) | undefined
 }
 
-export function AgentLaunchpad({ onAgentSpawned }: AgentLaunchpadProps): React.JSX.Element {
-  const [repoPaths, setRepoPaths] = useState<Record<string, string>>({})
-
-  const templates = usePromptTemplatesStore((s) => s.templates)
-  const loadTemplates = usePromptTemplatesStore((s) => s.loadTemplates)
-  const spawnAgent = useLocalAgentsStore((s) => s.spawnAgent)
-  const fetchProcesses = useLocalAgentsStore((s) => s.fetchProcesses)
-  const spawning = useLocalAgentsStore((s) => s.isSpawning)
-
-  useEffect(() => {
-    loadTemplates()
-    window.api.git
-      .getRepoPaths()
-      .then(setRepoPaths)
-      .catch((err) => {
-        console.error('Failed to load repo paths:', err)
-      })
-  }, [loadTemplates])
-
-  const visibleTemplates = templates.filter((t) => !t.hidden)
-
-  const handleSpawn = useCallback(
-    async (prompt: string, repo: string) => {
-      const repoPath = repoPaths[repo.toLowerCase()]
-      if (!repoPath) {
-        toast.error(`Repo path not found for "${repo}"`)
-        return
-      }
-      try {
-        await spawnAgent({ task: prompt, repoPath, assistant: true })
-        fetchProcesses()
-        toast.success('Session started')
-        onAgentSpawned()
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err)
-        toast.error(`Spawn failed: ${message}`)
-      }
-    },
-    [repoPaths, spawnAgent, fetchProcesses, onAgentSpawned]
-  )
-
-  const handleTemplateSpawn = useCallback(
-    (template: PromptTemplate, repo: string) => {
-      const prompt = assemblePrompt(template, {})
-      handleSpawn(prompt, repo)
-    },
-    [handleSpawn]
-  )
-
+export function AgentLaunchpad({
+  onAgentSpawned,
+  onCancel
+}: AgentLaunchpadProps): React.JSX.Element {
   return (
-    <LaunchpadGrid
-      templates={visibleTemplates}
-      onSelectTemplate={handleTemplateSpawn}
-      onCustomPrompt={handleSpawn}
-      spawning={spawning}
-    />
+    <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--s-7) var(--s-9)' }}>
+      <div
+        style={{
+          maxWidth: 720,
+          margin: '0 auto',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--s-5)'
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div className="fleet-eyebrow">SPAWN AGENT</div>
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 22,
+              fontWeight: 500,
+              color: 'var(--fg)',
+              letterSpacing: '-0.01em'
+            }}
+          >
+            New scratchpad agent
+          </h2>
+          <p style={{ margin: 0, fontSize: 13, color: 'var(--fg-3)', lineHeight: 1.5 }}>
+            Runs in an isolated worktree. Not tracked in the sprint pipeline until you promote it.
+          </p>
+        </div>
+
+        <LaunchpadGrid onAgentSpawned={onAgentSpawned} onCancel={onCancel} />
+      </div>
+    </div>
   )
 }

@@ -1,255 +1,292 @@
-import { useState, useCallback, useRef, useEffect } from 'react'
-import './LaunchpadGrid.css'
+import { useState, useCallback, useEffect } from 'react'
+import { useLocalAgentsStore } from '../../stores/localAgents'
+import { usePromptTemplatesStore } from '../../stores/promptTemplates'
+import { toast } from '../../stores/toasts'
+import { assemblePrompt } from '../../lib/prompt-assembly'
 import { useRepoOptions } from '../../hooks/useRepoOptions'
 import type { PromptTemplate } from '../../lib/launchpad-types'
-import type { NeonAccent } from '../neon/types'
-import { Play, ChevronDown } from 'lucide-react'
 
 interface LaunchpadGridProps {
-  templates: PromptTemplate[]
-  onSelectTemplate: (template: PromptTemplate, repo: string) => void
-  onCustomPrompt: (prompt: string, repo: string) => void
-  spawning: boolean
+  onAgentSpawned: () => void
+  onCancel?: (() => void) | undefined
 }
 
-const ACCENT_VARS: Record<
-  NeonAccent,
-  { bg: string; border: string; color: string; glow: string; hover: string }
-> = {
-  cyan: {
-    bg: 'var(--fleet-accent-surface)',
-    border: 'var(--fleet-accent-border)',
-    color: 'var(--fleet-accent)',
-    glow: 'transparent',
-    hover: 'var(--fleet-accent-border)'
-  },
-  pink: {
-    bg: 'var(--fleet-accent-surface)',
-    border: 'var(--fleet-accent-border)',
-    color: 'var(--fleet-status-done)',
-    glow: 'transparent',
-    hover: 'var(--fleet-accent-border)'
-  },
-  blue: {
-    bg: 'var(--fleet-accent-surface)',
-    border: 'var(--fleet-accent-border)',
-    color: 'var(--fleet-status-review)',
-    glow: 'transparent',
-    hover: 'var(--fleet-accent-border)'
-  },
-  purple: {
-    bg: 'var(--fleet-accent-surface)',
-    border: 'var(--fleet-accent-border)',
-    color: 'var(--fleet-status-active)',
-    glow: 'transparent',
-    hover: 'var(--fleet-accent-border)'
-  },
-  orange: {
-    bg: 'var(--fleet-warning-surface)',
-    border: 'var(--fleet-warning-border)',
-    color: 'var(--fleet-warning)',
-    glow: 'transparent',
-    hover: 'var(--fleet-warning-border)'
-  },
-  red: {
-    bg: 'var(--fleet-danger-surface)',
-    border: 'var(--fleet-danger-border)',
-    color: 'var(--fleet-danger)',
-    glow: 'transparent',
-    hover: 'var(--fleet-danger-border)'
-  }
+function FormRow({
+  label,
+  hint,
+  children
+}: {
+  label: string
+  hint?: string
+  children: React.ReactNode
+}): React.JSX.Element {
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+        <span style={{ fontSize: 12, fontWeight: 500, color: 'var(--fg)' }}>{label}</span>
+        {hint && (
+          <span style={{ fontSize: 10, color: 'var(--fg-4)', fontFamily: 'var(--font-mono)' }}>
+            {hint}
+          </span>
+        )}
+      </div>
+      {children}
+    </div>
+  )
 }
 
-export function LaunchpadGrid({
-  templates,
-  onSelectTemplate,
-  onCustomPrompt,
-  spawning
-}: LaunchpadGridProps): React.JSX.Element {
+const selectStyle: React.CSSProperties = {
+  height: 32,
+  background: 'var(--surf-1)',
+  border: '1px solid var(--line)',
+  borderRadius: 'var(--r-md)',
+  padding: '0 var(--s-3)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 12,
+  color: 'var(--fg)',
+  width: '100%',
+  boxSizing: 'border-box'
+}
+
+const textareaStyle: React.CSSProperties = {
+  minHeight: 96,
+  padding: 'var(--s-2) var(--s-3)',
+  background: 'var(--surf-1)',
+  border: '1px solid var(--line)',
+  borderRadius: 'var(--r-md)',
+  fontFamily: 'var(--font-mono)',
+  fontSize: 12,
+  color: 'var(--fg-3)',
+  lineHeight: 1.5,
+  resize: 'vertical',
+  width: '100%',
+  boxSizing: 'border-box'
+}
+
+export function LaunchpadGrid({ onAgentSpawned, onCancel }: LaunchpadGridProps): React.JSX.Element {
   const repos = useRepoOptions()
+
+  const [repoPaths, setRepoPaths] = useState<Record<string, string>>({})
+  const [selectedRepo, setSelectedRepo] = useState('')
+  const [specPath, setSpecPath] = useState('')
   const [prompt, setPrompt] = useState('')
-  const [repo, setRepo] = useState('')
-  const [isRepoDropdownOpen, setIsRepoDropdownOpen] = useState(false)
-  const repoDropdownRef = useRef<HTMLDivElement>(null)
 
-  // Derive effective repo: use selected repo if set, otherwise first available
-  const effectiveRepo = repo || (repos.length > 0 ? (repos[0]?.label ?? '') : '')
+  const templates = usePromptTemplatesStore((s) => s.templates)
+  const loadTemplates = usePromptTemplatesStore((s) => s.loadTemplates)
+  const spawnAgent = useLocalAgentsStore((s) => s.spawnAgent)
+  const fetchProcesses = useLocalAgentsStore((s) => s.fetchProcesses)
+  const spawning = useLocalAgentsStore((s) => s.isSpawning)
 
-  const handleKeyDown = useCallback(
+  const effectiveRepo = selectedRepo || (repos.length > 0 ? (repos[0]?.label ?? '') : '')
+
+  useEffect(() => {
+    loadTemplates()
+    window.api.git
+      .getRepoPaths()
+      .then(setRepoPaths)
+      .catch((err) => {
+        console.error('Failed to load repo paths:', err)
+      })
+  }, [loadTemplates])
+
+  const visibleTemplates = templates.filter((t) => !t.hidden)
+
+  const handleSpawn = useCallback(
+    async (task: string, repo: string) => {
+      const repoPath = repoPaths[repo.toLowerCase()]
+      if (!repoPath) {
+        toast.error(`Repo path not found for "${repo}"`)
+        return
+      }
+      try {
+        await spawnAgent({ task, repoPath, assistant: true })
+        fetchProcesses()
+        toast.success('Session started')
+        onAgentSpawned()
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err)
+        toast.error(`Spawn failed: ${message}`)
+      }
+    },
+    [repoPaths, spawnAgent, fetchProcesses, onAgentSpawned]
+  )
+
+  const handleTemplateSpawn = useCallback(
+    (template: PromptTemplate, repo: string) => {
+      const task = assemblePrompt(template, {})
+      handleSpawn(task, repo)
+    },
+    [handleSpawn]
+  )
+
+  const handlePromptKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
       if (e.key === 'Enter' && !e.shiftKey && prompt.trim()) {
         e.preventDefault()
-        onCustomPrompt(prompt.trim(), effectiveRepo)
+        handleSpawn(prompt.trim(), effectiveRepo)
       }
     },
-    [prompt, effectiveRepo, onCustomPrompt]
+    [prompt, effectiveRepo, handleSpawn]
   )
 
   const handleSubmit = useCallback(() => {
     if (prompt.trim()) {
-      onCustomPrompt(prompt.trim(), effectiveRepo)
+      handleSpawn(prompt.trim(), effectiveRepo)
     }
-  }, [prompt, effectiveRepo, onCustomPrompt])
-
-  const toggleRepoDropdown = useCallback(() => {
-    setIsRepoDropdownOpen((prev) => !prev)
-  }, [])
-
-  const handleSelectRepo = useCallback((repoLabel: string) => {
-    setRepo(repoLabel)
-    setIsRepoDropdownOpen(false)
-  }, [])
-
-  // Auto-focus first option when dropdown opens
-  useEffect(() => {
-    if (isRepoDropdownOpen && repoDropdownRef.current) {
-      const firstOption =
-        repoDropdownRef.current.querySelector<HTMLButtonElement>('[role="option"]')
-      firstOption?.focus()
-    }
-  }, [isRepoDropdownOpen])
-
-  // Keyboard navigation for repo dropdown
-  const handleRepoDropdownKeyDown = useCallback((e: React.KeyboardEvent) => {
-    const dropdown = repoDropdownRef.current
-    if (!dropdown) return
-    const items = Array.from(dropdown.querySelectorAll<HTMLElement>('[role="option"]'))
-    const currentIndex = items.indexOf(e.target as HTMLElement)
-
-    switch (e.key) {
-      case 'ArrowDown': {
-        e.preventDefault()
-        const next = currentIndex < items.length - 1 ? currentIndex + 1 : 0
-        items[next]?.focus()
-        break
-      }
-      case 'ArrowUp': {
-        e.preventDefault()
-        const prev = currentIndex > 0 ? currentIndex - 1 : items.length - 1
-        items[prev]?.focus()
-        break
-      }
-      case 'Enter':
-      case ' ':
-        e.preventDefault()
-        ;(e.target as HTMLElement).click()
-        break
-      case 'Escape':
-        e.preventDefault()
-        setIsRepoDropdownOpen(false)
-        break
-    }
-  }, [])
+  }, [prompt, effectiveRepo, handleSpawn])
 
   return (
-    <div className="launchpad" data-testid="launchpad-grid">
-      {/* Header */}
-      <div className="launchpad__header">
-        <div className="launchpad__header-dot" />
-        <span className="launchpad__header-title">New Session</span>
-        <div className="launchpad__repo-selector">
-          <button
-            type="button"
-            className="launchpad__repo-chip"
-            onClick={toggleRepoDropdown}
-            aria-haspopup="listbox"
-            aria-expanded={isRepoDropdownOpen}
-            aria-label={`Selected repository: ${effectiveRepo}`}
-          >
-            <div className="launchpad__repo-dot" />
-            {effectiveRepo}
-            <ChevronDown size={12} />
-          </button>
-
-          {isRepoDropdownOpen && (
-            <>
-              {/* Backdrop to close on outside click */}
-              <div
-                className="launchpad__repo-dropdown-backdrop"
-                onClick={() => setIsRepoDropdownOpen(false)}
-              />
-              <div
-                ref={repoDropdownRef}
-                role="listbox"
-                aria-label="Repositories"
-                className="launchpad__repo-dropdown"
-                onKeyDown={handleRepoDropdownKeyDown}
-              >
-                {repos.length === 0 ? (
-                  <div className="launchpad__repo-dropdown-empty">No repositories configured</div>
-                ) : (
-                  repos.map((r) => (
-                    <button
-                      key={r.label}
-                      role="option"
-                      tabIndex={-1}
-                      aria-selected={r.label === effectiveRepo}
-                      onClick={() => handleSelectRepo(r.label)}
-                      className={`launchpad__repo-dropdown-option ${r.label === effectiveRepo ? 'launchpad__repo-dropdown-option--current' : ''}`}
-                    >
-                      <div className="launchpad__repo-dot" />
-                      <span className="launchpad__repo-dropdown-option-name">{r.label}</span>
-                    </button>
-                  ))
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="launchpad__section-label">Quick Actions</div>
-      <div className="launchpad__tile-grid">
-        {templates.map((t) => {
-          const vars = ACCENT_VARS[t.accent]
-          return (
+    <div
+      data-testid="launchpad-grid"
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--s-4)',
+        background: 'var(--surf-1)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-lg)',
+        padding: 'var(--s-5)'
+      }}
+    >
+      {/* Quick actions */}
+      <FormRow label="Quick actions">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))',
+            gap: 'var(--s-2)'
+          }}
+        >
+          {visibleTemplates.map((t) => (
             <button
               key={t.id}
               type="button"
-              className="launchpad__tile"
               disabled={spawning}
-              style={
-                {
-                  '--tile-bg': vars.bg,
-                  '--tile-border': vars.border,
-                  '--tile-color': vars.color,
-                  '--tile-glow': vars.glow,
-                  '--tile-hover-border': vars.hover
-                } as React.CSSProperties
-              }
-              onClick={() => onSelectTemplate(t, effectiveRepo)}
+              onClick={() => handleTemplateSpawn(t, effectiveRepo)}
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 'var(--s-1)',
+                padding: 'var(--s-3) var(--s-2)',
+                background: 'var(--surf-2)',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--r-md)',
+                cursor: spawning ? 'default' : 'pointer',
+                opacity: spawning ? 0.4 : 1,
+                textAlign: 'center'
+              }}
             >
-              <div className="launchpad__tile-icon">{t.icon}</div>
-              <div className="launchpad__tile-name">{t.name}</div>
-              <div className="launchpad__tile-desc">{t.description}</div>
+              <span style={{ fontSize: 20 }}>{t.icon}</span>
+              <span style={{ fontSize: 11, fontWeight: 600, color: 'var(--fg)' }}>{t.name}</span>
+              <span style={{ fontSize: 10, color: 'var(--fg-3)' }}>{t.description}</span>
             </button>
-          )
-        })}
-      </div>
+          ))}
+        </div>
+      </FormRow>
 
-      {/* Chat Input */}
-      <div className="launchpad__prompt-bar">
+      {/* Repository */}
+      <FormRow label="Repository">
+        <select
+          style={selectStyle}
+          value={effectiveRepo}
+          onChange={(e) => setSelectedRepo(e.target.value)}
+          aria-label={`Selected repository: ${effectiveRepo}`}
+        >
+          {repos.map((r) => (
+            <option key={r.label} value={r.label}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+      </FormRow>
+
+      {/* Task spec */}
+      <FormRow label="Task spec" hint="step-by-step instructions file in the worktree">
+        <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+          <input
+            type="text"
+            aria-label="Task spec file path"
+            placeholder="path/to/spec.md (optional)"
+            value={specPath}
+            onChange={(e) => setSpecPath(e.target.value)}
+            disabled={spawning}
+            style={{
+              ...selectStyle,
+              flex: 1,
+              height: 32,
+              padding: '0 var(--s-3)',
+              color: specPath ? 'var(--fg)' : 'var(--fg-3)'
+            }}
+          />
+        </div>
+      </FormRow>
+
+      {/* Task prompt */}
+      <FormRow label="Task prompt" hint="opening message sent to the agent">
         <textarea
-          className="launchpad__prompt-input"
+          aria-label="Agent prompt"
           placeholder="What would you like to work on?"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={handleKeyDown}
-          rows={2}
+          onKeyDown={handlePromptKeyDown}
           disabled={spawning}
-          aria-label="Agent prompt"
+          style={textareaStyle}
         />
-        <button
-          type="button"
-          className="launchpad__submit-btn"
-          onClick={handleSubmit}
-          disabled={spawning || !prompt.trim()}
-          aria-label="Run agent with prompt"
-        >
-          <Play size={16} />
-          <span>Run</span>
-        </button>
+      </FormRow>
+
+      {/* Footer */}
+      <div
+        style={{
+          borderTop: '1px solid var(--line)',
+          paddingTop: 'var(--s-3)',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center'
+        }}
+      >
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-4)' }}>
+          scratchpad agents auto-clean after 24h idle
+        </span>
+        <div style={{ display: 'flex', gap: 'var(--s-2)' }}>
+          {onCancel && (
+            <button
+              type="button"
+              onClick={onCancel}
+              style={{
+                height: 30,
+                padding: '0 var(--s-3)',
+                background: 'transparent',
+                border: '1px solid var(--line)',
+                borderRadius: 'var(--r-md)',
+                fontSize: 12,
+                cursor: 'pointer',
+                color: 'var(--fg-2)'
+              }}
+            >
+              Cancel
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={handleSubmit}
+            disabled={spawning}
+            style={{
+              height: 30,
+              padding: '0 var(--s-3)',
+              background: 'var(--accent)',
+              color: 'var(--accent-fg)',
+              border: 'none',
+              borderRadius: 'var(--r-md)',
+              fontSize: 12,
+              fontWeight: 500,
+              cursor: spawning ? 'default' : 'pointer',
+              opacity: spawning ? 0.7 : 1
+            }}
+          >
+            {spawning ? 'Spawning…' : 'Spawn agent ↵'}
+          </button>
+        </div>
       </div>
     </div>
   )
