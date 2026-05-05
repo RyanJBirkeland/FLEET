@@ -1,18 +1,17 @@
 /**
- * AgentConsole — Terminal-style detail pane replacing AgentDetail.
- * Uses virtual scrolling for performance with 500+ events.
+ * AgentConsole — Coordinator for the terminal-style agent detail pane.
+ * Manages state (search, pending messages, playground) and delegates
+ * rendering to AgentConsoleHeader, AgentConsoleStream, and AgentComposer.
  */
-import { useRef, useEffect, useMemo, useState, useCallback } from 'react'
-import { useVirtualizer } from '@tanstack/react-virtual'
-import { ChevronDown, Loader } from 'lucide-react'
+import { useEffect, useMemo, useState, useCallback, startTransition } from 'react'
 import './AgentConsole.css'
 import type { ChatBlock } from '../../lib/pair-events'
 import { pairEvents } from '../../lib/pair-events'
 import { useAgentEventsStore } from '../../stores/agentEvents'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
-import { ConsoleHeader } from './ConsoleHeader'
-import { ConsoleCard } from './cards/ConsoleCard'
-import { CommandBar } from './CommandBar'
+import { AgentConsoleHeader } from './AgentConsoleHeader'
+import { AgentConsoleStream } from './AgentConsoleStream'
+import { AgentComposer } from './AgentComposer'
 import { PlaygroundModal } from './PlaygroundModal'
 import { ConsoleSearchBar } from './ConsoleSearchBar'
 import type { Attachment, PlaygroundContentType } from '../../../../shared/types'
@@ -30,16 +29,13 @@ export function AgentConsole({
   onSteer,
   onCommand
 }: AgentConsoleProps): React.JSX.Element {
-  const parentRef = useRef<HTMLDivElement>(null)
-  const isAtBottomRef = useRef(true)
-  const [showJumpButton, setShowJumpButton] = useState(false)
   const [playgroundBlock, setPlaygroundBlock] = useState<{
     filename: string
     html: string
     contentType: PlaygroundContentType
     sizeBytes: number
   } | null>(null)
-  const [pendingMessages, setPendingMessages] = useState<string[]>([])
+  const [pendingMessages, setPendingMessages] = useState<{ text: string; timestamp: number }[]>([])
 
   // Search state
   const [searchOpen, setSearchOpen] = useState(false)
@@ -54,12 +50,12 @@ export function AgentConsole({
 
   const pairedBlocks = useMemo(() => pairEvents(events), [events])
 
-  // Inject pending messages at the end
+  // Inject pending messages at the end — timestamps captured at send time, not during render
   const blocks = useMemo(() => {
-    const pendingBlocks: ChatBlock[] = pendingMessages.map((text) => ({
+    const pendingBlocks: ChatBlock[] = pendingMessages.map(({ text, timestamp }) => ({
       type: 'user_message',
       text,
-      timestamp: Date.now(),
+      timestamp,
       pending: true
     }))
     return [...pairedBlocks, ...pendingBlocks]
@@ -109,47 +105,19 @@ export function AgentConsole({
     return { matchingIndicesArray: arr, matchingIndicesSet: new Set(arr) }
   }, [blocks, searchQuery, blockMatchesQuery])
 
-  const virtualizer = useVirtualizer({
-    count: blocks.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 60,
-    overscan: 10
-  })
-
-  // Remove pending messages when real user_message events arrive
+  // Remove pending messages when real user_message events arrive.
+  // startTransition defers the state update so it doesn't run synchronously inside the effect.
   useEffect(() => {
     const hasUserMessage = events.some((e) => e.type === 'agent:user_message')
     if (hasUserMessage && pendingMessages.length > 0) {
-      setPendingMessages((prev) => prev.slice(1))
+      startTransition(() => {
+        setPendingMessages((prev) => prev.slice(1))
+      })
     }
   }, [events, pendingMessages.length])
 
-  // Auto-scroll: follow tail when at bottom
-  useEffect(() => {
-    if (isAtBottomRef.current && blocks.length > 0) {
-      virtualizer.scrollToIndex(blocks.length - 1, { align: 'end' })
-    }
-  }, [blocks.length, virtualizer])
-
-  const handleScroll = (): void => {
-    const el = parentRef.current
-    if (!el) return
-    const threshold = 100
-    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold
-    isAtBottomRef.current = atBottom
-    setShowJumpButton(!atBottom && blocks.length > 0)
-  }
-
-  const handleJumpToLatest = (): void => {
-    if (blocks.length > 0) {
-      virtualizer.scrollToIndex(blocks.length - 1, { align: 'end' })
-      isAtBottomRef.current = true
-      setShowJumpButton(false)
-    }
-  }
-
   const handleSteer = (message: string, attachment?: Attachment): void => {
-    setPendingMessages((prev) => [...prev, message])
+    setPendingMessages((prev) => [...prev, { text: message, timestamp: Date.now() }])
     onSteer(message, attachment)
   }
 
@@ -161,19 +129,14 @@ export function AgentConsole({
 
   const handleSearchNext = (): void => {
     if (matchingIndicesArray.length === 0) return
-    const nextIndex = (activeMatchIndex + 1) % matchingIndicesArray.length
-    setActiveMatchIndex(nextIndex)
-    const target = matchingIndicesArray[nextIndex]
-    if (target !== undefined) virtualizer.scrollToIndex(target, { align: 'center' })
+    setActiveMatchIndex((prev) => (prev + 1) % matchingIndicesArray.length)
   }
 
   const handleSearchPrev = (): void => {
     if (matchingIndicesArray.length === 0) return
-    const prevIndex =
-      activeMatchIndex === 0 ? matchingIndicesArray.length - 1 : activeMatchIndex - 1
-    setActiveMatchIndex(prevIndex)
-    const target = matchingIndicesArray[prevIndex]
-    if (target !== undefined) virtualizer.scrollToIndex(target, { align: 'center' })
+    setActiveMatchIndex((prev) =>
+      prev === 0 ? matchingIndicesArray.length - 1 : prev - 1
+    )
   }
 
   const handleSearchClose = (): void => {
@@ -197,13 +160,7 @@ export function AgentConsole({
   if (!agent) {
     return (
       <div className="agent-console">
-        <div
-          style={{
-            padding: '16px',
-            color: 'var(--fleet-text-muted)',
-            textAlign: 'center'
-          }}
-        >
+        <div style={{ padding: 'var(--s-4)', color: 'var(--fg-3)', textAlign: 'center' }}>
           Agent not found
         </div>
       </div>
@@ -212,7 +169,7 @@ export function AgentConsole({
 
   return (
     <div className="agent-console">
-      <ConsoleHeader agent={agent} events={events} />
+      <AgentConsoleHeader agent={agent} events={events} />
 
       {wasEvicted && (
         <div className="console-cap-banner">Older events were trimmed (showing last 2,000)</div>
@@ -230,81 +187,21 @@ export function AgentConsole({
         />
       )}
 
-      <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
-        <div
-          ref={parentRef}
-          onScroll={handleScroll}
-          className="console-body"
-          role="log"
-          aria-label="Agent console output"
-        >
-          {blocks.length > 0 ? (
-            <div
-              style={{
-                height: virtualizer.getTotalSize(),
-                width: '100%',
-                position: 'relative'
-              }}
-            >
-              {virtualizer.getVirtualItems().map((virtualRow) => {
-                const blockIndex = virtualRow.index
-                const isMatch = matchingIndicesSet.has(blockIndex)
-                const isActiveMatch =
-                  isMatch && matchingIndicesArray[activeMatchIndex] === blockIndex
-                const searchHighlight = isActiveMatch ? 'active' : isMatch ? 'match' : undefined
-                const block = blocks[blockIndex]
-                if (!block) return null
+      <AgentConsoleStream
+        blocks={blocks}
+        matchingIndicesSet={matchingIndicesSet}
+        matchingIndicesArray={matchingIndicesArray}
+        activeMatchIndex={activeMatchIndex}
+        onPlaygroundClick={setPlaygroundBlock}
+        isRunning={agent.status === 'running'}
+      />
 
-                return (
-                  <div
-                    key={virtualRow.key}
-                    data-index={virtualRow.index}
-                    ref={virtualizer.measureElement}
-                    style={{
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      width: '100%',
-                      transform: `translateY(${virtualRow.start}px)`
-                    }}
-                  >
-                    <ConsoleCard
-                      block={block}
-                      onPlaygroundClick={setPlaygroundBlock}
-                      searchHighlight={searchHighlight}
-                    />
-                  </div>
-                )
-              })}
-            </div>
-          ) : (
-            <div className="console-empty-state" role="status">
-              {agent.status === 'running' ? (
-                <>
-                  <Loader size={20} className="console-empty-state__spinner" aria-hidden="true" />
-                  <span>Waiting for agent output…</span>
-                </>
-              ) : (
-                <span>No events recorded for this agent</span>
-              )}
-            </div>
-          )}
-        </div>
-
-        {showJumpButton && (
-          <button onClick={handleJumpToLatest} className="console-jump-to-latest">
-            Jump to latest
-            <ChevronDown size={16} />
-          </button>
-        )}
-      </div>
-
-      {/* CommandBar */}
-      <CommandBar
+      <AgentComposer
         onSend={handleSteer}
         onCommand={onCommand}
         disabled={agent.status !== 'running'}
-        disabledReason={agent.status !== 'running' ? 'Agent not running' : undefined}
+        streaming={false}
+        model={agent.model}
       />
 
       {playgroundBlock && (

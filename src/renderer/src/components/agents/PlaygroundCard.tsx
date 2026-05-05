@@ -42,93 +42,27 @@ export function PlaygroundCard({
       aria-label={`Preview ${filename}`}
       data-testid="playground-card"
       className="playground-card"
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: 'var(--fleet-space-3)',
-        width: '100%',
-        maxWidth: '500px',
-        padding: 'var(--fleet-space-3)',
-        borderRadius: 'var(--fleet-radius-md)',
-        cursor: 'pointer',
-        transition: 'var(--fleet-transition-fast)',
-        fontFamily: 'var(--fleet-font-ui)',
-        textAlign: 'left'
-      }}
     >
-      {/* File icon */}
-      <div
-        className="playground-card__icon-box"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: '40px',
-          height: '40px',
-          borderRadius: 'var(--fleet-radius-sm)',
-          flexShrink: 0
-        }}
-      >
+      <div className="playground-card__icon-box">
         <FileCode size={20} className="playground-card__icon" />
       </div>
 
-      {/* Filename and size */}
-      <div style={{ flex: 1, minWidth: 0 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 'var(--fleet-space-2)',
-            overflow: 'hidden'
-          }}
-        >
+      <div className="playground-card__content">
+        <div className="playground-card__filename-row">
           <div
             className="playground-card__filename"
-            style={{
-              fontFamily: 'var(--fleet-font-code)',
-              fontSize: 'var(--fleet-size-sm)',
-              fontWeight: 500,
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              whiteSpace: 'nowrap'
-            }}
+            style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
           >
             {filename}
           </div>
-          <span
-            className="playground-card__content-type-badge"
-            style={{
-              fontSize: 'var(--fleet-size-xs)',
-              flexShrink: 0
-            }}
-          >
+          <span className="playground-card__content-type-badge">
             {CONTENT_TYPE_LABELS[contentType]}
           </span>
         </div>
-        <div
-          className="playground-card__filesize"
-          style={{
-            fontSize: 'var(--fleet-size-xs)',
-            marginTop: 'var(--fleet-space-1)'
-          }}
-        >
-          {formatFileSize(sizeBytes)}
-        </div>
+        <div className="playground-card__filesize">{formatFileSize(sizeBytes)}</div>
       </div>
 
-      {/* Preview hint */}
-      <div
-        className="playground-card__preview-hint"
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 'var(--fleet-space-1)',
-          padding: `${'var(--fleet-space-1)'} ${'var(--fleet-space-2)'}`,
-          borderRadius: 'var(--fleet-radius-sm)',
-          fontSize: 'var(--fleet-size-xs)',
-          flexShrink: 0
-        }}
-      >
+      <div className="playground-card__preview-hint">
         <Eye size={12} />
         <span>Preview</span>
       </div>

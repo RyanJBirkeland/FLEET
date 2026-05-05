@@ -97,9 +97,9 @@ function makeAgent(overrides: Partial<AgentMeta> = {}): AgentMeta {
   }
 }
 
-// Mock AgentCard to keep tests simple
-vi.mock('../AgentCard', () => ({
-  AgentCard: ({
+// Mock AgentRow to keep tests simple
+vi.mock('../AgentRow', () => ({
+  AgentRow: ({
     agent,
     selected,
     onClick
@@ -108,7 +108,7 @@ vi.mock('../AgentCard', () => ({
     selected: boolean
     onClick: () => void
   }) => (
-    <button data-testid={`agent-card-${agent.id}`} data-selected={selected} onClick={onClick}>
+    <button data-testid={`agent-row-${agent.id}`} data-selected={selected} onClick={onClick}>
       {agent.task}
     </button>
   )
@@ -118,7 +118,8 @@ describe('AgentList', () => {
   const defaultProps = {
     agents: [],
     selectedId: null,
-    onSelect: vi.fn()
+    onSelect: vi.fn(),
+    onSpawn: vi.fn()
   }
 
   it('renders filter input', () => {
@@ -131,13 +132,13 @@ describe('AgentList', () => {
     expect(screen.getByText('No agents yet')).toBeInTheDocument()
   })
 
-  it('renders running group header when running agents exist', () => {
+  it('renders live group label when running agents exist', () => {
     const agents = [makeAgent({ status: 'running', finishedAt: null })]
     render(<AgentList {...defaultProps} agents={agents} />)
-    expect(screen.getByText(/Running/)).toBeInTheDocument()
+    expect(screen.getByText(/Live/)).toBeInTheDocument()
   })
 
-  it('renders recent group header when recent agents exist', () => {
+  it('renders recent group label when recent agents exist', () => {
     const agents = [
       makeAgent({ status: 'done', finishedAt: new Date(Date.now() - 3600_000).toISOString() })
     ]
@@ -145,12 +146,25 @@ describe('AgentList', () => {
     expect(screen.getByText(/Recent/)).toBeInTheDocument()
   })
 
-  it('renders history group header when old agents exist', () => {
+  it('renders recent group label for history-age agents (no separate History group)', () => {
     const agents = [
       makeAgent({ status: 'done', finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString() })
     ]
     render(<AgentList {...defaultProps} agents={agents} />)
-    expect(screen.getByText(/History/)).toBeInTheDocument()
+    // V2 merges history into the Recent group — "History" label no longer exists
+    expect(screen.getByText(/Recent/)).toBeInTheDocument()
+  })
+
+  it('history-age agents are always visible (no collapse in V2)', () => {
+    const agent = makeAgent({
+      id: 'old-agent',
+      task: 'Old task',
+      status: 'done',
+      finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString()
+    })
+    render(<AgentList {...defaultProps} agents={[agent]} />)
+    // V2 does not collapse — old agents are immediately visible
+    expect(screen.getByText('Old task')).toBeInTheDocument()
   })
 
   it('filters agents by task text', async () => {
@@ -211,7 +225,7 @@ describe('AgentList', () => {
     ).toBeInTheDocument()
   })
 
-  it('calls onSelect when an agent card is clicked', async () => {
+  it('calls onSelect when an agent row is clicked', async () => {
     const user = userEvent.setup()
     const onSelect = vi.fn()
     const agent = makeAgent({
@@ -223,32 +237,6 @@ describe('AgentList', () => {
     render(<AgentList {...defaultProps} agents={[agent]} onSelect={onSelect} />)
     await user.click(screen.getByText('Some task'))
     expect(onSelect).toHaveBeenCalledWith('my-agent')
-  })
-
-  it('history group agents are hidden when collapsed', () => {
-    const agent = makeAgent({
-      id: 'old-agent',
-      task: 'Old task',
-      status: 'done',
-      finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString()
-    })
-    render(<AgentList {...defaultProps} agents={[agent]} />)
-    // History is collapsed by default
-    expect(screen.queryByText('Old task')).not.toBeInTheDocument()
-  })
-
-  it('history group expands when header is clicked', async () => {
-    const user = userEvent.setup()
-    const agent = makeAgent({
-      id: 'old-agent',
-      task: 'Old task',
-      status: 'done',
-      finishedAt: new Date(Date.now() - 48 * 3600_000).toISOString()
-    })
-    render(<AgentList {...defaultProps} agents={[agent]} />)
-    // Click the history header to expand
-    await user.click(screen.getByText(/History/))
-    expect(screen.getByText('Old task')).toBeInTheDocument()
   })
 
   it('uses initial filter prop to pre-populate search', () => {
@@ -270,19 +258,19 @@ describe('AgentList', () => {
     expect(screen.queryByText('Add feature')).not.toBeInTheDocument()
   })
 
-  it('shows count in group headers', () => {
+  it('shows running agent count in Live group label', () => {
     const agents = [
       makeAgent({ status: 'running', finishedAt: null }),
       makeAgent({ status: 'running', finishedAt: null })
     ]
     render(<AgentList {...defaultProps} agents={agents} />)
-    expect(screen.getByText('(2)')).toBeInTheDocument()
+    expect(screen.getByText(/Live · 2/)).toBeInTheDocument()
   })
 
-  it('renders 4 skeleton divs when loading and agents is empty', () => {
+  it('renders 5 skeleton rows when loading and agents is empty', () => {
     const { container } = render(<AgentList {...defaultProps} loading={true} agents={[]} />)
     const skeletons = container.querySelectorAll('.fleet-skeleton')
-    expect(skeletons).toHaveLength(4)
+    expect(skeletons).toHaveLength(5)
   })
 
   it('does not render skeletons when loading is false', () => {
@@ -298,5 +286,34 @@ describe('AgentList', () => {
     const { container } = render(<AgentList {...defaultProps} loading={true} agents={agents} />)
     const skeletons = container.querySelectorAll('.fleet-skeleton')
     expect(skeletons).toHaveLength(0)
+  })
+
+  it('renders ScratchpadBanner when showBanner is true', () => {
+    render(<AgentList {...defaultProps} showBanner={true} onDismissBanner={vi.fn()} />)
+    expect(screen.getByText(/SCRATCHPAD/)).toBeInTheDocument()
+  })
+
+  it('does not render ScratchpadBanner when showBanner is false', () => {
+    render(<AgentList {...defaultProps} showBanner={false} />)
+    expect(screen.queryByText(/SCRATCHPAD/)).not.toBeInTheDocument()
+  })
+
+  it('calls onSpawn when the header Spawn button is clicked', async () => {
+    const user = userEvent.setup()
+    const onSpawn = vi.fn()
+    render(<AgentList {...defaultProps} onSpawn={onSpawn} />)
+    const spawnButtons = screen.getAllByText('+ Spawn')
+    await user.click(spawnButtons[0])
+    expect(onSpawn).toHaveBeenCalled()
+  })
+
+  it('calls onSpawn from the empty-state Spawn button', async () => {
+    const user = userEvent.setup()
+    const onSpawn = vi.fn()
+    render(<AgentList {...defaultProps} onSpawn={onSpawn} />)
+    const spawnButtons = screen.getAllByText('+ Spawn')
+    // Header button is first; empty-state button is second
+    await user.click(spawnButtons[spawnButtons.length - 1])
+    expect(onSpawn).toHaveBeenCalled()
   })
 })

@@ -206,7 +206,7 @@ export function CommandBar({
         <div
           style={{
             padding: '8px 12px',
-            borderBottom: '1px solid var(--fleet-accent-border)',
+            borderBottom: '1px solid var(--accent-line)',
             display: 'flex',
             alignItems: 'center',
             gap: '8px'
@@ -219,7 +219,7 @@ export function CommandBar({
               height: 64,
               width: 'auto',
               borderRadius: 4,
-              border: '1px solid var(--fleet-accent-border)',
+              border: '1px solid var(--accent-line)',
               objectFit: 'contain'
             }}
           />
@@ -231,9 +231,9 @@ export function CommandBar({
               width: 20,
               height: 20,
               borderRadius: 4,
-              border: '1px solid var(--fleet-danger-border)',
-              background: 'var(--fleet-danger-surface)',
-              color: 'var(--fleet-danger)',
+              border: `1px solid color-mix(in oklch, var(--st-failed) 30%, transparent)`,
+              background: 'color-mix(in oklch, var(--st-failed) 12%, transparent)',
+              color: 'var(--st-failed)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',

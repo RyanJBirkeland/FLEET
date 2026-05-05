@@ -113,7 +113,8 @@ describe('AgentConsole', () => {
 
   it('renders console header with agent name', () => {
     render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
-    expect(screen.getByText('Implement feature X')).toBeInTheDocument()
+    // V2 header shows agent.id (not agent.task) in the identity span
+    expect(screen.getByText('test-agent-1')).toBeInTheDocument()
   })
 
   it('renders console lines for events', () => {
@@ -165,9 +166,8 @@ describe('AgentConsole', () => {
 
   it('displays duration in header', () => {
     render(<AgentConsole agentId="test-agent-1" onSteer={vi.fn()} onCommand={vi.fn()} />)
-    // Should show some duration (exact value depends on timing)
-    const header = screen.getByText('Implement feature X').closest('.console-header')
-    expect(header).toBeInTheDocument()
+    // V2 header renders a StatBlock with label "elapsed" — verify the duration section is present
+    expect(screen.getByText('elapsed')).toBeInTheDocument()
   })
 
   it('applies disabled class to command bar when agent is not running', () => {

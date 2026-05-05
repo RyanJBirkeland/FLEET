@@ -3,26 +3,26 @@
 
 .console-md-bold {
   font-weight: 700;
-  color: var(--fleet-text);
+  color: var(--fg);
 }
 
 .console-md-code {
-  background: var(--fleet-accent-surface);
-  color: var(--fleet-accent);
+  background: var(--accent-soft);
+  color: var(--accent);
   padding: 1px 5px;
-  border-radius: var(--fleet-radius-sm);
-  font-size: var(--fleet-size-xs);
+  border-radius: var(--r-sm);
+  font-size: var(--t-xs);
 }
 
 .console-md-heading {
   font-weight: 700;
-  color: var(--fleet-text);
-  font-size: var(--fleet-size-md);
+  color: var(--fg);
+  font-size: var(--t-base);
   display: block;
-  margin-top: var(--fleet-space-2);
+  margin-top: var(--s-2);
   margin-bottom: 2px;
 }
 
 .console-md-paragraph-break {
-  height: var(--fleet-space-2);
+  height: var(--s-2);
 }

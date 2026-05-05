@@ -1,10 +1,10 @@
 .edit-diff-card {
-  font-family: var(--fleet-font-code);
-  font-size: var(--fleet-size-xs);
+  font-family: var(--font-mono);
+  font-size: var(--t-xs);
   line-height: 1.5;
-  margin-top: var(--fleet-space-2);
-  border: 1px solid var(--fleet-border);
-  border-radius: var(--fleet-radius-sm);
+  margin-top: var(--s-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
   overflow: hidden;
   max-height: 400px;
   overflow-y: auto;
@@ -17,17 +17,17 @@
 }
 
 .edit-diff-card__row:hover {
-  background-color: var(--fleet-surface-hover, rgba(255, 255, 255, 0.02));
+  background-color: color-mix(in oklch, var(--fg) 2%, transparent);
 }
 
 .edit-diff-card__row--add {
-  background-color: var(--fleet-diff-add-bg);
-  border-left: 2px solid var(--fleet-status-done, #22c55e);
+  background-color: color-mix(in oklch, var(--st-done) 8%, transparent);
+  border-left: 2px solid var(--st-done);
 }
 
 .edit-diff-card__row--del {
-  background-color: var(--fleet-diff-del-bg);
-  border-left: 2px solid var(--fleet-danger, #ef4444);
+  background-color: color-mix(in oklch, var(--st-failed) 8%, transparent);
+  border-left: 2px solid var(--st-failed);
 }
 
 .edit-diff-card__row--ctx {
@@ -38,7 +38,7 @@
   display: inline-block;
   width: 40px;
   text-align: right;
-  color: var(--fleet-text-dim);
+  color: var(--fg-3);
   user-select: none;
   margin-right: 12px;
   flex-shrink: 0;
