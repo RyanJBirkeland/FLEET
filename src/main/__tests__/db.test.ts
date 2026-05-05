@@ -137,7 +137,6 @@ describe('db schema migrations', () => {
       'idx_review_comments_task_id',
       'idx_sprint_tasks_claimed_by',
       'idx_sprint_tasks_completed_at',
-      'idx_sprint_tasks_group',
       'idx_sprint_tasks_group_id',
       'idx_sprint_tasks_pr_number',
       'idx_sprint_tasks_pr_number_status',
