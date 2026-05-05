@@ -1,35 +1,45 @@
 /**
- * AgentList — left panel showing agents grouped by status.
- * Running agents appear first with live pulse, followed by recent (24h)
- * and history (older).
+ * AgentList — V2 banded layout.
+ * Header band (eyebrow + count + spawn) → composition strip → filter chips →
+ * search → ScratchpadBanner → scrollable grouped rows.
  */
 import { useMemo, useState, useRef, useEffect } from 'react'
-import { Search, ChevronRight } from 'lucide-react'
+import { Search } from 'lucide-react'
 import './AgentList.css'
 import type { AgentMeta } from '../../../../shared/types'
-import { EmptyState } from '../ui/EmptyState'
-import { AgentCard } from './AgentCard'
-import { neonVar } from '../neon/types'
+import { AgentRow } from './AgentRow'
+import { ScratchpadBanner } from './ScratchpadBanner'
 
-interface AgentListProps {
-  agents: AgentMeta[]
-  selectedId: string | null
-  onSelect: (id: string) => void
-  onKill?: (() => void) | undefined
-  filter?: string | undefined
-  loading?: boolean | undefined
-  fetchError?: string | null | undefined
-  onRetry?: (() => void) | undefined
-  displayedCount?: number | undefined
-  hasMore?: boolean | undefined
-  onLoadMore?: (() => void) | undefined
-}
+// ─── Public types ──────────────────────────────────────────────────────────────
 
 export interface AgentGroups {
   running: AgentMeta[]
   recent: AgentMeta[]
   history: AgentMeta[]
 }
+
+type StatusFilter = 'all' | 'live' | 'review' | 'failed' | 'done'
+
+interface AgentListProps {
+  agents: AgentMeta[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  onSpawn?: (() => void) | undefined
+  onKill?: (() => void) | undefined
+  filter?: string | undefined
+  loading?: boolean | undefined
+  fetchError?: string | null | undefined
+  onRetry?: (() => void) | undefined
+  displayedCount?: number | undefined
+  /** V1 compat — no-op in V2 */
+  hasMore?: boolean | undefined
+  /** V1 compat — no-op in V2 */
+  onLoadMore?: (() => void) | undefined
+  showBanner?: boolean | undefined
+  onDismissBanner?: (() => void) | undefined
+}
+
+// ─── Grouping logic (exported — tests import this directly) ───────────────────
 
 const RECENT_THRESHOLD_MS = 24 * 60 * 60 * 1000
 
@@ -56,119 +66,298 @@ export function groupAgents(agents: AgentMeta[]): AgentGroups {
   return { running, recent, history }
 }
 
-function GroupHeader({
-  label,
-  count,
-  open,
-  onToggle,
-  showPulse,
-  collapsible = true,
-  controlsId
-}: {
-  label: string
-  count: number
-  open: boolean
-  onToggle: () => void
-  showPulse?: boolean | undefined
-  collapsible?: boolean | undefined
-  controlsId?: string | undefined
-}): React.JSX.Element {
-  const Tag = collapsible ? 'button' : 'div'
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function CompositionStrip({ agents }: { agents: AgentMeta[] }): React.JSX.Element | null {
+  const counts = useMemo(() => {
+    const map: Partial<Record<string, number>> = {}
+    for (const a of agents) {
+      map[a.status] = (map[a.status] ?? 0) + 1
+    }
+    return map
+  }, [agents])
+
+  const relevantStatuses = ['running', 'review', 'done', 'failed'] as const
+  const segments = relevantStatuses.filter((s) => (counts[s] ?? 0) > 0)
+
+  if (segments.length === 0) return null
+
   return (
-    <Tag
-      {...(collapsible ? { onClick: onToggle, 'aria-expanded': open, 'aria-controls': controlsId } : {})}
-      className={`agent-list__section-header ${!collapsible ? 'agent-list__section-header--static' : ''}`}
+    <div
       style={{
-        color: neonVar('purple', 'color')
+        height: 4,
+        display: 'flex',
+        overflow: 'hidden',
+        borderRadius: 2,
+        margin: 'var(--s-2) var(--s-4) 0',
       }}
     >
-      {collapsible && (
-        <ChevronRight
-          size={12}
-          className={`agent-list__section-chevron ${open ? 'agent-list__section-chevron--open' : ''}`}
-        />
-      )}
-      {showPulse && (
-        <span
-          className="agent-list__section-pulse"
+      {segments.map((status) => (
+        <div
+          key={status}
           style={{
-            background: neonVar('cyan', 'color')
+            flex: counts[status],
+            background: `var(--st-${status})`,
+            opacity: 0.85,
           }}
         />
-      )}
-      {label}
-      <span className="agent-list__count-badge">({count})</span>
-    </Tag>
+      ))}
+    </div>
   )
 }
+
+function FilterChips({
+  agents,
+  activeFilter,
+  onFilterChange,
+}: {
+  agents: AgentMeta[]
+  activeFilter: StatusFilter
+  onFilterChange: (f: StatusFilter) => void
+}): React.JSX.Element {
+  const counts = useMemo(() => {
+    // Cast to string to accommodate any status values beyond the core union
+    // (e.g. 'review', 'error' from pipeline agent flows)
+    const statusOf = (a: AgentMeta): string => a.status as string
+    const live = agents.filter((a) => statusOf(a) === 'running').length
+    const review = agents.filter((a) => statusOf(a) === 'review').length
+    const failed = agents.filter((a) => statusOf(a) === 'failed' || statusOf(a) === 'error').length
+    const done = agents.filter((a) => statusOf(a) === 'done').length
+    return { live, review, failed, done }
+  }, [agents])
+
+  const chips: { key: StatusFilter; label: string; count: number; status?: string }[] = [
+    { key: 'all', label: 'all', count: agents.length },
+    { key: 'live', label: 'live', count: counts.live, status: 'running' },
+    { key: 'review', label: 'review', count: counts.review, status: 'review' },
+    { key: 'failed', label: 'failed', count: counts.failed, status: 'failed' },
+    { key: 'done', label: 'done', count: counts.done, status: 'done' },
+  ]
+
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: 4,
+        padding: 'var(--s-2) var(--s-4)',
+      }}
+    >
+      {chips.map(({ key, label, count, status }) => {
+        const isActive = activeFilter === key
+        return (
+          <button
+            key={key}
+            aria-pressed={isActive}
+            onClick={() => onFilterChange(key)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 4,
+              padding: '2px 8px',
+              height: 22,
+              background: isActive ? 'var(--surf-2)' : 'transparent',
+              border: isActive ? '1px solid var(--line-2)' : '1px solid var(--line)',
+              borderRadius: 'var(--r-sm)',
+              color: isActive ? 'var(--fg)' : 'var(--fg-3)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              cursor: 'pointer',
+              transition: 'all var(--dur-fast)',
+            }}
+          >
+            {status && (
+              <span
+                className={`fleet-dot--${status}`}
+                style={{ width: 5, height: 5, flexShrink: 0 }}
+              />
+            )}
+            {label}
+            <span style={{ color: isActive ? 'var(--fg-3)' : 'var(--fg-4)' }}>{count}</span>
+          </button>
+        )
+      })}
+    </div>
+  )
+}
+
+function GroupLabel({ label }: { label: string }): React.JSX.Element {
+  return (
+    <div
+      className="fleet-eyebrow"
+      style={{
+        padding: 'var(--s-2) var(--s-3) var(--s-1)',
+        fontSize: 9,
+        color: 'var(--fg-4)',
+      }}
+    >
+      {label}
+    </div>
+  )
+}
+
+function SkeletonRows(): React.JSX.Element {
+  return (
+    <div
+      className="agent-list__loading-container"
+      style={{ padding: 'var(--s-2)', display: 'flex', flexDirection: 'column', gap: 'var(--s-2)' }}
+    >
+      {[56, 56, 56, 56, 56].map((h, i) => (
+        <div key={i} className="fleet-skeleton" style={{ height: h }} />
+      ))}
+    </div>
+  )
+}
+
+function EmptyAgentState({ onSpawn }: { onSpawn: () => void }): React.JSX.Element {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 'var(--s-3)',
+        padding: 'var(--s-7) var(--s-4)',
+        textAlign: 'center',
+      }}
+    >
+      <div className="fleet-eyebrow">EMPTY</div>
+      <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>No agents yet</div>
+      <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>Spawn one to get started.</div>
+      <button
+        onClick={onSpawn}
+        style={{
+          padding: '5px 14px',
+          height: 26,
+          background: 'var(--accent)',
+          color: 'var(--accent-fg)',
+          border: 'none',
+          borderRadius: 'var(--r-md)',
+          fontFamily: 'var(--font-mono)',
+          fontSize: 12,
+          fontWeight: 500,
+          cursor: 'pointer',
+        }}
+      >
+        + Spawn
+      </button>
+    </div>
+  )
+}
+
+function ErrorState({
+  error,
+  onRetry,
+}: {
+  error: string
+  onRetry?: (() => void) | undefined
+}): React.JSX.Element {
+  const message =
+    error.length > 200 ? `${error.slice(0, 200)}… (see ~/.fleet/fleet.log for details)` : error
+
+  return (
+    <div
+      style={{
+        margin: 'var(--s-2)',
+        padding: 'var(--s-3)',
+        background: 'var(--surf-1)',
+        border: '1px solid var(--st-failed)',
+        borderRadius: 'var(--r-md)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--s-2)',
+      }}
+    >
+      <div className="fleet-eyebrow" style={{ color: 'var(--st-failed)' }}>
+        FETCH FAILED
+      </div>
+      <div style={{ fontSize: 12, color: 'var(--fg-3)' }}>{message}</div>
+      {onRetry && (
+        <button
+          onClick={onRetry}
+          style={{
+            alignSelf: 'flex-start',
+            padding: '3px 10px',
+            background: 'transparent',
+            border: '1px solid var(--line-2)',
+            borderRadius: 'var(--r-sm)',
+            color: 'var(--fg-2)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 11,
+            cursor: 'pointer',
+          }}
+        >
+          Retry
+        </button>
+      )}
+    </div>
+  )
+}
+
+// ─── Main component ───────────────────────────────────────────────────────────
 
 export function AgentList({
   agents,
   selectedId,
   onSelect,
-  onKill,
+  onSpawn,
   filter,
   loading,
   fetchError,
   onRetry,
   displayedCount,
-  hasMore,
-  onLoadMore
+  // hasMore and onLoadMore are V1-compat props consumed by AgentsViewV1; unused in V2
+  hasMore: _hasMore,
+  onLoadMore: _onLoadMore,
+  showBanner,
+  onDismissBanner,
 }: AgentListProps): React.JSX.Element {
   const [searchText, setSearchText] = useState(filter ?? '')
-  const [historyOpen, setHistoryOpen] = useState(false)
   const [searchFocused, setSearchFocused] = useState(false)
-  const [selectedRepo, setSelectedRepo] = useState<string | null>(null)
+  const [activeFilter, setActiveFilter] = useState<StatusFilter>('all')
   const selectedRef = useRef<HTMLDivElement>(null)
+
+  // Provide a safe no-op when onSpawn is not passed (V1 compat)
+  const handleSpawn = onSpawn ?? (() => undefined)
 
   const limitedAgents = displayedCount ? agents.slice(0, displayedCount) : agents
 
-  const repos = useMemo(() => {
-    const set = new Set(agents.map((a) => a.repo))
-    return Array.from(set).sort()
-  }, [agents])
+  const searchFiltered = useMemo(() => {
+    if (!searchText) return limitedAgents
+    const lower = searchText.toLowerCase()
+    return limitedAgents.filter(
+      (a) =>
+        a.task.toLowerCase().includes(lower) ||
+        a.repo.toLowerCase().includes(lower) ||
+        a.model.toLowerCase().includes(lower)
+    )
+  }, [limitedAgents, searchText])
 
-  const filtered = useMemo(() => {
-    let result = limitedAgents
+  const statusFiltered = useMemo(() => {
+    if (activeFilter === 'all') return searchFiltered
+    // Cast to string to handle status values beyond the core AgentMeta union
+    const s = (a: AgentMeta): string => a.status as string
+    if (activeFilter === 'live') return searchFiltered.filter((a) => s(a) === 'running')
+    if (activeFilter === 'review') return searchFiltered.filter((a) => s(a) === 'review')
+    if (activeFilter === 'failed')
+      return searchFiltered.filter((a) => s(a) === 'failed' || s(a) === 'error')
+    if (activeFilter === 'done') return searchFiltered.filter((a) => s(a) === 'done')
+    return searchFiltered
+  }, [searchFiltered, activeFilter])
 
-    // Filter by repo first
-    if (selectedRepo) {
-      result = result.filter((a) => a.repo === selectedRepo)
-    }
+  const groups = useMemo(() => groupAgents(statusFiltered), [statusFiltered])
 
-    // Then filter by search text
-    if (searchText) {
-      const lower = searchText.toLowerCase()
-      result = result.filter(
-        (a) =>
-          a.task.toLowerCase().includes(lower) ||
-          a.repo.toLowerCase().includes(lower) ||
-          a.model.toLowerCase().includes(lower)
-      )
-    }
+  const visibleAgents = useMemo(
+    () => [...groups.running, ...groups.recent, ...groups.history],
+    [groups]
+  )
 
-    return result
-  }, [limitedAgents, searchText, selectedRepo])
-
-  const groups = useMemo(() => groupAgents(filtered), [filtered])
-
-  // Flat list of all visible agents for keyboard navigation
-  const visibleAgents = useMemo(() => {
-    const all = [...groups.running, ...groups.recent]
-    if (historyOpen) {
-      all.push(...groups.history)
-    }
-    return all
-  }, [groups, historyOpen])
-
-  // Scroll selected agent into view
   useEffect(() => {
     if (selectedRef.current) {
       selectedRef.current.scrollIntoView({ block: 'nearest', behavior: 'smooth' })
     }
   }, [selectedId])
 
-  // Handle arrow key navigation
   const handleKeyDown = (e: React.KeyboardEvent): void => {
     if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return
     if (visibleAgents.length === 0) return
@@ -179,7 +368,6 @@ export function AgentList({
     let nextIndex: number
 
     if (currentIndex === -1) {
-      // No selection, select first
       nextIndex = 0
     } else if (e.key === 'ArrowDown') {
       nextIndex = Math.min(currentIndex + 1, visibleAgents.length - 1)
@@ -191,103 +379,70 @@ export function AgentList({
     if (nextAgent) onSelect(nextAgent.id)
   }
 
+  const showFilteredEmptyMessage =
+    statusFiltered.length === 0 && agents.length > 0 && !loading && !fetchError
+
+  const showEmptyState =
+    agents.length === 0 && !loading && !fetchError
+
   return (
     <div className="agent-list">
-      {/* Search */}
-      <div className="agent-list__search-container">
-        <div
-          className={`agent-list__search-box ${
-            searchFocused ? 'agent-list__search-border--focused' : 'agent-list__search-border'
-          }`}
-        >
-          <Search
-            size={12}
-            className={
-              searchFocused ? 'agent-list__search-icon--focused' : 'agent-list__search-icon'
-            }
-          />
-          <input
-            type="text"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-            onFocus={() => setSearchFocused(true)}
-            onBlur={() => setSearchFocused(false)}
-            placeholder="Filter agents..."
-            aria-label="Filter agents"
-            className="agent-list__search-input agent-list__search-input-field"
-          />
-        </div>
-      </div>
+      <HeaderBand agents={agents} onSpawn={handleSpawn} />
 
-      {/* Repo filter chips */}
-      {repos.length >= 2 && (
-        <div className="agent-list__repo-chips">
-          <button
-            className={`agent-list__repo-chip ${!selectedRepo ? 'agent-list__repo-chip--active' : ''}`}
-            aria-pressed={!selectedRepo}
-            onClick={() => setSelectedRepo(null)}
-          >
-            All
-          </button>
-          {repos.map((repo) => (
-            <button
-              key={repo}
-              className={`agent-list__repo-chip ${selectedRepo === repo ? 'agent-list__repo-chip--active' : ''}`}
-              aria-pressed={selectedRepo === repo}
-              onClick={() => setSelectedRepo(repo)}
-            >
-              {repo}
-            </button>
-          ))}
-        </div>
+      <FilterChips
+        agents={searchFiltered}
+        activeFilter={activeFilter}
+        onFilterChange={setActiveFilter}
+      />
+
+      <SearchBand
+        value={searchText}
+        focused={searchFocused}
+        onChange={setSearchText}
+        onFocus={() => setSearchFocused(true)}
+        onBlur={() => setSearchFocused(false)}
+      />
+
+      {showBanner && onDismissBanner && (
+        <ScratchpadBanner onDismiss={onDismissBanner} />
       )}
 
-      {/* Agent groups */}
       <div
         role="listbox"
         tabIndex={0}
         onKeyDown={handleKeyDown}
         aria-label="Agent list"
-        className="agent-list__scroll-container"
+        style={{ flex: 1, overflowY: 'auto', outline: 'none', padding: '0 var(--s-2) var(--s-2)' }}
       >
         {fetchError && agents.length === 0 && (
-          <div className="agent-list__empty-message">
-            <span style={{ color: neonVar('red', 'color') }}>
-              {fetchError.length > 200
-                ? `${fetchError.slice(0, 200)}… (see ~/.fleet/fleet.log for details)`
-                : fetchError}
-            </span>
-            {onRetry && (
-              <button
-                onClick={onRetry}
-                className="agent-list__empty-retry"
-                style={{
-                  border: `1px solid ${neonVar('cyan', 'border')}`,
-                  color: neonVar('cyan', 'color')
-                }}
-              >
-                Retry
-              </button>
-            )}
-          </div>
+          <ErrorState error={fetchError} onRetry={onRetry} />
         )}
 
         {fetchError && agents.length > 0 && (
           <div
-            className="agent-list__error-banner"
             style={{
-              background: neonVar('orange', 'surface'),
-              borderBottom: `1px solid ${neonVar('orange', 'border')}`,
-              color: neonVar('orange', 'color')
+              padding: 'var(--s-1) var(--s-2)',
+              fontSize: 11,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'var(--surf-1)',
+              borderBottom: '1px solid var(--line)',
+              color: 'var(--fg-3)',
             }}
           >
             <span>Refresh failed — showing cached list</span>
             {onRetry && (
               <button
                 onClick={onRetry}
-                className="agent-list__retry-button"
                 style={{
-                  color: neonVar('orange', 'color')
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  fontSize: 11,
+                  color: 'var(--fg-3)',
+                  textDecoration: 'underline',
+                  padding: 0,
                 }}
               >
                 Retry
@@ -296,129 +451,239 @@ export function AgentList({
           </div>
         )}
 
-        {loading && agents.length === 0 && !fetchError && (
-          <div className="agent-list__loading-container">
-            <div className="fleet-skeleton" style={{ height: 56 }} />
-            <div className="fleet-skeleton" style={{ height: 56 }} />
-            <div className="fleet-skeleton" style={{ height: 56 }} />
-            <div className="fleet-skeleton" style={{ height: 56 }} />
-          </div>
-        )}
+        {loading && agents.length === 0 && !fetchError && <SkeletonRows />}
 
-        {groups.running.length > 0 && (
-          <div>
-            <GroupHeader
-              label="Running"
-              count={groups.running.length}
-              open
-              onToggle={() => {}}
-              showPulse
-              collapsible={false}
-            />
-            {groups.running.map((a) => (
-              <div
-                key={a.id}
-                ref={a.id === selectedId ? selectedRef : null}
-                role="option"
-                aria-selected={a.id === selectedId}
-                tabIndex={-1}
-              >
-                <AgentCard
-                  agent={a}
-                  selected={a.id === selectedId}
-                  onClick={() => onSelect(a.id)}
-                  onKill={onKill}
-                />
-              </div>
-            ))}
-          </div>
-        )}
+        {showEmptyState && <EmptyAgentState onSpawn={handleSpawn} />}
 
-        {groups.recent.length > 0 && (
-          <div>
-            <GroupHeader
-              label="Recent"
-              count={groups.recent.length}
-              open
-              onToggle={() => {}}
-              showPulse={false}
-              collapsible={false}
-            />
-            {groups.recent.map((a) => (
-              <div
-                key={a.id}
-                ref={a.id === selectedId ? selectedRef : null}
-                role="option"
-                aria-selected={a.id === selectedId}
-                tabIndex={-1}
-              >
-                <AgentCard
-                  agent={a}
-                  selected={a.id === selectedId}
-                  onClick={() => onSelect(a.id)}
-                  onKill={onKill}
-                />
-              </div>
-            ))}
-          </div>
-        )}
-
-        {groups.history.length > 0 && (
-          <div>
-            <GroupHeader
-              label="History"
-              count={groups.history.length}
-              open={historyOpen}
-              onToggle={() => setHistoryOpen((v) => !v)}
-              controlsId="agent-history-section"
-            />
-            <div id="agent-history-section">
-              {historyOpen &&
-                groups.history.map((a) => (
-                  <div
-                    key={a.id}
-                    ref={a.id === selectedId ? selectedRef : null}
-                    role="option"
-                    aria-selected={a.id === selectedId}
-                    tabIndex={-1}
-                  >
-                    <AgentCard
-                      agent={a}
-                      selected={a.id === selectedId}
-                      onClick={() => onSelect(a.id)}
-                      onKill={onKill}
-                    />
-                  </div>
-                ))}
-            </div>
-          </div>
-        )}
-
-        {filtered.length === 0 && !loading && !fetchError && agents.length === 0 && (
-          <EmptyState
-            title="No agents yet"
-            description="Spawn an agent to get started. Agents execute tasks, answer questions, and write code."
-          />
-        )}
-
-        {filtered.length === 0 && agents.length > 0 && (
-          <EmptyState message="No agents match your filter. Try adjusting the search or clearing filters." />
-        )}
-
-        {hasMore && onLoadMore && (
+        {showFilteredEmptyMessage && (
           <div
             style={{
-              padding: 'var(--fleet-space-2)',
-              display: 'flex',
-              justifyContent: 'center'
+              padding: 'var(--s-4)',
+              fontSize: 12,
+              color: 'var(--fg-3)',
+              textAlign: 'center',
             }}
           >
-            <button className="agent-list__load-more" onClick={onLoadMore}>
-              Load More
-            </button>
+            No agents match your filter. Try adjusting the search or clearing filters.
           </div>
         )}
+
+        {activeFilter === 'all' ? (
+          <GroupedAgentRows groups={groups} selectedId={selectedId} onSelect={onSelect} selectedRef={selectedRef} />
+        ) : (
+          <FlatAgentRows agents={statusFiltered} selectedId={selectedId} onSelect={onSelect} selectedRef={selectedRef} />
+        )}
       </div>
+    </div>
+  )
+}
+
+// ─── Layout bands ─────────────────────────────────────────────────────────────
+
+function HeaderBand({
+  agents,
+  onSpawn,
+}: {
+  agents: AgentMeta[]
+  onSpawn: () => void
+}): React.JSX.Element {
+  return (
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        padding: 'var(--s-3) var(--s-4)',
+        gap: 'var(--s-1)',
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', gap: 'var(--s-2)' }}>
+          <span className="fleet-eyebrow">FLEET</span>
+          <span style={{ fontSize: 16, color: 'var(--fg)', fontWeight: 500 }}>
+            {agents.length} agents
+          </span>
+        </div>
+        <button
+          onClick={onSpawn}
+          style={{
+            height: 26,
+            padding: '0 10px',
+            background: 'var(--accent)',
+            color: 'var(--accent-fg)',
+            border: 'none',
+            borderRadius: 'var(--r-md)',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: 'pointer',
+          }}
+        >
+          + Spawn
+        </button>
+      </div>
+      <CompositionStrip agents={agents} />
+    </div>
+  )
+}
+
+function SearchBand({
+  value,
+  focused,
+  onChange,
+  onFocus,
+  onBlur,
+}: {
+  value: string
+  focused: boolean
+  onChange: (v: string) => void
+  onFocus: () => void
+  onBlur: () => void
+}): React.JSX.Element {
+  return (
+    <div style={{ padding: '0 var(--s-2) var(--s-2)' }}>
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-2)',
+          height: 28,
+          padding: '0 var(--s-2)',
+          background: 'var(--surf-1)',
+          border: `1px solid ${focused ? 'var(--line-2)' : 'var(--line)'}`,
+          borderRadius: 'var(--r-md)',
+          transition: 'border-color var(--dur-fast)',
+        }}
+      >
+        <Search size={12} style={{ color: focused ? 'var(--fg-2)' : 'var(--fg-4)', flexShrink: 0 }} />
+        <input
+          type="text"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          onFocus={onFocus}
+          onBlur={onBlur}
+          placeholder="Filter agents..."
+          aria-label="Filter agents"
+          style={{
+            flex: 1,
+            background: 'none',
+            border: 'none',
+            outline: 'none',
+            fontFamily: 'var(--font-mono)',
+            fontSize: 12,
+            color: 'var(--fg)',
+          }}
+        />
+      </div>
+    </div>
+  )
+}
+
+// ─── Agent row renderers ──────────────────────────────────────────────────────
+
+function GroupedAgentRows({
+  groups,
+  selectedId,
+  onSelect,
+  selectedRef,
+}: {
+  groups: AgentGroups
+  selectedId: string | null
+  onSelect: (id: string) => void
+  selectedRef: React.RefObject<HTMLDivElement | null>
+}): React.JSX.Element {
+  return (
+    <>
+      {groups.running.length > 0 && (
+        <section>
+          <GroupLabel label={`Live · ${groups.running.length}`} />
+          {groups.running.map((agent) => (
+            <AgentRowWrapper
+              key={agent.id}
+              agent={agent}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              selectedRef={selectedRef}
+            />
+          ))}
+        </section>
+      )}
+
+      {(groups.recent.length > 0 || groups.history.length > 0) && (
+        <section>
+          <GroupLabel label="Recent" />
+          {groups.recent.map((agent) => (
+            <AgentRowWrapper
+              key={agent.id}
+              agent={agent}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              selectedRef={selectedRef}
+            />
+          ))}
+          {groups.history.map((agent) => (
+            <AgentRowWrapper
+              key={agent.id}
+              agent={agent}
+              selectedId={selectedId}
+              onSelect={onSelect}
+              selectedRef={selectedRef}
+            />
+          ))}
+        </section>
+      )}
+    </>
+  )
+}
+
+function FlatAgentRows({
+  agents,
+  selectedId,
+  onSelect,
+  selectedRef,
+}: {
+  agents: AgentMeta[]
+  selectedId: string | null
+  onSelect: (id: string) => void
+  selectedRef: React.RefObject<HTMLDivElement | null>
+}): React.JSX.Element {
+  return (
+    <>
+      {agents.map((agent) => (
+        <AgentRowWrapper
+          key={agent.id}
+          agent={agent}
+          selectedId={selectedId}
+          onSelect={onSelect}
+          selectedRef={selectedRef}
+        />
+      ))}
+    </>
+  )
+}
+
+function AgentRowWrapper({
+  agent,
+  selectedId,
+  onSelect,
+  selectedRef,
+}: {
+  agent: AgentMeta
+  selectedId: string | null
+  onSelect: (id: string) => void
+  selectedRef: React.RefObject<HTMLDivElement | null>
+}): React.JSX.Element {
+  return (
+    <div
+      ref={agent.id === selectedId ? selectedRef : null}
+      role="option"
+      aria-selected={agent.id === selectedId}
+      tabIndex={-1}
+    >
+      <AgentRow
+        agent={agent}
+        selected={agent.id === selectedId}
+        onClick={() => onSelect(agent.id)}
+      />
     </div>
   )
 }
