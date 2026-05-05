@@ -152,7 +152,7 @@ export function DagOverlay({
                     width={NODE_WIDTH}
                     height={NODE_HEIGHT}
                     rx={6}
-                    fill="var(--fleet-surface)"
+                    fill="var(--surf-1)"
                     stroke={fillColor}
                     strokeWidth={isSelected ? 3 : 1.5}
                     opacity={isSelected ? 1 : 0.8}
@@ -172,7 +172,7 @@ export function DagOverlay({
                     x={NODE_WIDTH / 2}
                     y={NODE_HEIGHT / 2 + 8}
                     textAnchor="middle"
-                    fill="var(--fleet-text-muted)"
+                    fill="var(--fg-3)"
                     fontSize={10}
                     fontFamily="var(--fleet-font-code)"
                   >
