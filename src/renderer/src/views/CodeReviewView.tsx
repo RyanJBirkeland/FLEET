@@ -29,12 +29,13 @@ export default function CodeReviewView(): React.JSX.Element {
   const panelOpen = useReviewPartnerStore((s) => s.panelOpen)
 
   // Filter + sort once per task change instead of inside every j/k action callback.
+  // Includes both 'review' and 'approved' so j/k navigation traverses both sidebar sections.
   // Recomputing in three call sites was both O(n log n) per keystroke on large
   // task lists and a forced re-registration of all review commands on every poll.
   const reviewTasksSorted = useMemo(
     () =>
       tasks
-        .filter((t) => t.status === 'review')
+        .filter((t) => t.status === 'review' || t.status === 'approved')
         .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime()),
     [tasks]
   )

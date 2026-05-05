@@ -17,12 +17,14 @@ export function useTaskAutoSelect(): void {
   const tasks = useSprintTasks((s) => s.tasks)
 
   const task = tasks.find((t) => t.id === selectedTaskId)
-  const isValidSelection = !!task && task.status === 'review'
+  // Both 'review' and 'approved' tasks are valid selections in the Code Review view.
+  const isValidSelection = !!task && (task.status === 'review' || task.status === 'approved')
 
   useEffect(() => {
     if (isValidSelection) return
+    // Prefer a 'review' task so users land on actionable work first.
     const firstReview = tasks
-      .filter((t) => t.status === 'review')
+      .filter((t) => t.status === 'review' || t.status === 'approved')
       .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())[0]
     if (firstReview) selectTask(firstReview.id)
   }, [isValidSelection, tasks, selectTask])

@@ -151,6 +151,61 @@
   }
 }
 
+/* Approved section header variant */
+.cr-queue__header--approved {
+  border-top: 1px solid var(--fleet-border);
+  margin-top: var(--fleet-space-1);
+}
+
+.cr-queue__title--approved {
+  font-size: var(--fleet-size-2xs);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--fleet-accent);
+  font-weight: 600;
+}
+
+/* "Build PR" button in the Approved section header */
+.cr-queue__build-pr-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-left: auto;
+  padding: 2px var(--fleet-space-2);
+  background: var(--fleet-accent-surface);
+  border: 1px solid var(--fleet-accent-border);
+  border-radius: var(--fleet-radius-sm);
+  color: var(--fleet-accent);
+  font-size: var(--fleet-size-2xs);
+  font-family: var(--fleet-font-code);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 150ms ease;
+}
+
+.cr-queue__build-pr-btn:hover {
+  background: var(--fleet-accent-border);
+}
+
+.cr-queue__build-pr-btn:focus-visible {
+  outline: 2px solid var(--fleet-status-review);
+  outline-offset: 2px;
+}
+
+/* Approved task row — no checkbox, slightly muted */
+.cr-queue__item--approved {
+  opacity: 0.85;
+}
+
+.cr-queue__item--approved.cr-queue__item--selected {
+  border-left: 3px solid var(--fleet-accent);
+}
+
+/* Compact empty state for the Approved section */
+.cr-queue__empty--compact {
+  padding: var(--fleet-space-3) var(--fleet-space-3);
+}
+
 /* Batch actions bar */
 .cr-batch {
   display: flex;

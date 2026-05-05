@@ -75,17 +75,20 @@ describe('TopBar', () => {
     expect(screen.getByRole('button', { name: 'Toggle AI Review Partner' })).toBeInTheDocument()
   })
 
-  it('should render Approve dropdown trigger', () => {
+  it('should render standalone Approve button and Approve dropdown trigger', () => {
     render(<TopBar />)
-    expect(screen.getByRole('button', { name: /approve/i })).toBeInTheDocument()
+    // Both the standalone Approve button and the ApproveDropdown trigger are rendered
+    // for a task in 'review' status.
+    const approveBtns = screen.getAllByRole('button', { name: /approve/i })
+    expect(approveBtns.length).toBeGreaterThanOrEqual(2)
   })
 
   it('should show action buttons inside Approve dropdown', async () => {
     const user = userEvent.setup()
     render(<TopBar />)
-    // Click the Approve trigger to open the dropdown
-    const approveBtn = screen.getByRole('button', { name: /approve/i })
-    await user.click(approveBtn)
+    // The ApproveDropdown trigger has aria-haspopup="menu" — target it specifically.
+    const dropdownTrigger = screen.getByRole('button', { name: /^approve$/i })
+    await user.click(dropdownTrigger)
     // All consolidated actions appear as menuitems
     expect(screen.getByRole('menuitem', { name: /Merge Locally/i })).toBeInTheDocument()
     expect(screen.getByRole('menuitem', { name: /Create PR/i })).toBeInTheDocument()
@@ -96,8 +99,8 @@ describe('TopBar', () => {
   it('should show Ship It as Squash & Merge inside Approve dropdown', async () => {
     const user = userEvent.setup()
     render(<TopBar />)
-    const approveBtn = screen.getByRole('button', { name: /approve/i })
-    await user.click(approveBtn)
+    const dropdownTrigger = screen.getByRole('button', { name: /^approve$/i })
+    await user.click(dropdownTrigger)
     // Ship It functionality maps to Squash & Merge in the consolidated dropdown
     expect(screen.getByRole('menuitem', { name: /Squash & Merge/i })).toBeInTheDocument()
   })

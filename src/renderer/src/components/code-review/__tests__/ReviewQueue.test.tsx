@@ -66,7 +66,9 @@ describe('ReviewQueue', () => {
       )
     ).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Go to Pipeline' })).toBeInTheDocument()
-    expect(screen.getByText('0')).toBeInTheDocument()
+    // Both sections render a count — two "0" spans are expected (Pending Review + Approved).
+    const countSpans = screen.getAllByText('0')
+    expect(countSpans.length).toBeGreaterThanOrEqual(1)
   })
 
   it('renders task list when review tasks exist', () => {

@@ -1,7 +1,7 @@
 import './TopBar.css'
 import { useState, useEffect, useRef } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronDown, FileText, Sparkles } from 'lucide-react'
+import { ChevronDown, FileText, GitPullRequest, Loader2, Sparkles } from 'lucide-react'
 import { useCodeReviewStore } from '../../stores/codeReview'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { ConfirmModal } from '../ui/ConfirmModal'
@@ -9,6 +9,7 @@ import { Modal } from '../ui/Modal'
 import { ReviewQueue } from './ReviewQueue'
 import { VARIANTS } from '../../lib/motion'
 import { useReviewActions } from '../../hooks/useReviewActions'
+import { useApproveAction } from '../../hooks/useApproveAction'
 import { useTaskAutoSelect } from '../../hooks/useTaskAutoSelect'
 import { useBatchActions } from '../../hooks/useBatchActions'
 import { BranchBar } from './BranchBar'
@@ -18,6 +19,7 @@ import { useReviewPartnerStore } from '../../stores/reviewPartner'
 import { ReviewActionsBar } from './ReviewActionsBar'
 import { BatchActionsToolbar } from './BatchActionsToolbar'
 import { RollupPrModal } from './RollupPrModal'
+import { PrBuilderModal } from './PrBuilderModal'
 
 export function TopBar(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
@@ -37,6 +39,7 @@ export function TopBar(): React.JSX.Element {
   const taskSwitcherRef = useRef<HTMLDivElement>(null)
   const [promptModalOpen, setPromptModalOpen] = useState(false)
   const [promptText, setPromptText] = useState<string | null>(null)
+  const [showPrBuilder, setShowPrBuilder] = useState(false)
 
   const openPromptModal = async (): Promise<void> => {
     if (!task) return
@@ -45,11 +48,19 @@ export function TopBar(): React.JSX.Element {
     setPromptModalOpen(true)
   }
 
+  const loadData = useSprintTasks((s) => s.loadData)
+
   const selectedTasks = tasks.filter((t) => selectedBatchIds.has(t.id) && t.status === 'review')
   const isBatchMode = selectedBatchIds.size > 0
 
-  // Call hook unconditionally (Rules of Hooks), but only use ghConfigured in batch mode
+  // Call hooks unconditionally (Rules of Hooks).
   const { ghConfigured } = useReviewActions()
+  // useApproveAction requires a taskId — use empty string as a safe sentinel when no task
+  // is selected; approve() will never be called in that state because the button is hidden.
+  const { approve, inFlight: approveInFlight } = useApproveAction(
+    selectedTaskId ?? '',
+    loadData
+  )
   const {
     batchActionInFlight,
     confirmProps: batchConfirmProps,
@@ -82,9 +93,12 @@ export function TopBar(): React.JSX.Element {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const hasAnyReviewTask = tasks.some((t) => t.status === 'review')
+  const hasAnyReviewOrApprovedTask = tasks.some(
+    (t) => t.status === 'review' || t.status === 'approved'
+  )
+  const isTaskInQueue = !!task && (task.status === 'review' || task.status === 'approved')
 
-  if (!task || task.status !== 'review') {
+  if (!isTaskInQueue) {
     return (
       <div className="cr-topbar">
         <AnimatePresence mode="wait">
@@ -120,7 +134,7 @@ export function TopBar(): React.JSX.Element {
               exit="exit"
               transition={{ duration: 0.12 }}
             >
-              {hasAnyReviewTask ? 'Loading…' : 'No tasks in review'}
+              {hasAnyReviewOrApprovedTask ? 'Loading…' : 'No tasks in review'}
             </motion.span>
           )}
         </AnimatePresence>
@@ -223,7 +237,36 @@ export function TopBar(): React.JSX.Element {
                       <span>AI Partner</span>
                     </button>
 
-                    {/* Approve dropdown (consolidated actions) */}
+                    {/* Approve button — transitions task to 'approved' for batched PR building */}
+                    {task.status === 'review' && (
+                      <button
+                        type="button"
+                        className="cr-topbar__approve-btn"
+                        onClick={approve}
+                        disabled={approveInFlight || !!actions.actionInFlight}
+                        aria-busy={approveInFlight}
+                        aria-label={approveInFlight ? 'Approving task…' : 'Approve task — mark as reviewed'}
+                      >
+                        {approveInFlight ? <Loader2 size={14} className="spin" /> : null}
+                        {approveInFlight ? 'Approving…' : 'Approve'}
+                      </button>
+                    )}
+
+                    {/* Build PR button — opens PR builder for approved tasks */}
+                    {task.status === 'approved' && (
+                      <button
+                        type="button"
+                        className="cr-topbar__build-pr-btn"
+                        onClick={() => setShowPrBuilder(true)}
+                        disabled={!!actions.actionInFlight}
+                        aria-label="Build PR from approved tasks"
+                      >
+                        <GitPullRequest size={14} />
+                        Build PR
+                      </button>
+                    )}
+
+                    {/* Approve dropdown (consolidated merge/discard actions) */}
                     <ApproveDropdown
                       onMergeLocally={actions.mergeLocally}
                       onSquashMerge={actions.shipIt}
@@ -248,6 +291,7 @@ export function TopBar(): React.JSX.Element {
           handleSubmitRollupPr(selectedTasks, branchName, prTitle)
         }
       />
+      <PrBuilderModal open={showPrBuilder} onClose={() => setShowPrBuilder(false)} />
       <Modal
         open={promptModalOpen}
         onClose={() => setPromptModalOpen(false)}
