@@ -289,10 +289,11 @@ function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
 function deriveAvgCostPerTask(agents: AgentCostRecord[]): number | null {
   const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
   const recent = agents.filter(
-    (a) => a.costUsd != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
+    (a): a is typeof a & { costUsd: number } =>
+      a.costUsd != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
   )
   if (recent.length === 0) return null
-  return recent.reduce((s, a) => s + a.costUsd!, 0) / recent.length
+  return recent.reduce((s, a) => s + a.costUsd, 0) / recent.length
 }
 
 export function useDashboardData(): DashboardData {
