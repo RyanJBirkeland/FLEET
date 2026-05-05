@@ -63,7 +63,9 @@ async function buildGroup(groupId: string, repo: ISprintTaskRepository): Promise
   if (group.status !== 'composing') return { success: false, error: `Group is already ${group.status}` }
   if (group.task_order.length === 0) return { success: false, error: 'No tasks in group' }
 
-  const tasks = loadApprovedGroupTasks(group.task_order)
+  // Validate all tasks and repo config before mutating group status.
+  // loadApprovedGroupTasks throws on missing/wrong-status/cross-repo tasks.
+  const tasks = loadApprovedGroupTasks(group.task_order, group.repo)
   const repoName = tasks[0]!.repo
   const repoConfig = getRepoConfig(repoName)
   if (!repoConfig) return { success: false, error: `Repository "${repoName}" is not configured` }
@@ -74,6 +76,7 @@ async function buildGroup(groupId: string, repo: ISprintTaskRepository): Promise
   validateGitRef(group.branch_name)
   const env = buildAgentEnv()
 
+  // All validation passed — commit to building status now.
   updatePrGroup(groupId, { status: 'building' })
 
   try {
@@ -176,44 +179,50 @@ async function buildRollupPr(
 // ============================================================================
 
 async function checkGroupConflicts(groupId: string): Promise<DryRunConflictResult> {
-  const group = getPrGroup(groupId)
-  if (!group || group.task_order.length < 2) return { hasConflicts: false, conflictingFiles: [] }
-
-  const tasks = loadApprovedGroupTasks(group.task_order)
-  const ordered = topoSort(tasks)
-  const repoName = ordered[0]!.repo
-  const repoConfig = getRepoConfig(repoName)
-  if (!repoConfig) return { hasConflicts: false, conflictingFiles: [] }
-
-  const env = buildAgentEnv()
-  const repoPath = repoConfig.localPath
-  const dryRunBranch = `dry-run-${randomBytes(4).toString('hex')}`
-  const rollupPath = join(getWorktreeBase(), 'rollup-dry', randomBytes(4).toString('hex'))
-
-  await fetchOriginMain(repoPath, env)
-  await createRollupWorktree(repoPath, dryRunBranch, rollupPath, env)
-
   try {
-    for (const task of ordered) {
-      const branch = await currentBranch(task.worktree_path!, env)
-      try {
-        await execFileAsync('git', ['merge', '--no-commit', '--no-ff', branch], {
-          cwd: rollupPath,
-          env,
-          timeout: GIT_EXEC_TIMEOUT_MS,
-        })
-        // Successful dry-merge: reset and continue to the next task
-        await execFileAsync('git', ['merge', '--abort'], { cwd: rollupPath, env, timeout: GIT_EXEC_TIMEOUT_MS }).catch(() => {})
-        await execFileAsync('git', ['reset', '--hard', 'HEAD'], { cwd: rollupPath, env, timeout: GIT_EXEC_TIMEOUT_MS })
-      } catch {
-        const conflictingFiles = await extractConflictFiles(rollupPath, env)
-        await execFileAsync('git', ['merge', '--abort'], { cwd: rollupPath, env, timeout: GIT_EXEC_TIMEOUT_MS }).catch(() => {})
-        return { hasConflicts: true, conflictingFiles }
+    const group = getPrGroup(groupId)
+    if (!group || group.task_order.length < 2) return { hasConflicts: false, conflictingFiles: [] }
+
+    const tasks = loadApprovedGroupTasks(group.task_order, group.repo)
+    const ordered = topoSort(tasks)
+    const repoName = ordered[0]!.repo
+    const repoConfig = getRepoConfig(repoName)
+    if (!repoConfig) return { hasConflicts: false, conflictingFiles: [] }
+
+    const env = buildAgentEnv()
+    const repoPath = repoConfig.localPath
+    const dryRunBranch = `dry-run-${randomBytes(4).toString('hex')}`
+    const rollupPath = join(getWorktreeBase(), 'rollup-dry', randomBytes(4).toString('hex'))
+
+    await fetchOriginMain(repoPath, env)
+    await createRollupWorktree(repoPath, dryRunBranch, rollupPath, env)
+
+    try {
+      for (const task of ordered) {
+        const branch = await currentBranch(task.worktree_path!, env)
+        try {
+          await execFileAsync('git', ['merge', '--no-commit', '--no-ff', branch], {
+            cwd: rollupPath,
+            env,
+            timeout: GIT_EXEC_TIMEOUT_MS,
+          })
+          // Successful --no-commit merge: reset staging area and continue to the next task.
+          // merge --abort is a no-op here (no conflict in progress), so skip it.
+          await execFileAsync('git', ['reset', '--hard', 'HEAD'], { cwd: rollupPath, env, timeout: GIT_EXEC_TIMEOUT_MS })
+        } catch {
+          // Merge failed — conflict is in progress, abort it first.
+          const conflictingFiles = await extractConflictFiles(rollupPath, env)
+          await execFileAsync('git', ['merge', '--abort'], { cwd: rollupPath, env, timeout: GIT_EXEC_TIMEOUT_MS }).catch(() => {})
+          return { hasConflicts: true, conflictingFiles }
+        }
       }
+      return { hasConflicts: false, conflictingFiles: [] }
+    } finally {
+      await cleanupWorktree(repoPath, rollupPath, dryRunBranch, env).catch(() => {})
     }
+  } catch (err) {
+    logger.warn(`[pr-group] checkConflicts failed for ${groupId}: ${getErrorMessage(err)}`)
     return { hasConflicts: false, conflictingFiles: [] }
-  } finally {
-    await cleanupWorktree(repoPath, rollupPath, dryRunBranch, env).catch(() => {})
   }
 }
 
@@ -324,14 +333,23 @@ async function cleanupWorktree(
 // Task helpers
 // ============================================================================
 
-function loadApprovedGroupTasks(taskIds: string[]): SprintTask[] {
-  return taskIds.map((id) => {
+function loadApprovedGroupTasks(taskIds: string[], groupRepo: string): SprintTask[] {
+  const tasks = taskIds.map((id) => {
     const task = getTask(id)
     if (!task) throw new Error(`Task ${id} not found`)
     if (task.status !== 'approved') throw new Error(`Task "${task.title}" is not in approved status`)
     if (!task.worktree_path) throw new Error(`Task "${task.title}" has no worktree`)
     return task
   })
+
+  const foreignTask = tasks.find((t) => t.repo !== groupRepo)
+  if (foreignTask) {
+    throw new Error(
+      `All tasks must belong to the same repository — task "${foreignTask.title}" is in "${foreignTask.repo}", group is in "${groupRepo}"`
+    )
+  }
+
+  return tasks
 }
 
 async function updateTaskPrFields(
