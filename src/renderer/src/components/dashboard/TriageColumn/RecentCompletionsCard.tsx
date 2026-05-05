@@ -37,8 +37,7 @@ export function RecentCompletionsCard({
             >
               <span className="fleet-dot fleet-dot--done" />
               <span className="recent-completions__title">{task.title}</span>
-              {/* TODO(phase-2.5): quality score needs SprintTask.quality DB column + reviewer write-back */}
-              <QualityChip q={null} />
+              <QualityChip q={task.quality_score ?? null} />
               <span className="recent-completions__tokens">
                 {tokens > 0 ? formatTokensCompact(tokens) : '—'}
               </span>

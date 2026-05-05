@@ -1,6 +1,7 @@
 import './PerAgentStats.css'
 import { Card } from '../primitives/Card'
 import { CardHead } from '../primitives/CardHead'
+import { QualityChip } from '../primitives/QualityChip'
 import { formatDurationMs, formatTokensCompact } from '../../../lib/format'
 import type { PerAgentRow } from '../hooks/useDashboardData'
 
@@ -40,7 +41,6 @@ export function PerAgentStats({ rows }: PerAgentStatsProps): React.JSX.Element {
         <span className="fleet-eyebrow per-agent__col-num">Succ</span>
         <span className="fleet-eyebrow per-agent__col-avg">Avg</span>
         <span className="fleet-eyebrow per-agent__col-tok">Tok</span>
-        {/* TODO(phase-2.5): quality needs SprintTask.quality DB column + reviewer write-back */}
         <span className="fleet-eyebrow per-agent__col-q">Q</span>
       </div>
       {rows.map((row, i) => (
@@ -74,11 +74,8 @@ export function PerAgentStats({ rows }: PerAgentStatsProps): React.JSX.Element {
           >
             {row.totalTokens > 0 ? formatTokensCompact(row.totalTokens) : '—'}
           </span>
-          <span
-            className="per-agent__col-q"
-            style={{ color: 'var(--fg-2)' }}
-          >
-            —
+          <span className="per-agent__col-q">
+            {row.quality != null ? <QualityChip q={row.quality} /> : '—'}
           </span>
         </div>
       ))}

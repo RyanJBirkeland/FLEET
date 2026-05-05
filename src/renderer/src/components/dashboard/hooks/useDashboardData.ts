@@ -45,8 +45,7 @@ export interface PerAgentRow {
   successPct: number | null
   avgDurationMs: number | null
   totalTokens: number
-  // TODO(phase-2.5): quality needs SprintTask.quality DB column + reviewer write-back
-  quality: null
+  quality: number | null
 }
 
 export interface PerRepoRow {
@@ -203,8 +202,12 @@ function deriveActiveAgents(
   })
 }
 
-function derivePerAgentStats(agents: AgentCostRecord[]): PerAgentRow[] {
+function derivePerAgentStats(
+  agents: AgentCostRecord[],
+  taskQualityMap: Map<string, number>
+): PerAgentRow[] {
   const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
+
   const recent = agents.filter((a) => new Date(a.startedAt).getTime() >= sevenDaysAgo)
 
   const byName = new Map<string, AgentCostRecord[]>()
@@ -224,13 +227,22 @@ function derivePerAgentStats(agents: AgentCostRecord[]): PerAgentRow[] {
       const totalTokens = runs.reduce((s, r) => s + (r.tokensIn ?? 0) + (r.tokensOut ?? 0), 0)
       const withCost = runs.filter((r) => r.costUsd != null)
       const successCount = withCost.filter((r) => r.finishedAt != null).length
+
+      const qualityScores = runs
+        .filter((r) => r.sprintTaskId != null && taskQualityMap.has(r.sprintTaskId))
+        .map((r) => taskQualityMap.get(r.sprintTaskId!)!)
+      const quality =
+        qualityScores.length > 0
+          ? Math.round(qualityScores.reduce((s, q) => s + q, 0) / qualityScores.length)
+          : null
+
       return {
         name,
         runs: runs.length,
         successPct: runs.length > 0 ? Math.round((successCount / runs.length) * 100) : null,
         avgDurationMs,
         totalTokens,
-        quality: null as null
+        quality
       }
     })
     .sort((a, b) => b.runs - a.runs)
@@ -326,7 +338,18 @@ export function useDashboardData(): DashboardData {
     [partitions]
   )
 
-  const perAgentStats = useMemo(() => derivePerAgentStats(localAgents), [localAgents])
+  const taskQualityMap = useMemo(() => {
+    const map = new Map<string, number>()
+    for (const task of tasks) {
+      if (task.quality_score != null) map.set(task.id, task.quality_score)
+    }
+    return map
+  }, [tasks])
+
+  const perAgentStats = useMemo(
+    () => derivePerAgentStats(localAgents, taskQualityMap),
+    [localAgents, taskQualityMap]
+  )
   const perRepoStats = useMemo(() => derivePerRepoStats(localAgents), [localAgents])
   const avgCostPerTask = useMemo(() => deriveAvgCostPerTask(localAgents), [localAgents])
   const failureRate = useMemo(() => {
