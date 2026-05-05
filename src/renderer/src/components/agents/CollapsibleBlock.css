@@ -5,20 +5,20 @@
 }
 
 .console-line--collapsible:hover {
-  background: var(--fleet-border);
+  background: var(--line);
 }
 
 .console-line__chevron {
   flex-shrink: 0;
-  color: var(--fleet-text-dim);
+  color: var(--fg-3);
   transition:
     transform 150ms ease,
     color 150ms ease;
-  font-size: var(--fleet-size-2xs);
+  font-size: var(--t-2xs);
 }
 
 .console-line--collapsible:hover .console-line__chevron {
-  color: var(--fleet-text-muted);
+  color: var(--fg-2);
 }
 
 .console-line--expanded .console-line__chevron {
@@ -28,7 +28,7 @@
 .console-collapsible-button {
   display: flex;
   align-items: center;
-  gap: var(--fleet-space-2);
+  gap: var(--s-2);
   background: none;
   border: none;
   cursor: pointer;
@@ -37,43 +37,9 @@
   text-align: left;
 }
 
-/* ── Tool Call Block Components ── */
-.tool-block {
-  border-left: 3px solid var(--fleet-accent-border);
-}
-
-.tool-block__chevron {
-  color: var(--fleet-status-review);
-}
-
-.tool-block__badge {
-  background: var(--fleet-accent-surface);
-  color: var(--fleet-status-review);
-}
-
-.tool-block__summary {
-  color: var(--fleet-text);
-}
-
-.tool-block__status-badge--success {
-  background: var(--fleet-accent-surface);
-  color: var(--fleet-accent);
-}
-
-.tool-block__status-badge--danger {
-  background: var(--fleet-danger-surface);
-  color: var(--fleet-danger);
-}
-
-.tool-block__timestamp {
-  color: var(--fleet-text-dim);
-}
-
-.tool-block__label {
-  color: var(--fleet-text-dim);
-}
-
-.tool-block__json-block {
-  background: var(--fleet-border);
-  color: var(--fleet-text-muted);
+/* ── Reduced Motion Overrides ── */
+@media (prefers-reduced-motion: reduce) {
+  .console-line__chevron {
+    transition: none;
+  }
 }
