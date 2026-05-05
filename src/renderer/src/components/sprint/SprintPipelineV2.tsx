@@ -422,7 +422,6 @@ export function SprintPipelineV2(): React.JSX.Element {
               onClose={handleCloseDrawer}
               onLaunch={launchTask}
               onStop={handleStop}
-              onRerun={handleRerun}
               onDelete={handleDeleteTask}
               onViewLogs={() => setView('agents')}
               onOpenSpec={() => setSpecPanelOpen(true)}

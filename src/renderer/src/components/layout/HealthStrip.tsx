@@ -4,7 +4,6 @@
  * Shows a status dot plus micro-pills for active / queued / failed counts.
  * Clicking navigates to the Sprint Pipeline so users can drill into problems.
  */
-import { neonVar } from '../neon/types'
 
 export type HealthManagerState = 'running' | 'error' | 'idle'
 
@@ -17,9 +16,9 @@ interface HealthStripProps {
 }
 
 const DOT_COLOR: Record<HealthManagerState, string> = {
-  running: neonVar('cyan', 'color'),
-  error: neonVar('red', 'color'),
-  idle: 'var(--fleet-text-dim, rgba(255,255,255,0.35))'
+  running: 'var(--st-running)',
+  error: 'var(--st-failed)',
+  idle: 'var(--fg-4)'
 }
 
 const DOT_LABEL: Record<HealthManagerState, string> = {
@@ -50,9 +49,9 @@ export function HealthStrip({
       title={ariaLabel}
       data-testid="unified-header-health-strip"
       style={{
-        background: 'var(--fleet-surface-raised, rgba(255,255,255,0.04))',
-        border: '1px solid var(--fleet-border, rgba(255,255,255,0.08))',
-        color: 'var(--fleet-text, rgba(255,255,255,0.85))'
+        background: 'var(--surf-1)',
+        border: '1px solid var(--line)',
+        color: 'var(--fg)'
       }}
     >
       <span
@@ -72,13 +71,13 @@ export function HealthStrip({
       />
       <span
         data-testid="health-strip-active"
-        style={{ fontSize: 11, color: neonVar('cyan', 'color') }}
+        style={{ fontSize: 11, color: 'var(--st-running)' }}
       >
         {activeCount}
       </span>
       <span
         data-testid="health-strip-queued"
-        style={{ fontSize: 11, color: 'var(--fleet-text-dim, rgba(255,255,255,0.55))' }}
+        style={{ fontSize: 11, color: 'var(--fg-4)' }}
       >
         {queuedCount}
       </span>
@@ -87,7 +86,7 @@ export function HealthStrip({
           data-testid="health-strip-failed"
           style={{
             fontSize: 11,
-            color: neonVar('red', 'color'),
+            color: 'var(--st-failed)',
             fontWeight: 600
           }}
         >

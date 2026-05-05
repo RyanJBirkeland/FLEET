@@ -6,7 +6,7 @@ import { formatElapsed } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useSprintSelection } from '../../stores/sprintSelection'
 import { StatusDot } from '../ui/StatusDot'
-import type { StatusDotKind } from '../ui/StatusDot'
+import { statusToDotKind } from '../../lib/task-status'
 import { PriorityChip } from './primitives/PriorityChip'
 
 interface TaskRowV2Props {
@@ -15,15 +15,6 @@ interface TaskRowV2Props {
   onClick: (id: string) => void
 }
 
-function statusToDotKind(status: string, prStatus?: string | null): StatusDotKind {
-  if (prStatus === 'open' || prStatus === 'branch_only') return 'review'
-  if (status === 'active') return 'running'
-  if (status === 'blocked') return 'blocked'
-  if (status === 'review' || status === 'approved') return 'review'
-  if (status === 'done') return 'done'
-  if (status === 'failed' || status === 'error' || status === 'cancelled') return 'failed'
-  return 'queued'
-}
 
 function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.Element {
   const [, setTick] = useState(0)

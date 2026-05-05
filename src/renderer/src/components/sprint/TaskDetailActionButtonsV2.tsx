@@ -1,12 +1,12 @@
 import { useCallback, useState } from 'react'
 import { RefreshCw, Loader2 } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
+import { toast } from '../../stores/toasts'
 
 export interface ActionButtonsV2Props {
   task: SprintTask
   onLaunch: (t: SprintTask) => void
   onStop: (t: SprintTask) => void
-  onRerun: (t: SprintTask) => void
   onDelete: (t: SprintTask) => void
   onViewLogs: (t: SprintTask) => void
   onEdit: (t: SprintTask) => void
@@ -75,7 +75,6 @@ export function TaskDetailActionButtonsV2({
   task,
   onLaunch,
   onStop,
-  onRerun: _onRerun,
   onDelete,
   onViewLogs,
   onEdit,
@@ -93,7 +92,7 @@ export function TaskDetailActionButtonsV2({
       try {
         await Promise.resolve(handler(task))
       } catch (error) {
-        console.error(`Action ${actionName} failed:`, error)
+        toast.error(`${actionName} failed: ${error instanceof Error ? error.message : String(error)}`)
       } finally {
         setLoadingAction(null)
       }

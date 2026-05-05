@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
@@ -7,7 +7,6 @@ import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
 import { useSprintSelection } from '../../stores/sprintSelection'
 import { useSprintTasks } from '../../stores/sprintTasks'
-import { useTaskCost } from '../../hooks/useTaskCost'
 import { PriorityChip } from './primitives/PriorityChip'
 import { Tag } from '../ui/Tag'
 
@@ -149,10 +148,7 @@ function TaskPillV2Inner({
   onClick,
 }: TaskPillV2Props): React.JSX.Element {
   const [elapsed, setElapsed] = useState('')
-  const [arriving, setArriving] = useState(false)
-  const prevStatusRef = useRef(task.status)
   const now = useNow()
-  const { costUsd } = useTaskCost(task.agent_run_id)
 
   const blockingTitles = useSprintTasks(
     useCallback(
@@ -166,17 +162,6 @@ function TaskPillV2Inner({
     )
   )
 
-  useEffect(() => {
-    if (task.status !== prevStatusRef.current) {
-      prevStatusRef.current = task.status
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: schedule animation on status transition
-      setArriving(true)
-      const timer = setTimeout(() => setArriving(false), 500)
-      return () => clearTimeout(timer)
-    }
-    return undefined
-  }, [task.status])
-
   const isActive = task.status === 'active' && !!task.started_at
   useBackoffInterval(() => setElapsed(formatElapsed(task.started_at!)), isActive ? 10_000 : null)
 
@@ -184,11 +169,6 @@ function TaskPillV2Inner({
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: seed elapsed string once on first active render
     if (isActive) setElapsed(formatElapsed(task.started_at!))
   }, [isActive, task.started_at])
-
-  // Suppress unused-variable warnings — these derived values will be used
-  // when zombie/stale indicators are added in a future pass.
-  void costUsd
-  void arriving
 
   const toggleTaskSelection = useSprintSelection((s) => s.toggleTaskSelection)
   const clearSelection = useSprintSelection((s) => s.clearSelection)

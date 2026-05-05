@@ -18,6 +18,7 @@ import { MiniStat } from './primitives/MiniStat'
 import { PriorityChip } from './primitives/PriorityChip'
 import { StatusDot } from '../ui/StatusDot'
 import type { StatusDotKind } from '../ui/StatusDot'
+import { statusToDotKind } from '../../lib/task-status'
 import { Tag } from '../ui/Tag'
 import { TaskDetailActionButtonsV2 } from './TaskDetailActionButtonsV2'
 
@@ -32,7 +33,6 @@ export interface TaskDetailDrawerV2Props {
   onClose: () => void
   onLaunch: (task: SprintTask) => void
   onStop: (task: SprintTask) => void
-  onRerun: (task: SprintTask) => void
   onDelete: (task: SprintTask) => void
   onViewLogs: (task: SprintTask) => void
   onOpenSpec: () => void
@@ -44,15 +44,6 @@ export interface TaskDetailDrawerV2Props {
   onExport?: ((task: SprintTask) => void) | undefined
 }
 
-function statusToDotKind(status: string, prStatus?: string | null): StatusDotKind {
-  if (prStatus === 'open' || prStatus === 'branch_only') return 'review'
-  if (status === 'active') return 'running'
-  if (status === 'blocked') return 'blocked'
-  if (status === 'review' || status === 'approved') return 'review'
-  if (status === 'done') return 'done'
-  if (status === 'failed' || status === 'error' || status === 'cancelled') return 'failed'
-  return 'queued'
-}
 
 function statusTextColor(status: string): string {
   switch (status) {
@@ -137,7 +128,6 @@ export function TaskDetailDrawerV2({
   onClose,
   onLaunch,
   onStop,
-  onRerun,
   onDelete,
   onViewLogs,
   onOpenSpec,
@@ -374,7 +364,6 @@ export function TaskDetailDrawerV2({
           task={task}
           onLaunch={onLaunch}
           onStop={onStop}
-          onRerun={onRerun}
           onDelete={handleDelete}
           onViewLogs={onViewLogs}
           onEdit={onEdit}
