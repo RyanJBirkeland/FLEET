@@ -80,6 +80,38 @@ function getDisplayName(filePath: string, allTabs: EditorTab[]): string {
 }
 
 // ---------------------------------------------------------------------------
+// UI-only state types (V2 IDE layout)
+// ---------------------------------------------------------------------------
+
+export type IDEActivity = 'files' | 'search' | 'scm' | 'outline' | 'agents'
+
+export type InsightSectionKey = 'thisFile' | 'agents' | 'tasks' | 'commits' | 'problems'
+
+export interface IDEUIState {
+  activity: IDEActivity
+  insightRailOpen: boolean
+  insightSectionsOpen: Record<InsightSectionKey, boolean>
+  terminalOpen: boolean
+  sidebarOpen: boolean
+}
+
+const DEFAULT_INSIGHT_SECTIONS: Record<InsightSectionKey, boolean> = {
+  thisFile: true,
+  agents: true,
+  tasks: true,
+  commits: true,
+  problems: true
+}
+
+const DEFAULT_UI_STATE: IDEUIState = {
+  activity: 'files',
+  insightRailOpen: true,
+  insightSectionsOpen: DEFAULT_INSIGHT_SECTIONS,
+  terminalOpen: false,
+  sidebarOpen: true
+}
+
+// ---------------------------------------------------------------------------
 // Store interface
 // ---------------------------------------------------------------------------
 
@@ -95,6 +127,9 @@ interface IDEState {
   minimapEnabled: boolean
   wordWrapEnabled: boolean
   fontSize: number
+
+  // V2 UI-only state
+  uiState: IDEUIState
 
   // Actions
   setRootPath: (path: string) => void
@@ -116,6 +151,13 @@ interface IDEState {
   toggleWordWrap: () => void
   increaseFontSize: () => void
   decreaseFontSize: () => void
+
+  // V2 UI actions
+  setActivity: (activity: IDEActivity) => void
+  setInsightRailOpen: (open: boolean) => void
+  setInsightSectionOpen: (key: InsightSectionKey, open: boolean) => void
+  setTerminalOpen: (open: boolean) => void
+  setSidebarOpen: (open: boolean) => void
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +176,7 @@ export const useIDEStore = create<IDEState>((set) => ({
   minimapEnabled: true,
   wordWrapEnabled: false,
   fontSize: 13,
+  uiState: DEFAULT_UI_STATE,
 
   setRootPath: (path: string): void => {
     set((s) => {
@@ -282,6 +325,31 @@ export const useIDEStore = create<IDEState>((set) => ({
 
   decreaseFontSize: (): void => {
     set((s) => ({ fontSize: Math.max(10, s.fontSize - 1) }))
+  },
+
+  setActivity: (activity: IDEActivity): void => {
+    set((s) => ({ uiState: { ...s.uiState, activity } }))
+  },
+
+  setInsightRailOpen: (open: boolean): void => {
+    set((s) => ({ uiState: { ...s.uiState, insightRailOpen: open } }))
+  },
+
+  setInsightSectionOpen: (key: InsightSectionKey, open: boolean): void => {
+    set((s) => ({
+      uiState: {
+        ...s.uiState,
+        insightSectionsOpen: { ...s.uiState.insightSectionsOpen, [key]: open }
+      }
+    }))
+  },
+
+  setTerminalOpen: (open: boolean): void => {
+    set((s) => ({ uiState: { ...s.uiState, terminalOpen: open } }))
+  },
+
+  setSidebarOpen: (open: boolean): void => {
+    set((s) => ({ uiState: { ...s.uiState, sidebarOpen: open } }))
   }
 }))
 
@@ -316,7 +384,8 @@ useIDEStore.subscribe((state) => {
     expandedDirs: state.expandedDirs, // IDE-11: Persist expanded directories
     minimapEnabled: state.minimapEnabled,
     wordWrapEnabled: state.wordWrapEnabled,
-    fontSize: state.fontSize
+    fontSize: state.fontSize,
+    uiState: state.uiState
   }
   const serialized = JSON.stringify(toSave)
   if (serialized === lastSerialized) return // Skip — nothing changed
