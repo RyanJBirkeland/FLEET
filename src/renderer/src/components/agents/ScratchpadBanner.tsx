@@ -21,7 +21,7 @@ export function ScratchpadBanner({ onDismiss }: ScratchpadBannerProps): React.JS
       }}
     >
       <div style={{ flex: 1 }}>
-        <div className="fleet-eyebrow" style={{ marginBottom: 4 }}>
+        <div className="fleet-eyebrow" style={{ marginBottom: 'var(--s-1)' }}>
           SCRATCHPAD
         </div>
         <p style={{ margin: 0, fontSize: 11, color: 'var(--fg-2)', lineHeight: 1.5 }}>

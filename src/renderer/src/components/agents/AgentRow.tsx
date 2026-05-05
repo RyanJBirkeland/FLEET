@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { timeAgo } from '../../lib/format'
 import type { AgentMeta } from '../../../../shared/types'
 
@@ -16,19 +17,22 @@ export function AgentRow({
   currentStep,
   progressPct = 0,
 }: AgentRowProps): React.JSX.Element {
+  const [hovered, setHovered] = useState(false)
   const isRunning = agent.status === 'running'
   const age = agent.startedAt ? timeAgo(agent.startedAt) : ''
 
   return (
     <button
       onClick={onClick}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
       aria-label={`${agent.task} — ${agent.status}`}
       aria-current={selected ? 'true' : undefined}
       style={{
         width: '100%',
         padding: 'var(--s-2)',
         borderRadius: 'var(--r-md)',
-        background: selected ? 'var(--surf-2)' : 'transparent',
+        background: selected ? 'var(--surf-2)' : hovered ? 'var(--surf-1)' : 'transparent',
         border: selected ? '1px solid var(--line-2)' : '1px solid transparent',
         borderLeft: selected
           ? `2px solid var(--st-${agent.status})`
@@ -37,10 +41,10 @@ export function AgentRow({
         textAlign: 'left',
         display: 'flex',
         flexDirection: 'column',
-        gap: 6,
+        gap: 'var(--s-2)',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-2)' }}>
         {isRunning ? (
           <span
             className="fleet-pulse"
@@ -85,7 +89,7 @@ export function AgentRow({
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           whiteSpace: 'nowrap',
-          paddingLeft: 12,
+          paddingLeft: 'var(--s-3)',
         }}
       >
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-4)' }}>
@@ -102,7 +106,7 @@ export function AgentRow({
             background: 'var(--surf-3)',
             borderRadius: 999,
             overflow: 'hidden',
-            marginLeft: 12,
+            marginLeft: 'var(--s-3)',
           }}
         >
           <div
