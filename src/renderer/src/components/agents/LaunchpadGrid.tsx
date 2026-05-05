@@ -219,6 +219,28 @@ export function LaunchpadGrid({ onAgentSpawned, onCancel }: LaunchpadGridProps):
               color: specPath ? 'var(--fg)' : 'var(--fg-3)'
             }}
           />
+          <button
+            type="button"
+            disabled={spawning}
+            onClick={() => {
+              // TODO(verify): wire to IDE file picker when available
+            }}
+            style={{
+              height: 32,
+              padding: '0 var(--s-2)',
+              background: 'transparent',
+              border: '1px solid var(--line-2)',
+              borderRadius: 'var(--r-md)',
+              fontFamily: 'var(--font-mono)',
+              fontSize: 11,
+              color: 'var(--fg-2)',
+              cursor: spawning ? 'default' : 'pointer',
+              flexShrink: 0,
+              opacity: spawning ? 0.4 : 1
+            }}
+          >
+            Browse…
+          </button>
         </div>
       </FormRow>
 

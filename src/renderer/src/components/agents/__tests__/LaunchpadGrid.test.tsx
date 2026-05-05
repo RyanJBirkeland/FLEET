@@ -200,6 +200,17 @@ describe('LaunchpadGrid', () => {
     expect(mockSpawnAgent).not.toHaveBeenCalled()
   })
 
+  it('renders Browse button for Task spec field', () => {
+    render(<LaunchpadGrid onAgentSpawned={onAgentSpawned} />)
+    expect(screen.getByText('Browse…')).toBeInTheDocument()
+  })
+
+  it('Browse button is disabled when spawning', () => {
+    mockedLocalAgentsStore.mockImplementation(makeLocalAgentsSelector(true))
+    render(<LaunchpadGrid onAgentSpawned={onAgentSpawned} />)
+    expect(screen.getByText('Browse…').closest('button')).toBeDisabled()
+  })
+
   it('does not render a "Recent" section', () => {
     render(<LaunchpadGrid onAgentSpawned={onAgentSpawned} />)
     expect(screen.queryByText(/Recent/i)).not.toBeInTheDocument()
