@@ -231,4 +231,29 @@ export function registerReviewHandlers(deps: ReviewHandlersDeps): void {
       env: buildAgentEnv()
     })
   })
+
+  // review:approveTask — transitions a task from `review` to `approved`.
+  // `approved` satisfies hard dependencies without being terminal, so downstream
+  // tasks unblock immediately. TaskTerminalService.onStatusTerminal now accepts
+  // DEPENDENCY_TRIGGER_STATUSES (terminal + approved), so the standard callback
+  // handles dep resolution without a separate call.
+  safeHandle('review:approveTask', async (_e, payload) => {
+    const { taskId } = payload
+    if (!isValidTaskId(taskId)) throw new Error('Invalid task ID format')
+
+    const task = getTask(taskId)
+    if (!task) throw new Error(`Task ${taskId} not found`)
+    if (task.status !== 'review') throw new Error(`Task ${taskId} is not in review status`)
+
+    // Commits the review → approved transition. Throws on invalid transition or DB error.
+    await deps.taskStateService.transition(taskId, 'approved', {
+      caller: 'review:approveTask'
+    })
+
+    // `approved` is in DEPENDENCY_TRIGGER_STATUSES so onStatusTerminal schedules
+    // downstream unblocking via the batched resolver — no separate call needed.
+    deps.onStatusTerminal(taskId, 'approved')
+
+    return { success: true }
+  })
 }

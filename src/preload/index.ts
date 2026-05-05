@@ -84,6 +84,7 @@ import {
   workbench,
   tearoff,
   review,
+  prGroups,
   synthesizeSpec,
   reviseSpec,
   cancelSynthesis,
@@ -240,6 +241,9 @@ const api = {
 
   // Code Review
   review,
+
+  // PR Groups
+  prGroups,
 
   // Repository discovery
   repoDiscovery,

@@ -3,9 +3,9 @@ import { sleep } from '../lib/async-utils'
 import type { TaskStateService } from './task-state-service'
 import {
   createDependencyIndex,
-  type DependencyIndex,
-  TERMINAL_STATUSES
+  type DependencyIndex
 } from './dependency-service'
+import { DEPENDENCY_TRIGGER_STATUSES } from '../../shared/task-state-machine'
 import type { EpicDepsReader } from './epic-dependency-service'
 import type { SprintTask, TaskDependency, TaskGroup } from '../../shared/types'
 import type { TaskStatus } from '../../shared/task-state-machine'
@@ -151,7 +151,9 @@ export function createTaskTerminalService(deps: TaskTerminalServiceDeps): TaskTe
   }
 
   function onStatusTerminal(taskId: string, status: TaskStatus): void {
-    if (!TERMINAL_STATUSES.has(status)) return
+    // Accept terminal statuses and `approved` — both satisfy hard dependencies
+    // and must trigger downstream unblocking. See DEPENDENCY_TRIGGER_STATUSES.
+    if (!DEPENDENCY_TRIGGER_STATUSES.has(status)) return
     scheduleDependencyResolution(taskId, status)
   }
 

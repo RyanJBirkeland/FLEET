@@ -269,7 +269,31 @@ export const review = {
   chatStream: (params: { taskId: string; messages: PartnerMessage[] }) =>
     typedInvoke('review:chatStream', params),
   onChatChunk: onBroadcast<BroadcastChannels['review:chatChunk']>('review:chatChunk'),
-  abortChat: (streamId: string) => typedInvoke('review:chatAbort', streamId)
+  abortChat: (streamId: string) => typedInvoke('review:chatAbort', streamId),
+  approveTask: (payload: { taskId: string }) => typedInvoke('review:approveTask', payload),
+}
+
+// PR Groups
+export const prGroups = {
+  list: (payload: { repo?: string | undefined }) => typedInvoke('prGroups:list', payload),
+  create: (payload: {
+    repo: string
+    title: string
+    branchName: string
+    description?: string | undefined
+  }) => typedInvoke('prGroups:create', payload),
+  update: (payload: {
+    id: string
+    title?: string | undefined
+    branchName?: string | undefined
+    description?: string | undefined
+  }) => typedInvoke('prGroups:update', payload),
+  addTask: (payload: { groupId: string; taskId: string }) =>
+    typedInvoke('prGroups:addTask', payload),
+  removeTask: (payload: { groupId: string; taskId: string }) =>
+    typedInvoke('prGroups:removeTask', payload),
+  build: (payload: { id: string }) => typedInvoke('prGroups:build', payload),
+  delete: (payload: { id: string }) => typedInvoke('prGroups:delete', payload),
 }
 
 // Spec Synthesizer

@@ -10,6 +10,7 @@ import type { ReviewOrchestrationService } from '../services/review-orchestratio
 import type { ReviewShipBatchService } from '../services/review-ship-batch'
 import type { ReviewRollupService } from '../services/review-rollup-service'
 import type { PreflightGate } from '../agent-manager/preflight-gate'
+import { createPrGroupBuildService } from '../services/pr-group-build-service'
 
 import { registerAgentHandlers } from './agent-handlers'
 import { registerGitHandlers } from './git-handlers'
@@ -40,6 +41,7 @@ import { registerRepoDiscoveryHandlers } from './repo-discovery'
 import { registerTearoffHandlers } from '../tearoff-manager'
 import { createPreflightGate } from '../agent-manager/preflight-gate'
 import { broadcast } from '../broadcast'
+import { registerPrGroupHandlers } from './pr-groups'
 
 export interface TerminalDeps {
   onStatusTerminal: TaskTerminalService['onStatusTerminal']
@@ -133,4 +135,8 @@ export function registerAllHandlers(deps: AppHandlerDeps): void {
   registerGroupHandlers(epicGroupService)
   registerPlannerImportHandlers({ dialog: terminalDeps.dialog })
   registerRepoDiscoveryHandlers()
+
+  // PR Group handlers
+  const prGroupBuild = createPrGroupBuildService(repo)
+  registerPrGroupHandlers({ prGroupBuild })
 }
