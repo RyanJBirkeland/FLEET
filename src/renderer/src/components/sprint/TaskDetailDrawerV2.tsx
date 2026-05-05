@@ -9,9 +9,9 @@ import { formatElapsed, failureCategoryForReason } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
 import { useGitHubStatus } from '../../hooks/useGitHubStatus'
+import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { TextareaPromptModal, useTextareaPrompt } from '../ui/TextareaPromptModal'
-import { toast } from '../../stores/toasts'
 import { useTaskCost } from '../../hooks/useTaskCost'
 import { DrawerSection } from './primitives/DrawerSection'
 import { MiniStat } from './primitives/MiniStat'
@@ -46,15 +46,23 @@ export interface TaskDetailDrawerV2Props {
   onExport?: ((task: SprintTask) => void) | undefined
 }
 
-
 function statusTextColor(status: string): string {
   switch (status) {
-    case 'active': return 'var(--st-running)'
-    case 'blocked': return 'var(--st-blocked)'
-    case 'review': case 'approved': return 'var(--st-review)'
-    case 'done': return 'var(--st-done)'
-    case 'failed': case 'error': case 'cancelled': return 'var(--st-failed)'
-    default: return 'var(--fg-3)'
+    case 'active':
+      return 'var(--st-running)'
+    case 'blocked':
+      return 'var(--st-blocked)'
+    case 'review':
+    case 'approved':
+      return 'var(--st-review)'
+    case 'done':
+      return 'var(--st-done)'
+    case 'failed':
+    case 'error':
+    case 'cancelled':
+      return 'var(--st-failed)'
+    default:
+      return 'var(--fg-3)'
   }
 }
 
@@ -94,7 +102,7 @@ function renderFailureNotes(notes: string | null | undefined): React.JSX.Element
         fontFamily: 'var(--font-mono)',
         color: 'var(--fg-2)',
         whiteSpace: 'pre-wrap',
-        wordBreak: 'break-word',
+        wordBreak: 'break-word'
       }}
     >
       {notes}
@@ -104,16 +112,28 @@ function renderFailureNotes(notes: string | null | undefined): React.JSX.Element
 
 function VerificationDiagnostics({ feedback }: { feedback: RevisionFeedback }): React.JSX.Element {
   return (
-    <div data-testid="task-drawer-verification-diagnostics" style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
+    <div
+      data-testid="task-drawer-verification-diagnostics"
+      style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}
+    >
       <p style={{ margin: 0, fontSize: 12, color: 'var(--fg-2)' }}>{feedback.summary}</p>
       {feedback.diagnostics.length > 0 && (
-        <ul style={{ margin: 0, padding: '0 0 0 var(--s-3)', display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
+        <ul
+          style={{
+            margin: 0,
+            padding: '0 0 0 var(--s-3)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--s-1)'
+          }}
+        >
           {feedback.diagnostics.map((d, i) => (
             <li key={i} style={{ fontSize: 11, color: 'var(--fg-2)' }}>
               <span style={{ fontFamily: 'var(--font-mono)', color: 'var(--fg-3)' }}>
-                {d.file}{d.line !== undefined ? `:${d.line}` : ''} [{d.kind}]
-              </span>
-              {' '}{d.message}
+                {d.file}
+                {d.line !== undefined ? `:${d.line}` : ''} [{d.kind}]
+              </span>{' '}
+              {d.message}
               {d.suggestedFix && (
                 <span style={{ color: 'var(--fg-3)' }}> — Fix: {d.suggestedFix}</span>
               )}
@@ -138,7 +158,7 @@ export function TaskDetailDrawerV2({
   onUnblock,
   onRetry,
   onReviewChanges,
-  onExport,
+  onExport
 }: TaskDetailDrawerV2Props): React.JSX.Element {
   const [elapsed, setElapsed] = useState(() =>
     task.status === 'active' && task.started_at ? formatElapsed(task.started_at) : ''
@@ -165,14 +185,20 @@ export function TaskDetailDrawerV2({
   const { costUsd } = useTaskCost(task.agent_run_id)
   const now = useNow()
 
-  const progressPct = !task.started_at || !task.max_runtime_ms
-    ? 0
-    : Math.min(100, Math.round(((now - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100))
+  const progressPct =
+    !task.started_at || !task.max_runtime_ms
+      ? 0
+      : Math.min(
+          100,
+          Math.round(((now - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100)
+        )
 
   const { prompt: promptForReason, promptProps: reasonPromptProps } = useTextareaPrompt()
   const { confirm: confirmForceDone, confirmProps: forceDoneConfirmProps } = useConfirm()
   const { confirm: confirmForceRelease, confirmProps: forceReleaseConfirmProps } = useConfirm()
   const { confirm: confirmDelete, confirmProps: deleteConfirmProps } = useConfirm()
+
+  const { markTaskFailed, forceTaskDone, releaseTask } = useSprintTaskActions()
 
   const showMarkFailed = FORCE_FAIL_VISIBLE_STATUSES.has(task.status)
   const showForceDone = task.status !== 'done'
@@ -187,11 +213,7 @@ export function TaskDetailDrawerV2({
       confirmLabel: 'Mark Failed'
     })
     if (reason === null) return
-    try {
-      await window.api.sprint.forceFailTask({ taskId: task.id, reason: reason.trim() || undefined })
-    } catch (err) {
-      toast.error(`Failed to mark task as failed: ${err instanceof Error ? err.message : String(err)}`)
-    }
+    await markTaskFailed(task.id, reason.trim() || undefined)
   }
 
   async function handleForceDone(): Promise<void> {
@@ -203,11 +225,7 @@ export function TaskDetailDrawerV2({
       variant: 'danger'
     })
     if (!approved) return
-    try {
-      await window.api.sprint.forceDoneTask({ taskId: task.id, force: true })
-    } catch (err) {
-      toast.error(`Failed to force task done: ${err instanceof Error ? err.message : String(err)}`)
-    }
+    await forceTaskDone(task.id)
   }
 
   async function handleForceRelease(): Promise<void> {
@@ -219,12 +237,7 @@ export function TaskDetailDrawerV2({
       variant: 'danger'
     })
     if (!approved) return
-    try {
-      await window.api.sprint.forceReleaseClaim(task.id)
-      toast.success('Task released — it will be re-queued shortly')
-    } catch (err) {
-      toast.error(`Failed to release claim: ${err instanceof Error ? err.message : String(err)}`)
-    }
+    await releaseTask(task.id)
   }
 
   async function handleDelete(): Promise<void> {
@@ -249,7 +262,7 @@ export function TaskDetailDrawerV2({
         background: 'var(--bg)',
         overflowY: 'auto',
         display: 'flex',
-        flexDirection: 'column',
+        flexDirection: 'column'
       }}
       role="complementary"
       aria-label={`Task details: ${task.title}`}
@@ -263,7 +276,7 @@ export function TaskDetailDrawerV2({
           zIndex: 1,
           background: 'var(--bg)',
           padding: 'var(--s-3) var(--s-4)',
-          borderBottom: '1px solid var(--line)',
+          borderBottom: '1px solid var(--line)'
         }}
       >
         {/* Top meta row */}
@@ -273,7 +286,7 @@ export function TaskDetailDrawerV2({
             alignItems: 'center',
             gap: 'var(--s-1)',
             minWidth: 0,
-            marginBottom: 'var(--s-1)',
+            marginBottom: 'var(--s-1)'
           }}
         >
           <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-4)' }}>
@@ -291,7 +304,7 @@ export function TaskDetailDrawerV2({
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 10,
-                color: statusTextColor(task.status),
+                color: statusTextColor(task.status)
               }}
             >
               {task.status}
@@ -312,7 +325,7 @@ export function TaskDetailDrawerV2({
               color: 'var(--fg-3)',
               cursor: 'pointer',
               borderRadius: 'var(--r-sm)',
-              fontSize: 14,
+              fontSize: 14
             }}
           >
             ×
@@ -329,7 +342,7 @@ export function TaskDetailDrawerV2({
             color: 'var(--fg)',
             lineHeight: 1.4,
             margin: '0 0 var(--s-1) 0',
-            ...textPretty,
+            ...textPretty
           }}
         >
           {task.title}
@@ -342,16 +355,18 @@ export function TaskDetailDrawerV2({
             alignItems: 'center',
             gap: 'var(--s-1)',
             flexWrap: 'wrap',
-            minWidth: 0,
+            minWidth: 0
           }}
         >
-          {task.tags?.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+          {task.tags?.map((tag) => (
+            <Tag key={tag}>{tag}</Tag>
+          ))}
           <span
             style={{
               marginLeft: 'auto',
               fontFamily: 'var(--font-mono)',
               fontSize: 10,
-              color: 'var(--fg-3)',
+              color: 'var(--fg-3)'
             }}
           >
             {task.repo}
@@ -385,7 +400,7 @@ export function TaskDetailDrawerV2({
                 color: 'var(--fg-2)',
                 lineHeight: 1.5,
                 margin: 0,
-                ...textPretty,
+                ...textPretty
               }}
             >
               {task.spec.length > 300 ? task.spec.substring(0, 300) + '…' : task.spec}
@@ -402,7 +417,7 @@ export function TaskDetailDrawerV2({
                 fontFamily: 'var(--font-mono)',
                 fontSize: 10,
                 color: 'var(--fg-2)',
-                cursor: 'pointer',
+                cursor: 'pointer'
               }}
             >
               edit spec ↗
@@ -416,7 +431,7 @@ export function TaskDetailDrawerV2({
               padding: 'var(--s-3)',
               display: 'flex',
               alignItems: 'center',
-              gap: 'var(--s-2)',
+              gap: 'var(--s-2)'
             }}
           >
             <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-4)' }}>
@@ -431,7 +446,7 @@ export function TaskDetailDrawerV2({
                 color: 'var(--fg-3)',
                 background: 'transparent',
                 border: 'none',
-                cursor: 'pointer',
+                cursor: 'pointer'
               }}
             >
               Generate
@@ -454,13 +469,18 @@ export function TaskDetailDrawerV2({
                 flex: 1,
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                whiteSpace: 'nowrap',
+                whiteSpace: 'nowrap'
               }}
             >
               {task.title}
             </span>
             <span
-              style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-2)', flexShrink: 0 }}
+              style={{
+                fontFamily: 'var(--font-mono)',
+                fontSize: 11,
+                color: 'var(--fg-2)',
+                flexShrink: 0
+              }}
             >
               {progressPct}%
             </span>
@@ -499,12 +519,17 @@ export function TaskDetailDrawerV2({
                   border: 'none',
                   cursor: 'pointer',
                   width: '100%',
-                  textAlign: 'left',
+                  textAlign: 'left'
                 }}
               >
                 <StatusDot kind={depTask ? statusToDotKind(depTask.status) : 'queued'} size={6} />
                 <span
-                  style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-4)', flexShrink: 0 }}
+                  style={{
+                    fontFamily: 'var(--font-mono)',
+                    fontSize: 10,
+                    color: 'var(--fg-4)',
+                    flexShrink: 0
+                  }}
                 >
                   {dep.id.substring(0, 8)}
                 </span>
@@ -514,7 +539,7 @@ export function TaskDetailDrawerV2({
                     color: 'var(--fg-2)',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
+                    whiteSpace: 'nowrap'
                   }}
                 >
                   {depTask?.title ?? dep.id}
@@ -541,7 +566,7 @@ export function TaskDetailDrawerV2({
                 gap: 'var(--s-1)',
                 alignItems: 'start',
                 fontFamily: 'var(--font-mono)',
-                fontSize: 10,
+                fontSize: 10
               }}
             >
               <span style={{ color: 'var(--fg-4)' }}>
@@ -549,7 +574,7 @@ export function TaskDetailDrawerV2({
                   hour: '2-digit',
                   minute: '2-digit',
                   second: '2-digit',
-                  hour12: false,
+                  hour12: false
                 })}
               </span>
               <StatusDot kind={eventToKind(event.type)} size={5} />
@@ -558,7 +583,7 @@ export function TaskDetailDrawerV2({
                   color: 'var(--fg-2)',
                   overflow: 'hidden',
                   textOverflow: 'ellipsis',
-                  whiteSpace: 'nowrap',
+                  whiteSpace: 'nowrap'
                 }}
               >
                 {getEventContent(event)}
@@ -573,7 +598,9 @@ export function TaskDetailDrawerV2({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--s-1)' }}>
           <MetaRow label="Created" value={formatTimestamp(task.created_at)} />
           {task.started_at && <MetaRow label="Started" value={formatTimestamp(task.started_at)} />}
-          {task.completed_at && <MetaRow label="Completed" value={formatTimestamp(task.completed_at)} />}
+          {task.completed_at && (
+            <MetaRow label="Completed" value={formatTimestamp(task.completed_at)} />
+          )}
           {task.pr_url && task.pr_number && (
             <MetaRow label="PR" value={`#${task.pr_number} (${task.pr_status ?? 'unknown'})`} />
           )}
@@ -591,7 +618,7 @@ export function TaskDetailDrawerV2({
                 fontSize: 10,
                 color: 'var(--fg-2)',
                 cursor: 'pointer',
-                marginTop: 'var(--s-1)',
+                marginTop: 'var(--s-1)'
               }}
             >
               View in Agents →
@@ -602,7 +629,10 @@ export function TaskDetailDrawerV2({
 
       {/* Failure details */}
       {(task.status === 'failed' || task.status === 'error' || task.status === 'cancelled') && (
-        <DrawerSection eyebrow="FAIL" title={task.status === 'cancelled' ? 'Cancellation' : 'Failure'}>
+        <DrawerSection
+          eyebrow="FAIL"
+          title={task.status === 'cancelled' ? 'Cancellation' : 'Failure'}
+        >
           <div
             data-testid="task-drawer-failure"
             style={{
@@ -612,12 +642,10 @@ export function TaskDetailDrawerV2({
               padding: 'var(--s-3)',
               borderRadius: 'var(--r-md)',
               border: '1px solid color-mix(in oklch, var(--st-failed) 25%, transparent)',
-              background: 'color-mix(in oklch, var(--st-failed) 8%, var(--bg))',
+              background: 'color-mix(in oklch, var(--st-failed) 8%, var(--bg))'
             }}
           >
-            {task.failure_reason && (
-              <FailureChip reason={task.failure_reason} />
-            )}
+            {task.failure_reason && <FailureChip reason={task.failure_reason} />}
             {task.failure_reason && (
               <pre
                 data-testid="task-drawer-failure-reason"
@@ -627,7 +655,7 @@ export function TaskDetailDrawerV2({
                   fontFamily: 'var(--font-mono)',
                   color: 'var(--fg-2)',
                   whiteSpace: 'pre-wrap',
-                  wordBreak: 'break-word',
+                  wordBreak: 'break-word'
                 }}
               >
                 {task.failure_reason}
@@ -650,13 +678,19 @@ export function TaskDetailDrawerV2({
                 data-testid="task-drawer-failure-errors"
                 style={{ display: 'flex', flexDirection: 'column', gap: 4 }}
               >
-                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-4)' }}>
+                <span
+                  style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-4)' }}
+                >
                   Recent errors
                 </span>
                 {recentAgentErrors.map((e, i) => (
                   <div
                     key={i}
-                    style={{ fontSize: 11, color: 'var(--st-failed)', fontFamily: 'var(--font-mono)' }}
+                    style={{
+                      fontSize: 11,
+                      color: 'var(--st-failed)',
+                      fontFamily: 'var(--font-mono)'
+                    }}
                   >
                     {e.type === 'agent:error' ? e.message : ''}
                   </div>
@@ -676,40 +710,7 @@ export function TaskDetailDrawerV2({
           >
             PR creation failed after retries
           </span>
-          {ghConfigured &&
-            task.notes &&
-            (() => {
-              const match = task.notes.match(/Branch\s+(\S+)\s+pushed\s+to\s+(\S+)/)
-              if (!match) return null
-              const [, branch, ghRepo] = match
-              if (!branch || !ghRepo) return null
-              if (!/^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/.test(ghRepo)) return null
-              if (!/^[a-zA-Z0-9/_.-]+$/.test(branch)) return null
-              return (
-                <a
-                  href={`https://github.com/${encodeURIComponent(ghRepo)}/pull/new/${encodeURIComponent(branch)}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  style={{
-                    alignSelf: 'flex-start',
-                    height: 24,
-                    padding: '0 var(--s-2)',
-                    background: 'var(--accent)',
-                    color: 'var(--accent-fg)',
-                    border: 'none',
-                    borderRadius: 'var(--r-md)',
-                    fontFamily: 'var(--font-mono)',
-                    fontSize: 10,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    textDecoration: 'none',
-                  }}
-                >
-                  Create PR →
-                </a>
-              )
-            })()}
+          {ghConfigured && buildBranchOnlyPrLink(task.notes)}
         </DrawerSection>
       )}
 
@@ -733,7 +734,7 @@ export function TaskDetailDrawerV2({
                   border: '1px solid color-mix(in oklch, var(--st-failed) 30%, transparent)',
                   borderRadius: 'var(--r-md)',
                   fontSize: 11,
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 Force Release
@@ -752,7 +753,7 @@ export function TaskDetailDrawerV2({
                   border: '1px solid color-mix(in oklch, var(--st-failed) 30%, transparent)',
                   borderRadius: 'var(--r-md)',
                   fontSize: 11,
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 Mark Failed
@@ -771,7 +772,7 @@ export function TaskDetailDrawerV2({
                   border: '1px solid color-mix(in oklch, var(--st-failed) 30%, transparent)',
                   borderRadius: 'var(--r-md)',
                   fontSize: 11,
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 Force Done
@@ -800,7 +801,13 @@ function MetaRow({ label, value }: MetaRowProps): React.JSX.Element {
   return (
     <div style={{ display: 'flex', gap: 'var(--s-2)', alignItems: 'baseline' }}>
       <span
-        style={{ fontFamily: 'var(--font-mono)', fontSize: 10, color: 'var(--fg-4)', flexShrink: 0, minWidth: 64 }}
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--fg-4)',
+          flexShrink: 0,
+          minWidth: 64
+        }}
       >
         {label}
       </span>
@@ -826,7 +833,7 @@ function FailureChip({ reason }: FailureChipProps): React.JSX.Element {
         borderRadius: 'var(--r-sm)',
         background: 'color-mix(in oklch, var(--st-failed) 20%, transparent)',
         color: 'var(--st-failed)',
-        border: '1px solid color-mix(in oklch, var(--st-failed) 30%, transparent)',
+        border: '1px solid color-mix(in oklch, var(--st-failed) 30%, transparent)'
       }}
     >
       {category.label}
@@ -840,4 +847,43 @@ function getEventContent(event: { type: string; [key: string]: unknown }): strin
   if (event.type === 'agent:tool_result') return `[${event.tool}] ${event.summary}`
   if (event.type === 'agent:error') return String(event.message ?? event.type)
   return event.type
+}
+
+const GH_REPO_PATTERN = /^[a-zA-Z0-9_.-]+\/[a-zA-Z0-9_.-]+$/
+const GH_BRANCH_PATTERN = /^[a-zA-Z0-9/_.-]+$/
+const BRANCH_PUSHED_PATTERN = /Branch\s+(\S+)\s+pushed\s+to\s+(\S+)/
+
+function buildBranchOnlyPrLink(notes: string | null | undefined): React.ReactNode {
+  if (!notes) return null
+  const match = notes.match(BRANCH_PUSHED_PATTERN)
+  if (!match) return null
+  const [, branch, ghRepo] = match
+  if (!branch || !ghRepo) return null
+  if (!GH_REPO_PATTERN.test(ghRepo)) return null
+  if (!GH_BRANCH_PATTERN.test(branch)) return null
+  const href = `https://github.com/${encodeURIComponent(ghRepo)}/pull/new/${encodeURIComponent(branch)}`
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      style={{
+        alignSelf: 'flex-start',
+        height: 24,
+        padding: '0 var(--s-2)',
+        background: 'var(--accent)',
+        color: 'var(--accent-fg)',
+        border: 'none',
+        borderRadius: 'var(--r-md)',
+        fontFamily: 'var(--font-mono)',
+        fontSize: 10,
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        textDecoration: 'none'
+      }}
+    >
+      Create PR →
+    </a>
+  )
 }

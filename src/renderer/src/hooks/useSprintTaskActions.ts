@@ -18,6 +18,10 @@ interface SprintTaskActions {
   deleteTask: (id: string) => Promise<void>
   createTask: (data: CreateTicketInput) => Promise<string | null>
   batchDeleteTasks: (taskIds: string[]) => Promise<void>
+  unblockTask: (taskId: string) => Promise<void>
+  markTaskFailed: (taskId: string, reason?: string) => Promise<void>
+  forceTaskDone: (taskId: string) => Promise<void>
+  releaseTask: (taskId: string) => Promise<void>
   confirmProps: ReturnType<typeof useConfirm>['confirmProps']
 }
 
@@ -173,6 +177,46 @@ export function useSprintTaskActions(): SprintTaskActions {
     [storeBatchDeleteTasks, clearTaskIfSelected]
   )
 
+  // --- Unblock a blocked task (re-checks dependencies) ---
+  const unblockTask = useCallback(async (taskId: string): Promise<void> => {
+    try {
+      await window.api.sprint.unblockTask(taskId)
+      toast.success('Task unblocked - dependencies will be re-checked')
+    } catch (err) {
+      toast.error(`Failed to unblock: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [])
+
+  // --- Operator override: mark task as failed (audit-trailed reason optional) ---
+  const markTaskFailed = useCallback(async (taskId: string, reason?: string): Promise<void> => {
+    try {
+      await window.api.sprint.forceFailTask({ taskId, reason })
+    } catch (err) {
+      toast.error(
+        `Failed to mark task as failed: ${err instanceof Error ? err.message : String(err)}`
+      )
+    }
+  }, [])
+
+  // --- Operator override: force-mark task as done (resolves dependents) ---
+  const forceTaskDone = useCallback(async (taskId: string): Promise<void> => {
+    try {
+      await window.api.sprint.forceDoneTask({ taskId, force: true })
+    } catch (err) {
+      toast.error(`Failed to force task done: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [])
+
+  // --- Operator override: force-release a stuck claim so the agent manager re-queues it ---
+  const releaseTask = useCallback(async (taskId: string): Promise<void> => {
+    try {
+      await window.api.sprint.forceReleaseClaim(taskId)
+      toast.success('Task released — it will be re-queued shortly')
+    } catch (err) {
+      toast.error(`Failed to release claim: ${err instanceof Error ? err.message : String(err)}`)
+    }
+  }, [])
+
   return {
     handleSaveSpec,
     handleStop,
@@ -182,6 +226,10 @@ export function useSprintTaskActions(): SprintTaskActions {
     deleteTask,
     createTask,
     batchDeleteTasks,
+    unblockTask,
+    markTaskFailed,
+    forceTaskDone,
+    releaseTask,
     confirmProps
   }
 }

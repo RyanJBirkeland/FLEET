@@ -60,6 +60,7 @@ const setDrawerOpen = vi.fn()
 const setSpecPanelOpen = vi.fn()
 const setLogDrawerTaskId = vi.fn()
 const clearMultiSelection = vi.fn()
+const toggleTaskSelection = vi.fn()
 const setDoneViewOpen = vi.fn()
 const setConflictDrawerOpen = vi.fn()
 const setHealthCheckDrawerOpen = vi.fn()
@@ -101,6 +102,7 @@ vi.mock('../../../hooks/useSprintPipelineState', () => ({
     setSpecPanelOpen,
     setLogDrawerTaskId,
     clearMultiSelection,
+    toggleTaskSelection,
     doneViewOpen: false,
     conflictDrawerOpen: false,
     healthCheckDrawerOpen: false,
@@ -127,6 +129,10 @@ vi.mock('../../../hooks/useSprintTaskActions', () => ({
     launchTask: vi.fn(),
     deleteTask: vi.fn(),
     batchDeleteTasks: vi.fn(),
+    unblockTask: vi.fn().mockResolvedValue(undefined),
+    markTaskFailed: vi.fn().mockResolvedValue(undefined),
+    forceTaskDone: vi.fn().mockResolvedValue(undefined),
+    releaseTask: vi.fn().mockResolvedValue(undefined),
     confirmProps: { open: false, title: '', message: '', onConfirm: vi.fn(), onCancel: vi.fn() }
   })
 }))

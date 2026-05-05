@@ -15,6 +15,12 @@ interface PipelineStageV2Props {
   count: string
   selectedTaskId: string | null
   selectedTaskIds?: Set<string> | undefined
+  /**
+   * Map of taskId → task title used to render upstream-task names in
+   * blocked-task tooltips. Only required for the `blocked` stage; other
+   * stages never read it.
+   */
+  taskTitlesById?: ReadonlyMap<string, string> | undefined
   onTaskClick: (id: string) => void
   doneFooter?: React.ReactNode | undefined
 }
@@ -27,7 +33,7 @@ const STAGE_DOT_KIND: Record<PipelineStageV2Props['name'], StatusDotKind> = {
   active: 'running',
   review: 'review',
   'open-prs': 'review',
-  done: 'done',
+  done: 'done'
 }
 
 function PipelineStageV2Inner({
@@ -37,8 +43,9 @@ function PipelineStageV2Inner({
   count,
   selectedTaskId,
   selectedTaskIds,
+  taskTitlesById,
   onTaskClick,
-  doneFooter,
+  doneFooter
 }: PipelineStageV2Props): React.JSX.Element {
   const empty = tasks.length === 0 && !doneFooter
   const cardsRef = useRef<HTMLDivElement>(null)
@@ -90,7 +97,7 @@ function PipelineStageV2Inner({
         display: 'flex',
         flexDirection: 'column',
         minHeight: 0,
-        overflow: 'hidden',
+        overflow: 'hidden'
       }}
       data-testid={`pipeline-stage-${name}`}
       role="region"
@@ -105,7 +112,7 @@ function PipelineStageV2Inner({
           padding: 'var(--s-2) var(--s-3)',
           borderBottom: '1px solid var(--line)',
           height: 40,
-          flexShrink: 0,
+          flexShrink: 0
         }}
       >
         <StatusDot kind={STAGE_DOT_KIND[name]} size={6} />
@@ -114,7 +121,7 @@ function PipelineStageV2Inner({
             fontSize: 11,
             fontWeight: 500,
             color: 'var(--fg)',
-            letterSpacing: '0.02em',
+            letterSpacing: '0.02em'
           }}
         >
           {label}
@@ -127,7 +134,7 @@ function PipelineStageV2Inner({
             color:
               name === 'active' && tasks.length > WIP_LIMIT_IN_PROGRESS
                 ? 'var(--st-failed)'
-                : 'var(--fg-3)',
+                : 'var(--fg-3)'
           }}
         >
           {count}
@@ -142,7 +149,7 @@ function PipelineStageV2Inner({
           flexDirection: 'column',
           gap: 'var(--s-2)',
           overflowY: 'auto',
-          flex: 1,
+          flex: 1
         }}
         ref={cardsRef}
         onKeyDown={handleStageKeyDown}
@@ -154,12 +161,10 @@ function PipelineStageV2Inner({
               borderRadius: 'var(--r-md)',
               padding: 'var(--s-3)',
               display: 'flex',
-              justifyContent: 'center',
+              justifyContent: 'center'
             }}
           >
-            <span
-              style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-4)' }}
-            >
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-4)' }}>
               —
             </span>
           </div>
@@ -179,6 +184,9 @@ function PipelineStageV2Inner({
                   task={task}
                   selected={task.id === selectedTaskId}
                   multiSelected={selectedTaskIds?.has(task.id)}
+                  blockingTitles={
+                    name === 'blocked' ? resolveBlockingTitles(task, taskTitlesById) : null
+                  }
                   onClick={onTaskClick}
                 />
               )
@@ -187,18 +195,12 @@ function PipelineStageV2Inner({
         )}
 
         {!expanded && hiddenCount > 0 && (
-          <button
-            className="pipeline-stage__show-more"
-            onClick={() => setExpanded(true)}
-          >
+          <button className="pipeline-stage__show-more" onClick={() => setExpanded(true)}>
             Show {hiddenCount} more
           </button>
         )}
         {expanded && tasks.length > STAGE_VISIBLE_LIMIT && (
-          <button
-            className="pipeline-stage__show-more"
-            onClick={() => setExpanded(false)}
-          >
+          <button className="pipeline-stage__show-more" onClick={() => setExpanded(false)}>
             Show less
           </button>
         )}
@@ -206,6 +208,14 @@ function PipelineStageV2Inner({
       </div>
     </div>
   )
+}
+
+function resolveBlockingTitles(
+  task: SprintTask,
+  taskTitlesById: ReadonlyMap<string, string> | undefined
+): string | null {
+  if (!task.depends_on?.length) return null
+  return task.depends_on.map((dep) => taskTitlesById?.get(dep.id) ?? dep.id).join(', ')
 }
 
 export const PipelineStageV2 = React.memo(PipelineStageV2Inner)

@@ -15,9 +15,9 @@ interface TaskRowV2Props {
   onClick: (id: string) => void
 }
 
-
 function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.Element {
   const [, setTick] = useState(0)
+  const clearSelection = useSprintSelection((s) => s.clearSelection)
 
   const isActive = task.status === 'active' && !!task.started_at
   useBackoffInterval(() => setTick((t) => t + 1), isActive ? 10_000 : null)
@@ -25,7 +25,7 @@ function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.
   const elapsed = isActive ? formatElapsed(task.started_at!) : ''
 
   const handleClick = (): void => {
-    useSprintSelection.getState().clearSelection()
+    clearSelection()
     onClick(task.id)
   }
 
@@ -54,7 +54,7 @@ function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.
         border: selected ? '1px solid var(--line-2)' : '1px solid transparent',
         borderRadius: 5,
         cursor: 'pointer',
-        minWidth: 0,
+        minWidth: 0
       }}
     >
       <StatusDot kind={statusToDotKind(task.status, task.pr_status)} size={6} />
@@ -63,7 +63,7 @@ function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.
           fontFamily: 'var(--font-mono)',
           fontSize: 10,
           color: 'var(--fg-4)',
-          flexShrink: 0,
+          flexShrink: 0
         }}
       >
         {task.id.substring(0, 8)}
@@ -75,7 +75,7 @@ function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.
           flex: 1,
           overflow: 'hidden',
           textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap',
+          whiteSpace: 'nowrap'
         }}
       >
         {task.title}
@@ -87,7 +87,7 @@ function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.
             fontFamily: 'var(--font-mono)',
             fontSize: 10,
             color: 'var(--fg-3)',
-            flexShrink: 0,
+            flexShrink: 0
           }}
         >
           {elapsed}

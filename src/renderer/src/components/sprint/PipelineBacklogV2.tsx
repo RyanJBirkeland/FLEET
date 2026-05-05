@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { Inbox } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
-import { useSprintSelection } from '../../stores/sprintSelection'
 import { EmptyState } from '../ui/EmptyState'
 import { Tag } from '../ui/Tag'
 import { PriorityChip } from './primitives/PriorityChip'
@@ -9,6 +8,8 @@ import { PriorityChip } from './primitives/PriorityChip'
 interface PipelineBacklogV2Props {
   backlog: SprintTask[]
   failed: SprintTask[]
+  selectedTaskIds: Set<string>
+  onToggleTaskSelection: (taskId: string) => void
   onTaskClick: (id: string) => void
   onAddToQueue: (task: SprintTask) => void
   onRerun: (task: SprintTask) => void
@@ -22,29 +23,21 @@ const BACKLOG_VISIBLE_LIMIT = 40
 function PipelineBacklogV2Inner({
   backlog,
   failed,
+  selectedTaskIds,
+  onToggleTaskSelection,
   onTaskClick,
   onAddToQueue,
   onRerun,
   onClearFailures,
-  onRequeueAllFailed,
+  onRequeueAllFailed
 }: PipelineBacklogV2Props): React.JSX.Element {
   const [failedExpanded, setFailedExpanded] = useState(false)
   const [backlogExpanded, setBacklogExpanded] = useState(false)
-  const selectedTaskIds = useSprintSelection((s) => s.selectedTaskIds)
-  const toggleTaskSelection = useSprintSelection((s) => s.toggleTaskSelection)
 
   const visibleFailed = failedExpanded ? failed : failed.slice(0, FAILED_VISIBLE_LIMIT)
   const hiddenFailedCount = failed.length - FAILED_VISIBLE_LIMIT
   const visibleBacklog = backlogExpanded ? backlog : backlog.slice(0, BACKLOG_VISIBLE_LIMIT)
   const hiddenBacklogCount = backlog.length - BACKLOG_VISIBLE_LIMIT
-
-  const handleCheckboxClick = (
-    e: React.MouseEvent | React.ChangeEvent<HTMLInputElement>,
-    taskId: string
-  ): void => {
-    e.stopPropagation()
-    toggleTaskSelection(taskId)
-  }
 
   return (
     <div
@@ -57,7 +50,7 @@ function PipelineBacklogV2Inner({
         overflowY: 'auto',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 0,
+        minHeight: 0
       }}
       data-testid="pipeline-backlog"
     >
@@ -65,20 +58,18 @@ function PipelineBacklogV2Inner({
         <div
           style={{
             padding: 'var(--s-3) var(--s-3) var(--s-2)',
-            borderBottom: '1px solid var(--line)',
+            borderBottom: '1px solid var(--line)'
           }}
         >
           <span className="fleet-eyebrow">TRIAGE</span>
-          <div
-            style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)', marginTop: 4 }}
-          >
+          <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)', marginTop: 4 }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>Backlog</span>
             <span
               style={{
                 fontFamily: 'var(--font-mono)',
                 fontSize: 10,
                 color: 'var(--fg-3)',
-                marginLeft: 'auto',
+                marginLeft: 'auto'
               }}
             >
               {backlog.length}
@@ -86,7 +77,15 @@ function PipelineBacklogV2Inner({
           </div>
         </div>
 
-        <div style={{ padding: 'var(--s-2)', display: 'flex', flexDirection: 'column', gap: 'var(--s-1)', flex: 1 }}>
+        <div
+          style={{
+            padding: 'var(--s-2)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 'var(--s-1)',
+            flex: 1
+          }}
+        >
           {visibleBacklog.map((task) => {
             const isSelected = selectedTaskIds.has(task.id)
             return (
@@ -100,14 +99,17 @@ function PipelineBacklogV2Inner({
                       bottom: 0,
                       width: 2,
                       background: 'var(--accent)',
-                      borderRadius: '0 2px 2px 0',
+                      borderRadius: '0 2px 2px 0'
                     }}
                   />
                 )}
                 <input
                   type="checkbox"
                   checked={isSelected}
-                  onChange={(e) => handleCheckboxClick(e, task.id)}
+                  onChange={(e) => {
+                    e.stopPropagation()
+                    onToggleTaskSelection(task.id)
+                  }}
                   onClick={(e) => e.stopPropagation()}
                   aria-label={`Select ${task.title}`}
                   style={{
@@ -117,7 +119,7 @@ function PipelineBacklogV2Inner({
                     zIndex: 1,
                     cursor: 'pointer',
                     opacity: isSelected ? 1 : 0,
-                    pointerEvents: 'auto',
+                    pointerEvents: 'auto'
                   }}
                 />
                 <button
@@ -126,14 +128,12 @@ function PipelineBacklogV2Inner({
                     padding: 'var(--s-2)',
                     borderRadius: 'var(--r-md)',
                     background: isSelected ? 'var(--surf-2)' : 'transparent',
-                    border: isSelected
-                      ? '1px solid var(--line-2)'
-                      : '1px solid transparent',
+                    border: isSelected ? '1px solid var(--line-2)' : '1px solid transparent',
                     textAlign: 'left',
                     cursor: 'pointer',
                     display: 'flex',
                     flexDirection: 'column',
-                    gap: 'var(--s-1)',
+                    gap: 'var(--s-1)'
                   }}
                   aria-label={`Select task: ${task.title}`}
                   onClick={() => onTaskClick(task.id)}
@@ -149,7 +149,7 @@ function PipelineBacklogV2Inner({
                       display: 'flex',
                       alignItems: 'center',
                       gap: 'var(--s-1)',
-                      minWidth: 0,
+                      minWidth: 0
                     }}
                   >
                     <span
@@ -157,7 +157,7 @@ function PipelineBacklogV2Inner({
                         fontFamily: 'var(--font-mono)',
                         fontSize: 10,
                         color: 'var(--fg-4)',
-                        flexShrink: 0,
+                        flexShrink: 0
                       }}
                     >
                       {task.id.substring(0, 8)}
@@ -169,7 +169,7 @@ function PipelineBacklogV2Inner({
                         fontFamily: 'var(--font-mono)',
                         fontSize: 10,
                         color: 'var(--fg-3)',
-                        flexShrink: 0,
+                        flexShrink: 0
                       }}
                     >
                       {task.repo}
@@ -181,7 +181,7 @@ function PipelineBacklogV2Inner({
                         fontSize: 12,
                         color: 'var(--fg)',
                         lineHeight: 1.35,
-                        textWrap: 'pretty',
+                        textWrap: 'pretty'
                       } as React.CSSProperties
                     }
                   >
@@ -212,7 +212,7 @@ function PipelineBacklogV2Inner({
                 fontSize: 11,
                 color: 'var(--fg-3)',
                 cursor: 'pointer',
-                marginTop: 'var(--s-1)',
+                marginTop: 'var(--s-1)'
               }}
             >
               + {hiddenBacklogCount} more in backlog
@@ -231,7 +231,7 @@ function PipelineBacklogV2Inner({
                 fontSize: 11,
                 color: 'var(--fg-3)',
                 cursor: 'pointer',
-                marginTop: 'var(--s-1)',
+                marginTop: 'var(--s-1)'
               }}
             >
               Show less
@@ -249,19 +249,19 @@ function PipelineBacklogV2Inner({
       </div>
 
       {failed.length > 0 && (
-        <div style={{ borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column' }}>
+        <div
+          style={{ borderTop: '1px solid var(--line)', display: 'flex', flexDirection: 'column' }}
+        >
           <div style={{ padding: 'var(--s-3) var(--s-3) var(--s-2)' }}>
             <span className="fleet-eyebrow">NEEDS ATTENTION</span>
-            <div
-              style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)', marginTop: 4 }}
-            >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)', marginTop: 4 }}>
               <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--fg)' }}>Failed</span>
               <span
                 style={{
                   fontFamily: 'var(--font-mono)',
                   fontSize: 10,
                   color: 'var(--st-failed)',
-                  marginLeft: 'auto',
+                  marginLeft: 'auto'
                 }}
               >
                 {failed.length}
@@ -279,7 +279,7 @@ function PipelineBacklogV2Inner({
                   fontFamily: 'var(--font-mono)',
                   fontSize: 10,
                   color: 'var(--fg-2)',
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 ↻ Requeue all
@@ -295,7 +295,7 @@ function PipelineBacklogV2Inner({
                   fontFamily: 'var(--font-mono)',
                   fontSize: 10,
                   color: 'var(--st-failed)',
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 ✕ Clear
@@ -308,7 +308,7 @@ function PipelineBacklogV2Inner({
               padding: '0 var(--s-2) var(--s-2)',
               display: 'flex',
               flexDirection: 'column',
-              gap: 'var(--s-1)',
+              gap: 'var(--s-1)'
             }}
           >
             {visibleFailed.map((task) => {
@@ -324,7 +324,7 @@ function PipelineBacklogV2Inner({
                         bottom: 0,
                         width: 2,
                         background: 'var(--st-failed)',
-                        borderRadius: '0 2px 2px 0',
+                        borderRadius: '0 2px 2px 0'
                       }}
                     />
                   )}
@@ -334,14 +334,12 @@ function PipelineBacklogV2Inner({
                       padding: 'var(--s-2)',
                       borderRadius: 'var(--r-md)',
                       background: isSelected ? 'var(--surf-2)' : 'transparent',
-                      border: isSelected
-                        ? '1px solid var(--line-2)'
-                        : '1px solid transparent',
+                      border: isSelected ? '1px solid var(--line-2)' : '1px solid transparent',
                       textAlign: 'left',
                       cursor: 'pointer',
                       display: 'flex',
                       flexDirection: 'column',
-                      gap: 'var(--s-1)',
+                      gap: 'var(--s-1)'
                     }}
                     aria-label={`Select task: ${task.title}`}
                     onClick={() => onTaskClick(task.id)}
@@ -353,7 +351,7 @@ function PipelineBacklogV2Inner({
                           fontSize: 12,
                           color: 'var(--fg)',
                           lineHeight: 1.35,
-                          textWrap: 'pretty',
+                          textWrap: 'pretty'
                         } as React.CSSProperties
                       }
                     >
@@ -366,7 +364,7 @@ function PipelineBacklogV2Inner({
                         color: 'var(--st-failed)',
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        whiteSpace: 'nowrap'
                       }}
                     >
                       ✗ {task.notes ?? 'No details'}
@@ -391,7 +389,7 @@ function PipelineBacklogV2Inner({
                       fontSize: 10,
                       color: 'var(--fg-2)',
                       cursor: 'pointer',
-                      flexShrink: 0,
+                      flexShrink: 0
                     }}
                   >
                     ↻ Re-run
@@ -412,7 +410,7 @@ function PipelineBacklogV2Inner({
                   fontFamily: 'var(--font-mono)',
                   fontSize: 11,
                   color: 'var(--fg-3)',
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 + {hiddenFailedCount} more
@@ -430,7 +428,7 @@ function PipelineBacklogV2Inner({
                   fontFamily: 'var(--font-mono)',
                   fontSize: 11,
                   color: 'var(--fg-3)',
-                  cursor: 'pointer',
+                  cursor: 'pointer'
                 }}
               >
                 Show less

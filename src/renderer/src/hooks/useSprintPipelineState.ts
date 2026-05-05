@@ -30,6 +30,7 @@ export interface SprintPipelineState {
   setSpecPanelOpen: (open: boolean) => void
   setLogDrawerTaskId: (id: string | null) => void
   clearMultiSelection: () => void
+  toggleTaskSelection: (id: string) => void
 
   // UI overlays
   doneViewOpen: boolean
@@ -91,14 +92,16 @@ export function useSprintPipelineState(): SprintPipelineState {
     setDrawerOpen,
     setSpecPanelOpen,
     setLogDrawerTaskId,
-    clearMultiSelection
+    clearMultiSelection,
+    toggleTaskSelection
   } = useSprintSelection(
     useShallow((s) => ({
       setSelectedTaskId: s.setSelectedTaskId,
       setDrawerOpen: s.setDrawerOpen,
       setSpecPanelOpen: s.setSpecPanelOpen,
       setLogDrawerTaskId: s.setLogDrawerTaskId,
-      clearMultiSelection: s.clearMultiSelection
+      clearMultiSelection: s.clearMultiSelection,
+      toggleTaskSelection: s.toggleTaskSelection
     }))
   )
 
@@ -146,6 +149,7 @@ export function useSprintPipelineState(): SprintPipelineState {
     setSpecPanelOpen,
     setLogDrawerTaskId,
     clearMultiSelection,
+    toggleTaskSelection,
     doneViewOpen,
     conflictDrawerOpen,
     healthCheckDrawerOpen,

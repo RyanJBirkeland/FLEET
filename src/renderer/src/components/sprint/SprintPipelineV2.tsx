@@ -52,6 +52,7 @@ export function SprintPipelineV2(): React.JSX.Element {
     setSpecPanelOpen,
     setLogDrawerTaskId,
     clearMultiSelection,
+    toggleTaskSelection,
     doneViewOpen,
     conflictDrawerOpen,
     healthCheckDrawerOpen,
@@ -64,7 +65,7 @@ export function SprintPipelineV2(): React.JSX.Element {
     filteredPartition,
     partition,
     selectedTask,
-    conflictingTasks,
+    conflictingTasks
   } = useSprintPipelineState()
 
   const pollError = useSprintTasks((s) => s.pollError)
@@ -81,6 +82,7 @@ export function SprintPipelineV2(): React.JSX.Element {
   const setView = usePanelLayoutStore((s) => s.setView)
   const reduced = useReducedMotion()
   const openWorkbenchForCreate = useTaskWorkbenchModalStore((s) => s.openForCreate)
+  const openForEdit = useTaskWorkbenchModalStore((s) => s.openForEdit)
   const openWorkbench = useCallback(() => openWorkbenchForCreate(), [openWorkbenchForCreate])
 
   const {
@@ -91,7 +93,8 @@ export function SprintPipelineV2(): React.JSX.Element {
     launchTask,
     deleteTask,
     batchDeleteTasks,
-    confirmProps,
+    unblockTask,
+    confirmProps
   } = useSprintTaskActions()
 
   const { visibleStuckTasks, dismissTask } = useVisibleStuckTasks()
@@ -113,7 +116,9 @@ export function SprintPipelineV2(): React.JSX.Element {
   }, [logDrawerTaskId])
 
   const handleViewOutput = useCallback(
-    (task: SprintTask) => { setLogDrawerTaskId(task.id) },
+    (task: SprintTask) => {
+      setLogDrawerTaskId(task.id)
+    },
     [setLogDrawerTaskId]
   )
   useTaskToasts(tasks, logDrawerTaskId, handleViewOutput)
@@ -122,7 +127,7 @@ export function SprintPipelineV2(): React.JSX.Element {
     openWorkbench,
     setConflictDrawerOpen: (value) => {
       setConflictDrawerOpen(typeof value === 'function' ? value(conflictDrawerOpen) : value)
-    },
+    }
   })
 
   useEffect(() => {
@@ -162,18 +167,17 @@ export function SprintPipelineV2(): React.JSX.Element {
   }, [setDrawerOpen, setSelectedTaskId])
 
   const handleDeleteTask = useCallback(
-    (task: SprintTask) => { void deleteTask(task.id) },
+    (task: SprintTask) => {
+      void deleteTask(task.id)
+    },
     [deleteTask]
   )
 
-  const handleUnblock = useCallback(async (task: SprintTask) => {
-    try {
-      await window.api.sprint.unblockTask(task.id)
-      toast.success('Task unblocked - dependencies will be re-checked')
-    } catch (err) {
-      toast.error(`Failed to unblock: ${err instanceof Error ? err.message : String(err)}`)
-    }
-  }, [])
+  const handleUnblock = useCallback((task: SprintTask) => unblockTask(task.id), [unblockTask])
+
+  const handleEdit = useCallback(() => {
+    if (selectedTask) openForEdit(selectedTask)
+  }, [selectedTask, openForEdit])
 
   const handleReviewChanges = useCallback(
     (task: SprintTask): void => {
@@ -208,10 +212,12 @@ export function SprintPipelineV2(): React.JSX.Element {
       { label: 'review', count: partition.pendingReview.length, filter: 'review' as const },
       { label: 'PRs', count: partition.openPrs.length, filter: 'open-prs' as const },
       { label: 'failed', count: partition.failed.length, filter: 'failed' as const },
-      { label: 'done', count: partition.done.length, filter: 'done' as const },
+      { label: 'done', count: partition.done.length, filter: 'done' as const }
     ],
     [partition]
   )
+
+  const taskTitlesById = useMemo(() => new Map(tasks.map((t) => [t.id, t.title])), [tasks])
 
   return (
     <motion.div
@@ -248,7 +254,10 @@ export function SprintPipelineV2(): React.JSX.Element {
         <PollErrorBanner
           message={pollError}
           loading={loading && tasks.length === 0}
-          onRetry={() => { clearPollError(); void loadData() }}
+          onRetry={() => {
+            clearPollError()
+            void loadData()
+          }}
           onDismiss={clearPollError}
         />
       )}
@@ -284,15 +293,42 @@ export function SprintPipelineV2(): React.JSX.Element {
       )}
 
       {loadError && (
-        <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center', padding: 'var(--s-8)' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-3)' }}>
+        <div
+          style={{
+            display: 'flex',
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 'var(--s-8)'
+          }}
+        >
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 'var(--s-3)'
+            }}
+          >
             <span className="fleet-eyebrow">ERROR</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg)' }}>Error loading tasks</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg)' }}>
+              Error loading tasks
+            </span>
             <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: 0 }}>{loadError}</p>
             <button
               onClick={() => void loadData()}
               disabled={loading}
-              style={{ padding: '0 var(--s-3)', height: 28, background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+              style={{
+                padding: '0 var(--s-3)',
+                height: 28,
+                background: 'var(--accent)',
+                color: 'var(--accent-fg)',
+                border: 'none',
+                borderRadius: 'var(--r-md)',
+                fontSize: 12,
+                fontWeight: 500,
+                cursor: 'pointer'
+              }}
             >
               {loading ? 'Retrying…' : 'Retry'}
             </button>
@@ -303,29 +339,69 @@ export function SprintPipelineV2(): React.JSX.Element {
       {!loading && !loadError && tasks.length === 0 && (
         <div style={{ display: 'flex', flex: 1, alignItems: 'center', justifyContent: 'center' }}>
           {repos.length === 0 ? (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-3)', padding: 'var(--s-8)' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 'var(--s-3)',
+                padding: 'var(--s-8)'
+              }}
+            >
               <span className="fleet-eyebrow">NO REPOSITORY</span>
-              <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg)' }}>No repository configured</span>
+              <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg)' }}>
+                No repository configured
+              </span>
               <p style={{ fontSize: 12, color: 'var(--fg-3)', textAlign: 'center', margin: 0 }}>
                 Add a repository in Settings before creating tasks.
               </p>
               <button
                 onClick={() => setView('settings')}
-                style={{ padding: '0 var(--s-3)', height: 28, background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                style={{
+                  padding: '0 var(--s-3)',
+                  height: 28,
+                  background: 'var(--accent)',
+                  color: 'var(--accent-fg)',
+                  border: 'none',
+                  borderRadius: 'var(--r-md)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
               >
                 Configure Repository
               </button>
             </div>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 'var(--s-3)', padding: 'var(--s-8)' }}>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: 'var(--s-3)',
+                padding: 'var(--s-8)'
+              }}
+            >
               <span className="fleet-eyebrow">PIPELINE</span>
-              <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg)' }}>No tasks yet</span>
+              <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg)' }}>
+                No tasks yet
+              </span>
               <p style={{ fontSize: 12, color: 'var(--fg-3)', textAlign: 'center', margin: 0 }}>
                 Create your first task to start the pipeline.
               </p>
               <button
                 onClick={openWorkbench}
-                style={{ padding: '0 var(--s-3)', height: 28, background: 'var(--accent)', color: 'var(--accent-fg)', border: 'none', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 500, cursor: 'pointer' }}
+                style={{
+                  padding: '0 var(--s-3)',
+                  height: 28,
+                  background: 'var(--accent)',
+                  color: 'var(--accent-fg)',
+                  border: 'none',
+                  borderRadius: 'var(--r-md)',
+                  fontSize: 12,
+                  fontWeight: 500,
+                  cursor: 'pointer'
+                }}
               >
                 New Task
               </button>
@@ -335,10 +411,14 @@ export function SprintPipelineV2(): React.JSX.Element {
       )}
 
       <PipelineErrorBoundary fallbackLabel="Pipeline crashed">
-        <div className={`sprint-pipeline__body ${tasks.length === 0 ? 'sprint-pipeline__body--hidden' : ''}`}>
+        <div
+          className={`sprint-pipeline__body ${tasks.length === 0 ? 'sprint-pipeline__body--hidden' : ''}`}
+        >
           <PipelineBacklogV2
             backlog={filteredPartition.backlog}
             failed={filteredPartition.failed}
+            selectedTaskIds={selectedTaskIds}
+            onToggleTaskSelection={toggleTaskSelection}
             onTaskClick={handleTaskClick}
             onAddToQueue={handleAddToQueue}
             onRerun={handleRerun}
@@ -347,7 +427,17 @@ export function SprintPipelineV2(): React.JSX.Element {
           />
 
           <div style={{ flex: 1, minWidth: 0, overflow: 'auto' }}>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(6, minmax(220px, 1fr))', gap: 'var(--s-3)', padding: 'var(--s-4)', height: '100%', boxSizing: 'border-box', alignItems: 'stretch' }}>
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(6, minmax(220px, 1fr))',
+                gap: 'var(--s-3)',
+                padding: 'var(--s-4)',
+                height: '100%',
+                boxSizing: 'border-box',
+                alignItems: 'stretch'
+              }}
+            >
               <LayoutGroup>
                 <PipelineStageV2
                   name="queued"
@@ -365,6 +455,7 @@ export function SprintPipelineV2(): React.JSX.Element {
                   count={`${filteredPartition.blocked.length}`}
                   selectedTaskId={selectedTaskId}
                   selectedTaskIds={selectedTaskIds}
+                  taskTitlesById={taskTitlesById}
                   onTaskClick={handleTaskClick}
                 />
                 <PipelineStageV2
@@ -426,7 +517,7 @@ export function SprintPipelineV2(): React.JSX.Element {
               onDelete={handleDeleteTask}
               onViewLogs={() => setView('agents')}
               onOpenSpec={() => setSpecPanelOpen(true)}
-              onEdit={() => useTaskWorkbenchModalStore.getState().openForEdit(selectedTask)}
+              onEdit={handleEdit}
               onViewAgents={() => setView('agents')}
               onUnblock={handleUnblock}
               onRetry={handleRetry}
