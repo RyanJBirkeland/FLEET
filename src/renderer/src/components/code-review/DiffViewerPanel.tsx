@@ -4,7 +4,7 @@ import { useCodeReviewStore } from '../../stores/codeReview'
 import { useReviewPartnerStore } from '../../stores/reviewPartner'
 import { ChangesTab } from './ChangesTab'
 import { CommitsTab } from './CommitsTab'
-import { TestsTab } from './TestsTab'
+import { VerificationTab } from './VerificationTab'
 import { AIReviewedBadge } from './AIReviewedBadge'
 import { toast } from '../../stores/toasts'
 import type { DiffMode } from '../../stores/codeReview'
@@ -30,7 +30,7 @@ export function DiffViewerPanel(): React.JSX.Element {
   const modes: Array<{ key: DiffMode; label: string }> = [
     { key: 'diff', label: 'Diff' },
     { key: 'commits', label: 'Commits' },
-    { key: 'tests', label: 'Tests' }
+    { key: 'verification', label: 'Verification' }
   ]
 
   return (
@@ -70,7 +70,7 @@ export function DiffViewerPanel(): React.JSX.Element {
       <div className="cr-diffviewer__body">
         {diffMode === 'diff' && <ChangesTab />}
         {diffMode === 'commits' && <CommitsTab />}
-        {diffMode === 'tests' && <TestsTab />}
+        {diffMode === 'verification' && <VerificationTab />}
       </div>
     </div>
   )

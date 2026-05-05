@@ -12,8 +12,8 @@ vi.mock('../CommitsTab', () => ({
   CommitsTab: () => <div data-testid="commits-tab">Commits</div>
 }))
 
-vi.mock('../TestsTab', () => ({
-  TestsTab: () => <div data-testid="tests-tab">Tests</div>
+vi.mock('../VerificationTab', () => ({
+  VerificationTab: () => <div data-testid="verification-tab">Verification</div>
 }))
 
 const partnerState = vi.hoisted(() => ({
@@ -34,7 +34,7 @@ describe('DiffViewerPanel', () => {
     render(<DiffViewerPanel />)
     expect(screen.getByTestId('changes-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('commits-tab')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('tests-tab')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('verification-tab')).not.toBeInTheDocument()
   })
 
   it('should show Commits tab when mode is commits', () => {
@@ -44,10 +44,10 @@ describe('DiffViewerPanel', () => {
     expect(screen.queryByTestId('changes-tab')).not.toBeInTheDocument()
   })
 
-  it('should show Tests tab when mode is tests', () => {
-    useCodeReviewStore.getState().setDiffMode('tests')
+  it('should show Verification tab when mode is verification', () => {
+    useCodeReviewStore.getState().setDiffMode('verification')
     render(<DiffViewerPanel />)
-    expect(screen.getByTestId('tests-tab')).toBeInTheDocument()
+    expect(screen.getByTestId('verification-tab')).toBeInTheDocument()
     expect(screen.queryByTestId('changes-tab')).not.toBeInTheDocument()
   })
 
@@ -74,7 +74,7 @@ describe('DiffViewerPanel', () => {
     render(<DiffViewerPanel />)
     expect(screen.getByRole('button', { name: 'Diff' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Commits' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Tests' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Verification' })).toBeInTheDocument()
   })
 
   it('should show AIReviewedBadge when a finding exists for selected file', () => {
