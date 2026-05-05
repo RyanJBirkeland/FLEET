@@ -320,7 +320,7 @@ function InspectorPane({ agent, events, asOverlay }: InspectorPaneProps): React.
     : {}
 
   return (
-    <div style={overlayStyles}>
+    <div style={{ height: '100%', ...overlayStyles }}>
       <AgentInspector agent={agent} events={events ?? []} />
     </div>
   )

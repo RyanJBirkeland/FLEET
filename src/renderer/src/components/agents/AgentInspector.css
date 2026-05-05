@@ -1,9 +1,11 @@
 .agent-inspector {
   width: 320px;
   flex-shrink: 0;
+  height: 100%;         /* fill the InspectorPane wrapper so overflow-y activates */
   background: var(--bg);
   border-left: 1px solid var(--line);
   overflow-y: auto;
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
