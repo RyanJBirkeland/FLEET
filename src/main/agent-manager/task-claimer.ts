@@ -25,6 +25,7 @@ import type { PreflightGate } from './preflight-gate'
 import { runPreflightChecks } from './preflight-check'
 import { buildAgentEnv } from '../env-utils'
 import { getRepoConfig } from '../paths'
+import { execFileAsync } from '../lib/async-utils'
 
 // ---------------------------------------------------------------------------
 // Deps interface
@@ -166,15 +167,76 @@ async function skipIfAlreadyOnMain(
 // ---------------------------------------------------------------------------
 
 /**
+ * Inspect the task's hard dependencies and return the branch name of the first
+ * approved parent whose worktree is still on disk. When a parent qualifies, the
+ * new worktree forks from that branch instead of the repo's current HEAD — this
+ * is the "fork-on-approve" stacking behaviour.
+ *
+ * Returns `{ baseBranch, stackedOnTaskId }` where `stackedOnTaskId` is null
+ * when no approved parent was found (i.e. the worktree should fork from HEAD).
+ */
+async function resolveBaseBranch(
+  task: SprintTask,
+  repo: IAgentTaskRepository,
+  env: NodeJS.ProcessEnv,
+  logger: Logger
+): Promise<{ baseBranch: string; stackedOnTaskId: string | null }> {
+  const nothingToStack = { baseBranch: 'origin/main', stackedOnTaskId: null }
+  if (!task.depends_on || task.depends_on.length === 0) return nothingToStack
+
+  for (const dep of task.depends_on) {
+    const isHardDep = dep.type === 'hard' || dep.condition === 'on_success'
+    if (!isHardDep) continue
+
+    const depTask = repo.getTask(dep.id)
+    if (!depTask || depTask.status !== 'approved' || !depTask.worktree_path) continue
+
+    try {
+      const { stdout } = await execFileAsync('git', ['branch', '--show-current'], {
+        cwd: depTask.worktree_path,
+        env,
+        timeout: 30_000,
+      })
+      const branch = stdout.trim()
+      if (!branch) continue
+
+      logger.info(`[task-claimer] stacking task ${task.id} on approved task ${dep.id} branch: ${branch}`)
+      return { baseBranch: branch, stackedOnTaskId: dep.id }
+    } catch (err) {
+      logger.warn(`[task-claimer] could not read branch for approved dep ${dep.id}: ${err}`)
+    }
+  }
+
+  return nothingToStack
+}
+
+/**
  * Create or reuse the git worktree for `task`.
  * Returns the worktree descriptor on success, or `null` on failure after
  * marking the task as `error` and notifying the terminal handler.
+ *
+ * When the task has an approved hard dependency whose worktree is still on
+ * disk, the new worktree is forked from that parent's branch (fork-on-approve).
+ * The `stacked_on_task_id` field is recorded on the task for traceability.
  */
 export async function prepareWorktreeForTask(
   task: MappedTask,
   repoPath: string,
-  deps: TaskClaimerDeps
+  deps: TaskClaimerDeps,
+  rawTask?: SprintTask | undefined
 ): Promise<{ worktreePath: string; branch: string } | null> {
+  const env = buildAgentEnv()
+  const parentLookup = rawTask ?? deps.repo.getTask(task.id)
+  const { baseBranch, stackedOnTaskId } = parentLookup
+    ? await resolveBaseBranch(parentLookup, deps.repo, env, deps.logger)
+    : { baseBranch: 'origin/main', stackedOnTaskId: null }
+
+  if (stackedOnTaskId) {
+    void deps.repo.updateTask(task.id, { stacked_on_task_id: stackedOnTaskId }, { caller: 'task-claimer:fork-on-approve' }).catch((err) => {
+      deps.logger.warn(`[task-claimer] Failed to record stacked_on_task_id for task ${task.id}: ${err}`)
+    })
+  }
+
   try {
     return await setupWorktree({
       repoPath,
@@ -183,6 +245,7 @@ export async function prepareWorktreeForTask(
       title: task.title,
       groupId: task.group_id ?? undefined,
       logger: deps.logger,
+      baseBranch,
       appendToNotes: (text) => {
         // fire-and-forget: note append is best-effort, so void the Promise
         void deps.repo.updateTask(task.id, { notes: text }).catch((err) => {
@@ -319,7 +382,7 @@ export async function processQueuedTask(
       // non-fatal: stale map is better than aborting the drain
     }
 
-    const wt = await prepareWorktreeForTask(task, repoPath, deps)
+    const wt = await prepareWorktreeForTask(task, repoPath, deps, rawTask)
     if (!wt) return
 
     deps.logger.info(`[agent-manager] Task ${task.id} claimed — spawning agent in ${wt.worktreePath}`)

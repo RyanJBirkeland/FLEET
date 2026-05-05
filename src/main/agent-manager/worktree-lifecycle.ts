@@ -74,14 +74,22 @@ export async function forceDeleteBranchRef(
 
 /**
  * Create a new worktree with a new branch.
+ *
+ * When `baseBranch` is provided the new branch starts at that commit instead
+ * of the repo's current HEAD. Used by fork-on-approve to stack a downstream
+ * agent on top of an approved parent's branch.
  */
 export async function addWorktree(
   repoPath: string,
   branch: string,
   worktreePath: string,
-  env: NodeJS.ProcessEnv
+  env: NodeJS.ProcessEnv,
+  baseBranch?: string | undefined
 ): Promise<void> {
-  await execFileAsync('git', ['worktree', 'add', '-b', branch, worktreePath], {
+  const args = baseBranch
+    ? ['worktree', 'add', '-b', branch, worktreePath, baseBranch]
+    : ['worktree', 'add', '-b', branch, worktreePath]
+  await execFileAsync('git', args, {
     cwd: repoPath,
     env,
     timeout: GIT_EXEC_TIMEOUT_MS

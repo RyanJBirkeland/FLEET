@@ -78,6 +78,12 @@ export interface SetupWorktreeOpts {
   groupId?: string | undefined
   /** Called when fetchMain fails so the task's notes field records the failure. Optional. */
   appendToNotes?: (text: string) => void
+  /**
+   * Override the base branch for the new worktree (defaults to the repo's current HEAD
+   * after the ff-merge to origin/main). Set to an approved parent task's local branch
+   * name to stack this worktree on top of that parent's changes (fork-on-approve).
+   */
+  baseBranch?: string | undefined
 }
 
 export interface SetupWorktreeResult {
@@ -349,7 +355,8 @@ async function createWorktreeUnderLock(
   defaultBranch: string,
   taskId: string,
   env: Record<string, string | undefined>,
-  log: Logger
+  log: Logger,
+  baseBranch?: string | undefined
 ): Promise<void> {
   // The lock guards `git worktree add`, branch creation, and the merge --ff-only
   // (which mutates the main checkout's HEAD) — these races corrupted state in
@@ -360,7 +367,7 @@ async function createWorktreeUnderLock(
     // same branch name, leftover dirs, dangling refs).
     await cleanupStaleWorktrees(repoPath, worktreePath, branch, env, log)
     await fastForwardMainIfOnDefaultBranch(repoPath, defaultBranch, env, log)
-    await addWorktree(repoPath, branch, worktreePath, env)
+    await addWorktree(repoPath, branch, worktreePath, env, baseBranch)
     await symlinkNodeModules(repoPath, worktreePath, taskId, log)
   } catch (err) {
     // Clean up the worktree directory on setup failure (best effort).
@@ -379,7 +386,7 @@ async function createWorktreeUnderLock(
 export async function setupWorktree(
   opts: SetupWorktreeOpts & { logger?: Logger | undefined }
 ): Promise<SetupWorktreeResult> {
-  const { repoPath, worktreeBase, taskId, title, groupId, logger, appendToNotes } = opts
+  const { repoPath, worktreeBase, taskId, title, groupId, logger, appendToNotes, baseBranch } = opts
   const branch = branchNameForTask(title, taskId, groupId)
   const repoDir = path.join(worktreeBase, repoSlug(repoPath))
   const worktreePath = path.join(repoDir, taskId)
@@ -397,7 +404,7 @@ export async function setupWorktree(
   reserveDisk(worktreeBase)
   try {
     const defaultBranch = await fetchLatestMainOutsideLock(repoPath, env, log, taskId, appendToNotes)
-    await createWorktreeUnderLock(repoPath, worktreeBase, worktreePath, branch, defaultBranch, taskId, env, log)
+    await createWorktreeUnderLock(repoPath, worktreeBase, worktreePath, branch, defaultBranch, taskId, env, log, baseBranch)
     return { worktreePath, branch }
   } finally {
     // Always release the disk reservation whether setup succeeded or failed.
