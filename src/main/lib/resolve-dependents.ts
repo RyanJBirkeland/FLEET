@@ -7,9 +7,9 @@ import {
   type DependencyIndex,
   buildBlockedNotes,
   computeBlockState,
-  FAILURE_STATUSES,
-  TERMINAL_STATUSES
+  FAILURE_STATUSES
 } from '../services/dependency-service'
+import { DEPENDENCY_TRIGGER_STATUSES } from '../../shared/task-state-machine'
 import type { EpicDepsReader } from '../services/epic-dependency-service'
 
 export interface ResolveDependentsContext {
@@ -62,11 +62,11 @@ export function resolveDependents(ctx: ResolveDependentsContext): void {
     onTaskTerminal,
     taskStateService
   } = ctx
-  // Guard: only process terminal statuses — calling with active/queued/blocked
+  // Guard: only process terminal or approval statuses — calling with active/queued/blocked
   // produces nonsensical cascade-cancel and satisfaction results.
-  if (!TERMINAL_STATUSES.has(completedStatus)) {
+  if (!DEPENDENCY_TRIGGER_STATUSES.has(completedStatus)) {
     logger?.warn(
-      `[resolve-dependents] Called with non-terminal status "${completedStatus}" for task ${completedTaskId} — skipping`
+      `[resolve-dependents] Called with non-approval-or-terminal status "${completedStatus}" for task ${completedTaskId} — skipping`
     )
     return
   }

@@ -31,7 +31,7 @@ export type TaskStatus =
  * All task statuses in a principled order (lifecycle progression).
  *
  * Typed as a readonly tuple of literals (no widening annotation) so
- * consumers like Zod can preserve the 9-literal union via `z.enum(...)`.
+ * consumers like Zod can preserve the 10-literal union via `z.enum(...)`.
  */
 export const TASK_STATUSES = [
   'backlog',
@@ -159,7 +159,7 @@ export function isFailure(status: TaskStatus): boolean {
 
 /**
  * Check if a status satisfies hard dependencies.
- * Only 'done' returns true; all other statuses return false.
+ * Both 'done' and 'approved' return true; all other statuses return false.
  */
 export function isHardSatisfied(status: TaskStatus): boolean {
   return HARD_SATISFIED_STATUSES.has(status)
