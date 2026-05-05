@@ -26,10 +26,9 @@ interface SearchResult {
 
 interface ResultGroupProps {
   result: SearchResult
-  query: string
 }
 
-function ResultGroup({ result, query }: ResultGroupProps): React.JSX.Element {
+function ResultGroup({ result }: ResultGroupProps): React.JSX.Element {
   const [expanded, setExpanded] = useState(true)
 
   const fileName = result.filePath.split('/').pop() ?? result.filePath
@@ -87,8 +86,8 @@ function ResultGroup({ result, query }: ResultGroupProps): React.JSX.Element {
       </div>
 
       {/* Match rows */}
-      {expanded && result.matches.map((match, idx) => (
-        <MatchRow key={idx} match={match} query={query} />
+      {expanded && result.matches.map((match) => (
+        <MatchRow key={match.line} match={match} />
       ))}
     </div>
   )
@@ -100,7 +99,6 @@ function ResultGroup({ result, query }: ResultGroupProps): React.JSX.Element {
 
 interface MatchRowProps {
   match: SearchMatch
-  query: string
 }
 
 function MatchRow({ match }: MatchRowProps): React.JSX.Element {
@@ -300,7 +298,7 @@ export function SearchPanel(): React.JSX.Element {
         {hasQuery && !loading && results.length > 0 && (
           <div>
             {results.map((result) => (
-              <ResultGroup key={result.filePath} result={result} query={query} />
+              <ResultGroup key={result.filePath} result={result} />
             ))}
           </div>
         )}

@@ -304,8 +304,8 @@ function RootTree({ rootPath, activeFilePath, onOpenFile }: RootTreeProps): Reac
   if (loading) {
     return (
       <div style={{ padding: 'var(--s-2)' }}>
-        <div className="view-skeleton" style={{ height: 20, marginBottom: 6 }} />
-        <div className="view-skeleton" style={{ height: 20, marginBottom: 6 }} />
+        <div className="view-skeleton" style={{ height: 20, marginBottom: 'var(--s-1)' }} />
+        <div className="view-skeleton" style={{ height: 20, marginBottom: 'var(--s-1)' }} />
         <div className="view-skeleton" style={{ height: 20 }} />
       </div>
     )
@@ -356,22 +356,22 @@ export function FilesPanel({ activeFilePath, onOpenFile }: FilesPanelProps): Rea
         <IconBtn
           icon={<FilePlus size={14} />}
           title="New File"
-          onClick={() => console.log('TODO')}
+          onClick={() => { /* TODO(phase-6.5): implement */ }}
         />
         <IconBtn
           icon={<FolderPlus size={14} />}
           title="New Folder"
-          onClick={() => console.log('TODO')}
+          onClick={() => { /* TODO(phase-6.5): implement */ }}
         />
         <IconBtn
           icon={<RefreshCw size={14} />}
           title="Refresh"
-          onClick={() => console.log('TODO')}
+          onClick={() => { /* TODO(phase-6.5): implement */ }}
         />
         <IconBtn
           icon={<ChevronsUpDown size={14} />}
           title="Collapse All"
-          onClick={() => console.log('TODO')}
+          onClick={() => { /* TODO(phase-6.5): implement */ }}
         />
       </PanelHeader>
 
