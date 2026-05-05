@@ -10,6 +10,7 @@ import type { Logger } from '../logger'
 import { captureDiffSnapshot } from './diff-snapshot'
 import { nowIso } from '../../shared/time'
 import type { TaskStateService } from '../services/task-state-service'
+import type { RevisionFeedbackEntry } from '../../shared/types/task-types'
 import { execFileAsync } from '../lib/async-utils'
 import { buildAgentEnv } from '../env-utils'
 import { resolveDefaultBranch } from '../lib/default-branch'
@@ -44,12 +45,38 @@ async function countCommitsAheadOfMain(
   }
 }
 
+/**
+ * Appends a conflict note to the existing revision_feedback array when a
+ * stacked branch could not be rebased cleanly onto origin/main.
+ * Returns null when there is no conflict note to add.
+ */
+function buildRevisionFeedbackWithConflictNote(
+  existing: RevisionFeedbackEntry[] | null | undefined,
+  conflictNote: string | undefined
+): RevisionFeedbackEntry[] | null {
+  if (!conflictNote) return null
+  const prior = existing ?? []
+  return [
+    ...prior,
+    {
+      timestamp: new Date().toISOString(),
+      feedback: conflictNote,
+      attempt: prior.length + 1
+    }
+  ]
+}
+
 export interface TransitionToReviewOpts {
   taskId: string
   worktreePath: string
   rebaseNote: string | undefined
   rebaseBaseSha: string | undefined
   rebaseSucceeded: boolean
+  /**
+   * When a stacked task's rebase onto origin/main produced conflicts, this
+   * message is appended to revision_feedback so Code Review surfaces it.
+   */
+  stackedRebaseConflictNote?: string
   repo: IAgentTaskRepository
   reviewRepo: IReviewRepository
   logger: Logger
@@ -69,6 +96,7 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
     rebaseNote,
     rebaseBaseSha,
     rebaseSucceeded,
+    stackedRebaseConflictNote,
     repo,
     reviewRepo,
     logger,
@@ -109,6 +137,11 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
     logger.warn(`[completion] Diff snapshot capture failed for task ${taskId}: ${err}`)
   }
 
+  const revisionFeedbackWithConflict = buildRevisionFeedbackWithConflictNote(
+    task?.revision_feedback ?? null,
+    stackedRebaseConflictNote
+  )
+
   try {
     await taskStateService.transition(taskId, 'review', {
       fields: {
@@ -120,7 +153,8 @@ export async function transitionToReview(opts: TransitionToReviewOpts): Promise<
         ...(rebaseNote ? { notes: rebaseNote } : {}),
         ...(diffSnapshotJson ? { review_diff_snapshot: diffSnapshotJson } : {}),
         rebase_base_sha: rebaseBaseSha ?? null,
-        rebased_at: rebaseSucceeded ? nowIso() : null
+        rebased_at: rebaseSucceeded ? nowIso() : null,
+        ...(revisionFeedbackWithConflict ? { revision_feedback: revisionFeedbackWithConflict } : {})
       },
       caller: 'review-transition'
     })

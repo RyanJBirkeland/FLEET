@@ -2,10 +2,10 @@
  * Tests for the agent success pipeline in success-pipeline.ts.
  *
  * Covers:
- *   - All 10 phases execute in order on a clean run
+ *   - All 11 phases execute in order on a clean run
  *   - PipelineAbortError thrown by any phase halts remaining phases without rethrowing
  *   - Non-PipelineAbortError exceptions propagate out of resolveSuccess
- *   - noOpGuardPhase (successPhases[5]): write-failure guard suppresses onTaskTerminal
+ *   - noOpGuardPhase (successPhases[6]): write-failure guard suppresses onTaskTerminal
  *   - noOpGuardPhase: successful write calls onTaskTerminal with correct status
  */
 
@@ -27,6 +27,7 @@ vi.mock('../resolve-success-phases', async (importOriginal) => {
       rebaseBaseSha: undefined,
       rebaseSucceeded: true
     }),
+    rebaseStackedBranchIfNeeded: vi.fn().mockResolvedValue('clean'),
     failTaskIfNoCommitsAheadOfMain: vi.fn().mockResolvedValue({ committed: true }),
     transitionTaskToReview: vi.fn()
   }
@@ -194,7 +195,7 @@ describe('resolveSuccess', () => {
     vi.mocked(transitionTaskToReview).mockResolvedValue(undefined)
   })
 
-  it('executes all 10 phases in order on a clean run without throwing', async () => {
+  it('executes all 11 phases in order on a clean run without throwing', async () => {
     const opts = makeBaseOpts()
 
     await resolveSuccess(opts, logger)
@@ -207,17 +208,18 @@ describe('resolveSuccess', () => {
     expect(autoCommitPendingChanges).toHaveBeenCalledTimes(1)
     // Phase 3: rebase
     expect(performRebaseOntoMain).toHaveBeenCalledTimes(1)
-    // Phase 4: verifyCommits
+    // Phase 4: rebaseStackedBranch — no-op for non-stacked task (task has no stacked_on_task_id)
+    // Phase 5: verifyCommits
     expect(failTaskIfNoCommitsAheadOfMain).toHaveBeenCalledTimes(1)
-    // Phase 5: noOpGuard — via detectNoOpRun
+    // Phase 6: noOpGuard — via detectNoOpRun
     expect(detectNoOpRun).toHaveBeenCalledTimes(1)
-    // Phase 6: branchTipVerify
+    // Phase 7: branchTipVerify
     expect(verifyBranchTipOrFail).toHaveBeenCalledTimes(1)
-    // Phase 7: advisoryAnnotations
+    // Phase 8: advisoryAnnotations
     expect(runPreReviewAdvisors).toHaveBeenCalledTimes(1)
-    // Phase 8: verifyWorktreeBuild
+    // Phase 9: verifyWorktreeBuild
     expect(verifyWorktreeOrFail).toHaveBeenCalledTimes(1)
-    // Phase 9: reviewTransition
+    // Phase 10: reviewTransition
     expect(transitionTaskToReview).toHaveBeenCalledTimes(1)
   })
 
@@ -252,7 +254,7 @@ describe('resolveSuccess', () => {
 
 describe('noOpGuardPhase — detectNoOpAndFailIfSo write-failure guard', () => {
   let logger: ReturnType<typeof makeLogger>
-  const noOpGuardPhase = successPhases[5]
+  const noOpGuardPhase = successPhases[6]
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -318,8 +320,8 @@ describe('PipelineAbortError cross-module identity', () => {
 // ---------------------------------------------------------------------------
 
 describe('T-52: verifyCommitsPhase unexpected failure routes to failed, not requeue', () => {
-  // verifyCommitsPhase is successPhases[4]
-  const verifyCommitsPhase = successPhases[4]
+  // verifyCommitsPhase is successPhases[5]
+  const verifyCommitsPhase = successPhases[5]
   let logger: ReturnType<typeof makeLogger>
 
   beforeEach(() => {

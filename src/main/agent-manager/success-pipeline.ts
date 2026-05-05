@@ -19,6 +19,7 @@ import {
   detectAgentBranch,
   autoCommitPendingChanges,
   performRebaseOntoMain,
+  rebaseStackedBranchIfNeeded,
   failTaskIfNoCommitsAheadOfMain,
   transitionTaskToReview,
   type ReviewTransitionContext
@@ -88,6 +89,13 @@ export interface SuccessPhaseContext extends ResolveSuccessContext {
   logger: Logger
   branch: string
   rebaseOutcome: import('./resolve-success-phases').RebaseOutcome
+  /**
+   * Set by the stacked-rebase phase when a stacked task's rebase onto
+   * origin/main produced conflicts. Threaded into the review transition
+   * so the Code Review Station can surface it via revision_feedback.
+   * Absent when the task is not stacked or the rebase was clean.
+   */
+  stackedRebaseConflictNote?: string
 }
 
 /**
@@ -142,6 +150,20 @@ const rebasePhase: SuccessPhase = {
   name: 'rebase',
   async run(ctx) {
     ctx.rebaseOutcome = await performRebaseOntoMain(ctx.taskId, ctx.worktreePath, ctx.logger)
+  }
+}
+
+const rebaseStackedBranchPhase: SuccessPhase = {
+  name: 'rebaseStackedBranch',
+  async run(ctx) {
+    const task = ctx.repo.getTask(ctx.taskId)
+    if (!task) return
+    const result = await rebaseStackedBranchIfNeeded(task, ctx.logger)
+    if (result === 'conflict') {
+      ctx.stackedRebaseConflictNote =
+        'Stacked branch could not be rebased onto origin/main cleanly — ' +
+        'manual conflict resolution is required before merging.'
+    }
   }
 }
 
@@ -260,6 +282,7 @@ const reviewTransitionPhase: SuccessPhase = {
       worktreePath: ctx.worktreePath,
       title: ctx.title,
       rebaseOutcome: ctx.rebaseOutcome,
+      ...(ctx.stackedRebaseConflictNote ? { stackedRebaseConflictNote: ctx.stackedRebaseConflictNote } : {}),
       repo: ctx.repo,
       reviewRepo: ctx.reviewRepo,
       unitOfWork: ctx.unitOfWork,
@@ -279,6 +302,7 @@ export const successPhases: SuccessPhase[] = [
   detectBranchPhase,
   autoCommitPhase,
   rebasePhase,
+  rebaseStackedBranchPhase,
   verifyCommitsPhase,
   noOpGuardPhase,
   branchTipVerifyPhase,

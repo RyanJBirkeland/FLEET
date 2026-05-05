@@ -51,6 +51,57 @@ export interface RebaseOutcome {
 }
 
 /**
+ * For a stacked task (one whose `stacked_on_task_id` is set), fetch origin/main
+ * and rebase the worktree branch onto it. The parent's commits will have been
+ * merged by the time the stacked agent finishes, so this rebase integrates
+ * them cleanly before the task enters review.
+ *
+ * Returns 'clean' when the rebase succeeded or was skipped (non-stacked task).
+ * Returns 'conflict' when git rebase exits non-zero — the caller should surface
+ * a human-readable note via revision_feedback.
+ */
+export async function rebaseStackedBranchIfNeeded(
+  task: SprintTask,
+  logger: Logger
+): Promise<'clean' | 'conflict'> {
+  if (!task.stacked_on_task_id || !task.worktree_path) return 'clean'
+
+  const env = buildAgentEnv()
+  logger.info(
+    `[success-pipeline] rebasing stacked task ${task.id} onto origin/main (parent: ${task.stacked_on_task_id})`
+  )
+
+  try {
+    await execFileAsync('git', ['fetch', 'origin', 'main'], {
+      cwd: task.worktree_path,
+      env,
+      timeout: GIT_EXEC_TIMEOUT_MS
+    })
+    await execFileAsync('git', ['rebase', 'origin/main'], {
+      cwd: task.worktree_path,
+      env,
+      timeout: GIT_EXEC_TIMEOUT_MS
+    })
+    logger.info(`[success-pipeline] stacked rebase clean for task ${task.id}`)
+    return 'clean'
+  } catch (err) {
+    logger.warn(
+      `[success-pipeline] stacked rebase conflict for task ${task.id}: ${err} — aborting and promoting to review with conflict note`
+    )
+    await execFileAsync('git', ['rebase', '--abort'], {
+      cwd: task.worktree_path,
+      env,
+      timeout: GIT_EXEC_TIMEOUT_MS
+    }).catch((abortErr) => {
+      logger.warn(
+        `[success-pipeline] rebase --abort failed for task ${task.id} (non-fatal): ${abortErr}`
+      )
+    })
+    return 'conflict'
+  }
+}
+
+/**
  * Fail task with error status, emit agent event, and call terminal callback.
  * Consolidates error handling pattern used in resolveSuccess guards.
  */
@@ -379,6 +430,12 @@ export interface ReviewTransitionContext {
   worktreePath: string
   title: string
   rebaseOutcome: RebaseOutcome
+  /**
+   * Set when a stacked task's pre-review rebase onto origin/main produced
+   * merge conflicts. Written into revision_feedback at the review transition
+   * so the Code Review Station surfaces the conflict to the reviewer.
+   */
+  stackedRebaseConflictNote?: string
   repo: IAgentTaskRepository
   reviewRepo: IReviewRepository
   unitOfWork: IUnitOfWork
@@ -406,6 +463,7 @@ export async function transitionTaskToReview(ctx: ReviewTransitionContext): Prom
     worktreePath,
     title,
     rebaseOutcome,
+    stackedRebaseConflictNote,
     repo,
     reviewRepo,
     unitOfWork,
@@ -425,6 +483,7 @@ export async function transitionTaskToReview(ctx: ReviewTransitionContext): Prom
     rebaseNote: rebaseOutcome.rebaseNote,
     rebaseBaseSha: rebaseOutcome.rebaseBaseSha,
     rebaseSucceeded: rebaseOutcome.rebaseSucceeded,
+    ...(stackedRebaseConflictNote ? { stackedRebaseConflictNote } : {}),
     repo,
     reviewRepo,
     logger,
