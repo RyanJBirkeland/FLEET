@@ -16,6 +16,13 @@ vi.mock('../../lib/motion', () => ({
   useReducedMotion: () => false
 }))
 
+// Force V1 rendering — these tests cover AgentsViewV1 behaviour
+vi.mock('../../stores/featureFlags', () => ({
+  useFeatureFlags: vi.fn((selector: any) =>
+    selector({ v2Shell: false, v2Dashboard: false, v2Pipeline: false, v2Agents: false })
+  )
+}))
+
 // Mock stores
 const mockAgentHistoryState = {
   agents: [] as any[],
