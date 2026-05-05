@@ -8,6 +8,8 @@
 }
 
 .console-body {
+  flex: 1;            /* fill the stream wrapper so overflow:auto activates */
+  min-height: 0;
   overflow: auto;
   padding: var(--s-4) var(--s-5);
   display: flex;
