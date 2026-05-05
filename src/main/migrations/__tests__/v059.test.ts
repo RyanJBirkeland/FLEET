@@ -1,55 +1,106 @@
 import { describe, it, expect } from 'vitest'
 import Database from 'better-sqlite3'
-import { up, version } from '../v059-add-verification-results-to-sprint-tasks'
+import { up, version } from '../v059-add-stacked-on-task-id-and-pr-groups'
+
+const createMinimalSprintTasksTable = (db: Database.Database): void => {
+  db.exec(
+    `CREATE TABLE sprint_tasks (
+      id      TEXT PRIMARY KEY,
+      title   TEXT NOT NULL,
+      status  TEXT NOT NULL DEFAULT 'backlog',
+      repo    TEXT NOT NULL DEFAULT ''
+    )`
+  )
+}
 
 describe('migration v059', () => {
   it('has version 59', () => {
     expect(version).toBe(59)
   })
 
-  it('adds verification_results column to sprint_tasks', () => {
+  it('adds stacked_on_task_id column to sprint_tasks', () => {
     const db = new Database(':memory:')
-    db.exec(`CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, title TEXT)`)
+    createMinimalSprintTasksTable(db)
 
     up(db)
 
-    const col = db
-      .prepare(
-        `SELECT name FROM pragma_table_info('sprint_tasks') WHERE name = 'verification_results'`
-      )
+    const cols = (db.pragma('table_info(sprint_tasks)') as { name: string }[]).map((c) => c.name)
+    expect(cols).toContain('stacked_on_task_id')
+    db.close()
+  })
+
+  it('creates the pr_groups table with all expected columns', () => {
+    const db = new Database(':memory:')
+    createMinimalSprintTasksTable(db)
+
+    up(db)
+
+    const table = db
+      .prepare(`SELECT name FROM sqlite_master WHERE type='table' AND name='pr_groups'`)
       .get() as { name: string } | undefined
 
-    expect(col?.name).toBe('verification_results')
+    expect(table?.name).toBe('pr_groups')
+
+    const cols = (db.pragma('table_info(pr_groups)') as { name: string }[]).map((c) => c.name)
+    expect(cols).toContain('id')
+    expect(cols).toContain('repo')
+    expect(cols).toContain('title')
+    expect(cols).toContain('branch_name')
+    expect(cols).toContain('description')
+    expect(cols).toContain('status')
+    expect(cols).toContain('task_order')
+    expect(cols).toContain('pr_number')
+    expect(cols).toContain('pr_url')
+    expect(cols).toContain('created_at')
+    expect(cols).toContain('updated_at')
     db.close()
   })
 
-  it('existing rows keep null in the new column', () => {
+  it('pr_groups.status defaults to composing', () => {
     const db = new Database(':memory:')
-    db.exec(`CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, title TEXT)`)
-    db.exec(`INSERT INTO sprint_tasks VALUES ('t1', 'Task 1')`)
+    createMinimalSprintTasksTable(db)
 
     up(db)
 
-    const row = db.prepare(`SELECT verification_results FROM sprint_tasks WHERE id = 't1'`).get() as {
-      verification_results: string | null
+    db.prepare(
+      `INSERT INTO pr_groups (id, repo, title, branch_name, created_at, updated_at)
+       VALUES ('pg-1', 'fleet', 'Stack PR', 'stack/test', '2026-01-01T00:00:00Z', '2026-01-01T00:00:00Z')`
+    ).run()
+
+    const row = db.prepare(`SELECT status, task_order FROM pr_groups WHERE id = 'pg-1'`).get() as {
+      status: string
+      task_order: string
     }
-    expect(row.verification_results).toBeNull()
+
+    expect(row.status).toBe('composing')
+    expect(row.task_order).toBe('[]')
     db.close()
   })
 
-  it('column accepts valid JSON', () => {
+  it('is idempotent — calling up twice does not throw', () => {
     const db = new Database(':memory:')
-    db.exec(`CREATE TABLE sprint_tasks (id TEXT PRIMARY KEY, title TEXT)`)
-    up(db)
+    createMinimalSprintTasksTable(db)
 
-    const json = JSON.stringify({ typecheck: null, tests: null })
-    db.exec(`INSERT INTO sprint_tasks (id, title) VALUES ('t2', 'Task 2')`)
-    db.prepare(`UPDATE sprint_tasks SET verification_results = ? WHERE id = 't2'`).run(json)
+    expect(() => {
+      up(db)
+      up(db)
+    }).not.toThrow()
+    db.close()
+  })
 
-    const row = db.prepare(`SELECT verification_results FROM sprint_tasks WHERE id = 't2'`).get() as {
-      verification_results: string
-    }
-    expect(JSON.parse(row.verification_results)).toEqual({ typecheck: null, tests: null })
+  it('is idempotent when stacked_on_task_id already exists on sprint_tasks', () => {
+    const db = new Database(':memory:')
+    db.exec(
+      `CREATE TABLE sprint_tasks (
+        id                  TEXT PRIMARY KEY,
+        title               TEXT NOT NULL,
+        status              TEXT NOT NULL DEFAULT 'backlog',
+        repo                TEXT NOT NULL DEFAULT '',
+        stacked_on_task_id  TEXT
+      )`
+    )
+
+    expect(() => up(db)).not.toThrow()
     db.close()
   })
 })

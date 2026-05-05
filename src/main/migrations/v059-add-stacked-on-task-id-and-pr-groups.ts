@@ -4,8 +4,12 @@ export const version = 59
 export const description = 'Add stacked_on_task_id to sprint_tasks and create pr_groups table'
 
 export const up = (db: Database.Database): void => {
-  const addStackedOnColumn = `ALTER TABLE sprint_tasks ADD COLUMN stacked_on_task_id TEXT`
-  db.exec(addStackedOnColumn)
+  const existingColumns = (db.pragma('table_info(sprint_tasks)') as Array<{ name: string }>).map(
+    (c) => c.name
+  )
+  if (!existingColumns.includes('stacked_on_task_id')) {
+    db.exec(`ALTER TABLE sprint_tasks ADD COLUMN stacked_on_task_id TEXT`)
+  }
 
   const createPrGroupsTable = `
     CREATE TABLE IF NOT EXISTS pr_groups (
