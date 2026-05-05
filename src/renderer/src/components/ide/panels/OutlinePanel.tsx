@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type * as Monaco from 'monaco-editor'
 import { Filter, ArrowUpDown } from 'lucide-react'
 import { PanelHeader } from '../PanelHeader'
 import { IconBtn } from '../IconBtn'
+import { useIDEStore } from '../../../stores/ide'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -109,29 +110,23 @@ async function fetchTsSymbols(
 // ---------------------------------------------------------------------------
 
 export function OutlinePanel({ editorRef, activeFilePath }: OutlinePanelProps): React.JSX.Element {
-  const [symbols, setSymbols] = useState<FlatSymbol[]>([])
-  const [supportsOutline, setSupportsOutline] = useState(true)
+  // Derive outline support from the IDE store (no ref access during render)
+  const supportsOutline = useIDEStore((s) => {
+    const tab = s.openTabs.find((t) => t.id === s.activeTabId)
+    return tab ? TS_LANGUAGE_IDS.has(tab.language) : false
+  })
+
+  // rawSymbols holds the last fetched result; symbols clears when file/language changes
+  const [rawSymbols, setRawSymbols] = useState<FlatSymbol[]>([])
+  const symbols = useMemo(() => {
+    if (!activeFilePath || !supportsOutline) return []
+    return rawSymbols
+  }, [activeFilePath, supportsOutline, rawSymbols])
 
   useEffect(() => {
-    if (!activeFilePath) {
-      setSymbols([])
-      return
-    }
-
-    const editor = editorRef.current
-    if (!editor) return
-
-    const languageId = editor.getModel()?.getLanguageId() ?? ''
-    if (!TS_LANGUAGE_IDS.has(languageId)) {
-      setSupportsOutline(false)
-      setSymbols([])
-      return
-    }
-
-    setSupportsOutline(true)
-
-    void fetchTsSymbols(editor).then(setSymbols)
-  }, [activeFilePath, editorRef])
+    if (!activeFilePath || !supportsOutline || !editorRef.current) return
+    void fetchTsSymbols(editorRef.current).then(setRawSymbols)
+  }, [activeFilePath, supportsOutline, editorRef])
 
   const activeFilename = activeFilePath ? activeFilePath.split('/').pop() ?? null : null
   const eyebrow = activeFilename ? `OUTLINE — ${activeFilename}` : 'OUTLINE'

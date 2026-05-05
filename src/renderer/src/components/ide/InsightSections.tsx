@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useTransition } from 'react'
 import type * as monacoEditor from 'monaco-editor'
 import * as monacoApi from 'monaco-editor'
 import { SectionHead } from './SectionHead'
 import { CompactAgentRow } from './CompactAgentRow'
 import { useIDEStore } from '../../stores/ide'
+import { useIDEFileCache } from '../../stores/ideFileCache'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import type { InsightSectionKey } from '../../stores/ide'
@@ -102,7 +103,6 @@ export function InsightSections({
   return (
     <>
       <ThisFileSection
-        editorRef={editorRef}
         open={insightSections.thisFile}
         onToggle={() => toggle('thisFile')}
       />
@@ -137,20 +137,16 @@ export function InsightSections({
 // ---------------------------------------------------------------------------
 
 interface ThisFileSectionProps {
-  editorRef: React.RefObject<monacoEditor.editor.IStandaloneCodeEditor | null>
   open: boolean
   onToggle: () => void
 }
 
-function ThisFileSection({
-  editorRef,
-  open,
-  onToggle
-}: ThisFileSectionProps): React.JSX.Element {
-  const rawLanguageId = editorRef.current?.getModel()?.getLanguageId() ?? 'plaintext'
-  const language = toLanguageDisplayName(rawLanguageId)
-  const lineCount = editorRef.current?.getModel()?.getLineCount() ?? 0
-  // TODO(phase-6.5): wire agent-file-touch count from the agent-file index
+function ThisFileSection({ open, onToggle }: ThisFileSectionProps): React.JSX.Element {
+  const activeTab = useIDEStore((s) => s.openTabs.find((t) => t.id === s.activeTabId) ?? null)
+  const fileContent = useIDEFileCache((s) => (activeTab ? (s.fileContents[activeTab.filePath] ?? '') : ''))
+
+  const language = toLanguageDisplayName(activeTab?.language ?? 'plaintext')
+  const lineCount = fileContent ? fileContent.split('\n').length : 0
   const agentCount = 0
 
   return (
@@ -358,22 +354,18 @@ function RecentCommitsSection({
   onToggle
 }: RecentCommitsSectionProps): React.JSX.Element {
   const [commits, setCommits] = useState<FileCommit[]>([])
-  const [loading, setLoading] = useState(false)
+  const [isPending, startTransition] = useTransition()
 
   useEffect(() => {
     if (!open || !rootPath || !activeFilePath) return
-    setLoading(true)
-    void window.api.git
-      .fileLog({ cwd: rootPath, filePath: activeFilePath, n: 5 })
-      .then((result) => {
+    startTransition(async () => {
+      try {
+        const result = await window.api.git.fileLog({ cwd: rootPath, filePath: activeFilePath, n: 5 })
         setCommits(result)
-      })
-      .catch(() => {
+      } catch {
         setCommits([])
-      })
-      .finally(() => {
-        setLoading(false)
-      })
+      }
+    })
   }, [open, activeFilePath, rootPath])
 
   return (
@@ -381,7 +373,7 @@ function RecentCommitsSection({
       <SectionHead eyebrow="RECENT COMMITS" open={open} onToggle={onToggle} />
       {open && (
         <div style={{ padding: 'var(--s-1) 0' }}>
-          {loading ? (
+          {isPending ? (
             <span
               style={{
                 display: 'block',
@@ -497,11 +489,16 @@ function ProblemsSection({
     setMarkers(all)
   }
 
-  // Re-read markers when the file changes and on a 5-second interval
+  // Re-read markers when the file changes and on a 5-second interval.
+  // setTimeout defers the initial read so it happens outside the effect body,
+  // avoiding a synchronous setState-in-effect cascade.
   useEffect(() => {
-    readMarkers()
+    const timeout = setTimeout(readMarkers, 0)
     const id = setInterval(readMarkers, 5_000)
-    return () => clearInterval(id)
+    return () => {
+      clearTimeout(timeout)
+      clearInterval(id)
+    }
   }, [activeFilePath]) // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
