@@ -30,10 +30,10 @@ describe('IDEEmptyState', () => {
     mockRecentFolders = []
   })
 
-  it('renders title and subtitle', () => {
+  it('renders eyebrow and subtitle', () => {
     render(<IDEEmptyState onOpenFolder={onOpenFolder} />)
-    expect(screen.getByText('FLEET IDE')).toBeInTheDocument()
-    expect(screen.getByText('Open a folder to start editing')).toBeInTheDocument()
+    expect(screen.getByText('NO WORKSPACE')).toBeInTheDocument()
+    expect(screen.getByText('Open a folder to start editing.')).toBeInTheDocument()
   })
 
   it('renders Open Folder button', () => {
@@ -50,13 +50,13 @@ describe('IDEEmptyState', () => {
   it('does not render recent section when recentFolders is empty', () => {
     mockRecentFolders = []
     render(<IDEEmptyState onOpenFolder={onOpenFolder} />)
-    expect(screen.queryByText('Recent')).not.toBeInTheDocument()
+    expect(screen.queryByText('RECENT')).not.toBeInTheDocument()
   })
 
   it('renders recent folders when available', () => {
     mockRecentFolders = ['/home/user/project-a', '/home/user/project-b']
     render(<IDEEmptyState onOpenFolder={onOpenFolder} />)
-    expect(screen.getByText('Recent')).toBeInTheDocument()
+    expect(screen.getByText('RECENT')).toBeInTheDocument()
     expect(screen.getByText('/home/user/project-a')).toBeInTheDocument()
     expect(screen.getByText('/home/user/project-b')).toBeInTheDocument()
   })
