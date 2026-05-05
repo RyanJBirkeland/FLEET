@@ -73,16 +73,17 @@ function contextualRightTag(task: SprintTask): React.ReactNode {
 interface LiveAgentBlockProps {
   task: SprintTask
   elapsed: string
+  now: number
 }
 
 // Only place in this file where .fleet-pulse appears — active tasks only.
-function LiveAgentBlock({ task, elapsed }: LiveAgentBlockProps): React.JSX.Element {
+function LiveAgentBlock({ task, elapsed, now }: LiveAgentBlockProps): React.JSX.Element {
   const pct =
     task.started_at && task.max_runtime_ms
       ? Math.min(
           95,
           Math.round(
-            ((Date.now() - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100
+            ((now - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100
           )
         )
       : 0
@@ -184,9 +185,8 @@ function TaskPillV2Inner({
     if (isActive) setElapsed(formatElapsed(task.started_at!))
   }, [isActive, task.started_at])
 
-  // Suppress unused-variable warnings — these derived values mirror V1 and will be used
+  // Suppress unused-variable warnings — these derived values will be used
   // when zombie/stale indicators are added in a future pass.
-  void now
   void costUsd
   void arriving
 
@@ -279,7 +279,7 @@ function TaskPillV2Inner({
       </span>
 
       {/* Live agent block — only for active tasks */}
-      {task.status === 'active' && <LiveAgentBlock task={task} elapsed={elapsed} />}
+      {task.status === 'active' && <LiveAgentBlock task={task} elapsed={elapsed} now={now} />}
 
       {/* Bottom row */}
       <div

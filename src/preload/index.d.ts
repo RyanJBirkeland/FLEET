@@ -109,6 +109,9 @@ declare global {
         diffBetweenRefs: (
           ...args: IpcArgs<'git:diffBetweenRefs'>
         ) => Promise<IpcResult<'git:diffBetweenRefs'>>
+        fileLog: (
+          ...args: IpcArgs<'git:fileLog'>
+        ) => Promise<IpcResult<'git:fileLog'>>
       }
 
       // Memory

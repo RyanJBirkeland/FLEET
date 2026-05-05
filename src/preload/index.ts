@@ -16,7 +16,8 @@ import {
   gitDetectRemote as detectRemote,
   gitFetch as fetch,
   gitPull as pull,
-  gitDiffBetweenRefs as diffBetweenRefs
+  gitDiffBetweenRefs as diffBetweenRefs,
+  gitFileLog as fileLog
 } from './api-git'
 import { sprint, groups } from './api-sprint'
 import {
@@ -124,7 +125,8 @@ const api = {
     detectRemote,
     fetch,
     pull,
-    diffBetweenRefs
+    diffBetweenRefs,
+    fileLog
   },
 
   // Memory

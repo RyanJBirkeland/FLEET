@@ -5,6 +5,12 @@ import { IconBtn } from './IconBtn'
 import { InsightSections } from './InsightSections'
 
 // ---------------------------------------------------------------------------
+// Module-level constant — avoids calling Date.now() during render
+// ---------------------------------------------------------------------------
+
+const FRESHNESS_INIT = Date.now()
+
+// ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
@@ -36,21 +42,27 @@ export function InsightRail({
   onClose,
   rootPath
 }: InsightRailProps): React.JSX.Element {
-  const [lastRefreshed, setLastRefreshed] = useState(Date.now())
+  const [lastRefreshed, setLastRefreshed] = useState(FRESHNESS_INIT)
   const [freshnessLabel, setFreshnessLabel] = useState('updated 0s ago')
 
-  // Reset freshness timestamp whenever the active file changes
+  // Reset freshness timestamp whenever the active file changes.
+  // Deferred with setTimeout so setLastRefreshed is not synchronous in the effect body.
   useEffect(() => {
-    setLastRefreshed(Date.now())
+    const t = setTimeout(() => setLastRefreshed(Date.now()), 0)
+    return () => clearTimeout(t)
   }, [activeFilePath])
 
-  // Update the displayed label every 30 seconds
+  // Update the displayed label every 30 seconds.
+  // Deferred initial update to avoid synchronous setState in the effect body.
   useEffect(() => {
-    setFreshnessLabel(buildFreshnessLabel(lastRefreshed))
+    const t = setTimeout(() => setFreshnessLabel(buildFreshnessLabel(lastRefreshed)), 0)
     const id = setInterval(() => {
       setFreshnessLabel(buildFreshnessLabel(lastRefreshed))
     }, 30_000)
-    return () => clearInterval(id)
+    return () => {
+      clearTimeout(t)
+      clearInterval(id)
+    }
   }, [lastRefreshed])
 
   return (

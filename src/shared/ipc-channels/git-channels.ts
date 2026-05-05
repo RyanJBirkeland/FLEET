@@ -83,6 +83,10 @@ export interface GitChannels {
     args: [payload: { repoPath: string; fromRef: string; toRef: string }]
     result: string
   }
+  'git:fileLog': {
+    args: [payload: { cwd: string; filePath: string; n: number }]
+    result: Array<{ hash: string; shortHash: string; subject: string; author: string; date: string }>
+  }
 }
 
 /** Pull request operations */

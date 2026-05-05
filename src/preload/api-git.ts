@@ -57,3 +57,9 @@ export const gitDiffBetweenRefs = (payload: {
   toRef: string
 }): Promise<IpcChannelMap['git:diffBetweenRefs']['result']> =>
   typedInvoke('git:diffBetweenRefs', payload)
+
+export const gitFileLog = (payload: {
+  cwd: string
+  filePath: string
+  n: number
+}): Promise<IpcChannelMap['git:fileLog']['result']> => typedInvoke('git:fileLog', payload)

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { SprintTask } from '../../../../shared/types'
 import { parseRevisionFeedback } from '../../../../shared/types/revision'
 import type { RevisionFeedback } from '../../../../shared/types/revision'
@@ -7,6 +7,7 @@ import { useSprintSelection } from '../../stores/sprintSelection'
 import { useAgentEventsStore } from '../../stores/agentEvents'
 import { formatElapsed, failureCategoryForReason } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
+import { useNow } from '../../hooks/useNow'
 import { useGitHubStatus } from '../../hooks/useGitHubStatus'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { TextareaPromptModal, useTextareaPrompt } from '../ui/TextareaPromptModal'
@@ -171,12 +172,11 @@ export function TaskDetailDrawerV2({
   const recentEvents = allAgentEvents.slice(-8).reverse()
 
   const { costUsd } = useTaskCost(task.agent_run_id)
+  const now = useNow()
 
-  const progressPct = useMemo(() => {
-    if (!task.started_at || !task.max_runtime_ms) return 0
-    const elapsed_ms = Date.now() - new Date(task.started_at).getTime()
-    return Math.min(100, Math.round((elapsed_ms / task.max_runtime_ms) * 100))
-  }, [task.started_at, task.max_runtime_ms])
+  const progressPct = !task.started_at || !task.max_runtime_ms
+    ? 0
+    : Math.min(100, Math.round(((now - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100))
 
   const { prompt: promptForReason, promptProps: reasonPromptProps } = useTextareaPrompt()
   const { confirm: confirmForceDone, confirmProps: forceDoneConfirmProps } = useConfirm()

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Bot, Files, GitBranch, List, PanelRight, Search } from 'lucide-react'
 import { useAgentHistoryStore } from '../../stores/agentHistory'
 import { useIDEStore } from '../../stores/ide'
@@ -45,13 +45,15 @@ function useAgentUnreadDot(activity: ActivityMode): DotColor {
   const agents = useAgentHistoryStore((s) => s.agents)
   const rootPath = useIDEStore((s) => s.rootPath)
 
-  // Track when the Agents panel was last opened
-  const lastOpenedAtRef = useRef<number>(Date.now())
+  // Track when the Agents panel was last opened.
+  // 0 = epoch, so all past finished agents are considered unread on first render.
+  const [lastOpenedAt, setLastOpenedAt] = useState(0)
 
   useEffect(() => {
-    if (activity === 'agents') {
-      lastOpenedAtRef.current = Date.now()
-    }
+    if (activity !== 'agents') return
+    // Defer so setLastOpenedAt is not synchronous in the effect body
+    const t = setTimeout(() => setLastOpenedAt(Date.now()), 0)
+    return () => clearTimeout(t)
   }, [activity])
 
   if (activity === 'agents') {
@@ -65,8 +67,6 @@ function useAgentUnreadDot(activity: ActivityMode): DotColor {
     repoBasename != null
       ? agents.filter((a) => a.repo.toLowerCase() === repoBasename.toLowerCase())
       : agents
-
-  const lastOpenedAt = lastOpenedAtRef.current
 
   // Any agent that finished after the panel was last opened
   const hasNewlyFinished = workspaceAgents.some((a) => {
