@@ -153,6 +153,45 @@ export function registerGitHandlers(deps: GitHandlersDeps): void {
     return stdout
   })
 
+  // --- File commit history (IDE Insight Rail) ---
+  // cwd is the user's opened workspace root (not necessarily a configured repo).
+  // We validate it the same way as git:detectRemote — absolute path, no traversal.
+  safeHandle('git:fileLog', async (_e, { cwd, filePath, n }: { cwd: string; filePath: string; n: number }) => {
+    const resolvedCwd = path.resolve(cwd)
+    if (!cwd.startsWith('/') || resolvedCwd !== cwd || cwd.includes('..')) {
+      return []
+    }
+    const resolvedFile = path.resolve(resolvedCwd, filePath)
+    if (!resolvedFile.startsWith(resolvedCwd + '/') && resolvedFile !== resolvedCwd) {
+      return []
+    }
+    const relPath = path.relative(resolvedCwd, resolvedFile)
+    const fmt = '%H%x09%h%x09%s%x09%an%x09%ai'
+    try {
+      const gitBin = resolveGitExecutable() ?? 'git'
+      const { stdout } = await execFileAsync(
+        gitBin,
+        ['log', '--follow', `-n`, String(Math.min(n, 20)), `--format=${fmt}`, '--', relPath],
+        { cwd: resolvedCwd, env: buildAgentEnv(), maxBuffer: 1 * 1024 * 1024 }
+      )
+      return stdout
+        .split('\n')
+        .filter((line) => line.trim())
+        .map((line) => {
+          const parts = line.split('\t')
+          return {
+            hash: parts[0] ?? '',
+            shortHash: parts[1] ?? '',
+            subject: parts[2] ?? '',
+            author: parts[3] ?? '',
+            date: parts[4] ?? ''
+          }
+        })
+    } catch {
+      return []
+    }
+  })
+
   // --- Conflict file detection ---
   safeHandle('pr:checkConflictFiles', (_e, input: ConflictFilesInput) => checkConflictFiles(input))
 

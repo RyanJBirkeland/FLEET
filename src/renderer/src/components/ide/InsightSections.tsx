@@ -5,6 +5,7 @@ import { SectionHead } from './SectionHead'
 import { CompactAgentRow } from './CompactAgentRow'
 import { useIDEStore } from '../../stores/ide'
 import { useSprintTasks } from '../../stores/sprintTasks'
+import { useAgentHistoryStore } from '../../stores/agentHistory'
 import type { InsightSectionKey } from '../../stores/ide'
 
 // ---------------------------------------------------------------------------
@@ -89,7 +90,7 @@ function IDEMiniStat({ label, value }: { label: string; value: string }): React.
 export function InsightSections({
   activeFilePath,
   editorRef,
-  rootPath: _rootPath
+  rootPath
 }: InsightSectionsProps): React.JSX.Element {
   const insightSections = useIDEStore((s) => s.uiState.insightSectionsOpen)
   const setInsightSectionOpen = useIDEStore((s) => s.setInsightSectionOpen)
@@ -106,6 +107,7 @@ export function InsightSections({
         onToggle={() => toggle('thisFile')}
       />
       <AgentsOnFileSection
+        rootPath={rootPath}
         open={insightSections.agents}
         onToggle={() => toggle('agents')}
       />
@@ -115,6 +117,8 @@ export function InsightSections({
         onToggle={() => toggle('tasks')}
       />
       <RecentCommitsSection
+        activeFilePath={activeFilePath}
+        rootPath={rootPath}
         open={insightSections.commits}
         onToggle={() => toggle('commits')}
       />
@@ -176,22 +180,32 @@ function ThisFileSection({
 // ---------------------------------------------------------------------------
 
 interface AgentsOnFileSectionProps {
+  rootPath: string | null
   open: boolean
   onToggle: () => void
 }
 
-function AgentsOnFileSection({ open, onToggle }: AgentsOnFileSectionProps): React.JSX.Element {
-  // TODO(phase-6.5): filter by files-touched when agent-file index is available.
-  // CompactAgentRow is imported and ready; the list is stubbed empty until the
-  // signal exists.
-  const agentsOnFile: React.ComponentProps<typeof CompactAgentRow>[] = []
+function rootBasename(rootPath: string): string {
+  return rootPath.split('/').filter(Boolean).pop() ?? rootPath
+}
+
+function AgentsOnFileSection({ rootPath, open, onToggle }: AgentsOnFileSectionProps): React.JSX.Element {
+  const agents = useAgentHistoryStore((s) => s.agents)
+
+  const runningAgents = agents
+    .filter((a) => {
+      if (a.status !== 'running') return false
+      if (!rootPath) return true
+      return rootBasename(a.repo).toLowerCase() === rootBasename(rootPath).toLowerCase()
+    })
+    .slice(0, 5)
 
   return (
     <div style={{ borderBottom: '1px solid var(--line)' }}>
       <SectionHead eyebrow="AGENTS ON THIS FILE" open={open} onToggle={onToggle} />
       {open && (
         <div style={{ padding: 'var(--s-1) 0' }}>
-          {agentsOnFile.length === 0 ? (
+          {runningAgents.length === 0 ? (
             <span
               style={{
                 display: 'block',
@@ -200,10 +214,16 @@ function AgentsOnFileSection({ open, onToggle }: AgentsOnFileSectionProps): Reac
                 fontSize: 'var(--t-sm)'
               }}
             >
-              No agents are touching this file right now.
+              No agents are running in this workspace.
             </span>
           ) : (
-            agentsOnFile.map((props) => <CompactAgentRow key={props.agentId} {...props} />)
+            runningAgents.map((agent) => (
+              <CompactAgentRow
+                key={agent.id}
+                agentId={agent.task || agent.id}
+                status="running"
+              />
+            ))
           )}
         </div>
       )}
@@ -307,29 +327,141 @@ function TasksReferencingSection({
 // Section 4: RECENT COMMITS
 // ---------------------------------------------------------------------------
 
+interface FileCommit {
+  hash: string
+  shortHash: string
+  subject: string
+  author: string
+  date: string
+}
+
 interface RecentCommitsSectionProps {
+  activeFilePath: string
+  rootPath: string | null
   open: boolean
   onToggle: () => void
 }
 
-function RecentCommitsSection({ open, onToggle }: RecentCommitsSectionProps): React.JSX.Element {
-  // TODO(phase-6.5): wire git:fileLog --follow -n 5 -- <path>
+function formatCommitDate(isoDate: string): string {
+  if (!isoDate) return ''
+  try {
+    return new Date(isoDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
+  } catch {
+    return isoDate.slice(0, 10)
+  }
+}
+
+function RecentCommitsSection({
+  activeFilePath,
+  rootPath,
+  open,
+  onToggle
+}: RecentCommitsSectionProps): React.JSX.Element {
+  const [commits, setCommits] = useState<FileCommit[]>([])
+  const [loading, setLoading] = useState(false)
+
+  useEffect(() => {
+    if (!open || !rootPath || !activeFilePath) return
+    setLoading(true)
+    void window.api.git
+      .fileLog({ cwd: rootPath, filePath: activeFilePath, n: 5 })
+      .then((result) => {
+        setCommits(result)
+      })
+      .catch(() => {
+        setCommits([])
+      })
+      .finally(() => {
+        setLoading(false)
+      })
+  }, [open, activeFilePath, rootPath])
+
   return (
     <div style={{ borderBottom: '1px solid var(--line)' }}>
       <SectionHead eyebrow="RECENT COMMITS" open={open} onToggle={onToggle} />
       {open && (
-        <div
-          style={{
-            padding: 'var(--s-3)',
-            display: 'flex',
-            flexDirection: 'column',
-            gap: 'var(--s-2)'
-          }}
-        >
-          <span className="fleet-eyebrow">COMING SOON</span>
-          <span style={{ fontSize: 'var(--t-sm)', color: 'var(--fg-3)' }}>
-            Recent commits for this file will appear here.
-          </span>
+        <div style={{ padding: 'var(--s-1) 0' }}>
+          {loading ? (
+            <span
+              style={{
+                display: 'block',
+                padding: 'var(--s-3)',
+                color: 'var(--fg-3)',
+                fontSize: 'var(--t-sm)'
+              }}
+            >
+              Loading…
+            </span>
+          ) : commits.length === 0 ? (
+            <span
+              style={{
+                display: 'block',
+                padding: 'var(--s-3)',
+                color: 'var(--fg-3)',
+                fontSize: 'var(--t-sm)'
+              }}
+            >
+              No commits found for this file.
+            </span>
+          ) : (
+            commits.map((commit) => (
+              <div
+                key={commit.hash}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 'var(--s-1)',
+                  padding: 'var(--s-2) var(--s-3)',
+                  borderBottom: '1px solid var(--line-2)'
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'baseline',
+                    gap: 'var(--s-2)',
+                    overflow: 'hidden'
+                  }}
+                >
+                  <span
+                    style={{
+                      fontFamily: 'var(--font-mono)',
+                      fontSize: 'var(--t-2xs)',
+                      color: 'var(--accent)',
+                      flexShrink: 0
+                    }}
+                  >
+                    {commit.shortHash}
+                  </span>
+                  <span
+                    style={{
+                      fontSize: 'var(--t-sm)',
+                      color: 'var(--fg)',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      flex: 1
+                    }}
+                  >
+                    {commit.subject}
+                  </span>
+                </div>
+                <div
+                  style={{
+                    display: 'flex',
+                    gap: 'var(--s-2)',
+                    fontSize: 'var(--t-2xs)',
+                    color: 'var(--fg-4)',
+                    fontFamily: 'var(--font-mono)'
+                  }}
+                >
+                  <span>{commit.author}</span>
+                  <span>·</span>
+                  <span>{formatCommitDate(commit.date)}</span>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       )}
     </div>
