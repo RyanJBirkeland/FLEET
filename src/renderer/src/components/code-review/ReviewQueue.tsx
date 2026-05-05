@@ -217,7 +217,11 @@ export function ReviewQueue(): React.JSX.Element {
         </motion.div>
       </section>
 
-      <PrBuilderModal open={showPrBuilder} onClose={() => setShowPrBuilder(false)} />
+      <PrBuilderModal
+        open={showPrBuilder}
+        repo={approvedTasks[0]?.repo ?? ''}
+        onClose={() => setShowPrBuilder(false)}
+      />
     </div>
   )
 }

@@ -291,7 +291,11 @@ export function TopBar(): React.JSX.Element {
           handleSubmitRollupPr(selectedTasks, branchName, prTitle)
         }
       />
-      <PrBuilderModal open={showPrBuilder} onClose={() => setShowPrBuilder(false)} />
+      <PrBuilderModal
+        open={showPrBuilder}
+        repo={task?.repo ?? ''}
+        onClose={() => setShowPrBuilder(false)}
+      />
       <Modal
         open={promptModalOpen}
         onClose={() => setPromptModalOpen(false)}
