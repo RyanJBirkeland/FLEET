@@ -7,6 +7,11 @@ import { useTerminalStore } from '../../stores/terminal'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import type { TerminalTab } from '../../stores/terminal'
 
+const TAB_MIN_WIDTH = 80
+const TAB_MAX_WIDTH = 160
+const TERMINAL_MIN_HEIGHT = 140
+const TERMINAL_MAX_HEIGHT = 280
+
 // ── TermTab ────────────────────────────────────────────────
 // 24px inline tab for each terminal session. Agent-attached
 // tabs receive a left accent stripe via box-shadow.
@@ -21,10 +26,11 @@ interface TermTabProps {
 
 function TermTab({ tab, isActive, canClose, onSelect, onClose }: TermTabProps): React.JSX.Element {
   const [hovered, setHovered] = useState(false)
+  const [closeHovered, setCloseHovered] = useState(false)
   const isAgent = tab.kind === 'agent'
   const isRunning = tab.status === 'running'
 
-  const dotColor = isAgent ? 'var(--st-running)' : isRunning ? 'var(--st-running)' : 'var(--fg-3)'
+  const dotColor = isAgent || isRunning ? 'var(--st-running)' : 'var(--fg-3)'
 
   return (
     <div
@@ -42,8 +48,8 @@ function TermTab({ tab, isActive, canClose, onSelect, onClose }: TermTabProps): 
         padding: '0 var(--s-2)',
         borderRight: '1px solid var(--line)',
         cursor: 'pointer',
-        minWidth: 80,
-        maxWidth: 160,
+        minWidth: TAB_MIN_WIDTH,
+        maxWidth: TAB_MAX_WIDTH,
         flexShrink: 0,
         fontSize: 'var(--t-sm)',
         color: isActive ? 'var(--fg)' : hovered ? 'var(--fg-2)' : 'var(--fg-3)',
@@ -87,6 +93,8 @@ function TermTab({ tab, isActive, canClose, onSelect, onClose }: TermTabProps): 
             e.stopPropagation()
             onClose(tab.id)
           }}
+          onMouseEnter={() => setCloseHovered(true)}
+          onMouseLeave={() => setCloseHovered(false)}
           style={{
             width: 14,
             height: 14,
@@ -94,22 +102,14 @@ function TermTab({ tab, isActive, canClose, onSelect, onClose }: TermTabProps): 
             alignItems: 'center',
             justifyContent: 'center',
             border: 'none',
-            background: 'transparent',
-            color: 'var(--fg-3)',
+            background: closeHovered ? 'var(--surf-3)' : 'transparent',
+            color: closeHovered ? 'var(--fg)' : 'var(--fg-3)',
             cursor: 'pointer',
             padding: 0,
             flexShrink: 0,
             opacity: hovered || isActive ? 1 : 0,
-            transition: `opacity var(--dur-fast) var(--ease-out)`,
+            transition: `opacity var(--dur-fast) var(--ease-out), background var(--dur-fast) var(--ease-out), color var(--dur-fast) var(--ease-out)`,
             borderRadius: 'var(--r-sm)'
-          }}
-          onMouseEnter={(e) => {
-            e.currentTarget.style.background = 'var(--surf-3)'
-            e.currentTarget.style.color = 'var(--fg)'
-          }}
-          onMouseLeave={(e) => {
-            e.currentTarget.style.background = 'transparent'
-            e.currentTarget.style.color = 'var(--fg-3)'
           }}
         >
           <X size={10} />
@@ -155,8 +155,8 @@ export function TerminalPanel(): React.JSX.Element {
         background: 'var(--surf-1)',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: 140,
-        maxHeight: 280,
+        minHeight: TERMINAL_MIN_HEIGHT,
+        maxHeight: TERMINAL_MAX_HEIGHT,
         resize: 'vertical',
         overflow: 'hidden'
       }}
