@@ -3,14 +3,14 @@
   display: grid;
   grid-template-columns: 1fr 50px 50px 60px 50px;
   gap: var(--s-2);
-  padding: var(--s-1) 0;
+  padding: var(--s-2) 0;
   align-items: center;
   min-width: 0;
 }
 
 .per-repo__header-row {
   border-bottom: 1px solid var(--line);
-  padding-bottom: var(--s-1);
+  padding-bottom: var(--s-2);
 }
 
 .per-repo__header-row .fleet-eyebrow {

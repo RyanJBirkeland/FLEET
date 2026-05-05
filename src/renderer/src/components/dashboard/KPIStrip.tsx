@@ -106,11 +106,10 @@ export function KPIStrip(props: KPIStripProps): React.JSX.Element {
 
   return (
     <div className="kpi-strip">
-      {cells.map((cell, i) => (
+      {cells.map((cell) => (
         <div
           key={cell.label}
           className="kpi-strip__cell"
-          style={{ borderRight: i < cells.length - 1 ? '1px solid var(--line)' : 'none' }}
         >
           <span className="fleet-eyebrow">{cell.label}</span>
           <div className="kpi-strip__value-row">

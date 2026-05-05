@@ -9,18 +9,47 @@
   container-type: inline-size;
 }
 
+/* Two-column body: live (left) + triage (right) */
 .dashboard-v2__columns {
-  display: grid;
-  grid-template-columns: 1.4fr 1fr;
+  display: flex;
+  flex-wrap: wrap;
   gap: var(--s-4);
-  min-height: 0;
   min-width: 0;
 }
 
-.dashboard-v2__live-col,
-.dashboard-v2__triage-col {
+.dashboard-v2__live-col {
+  flex: 1.4 1 360px;   /* grows proportionally, shrinks, wraps below 360px */
   display: flex;
   flex-direction: column;
-  gap: var(--s-3);
+  gap: var(--s-4);
   min-width: 0;
+}
+
+.dashboard-v2__triage-col {
+  flex: 1 1 260px;     /* wraps below 260px, stacks under live col */
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+/* Bottom stats accordion */
+.dashboard-v2__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  min-width: 0;
+}
+
+.dashboard-v2__stats > * {
+  flex: 1 1 300px;
+  min-width: 0;
+}
+
+/* Compact padding at narrow viewports */
+@container (max-width: 720px) {
+  .dashboard-v2 {
+    padding: var(--s-4) var(--s-4) var(--s-6);
+    gap: var(--s-3);
+  }
 }

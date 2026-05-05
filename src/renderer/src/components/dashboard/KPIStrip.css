@@ -1,6 +1,6 @@
 .kpi-strip {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
+  display: flex;
+  flex-wrap: wrap;
   background: var(--surf-1);
   border: 1px solid var(--line);
   border-radius: var(--r-lg);
@@ -9,11 +9,20 @@
 }
 
 .kpi-strip__cell {
+  flex: 1 1 140px;   /* wraps naturally; 5 fit comfortably at 700px+ */
   padding: var(--s-3) var(--s-4);
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
   min-width: 0;
+  /* Separator: right border on all but the last cell in each visual row.
+     Using left border on non-first adjacent cells is the cleanest flex-wrap approach. */
+  border-right: 1px solid var(--line);
+}
+
+/* Remove right border on the very last cell to avoid a double border with the card border */
+.kpi-strip__cell:last-child {
+  border-right: none;
 }
 
 .kpi-strip__value-row {
@@ -37,4 +46,31 @@
   font-size: 10px;
   font-family: var(--font-mono);
   flex-shrink: 0;
+}
+
+/* When cells wrap to multiple rows, add top border to cells that start a new row.
+   We can't know which ones in CSS alone, so we add a top separator to all cells
+   except the first row by targeting nth-child > 5 for the default 5-up layout. */
+@container (max-width: 700px) {
+  .kpi-strip__cell {
+    flex-basis: 33.33%;   /* 3 per row */
+  }
+
+  /* Top border for row 2 cells (4th and 5th) */
+  .kpi-strip__cell:nth-child(4),
+  .kpi-strip__cell:nth-child(5) {
+    border-top: 1px solid var(--line);
+  }
+}
+
+@container (max-width: 480px) {
+  .kpi-strip__cell {
+    flex-basis: 50%;   /* 2 per row */
+  }
+
+  .kpi-strip__cell:nth-child(3),
+  .kpi-strip__cell:nth-child(4),
+  .kpi-strip__cell:nth-child(5) {
+    border-top: 1px solid var(--line);
+  }
 }

@@ -18,7 +18,7 @@ export function Card({ children, attention = false, className }: CardProps): Rea
         padding: '14px 16px',
         display: 'flex',
         flexDirection: 'column',
-        gap: 'var(--s-2)',
+        gap: 'var(--s-3)',
         minWidth: 0
       }}
     >

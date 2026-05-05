@@ -76,14 +76,7 @@ export default function DashboardViewV2(): React.JSX.Element {
         successTrendData={data.successTrendData}
       />
 
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: 'var(--s-4)',
-          minWidth: 0
-        }}
-      >
+      <div className="dashboard-v2__stats">
         <PerAgentStats rows={data.perAgentStats} />
         <PerRepoStats rows={data.perRepoStats} />
       </div>

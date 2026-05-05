@@ -3,7 +3,7 @@
   grid-template-columns: 14px 1fr 1fr 80px 60px 50px;
   gap: var(--s-3);
   align-items: center;
-  padding: var(--s-2) 0;
+  padding: 10px 0;
   min-width: 0;
 }
 
@@ -82,7 +82,7 @@
   display: flex;
   align-items: center;
   gap: var(--s-2);
-  padding: var(--s-2) 0;
+  padding: var(--s-3) 0;
 }
 
 .active-agents__empty-text {

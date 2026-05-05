@@ -1,7 +1,7 @@
 .mission-brief {
-  display: grid;
-  grid-template-columns: 1.6fr 1fr 1fr;
-  gap: var(--s-4);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3) var(--s-4);  /* row-gap col-gap */
   padding: var(--s-3) var(--s-5);
   background: var(--surf-1);
   border: 1px solid var(--line);
@@ -10,6 +10,7 @@
 }
 
 .mission-brief__col {
+  flex: 1.6 1 200px;   /* headline col */
   display: flex;
   flex-direction: column;
   gap: var(--s-1);
@@ -17,6 +18,7 @@
 }
 
 .mission-brief__col--bordered {
+  flex: 1 1 150px;     /* sprint + quick cols */
   padding-left: var(--s-4);
   border-left: 1px solid var(--line);
 }
@@ -142,4 +144,15 @@
 .mission-brief__ghost-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* At narrow viewports: bordered cols stack — swap left border for top border */
+@container (max-width: 640px) {
+  .mission-brief__col--bordered {
+    flex-basis: 100%;
+    padding-left: 0;
+    border-left: none;
+    padding-top: var(--s-3);
+    border-top: 1px solid var(--line);
+  }
 }
