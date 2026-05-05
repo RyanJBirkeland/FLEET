@@ -1,0 +1,47 @@
+.per-repo__header-row,
+.per-repo__data-row {
+  display: grid;
+  grid-template-columns: 1fr 50px 50px 60px 50px;
+  gap: var(--s-2);
+  padding: var(--s-1) 0;
+  align-items: center;
+  min-width: 0;
+}
+
+.per-repo__header-row {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--s-1);
+}
+
+.per-repo__header-row .fleet-eyebrow {
+  font-size: 9px;
+}
+
+.per-repo__col-repo {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.per-repo__col-num {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.per-repo__name {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.per-repo__empty {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  margin: 0;
+  padding: var(--s-2) 0;
+}

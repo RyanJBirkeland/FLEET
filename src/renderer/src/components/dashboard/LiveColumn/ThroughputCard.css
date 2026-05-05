@@ -1,0 +1,21 @@
+.throughput__chart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 64px;
+}
+
+.throughput__bar {
+  flex: 1;
+  min-height: 2px;
+  background: var(--st-running);
+  border-radius: 1px;
+}
+
+.throughput__axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-4);
+}

@@ -1,0 +1,62 @@
+.pipeline-glance__flow-bar {
+  display: flex;
+  height: 5px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surf-3);
+}
+
+.pipeline-glance__grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--s-3);
+  margin-top: var(--s-1);
+}
+
+.pipeline-glance__cell {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  cursor: pointer;
+  min-width: 0;
+}
+
+.pipeline-glance__label-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-1);
+}
+
+.pipeline-glance__count {
+  font-size: 22px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: var(--fg);
+  line-height: 1;
+}
+
+.pipeline-glance__peek {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pipeline-glance__mini-link {
+  height: 22px;
+  padding: 0 var(--s-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-2);
+  cursor: pointer;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.pipeline-glance__mini-link:hover {
+  background: var(--surf-2);
+}

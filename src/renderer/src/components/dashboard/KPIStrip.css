@@ -1,0 +1,40 @@
+.kpi-strip {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  background: var(--surf-1);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  min-width: 0;
+}
+
+.kpi-strip__cell {
+  padding: var(--s-3) var(--s-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.kpi-strip__value-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-1);
+  min-width: 0;
+}
+
+.kpi-strip__value {
+  font-size: var(--t-xl);
+  font-weight: 500;
+  color: var(--fg);
+  letter-spacing: -0.02em;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kpi-strip__delta {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  flex-shrink: 0;
+}

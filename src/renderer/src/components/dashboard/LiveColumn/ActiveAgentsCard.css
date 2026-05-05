@@ -1,0 +1,115 @@
+.active-agents__row {
+  display: grid;
+  grid-template-columns: 14px 1fr 1fr 80px 60px 50px;
+  gap: var(--s-3);
+  align-items: center;
+  padding: var(--s-2) 0;
+  min-width: 0;
+}
+
+.active-agents__name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.active-agents__title {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-agents__repo {
+  color: var(--fg-4);
+}
+
+.active-agents__step {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-agents__dollar {
+  color: var(--fg-4);
+}
+
+.active-agents__progress-col {
+  min-width: 0;
+}
+
+.active-agents__bar-track {
+  height: 3px;
+  background: var(--surf-3);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.active-agents__bar-fill {
+  height: 100%;
+  background: var(--st-running);
+  border-radius: 2px;
+  transition: width var(--dur-base) var(--ease-out);
+}
+
+.active-agents__meta {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.active-agents__meta-dim {
+  color: var(--fg-4);
+}
+
+.active-agents__pct {
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-4);
+  text-align: right;
+}
+
+.active-agents__empty {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  padding: var(--s-2) 0;
+}
+
+.active-agents__empty-text {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+}
+
+.active-agents__empty-sep {
+  color: var(--fg-4);
+  font-size: 12px;
+}
+
+.active-agents__mini-link {
+  height: 22px;
+  padding: 0 var(--s-2);
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 10px;
+  font-family: var(--font-mono);
+  color: var(--fg-2);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background var(--dur-fast) var(--ease-out);
+}
+
+.active-agents__mini-link:hover {
+  background: var(--surf-2);
+}

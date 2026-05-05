@@ -1,0 +1,57 @@
+.per-agent__header-row,
+.per-agent__data-row {
+  display: grid;
+  grid-template-columns: 1fr 50px 60px 70px 60px 50px;
+  gap: var(--s-2);
+  padding: var(--s-1) 0;
+  align-items: center;
+  min-width: 0;
+}
+
+.per-agent__header-row {
+  border-bottom: 1px solid var(--line);
+  padding-bottom: var(--s-1);
+}
+
+.per-agent__header-row .fleet-eyebrow {
+  font-size: 9px;
+}
+
+.per-agent__col-agent {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.per-agent__col-num,
+.per-agent__col-avg,
+.per-agent__col-tok,
+.per-agent__col-q {
+  font-size: 11px;
+  font-family: var(--font-mono);
+  text-align: right;
+}
+
+.per-agent__header-row .per-agent__col-num,
+.per-agent__header-row .per-agent__col-avg,
+.per-agent__header-row .per-agent__col-tok,
+.per-agent__header-row .per-agent__col-q {
+  text-align: right;
+}
+
+.per-agent__name {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.per-agent__empty {
+  font-size: 12px;
+  font-family: var(--font-mono);
+  color: var(--fg-3);
+  margin: 0;
+  padding: var(--s-2) 0;
+}

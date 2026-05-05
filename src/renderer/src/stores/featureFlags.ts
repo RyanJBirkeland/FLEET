@@ -2,6 +2,7 @@ import { create } from 'zustand'
 
 interface Flags {
   v2Shell: boolean
+  v2Dashboard: boolean
 }
 
 interface FeatureFlagState extends Flags {
@@ -13,11 +14,14 @@ const STORAGE_KEY = 'fleet:ff'
 function loadFlags(): Flags {
   try {
     const stored = localStorage.getItem(STORAGE_KEY)
-    if (!stored) return { v2Shell: false }
+    if (!stored) return { v2Shell: false, v2Dashboard: false }
     const parsed = JSON.parse(stored) as Partial<Flags>
-    return { v2Shell: parsed.v2Shell ?? false }
+    return {
+      v2Shell: parsed.v2Shell ?? false,
+      v2Dashboard: parsed.v2Dashboard ?? false
+    }
   } catch {
-    return { v2Shell: false }
+    return { v2Shell: false, v2Dashboard: false }
   }
 }
 
@@ -36,7 +40,7 @@ export const useFeatureFlags = create<FeatureFlagState>((set) => ({
   setFlag: (key, value) =>
     set((state) => {
       const next = { ...state, [key]: value }
-      persistFlags({ v2Shell: next.v2Shell })
+      persistFlags({ v2Shell: next.v2Shell, v2Dashboard: next.v2Dashboard })
       return { [key]: value }
     }),
 }))
