@@ -13,6 +13,7 @@ import { spawnWithTimeout } from './sdk-adapter'
 import { initializeAgentTracking } from './agent-initialization'
 import { cleanupWorktree } from './worktree'
 import { emitAgentEvent, flushAgentEventBatcher } from '../agent-event-mapper'
+import { readFileMcpServerNames } from '../lib/mcp-disclosure'
 import { nowIso } from '../../shared/time'
 import { TurnTracker } from './turn-tracker'
 import { getDefaultCredentialService } from '../services/credential-service'
@@ -148,6 +149,7 @@ export async function spawnAndWireAgent(
     logger.warn(`[agent-manager] onSpawnSuccess hook threw: ${cbErr}`)
   }
 
+  const fileMcpServers = await readFileMcpServerNames()
   const result = initializeAgentTracking(
     task,
     handle,
@@ -158,6 +160,11 @@ export async function spawnAndWireAgent(
     repo,
     logger
   )
+  emitAgentEvent(result.agentRunId, {
+    type: 'agent:mcp_disclosure',
+    servers: fileMcpServers,
+    timestamp: Date.now()
+  })
   try {
     deps.onAgentRegistered?.()
   } catch (cbErr) {

@@ -72,6 +72,8 @@ function dedupKey(event: AgentEvent): string {
       return `${event.type}|${event.timestamp}|${event.attempt}|${event.retryDelayMs}`
     case 'agent:started':
       return `${event.type}|${event.timestamp}|${event.model}`
+    case 'agent:mcp_disclosure':
+      return `${event.type}|${event.timestamp}|${event.servers.join(',')}`
     case 'agent:completed':
       return `${event.type}|${event.timestamp}|${event.exitCode}|${event.costUsd}`
     case 'agent:playground':

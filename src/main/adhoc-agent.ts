@@ -57,6 +57,7 @@ import { getErrorMessage } from '../shared/errors'
 import { nowIso } from '../shared/time'
 import { createLogger } from './logger'
 import { getDb } from './db'
+import { readFileMcpServerNames } from './lib/mcp-disclosure'
 
 const log = createLogger('adhoc-agent')
 
@@ -219,6 +220,7 @@ export async function spawnAdhocAgent(args: {
   // so both can reference `closed` without a temporal dependency.
   let closed = false
   const startedAt = Date.now()
+  const fileMcpServers = await readFileMcpServerNames()
 
   // --- Opencode path ---
   // When the configured backend is opencode, each conversational turn spawns
@@ -299,6 +301,11 @@ export async function spawnAdhocAgent(args: {
     })
 
     emitAgentEvent(meta.id, { type: 'agent:started', model, timestamp: Date.now() })
+    emitAgentEvent(meta.id, {
+      type: 'agent:mcp_disclosure',
+      servers: [...new Set([...fileMcpServers, 'fleet'])],
+      timestamp: Date.now()
+    })
     log.info(`[adhoc] ${meta.id} starting opencode session in ${worktreePath}`)
 
     // Kick off the first turn with a concise opencode-specific prompt. The full
@@ -597,6 +604,11 @@ export async function spawnAdhocAgent(args: {
 
   // Start first turn
   emitAgentEvent(meta.id, { type: 'agent:started', model, timestamp: Date.now() })
+  emitAgentEvent(meta.id, {
+    type: 'agent:mcp_disclosure',
+    servers: [...new Set([...fileMcpServers, 'fleet'])],
+    timestamp: Date.now()
+  })
   log.info(`[adhoc] ${meta.id} starting session in ${worktreePath}`)
 
   runTurn(prompt).catch((err) => {

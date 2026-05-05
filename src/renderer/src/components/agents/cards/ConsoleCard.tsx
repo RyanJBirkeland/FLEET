@@ -5,6 +5,7 @@
 import type { ChatBlock } from '../../../lib/pair-events'
 import type { PlaygroundContentType } from '../../../../../shared/types'
 import { StartedCard } from './StartedCard'
+import { McpDisclosureCard } from './McpDisclosureCard'
 import { TextCard } from './TextCard'
 import { UserMessageCard } from './UserMessageCard'
 import { ThinkingCard } from './ThinkingCard'
@@ -45,6 +46,15 @@ export function ConsoleCard({
       return (
         <StartedCard
           model={block.model}
+          timestamp={block.timestamp}
+          searchClass={getSearchClass()}
+        />
+      )
+
+    case 'mcp_disclosure':
+      return (
+        <McpDisclosureCard
+          servers={block.servers}
           timestamp={block.timestamp}
           searchClass={getSearchClass()}
         />

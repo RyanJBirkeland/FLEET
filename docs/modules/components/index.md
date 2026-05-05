@@ -12,6 +12,7 @@ Source: `src/renderer/src/components/`
 | `AgentList.tsx`               | agents         | Left-panel agent list grouped by Running / Recent / History. History section has `aria-expanded`/`aria-controls` on toggle button and `id="agent-history-section"`. Repo filter chips have `aria-pressed`. Fetch-error message capped at 200 chars. | `AgentList`, `groupAgents`, `AgentGroups` |
 | `CollapsibleBlock.tsx`        | agents         | Shared collapsible wrapper used in tool cards. Accepts optional `label` prop; when set, aria-label reads "Expand/Collapse \<label\>" for screen-reader context. | `CollapsibleBlock` |
 | `cards/ConsoleCard.tsx`       | agents         | Router component dispatching to type-specific card components. | `ConsoleCard` |
+| `cards/McpDisclosureCard.tsx` | agents         | Renders the MCP server disclosure line in the agent console immediately after spawn — lists file-based servers loaded and notes that managed connectors are not available. | `McpDisclosureCard` |
 | `cards/TextCard.tsx`          | agents         | Renders agent text output as markdown. Removed dead `timestamp` and `searchClass` props. | `TextCard` |
 | `cards/ThinkingCard.tsx`      | agents         | Reasoning block with preview/expanded toggle. `THINKING_PREVIEW_MAX_CHARS = 120` replaces magic literal; emoji header is `aria-hidden`; removed dead `timestamp`/`searchClass` props. | `ThinkingCard` |
 | `cards/ErrorCard.tsx`         | agents         | Error message card. Removed dead `timestamp` and `searchClass` props. | `ErrorCard` |

@@ -20,6 +20,7 @@ export type ToolBlock =
 
 export type ChatBlock =
   | { type: 'started'; model: string; timestamp: number }
+  | { type: 'mcp_disclosure'; servers: string[]; timestamp: number }
   | { type: 'text'; text: string; timestamp: number }
   | { type: 'user_message'; text: string; timestamp: number; pending?: boolean }
   | { type: 'thinking'; tokenCount: number; text?: string; timestamp: number }
@@ -58,6 +59,10 @@ export function pairEvents(events: AgentEvent[]): ChatBlock[] {
     switch (ev.type) {
       case 'agent:started':
         blocks.push({ type: 'started', model: ev.model, timestamp: ev.timestamp })
+        break
+
+      case 'agent:mcp_disclosure':
+        blocks.push({ type: 'mcp_disclosure', servers: ev.servers, timestamp: ev.timestamp })
         break
 
       case 'agent:text':

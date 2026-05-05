@@ -112,3 +112,12 @@
   font-size: var(--fleet-size-xs);
   padding: var(--fleet-space-2) var(--fleet-space-3);
 }
+
+/* MCP disclosure: dim info line, accent-blue left border */
+.console-card--mcp-disclosure {
+  background: var(--fleet-surface);
+  color: var(--fleet-text-dim);
+  font-size: var(--fleet-size-xs);
+  padding: var(--fleet-space-2) var(--fleet-space-3);
+  border-left: 3px solid var(--fleet-accent);
+}

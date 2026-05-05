@@ -222,6 +222,7 @@ export interface MetricsSnapshot {
 
 export type AgentEventType =
   | 'agent:started'
+  | 'agent:mcp_disclosure'
   | 'agent:text'
   | 'agent:user_message'
   | 'agent:thinking'
@@ -235,6 +236,7 @@ export type AgentEventType =
 
 export type AgentEvent =
   | { type: 'agent:started'; model: string; timestamp: number }
+  | { type: 'agent:mcp_disclosure'; servers: string[]; timestamp: number }
   | { type: 'agent:text'; text: string; timestamp: number }
   | { type: 'agent:user_message'; text: string; timestamp: number }
   | { type: 'agent:thinking'; tokenCount: number; text?: string; timestamp: number }
