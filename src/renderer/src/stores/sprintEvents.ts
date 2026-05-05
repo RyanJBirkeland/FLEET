@@ -12,7 +12,7 @@ export const MAX_EVENTS_PER_AGENT = 500
 
 let unsubscribe: (() => void) | null = null
 
-interface SprintEventsState {
+export interface SprintEventsState {
   // --- State ---
   taskEvents: Record<string, RingBuffer<AnyTaskEvent>>
 
@@ -73,6 +73,20 @@ export const useSprintEvents = create<SprintEventsState>((set) => ({
     })
   }
 }))
+
+/**
+ * Pure ring-buffer lookup for use outside of React hooks.
+ * Reads the most recent event for `taskId` from a `taskEvents` snapshot.
+ */
+export function latestEventForTask(
+  taskEvents: SprintEventsState['taskEvents'],
+  taskId: string
+): AnyTaskEvent | undefined {
+  const buf = taskEvents[taskId]
+  if (!buf || buf.count === 0) return undefined
+  const lastSlot = (buf.head - 1 + buf.size) % buf.size
+  return buf.items[lastSlot]
+}
 
 /**
  * Returns all events for an agent in insertion order (oldest first).

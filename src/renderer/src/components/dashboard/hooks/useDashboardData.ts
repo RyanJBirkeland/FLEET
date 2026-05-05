@@ -2,6 +2,8 @@ import { useMemo, useEffect, useState, useCallback } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useSprintTasks } from '../../../stores/sprintTasks'
 import { useCostDataStore } from '../../../stores/costData'
+import { useSprintEvents, latestEventForTask, type SprintEventsState } from '../../../stores/sprintEvents'
+import { describeAgentStep } from '../../../lib/describeAgentStep'
 import { useDashboardDataStore } from '../../../stores/dashboardData'
 import { useSprintFilters, type StatusFilter } from '../../../stores/sprintFilters'
 import { usePanelLayoutStore } from '../../../stores/panelLayout'
@@ -29,6 +31,7 @@ export interface ActiveAgent {
   elapsedMs: number
   progressPct: number | null
   startedAt: string | null
+  stepDescription: string
 }
 
 export interface AttentionItem {
@@ -181,6 +184,7 @@ function deriveAttentionItems(
 function deriveActiveAgents(
   inProgress: SprintTask[],
   taskTokenMap: Map<string, number>,
+  taskEvents: SprintEventsState['taskEvents'],
   now: number
 ): ActiveAgent[] {
   return inProgress.slice(0, 5).map((task) => {
@@ -189,7 +193,8 @@ function deriveActiveAgents(
     const progressPct =
       task.max_runtime_ms != null
         ? Math.min(100, Math.round((elapsedMs / task.max_runtime_ms) * 100))
-        : null // TODO(phase-2.5): real progress needs step-level agent event tracking
+        : null
+    const latestEvent = latestEventForTask(taskEvents, task.id)
     return {
       id: task.id,
       title: task.title,
@@ -197,7 +202,8 @@ function deriveActiveAgents(
       tokens: taskTokenMap.get(task.id) ?? 0,
       elapsedMs,
       progressPct,
-      startedAt: task.started_at ?? null
+      startedAt: task.started_at ?? null,
+      stepDescription: describeAgentStep(latestEvent)
     }
   })
 }
@@ -292,6 +298,7 @@ export function useDashboardData(): DashboardData {
   const setView = usePanelLayoutStore((s) => s.setView)
   const openForCreate = useTaskWorkbenchModalStore((s) => s.openForCreate)
   const drainStatus = useDrainStatus()
+  const taskEvents = useSprintEvents((s) => s.taskEvents)
 
   const { throughputData, successTrendData } = useDashboardDataStore(
     useShallow((s) => ({ throughputData: s.throughputData, successTrendData: s.successTrendData }))
@@ -327,9 +334,9 @@ export function useDashboardData(): DashboardData {
   const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
   const activeAgents = useMemo(
-    () => deriveActiveAgents(partitions.inProgress, taskTokenMap, now),
+    () => deriveActiveAgents(partitions.inProgress, taskTokenMap, taskEvents, now),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [partitions.inProgress, taskTokenMap]
+    [partitions.inProgress, taskTokenMap, taskEvents]
   )
 
   const attentionItems = useMemo(

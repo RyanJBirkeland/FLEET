@@ -26,10 +26,7 @@ function AgentRow({ agent, first }: { agent: ActiveAgent; first: boolean }): Rea
           {agent.title}
           <span className="active-agents__repo"> · {agent.repo}</span>
         </span>
-        {/* TODO(phase-2.5): step description needs agent event streaming */}
-        <span className="active-agents__step">
-          <span className="active-agents__dollar">$ </span>running…
-        </span>
+        <span className="active-agents__step">{agent.stepDescription}</span>
       </div>
       <div className="active-agents__progress-col">
         <div className="active-agents__bar-track">
