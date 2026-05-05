@@ -9,6 +9,8 @@ export interface SprintPartition {
   inProgress: SprintTask[]
   /** Tasks with status 'review' — agent done, awaiting human action in Code Review Station. */
   pendingReview: SprintTask[]
+  /** Tasks with status 'approved' — review passed, queued for PR group inclusion. */
+  approved: SprintTask[]
   /** Tasks with status 'active' and pr_status 'open'|'branch_only' — open GitHub PRs. */
   openPrs: SprintTask[]
   done: SprintTask[]
@@ -16,7 +18,7 @@ export interface SprintPartition {
 }
 
 /**
- * Partition sprint tasks into 8 mutually exclusive buckets.
+ * Partition sprint tasks into 9 mutually exclusive buckets.
  * Every task lands in exactly one bucket — no overlap.
  *
  * Status mapping:
@@ -26,6 +28,7 @@ export interface SprintPartition {
  *   active               → inProgress (max 5 enforced at UI layer)
  *   active + pr_status=open|branch_only → openPrs
  *   review               → pendingReview
+ *   approved             → approved
  *   done + pr_status=merged|closed|null|draft → done
  *   cancelled            → failed (dimmed at bottom of Done column)
  */
@@ -35,6 +38,7 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
   const blocked: SprintTask[] = []
   const inProgress: SprintTask[] = []
   const pendingReview: SprintTask[] = []
+  const approved: SprintTask[] = []
   const openPrs: SprintTask[] = []
   const done: SprintTask[] = []
   const failed: SprintTask[] = []
@@ -68,6 +72,9 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
       case 'awaitingReview':
         pendingReview.push(task)
         break
+      case 'approved':
+        approved.push(task)
+        break
       case 'done':
         done.push(task)
         break
@@ -84,5 +91,5 @@ export function partitionSprintTasks(tasks: SprintTask[]): SprintPartition {
     return tb.localeCompare(ta)
   })
 
-  return { backlog, todo, blocked, inProgress, pendingReview, openPrs, done, failed }
+  return { backlog, todo, blocked, inProgress, pendingReview, approved, openPrs, done, failed }
 }

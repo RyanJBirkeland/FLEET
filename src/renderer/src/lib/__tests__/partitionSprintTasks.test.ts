@@ -41,6 +41,7 @@ describe('partitionSprintTasks', () => {
       blocked: [],
       inProgress: [],
       pendingReview: [],
+      approved: [],
       openPrs: [],
       done: [],
       failed: []
@@ -200,6 +201,21 @@ describe('partitionSprintTasks', () => {
     ])
   })
 
+  it('routes approved tasks to the approved bucket', () => {
+    const task = { id: '1', status: 'approved', pr_status: null } as SprintTask
+    const result = partitionSprintTasks([task])
+    expect(result.approved).toHaveLength(1)
+    expect(result.pendingReview).toHaveLength(0)
+    expect(result.done).toHaveLength(0)
+  })
+
+  it('approved tasks with pr_status=open stay in approved, not openPrs', () => {
+    const task = { id: '1', status: 'approved', pr_status: 'open' } as SprintTask
+    const result = partitionSprintTasks([task])
+    expect(result.approved).toHaveLength(1)
+    expect(result.openPrs).toHaveLength(0)
+  })
+
   it('every task lands in exactly one bucket (no duplicates)', () => {
     const tasks = [
       makeTask({ status: 'backlog' }),
@@ -208,7 +224,8 @@ describe('partitionSprintTasks', () => {
       makeTask({ status: 'review' }),
       makeTask({ status: 'active', pr_status: 'open' }),
       makeTask({ status: 'done', pr_status: 'merged' }),
-      makeTask({ status: 'cancelled' })
+      makeTask({ status: 'cancelled' }),
+      makeTask({ status: 'approved' })
     ]
 
     const result = partitionSprintTasks(tasks)
@@ -218,6 +235,7 @@ describe('partitionSprintTasks', () => {
       ...result.blocked,
       ...result.inProgress,
       ...result.pendingReview,
+      ...result.approved,
       ...result.openPrs,
       ...result.done,
       ...result.failed
