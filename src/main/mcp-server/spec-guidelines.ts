@@ -17,12 +17,12 @@ Call this tool before drafting a task spec. The pipeline agent reads the spec on
 
 Every spec must contain these four \`##\` headings. The validator rejects specs missing any of them.
 
-- \`## Context\` — why this change is needed; what problem it solves; what the agent must understand about the codebase before starting
+- \`## Context\` — why this change is needed; what problem it solves; what the agent must understand about the codebase before starting. (\`## Overview\` is also accepted for backward compatibility; \`## Context\` is preferred.)
 - \`## Files to Change\` — explicit list of every file that will be modified, with a brief note on what each file gets
 - \`## Implementation Steps\` — numbered, prescriptive steps the agent executes in order
 - \`## How to Test\` — exact commands or actions to verify the work is complete
 
-Headings are matched case-insensitively but must otherwise match exactly (e.g. \`## Context\`, not \`## Background\`).
+Headings are matched case-insensitively. The first section must be \`## Context\` or \`## Overview\`; other headings must match exactly (e.g. \`## Files to Change\`, not \`## Changed Files\`).
 
 ---
 

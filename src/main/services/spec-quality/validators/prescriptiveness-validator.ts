@@ -103,7 +103,11 @@ export class PrescriptivenessValidator implements IAsyncSpecValidator {
         {
           code: 'PRESCRIPTIVENESS_CHECK_FAILED',
           severity: 'warning',
-          message: 'Could not validate implementation step clarity — review manually before queuing'
+          message:
+            'LLM validation unavailable — review Implementation Steps manually. ' +
+            "Flag any steps containing exploratory language: 'investigate', " +
+            "'explore', 'consider', 'evaluate options', 'choose the best approach', " +
+            "'figure out', 'research', 'decide how to'."
         }
       ]
     }

@@ -12,25 +12,39 @@ import type { ParsedSpec, SpecIssue } from '../../../../shared/spec-quality/type
 // RequiredSectionsValidator
 // ---------------------------------------------------------------------------
 
-const REQUIRED_SECTIONS: Array<{ match: string; code: SpecIssue['code'] }> = [
-  { match: 'overview', code: 'MISSING_SECTION_OVERVIEW' },
-  { match: 'files to change', code: 'MISSING_SECTION_FILES_TO_CHANGE' },
-  { match: 'implementation steps', code: 'MISSING_SECTION_IMPLEMENTATION_STEPS' },
-  { match: 'how to test', code: 'MISSING_SECTION_HOW_TO_TEST' }
-]
+// Overview section accepts either "## Context" (preferred) or "## Overview" (backward-compatible).
+const CONTEXT_OR_OVERVIEW = /^(context|overview)$/i
+
+type SectionMatcher = string | RegExp
+
+const REQUIRED_SECTIONS: Array<{ match: SectionMatcher; label: string; code: SpecIssue['code'] }> =
+  [
+    { match: CONTEXT_OR_OVERVIEW, label: 'Context', code: 'MISSING_SECTION_OVERVIEW' },
+    { match: 'files to change', label: 'Files to Change', code: 'MISSING_SECTION_FILES_TO_CHANGE' },
+    {
+      match: 'implementation steps',
+      label: 'Implementation Steps',
+      code: 'MISSING_SECTION_IMPLEMENTATION_STEPS'
+    },
+    { match: 'how to test', label: 'How to Test', code: 'MISSING_SECTION_HOW_TO_TEST' }
+  ]
+
+function headingMatchesRule(normalizedHeading: string, rule: SectionMatcher): boolean {
+  return rule instanceof RegExp ? rule.test(normalizedHeading) : normalizedHeading === rule
+}
 
 export class RequiredSectionsValidator implements ISpecValidator {
   validate(spec: ParsedSpec): SpecIssue[] {
     const issues: SpecIssue[] = []
-    for (const { match, code } of REQUIRED_SECTIONS) {
-      const found = spec.sections.some(
-        (s) => s.heading.replace(/^#{2,3}\s+/, '').toLowerCase() === match
+    for (const { match, label, code } of REQUIRED_SECTIONS) {
+      const found = spec.sections.some((s) =>
+        headingMatchesRule(s.heading.replace(/^#{2,3}\s+/, '').toLowerCase(), match)
       )
       if (!found) {
         issues.push({
           code,
           severity: 'error',
-          message: `Missing required section: "## ${match.replace(/\b\w/g, (c) => c.toUpperCase())}"`
+          message: `Missing required section: "## ${label}"`
         })
       }
     }
@@ -157,7 +171,7 @@ export class BannedPhrasesValidator implements ISpecValidator {
 // ---------------------------------------------------------------------------
 
 const WORD_LIMIT = 500
-const MAX_FILES = 10
+const MAX_FILES = 15
 const MAX_STEPS = 15
 
 const FILE_SIZE_PATTERN = /(?:\/src\/|src\/|\.\w{2,4}$)/
@@ -198,7 +212,7 @@ export class SizeWarningsValidator implements ISpecValidator {
         issues.push({
           code: 'TOO_MANY_FILES',
           severity: 'warning',
-          message: `"Files to Change" lists ${fileCount} files; consider splitting into multiple tasks (limit: ${MAX_FILES})`
+          message: `"Files to Change" lists ${fileCount} files. For cross-cutting refactors this may be necessary; consider splitting into multiple tasks only if the changes are logically independent (limit: ${MAX_FILES}).`
         })
       }
     }

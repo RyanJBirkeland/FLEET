@@ -9,6 +9,19 @@ import { SpecQualityService } from '../spec-quality-service'
 import type { IAsyncSpecValidator } from '../../../../shared/spec-quality/interfaces'
 import type { ParsedSpec } from '../../../../shared/spec-quality/types'
 
+// Mocked so the PrescriptivenessValidator tests can exercise the fallback path
+// without a real SDK call.
+vi.mock('../../../env-utils', () => ({
+  buildAgentEnv: () => ({}),
+  getClaudeCliPath: () => '/usr/local/bin/claude'
+}))
+vi.mock('@anthropic-ai/claude-agent-sdk', () => ({
+  query: vi.fn()
+}))
+vi.mock('../../../agent-manager/sdk-policy', () => ({
+  TEXT_HELPER_SETTINGS_SOURCES: []
+}))
+
 const parser = new SpecParser()
 
 const VALID_SPEC = `
@@ -30,6 +43,33 @@ Run \`npm test\` — all tests should pass.
 
 describe('RequiredSectionsValidator', () => {
   const validator = new RequiredSectionsValidator()
+
+  it('accepts "## Context" as the overview section without MISSING_SECTION_OVERVIEW', () => {
+    const spec = parser.parse(
+      `
+## Context
+Why we need this change.
+
+## Files to Change
+- src/main/foo.ts
+
+## Implementation Steps
+1. Do something
+
+## How to Test
+Run tests.
+    `.trim()
+    )
+
+    const issues = validator.validate(spec)
+    expect(issues.some((i) => i.code === 'MISSING_SECTION_OVERVIEW')).toBe(false)
+  })
+
+  it('accepts "## Overview" as the overview section (backward-compatible)', () => {
+    const spec = parser.parse(VALID_SPEC)
+    const issues = validator.validate(spec)
+    expect(issues.some((i) => i.code === 'MISSING_SECTION_OVERVIEW')).toBe(false)
+  })
 
   it('produces MISSING_SECTION_HOW_TO_TEST when "How to Test" is absent', () => {
     const spec = parser.parse(
@@ -232,12 +272,20 @@ describe('SizeWarningsValidator', () => {
     expect(issues.some((i) => i.code === 'SPEC_TOO_LONG')).toBe(false)
   })
 
-  it('returns TOO_MANY_FILES when "Files to Change" lists more than 10 files', () => {
-    const files = Array.from({ length: 11 }, (_, i) => `- src/main/file${i}.ts`).join('\n')
+  it('returns TOO_MANY_FILES when "Files to Change" lists more than 15 files', () => {
+    const files = Array.from({ length: 16 }, (_, i) => `- src/main/file${i}.ts`).join('\n')
     const spec = parser.parse(`## Files to Change\n${files}`)
 
     const issues = validator.validate(spec)
     expect(issues.some((i) => i.code === 'TOO_MANY_FILES')).toBe(true)
+  })
+
+  it('does not return TOO_MANY_FILES for exactly 15 files', () => {
+    const files = Array.from({ length: 15 }, (_, i) => `- src/main/file${i}.ts`).join('\n')
+    const spec = parser.parse(`## Files to Change\n${files}`)
+
+    const issues = validator.validate(spec)
+    expect(issues.some((i) => i.code === 'TOO_MANY_FILES')).toBe(false)
   })
 
   it('returns TOO_MANY_STEPS when "Implementation Steps" has more than 15 steps', () => {
@@ -246,6 +294,37 @@ describe('SizeWarningsValidator', () => {
 
     const issues = validator.validate(spec)
     expect(issues.some((i) => i.code === 'TOO_MANY_STEPS')).toBe(true)
+  })
+})
+
+describe('PrescriptivenessValidator — SDK failure fallback', () => {
+  it('returns PRESCRIPTIVENESS_CHECK_FAILED with an actionable message when the SDK call throws', async () => {
+    // Import after mocks are set up so vi.mock hoisting applies.
+    const { PrescriptivenessValidator } = await import('../validators/prescriptiveness-validator')
+    const sdk = await import('@anthropic-ai/claude-agent-sdk')
+    const querySpy = vi.mocked(sdk.query)
+    querySpy.mockImplementation(() => {
+      throw new Error('network unavailable')
+    })
+
+    const validator = new PrescriptivenessValidator()
+    const spec = parser.parse(
+      `
+## Implementation Steps
+1. Add the function doX() to src/main/foo.ts
+2. Update src/renderer/src/bar.tsx to import doX
+    `.trim()
+    )
+
+    const issues = await validator.validate(spec)
+
+    expect(issues).toHaveLength(1)
+    expect(issues[0].code).toBe('PRESCRIPTIVENESS_CHECK_FAILED')
+    expect(issues[0].severity).toBe('warning')
+    expect(issues[0].message).toContain('LLM validation unavailable')
+    expect(issues[0].message).toContain('investigate')
+    expect(issues[0].message).toContain("'explore'")
+    expect(issues[0].message).toContain('decide how to')
   })
 })
 
