@@ -1,12 +1,15 @@
 /**
  * Tests for the pre-review verification gates in verification-gate.ts.
  *
+ * capOutput — pure text truncation helper.
+ * toVerificationRecord — converts a CommandResult to a VerificationRecord.
+ *
  * verifyBranchTipOrFail — validates branch tip references this task before
  *   allowing the review transition. Routes mismatches to 'failed' status.
  *
- * verifyWorktreeOrFail — runs typecheck + tests in the worktree. Requeues or
- *   fails the task on verification failure; never calls onTaskTerminal when
- *   the DB write fails.
+ * verifyWorktreeOrFail — runs typecheck + tests in the worktree, persists
+ *   results regardless of outcome, then requeues or fails the task on
+ *   verification failure; never calls onTaskTerminal when the DB write fails.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -39,7 +42,7 @@ vi.mock('../revision-feedback-builder', () => ({
 // Imports (after vi.mock declarations)
 // ---------------------------------------------------------------------------
 
-import { verifyBranchTipOrFail, verifyWorktreeOrFail } from '../verification-gate'
+import { capOutput, toVerificationRecord, verifyBranchTipOrFail, verifyWorktreeOrFail } from '../verification-gate'
 import { assertBranchTipMatches, BranchTipMismatchError } from '../resolve-success-phases'
 import { verifyWorktreeBuildsAndTests } from '../verify-worktree'
 import { resolveFailure } from '../resolve-failure-phases'
@@ -73,6 +76,69 @@ function makeTaskStateService(): TaskStateService {
     transition: vi.fn().mockResolvedValue({ transitioned: true })
   } as unknown as TaskStateService
 }
+
+// ---------------------------------------------------------------------------
+// capOutput
+// ---------------------------------------------------------------------------
+
+describe('capOutput', () => {
+  it('returns text unchanged when under the cap', () => {
+    expect(capOutput('hello', 100)).toEqual({ text: 'hello', truncated: false })
+  })
+
+  it('truncates to exactly cap chars and sets truncated true', () => {
+    const result = capOutput('abcde', 3)
+    expect(result.text).toBe('abc')
+    expect(result.truncated).toBe(true)
+  })
+
+  it('handles empty string', () => {
+    expect(capOutput('', 100)).toEqual({ text: '', truncated: false })
+  })
+
+  it('returns text unchanged when length equals the cap exactly', () => {
+    expect(capOutput('abc', 3)).toEqual({ text: 'abc', truncated: false })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// toVerificationRecord
+// ---------------------------------------------------------------------------
+
+describe('toVerificationRecord', () => {
+  it('sets exitCode 0 on ok result', () => {
+    const rec = toVerificationRecord({ ok: true, stdout: 'out', stderr: '', durationMs: 100 })
+    expect(rec.exitCode).toBe(0)
+    expect(rec.stdout).toBe('out')
+    expect(rec.truncated).toBe(false)
+  })
+
+  it('sets exitCode 1 on failed result', () => {
+    const rec = toVerificationRecord({ ok: false, stdout: '', stderr: 'err', durationMs: 50 })
+    expect(rec.exitCode).toBe(1)
+    expect(rec.stderr).toBe('err')
+  })
+
+  it('sets truncated true when stdout exceeds cap', () => {
+    const longStdout = 'x'.repeat(10_001)
+    const rec = toVerificationRecord({ ok: true, stdout: longStdout, stderr: '', durationMs: 0 })
+    expect(rec.truncated).toBe(true)
+    expect(rec.stdout.length).toBe(10_000)
+  })
+
+  it('sets truncated true when stderr exceeds cap', () => {
+    const longStderr = 'e'.repeat(10_001)
+    const rec = toVerificationRecord({ ok: false, stdout: '', stderr: longStderr, durationMs: 0 })
+    expect(rec.truncated).toBe(true)
+    expect(rec.stderr.length).toBe(10_000)
+  })
+
+  it('includes durationMs and a timestamp ISO string', () => {
+    const rec = toVerificationRecord({ ok: true, stdout: '', stderr: '', durationMs: 42 })
+    expect(rec.durationMs).toBe(42)
+    expect(rec.timestamp).toMatch(/^\d{4}-\d{2}-\d{2}T/)
+  })
+})
 
 // ---------------------------------------------------------------------------
 // verifyBranchTipOrFail
@@ -163,20 +229,27 @@ describe('verifyBranchTipOrFail', () => {
 // verifyWorktreeOrFail
 // ---------------------------------------------------------------------------
 
+const okOutput = { ok: true as const, stdout: '', stderr: '', durationMs: 0 }
+
 describe('verifyWorktreeOrFail', () => {
   let logger: ReturnType<typeof makeLogger>
   let repo: IAgentTaskRepository
   let onTaskTerminal: ReturnType<typeof vi.fn>
+  let taskStateService: ReturnType<typeof makeTaskStateService>
 
   beforeEach(() => {
     vi.clearAllMocks()
     logger = makeLogger()
     repo = makeRepo()
     onTaskTerminal = vi.fn().mockResolvedValue(undefined)
+    taskStateService = makeTaskStateService()
   })
 
-  it('returns true and never calls onTaskTerminal when verification succeeds', async () => {
-    vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({ ok: true })
+  it('returns true and never calls onTaskTerminal when both steps pass', async () => {
+    vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
+      typecheck: okOutput,
+      tests: okOutput
+    })
 
     const result = await verifyWorktreeOrFail({
       taskId: 'task-1',
@@ -184,17 +257,84 @@ describe('verifyWorktreeOrFail', () => {
       retryCount: 0,
       repo,
       logger,
-      onTaskTerminal
+      onTaskTerminal,
+      taskStateService
     })
 
     expect(result).toBe(true)
     expect(onTaskTerminal).not.toHaveBeenCalled()
   })
 
+  it('returns true when both steps are null (no scripts found)', async () => {
+    vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
+      typecheck: null,
+      tests: null
+    })
+
+    const result = await verifyWorktreeOrFail({
+      taskId: 'task-1',
+      worktreePath: '/worktree',
+      retryCount: 0,
+      repo,
+      logger,
+      onTaskTerminal,
+      taskStateService
+    })
+
+    expect(result).toBe(true)
+    expect(onTaskTerminal).not.toHaveBeenCalled()
+  })
+
+  it('persists verification_results to the repo regardless of outcome', async () => {
+    vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
+      typecheck: okOutput,
+      tests: okOutput
+    })
+
+    await verifyWorktreeOrFail({
+      taskId: 'task-1',
+      worktreePath: '/worktree',
+      retryCount: 0,
+      repo,
+      logger,
+      onTaskTerminal,
+      taskStateService
+    })
+
+    expect(repo.updateTask).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ verification_results: expect.objectContaining({ typecheck: expect.any(Object), tests: expect.any(Object) }) })
+    )
+  })
+
+  it('persists verification_results even when typecheck fails', async () => {
+    const failOutput = { ok: false as const, stdout: '', stderr: 'tsc error', durationMs: 0 }
+    vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
+      typecheck: failOutput,
+      tests: null
+    })
+    vi.mocked(resolveFailure).mockResolvedValue({ writeFailed: true, isTerminal: false })
+
+    await verifyWorktreeOrFail({
+      taskId: 'task-1',
+      worktreePath: '/worktree',
+      retryCount: 0,
+      repo,
+      logger,
+      onTaskTerminal,
+      taskStateService
+    })
+
+    expect(repo.updateTask).toHaveBeenCalledWith(
+      'task-1',
+      expect.objectContaining({ verification_results: expect.any(Object) })
+    )
+  })
+
   it('returns false and never calls onTaskTerminal when resolveFailure returns writeFailed: true', async () => {
     vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
-      ok: false,
-      failure: { kind: 'compilation', stderr: 'tsc error' }
+      typecheck: { ok: false, stdout: '', stderr: 'tsc error', durationMs: 0 },
+      tests: null
     })
     vi.mocked(resolveFailure).mockResolvedValue({ writeFailed: true, isTerminal: false })
 
@@ -204,7 +344,8 @@ describe('verifyWorktreeOrFail', () => {
       retryCount: 0,
       repo,
       logger,
-      onTaskTerminal
+      onTaskTerminal,
+      taskStateService
     })
 
     expect(result).toBe(false)
@@ -213,8 +354,8 @@ describe('verifyWorktreeOrFail', () => {
 
   it('calls onTaskTerminal with queued when resolveFailure returns isTerminal: false', async () => {
     vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
-      ok: false,
-      failure: { kind: 'compilation', stderr: 'tsc error' }
+      typecheck: { ok: false, stdout: '', stderr: 'tsc error', durationMs: 0 },
+      tests: null
     })
     vi.mocked(resolveFailure).mockResolvedValue({ writeFailed: false, isTerminal: false })
 
@@ -224,7 +365,8 @@ describe('verifyWorktreeOrFail', () => {
       retryCount: 0,
       repo,
       logger,
-      onTaskTerminal
+      onTaskTerminal,
+      taskStateService
     })
 
     expect(result).toBe(false)
@@ -234,8 +376,8 @@ describe('verifyWorktreeOrFail', () => {
 
   it('calls onTaskTerminal with failed when resolveFailure returns isTerminal: true', async () => {
     vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
-      ok: false,
-      failure: { kind: 'compilation', stderr: 'tsc error' }
+      typecheck: { ok: false, stdout: '', stderr: 'tsc error', durationMs: 0 },
+      tests: null
     })
     vi.mocked(resolveFailure).mockResolvedValue({ writeFailed: false, isTerminal: true })
 
@@ -245,11 +387,35 @@ describe('verifyWorktreeOrFail', () => {
       retryCount: 0,
       repo,
       logger,
-      onTaskTerminal
+      onTaskTerminal,
+      taskStateService
     })
 
     expect(result).toBe(false)
     expect(onTaskTerminal).toHaveBeenCalledOnce()
     expect(onTaskTerminal).toHaveBeenCalledWith('task-1', 'failed')
+  })
+
+  it('routes test failure to resolveFailure with test_failure kind', async () => {
+    vi.mocked(verifyWorktreeBuildsAndTests).mockResolvedValue({
+      typecheck: okOutput,
+      tests: { ok: false, stdout: '', stderr: '3 tests failed', durationMs: 0 }
+    })
+    vi.mocked(resolveFailure).mockResolvedValue({ writeFailed: false, isTerminal: false })
+
+    await verifyWorktreeOrFail({
+      taskId: 'task-1',
+      worktreePath: '/worktree',
+      retryCount: 0,
+      repo,
+      logger,
+      onTaskTerminal,
+      taskStateService
+    })
+
+    expect(logger.event).toHaveBeenCalledWith(
+      'completion.decision',
+      expect.objectContaining({ reason: 'test_failure' })
+    )
   })
 })
