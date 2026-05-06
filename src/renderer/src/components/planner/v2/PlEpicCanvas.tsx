@@ -4,6 +4,7 @@ import { PlEpicHero } from './PlEpicHero'
 import { PlTaskListPane } from './PlTaskListPane'
 import { PlSpecPane } from './PlSpecPane'
 import { PlQueueBar } from './PlQueueBar'
+import { PlDepsPane } from './PlDepsPane'
 import { useRovingTabIndex } from '../../../hooks/useRovingTabIndex'
 
 interface Props {
@@ -83,6 +84,15 @@ export function PlEpicCanvas({
             onAskAssistantDraft={onAskAssistantDraft}
             onSaveSpec={onSaveSpec}
           />
+        </div>
+      ) : activeTab === 'Dependencies' ? (
+        <div
+          role="tabpanel"
+          id="tabpanel-Dependencies"
+          aria-labelledby="tab-Dependencies"
+          style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}
+        >
+          <PlDepsPane epic={epic} />
         </div>
       ) : (
         <div
