@@ -34,11 +34,19 @@ export function ReviewQueueCard({ tasks, onOpenReview }: ReviewQueueCardProps): 
           {displayed.map((task, i) => {
             const age = task.promoted_to_review_at ? timeAgo(task.promoted_to_review_at) : '—'
             return (
-              <div
+              <button
                 key={task.id}
+                type="button"
                 className="review-queue__row"
-                style={{ borderTop: i === 0 ? 'none' : '1px solid var(--line)' }}
+                style={{
+                  borderTop: i === 0 ? 'none' : '1px solid var(--line)',
+                  background: 'transparent',
+                  width: '100%',
+                  textAlign: 'left',
+                  cursor: 'pointer'
+                }}
                 onClick={onOpenReview}
+                aria-label={`Review "${task.title}" in ${task.repo}, waiting ${age}`}
               >
                 <span className="fleet-dot fleet-dot--review" />
                 <div className="review-queue__text-col">
@@ -51,7 +59,7 @@ export function ReviewQueueCard({ tasks, onOpenReview }: ReviewQueueCardProps): 
                   </span>
                 </div>
                 <span className="review-queue__age">{age}</span>
-              </div>
+              </button>
             )
           })}
           {remaining > 0 && (

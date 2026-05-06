@@ -319,6 +319,7 @@ function PlSpecEditor({
         value={draftSpec}
         onChange={(e) => handleChange(e.target.value)}
         onBlur={handleBlur}
+        aria-label="Task specification"
         style={{
           flex: 1,
           padding: '20px 28px',
@@ -351,6 +352,7 @@ function SpecQualityPill({ ok, label }: { ok: boolean; label: string }): React.J
         }}
       />
       <span style={{ fontSize: 11, color: 'var(--fg-2)' }}>{label}</span>
+      <span className="sr-only">{ok ? 'satisfied' : 'not satisfied'}</span>
     </span>
   )
 }

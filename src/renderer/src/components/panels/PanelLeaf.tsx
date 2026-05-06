@@ -93,6 +93,7 @@ export function PanelLeaf({ node }: PanelLeafProps): React.ReactElement {
           return (
             <div
               key={`${tab.viewKey}-${index}`}
+              id={`panel-${tab.viewKey}-${node.panelId}`}
               role="tabpanel"
               aria-labelledby={`panel-tab-${tab.viewKey}-${node.panelId}`}
               className={`panel-leaf__tabpanel ${isActive ? 'panel-leaf__tabpanel--active' : ''}`}

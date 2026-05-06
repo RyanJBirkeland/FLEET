@@ -203,7 +203,9 @@ export function PlAssistantColumn({
         </span>
         <span style={{ flex: 1 }} />
         <button
+          type="button"
           onClick={() => setMessages([])}
+          aria-label="Clear conversation"
           style={{
             height: 22,
             padding: '0 8px',
@@ -342,6 +344,7 @@ export function PlAssistantColumn({
             rows={1}
             disabled={isStreaming}
             placeholder="Ask the assistant…"
+            aria-label="Message the planning assistant"
             style={{
               flex: 1,
               background: 'transparent',

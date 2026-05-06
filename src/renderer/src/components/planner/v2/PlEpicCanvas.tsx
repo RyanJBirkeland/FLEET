@@ -63,7 +63,12 @@ export function PlEpicCanvas({
       />
 
       {activeTab === 'Tasks' ? (
-        <div style={{ flex: 1, minHeight: 0, display: 'flex' }}>
+        <div
+          role="tabpanel"
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
+          style={{ flex: 1, minHeight: 0, display: 'flex' }}
+        >
           <PlTaskListPane
             tasks={tasks}
             selectedTaskId={selectedTaskId}
@@ -80,6 +85,9 @@ export function PlEpicCanvas({
         </div>
       ) : (
         <div
+          role="tabpanel"
+          id={`tabpanel-${activeTab}`}
+          aria-labelledby={`tab-${activeTab}`}
           style={{
             flex: 1,
             display: 'flex',
@@ -122,6 +130,7 @@ function PlEpicTabBar({
 
   return (
     <div
+      role="tablist"
       style={{
         height: 38,
         padding: '0 28px',
@@ -138,6 +147,10 @@ function PlEpicTabBar({
         return (
           <button
             key={tab}
+            role="tab"
+            id={`tab-${tab}`}
+            aria-selected={isActive}
+            aria-controls={`tabpanel-${tab}`}
             onClick={() => onSelectTab(tab)}
             style={{
               position: 'relative',

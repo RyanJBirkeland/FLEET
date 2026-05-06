@@ -63,10 +63,15 @@ export function ThroughputCard({ throughputData }: ThroughputCardProps): React.J
       </span>
     )
 
+  const chartLabel =
+    delta == null
+      ? `24-hour throughput chart: ${total} tasks completed`
+      : `24-hour throughput chart: ${total} tasks completed, ${delta >= 0 ? '+' : ''}${delta} versus yesterday`
+
   return (
     <Card>
       <CardHead eyebrow="Throughput · 24h" title={`${total} completed`} right={deltaEl} />
-      <div className="throughput__chart">
+      <div className="throughput__chart" role="img" aria-label={chartLabel}>
         {bars.map((h, i) => (
           <div
             key={i}

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import { Download } from 'lucide-react'
 
 const ICON_BTN_STYLE: React.CSSProperties = {
@@ -26,12 +26,19 @@ interface ExportDropdownProps {
 export function ExportDropdown({ onExport }: ExportDropdownProps): React.JSX.Element {
   const [open, setOpen] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     if (!open) return
     const handleOutsideClick = (): void => setOpen(false)
     document.addEventListener('click', handleOutsideClick)
     return () => document.removeEventListener('click', handleOutsideClick)
+  }, [open])
+
+  useEffect(() => {
+    if (!open) return
+    const firstMenuItem = menuRef.current?.querySelector<HTMLButtonElement>('[role="menuitem"]')
+    firstMenuItem?.focus()
   }, [open])
 
   const handleSelect = async (format: ExportFormat): Promise<void> => {
@@ -54,12 +61,16 @@ export function ExportDropdown({ onExport }: ExportDropdownProps): React.JSX.Ele
         disabled={exporting}
         title="Export tasks"
         aria-label="Export sprint tasks"
+        aria-expanded={open}
+        aria-haspopup="menu"
         style={ICON_BTN_STYLE}
       >
         <Download size={13} />
       </button>
       {open && (
         <div
+          ref={menuRef}
+          role="menu"
           style={{
             position: 'absolute',
             top: 'calc(100% + var(--s-1))',
@@ -78,6 +89,7 @@ export function ExportDropdown({ onExport }: ExportDropdownProps): React.JSX.Ele
           {(['json', 'csv'] as const).map((fmt) => (
             <button
               key={fmt}
+              role="menuitem"
               onClick={() => void handleSelect(fmt)}
               disabled={exporting}
               style={{

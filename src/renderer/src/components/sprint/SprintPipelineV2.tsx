@@ -79,6 +79,7 @@ export function SprintPipelineV2(): React.JSX.Element {
   const repos = useRepoOptions()
 
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
+  const statusFilter = useSprintFilters((s) => s.statusFilter)
   const setView = usePanelLayoutStore((s) => s.setView)
   const reduced = useReducedMotion()
   const openWorkbenchForCreate = useTaskWorkbenchModalStore((s) => s.openForCreate)
@@ -241,6 +242,7 @@ export function SprintPipelineV2(): React.JSX.Element {
         conflictingTasks={conflictingTasks}
         visibleStuckTasks={visibleStuckTasks}
         onFilterClick={setStatusFilter}
+        activeFilter={statusFilter}
         onConflictClick={() => setConflictDrawerOpen(true)}
         onHealthCheckClick={() => setHealthCheckDrawerOpen(true)}
         onDagToggle={() => setDagOpen(!dagOpen)}

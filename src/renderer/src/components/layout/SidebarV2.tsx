@@ -74,7 +74,7 @@ export function SidebarV2({ model }: SidebarV2Props): React.JSX.Element {
       </div>
 
       {/* Nav */}
-      <nav className="sidebar-v2__nav">
+      <nav className="sidebar-v2__nav" aria-label="Main navigation">
         {NAV_ITEMS.map(({ view, icon }) => {
           const label = VIEW_REGISTRY[view].label
           const isActive = activeView === view
@@ -114,7 +114,7 @@ export function SidebarV2({ model }: SidebarV2Props): React.JSX.Element {
 
       {/* Live agents */}
       {activeTasks.length > 0 && (
-        <>
+        <section aria-label="Live agents">
           <div className="sidebar-v2__live-header">
             <span className="fleet-eyebrow">Live</span>
             <span className="sidebar-v2__live-count">{activeTasks.length}</span>
@@ -128,7 +128,7 @@ export function SidebarV2({ model }: SidebarV2Props): React.JSX.Element {
               />
             ))}
           </div>
-        </>
+        </section>
       )}
 
       {/* Footer */}

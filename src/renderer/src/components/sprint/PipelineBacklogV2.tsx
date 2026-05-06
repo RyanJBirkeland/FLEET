@@ -202,6 +202,8 @@ function PipelineBacklogV2Inner({
           {!backlogExpanded && hiddenBacklogCount > 0 && (
             <button
               onClick={() => setBacklogExpanded(true)}
+              aria-expanded={backlogExpanded}
+              aria-label={`Show ${hiddenBacklogCount} more backlog tasks`}
               style={{
                 width: '100%',
                 padding: 'var(--s-2)',
@@ -221,6 +223,8 @@ function PipelineBacklogV2Inner({
           {backlogExpanded && backlog.length > BACKLOG_VISIBLE_LIMIT && (
             <button
               onClick={() => setBacklogExpanded(false)}
+              aria-expanded={backlogExpanded}
+              aria-label="Show fewer backlog tasks"
               style={{
                 width: '100%',
                 padding: 'var(--s-2)',
@@ -270,6 +274,7 @@ function PipelineBacklogV2Inner({
             <div style={{ display: 'flex', gap: 'var(--s-1)', marginTop: 'var(--s-2)' }}>
               <button
                 onClick={onRequeueAllFailed}
+                aria-label="Requeue all failed tasks"
                 style={{
                   flex: 1,
                   height: 22,
@@ -286,6 +291,7 @@ function PipelineBacklogV2Inner({
               </button>
               <button
                 onClick={onClearFailures}
+                aria-label="Clear all failed tasks"
                 style={{
                   flex: 1,
                   height: 22,
@@ -375,6 +381,7 @@ function PipelineBacklogV2Inner({
                       e.stopPropagation()
                       onRerun(task)
                     }}
+                    aria-label={`Re-run ${task.title}`}
                     style={{
                       position: 'absolute',
                       right: 8,
@@ -401,6 +408,8 @@ function PipelineBacklogV2Inner({
             {!failedExpanded && hiddenFailedCount > 0 && (
               <button
                 onClick={() => setFailedExpanded(true)}
+                aria-expanded={failedExpanded}
+                aria-label={`Show ${hiddenFailedCount} more failed tasks`}
                 style={{
                   width: '100%',
                   padding: 'var(--s-2)',
@@ -419,6 +428,8 @@ function PipelineBacklogV2Inner({
             {failedExpanded && failed.length > FAILED_VISIBLE_LIMIT && (
               <button
                 onClick={() => setFailedExpanded(false)}
+                aria-expanded={failedExpanded}
+                aria-label="Show fewer failed tasks"
                 style={{
                   width: '100%',
                   padding: 'var(--s-2)',

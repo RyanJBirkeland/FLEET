@@ -17,6 +17,7 @@ interface PipelineHeaderV2Props {
   conflictingTasks: SprintTask[]
   visibleStuckTasks: SprintTask[]
   onFilterClick: (filter: StatBadge['filter']) => void
+  activeFilter?: string | undefined
   onConflictClick: () => void
   onHealthCheckClick: () => void
   onDagToggle?: (() => void) | undefined
@@ -57,6 +58,7 @@ export function PipelineHeaderV2({
   conflictingTasks,
   visibleStuckTasks,
   onFilterClick,
+  activeFilter,
   onConflictClick,
   onHealthCheckClick,
   onDagToggle,
@@ -112,6 +114,7 @@ export function PipelineHeaderV2({
             key={stat.label}
             type="button"
             onClick={() => onFilterClick(stat.filter)}
+            aria-pressed={activeFilter === stat.filter}
             style={{
               display: 'flex',
               alignItems: 'center',

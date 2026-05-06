@@ -16,6 +16,7 @@ interface HeaderTabProps {
   onDragStart?: ((e: React.DragEvent) => void) | undefined
   tabIndex?: number | undefined
   onKeyDown?: ((e: React.KeyboardEvent) => void) | undefined
+  ariaControls?: string | undefined
 }
 
 export function HeaderTab({
@@ -28,7 +29,8 @@ export function HeaderTab({
   draggable = false,
   onDragStart,
   tabIndex,
-  onKeyDown
+  onKeyDown,
+  ariaControls
 }: HeaderTabProps): React.JSX.Element {
   function handleClose(e: React.MouseEvent): void {
     e.stopPropagation()
@@ -46,6 +48,7 @@ export function HeaderTab({
       onDragStart={onDragStart}
       role="tab"
       aria-selected={isActive}
+      aria-controls={ariaControls}
       title={label}
       tabIndex={tabIndex}
       onKeyDown={onKeyDown}

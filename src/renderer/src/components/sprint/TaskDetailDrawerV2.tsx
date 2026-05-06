@@ -11,6 +11,7 @@ import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
 import { useGitHubStatus } from '../../hooks/useGitHubStatus'
 import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
+import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
 import { TextareaPromptModal, useTextareaPrompt } from '../ui/TextareaPromptModal'
 import { useTaskCost } from '../../hooks/useTaskCost'
@@ -166,10 +167,14 @@ export function TaskDetailDrawerV2({
   )
   const { configured: ghConfigured } = useGitHubStatus()
   const titleRef = useRef<HTMLParagraphElement>(null)
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const titleId = `task-detail-title-${task.id}`
 
   useEffect(() => {
     titleRef.current?.focus()
   }, [task.id])
+
+  useFocusTrap(drawerRef, true)
 
   const isActive = task.status === 'active' && !!task.started_at
   useBackoffInterval(() => setElapsed(formatElapsed(task.started_at!)), isActive ? 10_000 : null)
@@ -270,6 +275,7 @@ export function TaskDetailDrawerV2({
 
   return (
     <div
+      ref={drawerRef}
       style={{
         width: 340,
         flexShrink: 0,
@@ -279,8 +285,9 @@ export function TaskDetailDrawerV2({
         display: 'flex',
         flexDirection: 'column'
       }}
-      role="complementary"
-      aria-label={`Task details: ${task.title}`}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby={titleId}
       data-testid="task-detail-drawer"
     >
       {/* Sticky header */}
@@ -350,6 +357,7 @@ export function TaskDetailDrawerV2({
         {/* Title */}
         <p
           ref={titleRef}
+          id={titleId}
           tabIndex={-1}
           style={{
             fontSize: 15,

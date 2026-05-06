@@ -129,26 +129,33 @@ export function KPIStrip(props: KPIStripProps): React.JSX.Element {
 
   return (
     <div className="kpi-strip">
-      {cells.map((cell) => (
-        <div
-          key={cell.label}
-          className="kpi-strip__cell"
-        >
-          <span className="fleet-eyebrow">{cell.label}</span>
-          <div className="kpi-strip__value-row">
-            <span className="kpi-strip__value">{cell.value}</span>
-            {cell.delta && (
-              <span
-                className="kpi-strip__delta"
-                style={{ color: cell.deltaGood ? 'var(--st-done)' : 'var(--st-failed)' }}
-              >
-                {cell.delta}
-              </span>
-            )}
+      {cells.map((cell) => {
+        const trendSuffix = cell.delta
+          ? `, ${cell.deltaGood ? 'up' : 'down'} ${cell.delta} this week`
+          : ''
+        const cellLabel = `${cell.label}: ${cell.value}${trendSuffix}`
+        return (
+          <div
+            key={cell.label}
+            className="kpi-strip__cell"
+            aria-label={cellLabel}
+          >
+            <span className="fleet-eyebrow">{cell.label}</span>
+            <div className="kpi-strip__value-row">
+              <span className="kpi-strip__value">{cell.value}</span>
+              {cell.delta && (
+                <span
+                  className="kpi-strip__delta"
+                  style={{ color: cell.deltaGood ? 'var(--st-done)' : 'var(--st-failed)' }}
+                >
+                  {cell.delta}
+                </span>
+              )}
+            </div>
+            <MicroSpark accent={cell.sparkAccent} points={cell.sparkPoints} />
           </div>
-          <MicroSpark accent={cell.sparkAccent} points={cell.sparkPoints} />
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

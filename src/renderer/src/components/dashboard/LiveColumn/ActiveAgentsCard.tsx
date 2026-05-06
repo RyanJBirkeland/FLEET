@@ -16,9 +16,10 @@ function AgentRow({ agent, first }: { agent: ActiveAgent; first: boolean }): Rea
   const tokens = agent.tokens > 0 ? formatTokensCompact(agent.tokens) : '—'
   const pct = agent.progressPct ?? 0
   return (
-    <div
+    <li
       className="active-agents__row"
-      style={{ borderTop: first ? 'none' : '1px solid var(--line)' }}
+      aria-label={`${agent.title}, running for ${elapsed}, ${pct} percent complete`}
+      style={{ borderTop: first ? 'none' : '1px solid var(--line)', listStyle: 'none' }}
     >
       <span className="fleet-pulse" style={{ width: 7, height: 7, flexShrink: 0 }} />
       <div className="active-agents__name-col">
@@ -41,7 +42,7 @@ function AgentRow({ agent, first }: { agent: ActiveAgent; first: boolean }): Rea
         {elapsed}
       </span>
       <span className="active-agents__pct">{pct}%</span>
-    </div>
+    </li>
   )
 }
 
@@ -78,11 +79,11 @@ export function ActiveAgentsCard({
       {agents.length === 0 ? (
         <EmptyState onSpawnOne={onSpawnOne} />
       ) : (
-        <div>
+        <ul role="list" style={{ margin: 0, padding: 0 }}>
           {agents.map((a, i) => (
             <AgentRow key={a.id} agent={a} first={i === 0} />
           ))}
-        </div>
+        </ul>
       )}
     </Card>
   )

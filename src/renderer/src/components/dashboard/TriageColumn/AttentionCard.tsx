@@ -37,7 +37,11 @@ const AttentionRow = React.memo(function AttentionRow({
         <span className="attention__sub">{item.sub}</span>
       </div>
       <span className="attention__age">{age}</span>
-      <button className="attention__action-btn" onClick={handleClick}>
+      <button
+        className="attention__action-btn"
+        onClick={handleClick}
+        aria-label={`${item.action} "${item.task.title}"`}
+      >
         {item.action}
       </button>
     </div>

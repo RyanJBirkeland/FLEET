@@ -3,6 +3,7 @@ import { formatTokens } from '../../lib/format'
 
 export function TokenChip(): React.JSX.Element {
   const totalTokens = useCostDataStore((s) => s.totalTokens)
+  const formattedTokens = formatTokens(totalTokens)
 
   return (
     <div
@@ -20,10 +21,11 @@ export function TokenChip(): React.JSX.Element {
         fontSize: 'var(--t-xs)',
         whiteSpace: 'nowrap',
       }}
+      aria-label={`Total session tokens: ${formattedTokens}`}
       data-testid="token-chip"
     >
       <span style={{ color: 'var(--fg-3)' }}>tok</span>
-      <span style={{ color: 'var(--fg)' }}>{formatTokens(totalTokens)}</span>
+      <span style={{ color: 'var(--fg)' }}>{formattedTokens}</span>
     </div>
   )
 }

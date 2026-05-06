@@ -75,8 +75,14 @@ function QuickActions({
           <button className="mission-brief__ghost-btn" onClick={onOpenPlanner}>
             Plan
           </button>
-          <button className="mission-brief__ghost-btn" disabled title="Coming in Phase 3">
+          <button
+            className="mission-brief__ghost-btn"
+            disabled
+            aria-disabled="true"
+            title="Coming in Phase 3"
+          >
             Run all
+            <span className="sr-only"> — coming in a future release</span>
           </button>
         </div>
       </div>

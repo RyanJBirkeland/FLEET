@@ -94,11 +94,15 @@ export function UnifiedHeaderV2(): React.JSX.Element {
       <div className="unified-header-v2__tabs" role="tablist">
         {tabs.map((tab, index) => {
           const tabProps = getTabProps(index)
+          const tabpanelId = focusedPanelId
+            ? `panel-${tab.viewKey}-${focusedPanelId}`
+            : undefined
           return (
             <HeaderTab
               key={`${tab.viewKey}-${index}`}
               label={tab.label}
               isActive={index === activeTabIndex}
+              ariaControls={tabpanelId}
               onClick={() => handleTabClick(index)}
               onClose={() => handleTabClose(index)}
               showClose={tabs.length > 1}
