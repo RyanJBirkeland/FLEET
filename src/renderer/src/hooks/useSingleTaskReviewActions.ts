@@ -9,6 +9,7 @@ import { useConfirm } from '../components/ui/ConfirmModal'
 import { useTextareaPrompt } from '../components/ui/TextareaPromptModal'
 import { nowIso } from '../../../shared/time'
 import * as reviewService from '../services/review'
+import { TASK_TITLE_PREVIEW_LENGTH } from '../lib/constants'
 
 function getNextReviewTaskId(
   currentTaskId: string,
@@ -87,7 +88,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
     if (!task) return
     const ok = await confirm({
       title: 'Ship It',
-      message: `Merge "${task.title.slice(0, 50)}" into main using ${mergeStrategy}, push to origin, and mark done?\n\nThis will merge + push in one step.`,
+      message: `Merge "${task.title.slice(0, TASK_TITLE_PREVIEW_LENGTH)}" into main using ${mergeStrategy}, push to origin, and mark done?\n\nThis will merge + push in one step.`,
       confirmLabel: 'Ship It',
       variant: 'default'
     })
@@ -111,7 +112,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
     if (!task) return
     const ok = await confirm({
       title: 'Merge Locally',
-      message: `Merge "${task.title.slice(0, 50)}" into your local main branch using ${mergeStrategy} strategy?`,
+      message: `Merge "${task.title.slice(0, TASK_TITLE_PREVIEW_LENGTH)}" into your local main branch using ${mergeStrategy} strategy?`,
       confirmLabel: 'Merge',
       variant: 'default'
     })
@@ -138,7 +139,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
     if (!task) return
     const ok = await confirm({
       title: 'Create Pull Request',
-      message: `Push agent branch to GitHub and create a public PR for "${task.title.slice(0, 50)}"?\n\nRepo: ${task.repo}\n\nThis action cannot be undone.`,
+      message: `Push agent branch to GitHub and create a public PR for "${task.title.slice(0, TASK_TITLE_PREVIEW_LENGTH)}"?\n\nRepo: ${task.repo}\n\nThis action cannot be undone.`,
       confirmLabel: 'Create PR',
       variant: 'default'
     })
@@ -236,7 +237,7 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
     if (!task) return
     const ok = await confirm({
       title: 'Mark Shipped Outside FLEET',
-      message: `Mark "${task.title.slice(0, 50)}" as done? Use this when you merged or deployed the work outside of FLEET.`,
+      message: `Mark "${task.title.slice(0, TASK_TITLE_PREVIEW_LENGTH)}" as done? Use this when you merged or deployed the work outside of FLEET.`,
       confirmLabel: 'Mark Done',
       variant: 'default'
     })

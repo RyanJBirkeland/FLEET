@@ -59,6 +59,9 @@ export const REPO_OPTIONS: RepoOption[] = []
 export const WIP_LIMIT_IN_PROGRESS = 5
 
 // UI
+// Max characters of a task title to embed in confirm-dialog messages and similar
+// short previews. Long titles are truncated with `String.slice(0, N)`.
+export const TASK_TITLE_PREVIEW_LENGTH = 50
 export const SIDEBAR_WIDTH_DEFAULT = 240
 export const SIDEBAR_WIDTH_MIN = 180
 export const SIDEBAR_WIDTH_MAX = 400

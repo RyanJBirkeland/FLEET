@@ -8,11 +8,11 @@ import { formatElapsed } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
 import { useGitHubStatus } from '../../hooks/useGitHubStatus'
-import { useSprintTaskActions } from '../../hooks/useSprintTaskActions'
 import { useFocusTrap } from '../../hooks/useFocusTrap'
 import { ConfirmModal, useConfirm } from '../ui/ConfirmModal'
-import { TextareaPromptModal, useTextareaPrompt } from '../ui/TextareaPromptModal'
+import { TextareaPromptModal } from '../ui/TextareaPromptModal'
 import { useTaskCost } from '../../hooks/useTaskCost'
+import { useOperatorActions } from '../../hooks/useOperatorActions'
 import { TaskDetailActionButtons } from './TaskDetailActionButtons'
 import { TaskDrawerHeader } from './TaskDrawerHeader'
 import { TaskDrawerEvents } from './TaskDrawerEvents'
@@ -88,37 +88,16 @@ export function TaskDetailDrawer({
   const progressPct = !task.started_at || !task.max_runtime_ms ? 0
     : Math.min(100, Math.round(((now - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100))
 
-  const { prompt: promptForReason, promptProps: reasonPromptProps } = useTextareaPrompt()
-  const { confirm: confirmForceDone, confirmProps: forceDoneConfirmProps } = useConfirm()
-  const { confirm: confirmForceRelease, confirmProps: forceReleaseConfirmProps } = useConfirm()
+  const { handlers: operatorHandlers, modalProps: operatorModalProps } = useOperatorActions(task.id)
   const { confirm: confirmDelete, confirmProps: deleteConfirmProps } = useConfirm()
-  const { markTaskFailed, forceTaskDone, releaseTask } = useSprintTaskActions()
-
-  async function handleMarkFailed(): Promise<void> {
-    const reason = await promptForReason({
-      title: 'Mark task as failed?',
-      message: 'Agent will stop retrying and downstream tasks will unblock as if the task had failed normally. Optionally provide a reason for the audit trail.',
-      placeholder: 'Reason (optional) — e.g. "scope changed, dropping this task"',
-      confirmLabel: 'Mark Failed'
-    })
-    if (reason === null) return
-    await markTaskFailed(task.id, reason.trim() || undefined)
-  }
-
-  async function handleForceDone(): Promise<void> {
-    const approved = await confirmForceDone({ title: 'Force mark task as done?', message: 'This will trigger dependency resolution as if the agent succeeded. Use only if you have manually shipped the work.', confirmLabel: 'Force Done', variant: 'danger' })
-    if (!approved) return
-    await forceTaskDone(task.id)
-  }
-
-  async function handleForceRelease(): Promise<void> {
-    const approved = await confirmForceRelease({ title: 'Force-release this task?', message: 'The task will return to queued and the agent manager will pick it up again. Use this if the agent process died without releasing the claim.', confirmLabel: 'Force Release', variant: 'danger' })
-    if (!approved) return
-    await releaseTask(task.id)
-  }
 
   async function handleDelete(): Promise<void> {
-    const approved = await confirmDelete({ title: 'Delete task?', message: `"${task.title}" will be permanently removed.`, confirmLabel: 'Delete', variant: 'danger' })
+    const approved = await confirmDelete({
+      title: 'Delete task?',
+      message: `"${task.title}" will be permanently removed.`,
+      confirmLabel: 'Delete',
+      variant: 'danger'
+    })
     if (!approved) return
     onDelete(task)
   }
@@ -140,10 +119,15 @@ export function TaskDetailDrawer({
       <MetadataSection task={task} agentRunId={agentRunId} onViewAgents={onViewAgents} />
       <TaskDrawerFailureDiagnostics task={task} recentAgentErrors={recentAgentErrors} />
       {task.pr_status === 'branch_only' && <BranchOnlySection notes={task.notes} ghConfigured={ghConfigured} />}
-      <TaskDrawerOperatorActions task={task} onMarkFailed={handleMarkFailed} onForceDone={handleForceDone} onForceRelease={handleForceRelease} />
-      <TextareaPromptModal {...reasonPromptProps} />
-      <ConfirmModal {...forceDoneConfirmProps} />
-      <ConfirmModal {...forceReleaseConfirmProps} />
+      <TaskDrawerOperatorActions
+        task={task}
+        onMarkFailed={operatorHandlers.markFailed}
+        onForceDone={operatorHandlers.forceDone}
+        onForceRelease={operatorHandlers.forceRelease}
+      />
+      <TextareaPromptModal {...operatorModalProps.reasonPromptProps} />
+      <ConfirmModal {...operatorModalProps.forceDoneConfirmProps} />
+      <ConfirmModal {...operatorModalProps.forceReleaseConfirmProps} />
       <ConfirmModal {...deleteConfirmProps} />
     </div>
   )

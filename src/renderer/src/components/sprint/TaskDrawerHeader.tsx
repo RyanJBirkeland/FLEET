@@ -1,4 +1,5 @@
 import React from 'react'
+import { X } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import type { TaskStatus } from '../../../../shared/task-state-machine'
 import { statusToDotKind } from '../../lib/task-status'
@@ -94,11 +95,10 @@ function TopMetaRow({ task, onClose }: TopMetaRowProps): React.JSX.Element {
           border: 'none',
           color: 'var(--fg-3)',
           cursor: 'pointer',
-          borderRadius: 'var(--r-sm)',
-          fontSize: 14
+          borderRadius: 'var(--r-sm)'
         }}
       >
-        ×
+        <X size={14} aria-hidden="true" />
       </button>
     </div>
   )
