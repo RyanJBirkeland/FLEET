@@ -4,7 +4,7 @@ import {
   GH_REPO_PATTERN,
   GH_BRANCH_PATTERN,
   buildBranchOnlyPrLink
-} from '../TaskDrawerSections'
+} from '../branch-pr-link'
 
 /**
  * Tests for the BRANCH_PUSHED_PATTERN group-capture injection-prevention invariant.
