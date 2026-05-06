@@ -306,6 +306,7 @@ function deriveAvgCostPerTask(agents: AgentCostRecord[]): number | null {
 
 export function useDashboardData(): DashboardData {
   const tasks = useSprintTasks((s) => s.tasks)
+  const retryTaskFromStore = useSprintTasks((s) => s.retryTask)
   const localAgents = useCostDataStore((s) => s.localAgents)
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
   const setSearchQuery = useSprintFilters((s) => s.setSearchQuery)
@@ -387,9 +388,10 @@ export function useDashboardData(): DashboardData {
     [setStatusFilter, setSearchQuery, setRepoFilter, setTagFilter, setView]
   )
 
-  const retryTask = useCallback(async (taskId: string): Promise<void> => {
-    await window.api.sprint.retry(taskId)
-  }, [])
+  const retryTask = useCallback(
+    (taskId: string): Promise<void> => retryTaskFromStore(taskId),
+    [retryTaskFromStore]
+  )
 
   const openAgentsView = useCallback(() => setView('agents'), [setView])
   const openReviewView = useCallback(() => setView('code-review'), [setView])
