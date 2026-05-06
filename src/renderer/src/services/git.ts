@@ -2,6 +2,17 @@ export async function getRepoPaths(): Promise<Record<string, string>> {
   return window.api.git.getRepoPaths()
 }
 
+/**
+ * True when `path` is at, or inside, one of the user's configured repository
+ * roots. Used to gate IPC calls that the main process rejects for unknown
+ * paths (e.g. git:status), so we don't spam fleet.log with handler errors
+ * when the IDE is opened on a folder that isn't a configured repo.
+ */
+export async function isConfiguredRepoPath(path: string): Promise<boolean> {
+  const roots = Object.values(await getRepoPaths())
+  return roots.some((root) => path === root || path.startsWith(root + '/'))
+}
+
 export async function getGitStatus(cwd: string): ReturnType<typeof window.api.git.status> {
   return window.api.git.status(cwd)
 }

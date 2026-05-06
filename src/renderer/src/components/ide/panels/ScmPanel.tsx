@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { RefreshCw, ExternalLink } from 'lucide-react'
 import { PanelHeader } from '../PanelHeader'
 import { IconBtn } from '../IconBtn'
+import { isConfiguredRepoPath } from '../../../services/git'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -325,6 +326,13 @@ export function ScmPanel({ rootPath }: ScmPanelProps): React.JSX.Element {
     if (!rootPath) return
     const path: string = rootPath
     async function fetchStatus(): Promise<void> {
+      // Skip when the IDE is opened on a folder that isn't a configured
+      // repository — main rejects git:status outside known repos and the
+      // 30s refresh would otherwise flood fleet.log with handler errors.
+      if (!(await isConfiguredRepoPath(path))) {
+        setStatus({ staged: [], unstaged: [] })
+        return
+      }
       try {
         const result = await window.api.git.status(path)
         setStatus(parseGitStatus(result.files))
