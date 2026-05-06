@@ -104,7 +104,7 @@ export interface DashboardData {
   actions: DashboardActions
 }
 
-function buildBriefHeadlineParts(
+export function buildBriefHeadlineParts(
   activeCount: number,
   reviewCount: number,
   failedCount: number
@@ -137,7 +137,7 @@ function buildBriefHeadlineParts(
   return parts
 }
 
-function deriveAttentionItems(
+export function deriveAttentionItems(
   partitions: SprintPartition,
   now: number
 ): AttentionItem[] {
@@ -216,7 +216,7 @@ function deriveActiveAgents(
   })
 }
 
-function derivePerAgentStats(
+export function derivePerAgentStats(
   agents: AgentCostRecord[],
   taskQualityMap: Map<string, number>
 ): PerAgentRow[] {
@@ -269,7 +269,7 @@ function derivePerAgentStats(
     .slice(0, 6)
 }
 
-function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
+export function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
   const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
   const recent = agents.filter(
     (a) => a.repo != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
