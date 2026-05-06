@@ -1,11 +1,12 @@
-import React, { useRef, useState, useMemo } from 'react'
+import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
+import type { SprintTask } from '../../../../shared/types'
+import { useSprintUI } from '../../stores/sprintUI'
+import { WIP_LIMIT_IN_PROGRESS } from '../../lib/constants'
+import { StatusDot } from '../ui/StatusDot'
+import type { StatusDotKind } from '../ui/StatusDot'
 import { TaskPill } from './TaskPill'
 import { TaskRow } from './TaskRow'
-import { useSprintUI } from '../../stores/sprintUI'
-import type { SprintTask } from '../../../../shared/types'
-
-import './PipelineStage.css'
 
 interface PipelineStageProps {
   name: 'queued' | 'blocked' | 'active' | 'review' | 'open-prs' | 'done'
@@ -14,11 +15,45 @@ interface PipelineStageProps {
   count: string
   selectedTaskId: string | null
   selectedTaskIds?: Set<string> | undefined
+  /**
+   * Map of taskId → task title used to render upstream-task names in
+   * blocked-task tooltips. Only required for the `blocked` stage; other
+   * stages never read it.
+   */
+  taskTitlesById?: ReadonlyMap<string, string> | undefined
   onTaskClick: (id: string) => void
   doneFooter?: React.ReactNode | undefined
 }
 
 const STAGE_VISIBLE_LIMIT = 20
+
+const STAGE_DOT_KIND: Record<PipelineStageProps['name'], StatusDotKind> = {
+  queued: 'queued',
+  blocked: 'blocked',
+  active: 'running',
+  review: 'review',
+  'open-prs': 'review',
+  done: 'done'
+}
+
+function resolveBlockingTitles(
+  task: SprintTask,
+  taskTitlesById: ReadonlyMap<string, string> | undefined
+): string | null {
+  if (!task.depends_on?.length) return null
+  return task.depends_on.map((dep) => taskTitlesById?.get(dep.id) ?? dep.id).join(', ')
+}
+
+/**
+ * Queries the cards container once and caches the result.
+ * Called after each render so the list stays current with the visible task list.
+ * This avoids re-querying on every keydown event while still discovering DOM changes.
+ */
+function buildFocusableList(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>('[role="button"], button')
+  )
+}
 
 function PipelineStageInner({
   name,
@@ -27,6 +62,7 @@ function PipelineStageInner({
   count,
   selectedTaskId,
   selectedTaskIds,
+  taskTitlesById,
   onTaskClick,
   doneFooter
 }: PipelineStageProps): React.JSX.Element {
@@ -34,18 +70,27 @@ function PipelineStageInner({
   const cardsRef = useRef<HTMLDivElement>(null)
   const pipelineDensity = useSprintUI((s) => s.pipelineDensity)
   const [expanded, setExpanded] = useState(false)
+
   const visibleTasks = useMemo(
     () => (expanded ? tasks : tasks.slice(0, STAGE_VISIBLE_LIMIT)),
     [tasks, expanded]
   )
   const hiddenCount = tasks.length - STAGE_VISIBLE_LIMIT
 
+  // Rebuild the focusable element list after each render triggered by a task-list
+  // change. This prevents per-keydown DOM queries while keeping the list current.
+  const focusableRefs = useRef<HTMLElement[]>([])
+  useEffect(() => {
+    if (cardsRef.current) {
+      focusableRefs.current = buildFocusableList(cardsRef.current)
+    }
+  }, [visibleTasks, pipelineDensity])
+
   const handleStageKeyDown = (e: React.KeyboardEvent): void => {
-    const cards = cardsRef.current?.querySelectorAll(
-      '[role="button"], button'
-    ) as NodeListOf<HTMLElement>
-    if (!cards?.length) return
-    const currentIndex = Array.from(cards).indexOf(document.activeElement as HTMLElement)
+    const cards = focusableRefs.current
+    if (!cards.length) return
+    const activeEl = document.activeElement
+    const currentIndex = activeEl instanceof HTMLElement ? cards.indexOf(activeEl) : -1
     if (currentIndex === -1) return
 
     let nextIndex = currentIndex
@@ -71,25 +116,85 @@ function PipelineStageInner({
 
   return (
     <div
-      className={`pipeline-stage${empty ? ' pipeline-stage--empty' : ''}`}
+      style={{
+        background: 'var(--surf-1)',
+        border: '1px solid var(--line)',
+        borderRadius: 'var(--r-lg)',
+        display: 'flex',
+        flexDirection: 'column',
+        minHeight: 0,
+        overflow: 'hidden'
+      }}
       data-testid={`pipeline-stage-${name}`}
       role="region"
       aria-label={label}
     >
+      {/* Stage head — 40px */}
       <div
-        className={`pipeline-stage__dot pipeline-stage__dot--${name}${empty ? ' pipeline-stage__dot--dim' : ''}`}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-2)',
+          padding: 'var(--s-2) var(--s-3)',
+          borderBottom: '1px solid var(--line)',
+          height: 40,
+          flexShrink: 0
+        }}
       >
-        {tasks.length}
+        <StatusDot kind={STAGE_DOT_KIND[name]} size={6} />
+        <span
+          style={{
+            fontSize: 11,
+            fontWeight: 500,
+            color: 'var(--fg)',
+            letterSpacing: '0.02em'
+          }}
+        >
+          {label}
+        </span>
+        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color:
+              name === 'active' && tasks.length > WIP_LIMIT_IN_PROGRESS
+                ? 'var(--st-failed)'
+                : 'var(--fg-3)'
+          }}
+        >
+          {count}
+        </span>
       </div>
-      <div className="pipeline-stage__header">
-        <div className={`pipeline-stage__name pipeline-stage__name--${name}`}>{label}</div>
-        {!empty && <div className="pipeline-stage__count">{count}</div>}
-        {label === 'Review' && tasks.length > 0 && (
-          <span className="pipeline-stage__subtitle">PRs awaiting merge</span>
-        )}
-      </div>
-      {!empty && (
-        <div className="pipeline-stage__cards" ref={cardsRef} onKeyDown={handleStageKeyDown}>
+
+      {/* Stage body */}
+      <div
+        style={{
+          padding: 'var(--s-2)',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 'var(--s-2)',
+          overflowY: 'auto',
+          flex: 1
+        }}
+        ref={cardsRef}
+        onKeyDown={handleStageKeyDown}
+      >
+        {empty ? (
+          <div
+            style={{
+              border: '1px dashed var(--line)',
+              borderRadius: 'var(--r-md)',
+              padding: 'var(--s-3)',
+              display: 'flex',
+              justifyContent: 'center'
+            }}
+          >
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: 'var(--fg-4)' }}>
+              —
+            </span>
+          </div>
+        ) : (
           <AnimatePresence mode="popLayout">
             {visibleTasks.map((task) =>
               pipelineDensity === 'compact' ? (
@@ -105,24 +210,28 @@ function PipelineStageInner({
                   task={task}
                   selected={task.id === selectedTaskId}
                   multiSelected={selectedTaskIds?.has(task.id)}
+                  blockingTitles={
+                    name === 'blocked' ? resolveBlockingTitles(task, taskTitlesById) : null
+                  }
                   onClick={onTaskClick}
                 />
               )
             )}
           </AnimatePresence>
-          {!expanded && hiddenCount > 0 && (
-            <button className="pipeline-stage__show-more" onClick={() => setExpanded(true)}>
-              Show {hiddenCount} more
-            </button>
-          )}
-          {expanded && tasks.length > STAGE_VISIBLE_LIMIT && (
-            <button className="pipeline-stage__show-more" onClick={() => setExpanded(false)}>
-              Show less
-            </button>
-          )}
-          {doneFooter}
-        </div>
-      )}
+        )}
+
+        {!expanded && hiddenCount > 0 && (
+          <button className="pipeline-stage__show-more" onClick={() => setExpanded(true)}>
+            Show {hiddenCount} more
+          </button>
+        )}
+        {expanded && tasks.length > STAGE_VISIBLE_LIMIT && (
+          <button className="pipeline-stage__show-more" onClick={() => setExpanded(false)}>
+            Show less
+          </button>
+        )}
+        {doneFooter}
+      </div>
     </div>
   )
 }

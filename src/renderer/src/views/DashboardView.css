@@ -1,231 +1,55 @@
-/* DashboardView — view shell, layout, and shared states */
-
-/* Root Container */
-.dashboard-root {
-  height: 100%;
+.dashboard-v2 {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--s-5) var(--s-6) var(--s-7);
   display: flex;
   flex-direction: column;
-  background: var(--fleet-bg);
-  position: relative;
-  overflow: hidden;
+  gap: var(--s-4);
   container-type: inline-size;
-  container-name: view-width;
 }
 
-/* Background Gradient Overlay */
-.dashboard-bg-gradient {
-  position: absolute;
-  inset: 0;
-  background: var(--fleet-bg);
-  pointer-events: none;
-  z-index: 0;
+/* Two-column body: live (left) + triage (right) */
+.dashboard-v2__columns {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  min-width: 0;
 }
 
-/* Content Layer (above effects) */
-.dashboard-content {
-  position: relative;
-  z-index: 1;
+.dashboard-v2__live-col {
+  flex: 1.4 1 360px;   /* grows proportionally, shrinks, wraps below 360px */
   display: flex;
   flex-direction: column;
-  height: 100%;
+  gap: var(--s-4);
+  min-width: 0;
 }
 
-/* Status Bar Extras */
-.dashboard-status-loading {
-  opacity: 0.5;
-}
-
-.dashboard-status-error {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-/* 3-Column Ops Deck Grid */
-.dashboard-grid {
-  flex: 1;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
-  gap: var(--fleet-space-3);
-  padding: var(--fleet-space-3);
-  overflow: hidden;
-  min-height: 0;
-}
-
-/* Column Stacks */
-.dashboard-col {
+.dashboard-v2__triage-col {
+  flex: 1 1 260px;     /* wraps below 260px, stacks under live col */
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  overflow-y: auto;
-  min-height: 0;
+  gap: var(--s-4);
+  min-width: 0;
 }
 
-/* StatusRail — override inline width: 110 so it fills the grid cell */
-.dashboard-grid > :first-child {
-  width: auto !important;
-}
-
-.dashboard-col--center {
-  gap: var(--fleet-space-3);
-}
-
-/* Status Bar Freshness Indicator */
-.dashboard-status-ok {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--fleet-space-1);
-}
-
-.dashboard-status-freshness {
-  color: var(--fleet-text-dim);
-  font-size: var(--fleet-size-xs);
-  opacity: 0.6;
-}
-
-.dashboard-status-freshness--stale {
-  color: var(--fleet-warning);
-  opacity: 1;
-}
-
-/* New Task Button */
-.dashboard-new-task-btn {
+/* Bottom stats accordion */
+.dashboard-v2__stats {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  padding: var(--fleet-space-2) var(--fleet-space-3);
-  border: 1px dashed var(--fleet-accent-border);
-  border-radius: 8px;
-  background: none;
-  color: var(--fleet-accent);
-  font-size: var(--fleet-size-xs);
-  font-weight: 600;
-  cursor: pointer;
-  opacity: 0.6;
-  transition:
-    opacity 0.15s ease,
-    border-color 0.15s ease;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  min-width: 0;
 }
 
-.dashboard-new-task-btn:hover:not(:disabled) {
-  opacity: 1;
-  border-style: solid;
+.dashboard-v2__stats > * {
+  flex: 1 1 300px;
+  min-width: 0;
 }
 
-.dashboard-new-task-btn:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-/* Onboarding State */
-.dashboard-onboarding {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-}
-
-.dashboard-onboarding__content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: var(--fleet-space-4);
-  text-align: center;
-}
-
-.dashboard-onboarding__text {
-  color: var(--fleet-text-dim);
-  font-size: var(--fleet-size-lg);
-  line-height: 1.5;
-  max-width: 300px;
-}
-
-.dashboard-onboarding__cta {
-  display: flex;
-  align-items: center;
-  gap: var(--fleet-space-2);
-  padding: 10px var(--fleet-space-5);
-  border: 1px solid var(--fleet-accent-border);
-  border-radius: 8px;
-  background: var(--fleet-accent-surface);
-  color: var(--fleet-accent);
-  font-size: var(--fleet-size-lg);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background 0.15s ease;
-}
-
-.dashboard-onboarding__cta:hover:not(:disabled) {
-  background: var(--fleet-accent-border);
-}
-
-.dashboard-onboarding__cta:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-/* Card Error State (shared) */
-.dashboard-card-error {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--fleet-space-2);
-  padding: var(--fleet-space-4);
-  min-height: 120px;
-}
-
-.dashboard-card-error__message {
-  font-size: var(--fleet-size-sm);
-  color: var(--fleet-danger);
-  text-align: center;
-}
-
-.dashboard-card-error__retry {
-  padding: var(--fleet-space-1) var(--fleet-space-3);
-  border-radius: var(--fleet-radius-sm);
-  background: var(--fleet-danger-surface);
-  border: 1px solid var(--fleet-danger);
-  color: var(--fleet-danger);
-  font-size: var(--fleet-size-xs);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background var(--fleet-transition-fast);
-}
-
-.dashboard-card-error__retry:hover:not(:disabled) {
-  background: var(--fleet-danger-border);
-}
-
-.dashboard-card-error__retry:active:not(:disabled) {
-  transform: scale(0.97);
-}
-
-/* Responsive Breakpoints */
-
-/* Collapse to 2 columns at narrow widths */
-@container view-width (max-width: 900px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-  .dashboard-col:nth-child(3) {
-    grid-column: 1 / -1;
-    flex-direction: row;
-    flex-wrap: wrap;
-    gap: var(--fleet-space-3);
-  }
-}
-
-/* Drop fixed left column at mid-narrow widths */
-@container view-width (max-width: 800px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr 1fr;
-  }
-}
-
-/* Single column for very narrow */
-@container view-width (max-width: 600px) {
-  .dashboard-grid {
-    grid-template-columns: 1fr;
+/* Compact padding at narrow viewports */
+@container (max-width: 720px) {
+  .dashboard-v2 {
+    padding: var(--s-4) var(--s-4) var(--s-6);
+    gap: var(--s-3);
   }
 }

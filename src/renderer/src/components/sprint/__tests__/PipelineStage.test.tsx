@@ -1,434 +1,264 @@
+/**
+ * PipelineStage — keyboard navigation and resolveBlockingTitles unit tests.
+ *
+ * The keyboard handler uses querySelectorAll('[role="button"], button') inside the
+ * cards container ref. We mock TaskPill to render actual <button> elements so
+ * the focus movement can be exercised without the full component tree.
+ *
+ * resolveBlockingTitles is private to the module, so we verify its output through
+ * the blockingTitles prop that PipelineStage passes to TaskPill.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
-import { useSprintUI } from '../../../stores/sprintUI'
 import type { SprintTask } from '../../../../../shared/types'
+import { nowIso } from '../../../../../shared/time'
 
 vi.mock('framer-motion', () => ({
-  AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-  motion: {
-    div: ({ children, className, onClick, 'data-testid': testId, ...rest }: any) => (
-      <div className={className} onClick={onClick} data-testid={testId} {...rest}>
-        {children}
-      </div>
+  AnimatePresence: ({ children }: any) => <>{children}</>,
+  motion: { div: ({ children, ...rest }: any) => <div {...rest}>{children}</div> }
+}))
+
+// Capture blockingTitles passed from PipelineStage to TaskPill
+const capturedBlockingTitles: Array<string | null> = []
+
+vi.mock('../TaskPill', () => ({
+  TaskPill: ({ task, onClick, blockingTitles }: any) => {
+    capturedBlockingTitles.push(blockingTitles ?? null)
+    return (
+      <button role="button" data-testid={`pill-${task.id}`} onClick={() => onClick(task.id)}>
+        {task.title}
+      </button>
     )
   }
 }))
 
-const makeTask = (overrides: Partial<SprintTask> = {}): SprintTask => ({
-  id: 'task-1',
-  title: 'Test task',
-  repo: 'FLEET',
-  prompt: null,
-  priority: 1,
-  status: 'queued',
-  notes: null,
-  spec: null,
-  retry_count: 0,
-  fast_fail_count: 0,
-  agent_run_id: null,
-  pr_number: null,
-  pr_status: null,
-  pr_url: null,
-  claimed_by: null,
-  started_at: null,
-  completed_at: null,
-  template_name: null,
-  depends_on: null,
-  updated_at: '2026-03-01T00:00:00Z',
-  created_at: '2026-03-01T00:00:00Z',
-  ...overrides
+vi.mock('../TaskRow', () => ({
+  TaskRow: ({ task, onClick }: any) => (
+    <button data-testid={`row-${task.id}`} onClick={() => onClick(task.id)}>
+      {task.title}
+    </button>
+  )
+}))
+
+vi.mock('../../../stores/sprintUI', () => ({
+  useSprintUI: vi.fn((sel: any) => sel({ pipelineDensity: 'card' }))
+}))
+
+function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
+  return {
+    id: crypto.randomUUID(),
+    title: 'Test task',
+    repo: 'fleet',
+    prompt: null,
+    priority: 1,
+    status: 'queued',
+    notes: null,
+    spec: null,
+    agent_run_id: null,
+    pr_number: null,
+    pr_status: null,
+    pr_mergeable_state: null,
+    pr_url: null,
+    stacked_on_task_id: null,
+    claimed_by: null,
+    started_at: null,
+    completed_at: null,
+    retry_count: 0,
+    fast_fail_count: 0,
+    template_name: null,
+    depends_on: null,
+    updated_at: nowIso(),
+    created_at: nowIso(),
+    ...overrides
+  }
+}
+
+import { PipelineStage } from '../PipelineStage'
+
+const DEFAULT_PROPS = {
+  name: 'queued' as const,
+  label: 'Queued',
+  count: '3',
+  selectedTaskId: null,
+  onTaskClick: vi.fn()
+}
+
+function getStageBody(anyCardInStage: HTMLElement): HTMLElement {
+  // The keyboard handler is attached to the cards container div (ref=cardsRef).
+  // It is the direct parent of the pill buttons.
+  return anyCardInStage.parentElement as HTMLElement
+}
+
+describe('PipelineStage — keyboard navigation', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    capturedBlockingTitles.length = 0
+  })
+
+  it('moves focus to the next card on ArrowDown', () => {
+    const tasks = [
+      makeTask({ id: 'a', title: 'Task A' }),
+      makeTask({ id: 'b', title: 'Task B' }),
+      makeTask({ id: 'c', title: 'Task C' })
+    ]
+    render(<PipelineStage {...DEFAULT_PROPS} tasks={tasks} />)
+
+    const cardA = screen.getByTestId('pill-a')
+    const cardB = screen.getByTestId('pill-b')
+
+    cardA.focus()
+    expect(document.activeElement).toBe(cardA)
+
+    fireEvent.keyDown(getStageBody(cardA), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(cardB)
+  })
+
+  it('moves focus to the previous card on ArrowUp', () => {
+    const tasks = [
+      makeTask({ id: 'a', title: 'Task A' }),
+      makeTask({ id: 'b', title: 'Task B' }),
+      makeTask({ id: 'c', title: 'Task C' })
+    ]
+    render(<PipelineStage {...DEFAULT_PROPS} tasks={tasks} />)
+
+    const cardA = screen.getByTestId('pill-a')
+    const cardB = screen.getByTestId('pill-b')
+
+    cardB.focus()
+    expect(document.activeElement).toBe(cardB)
+
+    fireEvent.keyDown(getStageBody(cardB), { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(cardA)
+  })
+
+  it('moves focus to the first card on Home', () => {
+    const tasks = [
+      makeTask({ id: 'a', title: 'Task A' }),
+      makeTask({ id: 'b', title: 'Task B' }),
+      makeTask({ id: 'c', title: 'Task C' })
+    ]
+    render(<PipelineStage {...DEFAULT_PROPS} tasks={tasks} />)
+
+    const cardA = screen.getByTestId('pill-a')
+    const cardC = screen.getByTestId('pill-c')
+
+    cardC.focus()
+    fireEvent.keyDown(getStageBody(cardC), { key: 'Home' })
+    expect(document.activeElement).toBe(cardA)
+  })
+
+  it('moves focus to the last card on End', () => {
+    const tasks = [
+      makeTask({ id: 'a', title: 'Task A' }),
+      makeTask({ id: 'b', title: 'Task B' }),
+      makeTask({ id: 'c', title: 'Task C' })
+    ]
+    render(<PipelineStage {...DEFAULT_PROPS} tasks={tasks} />)
+
+    const cardA = screen.getByTestId('pill-a')
+    const cardC = screen.getByTestId('pill-c')
+
+    cardA.focus()
+    fireEvent.keyDown(getStageBody(cardA), { key: 'End' })
+    expect(document.activeElement).toBe(cardC)
+  })
+
+  it('does not move focus past the last card on ArrowDown', () => {
+    const tasks = [makeTask({ id: 'a', title: 'Task A' }), makeTask({ id: 'b', title: 'Task B' })]
+    render(<PipelineStage {...DEFAULT_PROPS} tasks={tasks} />)
+
+    const cardB = screen.getByTestId('pill-b')
+    cardB.focus()
+
+    fireEvent.keyDown(getStageBody(cardB), { key: 'ArrowDown' })
+    expect(document.activeElement).toBe(cardB)
+  })
+
+  it('does not move focus before the first card on ArrowUp', () => {
+    const tasks = [makeTask({ id: 'a', title: 'Task A' }), makeTask({ id: 'b', title: 'Task B' })]
+    render(<PipelineStage {...DEFAULT_PROPS} tasks={tasks} />)
+
+    const cardA = screen.getByTestId('pill-a')
+    cardA.focus()
+
+    fireEvent.keyDown(getStageBody(cardA), { key: 'ArrowUp' })
+    expect(document.activeElement).toBe(cardA)
+  })
 })
 
-describe('PipelineStage', () => {
+describe('PipelineStage — resolveBlockingTitles', () => {
   beforeEach(() => {
-    // Reset store to default state
-    useSprintUI.getState().setPipelineDensity('card')
+    vi.clearAllMocks()
+    capturedBlockingTitles.length = 0
   })
 
-  it('renders the stage label', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
+  it('resolves known upstream ids to their task titles', () => {
+    const blockedTask = makeTask({
+      id: 'blocked-1',
+      status: 'blocked',
+      depends_on: [
+        { id: 'upstream-a', type: 'hard' },
+        { id: 'upstream-b', type: 'hard' }
+      ]
+    })
+
+    const titleMap = new Map([
+      ['upstream-a', 'Feature A'],
+      ['upstream-b', 'Feature B']
+    ])
+
     render(
       <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={[]}
-        count="0 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.getByText('Queued')).toBeInTheDocument()
-  })
-
-  it('renders the task count string when stage has tasks', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [makeTask({ id: 't1' }), makeTask({ id: 't2' }), makeTask({ id: 't3' })]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="3 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.getByText('3 tasks')).toBeInTheDocument()
-  })
-
-  it('hides count when stage is empty', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={[]}
-        count="0 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.queryByText('0 tasks')).not.toBeInTheDocument()
-  })
-
-  it('applies the correct dot class based on name', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const { container } = render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={[]}
-        count="0 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(container.querySelector('.pipeline-stage__dot--queued')).toBeInTheDocument()
-  })
-
-  it('applies blocked dot class for blocked stage', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const { container } = render(
-      <PipelineStage
+        {...DEFAULT_PROPS}
         name="blocked"
         label="Blocked"
-        tasks={[]}
-        count="0 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
+        tasks={[blockedTask]}
+        taskTitlesById={titleMap}
       />
     )
-    expect(container.querySelector('.pipeline-stage__dot--blocked')).toBeInTheDocument()
+
+    expect(capturedBlockingTitles[0]).toBe('Feature A, Feature B')
   })
 
-  it('renders a TaskPill for each task', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' }),
-      makeTask({ id: 'task-3', title: 'Third task' })
-    ]
+  it('falls back to the raw id when a title is not in the map', () => {
+    const blockedTask = makeTask({
+      id: 'blocked-2',
+      status: 'blocked',
+      depends_on: [{ id: 'unknown-dep', type: 'hard' }]
+    })
+
     render(
       <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="3 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
+        {...DEFAULT_PROPS}
+        name="blocked"
+        label="Blocked"
+        tasks={[blockedTask]}
+        taskTitlesById={new Map()}
       />
     )
-    expect(screen.getAllByTestId('task-pill')).toHaveLength(3)
-    expect(screen.getByText('First task')).toBeInTheDocument()
-    expect(screen.getByText('Second task')).toBeInTheDocument()
-    expect(screen.getByText('Third task')).toBeInTheDocument()
+
+    expect(capturedBlockingTitles[0]).toBe('unknown-dep')
   })
 
-  it('renders doneFooter when provided', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
+  it('passes null blockingTitles for non-blocked stages', () => {
+    const task = makeTask({ id: 'q-1', status: 'queued' })
+    render(<PipelineStage {...DEFAULT_PROPS} name="queued" tasks={[task]} />)
+    expect(capturedBlockingTitles[0]).toBeNull()
+  })
+
+  it('passes null when the blocked task has no deps', () => {
+    const blockedTask = makeTask({ id: 'blocked-3', status: 'blocked', depends_on: null })
+
     render(
       <PipelineStage
-        name="done"
-        label="Done"
-        tasks={[]}
-        count="0 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-        doneFooter={<div data-testid="done-footer">Show all</div>}
+        {...DEFAULT_PROPS}
+        name="blocked"
+        label="Blocked"
+        tasks={[blockedTask]}
+        taskTitlesById={new Map()}
       />
     )
-    expect(screen.getByTestId('done-footer')).toBeInTheDocument()
-  })
 
-  it('does not render doneFooter when not provided', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={[]}
-        count="0 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.queryByTestId('done-footer')).not.toBeInTheDocument()
-  })
-
-  it('shows subtitle for Review stage when tasks exist', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [makeTask({ id: 'r1', status: 'active' })]
-    render(
-      <PipelineStage
-        name="review"
-        label="Review"
-        tasks={tasks}
-        count="1"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.getByText('PRs awaiting merge')).toBeInTheDocument()
-  })
-
-  it('does not show subtitle for Review stage when empty', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    render(
-      <PipelineStage
-        name="review"
-        label="Review"
-        tasks={[]}
-        count="0"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.queryByText('PRs awaiting merge')).not.toBeInTheDocument()
-  })
-
-  it('does not show subtitle for non-Review stages', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [makeTask({ id: 'q1' })]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="1"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.queryByText('PRs awaiting merge')).not.toBeInTheDocument()
-  })
-
-  it('shows task count in the dot', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [makeTask({ id: 'task-1' }), makeTask({ id: 'task-2' })]
-    const { container } = render(
-      <PipelineStage
-        name="active"
-        label="Active"
-        tasks={tasks}
-        count="2 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const dot = container.querySelector('.pipeline-stage__dot')
-    expect(dot?.textContent).toBe('2')
-  })
-
-  it('moves focus to next pill on ArrowDown', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' }),
-      makeTask({ id: 'task-3', title: 'Third task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="3 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const pills = screen.getAllByRole('button')
-    pills[0].focus()
-    expect(pills[0]).toHaveFocus()
-    fireEvent.keyDown(pills[0], { key: 'ArrowDown' })
-    expect(pills[1]).toHaveFocus()
-  })
-
-  it('moves focus to previous pill on ArrowUp', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="2 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const pills = screen.getAllByRole('button')
-    pills[1].focus()
-    fireEvent.keyDown(pills[1], { key: 'ArrowUp' })
-    expect(pills[0]).toHaveFocus()
-  })
-
-  it('moves focus to first pill on Home', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' }),
-      makeTask({ id: 'task-3', title: 'Third task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="3 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const pills = screen.getAllByRole('button')
-    pills[2].focus()
-    fireEvent.keyDown(pills[2], { key: 'Home' })
-    expect(pills[0]).toHaveFocus()
-  })
-
-  it('moves focus to last pill on End', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' }),
-      makeTask({ id: 'task-3', title: 'Third task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="3 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const pills = screen.getAllByRole('button')
-    pills[0].focus()
-    fireEvent.keyDown(pills[0], { key: 'End' })
-    expect(pills[2]).toHaveFocus()
-  })
-
-  it('does not move focus beyond first pill on ArrowUp', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="2 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const pills = screen.getAllByRole('button')
-    pills[0].focus()
-    fireEvent.keyDown(pills[0], { key: 'ArrowUp' })
-    expect(pills[0]).toHaveFocus()
-  })
-
-  it('does not move focus beyond last pill on ArrowDown', async () => {
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="2 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    const pills = screen.getAllByRole('button')
-    pills[1].focus()
-    fireEvent.keyDown(pills[1], { key: 'ArrowDown' })
-    expect(pills[1]).toHaveFocus()
-  })
-
-  it('renders TaskPill when density is card', async () => {
-    useSprintUI.getState().setPipelineDensity('card')
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [makeTask({ id: 'task-1', title: 'Test task' })]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="1 task"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.getByTestId('task-pill')).toBeInTheDocument()
-    expect(screen.queryByTestId('task-row')).not.toBeInTheDocument()
-  })
-
-  it('renders TaskRow when density is compact', async () => {
-    useSprintUI.getState().setPipelineDensity('compact')
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [makeTask({ id: 'task-1', title: 'Test task' })]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="1 task"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.getByTestId('task-row')).toBeInTheDocument()
-    expect(screen.queryByTestId('task-pill')).not.toBeInTheDocument()
-  })
-
-  it('renders correct number of TaskRows when density is compact', async () => {
-    useSprintUI.getState().setPipelineDensity('compact')
-    const { PipelineStage } = await import('../PipelineStage')
-    const tasks = [
-      makeTask({ id: 'task-1', title: 'First task' }),
-      makeTask({ id: 'task-2', title: 'Second task' }),
-      makeTask({ id: 'task-3', title: 'Third task' })
-    ]
-    render(
-      <PipelineStage
-        name="queued"
-        label="Queued"
-        tasks={tasks}
-        count="3 tasks"
-        selectedTaskId={null}
-        onTaskClick={vi.fn()}
-      />
-    )
-    expect(screen.getAllByTestId('task-row')).toHaveLength(3)
+    expect(capturedBlockingTitles[0]).toBeNull()
   })
 })

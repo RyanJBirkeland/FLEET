@@ -1,12 +1,13 @@
-import { useState, memo } from 'react'
+import { memo, useState } from 'react'
 import { motion } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
-import { formatElapsed, getDotColor } from '../../lib/task-format'
+import { formatElapsed } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useSprintSelection } from '../../stores/sprintSelection'
-
-import './TaskRow.css'
+import { StatusDot } from '../ui/StatusDot'
+import { statusToDotKind } from '../../lib/task-status'
+import { PriorityChip } from './primitives/PriorityChip'
 
 interface TaskRowProps {
   task: SprintTask
@@ -16,26 +17,26 @@ interface TaskRowProps {
 
 function TaskRowInner({ task, selected, onClick }: TaskRowProps): React.JSX.Element {
   const [, setTick] = useState(0)
+  const clearSelection = useSprintSelection((s) => s.clearSelection)
 
-  // Trigger re-render every 10s for active tasks to update elapsed time
   const isActive = task.status === 'active' && !!task.started_at
   useBackoffInterval(() => setTick((t) => t + 1), isActive ? 10_000 : null)
 
-  const elapsed = task.status === 'active' && task.started_at ? formatElapsed(task.started_at) : ''
+  const elapsed = isActive ? formatElapsed(task.started_at ?? new Date().toISOString()) : ''
 
   const handleClick = (): void => {
-    useSprintSelection.getState().clearSelection()
+    clearSelection()
     onClick(task.id)
   }
 
   return (
     <motion.div
       layoutId={task.id}
-      className={`task-row${selected ? ' task-row--selected' : ''}`}
-      onClick={handleClick}
       role="button"
       tabIndex={0}
       aria-label={`Task: ${task.title}, status: ${task.status}`}
+      data-testid="task-row"
+      onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -43,20 +44,53 @@ function TaskRowInner({ task, selected, onClick }: TaskRowProps): React.JSX.Elem
         }
       }}
       transition={SPRINGS.default}
-      data-testid="task-row"
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--s-2)',
+        padding: 'var(--s-1) var(--s-2)',
+        height: 28,
+        background: selected ? 'var(--surf-2)' : 'transparent',
+        border: selected ? '1px solid var(--line-2)' : '1px solid transparent',
+        borderRadius: 5,
+        cursor: 'pointer',
+        minWidth: 0
+      }}
     >
-      <div
-        className="task-row__dot"
-        style={{ background: getDotColor(task.status, task.pr_status) }}
-      />
-      <span className="task-row__title" title={task.title}>
+      <StatusDot kind={statusToDotKind(task.status, task.pr_status)} size={6} />
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--fg-4)',
+          flexShrink: 0
+        }}
+      >
+        {task.id.substring(0, 8)}
+      </span>
+      <span
+        style={{
+          fontSize: 11,
+          color: 'var(--fg)',
+          flex: 1,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap'
+        }}
+      >
         {task.title}
       </span>
-      <span className="task-row__repo">{task.repo}</span>
-      {elapsed && <span className="task-row__time">{elapsed}</span>}
-      {task.priority && (
-        <span className="task-row__priority" data-priority={task.priority}>
-          P{task.priority}
+      <PriorityChip priority={task.priority ?? 3} />
+      {isActive && elapsed && (
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--fg-3)',
+            flexShrink: 0
+          }}
+        >
+          {elapsed}
         </span>
       )}
     </motion.div>

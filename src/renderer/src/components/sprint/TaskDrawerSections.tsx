@@ -1,5 +1,5 @@
 /**
- * Private section components used exclusively by TaskDetailDrawerV2.
+ * Private section components used exclusively by TaskDetailDrawer.
  * Kept separate to satisfy the <150 line constraint on the main file.
  */
 import React from 'react'

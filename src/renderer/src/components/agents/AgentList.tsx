@@ -31,10 +31,6 @@ interface AgentListProps {
   fetchError?: string | null | undefined
   onRetry?: (() => void) | undefined
   displayedCount?: number | undefined
-  /** V1 compat — no-op in V2 */
-  hasMore?: boolean | undefined
-  /** V1 compat — no-op in V2 */
-  onLoadMore?: (() => void) | undefined
   showBanner?: boolean | undefined
   onDismissBanner?: (() => void) | undefined
 }
@@ -305,9 +301,6 @@ export function AgentList({
   fetchError,
   onRetry,
   displayedCount,
-  // hasMore and onLoadMore are V1-compat props consumed by AgentsViewV1; unused in V2
-  hasMore: _hasMore,
-  onLoadMore: _onLoadMore,
   showBanner,
   onDismissBanner,
 }: AgentListProps): React.JSX.Element {

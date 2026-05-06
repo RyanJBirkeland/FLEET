@@ -1,223 +1,253 @@
 import { useEffect, useState, useMemo, useCallback } from 'react'
-import { motion } from 'framer-motion'
 import { useTaskGroups } from '../stores/taskGroups'
 import { useTaskWorkbenchModalStore } from '../stores/taskWorkbenchModal'
-import { EpicList } from '../components/planner/EpicList'
-import { EpicDetail } from '../components/planner/EpicDetail'
+import { useSprintTasks } from '../stores/sprintTasks'
+import { PlPlannerHeader } from '../components/planner/PlPlannerHeader'
+import { PlEpicRail } from '../components/planner/PlEpicRail'
+import { PlEpicCanvas } from '../components/planner/PlEpicCanvas'
+import { PlAssistantColumn } from '../components/planner/PlAssistantColumn'
 import { CreateEpicModal } from '../components/planner/CreateEpicModal'
-import { PlannerAssistant } from '../components/planner/PlannerAssistant'
 import { toast } from '../stores/toasts'
 import { useConfirm, ConfirmModal } from '../components/ui/ConfirmModal'
-import { EmptyState } from '../components/ui/EmptyState'
-import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../lib/motion'
-import './PlannerView.css'
-import { ErrorBoundary } from '../components/ui/ErrorBoundary'
-import { useFeatureFlags } from '../stores/featureFlags'
-import { PlannerViewV2 } from '../components/planner/v2/PlannerViewV2'
+import type { TaskGroup, SprintTask, EpicDependency } from '../../../shared/types'
 
 export default function PlannerView(): React.JSX.Element {
-  const { v2Planner } = useFeatureFlags()
-  if (v2Planner) return <PlannerViewV2 />
-  return <PlannerViewV1 />
-}
-
-function PlannerViewV1(): React.JSX.Element {
-  const reduced = useReducedMotion()
   const {
     groups,
     selectedGroupId,
     groupTasks,
-    loading,
     loadGroups,
     selectGroup,
     queueAllTasks,
     updateGroup,
-    deleteGroup,
-    reorderTasks,
+    togglePause,
+    loadGroupTasks,
     addDependency,
     removeDependency,
     updateDependencyCondition,
-    togglePause
+    importPlan
   } = useTaskGroups()
 
-  const [searchQuery, setSearchQuery] = useState('')
-  const [showCreateModal, setShowCreateModal] = useState(false)
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null)
   const [assistantOpen, setAssistantOpen] = useState(false)
+  const [assistantPrefill, setAssistantPrefill] = useState('')
+  const [assistantKey, setAssistantKey] = useState(0)
+  const [showCreateModal, setShowCreateModal] = useState(false)
   const { confirm, confirmProps } = useConfirm()
 
-  // Load groups on mount
   useEffect(() => {
-    loadGroups()
+    void loadGroups()
   }, [loadGroups])
 
-  // Filter groups by search query
-  const filteredGroups = useMemo(() => {
-    if (!searchQuery.trim()) return groups
-    const query = searchQuery.toLowerCase()
-    return groups.filter(
-      (g) =>
-        g.name.toLowerCase().includes(query) || (g.goal && g.goal.toLowerCase().includes(query))
-    )
-  }, [groups, searchQuery])
+  const selectedGroup = useMemo(
+    () => groups.find((g) => g.id === selectedGroupId) ?? null,
+    [groups, selectedGroupId]
+  )
 
-  // Get the selected group object
-  const selectedGroup = useMemo(() => {
-    return groups.find((g) => g.id === selectedGroupId) || null
-  }, [groups, selectedGroupId])
+  const handleSelectEpic = useCallback(
+    (id: string) => {
+      selectGroup(id)
+      setSelectedTaskId(null)
+    },
+    [selectGroup]
+  )
 
-  // Handlers
-  const handleCreateNew = (): void => {
-    setShowCreateModal(true)
-  }
+  const handleSelectTask = useCallback((id: string) => {
+    setSelectedTaskId(id)
+  }, [])
 
-  const handleAddTask = useCallback((): void => {
+  const handleAddTask = useCallback(() => {
     useTaskWorkbenchModalStore.getState().openForCreate({ groupId: selectedGroupId })
   }, [selectedGroupId])
 
-  const handleEditTask = useCallback(
-    (taskId: string): void => {
-      const task = groupTasks.find((t) => t.id === taskId)
-      if (task) useTaskWorkbenchModalStore.getState().openForEdit(task)
+  const handleEditInWorkbench = useCallback((task: SprintTask) => {
+    useTaskWorkbenchModalStore.getState().openForEdit(task)
+  }, [])
+
+  const handleToggleReady = useCallback(async () => {
+    if (!selectedGroup) return
+    const nextStatus: TaskGroup['status'] = selectedGroup.status === 'ready' ? 'draft' : 'ready'
+    await updateGroup(selectedGroup.id, { status: nextStatus })
+  }, [selectedGroup, updateGroup])
+
+  const handleSaveName = useCallback(
+    async (name: string): Promise<void> => {
+      if (!selectedGroup) return
+      const trimmed = name.trim()
+      if (trimmed && trimmed !== selectedGroup.name) {
+        await updateGroup(selectedGroup.id, { name: trimmed })
+      }
     },
-    [groupTasks]
+    [selectedGroup, updateGroup]
   )
 
-  const handleEditGroup = async (name: string, goal: string): Promise<void> => {
-    if (!selectedGroupId) return
-    await updateGroup(selectedGroupId, { name, goal })
-  }
+  const handleSaveGoal = useCallback(
+    async (goal: string): Promise<void> => {
+      if (!selectedGroup) return
+      const trimmed = goal.trim()
+      if (trimmed !== (selectedGroup.goal ?? '')) {
+        await updateGroup(selectedGroup.id, { goal: trimmed || undefined })
+      }
+    },
+    [selectedGroup, updateGroup]
+  )
 
-  const handleDeleteGroup = async (): Promise<void> => {
-    if (!selectedGroupId) return
-    await deleteGroup(selectedGroupId)
-  }
-
-  const handleToggleReady = async (): Promise<void> => {
-    if (!selectedGroup) return
-    const newStatus = selectedGroup.status === 'ready' ? 'draft' : 'ready'
-    await updateGroup(selectedGroup.id, { status: newStatus })
-  }
-
-  const handleTogglePause = (): void => {
+  const handleTogglePause = useCallback(() => {
     if (!selectedGroup) return
     void togglePause(selectedGroup.id)
-  }
+  }, [selectedGroup, togglePause])
 
-  const handleMarkCompleted = async (): Promise<void> => {
-    if (!selectedGroup) return
-
-    const confirmed = await confirm({
-      title: 'Mark Epic as Completed',
-      message: `Mark "${selectedGroup.name}" as completed? It will move to the Completed section.`,
-      confirmLabel: 'Complete'
-    })
-
-    if (!confirmed) return
-    await updateGroup(selectedGroup.id, { status: 'completed' })
-  }
-
-  const handleQueueAll = async (): Promise<void> => {
+  const handleQueueAll = useCallback(async () => {
     if (!selectedGroupId || !selectedGroup) return
-
-    // Count tasks ready to queue (backlog tasks with specs)
-    const tasksToQueue = groupTasks.filter(
-      (t) => t.status === 'backlog' && t.spec && t.spec.trim() !== ''
-    )
-
-    if (tasksToQueue.length === 0) {
+    const readyTasks = groupTasks.filter((t) => t.status === 'backlog' && t.spec?.trim())
+    if (readyTasks.length === 0) {
       toast.error('No tasks ready to queue')
       return
     }
-
     const confirmed = await confirm({
       title: 'Queue Tasks',
-      message: `Queue ${tasksToQueue.length} task${tasksToQueue.length === 1 ? '' : 's'} to the pipeline? This will transition all draft tasks with specs to queued status.`,
+      message: `Queue ${readyTasks.length} task${readyTasks.length === 1 ? '' : 's'} to the pipeline?`,
       confirmLabel: 'Queue'
     })
-
     if (!confirmed) return
-
     await queueAllTasks(selectedGroupId)
-  }
+    await loadGroupTasks(selectedGroupId)
+  }, [selectedGroupId, selectedGroup, groupTasks, confirm, queueAllTasks, loadGroupTasks])
 
-  const handleReorderTasks = async (orderedTaskIds: string[]): Promise<void> => {
-    if (!selectedGroupId) return
-    await reorderTasks(selectedGroupId, orderedTaskIds)
-  }
-
-  const handleImportPlan = async (): Promise<void> => {
+  const handleImport = useCallback(async () => {
     try {
-      const result = await window.api.planner.import('fleet')
+      const result = await importPlan('fleet')
       toast.success(`Imported "${result.epicName}" with ${result.taskCount} tasks`)
-      await loadGroups()
-      selectGroup(result.epicId)
     } catch (err) {
-      if (err instanceof Error && err.message === 'No file selected') {
-        // User cancelled, don't show error
-        return
-      }
+      if (err instanceof Error && err.message === 'No file selected') return
       toast.error('Failed to import plan — ' + (err instanceof Error ? err.message : String(err)))
     }
-  }
+  }, [importPlan])
+
+  const handleAskAssistantDraft = useCallback((message: string) => {
+    setAssistantOpen(true)
+    setAssistantPrefill(message)
+    setAssistantKey((k) => k + 1)
+  }, [])
+
+  const updateTask = useSprintTasks((s) => s.updateTask)
+  const handleSaveSpec = useCallback(
+    async (taskId: string, spec: string): Promise<void> => {
+      await updateTask(taskId, { spec })
+      if (selectedGroupId) await loadGroupTasks(selectedGroupId)
+    },
+    [updateTask, selectedGroupId, loadGroupTasks]
+  )
+
+  const handleAddDependency = useCallback(
+    async (upstreamId: string): Promise<void> => {
+      if (!selectedGroup) return
+      await addDependency(selectedGroup.id, { id: upstreamId, condition: 'on_success' })
+    },
+    [selectedGroup, addDependency]
+  )
+
+  const handleRemoveDependency = useCallback(
+    async (upstreamId: string): Promise<void> => {
+      if (!selectedGroup) return
+      await removeDependency(selectedGroup.id, upstreamId)
+    },
+    [selectedGroup, removeDependency]
+  )
+
+  const handleChangeCondition = useCallback(
+    async (upstreamId: string, condition: EpicDependency['condition']): Promise<void> => {
+      if (!selectedGroup) return
+      await updateDependencyCondition(selectedGroup.id, upstreamId, condition)
+    },
+    [selectedGroup, updateDependencyCondition]
+  )
+
+  const activeGroups = useMemo(() => groups.filter((g) => g.status !== 'completed'), [groups])
 
   return (
-    <ErrorBoundary name="PlannerView">
-      <motion.div
-        className="planner-view"
-        variants={VARIANTS.fadeIn}
-        initial="initial"
-        animate="animate"
-        transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
-      >
-        {/* Body: Split layout */}
-        <div className="planner-body view-layout">
-          <EpicList
-            groups={filteredGroups}
-            selectedId={selectedGroupId}
-            onSelect={selectGroup}
-            onCreateNew={handleCreateNew}
-            searchQuery={searchQuery}
-            onSearchChange={setSearchQuery}
-            onImport={handleImportPlan}
-          />
-          <div className="view-content">
-            {selectedGroup && (
-              <EpicDetail
-                group={selectedGroup}
-                tasks={groupTasks}
-                allGroups={groups}
-                onAddDependency={(dep) => addDependency(selectedGroup.id, dep)}
-                onRemoveDependency={(upstreamId) => removeDependency(selectedGroup.id, upstreamId)}
-                onUpdateDependencyCondition={(upstreamId, condition) =>
-                  updateDependencyCondition(selectedGroup.id, upstreamId, condition)
-                }
-                loading={loading}
-                onQueueAll={handleQueueAll}
-                onAddTask={handleAddTask}
-                onEditTask={handleEditTask}
-                onEditGroup={handleEditGroup}
-                onDeleteGroup={handleDeleteGroup}
-                onToggleReady={handleToggleReady}
-                onReorderTasks={handleReorderTasks}
-                onMarkCompleted={handleMarkCompleted}
-                onTogglePause={handleTogglePause}
-                onOpenAssistant={() => setAssistantOpen(true)}
-              />
-            )}
-            <PlannerAssistant
-              open={assistantOpen && selectedGroup != null}
-              onClose={() => setAssistantOpen(false)}
-              epic={selectedGroup}
-              tasks={groupTasks}
-              onOpenWorkbench={handleAddTask}
-            />
-            {!selectedGroup && !loading && <EmptyState message="Select an epic to view details" />}
-          </div>
-        </div>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        flex: 1,
+        minHeight: 0,
+        overflow: 'hidden'
+      }}
+    >
+      <PlPlannerHeader
+        groups={activeGroups}
+        tasks={groupTasks}
+        assistantOpen={assistantOpen}
+        onToggleAssistant={() => setAssistantOpen((o) => !o)}
+        onNewEpic={() => setShowCreateModal(true)}
+        onImport={handleImport}
+      />
 
-        <CreateEpicModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
-        <ConfirmModal {...confirmProps} />
-      </motion.div>
-    </ErrorBoundary>
+      <div style={{ flex: 1, minHeight: 0, display: 'flex', overflow: 'hidden' }}>
+        <PlEpicRail
+          groups={groups}
+          selectedId={selectedGroupId}
+          onSelect={handleSelectEpic}
+          onNewEpic={() => setShowCreateModal(true)}
+        />
+
+        {selectedGroup ? (
+          <PlEpicCanvas
+            epic={selectedGroup}
+            tasks={groupTasks}
+            allGroups={groups}
+            selectedTaskId={selectedTaskId}
+            onSelectTask={handleSelectTask}
+            assistantOpen={assistantOpen}
+            onAddTask={handleAddTask}
+            onEditInWorkbench={handleEditInWorkbench}
+            onToggleReady={handleToggleReady}
+            onTogglePause={handleTogglePause}
+            onQueueAll={handleQueueAll}
+            onAskAssistantDraft={handleAskAssistantDraft}
+            onSaveSpec={handleSaveSpec}
+            onSaveName={handleSaveName}
+            onSaveGoal={handleSaveGoal}
+            onAddDependency={handleAddDependency}
+            onRemoveDependency={handleRemoveDependency}
+            onChangeCondition={handleChangeCondition}
+          />
+        ) : (
+          <PlEmptyCanvas assistantOpen={assistantOpen} />
+        )}
+
+        {assistantOpen && selectedGroup && (
+          <PlAssistantColumn
+            key={assistantKey}
+            epic={selectedGroup}
+            tasks={groupTasks}
+            initialInput={assistantPrefill}
+            onAddTask={handleAddTask}
+            onClose={() => setAssistantOpen(false)}
+          />
+        )}
+      </div>
+
+      <CreateEpicModal open={showCreateModal} onClose={() => setShowCreateModal(false)} />
+      <ConfirmModal {...confirmProps} />
+    </div>
+  )
+}
+
+function PlEmptyCanvas({ assistantOpen }: { assistantOpen: boolean }): React.JSX.Element {
+  return (
+    <div
+      style={{
+        flex: 1,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: 'var(--bg)',
+        borderRight: assistantOpen ? '1px solid var(--line)' : 'none'
+      }}
+    >
+      <span style={{ fontSize: 12, color: 'var(--fg-4)' }}>Select an epic to get started</span>
+    </div>
   )
 }

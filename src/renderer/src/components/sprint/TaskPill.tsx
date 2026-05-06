@@ -1,115 +1,158 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { AlertTriangle, Clock, Zap, GitBranch, Slash, XCircle } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import type { SprintTask } from '../../../../shared/types'
 import { SPRINGS } from '../../lib/motion'
-import { formatElapsed, failureCategoryForReason } from '../../lib/task-format'
-import { STATUS_METADATA } from '../../lib/task-status-ui'
+import { formatElapsed } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
 import { useSprintSelection } from '../../stores/sprintSelection'
-import { useSprintTasks } from '../../stores/sprintTasks'
-import { formatDuration } from '../../lib/format'
-import { useTaskCost } from '../../hooks/useTaskCost'
-import { TagBadge } from '../ui/TagBadge'
+import { PriorityChip } from './primitives/PriorityChip'
+import { Tag } from '../ui/Tag'
 
-import './TaskPill.css'
+const textPretty = { textWrap: 'pretty' } as React.CSSProperties
 
 interface TaskPillProps {
   task: SprintTask
   selected: boolean
   multiSelected?: boolean | undefined
+  blockingTitles?: string | null | undefined
   onClick: (id: string) => void
 }
 
-function getStatusClass(status: string, prStatus?: string | null): string {
-  if (prStatus === 'branch_only') return 'task-pill--branch-only'
-  if (status === 'active' && prStatus !== 'open') return 'task-pill--active'
-  if (status === 'blocked') return 'task-pill--blocked'
-  if ((status === 'active' || status === 'done') && prStatus === 'open') return 'task-pill--review'
-  if (status === 'done') return 'task-pill--done'
-  return ''
+function contextualRightTag(task: SprintTask): React.ReactNode {
+  if (task.status === 'review' || task.pr_status === 'open' || task.pr_status === 'branch_only') {
+    if (task.pr_number) {
+      return (
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--st-review)',
+            flexShrink: 0
+          }}
+        >
+          #{task.pr_number}
+        </span>
+      )
+    }
+  }
+  if (task.status === 'blocked' && task.depends_on?.length) {
+    return (
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--st-blocked)',
+          flexShrink: 0
+        }}
+      >
+        ↳ {task.depends_on[0]?.id.substring(0, 6)}
+      </span>
+    )
+  }
+  if (task.status === 'done' && task.completed_at) {
+    return (
+      <span
+        style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: 10,
+          color: 'var(--fg-4)',
+          flexShrink: 0
+        }}
+      >
+        {formatElapsed(task.completed_at)}
+      </span>
+    )
+  }
+  return null
 }
 
-function getFailureInfo(
+interface LiveAgentBlockProps {
   task: SprintTask
-): { icon: LucideIcon; label: string; className: string } | null {
-  if (task.status !== 'failed' && task.status !== 'error' && task.status !== 'cancelled')
-    return null
-  if (task.fast_fail_count >= 3)
-    return { icon: Zap, label: 'Fast-fail', className: 'task-pill__fail--fastfail' }
-  if (task.pr_url || task.pr_status === 'branch_only')
-    return { icon: GitBranch, label: 'Push failed', className: 'task-pill__fail--push' }
-  if (task.status === 'cancelled')
-    return { icon: Slash, label: 'Cancelled', className: 'task-pill__fail--cancelled' }
-  return { icon: XCircle, label: 'Agent failed', className: 'task-pill__fail--agent' }
+  elapsed: string
+  now: number
+}
+
+// Only place in this file where .fleet-pulse appears — active tasks only.
+function LiveAgentBlock({ task, elapsed, now }: LiveAgentBlockProps): React.JSX.Element {
+  const pct =
+    task.started_at && task.max_runtime_ms
+      ? Math.min(
+          95,
+          Math.round(((now - new Date(task.started_at).getTime()) / task.max_runtime_ms) * 100)
+        )
+      : 0
+
+  return (
+    <div
+      style={{
+        background: 'var(--surf-1)',
+        border: '1px solid var(--line)',
+        borderRadius: 5,
+        padding: 'var(--s-2)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 'var(--s-1)'
+      }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+        <span className="fleet-pulse" style={{ width: 6, height: 6, flexShrink: 0 }} />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--fg-2)',
+            flex: 1,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap'
+          }}
+        >
+          {elapsed || task.title.substring(0, 24)}
+        </span>
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--fg-3)',
+            flexShrink: 0
+          }}
+        >
+          {pct}%
+        </span>
+      </div>
+      <div style={{ height: 2, background: 'var(--surf-3)', borderRadius: 1, overflow: 'hidden' }}>
+        <div
+          style={{
+            height: '100%',
+            width: `${pct}%`,
+            background: 'var(--st-running)',
+            transition: 'width 0.5s ease'
+          }}
+        />
+      </div>
+    </div>
+  )
 }
 
 function TaskPillInner({
   task,
   selected,
   multiSelected,
+  blockingTitles,
   onClick
 }: TaskPillProps): React.JSX.Element {
   const [elapsed, setElapsed] = useState('')
-  const [arriving, setArriving] = useState(false)
-  const prevStatusRef = useRef(task.status)
   const now = useNow()
-  const { costUsd } = useTaskCost(task.agent_run_id)
-
-  const blockingTitles = useSprintTasks(
-    useCallback(
-      (s) => {
-        if (task.status !== 'blocked' || !task.depends_on?.length) return null
-        return task.depends_on
-          .map((d) => s.tasks.find((t) => t.id === d.id)?.title ?? d.id)
-          .join(', ')
-      },
-      [task.status, task.depends_on]
-    )
-  )
-
-  useEffect(() => {
-    if (task.status !== prevStatusRef.current) {
-      prevStatusRef.current = task.status
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: schedule animation on status transition
-      setArriving(true)
-      const timer = setTimeout(() => setArriving(false), 500)
-      return () => clearTimeout(timer)
-    }
-    return undefined
-  }, [task.status])
 
   const isActive = task.status === 'active' && !!task.started_at
-  useBackoffInterval(() => setElapsed(formatElapsed(task.started_at!)), isActive ? 10_000 : null)
-  // Set initial elapsed value when task becomes active
+  const safeStartedAt = task.started_at ?? new Date().toISOString()
+  useBackoffInterval(() => setElapsed(formatElapsed(safeStartedAt)), isActive ? 10_000 : null)
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: seed elapsed string once on first active render
-    if (isActive) setElapsed(formatElapsed(task.started_at!))
-  }, [isActive, task.started_at])
-
-  const isZombie = task.status === 'active' && (!!task.pr_url || !!task.pr_status)
-  // `now` comes from useNow() — a coarse 10-second tick shared across all pills.
-  // This keeps React.memo effective: the pill only re-renders when task data changes
-  // or the 10-second interval fires, not on every parent render.
-  const isStale =
-    task.status === 'active' &&
-    !!task.started_at &&
-    now - new Date(task.started_at).getTime() > (task.max_runtime_ms ?? 3600000)
-  const failureInfo = getFailureInfo(task)
-
-  const statusClass = getStatusClass(task.status, task.pr_status)
-  const classes = [
-    'task-pill',
-    statusClass,
-    selected ? 'task-pill--selected' : '',
-    multiSelected ? 'task-pill--multi-selected' : '',
-    arriving ? 'task-pill--arriving' : '',
-    isZombie ? 'task-pill--zombie' : ''
-  ]
-    .filter(Boolean)
-    .join(' ')
+    if (isActive) setElapsed(formatElapsed(safeStartedAt))
+  }, [isActive, safeStartedAt])
 
   const toggleTaskSelection = useSprintSelection((s) => s.toggleTaskSelection)
   const clearSelection = useSprintSelection((s) => s.clearSelection)
@@ -127,12 +170,12 @@ function TaskPillInner({
   return (
     <motion.div
       layoutId={task.id}
-      className={classes}
-      onClick={handleClick}
       role="button"
       tabIndex={0}
       aria-label={`Task: ${task.title}, status: ${task.status}`}
       title={blockingTitles ? `Blocked by: ${blockingTitles}` : undefined}
+      data-testid="task-pill"
+      onClick={handleClick}
       onKeyDown={(e) => {
         if (e.key === 'Enter' || e.key === ' ') {
           e.preventDefault()
@@ -144,85 +187,81 @@ function TaskPillInner({
         }
       }}
       transition={SPRINGS.default}
-      data-testid="task-pill"
+      style={{
+        padding: 'var(--s-2) var(--s-3)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 7,
+        background: selected || multiSelected ? 'var(--surf-2)' : 'var(--bg)',
+        border: selected || multiSelected ? '1px solid var(--line-2)' : '1px solid var(--line)',
+        borderRadius: 'var(--r-md)',
+        cursor: 'pointer',
+        textAlign: 'left',
+        opacity: task.status === 'done' ? 0.7 : 1,
+        minWidth: 0
+      }}
     >
+      {/* Top meta row */}
       <div
-        aria-hidden="true"
-        className="task-pill__dot"
         style={{
-          background:
-            task.pr_status === 'open' || task.pr_status === 'branch_only'
-              ? 'var(--fleet-status-review)'
-              : `var(${STATUS_METADATA[task.status].colorToken})`
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-1)',
+          minWidth: 0
         }}
-      />
-      {failureInfo && (
-        <span title={failureInfo.label}>
-          <failureInfo.icon
-            size={10}
-            className={failureInfo.className}
-            aria-label={failureInfo.label}
-          />
+      >
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--fg-4)',
+            flexShrink: 0
+          }}
+        >
+          {task.id.substring(0, 8)}
         </span>
-      )}
-      {failureInfo &&
-        task.failure_reason &&
-        (() => {
-          const chip = failureCategoryForReason(task.failure_reason)
-          return (
-            <span
-              className={`task-pill__failure-chip ${chip.colorClass}`}
-              aria-label={`Failure category: ${chip.label}`}
-            >
-              {chip.label}
-            </span>
-          )
-        })()}
-      {isZombie && (
-        <span title="Agent finished but task not marked done">
-          <AlertTriangle size={12} className="task-pill__zombie-icon" aria-label="Zombie task" />
-        </span>
-      )}
-      {isStale && !isZombie && (
-        <span title="Task may be stuck">
-          <Clock size={12} className="task-pill__stale-icon" aria-label="Stale task" />
-        </span>
-      )}
-      {task.status === 'queued' && !!task.claimed_by && (
-        <span className="task-pill__starting" aria-label="Agent starting">
-          starting…
-        </span>
-      )}
-      <span className="task-pill__title" title={task.title}>
+        {task.priority != null && <PriorityChip priority={task.priority} />}
+        <span style={{ flex: 1 }} />
+        {contextualRightTag(task)}
+      </div>
+
+      {/* Title */}
+      <span
+        style={{
+          fontSize: 12,
+          color: 'var(--fg)',
+          lineHeight: 1.4,
+          ...textPretty
+        }}
+      >
         {task.title}
       </span>
-      <span
-        className="task-pill__badge"
-        style={{ background: 'var(--fleet-accent-surface)', color: 'var(--fleet-accent)' }}
+
+      {/* Live agent block — only for active tasks */}
+      {task.status === 'active' && <LiveAgentBlock task={task} elapsed={elapsed} now={now} />}
+
+      {/* Bottom row */}
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-1)',
+          minWidth: 0
+        }}
       >
-        {task.repo}
-      </span>
-      {task.tags && task.tags.length > 0 && (
-        <div className="task-pill__tags">
-          {task.tags.map((tag) => (
-            <TagBadge key={tag} tag={tag} size="sm" />
-          ))}
-        </div>
-      )}
-      {elapsed && <span className="task-pill__time">{elapsed}</span>}
-      {task.status === 'done' && task.started_at && task.completed_at && (
-        <span className="task-pill__duration">
-          {formatDuration(task.started_at, task.completed_at)}
+        {task.tags && task.tags.map((tag) => <Tag key={tag}>{tag}</Tag>)}
+        <span style={{ flex: 1 }} />
+        <span
+          style={{
+            fontFamily: 'var(--font-mono)',
+            fontSize: 10,
+            color: 'var(--fg-4)',
+            flexShrink: 0
+          }}
+        >
+          {task.repo}
         </span>
-      )}
-      {(task.status === 'done' || task.status === 'review') &&
-        task.agent_run_id &&
-        costUsd !== null && (
-          <span className="task-pill__cost" title={`Agent execution cost: $${costUsd.toFixed(2)}`}>
-            ${costUsd.toFixed(2)}
-          </span>
-        )}
-      {task.status === 'active' && !isZombie && <span aria-hidden="true" className="task-pill__activity" />}
+      </div>
     </motion.div>
   )
 }

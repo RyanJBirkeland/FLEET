@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef, useCallback } from 'react'
+import React, { useMemo, useState, useRef, useCallback } from 'react'
 import { Search, X } from 'lucide-react'
 import { useSprintFilters } from '../../stores/sprintFilters'
 import { useFilterPresets } from '../../stores/filterPresets'
@@ -26,8 +26,6 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
   const deletePreset = useFilterPresets((s) => s.deletePreset)
   const [showSavePrompt, setShowSavePrompt] = useState(false)
 
-  // Local input value so the text field responds instantly while the store
-  // update (which triggers re-partitioning) is debounced by 150ms.
   const [localSearch, setLocalSearch] = useState(searchQuery)
   const debounceTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -43,47 +41,82 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
     [setSearchQuery]
   )
 
-  const repos = useMemo(() => {
-    const set = new Set(tasks.map((t) => t.repo))
-    return Array.from(set).sort()
-  }, [tasks])
-
+  const repos = useMemo(() => Array.from(new Set(tasks.map((t) => t.repo))).sort(), [tasks])
   const hasActiveFilters = !!(searchQuery || repoFilter || tagFilter || statusFilter !== 'all')
   const presetNames = Object.keys(presets)
 
-  // Always show if there are presets, multiple repos, or active search
   if (repos.length <= 1 && !searchQuery && presetNames.length === 0) return null
 
-  const handleSaveView = (): void => {
-    setShowSavePrompt(true)
-  }
+  const chipStyle = (active: boolean): React.CSSProperties => ({
+    padding: '0 var(--s-2)',
+    height: 22,
+    background: active ? 'var(--accent-soft)' : 'none',
+    border: `1px solid ${active ? 'var(--accent-line)' : 'var(--line)'}`,
+    borderRadius: 'var(--r-md)',
+    color: active ? 'var(--accent)' : 'var(--fg-3)',
+    fontSize: 11,
+    fontFamily: 'var(--font-mono)',
+    cursor: 'pointer',
+    whiteSpace: 'nowrap' as const,
+    flexShrink: 0,
+  })
 
   return (
-    <div className="pipeline-filter-bar">
-      <div className="pipeline-filter-bar__search">
-        <Search size={12} />
+    <div
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--s-2)',
+        padding: '0 var(--s-4)',
+        height: 38,
+        borderBottom: '1px solid var(--line)',
+        flexShrink: 0,
+        background: 'var(--bg)',
+        overflow: 'hidden',
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 'var(--s-1)',
+          padding: '0 var(--s-2)',
+          height: 26,
+          background: 'var(--surf-1)',
+          border: '1px solid var(--line)',
+          borderRadius: 'var(--r-md)',
+          flexShrink: 0,
+          minWidth: 160,
+        }}
+      >
+        <Search size={11} color="var(--fg-4)" />
         <input
           type="text"
           value={localSearch}
           onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder="Search tasks\u2026"
-          className="pipeline-filter-bar__input"
+          placeholder="Search tasks…"
           aria-label="Search tasks"
+          style={{
+            background: 'none',
+            border: 'none',
+            outline: 'none',
+            color: 'var(--fg)',
+            fontSize: 12,
+            width: '100%',
+            fontFamily: 'inherit',
+          }}
         />
       </div>
+
       {repos.length > 1 && (
-        <div className="pipeline-filter-bar__chips">
-          <button
-            className={`pipeline-filter-bar__chip${!repoFilter ? ' pipeline-filter-bar__chip--active' : ''}`}
-            onClick={() => setRepoFilter(null)}
-            aria-pressed={!repoFilter}
-          >
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)' }}>
+          <button style={chipStyle(!repoFilter)} onClick={() => setRepoFilter(null)} aria-pressed={!repoFilter}>
             All
           </button>
           {repos.map((repo) => (
             <button
               key={repo}
-              className={`pipeline-filter-bar__chip${repoFilter === repo ? ' pipeline-filter-bar__chip--active' : ''}`}
+              style={chipStyle(repoFilter === repo)}
               onClick={() => setRepoFilter(repoFilter === repo ? null : repo)}
               aria-pressed={repoFilter === repo}
             >
@@ -92,12 +125,13 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
           ))}
         </div>
       )}
+
       {presetNames.length > 0 && (
-        <div className="pipeline-filter-bar__presets">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--s-1)' }}>
           {presetNames.map((name) => (
-            <span key={name} className="pipeline-filter-bar__preset">
+            <span key={name} style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
               <button
-                className="pipeline-filter-bar__preset-name"
+                style={chipStyle(false)}
                 onClick={() => {
                   const preset = loadPreset(name)
                   if (preset) {
@@ -110,9 +144,18 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
                 {name}
               </button>
               <button
-                className="pipeline-filter-bar__preset-delete"
                 onClick={() => deletePreset(name)}
                 aria-label={`Delete preset "${name}"`}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  background: 'none',
+                  border: 'none',
+                  color: 'var(--fg-4)',
+                  cursor: 'pointer',
+                  padding: 2,
+                  borderRadius: 'var(--r-sm)',
+                }}
               >
                 <X size={10} />
               </button>
@@ -120,11 +163,27 @@ export function PipelineFilterBar({ tasks }: PipelineFilterBarProps): React.JSX.
           ))}
         </div>
       )}
+
       {hasActiveFilters && (
-        <button className="pipeline-filter-bar__save" onClick={handleSaveView}>
+        <button
+          onClick={() => setShowSavePrompt(true)}
+          style={{
+            marginLeft: 'auto',
+            padding: '0 var(--s-2)',
+            height: 22,
+            background: 'none',
+            border: '1px solid var(--line)',
+            borderRadius: 'var(--r-md)',
+            color: 'var(--fg-3)',
+            fontSize: 11,
+            cursor: 'pointer',
+            flexShrink: 0,
+          }}
+        >
           Save View
         </button>
       )}
+
       <PromptModal
         open={showSavePrompt}
         title="Save Filter Preset"

@@ -1,367 +1,127 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+/**
+ * DashboardView — verifies the v2Dashboard=true triage layout renders
+ * core regions (mission brief, KPI strip, review queue, etc) given a stubbed
+ * useDashboardData hook.
+ */
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { render, screen } from '@testing-library/react'
 
-// Force V1 dashboard so these tests remain valid until V1 is deleted
-vi.mock('../../stores/featureFlags', () => ({
-  useFeatureFlags: vi.fn((sel?: any) => { const s = { v2Shell: false, v2Dashboard: false, v2Pipeline: false, v2Agents: true, v2Planner: false }; return sel ? sel(s) : s })
+vi.mock('framer-motion', () => ({
+  motion: {
+    div: ({ children, ...rest }: any) => <div {...rest}>{children}</div>
+  },
+  useReducedMotion: () => false
 }))
 
-// ---------------------------------------------------------------------------
-// Mocks
-// ---------------------------------------------------------------------------
-
-const { mockFetchAll } = vi.hoisted(() => ({ mockFetchAll: vi.fn() }))
-
-vi.mock('../../stores/sprintTasks', () => ({
-  useSprintTasks: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      tasks: [{ id: 'seed-1', status: 'queued', title: 'Seed task' }],
-      loading: false,
-      loadData: vi.fn().mockResolvedValue(undefined)
-    })
-  )
-}))
-
-vi.mock('../../stores/costData', () => ({
-  useCostDataStore: vi.fn((selector: (s: Record<string, unknown>) => unknown) =>
-    selector({
-      localAgents: [],
-      totalTokens: 0,
-      fetchLocalAgents: vi.fn().mockResolvedValue(undefined)
-    })
-  )
-}))
-
-vi.mock('../../stores/dashboardData', () => {
-  const { create } = require('zustand')
-  const store = create(() => ({
+const baseData = {
+  metrics: {
+    partitions: {
+      backlog: [],
+      todo: [],
+      blocked: [],
+      inProgress: [],
+      pendingReview: [],
+      approved: [],
+      openPrs: [],
+      done: [],
+      failed: []
+    },
+    activeAgents: [],
+    attentionItems: [],
+    stats: {
+      active: 0,
+      queued: 0,
+      blocked: 0,
+      review: 0,
+      done: 0,
+      doneToday: 0,
+      failed: 0,
+      actualFailed: 0
+    },
+    recentCompletions: [],
+    tokens24h: 0,
+    tokenTrendData: [],
+    tokenAvg: null,
+    taskTokenMap: new Map<string, number>(),
+    stuckCount: 0,
+    loadSaturated: null,
+    successRate7dAvg: null,
+    successRateWeekDelta: null,
+    avgDuration: null,
+    avgTaskDuration: null,
     throughputData: [],
-    loadData: null,
-    feedEvents: [],
-    prCount: 0,
-    cardErrors: {},
-    loading: false,
-    fetchAll: mockFetchAll,
-    fetchLoad: vi.fn()
-  }))
-  return { useDashboardDataStore: store }
-})
+    successTrendData: [],
+    avgCostPerTask: null,
+    failureRate: null,
+    perAgentStats: [],
+    perRepoStats: [],
+    briefHeadlineParts: [{ kind: 'text' as const, text: 'All quiet.' }],
+    capacity: 2,
+    drainStatus: null
+  },
+  actions: {
+    openAgentsView: vi.fn(),
+    openPipelineView: vi.fn(),
+    openReviewView: vi.fn(),
+    openPlannerView: vi.fn(),
+    openNewTask: vi.fn(),
+    retryTask: vi.fn().mockResolvedValue(undefined)
+  }
+}
 
-// ---------------------------------------------------------------------------
-// Subject + stores
-// ---------------------------------------------------------------------------
+vi.mock('../../components/dashboard/hooks/useDashboardData', () => ({
+  useDashboardData: () => baseData
+}))
+
+// Stub cards we do not need to fully exercise here.
+vi.mock('../../components/dashboard/LiveColumn/ActiveAgentsCard', () => ({
+  ActiveAgentsCard: () => <div data-testid="active-agents-card" />
+}))
+vi.mock('../../components/dashboard/LiveColumn/PipelineGlanceCard', () => ({
+  PipelineGlanceCard: () => <div data-testid="pipeline-glance-card" />
+}))
+vi.mock('../../components/dashboard/LiveColumn/ThroughputCard', () => ({
+  ThroughputCard: () => <div data-testid="throughput-card" />
+}))
+vi.mock('../../components/dashboard/TriageColumn/AttentionCard', () => ({
+  AttentionCard: () => <div data-testid="attention-card" />
+}))
+vi.mock('../../components/dashboard/TriageColumn/RecentCompletionsCard', () => ({
+  RecentCompletionsCard: () => <div data-testid="recent-completions-card" />
+}))
+vi.mock('../../components/dashboard/StatsAccordion/PerAgentStats', () => ({
+  PerAgentStats: () => <div data-testid="per-agent-stats" />
+}))
+vi.mock('../../components/dashboard/StatsAccordion/PerRepoStats', () => ({
+  PerRepoStats: () => <div data-testid="per-repo-stats" />
+}))
 
 import DashboardView from '../DashboardView'
-import { useDashboardDataStore } from '../../stores/dashboardData'
-import { useSprintFilters } from '../../stores/sprintFilters'
-import { usePanelLayoutStore } from '../../stores/panelLayout'
-import { useSprintTasks } from '../../stores/sprintTasks'
-import { useCostDataStore } from '../../stores/costData'
-import { nowIso } from '../../../../shared/time'
-
-// ---------------------------------------------------------------------------
-// Tests
-// ---------------------------------------------------------------------------
 
 describe('DashboardView', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.spyOn(Math, 'random').mockReturnValue(0)
-    useSprintFilters.setState({ searchQuery: '', statusFilter: 'all' })
-    useDashboardDataStore.setState({
-      throughputData: [],
-      loadData: null,
-      feedEvents: [],
-      prCount: 0,
-      successTrendData: [],
-      cardErrors: {},
-      loading: false,
-      fetchAll: mockFetchAll
-    })
   })
 
-  afterEach(() => {
-    vi.restoreAllMocks()
+  it('renders without crashing with empty data', () => {
+    const { container } = render(<DashboardView />)
+    expect(container.firstChild).not.toBeNull()
   })
 
-  it('renders the Ops Deck command center', () => {
+  it('renders the MissionBriefBand region', () => {
     render(<DashboardView />)
-    expect(screen.getByText('FLEET Command Center')).toBeInTheDocument()
+    expect(screen.getByText('All quiet.')).toBeInTheDocument()
+    expect(screen.getByText('Mission Brief')).toBeInTheDocument()
   })
 
-  it('renders stat rail for key metrics', () => {
+  it('renders the KPIStrip with all five labels', () => {
     render(<DashboardView />)
-    expect(screen.getByText('Active')).toBeInTheDocument()
-    expect(screen.getByText('Queued')).toBeInTheDocument()
-    // Done label is in a div with subtext siblings — query by role
-    expect(screen.getAllByRole('button', { name: /done/i }).length).toBeGreaterThan(0)
-    // Tokens 24h appears in both StatusRail and ActivitySection
-    expect(screen.getAllByText('Tokens 24h').length).toBeGreaterThan(0)
+    expect(screen.getByText('Success rate')).toBeInTheDocument()
+    expect(screen.getByText('Failure rate')).toBeInTheDocument()
   })
 
-  it('renders pipeline and token sections', () => {
+  it('renders the empty state for the Review queue when there are no pending tasks', () => {
     render(<DashboardView />)
-    expect(screen.getByText('Pipeline')).toBeInTheDocument()
-    expect(screen.getByText('Throughput · last 24h')).toBeInTheDocument()
-  })
-
-  it('clicking Active rail tile navigates to Sprint with in-progress filter', () => {
-    render(<DashboardView />)
-    const activeStat = screen.getByText('Active').closest('button')!
-    fireEvent.click(activeStat)
-
-    expect(useSprintFilters.getState().statusFilter).toBe('in-progress')
-    expect(usePanelLayoutStore.getState().activeView).toBe('sprint')
-  })
-
-  it('clicking Done rail tile navigates to Sprint with done filter', () => {
-    render(<DashboardView />)
-    // Done tile is a button with data-role="rail-tile"
-    const doneTiles = screen.getAllByRole('button', { name: /done/i })
-    // Find the rail tile (not the pipeline stage button)
-    const doneTile = doneTiles.find((el) => el.getAttribute('data-role') === 'rail-tile')!
-    fireEvent.click(doneTile)
-
-    expect(useSprintFilters.getState().statusFilter).toBe('done')
-    expect(usePanelLayoutStore.getState().activeView).toBe('sprint')
-  })
-
-  it('renders chart data from completionsPerHour', () => {
-    useDashboardDataStore.setState({
-      throughputData: [
-        { hour: '10:00', successCount: 4, failedCount: 1 },
-        { hour: '11:00', successCount: 2, failedCount: 1 }
-      ],
-      loading: false
-    })
-    render(<DashboardView />)
-    expect(screen.getByText('Throughput · last 24h')).toBeInTheDocument()
-  })
-
-  it('renders feed events from recentEvents', () => {
-    useDashboardDataStore.setState({
-      feedEvents: [
-        { id: '1', label: 'complete: agent-1', accent: 'cyan', timestamp: Date.now() - 5000 },
-        { id: '2', label: 'error: agent-2', accent: 'red', timestamp: Date.now() - 10000 },
-        { id: '3', label: 'spawn: agent-3', accent: 'purple', timestamp: Date.now() - 20000 }
-      ],
-      loading: false
-    })
-    render(<DashboardView />)
-    expect(screen.getByText('complete: agent-1')).toBeInTheDocument()
-    expect(screen.getByText('error: agent-2')).toBeInTheDocument()
-    expect(screen.getByText('spawn: agent-3')).toBeInTheDocument()
-  })
-
-  it('renders correct review and open PR counts from pendingReview and openPrs partitions', () => {
-    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
-      selector({
-        tasks: [
-          { id: '1', status: 'review', title: 'T1' },
-          { id: '2', status: 'active', pr_status: 'open', title: 'T2' }
-        ],
-        loading: false,
-        loadData: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    // pendingReview has 1 task (status='review'), openPrs has 1 task (active + pr_status='open')
-    // The Sankey shows review=2 (combined), StatusRail shows review=1
-    expect(screen.getAllByText('1').length).toBeGreaterThan(0) // review and active both show 1
-  })
-
-  // ---------- Branch coverage: tokens/run card ----------
-
-  it('shows dash when no token data available', () => {
-    render(<DashboardView />)
-    // tokenAvg is null, should show '—' in tokens/run card
-    expect(screen.getByText('—')).toBeInTheDocument()
-  })
-
-  it('shows success rate chart card', () => {
-    render(<DashboardView />)
-    expect(screen.getByText('Success rate · last 14d')).toBeInTheDocument()
-  })
-
-  it('shows system load chart card', () => {
-    render(<DashboardView />)
-    expect(screen.getByText('System load · last 10m')).toBeInTheDocument()
-  })
-
-  // ---------- Branch coverage: recentCompletions ----------
-
-  it('renders Recent Completions card', () => {
-    render(<DashboardView />)
-    expect(screen.getByText('Recent Completions')).toBeInTheDocument()
-  })
-
-  it('shows recent completions when done tasks exist', () => {
-    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
-      selector({
-        tasks: [
-          {
-            id: '1',
-            status: 'done',
-            title: 'Implement feature X',
-            completed_at: nowIso()
-          }
-        ],
-        loading: false,
-        loadData: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    expect(screen.getByText('Implement feature X')).toBeInTheDocument()
-    expect(screen.getByText('just now')).toBeInTheDocument()
-  })
-
-  // ---------- Branch coverage: error states with retry ----------
-
-  it('shows error state with retry button when all fetches fail', () => {
-    useDashboardDataStore.setState({
-      cardErrors: {
-        throughput: 'Failed to load completions',
-        feed: 'Failed to load activity feed',
-        prs: 'Failed to load PR data'
-      },
-      loading: false
-    })
-
-    render(<DashboardView />)
-
-    const retryBtns = screen.getAllByText('Retry')
-    expect(retryBtns.length).toBeGreaterThanOrEqual(1)
-  })
-
-  it('retries fetching data when Retry button clicked', () => {
-    useDashboardDataStore.setState({
-      cardErrors: {
-        throughput: 'Failed to load completions',
-        feed: 'Failed to load activity feed',
-        prs: 'Failed to load PR data'
-      },
-      loading: false
-    })
-
-    render(<DashboardView />)
-
-    // Click the first retry button (throughput card)
-    const retryBtns = screen.getAllByText('Retry')
-    fireEvent.click(retryBtns[0])
-
-    expect(mockFetchAll).toHaveBeenCalled()
-  })
-
-  // ---------- Branch coverage: loading state ----------
-
-  it('shows Loading... text during initial load with no throughput data', () => {
-    useDashboardDataStore.setState({
-      loading: true,
-      throughputData: []
-    })
-    render(<DashboardView />)
-    // Multiple "Loading..." elements may appear (status bar + load card)
-    expect(screen.getAllByText('Loading...').length).toBeGreaterThan(0)
-  })
-
-  // ---------- Branch coverage: clicking Queued and PRs stats ----------
-
-  it('clicking Queued rail tile navigates to Sprint with todo filter', () => {
-    render(<DashboardView />)
-    const queuedElements = screen.getAllByText('Queued')
-    const queuedStat = queuedElements.find((el) => el.closest('button'))!.closest('button')!
-    fireEvent.click(queuedStat)
-
-    expect(useSprintFilters.getState().statusFilter).toBe('todo')
-    expect(usePanelLayoutStore.getState().activeView).toBe('sprint')
-  })
-
-  // ---------- Branch coverage: onboarding state ----------
-
-  it('shows onboarding card when no tasks exist', () => {
-    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
-      selector({
-        tasks: [],
-        loading: false,
-        loadData: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    expect(screen.getByText('Welcome to FLEET')).toBeInTheDocument()
-    expect(screen.getByText('Create First Task')).toBeInTheDocument()
-  })
-
-  it('clicking Create First Task navigates to task workbench', () => {
-    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
-      selector({
-        tasks: [],
-        loading: false,
-        loadData: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    fireEvent.click(screen.getByText('Create First Task'))
-    expect(usePanelLayoutStore.getState().activeView).toBe('planner')
-  })
-
-  // ---------- Branch coverage: fires strip ----------
-
-  it('shows fires strip when there are failed tasks', () => {
-    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
-      selector({
-        tasks: [
-          { id: '1', status: 'failed', title: 'Broken task' },
-          { id: '2', status: 'queued', title: 'Other task' }
-        ],
-        loading: false,
-        loadData: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    expect(screen.getByRole('region', { name: 'Dashboard alerts' })).toBeInTheDocument()
-    expect(screen.getByText('1 failed')).toBeInTheDocument()
-  })
-
-  it('does not show fires strip when no issues', () => {
-    vi.mocked(useSprintTasks).mockImplementation((selector: any) =>
-      selector({
-        tasks: [{ id: '1', status: 'done', title: 'Done task', completed_at: nowIso() }],
-        loading: false,
-        loadData: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    expect(screen.queryByRole('region', { name: 'Dashboard alerts' })).not.toBeInTheDocument()
-  })
-
-  // ---------- Branch coverage: cost trend data ----------
-
-  it('renders token trend chart with agent data', () => {
-    vi.mocked(useCostDataStore).mockImplementation((selector: any) =>
-      selector({
-        localAgents: [
-          {
-            id: 'a1',
-            durationMs: 60000,
-            tokensIn: 30000,
-            tokensOut: 5000,
-            startedAt: nowIso(),
-            taskTitle: 'Task A'
-          },
-          {
-            id: 'a2',
-            durationMs: 120000,
-            tokensIn: 60000,
-            tokensOut: 10000,
-            startedAt: nowIso(),
-            taskTitle: 'Task B'
-          }
-        ],
-        totalTokens: 105000,
-        fetchLocalAgents: vi.fn()
-      })
-    )
-    render(<DashboardView />)
-    expect(screen.getByText(/2 runs · avg/)).toBeInTheDocument()
+    expect(screen.getByText('All caught up.')).toBeInTheDocument()
   })
 })

@@ -1,154 +1,86 @@
-// src/renderer/src/components/layout/__tests__/Sidebar.test.tsx
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { describe, it, expect, vi } from 'vitest'
-
-// Force V1 sidebar so these tests remain valid until V1 is deleted
-vi.mock('../../../stores/featureFlags', () => ({
-  useFeatureFlags: vi.fn((sel?: any) => { const s = { v2Shell: false, v2Dashboard: false, v2Pipeline: false, v2Agents: true, v2Planner: false }; return sel ? sel(s) : s })
-}))
 
 vi.mock('framer-motion', () => ({
   motion: { div: ({ children, ...props }: any) => <div {...props}>{children}</div> },
   useReducedMotion: () => false
 }))
 
-let mockReviewCount = 0
-let mockFailedCount = 0
+const sprintTaskState: { tasks: Array<{ id: string; title: string; status: string }> } = {
+  tasks: []
+}
 
 vi.mock('../../../stores/sprintTasks', () => ({
-  useSprintTasks: vi.fn((sel?: any) => {
-    const tasks = [
-      ...Array.from({ length: mockReviewCount }, (_, i) => ({
-        id: `r${i}`,
-        status: 'review',
-        title: `Task ${i}`
-      })),
-      ...Array.from({ length: mockFailedCount }, (_, i) => ({
-        id: `f${i}`,
-        status: i % 2 === 0 ? 'failed' : 'error',
-        title: `Failed ${i}`
-      }))
-    ]
-    const state = { tasks }
-    return sel ? sel(state) : state
-  }),
-  selectReviewTaskCount: (s: any) =>
-    s.tasks.reduce((n: number, t: any) => (t.status === 'review' ? n + 1 : n), 0),
-  selectFailedTaskCount: (s: any) =>
-    s.tasks.reduce(
-      (n: number, t: any) => (t.status === 'failed' || t.status === 'error' ? n + 1 : n),
-      0
-    )
+  useSprintTasks: vi.fn((selector?: any) =>
+    typeof selector === 'function' ? selector(sprintTaskState) : sprintTaskState
+  ),
+  selectActiveTasks: (s: typeof sprintTaskState) =>
+    s.tasks.filter((t) => t.status === 'active'),
+  selectReviewTaskCount: (s: typeof sprintTaskState) =>
+    s.tasks.reduce((n, t) => (t.status === 'review' ? n + 1 : n), 0),
+  selectFailedTaskCount: (s: typeof sprintTaskState) =>
+    s.tasks.reduce((n, t) => (t.status === 'failed' || t.status === 'error' ? n + 1 : n), 0)
 }))
 
-vi.mock('../../../stores/sidebar', () => {
-  const mockState = {
-    pinnedViews: ['dashboard', 'agents', 'ide'],
-    pinView: vi.fn(),
-    unpinView: vi.fn()
-  }
+const mockSetView = vi.fn()
+const mockSetSelectedTaskId = vi.fn()
 
-  return {
-    useSidebarStore: vi.fn((sel?: any) => (sel ? sel(mockState) : mockState)),
-    getUnpinnedViews: vi.fn(() => ['sprint', 'code-review'])
-  }
-})
+vi.mock('../../../stores/panelLayout', () => ({
+  usePanelLayoutStore: vi.fn((selector: any) =>
+    selector({ activeView: 'dashboard', setView: mockSetView })
+  )
+}))
 
-vi.mock('../../../stores/panelLayout', () => {
-  const mockPanelState = {
-    root: {
-      type: 'leaf',
-      panelId: 'p1',
-      tabs: [{ viewKey: 'dashboard', label: 'Dashboard' }],
-      activeTab: 0
-    },
-    focusedPanelId: 'p1',
-    activeView: 'dashboard',
-    splitPanel: vi.fn(),
-    addTab: vi.fn(),
-    setView: vi.fn()
-  }
+vi.mock('../../../stores/sprintSelection', () => ({
+  useSprintSelection: vi.fn((selector: any) =>
+    selector({ setSelectedTaskId: mockSetSelectedTaskId })
+  )
+}))
 
-  return {
-    usePanelLayoutStore: vi.fn((sel?: any) => (sel ? sel(mockPanelState) : mockPanelState)),
-    // getOpenViews is a standalone exported function, not a store method
-    getOpenViews: vi.fn(() => ['dashboard'])
-  }
-})
+vi.mock('../../../stores/gitTree', () => ({
+  useGitTreeStore: vi.fn((selector: any) => selector({ branch: 'main' }))
+}))
+
+import { Sidebar } from '../Sidebar'
 
 describe('Sidebar', () => {
-  it('shows blue badge count on Code Review when tasks are in review status', async () => {
-    mockReviewCount = 2
-    // pin code-review so the badge-bearing item renders
-    const { useSidebarStore } = await import('../../../stores/sidebar')
-    vi.mocked(useSidebarStore).mockImplementation((sel?: any) => {
-      const state = {
-        pinnedViews: ['dashboard', 'agents', 'code-review'],
-        pinView: vi.fn(),
-        unpinView: vi.fn()
-      }
-      return sel ? sel(state) : state
-    })
-    const { Sidebar } = await import('../Sidebar')
-    render(<Sidebar />)
-    const badge = screen.getByTestId('sidebar-badge-code-review')
-    expect(badge).toHaveTextContent('2')
-    expect(badge).toHaveAttribute('data-accent', 'blue')
-    mockReviewCount = 0
+  beforeEach(() => {
+    sprintTaskState.tasks = []
+    mockSetView.mockClear()
+    mockSetSelectedTaskId.mockClear()
   })
 
-  it('shows red badge on Sprint Pipeline when tasks are failed/error', async () => {
-    mockFailedCount = 3
-    const { useSidebarStore } = await import('../../../stores/sidebar')
-    vi.mocked(useSidebarStore).mockImplementation((sel?: any) => {
-      const state = {
-        pinnedViews: ['dashboard', 'sprint', 'ide'],
-        pinView: vi.fn(),
-        unpinView: vi.fn()
-      }
-      return sel ? sel(state) : state
-    })
-    const { Sidebar } = await import('../Sidebar')
-    render(<Sidebar />)
-    const badge = screen.getByTestId('sidebar-badge-sprint')
-    expect(badge).toHaveTextContent('3')
-    expect(badge).toHaveAttribute('data-accent', 'red')
-    mockFailedCount = 0
+  it('renders the sidebar with workspace eyebrow', () => {
+    const { container } = render(<Sidebar />)
+    expect(container.querySelector('.sidebar-v2')).not.toBeNull()
   })
 
-  it('hides Sprint Pipeline badge when no failed tasks', async () => {
-    mockFailedCount = 0
-    const { useSidebarStore } = await import('../../../stores/sidebar')
-    vi.mocked(useSidebarStore).mockImplementation((sel?: any) => {
-      const state = {
-        pinnedViews: ['dashboard', 'sprint', 'ide'],
-        pinView: vi.fn(),
-        unpinView: vi.fn()
-      }
-      return sel ? sel(state) : state
-    })
-    const { Sidebar } = await import('../Sidebar')
+  it('does not show the live agents block when there are no active tasks', () => {
     render(<Sidebar />)
-    expect(screen.queryByTestId('sidebar-badge-sprint')).toBeNull()
+    expect(screen.queryByText('Live')).toBeNull()
   })
 
-  it('renders pinned view icons', async () => {
-    const { Sidebar } = await import('../Sidebar')
+  it('renders one LiveAgentRow when there is a single active task', () => {
+    sprintTaskState.tasks = [{ id: 't1', title: 'Refactor login', status: 'active' }]
     render(<Sidebar />)
-    // Should render 3 pinned items + more button
-    const buttons = screen.getAllByRole('button')
-    expect(buttons.length).toBeGreaterThanOrEqual(3)
+    expect(screen.getByText('Live')).toBeInTheDocument()
+    expect(screen.getByText('Refactor login')).toBeInTheDocument()
   })
 
-  it('renders the more button', async () => {
-    const { Sidebar } = await import('../Sidebar')
+  it('caps the live agents block at three rows when there are more active tasks', () => {
+    sprintTaskState.tasks = [
+      { id: 't1', title: 'Task one', status: 'active' },
+      { id: 't2', title: 'Task two', status: 'active' },
+      { id: 't3', title: 'Task three', status: 'active' },
+      { id: 't4', title: 'Task four', status: 'active' }
+    ]
     render(<Sidebar />)
-    expect(screen.getByLabelText('More views')).toBeInTheDocument()
-  })
-
-  it('renders model badge', async () => {
-    const { Sidebar } = await import('../Sidebar')
-    render(<Sidebar model="haiku" />)
-    expect(screen.getByText('haiku')).toBeInTheDocument()
+    // The live count display still shows the full count
+    expect(screen.getByText('4')).toBeInTheDocument()
+    // Only the first three rows are rendered
+    expect(screen.getByText('Task one')).toBeInTheDocument()
+    expect(screen.getByText('Task two')).toBeInTheDocument()
+    expect(screen.getByText('Task three')).toBeInTheDocument()
+    expect(screen.queryByText('Task four')).toBeNull()
   })
 })

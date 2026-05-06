@@ -1,7 +1,13 @@
+/**
+ * AgentsView — covers the v2Agents=true path that ships by default.
+ * Mocks the heavy children so we can verify the three-pane layout renders
+ * and reacts to selection/launchpad transitions without bringing in the full
+ * agent SDK and event-streaming machinery.
+ */
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
+import { render, screen, fireEvent } from '@testing-library/react'
+import { nowIso } from '../../../../shared/time'
 
-// Mock framer-motion
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...rest }: any) => <div {...rest}>{children}</div>
@@ -12,18 +18,10 @@ vi.mock('framer-motion', () => ({
 vi.mock('../../lib/motion', () => ({
   VARIANTS: { fadeIn: {} },
   SPRINGS: { snappy: {} },
-  REDUCED_TRANSITION: { duration: 0 },
+  REDUCED_TRANSITION: {},
   useReducedMotion: () => false
 }))
 
-// Force V1 rendering — these tests cover AgentsViewV1 behaviour
-vi.mock('../../stores/featureFlags', () => ({
-  useFeatureFlags: vi.fn((selector: any) =>
-    selector({ v2Shell: false, v2Dashboard: false, v2Pipeline: false, v2Agents: false })
-  )
-}))
-
-// Mock stores
 const mockAgentHistoryState = {
   agents: [] as any[],
   fetched: false,
@@ -39,12 +37,17 @@ vi.mock('../../stores/agentHistory', () => ({
   useAgentHistoryStore: vi.fn((selector: any) => selector(mockAgentHistoryState))
 }))
 
+const mockAgentEventsState = {
+  init: vi.fn(() => vi.fn()),
+  loadHistory: vi.fn().mockResolvedValue(undefined),
+  events: {} as Record<string, unknown[]>,
+  clear: vi.fn()
+}
+
 vi.mock('../../stores/agentEvents', () => ({
-  useAgentEventsStore: vi.fn((selector: any) =>
-    selector({
-      init: vi.fn(() => vi.fn()),
-      loadHistory: vi.fn().mockResolvedValue(undefined)
-    })
+  useAgentEventsStore: Object.assign(
+    vi.fn((selector: any) => selector(mockAgentEventsState)),
+    { getState: () => mockAgentEventsState }
   )
 }))
 
@@ -55,14 +58,28 @@ vi.mock('../../stores/panelLayout', () => ({
 }))
 
 vi.mock('../../stores/toasts', () => ({
-  toast: { error: vi.fn(), success: vi.fn() }
+  toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() }
 }))
 
-// Mock child components
+vi.mock('../../hooks/useAgentViewLifecycle', () => ({
+  useAgentViewLifecycle: vi.fn()
+}))
+
+vi.mock('../../hooks/useAgentViewCommands', () => ({
+  useAgentViewCommands: vi.fn()
+}))
+
+vi.mock('../../hooks/useAgentSlashCommands', () => ({
+  useAgentSlashCommands: () => ({ handleCommand: vi.fn() })
+}))
+
+vi.mock('../../adapters/attachments', () => ({
+  buildLocalAgentMessage: (msg: string) => msg
+}))
+
 vi.mock('../../components/agents/AgentList', () => ({
-  AgentList: ({ agents, onSelect, loading }: any) => (
+  AgentList: ({ agents, onSelect }: any) => (
     <div data-testid="agent-list">
-      {loading && <span>Loading...</span>}
       {agents.map((a: any) => (
         <button key={a.id} data-testid={`agent-${a.id}`} onClick={() => onSelect(a.id)}>
           {a.id}
@@ -73,186 +90,75 @@ vi.mock('../../components/agents/AgentList', () => ({
 }))
 
 vi.mock('../../components/agents/AgentConsole', () => ({
-  AgentConsole: ({ agentId }: any) => <div data-testid="agent-console">{agentId}</div>
+  AgentConsole: ({ agentId }: any) => <div data-testid="agent-console">Console: {agentId}</div>
 }))
 
 vi.mock('../../components/agents/AgentLaunchpad', () => ({
-  AgentLaunchpad: ({ onAgentSpawned }: any) => (
-    <div data-testid="agent-launchpad">
-      <button onClick={onAgentSpawned}>Spawned</button>
-    </div>
+  AgentLaunchpad: () => <div data-testid="agent-launchpad">Launchpad</div>
+}))
+
+vi.mock('../../components/agents/FleetGlance', () => ({
+  FleetGlance: ({ agents }: any) => (
+    <div data-testid="fleet-glance">Glance: {agents.length} agents</div>
   )
 }))
 
-vi.mock('../../components/neon', () => ({
-  NeonCard: ({ children, title }: any) => (
-    <div data-testid="neon-card">
-      <span>{title}</span>
-      {children}
-    </div>
+vi.mock('../../components/agents/AgentInspector', () => ({
+  AgentInspector: ({ agent }: any) => (
+    <div data-testid="agent-inspector">Inspector: {agent?.id}</div>
   )
 }))
 
-// Mock window.api
-Object.defineProperty(window, 'api', {
-  value: {
-    getRepoPaths: vi.fn().mockResolvedValue({ FLEET: '/repo/fleet' }),
-    spawnLocalAgent: vi.fn().mockResolvedValue({ pid: 1, logPath: '/tmp/log', id: 'agent-1' }),
-    steerAgent: vi.fn().mockResolvedValue({ ok: true }),
-    killAgent: vi.fn().mockResolvedValue(undefined),
-    sprint: { update: vi.fn().mockResolvedValue(undefined) },
-    settings: {
-      get: vi.fn().mockResolvedValue(null),
-      set: vi.fn().mockResolvedValue(undefined)
-    }
-  },
-  writable: true,
-  configurable: true
-})
+vi.mock('../../components/ui/ErrorBoundary', () => ({
+  ErrorBoundary: ({ children }: any) => <>{children}</>
+}))
 
 import { AgentsView } from '../AgentsView'
-import { nowIso } from '../../../../shared/time'
 
-describe('AgentsView', () => {
+describe('AgentsView (via AgentsView dispatcher)', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
     mockAgentHistoryState.agents = []
-    mockAgentHistoryState.fetched = false
-    mockAgentHistoryState.fetchError = null
-  })
-
-  it('renders Fleet header', () => {
-    render(<AgentsView />)
-    expect(screen.getByText('Fleet')).toBeInTheDocument()
-  })
-
-  it('renders agents sidebar with correct CSS class', () => {
-    const { container } = render(<AgentsView />)
-    const sidebar = container.querySelector('.agents-sidebar')
-    expect(sidebar).toBeInTheDocument()
-  })
-
-  // ---------- Branch coverage: main content area states ----------
-
-  it('does not show loading skeleton when fetch returned empty array', () => {
     mockAgentHistoryState.fetched = true
-    mockAgentHistoryState.agents = []
-    render(<AgentsView />)
-    // loading prop should be false since fetched is true, so no "Loading..." text
-    expect(screen.queryByText('Loading...')).not.toBeInTheDocument()
+    mockAgentHistoryState.fetchError = null
+    vi.clearAllMocks()
+    Object.defineProperty(window, 'innerWidth', {
+      writable: true,
+      configurable: true,
+      value: 1440
+    })
   })
 
-  it('shows loading skeleton before fetch completes', () => {
-    mockAgentHistoryState.fetched = false
-    mockAgentHistoryState.agents = []
-    render(<AgentsView />)
-    expect(screen.getByText('Loading...')).toBeInTheDocument()
+  it('renders without crashing when v2Agents=true', () => {
+    const { container } = render(<AgentsView />)
+    expect(container.firstChild).not.toBeNull()
   })
 
-  it('shows Launchpad when no agents and none selected', () => {
+  it('renders the agent list panel', () => {
+    render(<AgentsView />)
+    expect(screen.getByTestId('agent-list')).toBeInTheDocument()
+  })
+
+  it('shows the launchpad when no agents have been spawned yet', () => {
+    mockAgentHistoryState.agents = []
     render(<AgentsView />)
     expect(screen.getByTestId('agent-launchpad')).toBeInTheDocument()
   })
 
-  it('shows "Select an agent" message when agents exist but none selected after deselect', () => {
-    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'complete' }]
-    // Agents exist, auto-select will fire in useEffect, but on first render selectedId is null
-    // After useEffect, it will select the first agent. We need agents but to show the empty state
-    // we'd need selectedId set to something invalid. This branch is hard to test directly.
-    // Instead test that AgentConsole shows for a selected agent.
-    render(<AgentsView />)
-    // auto-select kicks in, so console should show
-    expect(screen.getByTestId('agent-console')).toBeInTheDocument()
-  })
-
-  it('shows AgentConsole when an agent is selected from list', () => {
+  it('shows the AgentConsole with the selected agent id once an agent is picked', () => {
     mockAgentHistoryState.agents = [
       { id: 'agent-1', startedAt: nowIso(), status: 'running' },
       { id: 'agent-2', startedAt: nowIso(), status: 'complete' }
     ]
     render(<AgentsView />)
-    // Should auto-select first agent
+    // The first render auto-falls-back to agents[0] for activeId
     expect(screen.getByTestId('agent-console')).toHaveTextContent('agent-1')
-    // Select second agent
     fireEvent.click(screen.getByTestId('agent-agent-2'))
     expect(screen.getByTestId('agent-console')).toHaveTextContent('agent-2')
   })
 
-  it('shows Launchpad when New Agent button clicked', () => {
-    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'complete' }]
+  it('renders the inspector pane in console mode at wide viewports', () => {
+    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'running' }]
     render(<AgentsView />)
-    // Click spawn button
-    fireEvent.click(screen.getByTitle('New Agent'))
-    expect(screen.getByTestId('agent-launchpad')).toBeInTheDocument()
-  })
-
-  it('hides Launchpad and refreshes agents when agent spawned callback fires', () => {
-    render(<AgentsView />)
-    expect(screen.getByTestId('agent-launchpad')).toBeInTheDocument()
-    // Click the "Spawned" button in the mock launchpad
-    fireEvent.click(screen.getByText('Spawned'))
-    expect(mockAgentHistoryState.fetchAgents).toHaveBeenCalled()
-  })
-
-  // ---------- Branch coverage: fleet:open-spawn-modal event ----------
-
-  it('opens launchpad when fleet:open-spawn-modal event fires', () => {
-    mockAgentHistoryState.agents = [{ id: 'agent-1', startedAt: nowIso(), status: 'complete' }]
-    render(<AgentsView />)
-    expect(screen.getByTestId('agent-console')).toBeInTheDocument()
-    act(() => {
-      window.dispatchEvent(new Event('fleet:open-spawn-modal'))
-    })
-    expect(screen.getByTestId('agent-launchpad')).toBeInTheDocument()
-  })
-
-  // ---------- Scratchpad banner and tooltip ----------
-
-  it('shows scratchpad banner when not dismissed', async () => {
-    const mockGet = vi.fn().mockResolvedValue(null)
-    window.api.settings.get = mockGet
-
-    render(<AgentsView />)
-
-    await vi.waitFor(() => {
-      expect(mockGet).toHaveBeenCalledWith('scratchpad.noticeDismissed')
-    })
-
-    await vi.waitFor(() => {
-      expect(screen.getByRole('status')).toBeInTheDocument()
-      expect(screen.getByRole('status')).toHaveTextContent('Scratchpad.')
-    })
-  })
-
-  it('hides scratchpad banner when already dismissed', async () => {
-    const mockGet = vi.fn().mockResolvedValue('true')
-    window.api.settings.get = mockGet
-
-    render(<AgentsView />)
-
-    await vi.waitFor(() => {
-      expect(mockGet).toHaveBeenCalledWith('scratchpad.noticeDismissed')
-    })
-
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
-  })
-
-  it('dismisses banner when X button clicked', async () => {
-    const mockGet = vi.fn().mockResolvedValue(null)
-    const mockSet = vi.fn().mockResolvedValue(undefined)
-    window.api.settings.get = mockGet
-    window.api.settings.set = mockSet
-
-    render(<AgentsView />)
-
-    await vi.waitFor(() => {
-      expect(screen.getByRole('status')).toBeInTheDocument()
-    })
-
-    const dismissButton = screen.getByLabelText('Dismiss scratchpad notice')
-    fireEvent.click(dismissButton)
-
-    expect(mockSet).toHaveBeenCalledWith('scratchpad.noticeDismissed', 'true')
-    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+    expect(screen.getByTestId('agent-inspector')).toBeInTheDocument()
   })
 })
