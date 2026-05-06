@@ -1,4 +1,4 @@
-import React, { useRef, useState, useMemo } from 'react'
+import React, { useRef, useState, useMemo, useEffect } from 'react'
 import { AnimatePresence } from 'framer-motion'
 import type { SprintTask } from '../../../../shared/types'
 import { useSprintUI } from '../../stores/sprintUI'
@@ -36,6 +36,25 @@ const STAGE_DOT_KIND: Record<PipelineStageV2Props['name'], StatusDotKind> = {
   done: 'done'
 }
 
+function resolveBlockingTitles(
+  task: SprintTask,
+  taskTitlesById: ReadonlyMap<string, string> | undefined
+): string | null {
+  if (!task.depends_on?.length) return null
+  return task.depends_on.map((dep) => taskTitlesById?.get(dep.id) ?? dep.id).join(', ')
+}
+
+/**
+ * Queries the cards container once and caches the result.
+ * Called after each render so the list stays current with the visible task list.
+ * This avoids re-querying on every keydown event while still discovering DOM changes.
+ */
+function buildFocusableList(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>('[role="button"], button')
+  )
+}
+
 function PipelineStageV2Inner({
   name,
   label,
@@ -58,10 +77,17 @@ function PipelineStageV2Inner({
   )
   const hiddenCount = tasks.length - STAGE_VISIBLE_LIMIT
 
+  // Rebuild the focusable element list after each render triggered by a task-list
+  // change. This prevents per-keydown DOM queries while keeping the list current.
+  const focusableRefs = useRef<HTMLElement[]>([])
+  useEffect(() => {
+    if (cardsRef.current) {
+      focusableRefs.current = buildFocusableList(cardsRef.current)
+    }
+  }, [visibleTasks, pipelineDensity])
+
   const handleStageKeyDown = (e: React.KeyboardEvent): void => {
-    const cards = Array.from(
-      cardsRef.current?.querySelectorAll('[role="button"], button') ?? []
-    ).filter((el): el is HTMLElement => el instanceof HTMLElement)
+    const cards = focusableRefs.current
     if (!cards.length) return
     const activeEl = document.activeElement
     const currentIndex = activeEl instanceof HTMLElement ? cards.indexOf(activeEl) : -1
@@ -208,14 +234,6 @@ function PipelineStageV2Inner({
       </div>
     </div>
   )
-}
-
-function resolveBlockingTitles(
-  task: SprintTask,
-  taskTitlesById: ReadonlyMap<string, string> | undefined
-): string | null {
-  if (!task.depends_on?.length) return null
-  return task.depends_on.map((dep) => taskTitlesById?.get(dep.id) ?? dep.id).join(', ')
 }
 
 export const PipelineStageV2 = React.memo(PipelineStageV2Inner)
