@@ -169,6 +169,7 @@ export interface SprintTasksState {
   setTasks: (tasks: SprintTask[]) => void
   batchDeleteTasks: (taskIds: string[]) => Promise<void>
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
+  retryTask: (taskId: string) => Promise<void>
 }
 
 export const selectActiveTasks = (state: SprintTasksState): SprintTask[] =>
@@ -543,6 +544,15 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       await get().loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to requeue tasks')
+    }
+  },
+
+  retryTask: async (taskId): Promise<void> => {
+    try {
+      await window.api.sprint.retry(taskId)
+      await get().loadData()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to retry task')
     }
   }
 }))

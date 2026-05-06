@@ -1,4 +1,4 @@
-import { neonVar } from './types'
+import { neonVar, type NeonAccent } from './types'
 import type { FeedEvent } from '../../lib/dashboard-types'
 
 export type { FeedEvent }
@@ -54,7 +54,7 @@ export function ActivityFeed({
           <div
             className="activity-feed__dot"
             style={{
-              background: neonVar(event.accent, 'color')
+              background: neonVar(event.accent as NeonAccent, 'color')
             }}
           />
           <span className="activity-feed__label">{event.label}</span>
