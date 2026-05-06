@@ -12,7 +12,7 @@ import {
   type PendingUpdates,
   type SprintTaskField
 } from '../lib/optimisticUpdateManager'
-import { listTasks, updateTask, deleteTask, createTask, batchUpdate, generatePrompt } from '../services/sprint'
+import { listTasks, updateTask, deleteTask, createTask, batchUpdate, generatePrompt, exportTaskHistory } from '../services/sprint'
 
 export interface CreateTicketInput {
   title: string
@@ -170,6 +170,7 @@ export interface SprintTasksState {
   batchDeleteTasks: (taskIds: string[]) => Promise<void>
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
   retryTask: (taskId: string) => Promise<void>
+  exportTaskHistory: (taskId: string) => Promise<{ success: boolean; path?: string | undefined }>
 }
 
 export const selectActiveTasks = (state: SprintTasksState): SprintTask[] =>
@@ -516,6 +517,10 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to delete tasks')
     }
+  },
+
+  exportTaskHistory: async (taskId): Promise<{ success: boolean; path?: string | undefined }> => {
+    return exportTaskHistory(taskId)
   },
 
   batchRequeueTasks: async (taskIds): Promise<void> => {
