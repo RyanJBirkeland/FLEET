@@ -218,11 +218,10 @@ function deriveActiveAgents(
 
 export function derivePerAgentStats(
   agents: AgentCostRecord[],
-  taskQualityMap: Map<string, number>
+  taskQualityMap: Map<string, number>,
+  cutoffTimestamp: number = Date.now() - SEVEN_DAYS_MS
 ): PerAgentRow[] {
-  const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
-
-  const recent = agents.filter((a) => new Date(a.startedAt).getTime() >= sevenDaysAgo)
+  const recent = agents.filter((a) => new Date(a.startedAt).getTime() >= cutoffTimestamp)
 
   const byName = new Map<string, AgentCostRecord[]>()
   for (const a of recent) {
@@ -269,10 +268,12 @@ export function derivePerAgentStats(
     .slice(0, 6)
 }
 
-export function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
-  const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
+export function derivePerRepoStats(
+  agents: AgentCostRecord[],
+  cutoffTimestamp: number = Date.now() - SEVEN_DAYS_MS
+): PerRepoRow[] {
   const recent = agents.filter(
-    (a) => a.repo != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
+    (a) => a.repo != null && new Date(a.startedAt).getTime() >= cutoffTimestamp
   )
 
   const byRepo = new Map<string, AgentCostRecord[]>()
@@ -294,11 +295,13 @@ export function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
     .slice(0, 6)
 }
 
-function deriveAvgCostPerTask(agents: AgentCostRecord[]): number | null {
-  const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
+function deriveAvgCostPerTask(
+  agents: AgentCostRecord[],
+  cutoffTimestamp: number = Date.now() - SEVEN_DAYS_MS
+): number | null {
   const recent = agents.filter(
     (a): a is typeof a & { costUsd: number } =>
-      a.costUsd != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
+      a.costUsd != null && new Date(a.startedAt).getTime() >= cutoffTimestamp
   )
   if (recent.length === 0) return null
   return recent.reduce((s, a) => s + a.costUsd, 0) / recent.length
@@ -355,6 +358,7 @@ export function useDashboardData(): DashboardData {
   const { maxSlots: capacity } = useAgentManagerStatus()
 
   const now = useNow()
+  const sevenDaysCutoff = now - SEVEN_DAYS_MS
 
   const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
@@ -377,11 +381,17 @@ export function useDashboardData(): DashboardData {
   }, [tasks])
 
   const perAgentStats = useMemo(
-    () => derivePerAgentStats(localAgents, taskQualityMap),
-    [localAgents, taskQualityMap]
+    () => derivePerAgentStats(localAgents, taskQualityMap, sevenDaysCutoff),
+    [localAgents, taskQualityMap, sevenDaysCutoff]
   )
-  const perRepoStats = useMemo(() => derivePerRepoStats(localAgents), [localAgents])
-  const avgCostPerTask = useMemo(() => deriveAvgCostPerTask(localAgents), [localAgents])
+  const perRepoStats = useMemo(
+    () => derivePerRepoStats(localAgents, sevenDaysCutoff),
+    [localAgents, sevenDaysCutoff]
+  )
+  const avgCostPerTask = useMemo(
+    () => deriveAvgCostPerTask(localAgents, sevenDaysCutoff),
+    [localAgents, sevenDaysCutoff]
+  )
   const failureRate = useMemo(() => {
     const terminal = stats.done + stats.actualFailed
     if (terminal === 0) return null

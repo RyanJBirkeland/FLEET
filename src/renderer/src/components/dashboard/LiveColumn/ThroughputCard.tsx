@@ -13,29 +13,26 @@ function buildBars(throughputData: CompletionBucket[]): number[] {
   return throughputData.map((b) => b.successCount + b.failedCount)
 }
 
+function isSameDay(a: Date, b: Date): boolean {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
 function computeDelta(throughputData: CompletionBucket[]): number | null {
   if (throughputData.length < 2) return null
   const now = new Date()
   const todayHour = now.getHours()
+  const yesterday = new Date(now)
+  yesterday.setDate(yesterday.getDate() - 1)
+
   // Compare today's completed to the same window yesterday
-  const todayBuckets = throughputData.filter((b) => {
-    const h = new Date(b.hour)
-    return (
-      h.getDate() === now.getDate() &&
-      h.getMonth() === now.getMonth() &&
-      h.getFullYear() === now.getFullYear()
-    )
-  })
-  const yesterdayStart = new Date(now)
-  yesterdayStart.setDate(yesterdayStart.getDate() - 1)
+  const todayBuckets = throughputData.filter((b) => isSameDay(new Date(b.hour), now))
   const yesterdayBuckets = throughputData.filter((b) => {
     const h = new Date(b.hour)
-    return (
-      h.getDate() === yesterdayStart.getDate() &&
-      h.getMonth() === yesterdayStart.getMonth() &&
-      h.getFullYear() === yesterdayStart.getFullYear() &&
-      h.getHours() <= todayHour
-    )
+    return isSameDay(h, yesterday) && h.getHours() <= todayHour
   })
   const todayTotal = todayBuckets.reduce((s, b) => s + b.successCount + b.failedCount, 0)
   const yesterdayTotal = yesterdayBuckets.reduce((s, b) => s + b.successCount + b.failedCount, 0)
