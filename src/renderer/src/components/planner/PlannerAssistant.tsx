@@ -11,18 +11,10 @@ import './PlannerAssistant.css'
 
 type ActionType = 'create-task' | 'create-epic' | 'update-spec'
 
-interface ActionPayload {
-  title?: string | undefined
-  spec?: string | undefined
-  name?: string | undefined
-  goal?: string | undefined
-  taskId?: string | undefined
-}
-
-interface ParsedAction {
-  type: ActionType
-  payload: ActionPayload
-}
+type CreateTaskAction = { type: 'create-task'; payload: { title?: string; spec?: string } }
+type CreateEpicAction = { type: 'create-epic'; payload: { name?: string; goal?: string } }
+type UpdateSpecAction = { type: 'update-spec'; payload: { taskId?: string; spec?: string } }
+type ParsedAction = CreateTaskAction | CreateEpicAction | UpdateSpecAction
 
 export interface ParseResult {
   cleanText: string
@@ -71,8 +63,8 @@ export function parseActionMarkers(text: string): ParseResult {
   cleanText = cleanText.replace(ACTION_REGEX, (_, type, jsonStr) => {
     if (!VALID_ACTION_TYPES.has(type)) return ''
     try {
-      const payload = JSON.parse(jsonStr.trim()) as ActionPayload
-      actions.push({ type: type as ActionType, payload })
+      const payload = JSON.parse(jsonStr.trim()) as Record<string, unknown>
+      actions.push({ type: type as ActionType, payload } as ParsedAction)
     } catch {
       // malformed JSON — skip
     }
@@ -172,7 +164,11 @@ function ActionCard({
     >
       <div className="planner-assistant__action-card-type">{ACTION_TYPE_LABELS[action.type]}</div>
       <div className="planner-assistant__action-card-title">
-        {action.payload.title ?? action.payload.name ?? action.payload.taskId ?? '—'}
+        {action.type === 'create-task'
+          ? (action.payload.title ?? '—')
+          : action.type === 'create-epic'
+            ? (action.payload.name ?? '—')
+            : (action.payload.taskId ?? '—')}
       </div>
       {action.type === 'update-spec' && !state.confirmed && (
         <SpecDiffViewer oldSpec={oldSpec} newSpec={action.payload.spec ?? ''} />
@@ -403,7 +399,7 @@ function PlannerAssistantInner({
                 setIsApplyingAll(true)
                 try {
                   for (const { action: a, key } of pendingSpecActions) {
-                    if (!a.payload.taskId) continue
+                    if (a.type !== 'update-spec' || !a.payload.taskId) continue
                     try {
                       await window.api.sprint.update(a.payload.taskId, { spec: a.payload.spec ?? '' })
                       setCardStates((prev) => ({
