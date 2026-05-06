@@ -14,6 +14,8 @@ vi.mock('../../../stores/sprintTasks', () => ({
   useSprintTasks: vi.fn((selector?: any) =>
     typeof selector === 'function' ? selector(sprintTaskState) : sprintTaskState
   ),
+  selectActiveTasks: (s: typeof sprintTaskState) =>
+    s.tasks.filter((t) => t.status === 'active'),
   selectReviewTaskCount: (s: typeof sprintTaskState) =>
     s.tasks.reduce((n, t) => (t.status === 'review' ? n + 1 : n), 0),
   selectFailedTaskCount: (s: typeof sprintTaskState) =>

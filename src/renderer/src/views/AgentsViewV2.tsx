@@ -14,7 +14,7 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
 import { motion } from 'framer-motion'
 import { usePanelLayoutStore } from '../stores/panelLayout'
-import { useAgentHistoryStore } from '../stores/agentHistory'
+import { useAgentHistoryStore, type AgentMeta } from '../stores/agentHistory'
 import { useAgentEventsStore } from '../stores/agentEvents'
 import { AgentList } from '../components/agents/AgentList'
 import { AgentConsole } from '../components/agents/AgentConsole'
@@ -65,9 +65,16 @@ export function AgentsViewV2(): React.JSX.Element {
   const [viewportWidth, setViewportWidth] = useState(() => window.innerWidth)
 
   useEffect(() => {
-    const onResize = (): void => setViewportWidth(window.innerWidth)
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null
+    const onResize = (): void => {
+      if (debounceTimer !== null) clearTimeout(debounceTimer)
+      debounceTimer = setTimeout(() => setViewportWidth(window.innerWidth), 150)
+    }
     window.addEventListener('resize', onResize)
-    return () => window.removeEventListener('resize', onResize)
+    return () => {
+      window.removeEventListener('resize', onResize)
+      if (debounceTimer !== null) clearTimeout(debounceTimer)
+    }
   }, [])
 
   const isWide = viewportWidth >= INSPECTOR_BREAKPOINT
@@ -200,7 +207,7 @@ export function AgentsViewV2(): React.JSX.Element {
 // --- Sub-renderers -------------------------------------------------------
 
 interface FleetListPaneProps {
-  agents: ReturnType<typeof useAgentHistoryStore.getState>['agents']
+  agents: AgentMeta[]
   activeId: string | null
   fetched: boolean
   fetchError: string | null
@@ -261,9 +268,9 @@ function FleetListPane({
 
 interface CenterPaneProps {
   showLaunchpad: boolean
-  selectedAgent: ReturnType<typeof useAgentHistoryStore.getState>['agents'][number] | undefined
+  selectedAgent: AgentMeta | undefined
   activeId: string | null
-  agents: ReturnType<typeof useAgentHistoryStore.getState>['agents']
+  agents: AgentMeta[]
   onAgentSpawned: () => void
   onCancelLaunchpad: (() => void) | undefined
   onSelectAgent: (id: string) => void
@@ -308,7 +315,7 @@ function CenterPane({
 }
 
 interface InspectorPaneProps {
-  agent: ReturnType<typeof useAgentHistoryStore.getState>['agents'][number]
+  agent: AgentMeta
   events: AgentEvent[] | undefined
   asOverlay: boolean
 }

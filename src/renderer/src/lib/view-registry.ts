@@ -24,6 +24,8 @@ export interface ViewMetadata {
   hidden?: true | undefined
 }
 
+// The `satisfies` check ensures every View key has a ViewMetadata entry.
+// Adding a View to the union without a registry entry is a compile error.
 export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
   dashboard: {
     label: 'Dashboard',
@@ -81,26 +83,31 @@ export const VIEW_REGISTRY: Record<View, ViewMetadata> = {
     shortcut: '⌘8',
     shortcutKey: '8'
   }
-}
+} satisfies Record<View, ViewMetadata>
 
 // ---------------------------------------------------------------------------
 // Derived constants for backward compatibility
 // ---------------------------------------------------------------------------
 
-export const VIEW_LABELS: Record<View, string> = Object.fromEntries(
-  Object.entries(VIEW_REGISTRY).map(([view, meta]) => [view, meta.label])
-) as Record<View, string>
+/**
+ * Maps each entry in VIEW_REGISTRY to a derived value without an `as` cast.
+ * TypeScript infers `Record<View, V>` correctly because the input is already
+ * typed as `Record<View, ViewMetadata>` via `satisfies`.
+ */
+function mapRegistry<V>(fn: (meta: ViewMetadata) => V): Record<View, V> {
+  return Object.fromEntries(
+    (Object.keys(VIEW_REGISTRY) as View[]).map((view) => [view, fn(VIEW_REGISTRY[view])])
+  ) as Record<View, V>
+}
 
-export const VIEW_ICONS: Record<View, LucideIcon> = Object.fromEntries(
-  Object.entries(VIEW_REGISTRY).map(([view, meta]) => [view, meta.icon])
-) as Record<View, LucideIcon>
+export const VIEW_LABELS: Record<View, string> = mapRegistry((meta) => meta.label)
 
-export const VIEW_SHORTCUTS: Record<View, string> = Object.fromEntries(
-  Object.entries(VIEW_REGISTRY).map(([view, meta]) => [view, meta.shortcut])
-) as Record<View, string>
+export const VIEW_ICONS: Record<View, LucideIcon> = mapRegistry((meta) => meta.icon)
+
+export const VIEW_SHORTCUTS: Record<View, string> = mapRegistry((meta) => meta.shortcut)
 
 export const VIEW_SHORTCUT_MAP: Partial<Record<string, View>> = Object.fromEntries(
-  Object.entries(VIEW_REGISTRY)
-    .filter(([, meta]) => !meta.hidden)
-    .map(([view, meta]) => [meta.shortcutKey, view as View])
+  (Object.keys(VIEW_REGISTRY) as View[])
+    .filter((view) => !VIEW_REGISTRY[view].hidden)
+    .map((view) => [VIEW_REGISTRY[view].shortcutKey, view])
 )
