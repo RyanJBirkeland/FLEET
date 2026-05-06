@@ -49,6 +49,7 @@ function makeTask(overrides: Partial<SprintTask> = {}): SprintTask {
     fast_fail_count: 0,
     template_name: null,
     depends_on: null,
+    stacked_on_task_id: null,
     updated_at: nowIso(),
     created_at: nowIso(),
     ...overrides

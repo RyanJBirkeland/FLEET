@@ -2,6 +2,7 @@ import { useEffect, useCallback, useMemo, useRef, useState } from 'react'
 import { motion, LayoutGroup } from 'framer-motion'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
 import { useSprintFilters } from '../../stores/sprintFilters'
+import type { StatusFilter } from '../../stores/sprintFilters'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { usePanelLayoutStore } from '../../stores/panelLayout'
 import { useSprintUI, selectOrphanRecoveryBanner } from '../../stores/sprintUI'
@@ -25,6 +26,7 @@ import { PipelineHeaderV2 } from './PipelineHeaderV2'
 import type { ExportFormat } from './ExportDropdown'
 import { PipelineOverlays } from './PipelineOverlays'
 import { DagOverlay } from './DagOverlay'
+import type { useConfirm } from '../ui/ConfirmModal'
 import { BulkActionBar } from './BulkActionBar'
 import { PollErrorBanner } from './banners/PollErrorBanner'
 import { DrainPausedBanner } from './banners/DrainPausedBanner'
@@ -163,6 +165,370 @@ function PipelineLoadingSkeleton(): React.JSX.Element {
         <div aria-hidden="true" className="fleet-skeleton pipeline-skeleton--stage" />
       </div>
     </div>
+  )
+}
+
+type HeaderStatFilter = 'in-progress' | 'todo' | 'blocked' | 'review' | 'open-prs' | 'failed' | 'done'
+
+interface PipelineControlBarProps {
+  headerStats: { label: string; count: number; filter: HeaderStatFilter }[]
+  conflictingTasks: SprintTask[]
+  visibleStuckTasks: SprintTask[]
+  statusFilter: StatusFilter
+  dagOpen: boolean
+  selectedTaskIds: Set<string>
+  tasks: SprintTask[]
+  filteredTasks: SprintTask[]
+  pollError: string | null
+  loading: boolean
+  orphanBanner: { recovered: unknown[]; exhausted: unknown[] } | null
+  drainStatus: { reason: string; affectedTaskCount: number; pausedUntil: number } | null
+  now: number
+  onFilterClick: (filter: HeaderStatFilter) => void
+  onConflictClick: () => void
+  onHealthCheckClick: () => void
+  onDagToggle: () => void
+  onOpenWorkbench: () => void
+  onExportTasks: (format: ExportFormat) => Promise<void>
+  onTriggerDrain: () => Promise<void>
+  onClearSelection: () => void
+  onPollRetry: () => void
+  onPollDismiss: () => void
+  onOrphanDismiss: () => void
+}
+
+function PipelineControlBar({
+  headerStats,
+  conflictingTasks,
+  visibleStuckTasks,
+  statusFilter,
+  dagOpen,
+  selectedTaskIds,
+  tasks,
+  filteredTasks,
+  pollError,
+  loading,
+  orphanBanner,
+  drainStatus,
+  now,
+  onFilterClick,
+  onConflictClick,
+  onHealthCheckClick,
+  onDagToggle,
+  onOpenWorkbench,
+  onExportTasks,
+  onTriggerDrain,
+  onClearSelection,
+  onPollRetry,
+  onPollDismiss,
+  onOrphanDismiss
+}: PipelineControlBarProps): React.JSX.Element {
+  return (
+    <>
+      <PipelineHeaderV2
+        stats={headerStats}
+        conflictingTasks={conflictingTasks}
+        visibleStuckTasks={visibleStuckTasks}
+        onFilterClick={onFilterClick}
+        activeFilter={statusFilter}
+        onConflictClick={onConflictClick}
+        onHealthCheckClick={onHealthCheckClick}
+        onDagToggle={onDagToggle}
+        dagOpen={dagOpen}
+        onOpenWorkbench={onOpenWorkbench}
+        onExportTasks={onExportTasks}
+        onTriggerDrain={onTriggerDrain}
+      />
+      <BulkActionBar
+        selectedCount={selectedTaskIds.size}
+        selectedTaskIds={selectedTaskIds}
+        onClearSelection={onClearSelection}
+      />
+      <PipelineFilterBarV2 tasks={tasks} />
+      <PipelineFilterBanner filteredTasks={filteredTasks} totalTasks={tasks} />
+      <PipelineBanners
+        pollError={pollError}
+        loading={loading}
+        tasksEmpty={tasks.length === 0}
+        orphanBanner={orphanBanner}
+        drainStatus={drainStatus}
+        now={now}
+        onPollRetry={onPollRetry}
+        onPollDismiss={onPollDismiss}
+        onOrphanDismiss={onOrphanDismiss}
+      />
+    </>
+  )
+}
+
+interface PipelineBannersProps {
+  pollError: string | null
+  loading: boolean
+  tasksEmpty: boolean
+  orphanBanner: { recovered: unknown[]; exhausted: unknown[] } | null
+  drainStatus: { reason: string; affectedTaskCount: number; pausedUntil: number } | null
+  now: number
+  onPollRetry: () => void
+  onPollDismiss: () => void
+  onOrphanDismiss: () => void
+}
+
+function PipelineBanners({
+  pollError,
+  loading,
+  tasksEmpty,
+  orphanBanner,
+  drainStatus,
+  now,
+  onPollRetry,
+  onPollDismiss,
+  onOrphanDismiss
+}: PipelineBannersProps): React.JSX.Element {
+  return (
+    <>
+      {pollError && (
+        <PollErrorBanner
+          message={pollError}
+          loading={loading && tasksEmpty}
+          onRetry={onPollRetry}
+          onDismiss={onPollDismiss}
+        />
+      )}
+      {orphanBanner && (
+        <OrphanRecoveryBanner
+          recoveredCount={orphanBanner.recovered.length}
+          exhaustedCount={orphanBanner.exhausted.length}
+          onDismiss={onOrphanDismiss}
+        />
+      )}
+      {drainStatus && (
+        <DrainPausedBanner
+          reason={drainStatus.reason}
+          affectedTaskCount={drainStatus.affectedTaskCount}
+          pausedUntil={drainStatus.pausedUntil}
+          now={now}
+        />
+      )}
+    </>
+  )
+}
+
+interface PipelineActiveBodyProps {
+  tasks: SprintTask[]
+  filteredPartition: {
+    backlog: SprintTask[]
+    failed: SprintTask[]
+    todo: SprintTask[]
+    blocked: SprintTask[]
+    inProgress: SprintTask[]
+    pendingReview: SprintTask[]
+    openPrs: SprintTask[]
+    done: SprintTask[]
+  }
+  selectedTaskId: string | null
+  selectedTaskIds: Set<string>
+  selectedTask: SprintTask | null
+  drawerOpen: boolean
+  taskTitlesById: Map<string, string>
+  onTaskClick: (id: string) => void
+  onToggleTaskSelection: (id: string) => void
+  onAddToQueue: (task: SprintTask) => void
+  onRerun: (task: SprintTask) => void
+  onClearFailures: () => void
+  onRequeueAllFailed: () => void
+  onSetDoneViewOpen: (open: boolean) => void
+  onCloseDrawer: () => void
+  onLaunch: (task: SprintTask) => void
+  onStop: (task: SprintTask) => void
+  onDelete: (task: SprintTask) => void
+  onViewLogs: () => void
+  onOpenSpec: () => void
+  onEdit: () => void
+  onViewAgents: () => void
+  onUnblock: (task: SprintTask) => void
+  onRetry: (task: SprintTask) => void
+  onReviewChanges: (task: SprintTask) => void
+  onExport: (task: SprintTask) => void
+}
+
+function PipelineActiveBody({
+  tasks,
+  filteredPartition,
+  selectedTaskId,
+  selectedTaskIds,
+  selectedTask,
+  drawerOpen,
+  taskTitlesById,
+  onTaskClick,
+  onToggleTaskSelection,
+  onAddToQueue,
+  onRerun,
+  onClearFailures,
+  onRequeueAllFailed,
+  onSetDoneViewOpen,
+  onCloseDrawer,
+  onLaunch,
+  onStop,
+  onDelete,
+  onViewLogs,
+  onOpenSpec,
+  onEdit,
+  onViewAgents,
+  onUnblock,
+  onRetry,
+  onReviewChanges,
+  onExport
+}: PipelineActiveBodyProps): React.JSX.Element {
+  const bodyClass = `sprint-pipeline__body${tasks.length === 0 ? ' sprint-pipeline__body--hidden' : ''}`
+  return (
+    <PipelineErrorBoundary fallbackLabel="Pipeline crashed">
+      <div className={bodyClass}>
+        <PipelineBacklogV2
+          backlog={filteredPartition.backlog}
+          failed={filteredPartition.failed}
+          selectedTaskIds={selectedTaskIds}
+          onToggleTaskSelection={onToggleTaskSelection}
+          onTaskClick={onTaskClick}
+          onAddToQueue={onAddToQueue}
+          onRerun={onRerun}
+          onClearFailures={onClearFailures}
+          onRequeueAllFailed={onRequeueAllFailed}
+        />
+        <PipelineStageGrid>
+          <LayoutGroup>
+            <PipelineStageV2
+              name="queued"
+              label="Queued"
+              tasks={filteredPartition.todo}
+              count={`${filteredPartition.todo.length}`}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              onTaskClick={onTaskClick}
+            />
+            <PipelineStageV2
+              name="blocked"
+              label="Blocked"
+              tasks={filteredPartition.blocked}
+              count={`${filteredPartition.blocked.length}`}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              taskTitlesById={taskTitlesById}
+              onTaskClick={onTaskClick}
+            />
+            <PipelineStageV2
+              name="active"
+              label="Active"
+              tasks={filteredPartition.inProgress}
+              count={`${filteredPartition.inProgress.length}/${WIP_LIMIT_IN_PROGRESS}`}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              onTaskClick={onTaskClick}
+            />
+            <PipelineStageV2
+              name="review"
+              label="Review"
+              tasks={filteredPartition.pendingReview}
+              count={`${filteredPartition.pendingReview.length}`}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              onTaskClick={onTaskClick}
+            />
+            <PipelineStageV2
+              name="open-prs"
+              label="PRs"
+              tasks={filteredPartition.openPrs}
+              count={`${filteredPartition.openPrs.length}`}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              onTaskClick={onTaskClick}
+            />
+            <PipelineStageV2
+              name="done"
+              label="Done"
+              tasks={filteredPartition.done.slice(0, 3)}
+              count={`${filteredPartition.done.length}`}
+              selectedTaskId={selectedTaskId}
+              selectedTaskIds={selectedTaskIds}
+              onTaskClick={onTaskClick}
+              doneFooter={
+                filteredPartition.done.length > 3 ? (
+                  <button
+                    className="pipeline-stage__done-summary"
+                    onClick={() => onSetDoneViewOpen(true)}
+                  >
+                    {filteredPartition.done.length} completed · View all
+                  </button>
+                ) : undefined
+              }
+            />
+          </LayoutGroup>
+        </PipelineStageGrid>
+        {drawerOpen && selectedTask && (
+          <TaskDetailDrawerV2
+            task={selectedTask}
+            onClose={onCloseDrawer}
+            onLaunch={onLaunch}
+            onStop={onStop}
+            onDelete={onDelete}
+            onViewLogs={onViewLogs}
+            onOpenSpec={onOpenSpec}
+            onEdit={onEdit}
+            onViewAgents={onViewAgents}
+            onUnblock={onUnblock}
+            onRetry={onRetry}
+            onReviewChanges={onReviewChanges}
+            onExport={onExport}
+          />
+        )}
+      </div>
+    </PipelineErrorBoundary>
+  )
+}
+
+interface PipelinePostContentProps {
+  specPanelOpen: boolean
+  selectedTask: SprintTask | null
+  onCloseSpec: () => void
+  onSaveSpec: (taskId: string, newSpec: string) => Promise<void>
+  doneViewOpen: boolean
+  doneTasks: SprintTask[]
+  onCloseDoneView: () => void
+  onTaskClick: (id: string) => void
+  conflictDrawerOpen: boolean
+  conflictingTasks: SprintTask[]
+  onCloseConflict: () => void
+  healthCheckDrawerOpen: boolean
+  visibleStuckTasks: SprintTask[]
+  onCloseHealthCheck: () => void
+  onDismissStuckTask: (taskId: string) => void
+  confirmProps: ReturnType<typeof useConfirm>['confirmProps']
+  dagOpen: boolean
+  tasks: SprintTask[]
+  selectedTaskId: string | null
+  onSelectTask: (taskId: string) => void
+  onCloseDag: () => void
+}
+
+function PipelinePostContent({
+  dagOpen,
+  tasks,
+  selectedTaskId,
+  onSelectTask,
+  onCloseDag,
+  ...overlayProps
+}: PipelinePostContentProps): React.JSX.Element {
+  return (
+    <>
+      <PipelineOverlays {...overlayProps} />
+      {dagOpen && (
+        <DagOverlay
+          tasks={tasks}
+          selectedTaskId={selectedTaskId}
+          onSelectTask={onSelectTask}
+          onClose={onCloseDag}
+        />
+      )}
+    </>
   )
 }
 
@@ -379,6 +745,86 @@ export function SprintPipelineV2(): React.JSX.Element {
     [setSelectedTaskId, setDrawerOpen]
   )
 
+  const controlBarProps: PipelineControlBarProps = {
+    headerStats,
+    conflictingTasks,
+    visibleStuckTasks,
+    statusFilter,
+    dagOpen,
+    selectedTaskIds,
+    tasks,
+    filteredTasks,
+    pollError,
+    loading,
+    orphanBanner,
+    drainStatus,
+    now,
+    onFilterClick: setStatusFilter,
+    onConflictClick: () => setConflictDrawerOpen(true),
+    onHealthCheckClick: () => setHealthCheckDrawerOpen(true),
+    onDagToggle: () => setDagOpen(!dagOpen),
+    onOpenWorkbench: openWorkbench,
+    onExportTasks: handleExportTasks,
+    onTriggerDrain: handleTriggerDrain,
+    onClearSelection: clearMultiSelection,
+    onPollRetry: () => { clearPollError(); void loadData() },
+    onPollDismiss: clearPollError,
+    onOrphanDismiss: () => dismissOrphanBanner(null)
+  }
+
+  const activeBodyProps: PipelineActiveBodyProps = {
+    tasks,
+    filteredPartition,
+    selectedTaskId,
+    selectedTaskIds,
+    selectedTask,
+    drawerOpen,
+    taskTitlesById,
+    onTaskClick: handleTaskClick,
+    onToggleTaskSelection: toggleTaskSelection,
+    onAddToQueue: handleAddToQueue,
+    onRerun: handleRerun,
+    onClearFailures: handleClearFailures,
+    onRequeueAllFailed: handleRequeueAllFailed,
+    onSetDoneViewOpen: setDoneViewOpen,
+    onCloseDrawer: handleCloseDrawer,
+    onLaunch: launchTask,
+    onStop: handleStop,
+    onDelete: handleDeleteTask,
+    onViewLogs: () => setView('agents'),
+    onOpenSpec: () => setSpecPanelOpen(true),
+    onEdit: handleEdit,
+    onViewAgents: () => setView('agents'),
+    onUnblock: handleUnblock,
+    onRetry: handleRetry,
+    onReviewChanges: handleReviewChanges,
+    onExport: handleExport
+  }
+
+  const postContentProps: PipelinePostContentProps = {
+    specPanelOpen,
+    selectedTask,
+    onCloseSpec: () => setSpecPanelOpen(false),
+    onSaveSpec: handleSaveSpec,
+    doneViewOpen,
+    doneTasks: filteredPartition.done,
+    onCloseDoneView: () => setDoneViewOpen(false),
+    onTaskClick: handleTaskClick,
+    conflictDrawerOpen,
+    conflictingTasks,
+    onCloseConflict: () => setConflictDrawerOpen(false),
+    healthCheckDrawerOpen,
+    visibleStuckTasks,
+    onCloseHealthCheck: () => setHealthCheckDrawerOpen(false),
+    onDismissStuckTask: dismissTask,
+    confirmProps,
+    dagOpen,
+    tasks,
+    selectedTaskId,
+    onSelectTask: handleSelectTask,
+    onCloseDag: () => setDagOpen(false)
+  }
+
   return (
     <motion.div
       className="sprint-pipeline"
@@ -388,209 +834,18 @@ export function SprintPipelineV2(): React.JSX.Element {
       animate="animate"
       transition={reduced ? REDUCED_TRANSITION : SPRINGS.snappy}
     >
-      <PipelineHeaderV2
-        stats={headerStats}
-        conflictingTasks={conflictingTasks}
-        visibleStuckTasks={visibleStuckTasks}
-        onFilterClick={setStatusFilter}
-        activeFilter={statusFilter}
-        onConflictClick={() => setConflictDrawerOpen(true)}
-        onHealthCheckClick={() => setHealthCheckDrawerOpen(true)}
-        onDagToggle={() => setDagOpen(!dagOpen)}
-        dagOpen={dagOpen}
-        onOpenWorkbench={openWorkbench}
-        onExportTasks={handleExportTasks}
-        onTriggerDrain={handleTriggerDrain}
-      />
-
-      <BulkActionBar
-        selectedCount={selectedTaskIds.size}
-        selectedTaskIds={selectedTaskIds}
-        onClearSelection={clearMultiSelection}
-      />
-
-      <PipelineFilterBarV2 tasks={tasks} />
-
-      <PipelineFilterBanner filteredTasks={filteredTasks} totalTasks={tasks} />
-
-      {pollError && (
-        <PollErrorBanner
-          message={pollError}
-          loading={loading && tasks.length === 0}
-          onRetry={() => {
-            clearPollError()
-            void loadData()
-          }}
-          onDismiss={clearPollError}
-        />
-      )}
-
-      {orphanBanner && (
-        <OrphanRecoveryBanner
-          recoveredCount={orphanBanner.recovered.length}
-          exhaustedCount={orphanBanner.exhausted.length}
-          onDismiss={() => dismissOrphanBanner(null)}
-        />
-      )}
-
-      {drainStatus && (
-        <DrainPausedBanner
-          reason={drainStatus.reason}
-          affectedTaskCount={drainStatus.affectedTaskCount}
-          pausedUntil={drainStatus.pausedUntil}
-          now={now}
-        />
-      )}
-
+      <PipelineControlBar {...controlBarProps} />
       {loading && tasks.length === 0 && <PipelineLoadingSkeleton />}
-
       {loadError && (
-        <PipelineLoadError
-          message={loadError}
-          loading={loading}
-          onRetry={() => void loadData()}
-        />
+        <PipelineLoadError message={loadError} loading={loading} onRetry={() => void loadData()} />
       )}
-
       {!loading && !loadError && tasks.length === 0 && (
         repos.length === 0
           ? <NoRepositoryState onNavigateToSettings={() => setView('settings')} />
           : <EmptyPipelineState onCreateTask={openWorkbench} />
       )}
-
-      <PipelineErrorBoundary fallbackLabel="Pipeline crashed">
-        <div
-          className={`sprint-pipeline__body ${tasks.length === 0 ? 'sprint-pipeline__body--hidden' : ''}`}
-        >
-          <PipelineBacklogV2
-            backlog={filteredPartition.backlog}
-            failed={filteredPartition.failed}
-            selectedTaskIds={selectedTaskIds}
-            onToggleTaskSelection={toggleTaskSelection}
-            onTaskClick={handleTaskClick}
-            onAddToQueue={handleAddToQueue}
-            onRerun={handleRerun}
-            onClearFailures={handleClearFailures}
-            onRequeueAllFailed={handleRequeueAllFailed}
-          />
-
-          <PipelineStageGrid>
-              <LayoutGroup>
-                <PipelineStageV2
-                  name="queued"
-                  label="Queued"
-                  tasks={filteredPartition.todo}
-                  count={`${filteredPartition.todo.length}`}
-                  selectedTaskId={selectedTaskId}
-                  selectedTaskIds={selectedTaskIds}
-                  onTaskClick={handleTaskClick}
-                />
-                <PipelineStageV2
-                  name="blocked"
-                  label="Blocked"
-                  tasks={filteredPartition.blocked}
-                  count={`${filteredPartition.blocked.length}`}
-                  selectedTaskId={selectedTaskId}
-                  selectedTaskIds={selectedTaskIds}
-                  taskTitlesById={taskTitlesById}
-                  onTaskClick={handleTaskClick}
-                />
-                <PipelineStageV2
-                  name="active"
-                  label="Active"
-                  tasks={filteredPartition.inProgress}
-                  count={`${filteredPartition.inProgress.length}/${WIP_LIMIT_IN_PROGRESS}`}
-                  selectedTaskId={selectedTaskId}
-                  selectedTaskIds={selectedTaskIds}
-                  onTaskClick={handleTaskClick}
-                />
-                <PipelineStageV2
-                  name="review"
-                  label="Review"
-                  tasks={filteredPartition.pendingReview}
-                  count={`${filteredPartition.pendingReview.length}`}
-                  selectedTaskId={selectedTaskId}
-                  selectedTaskIds={selectedTaskIds}
-                  onTaskClick={handleTaskClick}
-                />
-                <PipelineStageV2
-                  name="open-prs"
-                  label="PRs"
-                  tasks={filteredPartition.openPrs}
-                  count={`${filteredPartition.openPrs.length}`}
-                  selectedTaskId={selectedTaskId}
-                  selectedTaskIds={selectedTaskIds}
-                  onTaskClick={handleTaskClick}
-                />
-                <PipelineStageV2
-                  name="done"
-                  label="Done"
-                  tasks={filteredPartition.done.slice(0, 3)}
-                  count={`${filteredPartition.done.length}`}
-                  selectedTaskId={selectedTaskId}
-                  selectedTaskIds={selectedTaskIds}
-                  onTaskClick={handleTaskClick}
-                  doneFooter={
-                    filteredPartition.done.length > 3 ? (
-                      <button
-                        className="pipeline-stage__done-summary"
-                        onClick={() => setDoneViewOpen(true)}
-                      >
-                        {filteredPartition.done.length} completed · View all
-                      </button>
-                    ) : undefined
-                  }
-                />
-              </LayoutGroup>
-          </PipelineStageGrid>
-
-          {drawerOpen && selectedTask && (
-            <TaskDetailDrawerV2
-              task={selectedTask}
-              onClose={handleCloseDrawer}
-              onLaunch={launchTask}
-              onStop={handleStop}
-              onDelete={handleDeleteTask}
-              onViewLogs={() => setView('agents')}
-              onOpenSpec={() => setSpecPanelOpen(true)}
-              onEdit={handleEdit}
-              onViewAgents={() => setView('agents')}
-              onUnblock={handleUnblock}
-              onRetry={handleRetry}
-              onReviewChanges={handleReviewChanges}
-              onExport={handleExport}
-            />
-          )}
-        </div>
-      </PipelineErrorBoundary>
-
-      <PipelineOverlays
-        specPanelOpen={specPanelOpen}
-        selectedTask={selectedTask}
-        onCloseSpec={() => setSpecPanelOpen(false)}
-        onSaveSpec={handleSaveSpec}
-        doneViewOpen={doneViewOpen}
-        doneTasks={filteredPartition.done}
-        onCloseDoneView={() => setDoneViewOpen(false)}
-        onTaskClick={handleTaskClick}
-        conflictDrawerOpen={conflictDrawerOpen}
-        conflictingTasks={conflictingTasks}
-        onCloseConflict={() => setConflictDrawerOpen(false)}
-        healthCheckDrawerOpen={healthCheckDrawerOpen}
-        visibleStuckTasks={visibleStuckTasks}
-        onCloseHealthCheck={() => setHealthCheckDrawerOpen(false)}
-        onDismissStuckTask={dismissTask}
-        confirmProps={confirmProps}
-      />
-
-      {dagOpen && (
-        <DagOverlay
-          tasks={tasks}
-          selectedTaskId={selectedTaskId}
-          onSelectTask={handleSelectTask}
-          onClose={() => setDagOpen(false)}
-        />
-      )}
+      <PipelineActiveBody {...activeBodyProps} />
+      <PipelinePostContent {...postContentProps} />
     </motion.div>
   )
 }
