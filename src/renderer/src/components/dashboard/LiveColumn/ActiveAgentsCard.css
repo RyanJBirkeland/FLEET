@@ -7,6 +7,10 @@
   min-width: 0;
 }
 
+.active-agents__row + .active-agents__row {
+  border-top: 1px solid var(--line);
+}
+
 .active-agents__name-col {
   display: flex;
   flex-direction: column;
