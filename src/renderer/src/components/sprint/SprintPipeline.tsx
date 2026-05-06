@@ -59,33 +59,6 @@ function PipelineStageGrid({ children }: { children: React.ReactNode }): React.J
   )
 }
 
-const CENTER_FLEX_STYLE: React.CSSProperties = {
-  display: 'flex',
-  flex: 1,
-  alignItems: 'center',
-  justifyContent: 'center'
-}
-
-const EMPTY_COLUMN_STYLE: React.CSSProperties = {
-  display: 'flex',
-  flexDirection: 'column',
-  alignItems: 'center',
-  gap: 'var(--s-3)',
-  padding: 'var(--s-8)'
-}
-
-const CTA_BUTTON_STYLE: React.CSSProperties = {
-  padding: '0 var(--s-3)',
-  height: 28,
-  background: 'var(--accent)',
-  color: 'var(--accent-fg)',
-  border: 'none',
-  borderRadius: 'var(--r-md)',
-  fontSize: 12,
-  fontWeight: 500,
-  cursor: 'pointer'
-}
-
 interface PipelineLoadErrorProps {
   message: string
   loading: boolean
@@ -94,14 +67,12 @@ interface PipelineLoadErrorProps {
 
 function PipelineLoadError({ message, loading, onRetry }: PipelineLoadErrorProps): React.JSX.Element {
   return (
-    <div style={CENTER_FLEX_STYLE}>
-      <div style={EMPTY_COLUMN_STYLE}>
+    <div className="pipeline-state">
+      <div className="pipeline-state__column">
         <span className="fleet-eyebrow">ERROR</span>
-        <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--fg)' }}>
-          Error loading tasks
-        </span>
-        <p style={{ fontSize: 12, color: 'var(--fg-3)', margin: 0 }}>{message}</p>
-        <button onClick={onRetry} disabled={loading} style={CTA_BUTTON_STYLE}>
+        <span className="pipeline-state__title">Error loading tasks</span>
+        <p className="pipeline-state__hint">{message}</p>
+        <button onClick={onRetry} disabled={loading} className="pipeline-state__cta">
           {loading ? 'Retrying…' : 'Retry'}
         </button>
       </div>
@@ -115,16 +86,16 @@ interface NoRepositoryStateProps {
 
 function NoRepositoryState({ onNavigateToSettings }: NoRepositoryStateProps): React.JSX.Element {
   return (
-    <div style={CENTER_FLEX_STYLE}>
-      <div style={EMPTY_COLUMN_STYLE}>
+    <div className="pipeline-state">
+      <div className="pipeline-state__column">
         <span className="fleet-eyebrow">NO REPOSITORY</span>
-        <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg)' }}>
+        <span className="pipeline-state__title pipeline-state__title--lg">
           No repository configured
         </span>
-        <p style={{ fontSize: 12, color: 'var(--fg-3)', textAlign: 'center', margin: 0 }}>
+        <p className="pipeline-state__hint pipeline-state__hint--center">
           Add a repository in Settings before creating tasks.
         </p>
-        <button onClick={onNavigateToSettings} style={CTA_BUTTON_STYLE}>
+        <button onClick={onNavigateToSettings} className="pipeline-state__cta">
           Configure Repository
         </button>
       </div>
@@ -138,14 +109,14 @@ interface EmptyPipelineStateProps {
 
 function EmptyPipelineState({ onCreateTask }: EmptyPipelineStateProps): React.JSX.Element {
   return (
-    <div style={CENTER_FLEX_STYLE}>
-      <div style={EMPTY_COLUMN_STYLE}>
+    <div className="pipeline-state">
+      <div className="pipeline-state__column">
         <span className="fleet-eyebrow">PIPELINE</span>
-        <span style={{ fontSize: 15, fontWeight: 500, color: 'var(--fg)' }}>No tasks yet</span>
-        <p style={{ fontSize: 12, color: 'var(--fg-3)', textAlign: 'center', margin: 0 }}>
+        <span className="pipeline-state__title pipeline-state__title--lg">No tasks yet</span>
+        <p className="pipeline-state__hint pipeline-state__hint--center">
           Create your first task to start the pipeline.
         </p>
-        <button onClick={onCreateTask} style={CTA_BUTTON_STYLE}>
+        <button onClick={onCreateTask} className="pipeline-state__cta">
           New Task
         </button>
       </div>
@@ -170,98 +141,38 @@ function PipelineLoadingSkeleton(): React.JSX.Element {
 
 type HeaderStatFilter = 'in-progress' | 'todo' | 'blocked' | 'review' | 'open-prs' | 'failed' | 'done'
 
-interface PipelineControlBarProps {
+// PipelineControlBarProps decomposed (T-28) into four cohesive views — each ≤8 props —
+// composed below. Each sub-section maps to a single sub-component the control bar renders.
+
+interface HeaderSectionProps {
   headerStats: { label: string; count: number; filter: HeaderStatFilter }[]
   conflictingTasks: SprintTask[]
   visibleStuckTasks: SprintTask[]
   statusFilter: StatusFilter
   dagOpen: boolean
-  selectedTaskIds: Set<string>
-  tasks: SprintTask[]
-  filteredTasks: SprintTask[]
-  pollError: string | null
-  loading: boolean
-  orphanBanner: { recovered: unknown[]; exhausted: unknown[] } | null
-  drainStatus: { reason: string; affectedTaskCount: number; pausedUntil: number } | null
-  now: number
   onFilterClick: (filter: HeaderStatFilter) => void
   onConflictClick: () => void
   onHealthCheckClick: () => void
+}
+
+interface OperatorActionsProps {
   onDagToggle: () => void
   onOpenWorkbench: () => void
   onExportTasks: (format: ExportFormat) => Promise<void>
   onTriggerDrain: () => Promise<void>
+}
+
+interface SelectionSectionProps {
+  selectedTaskIds: Set<string>
   onClearSelection: () => void
-  onPollRetry: () => void
-  onPollDismiss: () => void
-  onOrphanDismiss: () => void
 }
 
-function PipelineControlBar({
-  headerStats,
-  conflictingTasks,
-  visibleStuckTasks,
-  statusFilter,
-  dagOpen,
-  selectedTaskIds,
-  tasks,
-  filteredTasks,
-  pollError,
-  loading,
-  orphanBanner,
-  drainStatus,
-  now,
-  onFilterClick,
-  onConflictClick,
-  onHealthCheckClick,
-  onDagToggle,
-  onOpenWorkbench,
-  onExportTasks,
-  onTriggerDrain,
-  onClearSelection,
-  onPollRetry,
-  onPollDismiss,
-  onOrphanDismiss
-}: PipelineControlBarProps): React.JSX.Element {
-  return (
-    <>
-      <PipelineHeader
-        stats={headerStats}
-        conflictingTasks={conflictingTasks}
-        visibleStuckTasks={visibleStuckTasks}
-        onFilterClick={onFilterClick}
-        activeFilter={statusFilter}
-        onConflictClick={onConflictClick}
-        onHealthCheckClick={onHealthCheckClick}
-        onDagToggle={onDagToggle}
-        dagOpen={dagOpen}
-        onOpenWorkbench={onOpenWorkbench}
-        onExportTasks={onExportTasks}
-        onTriggerDrain={onTriggerDrain}
-      />
-      <BulkActionBar
-        selectedCount={selectedTaskIds.size}
-        selectedTaskIds={selectedTaskIds}
-        onClearSelection={onClearSelection}
-      />
-      <PipelineFilterBar tasks={tasks} />
-      <PipelineFilterBanner filteredTasks={filteredTasks} totalTasks={tasks} />
-      <PipelineBanners
-        pollError={pollError}
-        loading={loading}
-        tasksEmpty={tasks.length === 0}
-        orphanBanner={orphanBanner}
-        drainStatus={drainStatus}
-        now={now}
-        onPollRetry={onPollRetry}
-        onPollDismiss={onPollDismiss}
-        onOrphanDismiss={onOrphanDismiss}
-      />
-    </>
-  )
+interface FilterSectionProps {
+  tasks: SprintTask[]
+  filteredTasks: SprintTask[]
 }
 
-interface PipelineBannersProps {
+interface BannerSectionProps {
   pollError: string | null
   loading: boolean
   tasksEmpty: boolean
@@ -271,6 +182,49 @@ interface PipelineBannersProps {
   onPollRetry: () => void
   onPollDismiss: () => void
   onOrphanDismiss: () => void
+}
+
+interface PipelineControlBarProps {
+  header: HeaderSectionProps
+  actions: OperatorActionsProps
+  selection: SelectionSectionProps
+  filter: FilterSectionProps
+  banners: BannerSectionProps
+}
+
+function PipelineControlBar({
+  header,
+  actions,
+  selection,
+  filter,
+  banners
+}: PipelineControlBarProps): React.JSX.Element {
+  return (
+    <>
+      <PipelineHeader
+        stats={header.headerStats}
+        conflictingTasks={header.conflictingTasks}
+        visibleStuckTasks={header.visibleStuckTasks}
+        onFilterClick={header.onFilterClick}
+        activeFilter={header.statusFilter}
+        onConflictClick={header.onConflictClick}
+        onHealthCheckClick={header.onHealthCheckClick}
+        onDagToggle={actions.onDagToggle}
+        dagOpen={header.dagOpen}
+        onOpenWorkbench={actions.onOpenWorkbench}
+        onExportTasks={actions.onExportTasks}
+        onTriggerDrain={actions.onTriggerDrain}
+      />
+      <BulkActionBar
+        selectedCount={selection.selectedTaskIds.size}
+        selectedTaskIds={selection.selectedTaskIds}
+        onClearSelection={selection.onClearSelection}
+      />
+      <PipelineFilterBar tasks={filter.tasks} />
+      <PipelineFilterBanner filteredTasks={filter.filteredTasks} totalTasks={filter.tasks} />
+      <PipelineBanners {...banners} />
+    </>
+  )
 }
 
 function PipelineBanners({
@@ -283,7 +237,7 @@ function PipelineBanners({
   onPollRetry,
   onPollDismiss,
   onOrphanDismiss
-}: PipelineBannersProps): React.JSX.Element {
+}: BannerSectionProps): React.JSX.Element {
   return (
     <>
       {pollError && (
@@ -606,6 +560,12 @@ export function SprintPipeline(): React.JSX.Element {
   useSprintPipelineCommands({ openWorkbench, handleStop, handleRetry, setStatusFilter })
 
   const [dagOpen, setDagOpen] = useState(false)
+  // Ref mirror of dagOpen so `handleDagToggle` can flip it without re-creating the callback
+  // (T-30: stable callback identity is preserved across renders that don't change deps).
+  const dagOpenRef = useRef(dagOpen)
+  useEffect(() => {
+    dagOpenRef.current = dagOpen
+  }, [dagOpen])
 
   useEffect(() => {
     const cleanup = initTaskOutputListener()
@@ -732,32 +692,107 @@ export function SprintPipeline(): React.JSX.Element {
     [setSelectedTaskId, setDrawerOpen]
   )
 
+  // T-30: stabilize control-bar callbacks so PipelineControlBar / PipelineHeader / banners
+  // see referentially stable handlers across renders that don't actually change deps.
+  const handleOpenConflict = useCallback(
+    () => setConflictDrawerOpen(true),
+    [setConflictDrawerOpen]
+  )
+  const handleOpenHealthCheck = useCallback(
+    () => setHealthCheckDrawerOpen(true),
+    [setHealthCheckDrawerOpen]
+  )
+  const handleDagToggle = useCallback(() => setDagOpen(!dagOpenRef.current), [])
+  const handlePollRetry = useCallback(() => {
+    clearPollError()
+    void loadData()
+  }, [clearPollError, loadData])
+  const handleOrphanDismiss = useCallback(
+    () => dismissOrphanBanner(null),
+    [dismissOrphanBanner]
+  )
+
+  const headerSection: HeaderSectionProps = useMemo(
+    () => ({
+      headerStats,
+      conflictingTasks,
+      visibleStuckTasks,
+      statusFilter,
+      dagOpen,
+      onFilterClick: setStatusFilter,
+      onConflictClick: handleOpenConflict,
+      onHealthCheckClick: handleOpenHealthCheck
+    }),
+    [
+      headerStats,
+      conflictingTasks,
+      visibleStuckTasks,
+      statusFilter,
+      dagOpen,
+      setStatusFilter,
+      handleOpenConflict,
+      handleOpenHealthCheck
+    ]
+  )
+
+  const operatorActions: OperatorActionsProps = useMemo(
+    () => ({
+      onDagToggle: handleDagToggle,
+      onOpenWorkbench: openWorkbench,
+      onExportTasks: handleExportTasks,
+      onTriggerDrain: handleTriggerDrain
+    }),
+    [handleDagToggle, openWorkbench, handleExportTasks, handleTriggerDrain]
+  )
+
+  const selectionSection: SelectionSectionProps = useMemo(
+    () => ({
+      selectedTaskIds,
+      onClearSelection: clearMultiSelection
+    }),
+    [selectedTaskIds, clearMultiSelection]
+  )
+
+  const filterSection: FilterSectionProps = useMemo(
+    () => ({ tasks, filteredTasks }),
+    [tasks, filteredTasks]
+  )
+
+  const bannerSection: BannerSectionProps = useMemo(
+    () => ({
+      pollError,
+      loading,
+      tasksEmpty: tasks.length === 0,
+      orphanBanner,
+      drainStatus,
+      now,
+      onPollRetry: handlePollRetry,
+      onPollDismiss: clearPollError,
+      onOrphanDismiss: handleOrphanDismiss
+    }),
+    [
+      pollError,
+      loading,
+      tasks.length,
+      orphanBanner,
+      drainStatus,
+      now,
+      handlePollRetry,
+      clearPollError,
+      handleOrphanDismiss
+    ]
+  )
+
   const controlBarProps: PipelineControlBarProps = {
-    headerStats,
-    conflictingTasks,
-    visibleStuckTasks,
-    statusFilter,
-    dagOpen,
-    selectedTaskIds,
-    tasks,
-    filteredTasks,
-    pollError,
-    loading,
-    orphanBanner,
-    drainStatus,
-    now,
-    onFilterClick: setStatusFilter,
-    onConflictClick: () => setConflictDrawerOpen(true),
-    onHealthCheckClick: () => setHealthCheckDrawerOpen(true),
-    onDagToggle: () => setDagOpen(!dagOpen),
-    onOpenWorkbench: openWorkbench,
-    onExportTasks: handleExportTasks,
-    onTriggerDrain: handleTriggerDrain,
-    onClearSelection: clearMultiSelection,
-    onPollRetry: () => { clearPollError(); void loadData() },
-    onPollDismiss: clearPollError,
-    onOrphanDismiss: () => dismissOrphanBanner(null)
+    header: headerSection,
+    actions: operatorActions,
+    selection: selectionSection,
+    filter: filterSection,
+    banners: bannerSection
   }
+
+  const handleViewAgents = useCallback(() => setView('agents'), [setView])
+  const handleOpenSpec = useCallback(() => setSpecPanelOpen(true), [setSpecPanelOpen])
 
   const activeBodyProps: PipelineActiveBodyProps = {
     tasks,
@@ -778,38 +813,52 @@ export function SprintPipeline(): React.JSX.Element {
     onLaunch: launchTask,
     onStop: handleStop,
     onDelete: handleDeleteTask,
-    onViewLogs: () => setView('agents'),
-    onOpenSpec: () => setSpecPanelOpen(true),
+    onViewLogs: handleViewAgents,
+    onOpenSpec: handleOpenSpec,
     onEdit: handleEdit,
-    onViewAgents: () => setView('agents'),
+    onViewAgents: handleViewAgents,
     onUnblock: handleUnblock,
     onRetry: handleRetry,
     onReviewChanges: handleReviewChanges,
     onExport: handleExport
   }
 
+  const handleCloseSpec = useCallback(() => setSpecPanelOpen(false), [setSpecPanelOpen])
+  const handleCloseDoneView = useCallback(() => setDoneViewOpen(false), [setDoneViewOpen])
+  const handleCloseConflict = useCallback(
+    () => setConflictDrawerOpen(false),
+    [setConflictDrawerOpen]
+  )
+  const handleCloseHealthCheck = useCallback(
+    () => setHealthCheckDrawerOpen(false),
+    [setHealthCheckDrawerOpen]
+  )
+  const handleCloseDag = useCallback(() => setDagOpen(false), [])
+  const handleNavigateToSettings = useCallback(() => setView('settings'), [setView])
+  const handleLoadDataRetry = useCallback(() => void loadData(), [loadData])
+
   const postContentProps: PipelinePostContentProps = {
     specPanelOpen,
     selectedTask,
-    onCloseSpec: () => setSpecPanelOpen(false),
+    onCloseSpec: handleCloseSpec,
     onSaveSpec: handleSaveSpec,
     doneViewOpen,
     doneTasks: filteredPartition.done,
-    onCloseDoneView: () => setDoneViewOpen(false),
+    onCloseDoneView: handleCloseDoneView,
     onTaskClick: handleTaskClick,
     conflictDrawerOpen,
     conflictingTasks,
-    onCloseConflict: () => setConflictDrawerOpen(false),
+    onCloseConflict: handleCloseConflict,
     healthCheckDrawerOpen,
     visibleStuckTasks,
-    onCloseHealthCheck: () => setHealthCheckDrawerOpen(false),
+    onCloseHealthCheck: handleCloseHealthCheck,
     onDismissStuckTask: dismissTask,
     confirmProps,
     dagOpen,
     tasks,
     selectedTaskId,
     onSelectTask: handleSelectTask,
-    onCloseDag: () => setDagOpen(false)
+    onCloseDag: handleCloseDag
   }
 
   return (
@@ -824,11 +873,11 @@ export function SprintPipeline(): React.JSX.Element {
       <PipelineControlBar {...controlBarProps} />
       {loading && tasks.length === 0 && <PipelineLoadingSkeleton />}
       {loadError && (
-        <PipelineLoadError message={loadError} loading={loading} onRetry={() => void loadData()} />
+        <PipelineLoadError message={loadError} loading={loading} onRetry={handleLoadDataRetry} />
       )}
       {!loading && !loadError && tasks.length === 0 && (
         repos.length === 0
-          ? <NoRepositoryState onNavigateToSettings={() => setView('settings')} />
+          ? <NoRepositoryState onNavigateToSettings={handleNavigateToSettings} />
           : <EmptyPipelineState onCreateTask={openWorkbench} />
       )}
       <PipelineActiveBody {...activeBodyProps} />

@@ -141,3 +141,56 @@
   z-index: 0;
   opacity: 0.3;
 }
+
+/* Centered empty/error state shells (T-29: replaces inline pixel styles in SprintPipeline.tsx) */
+.pipeline-state {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.pipeline-state__column {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--s-3);
+  padding: var(--s-8);
+}
+
+.pipeline-state__title {
+  font-size: var(--fleet-size-md, 14px);
+  font-weight: 500;
+  color: var(--fg);
+}
+
+.pipeline-state__title--lg {
+  font-size: var(--fleet-size-lg, 15px);
+}
+
+.pipeline-state__hint {
+  font-size: var(--fleet-size-sm, 12px);
+  color: var(--fg-3);
+  margin: 0;
+}
+
+.pipeline-state__hint--center {
+  text-align: center;
+}
+
+.pipeline-state__cta {
+  padding: 0 var(--s-3);
+  height: var(--s-7);
+  background: var(--accent);
+  color: var(--accent-fg);
+  border: none;
+  border-radius: var(--r-md);
+  font-size: var(--fleet-size-sm, 12px);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pipeline-state__cta:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
