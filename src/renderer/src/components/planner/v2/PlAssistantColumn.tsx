@@ -11,6 +11,7 @@ import {
   MAX_TASK_TITLE_CHARS,
   MAX_TASK_SPEC_CHARS
 } from '../../../lib/sanitize-agent-output'
+import { buildSystemPrefix, buildApiMessages } from './pl-assistant-helpers'
 
 interface Message {
   id: string
@@ -697,19 +698,3 @@ function deriveSuggestions(tasks: SprintTask[]): string[] {
   return suggestions.slice(0, 3)
 }
 
-function buildSystemPrefix(epicContext: string): string {
-  return `You are a planning assistant for the FLEET software development environment. Help the user brainstorm and plan tasks for their epic.\n\nEpic context:\n${epicContext}\n\nWhen you propose creating a task, use this exact format:\n[ACTION:create-task]{"title":"...","spec":"..."}[/ACTION]\n\nWhen you propose creating an epic, use:\n[ACTION:create-epic]{"name":"...","goal":"..."}[/ACTION]\n\nWhen you propose updating a task spec, use:\n[ACTION:update-spec]{"taskId":"<existing task id>","spec":"..."}[/ACTION]\n\nKeep responses concise and actionable. Steps must be numbered and concrete.`
-}
-
-function buildApiMessages(
-  history: Message[],
-  newText: string,
-  systemPrefix: string
-): Array<{ role: 'user' | 'assistant'; content: string }> {
-  const api = history.map((m) => ({ role: m.role, content: m.content }))
-  api.push({ role: 'user', content: newText })
-  if (api[0]?.role === 'user') {
-    api[0] = { role: 'user', content: `${systemPrefix}\n\n${api[0].content}` }
-  }
-  return api
-}
