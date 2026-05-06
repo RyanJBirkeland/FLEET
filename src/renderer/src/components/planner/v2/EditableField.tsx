@@ -50,6 +50,7 @@ export function EditableField({
 
   async function commit(): Promise<void> {
     setEditing(false)
+    if (draft.trim() === value.trim()) return
     await onSave(draft)
   }
 

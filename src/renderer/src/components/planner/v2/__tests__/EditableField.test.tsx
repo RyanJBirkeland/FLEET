@@ -54,17 +54,15 @@ describe('EditableField — single-line', () => {
   })
 
   it('does NOT call onSave when the value is unchanged on blur', async () => {
-    // onSave is called with same value — the filtering is the caller's responsibility,
-    // but we verify the component passes the raw draft so callers can decide.
-    // The important property tested here is that we do NOT suppress the call;
-    // the parent (PlannerViewV2.handleSaveName) does the unchanged-value guard.
     const onSave = vi.fn().mockResolvedValue(undefined)
     render(<EditableField value="hello" onSave={onSave} />)
     fireEvent.click(screen.getByText('hello'))
     const input = screen.getByRole('textbox')
     // No change — blur immediately
     fireEvent.blur(input)
-    await waitFor(() => expect(onSave).toHaveBeenCalledWith('hello'))
+    // Allow any pending microtasks to settle, then confirm onSave was never invoked
+    await Promise.resolve()
+    expect(onSave).not.toHaveBeenCalled()
   })
 })
 

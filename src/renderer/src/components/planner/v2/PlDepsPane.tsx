@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import type { TaskGroup, EpicDependency } from '../../../../../shared/types'
+import { CONDITION_LABEL, nextDependencyCondition } from './epicDependencyUtils'
 
 interface PlDepsPaneProps {
   epicId: string
@@ -8,20 +9,6 @@ interface PlDepsPaneProps {
   onAdd: (upstreamId: string) => Promise<void>
   onRemove: (upstreamId: string) => Promise<void>
   onChangeCondition: (upstreamId: string, condition: EpicDependency['condition']) => Promise<void>
-}
-
-const CONDITION_LABEL: Record<EpicDependency['condition'], string> = {
-  on_success: 'on success',
-  always: 'always',
-  manual: 'manual'
-}
-
-export function nextDependencyCondition(
-  current: EpicDependency['condition']
-): EpicDependency['condition'] {
-  if (current === 'on_success') return 'always'
-  if (current === 'always') return 'manual'
-  return 'on_success'
 }
 
 export function PlDepsPane({
@@ -63,8 +50,8 @@ export function PlDepsPane({
     setAdding(true)
     try {
       await onAdd(upstreamId)
-    } catch {
-      setCycleError('Adding this dependency would create a cycle.')
+    } catch (err) {
+      setCycleError(err instanceof Error ? err.message : String(err))
     } finally {
       setAdding(false)
     }
