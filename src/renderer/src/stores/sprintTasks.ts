@@ -176,6 +176,9 @@ export interface SprintTasksState {
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
 }
 
+export const selectActiveTasks = (state: SprintTasksState): SprintTask[] =>
+  state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE)
+
 export const selectActiveTaskCount = (state: SprintTasksState): number =>
   state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
 
