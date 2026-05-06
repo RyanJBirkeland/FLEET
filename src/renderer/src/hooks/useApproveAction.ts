@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { toast } from '../stores/toasts'
+import * as reviewService from '../services/review'
 
 export interface UseApproveActionResult {
   approve: () => Promise<void>
@@ -12,7 +13,7 @@ export function useApproveAction(taskId: string, onSuccess: () => void): UseAppr
   const approve = async (): Promise<void> => {
     setInFlight(true)
     try {
-      await window.api.review.approveTask({ taskId })
+      await reviewService.approveTask({ taskId })
       toast.success('Task approved — dependents unblocked')
       onSuccess()
     } catch (e) {

@@ -38,3 +38,9 @@ export async function exportTaskHistory(
 ): ReturnType<typeof window.api.sprint.exportTaskHistory> {
   return window.api.sprint.exportTaskHistory(taskId)
 }
+
+export async function getLastPrompt(
+  taskId: string
+): ReturnType<typeof window.api.sprint.getLastPrompt> {
+  return window.api.sprint.getLastPrompt(taskId)
+}

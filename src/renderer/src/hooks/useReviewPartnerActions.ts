@@ -1,6 +1,7 @@
 import { useRef } from 'react'
 import { useReviewPartnerStore } from '../stores/reviewPartner'
 import type { PartnerMessage, ChatChunk } from '../../../shared/types'
+import * as reviewService from '../services/review'
 
 function newId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
@@ -30,7 +31,7 @@ function saveMessages(messagesByTask: Record<string, PartnerMessage[]>): void {
 
 /**
  * Hook for Review Partner IPC actions.
- * Owns all window.api.review.* calls and subscription lifecycle.
+ * Routes all review IPC through `services/review` and owns subscription lifecycle.
  * Updates the reviewPartner store state; components read state from the store.
  */
 export function useReviewPartnerActions(): {
@@ -52,7 +53,7 @@ export function useReviewPartnerActions(): {
     }))
 
     try {
-      const result = await window.api.review.autoReview(taskId, opts?.force ?? false)
+      const result = await reviewService.autoReview(taskId, opts?.force ?? false)
       useReviewPartnerStore.setState((s) => {
         const existingMessages = s.messagesByTask[taskId] ?? []
         // Only seed if the user hasn't started a conversation yet
@@ -112,7 +113,7 @@ export function useReviewPartnerActions(): {
       // Subscribe BEFORE invoking chatStream so we don't miss early chunks.
       let streamId: string | null = null
 
-      unsubscribe = window.api.review.onChatChunk((_e: unknown, chunk: ChatChunk) => {
+      unsubscribe = reviewService.onChatChunk((_e: unknown, chunk: ChatChunk) => {
         if (!streamId || chunk.streamId !== streamId) return
         useReviewPartnerStore.setState((s) => {
           const msgs = [...(s.messagesByTask[taskId] ?? [])]
@@ -150,7 +151,7 @@ export function useReviewPartnerActions(): {
       chunkUnsubscribeByTask.current.set(taskId, () => unsubscribe?.())
 
       const messages = (useReviewPartnerStore.getState().messagesByTask[taskId] ?? []).slice(0, -1) // exclude the empty streaming msg
-      const { streamId: sid } = await window.api.review.chatStream({ taskId, messages })
+      const { streamId: sid } = await reviewService.chatStream({ taskId, messages })
       streamId = sid
       useReviewPartnerStore.setState((s) => ({
         activeStreamByTask: { ...s.activeStreamByTask, [taskId]: streamId }
@@ -194,7 +195,7 @@ export function useReviewPartnerActions(): {
       unsub()
       chunkUnsubscribeByTask.current.delete(taskId)
     }
-    await window.api.review.abortChat(streamId)
+    await reviewService.abortChat(streamId)
   }
 
   const appendQuickAction = async (taskId: string, prompt: string): Promise<void> => {

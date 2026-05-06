@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useCodeReviewStore } from '../stores/codeReview'
 import { useSprintTasks } from '../stores/sprintTasks'
 import type { ReviewCommit } from '../stores/codeReview'
+import * as reviewService from '../services/review'
 
 export interface ReviewCommitsResult {
   commits: ReviewCommit[]
@@ -33,7 +34,7 @@ export function useReviewCommits(taskId: string | null): ReviewCommitsResult {
       setError(null)
 
       try {
-        const result = await window.api.review.getCommits({
+        const result = await reviewService.getCommits({
           worktreePath
         })
         if (!cancelled) setCommits(result.commits)

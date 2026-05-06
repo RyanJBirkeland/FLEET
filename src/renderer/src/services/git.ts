@@ -40,3 +40,9 @@ export async function push(cwd: string): Promise<string> {
 export async function getBranches(cwd: string): ReturnType<typeof window.api.git.branches> {
   return window.api.git.branches(cwd)
 }
+
+export async function diffBetweenRefs(
+  payload: Parameters<typeof window.api.git.diffBetweenRefs>[0]
+): ReturnType<typeof window.api.git.diffBetweenRefs> {
+  return window.api.git.diffBetweenRefs(payload)
+}

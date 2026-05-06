@@ -3,6 +3,8 @@ import { useCodeReviewStore } from '../stores/codeReview'
 import { useSprintTasks } from '../stores/sprintTasks'
 import type { DiffFile } from '../stores/codeReview'
 import type { ReviewDiffSnapshot } from '../../../shared/types'
+import * as reviewService from '../services/review'
+import * as gitService from '../services/git'
 
 function parseSnapshot(raw: string | null | undefined): ReviewDiffSnapshot | null {
   if (!raw) return null
@@ -11,6 +13,16 @@ function parseSnapshot(raw: string | null | undefined): ReviewDiffSnapshot | nul
   } catch {
     return null
   }
+}
+
+export interface IncrementalDiffOptions {
+  enabled: boolean
+  fromRef: string | null | undefined
+}
+
+export interface IncrementalDiffResult {
+  diff: string
+  loading: boolean
 }
 
 export interface ReviewChangesResult {
@@ -24,9 +36,14 @@ export interface ReviewChangesResult {
   fileDiffLoading: boolean
   selectFile: (filePath: string) => void
   retryDiff: () => void
+  /** Optional incremental diff between an earlier branch tip and HEAD. */
+  incrementalDiff: IncrementalDiffResult
 }
 
-export function useReviewChanges(taskId: string | null): ReviewChangesResult {
+export function useReviewChanges(
+  taskId: string | null,
+  incremental?: IncrementalDiffOptions
+): ReviewChangesResult {
   const tasks = useSprintTasks((s) => s.tasks)
   const setDiffFiles = useCodeReviewStore((s) => s.setDiffFiles)
   const diffRefreshKey = useCodeReviewStore((s) => s.diffRefreshKey)
@@ -38,6 +55,10 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
   const [fileDiff, setFileDiff] = useState<string>('')
   const [isSnapshot, setIsSnapshot] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [incrementalState, setIncrementalState] = useState<IncrementalDiffResult>({
+    diff: '',
+    loading: false
+  })
 
   const task = tasks.find((t) => t.id === taskId)
 
@@ -83,7 +104,7 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
       }
 
       try {
-        const result = await window.api.review.getDiff({
+        const result = await reviewService.getDiff({
           worktreePath: task.worktree_path
         })
         if (cancelled) return
@@ -137,7 +158,7 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
       }
       if (!task?.worktree_path || !selectedDiffFile) return
       try {
-        const result = await window.api.review.getFileDiff({
+        const result = await reviewService.getFileDiff({
           worktreePath: task.worktree_path,
           filePath: selectedDiffFile
         })
@@ -154,6 +175,39 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
     }
   }, [task?.worktree_path, selectedDiffFile, isSnapshot, snapshot])
 
+  // Load incremental diff when caller enables it.
+  // The caller controls toggling; the hook owns the IPC + lifecycle.
+  const incrementalEnabled = incremental?.enabled === true
+  const incrementalFromRef = incremental?.fromRef ?? null
+  const worktreeForIncremental = task?.worktree_path ?? null
+
+  useEffect(() => {
+    if (!incrementalEnabled || !incrementalFromRef || !worktreeForIncremental) {
+      setIncrementalState({ diff: '', loading: false })
+      return
+    }
+
+    let cancelled = false
+    setIncrementalState({ diff: '', loading: true })
+
+    gitService
+      .diffBetweenRefs({
+        repoPath: worktreeForIncremental,
+        fromRef: incrementalFromRef,
+        toRef: 'HEAD'
+      })
+      .then((diff) => {
+        if (!cancelled) setIncrementalState({ diff, loading: false })
+      })
+      .catch(() => {
+        if (!cancelled) setIncrementalState({ diff: '', loading: false })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [incrementalEnabled, incrementalFromRef, worktreeForIncremental])
+
   return {
     files: useCodeReviewStore((s) => s.diffFiles),
     loading: useCodeReviewStore((s) => s.loading.diff ?? false),
@@ -164,6 +218,7 @@ export function useReviewChanges(taskId: string | null): ReviewChangesResult {
     fileDiff,
     fileDiffLoading: false, // Not tracking separate loading state for file diff
     selectFile: setSelectedDiffFile,
-    retryDiff
+    retryDiff,
+    incrementalDiff: incrementalState
   }
 }

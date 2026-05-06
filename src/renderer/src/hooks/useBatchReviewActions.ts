@@ -1,6 +1,7 @@
 import { useCodeReviewStore } from '../stores/codeReview'
 import { useSprintTasks } from '../stores/sprintTasks'
 import { toast } from '../stores/toasts'
+import * as reviewService from '../services/review'
 
 export interface UseBatchReviewActionsResult {
   batchMergeLocally: (tasks: Array<{ id: string; title: string }>) => Promise<void>
@@ -57,7 +58,7 @@ export function useBatchReviewActions(): UseBatchReviewActionsResult {
     executeBatchAction(
       batchTasks,
       async (task) => {
-        const result = await window.api.review.mergeLocally({ taskId: task.id, strategy: 'squash' })
+        const result = await reviewService.mergeLocally({ taskId: task.id, strategy: 'squash' })
         return result.success
       },
       (n) => `Merged ${n} tasks`,
@@ -75,7 +76,7 @@ export function useBatchReviewActions(): UseBatchReviewActionsResult {
       afterBatch()
       return
     }
-    const result = await window.api.review.shipBatch({
+    const result = await reviewService.shipBatch({
       taskIds: batchTasks.map((t) => t.id),
       strategy: 'squash'
     })
@@ -100,7 +101,7 @@ export function useBatchReviewActions(): UseBatchReviewActionsResult {
     executeBatchAction(
       batchTasks,
       async (task) => {
-        await window.api.review.createPr({
+        await reviewService.createPr({
           taskId: task.id,
           title: task.title,
           body: task.spec || task.prompt || ''
@@ -116,7 +117,7 @@ export function useBatchReviewActions(): UseBatchReviewActionsResult {
     executeBatchAction(
       batchTasks,
       async (task) => {
-        await window.api.review.discard({ taskId: task.id })
+        await reviewService.discard({ taskId: task.id })
         return true
       },
       (n) => `Discarded ${n} tasks`,

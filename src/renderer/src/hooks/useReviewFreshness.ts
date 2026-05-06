@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import * as reviewService from '../services/review'
 
 export type FreshnessStatus = 'fresh' | 'stale' | 'conflict' | 'unknown' | 'loading'
 
@@ -26,7 +27,7 @@ export function useReviewFreshness(
   useEffect(() => {
     if (!taskId || taskStatus !== 'review') return
     let cancelled = false
-    window.api.review
+    reviewService
       .checkFreshness({ taskId })
       .then((result) => {
         if (!cancelled) setFreshness(result)

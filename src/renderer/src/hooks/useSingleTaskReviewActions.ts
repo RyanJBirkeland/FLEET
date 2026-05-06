@@ -8,6 +8,7 @@ import { useReviewFreshness } from './useReviewFreshness'
 import { useConfirm } from '../components/ui/ConfirmModal'
 import { useTextareaPrompt } from '../components/ui/TextareaPromptModal'
 import { nowIso } from '../../../shared/time'
+import * as reviewService from '../services/review'
 
 function getNextReviewTaskId(
   currentTaskId: string,
@@ -58,6 +59,30 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
   const { freshness, setFreshness } = useReviewFreshness(task?.id, task?.status, task?.rebased_at)
   const { configured: ghConfigured } = useGitHubStatus()
 
+  function advanceToNextReview(currentTaskId: string): void {
+    const nextTaskId = getNextReviewTaskId(currentTaskId, tasks)
+    selectTask(nextTaskId)
+    if (!nextTaskId) toast.info('Review queue empty')
+    loadData()
+  }
+
+  async function withReviewAction<T>(
+    label: string,
+    fallbackErrorMessage: string,
+    fn: () => Promise<T>,
+    onSuccess: (result: T) => void
+  ): Promise<void> {
+    setActionInFlight(label)
+    try {
+      const result = await fn()
+      onSuccess(result)
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : fallbackErrorMessage)
+    } finally {
+      setActionInFlight(null)
+    }
+  }
+
   const shipIt = async (): Promise<void> => {
     if (!task) return
     const ok = await confirm({
@@ -67,29 +92,19 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       variant: 'default'
     })
     if (!ok) return
-    setActionInFlight('shipIt')
-    try {
-      const result = await window.api.review.shipIt({
-        taskId: task.id,
-        strategy: mergeStrategy
-      })
-      if (result.success) {
-        // After the push-failure fix, shipIt never returns {success:true, pushed:false}.
-        // A successful result means merged AND pushed — anything else returns
-        // success:false with the task still in review for retry.
-        toast.success('Merged & pushed!')
-        const nextTaskId = getNextReviewTaskId(task.id, tasks)
-        selectTask(nextTaskId)
-        if (!nextTaskId) toast.info('Review queue empty')
-        loadData()
-      } else {
-        toast.error(`Ship It failed: ${result.error || 'unknown error'}`, 10000)
+    await withReviewAction(
+      'shipIt',
+      'Ship It failed',
+      () => reviewService.shipIt({ taskId: task.id, strategy: mergeStrategy }),
+      (result) => {
+        if (result.success) {
+          toast.success('Merged & pushed!')
+          advanceToNextReview(task.id)
+        } else {
+          toast.error(`Ship It failed: ${result.error || 'unknown error'}`, 10000)
+        }
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Ship It failed')
-    } finally {
-      setActionInFlight(null)
-    }
+    )
   }
 
   const mergeLocally = async (): Promise<void> => {
@@ -101,29 +116,22 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       variant: 'default'
     })
     if (!ok) return
-    setActionInFlight('merge')
-    try {
-      const result = await window.api.review.mergeLocally({
-        taskId: task.id,
-        strategy: mergeStrategy
-      })
-      if (result.success) {
-        toast.success('Changes merged locally')
-        const nextTaskId = getNextReviewTaskId(task.id, tasks)
-        selectTask(nextTaskId)
-        if (!nextTaskId) toast.info('Review queue empty')
-        loadData()
-      } else {
-        const conflictInfo = result.conflicts?.length
-          ? `\n\nConflicting files:\n${result.conflicts.slice(0, 5).join('\n')}${result.conflicts.length > 5 ? `\n...and ${result.conflicts.length - 5} more` : ''}`
-          : ''
-        toast.error(`Merge failed: ${result.error || 'conflicts detected'}${conflictInfo}`, 10000)
+    await withReviewAction(
+      'merge',
+      'Merge failed',
+      () => reviewService.mergeLocally({ taskId: task.id, strategy: mergeStrategy }),
+      (result) => {
+        if (result.success) {
+          toast.success('Changes merged locally')
+          advanceToNextReview(task.id)
+        } else {
+          const conflictInfo = result.conflicts?.length
+            ? `\n\nConflicting files:\n${result.conflicts.slice(0, 5).join('\n')}${result.conflicts.length > 5 ? `\n...and ${result.conflicts.length - 5} more` : ''}`
+            : ''
+          toast.error(`Merge failed: ${result.error || 'conflicts detected'}${conflictInfo}`, 10000)
+        }
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Merge failed')
-    } finally {
-      setActionInFlight(null)
-    }
+    )
   }
 
   const createPr = async (): Promise<void> => {
@@ -135,26 +143,23 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       variant: 'default'
     })
     if (!ok) return
-    setActionInFlight('createPr')
-    try {
-      const result = await window.api.review.createPr({
-        taskId: task.id,
-        title: task.title,
-        body: task.spec || task.prompt || ''
-      })
-      toast.info(`PR created`, {
-        action: 'Open PR',
-        onAction: () => window.open(result.prUrl, '_blank')
-      })
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      if (!nextTaskId) toast.info('Review queue empty')
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to create PR')
-    } finally {
-      setActionInFlight(null)
-    }
+    await withReviewAction(
+      'createPr',
+      'Failed to create PR',
+      () =>
+        reviewService.createPr({
+          taskId: task.id,
+          title: task.title,
+          body: task.spec || task.prompt || ''
+        }),
+      (result) => {
+        toast.info(`PR created`, {
+          action: 'Open PR',
+          onAction: () => window.open(result.prUrl, '_blank')
+        })
+        advanceToNextReview(task.id)
+      }
+    )
   }
 
   const requestRevision = async (): Promise<void> => {
@@ -166,55 +171,45 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       confirmLabel: 'Send to Agent'
     })
     if (!feedback) return
-    setActionInFlight('revise')
-    try {
-      const priorEntries = Array.isArray(task.revision_feedback) ? task.revision_feedback : []
-      const revisionFeedback = [
-        ...priorEntries,
-        {
-          timestamp: nowIso(),
+    const priorEntries = Array.isArray(task.revision_feedback) ? task.revision_feedback : []
+    const revisionFeedback = [
+      ...priorEntries,
+      { timestamp: nowIso(), feedback, attempt: priorEntries.length + 1 }
+    ]
+    await withReviewAction(
+      'revise',
+      'Failed to request revision',
+      () =>
+        reviewService.requestRevision({
+          taskId: task.id,
           feedback,
-          attempt: priorEntries.length + 1
-        }
-      ]
-      // Pass revisionFeedback to the server so it is written atomically with
-      // the status transition — no longer a separate pre-write that persists on failure.
-      await window.api.review.requestRevision({
-        taskId: task.id,
-        feedback,
-        mode: 'fresh',
-        revisionFeedback
-      })
-      toast.success('Revision requested — agent will re-run with your feedback')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      if (!nextTaskId) toast.info('Review queue empty')
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to request revision')
-    } finally {
-      setActionInFlight(null)
-    }
+          mode: 'fresh',
+          revisionFeedback
+        }),
+      () => {
+        toast.success('Revision requested — agent will re-run with your feedback')
+        advanceToNextReview(task.id)
+      }
+    )
   }
 
   const rebase = async (): Promise<void> => {
     if (!task) return
-    setActionInFlight('rebase')
-    try {
-      const result = await window.api.review.rebase({ taskId: task.id })
-      if (result.success) {
-        toast.success('Rebased onto main')
-        setFreshness({ status: 'fresh', commitsBehind: 0 })
-        loadData()
-      } else {
-        toast.error(`Rebase failed: ${result.error || 'conflicts detected'}`)
-        setFreshness({ status: 'conflict' })
+    await withReviewAction(
+      'rebase',
+      'Rebase failed',
+      () => reviewService.rebase({ taskId: task.id }),
+      (result) => {
+        if (result.success) {
+          toast.success('Rebased onto main')
+          setFreshness({ status: 'fresh', commitsBehind: 0 })
+          loadData()
+        } else {
+          toast.error(`Rebase failed: ${result.error || 'conflicts detected'}`)
+          setFreshness({ status: 'conflict' })
+        }
       }
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Rebase failed')
-    } finally {
-      setActionInFlight(null)
-    }
+    )
   }
 
   const discard = async (): Promise<void> => {
@@ -226,19 +221,15 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       variant: 'danger'
     })
     if (!ok) return
-    setActionInFlight('discard')
-    try {
-      await window.api.review.discard({ taskId: task.id })
-      toast.success('Changes discarded')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      if (!nextTaskId) toast.info('Review queue empty')
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to discard')
-    } finally {
-      setActionInFlight(null)
-    }
+    await withReviewAction(
+      'discard',
+      'Failed to discard',
+      () => reviewService.discard({ taskId: task.id }),
+      () => {
+        toast.success('Changes discarded')
+        advanceToNextReview(task.id)
+      }
+    )
   }
 
   const markShippedOutsideFleet = async (): Promise<void> => {
@@ -250,19 +241,15 @@ export function useSingleTaskReviewActions(): UseSingleTaskReviewActionsResult {
       variant: 'default'
     })
     if (!ok) return
-    setActionInFlight('markShipped')
-    try {
-      await window.api.review.markShippedOutsideFleet({ taskId: task.id })
-      toast.success('Task marked as shipped')
-      const nextTaskId = getNextReviewTaskId(task.id, tasks)
-      selectTask(nextTaskId)
-      if (!nextTaskId) toast.info('Review queue empty')
-      loadData()
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to mark shipped')
-    } finally {
-      setActionInFlight(null)
-    }
+    await withReviewAction(
+      'markShipped',
+      'Failed to mark shipped',
+      () => reviewService.markShippedOutsideFleet({ taskId: task.id }),
+      () => {
+        toast.success('Task marked as shipped')
+        advanceToNextReview(task.id)
+      }
+    )
   }
 
   return {

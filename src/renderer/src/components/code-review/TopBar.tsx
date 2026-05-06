@@ -19,6 +19,7 @@ import { useReviewPartnerStore } from '../../stores/reviewPartner'
 import { ReviewActionsBar } from './ReviewActionsBar'
 import { BatchActionsToolbar } from './BatchActionsToolbar'
 import { PrBuilderModal } from './PrBuilderModal'
+import * as sprintService from '../../services/sprint'
 
 export function TopBar(): React.JSX.Element {
   const selectedTaskId = useCodeReviewStore((s) => s.selectedTaskId)
@@ -42,7 +43,7 @@ export function TopBar(): React.JSX.Element {
 
   const openPromptModal = async (): Promise<void> => {
     if (!task) return
-    const result = await window.api.sprint.getLastPrompt(task.id)
+    const result = await sprintService.getLastPrompt(task.id)
     setPromptText(result.prompt)
     setPromptModalOpen(true)
   }
