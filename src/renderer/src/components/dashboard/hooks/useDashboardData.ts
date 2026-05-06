@@ -304,9 +304,25 @@ function deriveAvgCostPerTask(agents: AgentCostRecord[]): number | null {
   return recent.reduce((s, a) => s + a.costUsd, 0) / recent.length
 }
 
+/**
+ * Stable fingerprint for the tasks array — only changes string value when a task id
+ * or updated_at timestamp changes. Zustand compares with `===` so polls that find
+ * identical data will NOT trigger re-renders in useDashboardData.
+ */
+function selectTasksFingerprint(s: { tasks: SprintTask[] }): string {
+  return s.tasks.map((t) => `${t.id}:${t.updated_at}`).join(',')
+}
+
 export function useDashboardData(): DashboardData {
-  const tasks = useSprintTasks((s) => s.tasks)
+  const taskFingerprint = useSprintTasks(selectTasksFingerprint)
+  const allTasks = useSprintTasks((s) => s.tasks)
   const retryTaskFromStore = useSprintTasks((s) => s.retryTask)
+
+  // Re-use the tasks reference only when the fingerprint changes, so the seven
+  // downstream useMemo chains do not recompute on every background poll.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tasks = useMemo(() => allTasks, [taskFingerprint])
+
   const localAgents = useCostDataStore((s) => s.localAgents)
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
   const setSearchQuery = useSprintFilters((s) => s.setSearchQuery)
