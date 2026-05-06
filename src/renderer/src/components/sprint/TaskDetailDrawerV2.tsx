@@ -25,7 +25,6 @@ import {
   MetadataSection,
   BranchOnlySection
 } from './TaskDrawerSections'
-
 export interface TaskDetailDrawerV2Props {
   task: SprintTask
   onClose: () => void
@@ -80,7 +79,6 @@ export function TaskDetailDrawerV2({
   const depTasks = useSprintTasks(
     useShallow((s) => s.tasks.filter((t) => depTaskIds.has(t.id)).map((t) => ({ id: t.id, title: t.title, status: t.status })))
   )
-
   const agentRunId = task.agent_run_id
   const allAgentEvents = useAgentEventsStore((s) => agentRunId !== null ? (s.events[agentRunId] ?? []) : [])
   const recentAgentErrors = useMemo(() => allAgentEvents.filter((e) => e.type === 'agent:error').slice(-3), [allAgentEvents])
