@@ -547,11 +547,7 @@ function PlActionCard({
     onClose()
   }
 
-  const displayTitle =
-    action.payload.title ??
-    action.payload.name ??
-    (action.payload.taskId ? tasks.find((t) => t.id === action.payload.taskId)?.title : null) ??
-    '—'
+  const displayTitle = resolveDisplayTitle(action, tasks)
 
   return (
     <div
@@ -653,6 +649,24 @@ function PlActionCard({
       )}
     </div>
   )
+}
+
+/**
+ * Resolves the human-readable title for an action card.
+ *
+ * Uses a switch on action.type so each variant accesses only the payload
+ * fields that belong to it, making future shape changes visible at
+ * compile time.
+ */
+function resolveDisplayTitle(action: ParsedAction, tasks: SprintTask[]): string {
+  switch (action.type) {
+    case 'create-task':
+      return action.payload.title ?? '—'
+    case 'create-epic':
+      return action.payload.name ?? '—'
+    case 'update-spec':
+      return tasks.find((t) => t.id === action.payload.taskId)?.title ?? '—'
+  }
 }
 
 function deriveSuggestions(tasks: SprintTask[]): string[] {
