@@ -22,7 +22,7 @@ function TaskRowV2Inner({ task, selected, onClick }: TaskRowV2Props): React.JSX.
   const isActive = task.status === 'active' && !!task.started_at
   useBackoffInterval(() => setTick((t) => t + 1), isActive ? 10_000 : null)
 
-  const elapsed = isActive ? formatElapsed(task.started_at!) : ''
+  const elapsed = isActive ? formatElapsed(task.started_at ?? new Date().toISOString()) : ''
 
   const handleClick = (): void => {
     clearSelection()
