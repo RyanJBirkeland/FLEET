@@ -11,6 +11,21 @@ const TRACKED_EVENTS = new Set<string>([
   'agent:tool_call'
 ])
 
+const AGENT_EVENT_TYPES = new Set<string>([
+  'agent:started',
+  'agent:mcp_disclosure',
+  'agent:text',
+  'agent:user_message',
+  'agent:thinking',
+  'agent:tool_call',
+  'agent:tool_result',
+  'agent:rate_limited',
+  'agent:error',
+  'agent:stderr',
+  'agent:completed',
+  'agent:playground'
+])
+
 interface ChangeRow {
   id: number
   task_id: string
@@ -19,6 +34,37 @@ interface ChangeRow {
   new_value: string | null
   changed_by: string
   changed_at: string
+}
+
+function isChangeRow(value: unknown): value is ChangeRow {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.task_id === 'string' &&
+    typeof candidate.field === 'string' &&
+    typeof candidate.changed_by === 'string' &&
+    typeof candidate.changed_at === 'string'
+  )
+}
+
+function isAgentEvent(value: unknown): value is AgentEvent {
+  if (typeof value !== 'object' || value === null) return false
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.type === 'string' &&
+    AGENT_EVENT_TYPES.has(candidate.type) &&
+    typeof candidate.timestamp === 'number'
+  )
+}
+
+export function parseChangeRows(raw: unknown): ChangeRow[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isChangeRow)
+}
+
+export function parseAgentEvents(raw: unknown): AgentEvent[] {
+  if (!Array.isArray(raw)) return []
+  return raw.filter(isAgentEvent)
 }
 
 export type FeedEntry =
@@ -106,11 +152,11 @@ export function usePlActivityFeed(tasks: SprintTask[]): {
             window.api.sprint.getChanges(task.id),
             getAgentEventHistory(task.id)
           ])
-          const changeEntries = (changes as ChangeRow[]).map((c) =>
+          const changeEntries = parseChangeRows(changes).map((c) =>
             buildChangeFeedEntry(c, task.title)
           )
-          const agentEntries = (agentEvents as AgentEvent[])
-            .map((e: AgentEvent) => buildAgentFeedEntry(e, task.id, task.title))
+          const agentEntries = parseAgentEvents(agentEvents)
+            .map((e) => buildAgentFeedEntry(e, task.id, task.title))
             .filter((e): e is FeedEntry => e !== null)
           return [...changeEntries, ...agentEntries]
         })

@@ -2,7 +2,9 @@ import { describe, it, expect } from 'vitest'
 import {
   agentEventSummary,
   buildAgentFeedEntry,
-  buildChangeFeedEntry
+  buildChangeFeedEntry,
+  parseChangeRows,
+  parseAgentEvents
 } from '../usePlActivityFeed'
 import type { AgentEvent } from '../../../../../../shared/types'
 
@@ -97,5 +99,64 @@ describe('buildChangeFeedEntry', () => {
     expect(entry.newValue).toBe('active')
     expect(entry.changedBy).toBe('system')
     expect(entry.timestamp).toBe('2026-01-01T00:00:00.000Z')
+  })
+})
+
+describe('parseChangeRows', () => {
+  it('returns empty array for non-array input', () => {
+    expect(parseChangeRows(null)).toEqual([])
+    expect(parseChangeRows('bad')).toEqual([])
+    expect(parseChangeRows(42)).toEqual([])
+  })
+
+  it('filters out rows missing required string fields', () => {
+    const malformed = { id: 1, task_id: 't1' } // missing field, changed_by, changed_at
+    expect(parseChangeRows([malformed])).toEqual([])
+  })
+
+  it('accepts a well-formed row', () => {
+    const valid = {
+      id: 1,
+      task_id: 't1',
+      field: 'status',
+      old_value: null,
+      new_value: 'active',
+      changed_by: 'system',
+      changed_at: '2026-01-01T00:00:00.000Z'
+    }
+    expect(parseChangeRows([valid])).toHaveLength(1)
+  })
+
+  it('keeps valid rows and drops invalid ones in a mixed array', () => {
+    const valid = {
+      id: 1,
+      task_id: 't1',
+      field: 'status',
+      old_value: null,
+      new_value: 'done',
+      changed_by: 'system',
+      changed_at: '2026-01-01T00:00:00.000Z'
+    }
+    const invalid = { id: 2, task_id: 't2' }
+    expect(parseChangeRows([valid, invalid])).toHaveLength(1)
+  })
+})
+
+describe('parseAgentEvents', () => {
+  it('returns empty array for non-array input', () => {
+    expect(parseAgentEvents(null)).toEqual([])
+    expect(parseAgentEvents('bad')).toEqual([])
+  })
+
+  it('filters out rows missing required fields', () => {
+    const missingType = { timestamp: 1000 }
+    const missingTimestamp = { type: 'agent:started' }
+    const unknownType = { type: 'agent:unknown', timestamp: 1000 }
+    expect(parseAgentEvents([missingType, missingTimestamp, unknownType])).toEqual([])
+  })
+
+  it('accepts a well-formed agent event', () => {
+    const valid = { type: 'agent:started', model: 'claude', timestamp: 1000 }
+    expect(parseAgentEvents([valid])).toHaveLength(1)
   })
 })
