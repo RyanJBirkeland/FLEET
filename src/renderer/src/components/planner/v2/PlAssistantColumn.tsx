@@ -12,6 +12,7 @@ import {
   MAX_TASK_SPEC_CHARS
 } from '../../../lib/sanitize-agent-output'
 import { buildSystemPrefix, buildApiMessages } from './pl-assistant-helpers'
+import { useWorkbenchChat } from './hooks/useWorkbenchChat'
 
 interface Message {
   id: string
@@ -44,14 +45,11 @@ export function PlAssistantColumn({
 }: Props): React.JSX.Element {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState(initialInput ?? '')
-  const [isStreaming, setIsStreaming] = useState(false)
   const [cardStates, setCardStates] = useState<Record<string, ActionCardState>>({})
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const inputRef = useRef<HTMLTextAreaElement>(null)
-  const unsubRef = useRef<(() => void) | null>(null)
-  const streamBufferRef = useRef('')
-  const streamRafRef = useRef<number | null>(null)
 
+  const chat = useWorkbenchChat()
   const repos = useRepoOptions()
   const firstRepo = repos[0]?.label ?? ''
 
@@ -86,85 +84,59 @@ export function PlAssistantColumn({
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
-  useEffect(
-    () => () => {
-      unsubRef.current?.()
-      if (streamRafRef.current !== null) {
-        cancelAnimationFrame(streamRafRef.current)
-        streamRafRef.current = null
-      }
-    },
-    []
-  )
-
   const sendMessage = useCallback(
     async (text?: string) => {
       const body = (text ?? input).trim()
-      if (!body || isStreaming) return
+      if (!body || chat.isStreaming) return
 
-      const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: body }
-      const assistantId = crypto.randomUUID()
-
-      setMessages((prev) => [...prev, userMsg, { id: assistantId, role: 'assistant', content: '' }])
+      appendOptimisticMessages(body)
       setInput('')
-      setIsStreaming(true)
 
-      const systemPrefix = buildSystemPrefix(epicContext)
-      const apiMessages = buildApiMessages(messages, body, systemPrefix)
+      const assistantId = resolveLastAssistantId()
+      const apiMessages = buildApiMessages(messages, body, buildSystemPrefix(epicContext))
 
-      streamBufferRef.current = ''
-      unsubRef.current?.()
-      const flushBuffer = (): void => {
-        const snapshot = streamBufferRef.current
-        setMessages((prev) =>
-          prev.map((m) => (m.id === assistantId ? { ...m, content: snapshot } : m))
-        )
-      }
-      const unsub = window.api.workbench.onChatChunk((data) => {
-        if (data.done) {
-          if (streamRafRef.current !== null) {
-            cancelAnimationFrame(streamRafRef.current)
-            streamRafRef.current = null
-          }
-          const { cleanText, actions } = parseActionMarkers(streamBufferRef.current)
+      await chat.stream({
+        messages: apiMessages,
+        formContext: { title: epic.name, repo: firstRepo, spec: epicContext },
+        onChunk: (text) =>
+          setMessages((prev) =>
+            prev.map((m) => (m.id === assistantId ? { ...m, content: text } : m))
+          ),
+        onDone: (fullText) => {
+          const { cleanText, actions } = parseActionMarkers(fullText)
           setMessages((prev) =>
             prev.map((m) => (m.id === assistantId ? { ...m, content: cleanText, actions } : m))
           )
-          setIsStreaming(false)
-          unsubRef.current = null
-          unsub()
-          return
-        }
-        if (data.chunk) {
-          streamBufferRef.current += data.chunk
-          if (streamRafRef.current === null) {
-            streamRafRef.current = requestAnimationFrame(() => {
-              streamRafRef.current = null
-              flushBuffer()
-            })
-          }
-        }
-      })
-      unsubRef.current = unsub
-
-      try {
-        await window.api.workbench.chatStream({
-          messages: apiMessages,
-          formContext: { title: epic.name, repo: firstRepo, spec: epicContext }
-        })
-      } catch {
-        setMessages((prev) =>
-          prev.map((m) =>
-            m.id === assistantId ? { ...m, content: 'Error: failed to connect to assistant.' } : m
+        },
+        onError: () =>
+          setMessages((prev) =>
+            prev.map((m) =>
+              m.id === assistantId
+                ? { ...m, content: 'Error: failed to connect to assistant.' }
+                : m
+            )
           )
-        )
-        setIsStreaming(false)
-        unsubRef.current = null
-        unsub()
-      }
+      })
     },
-    [input, isStreaming, messages, epic, epicContext, firstRepo]
+    [input, chat, messages, epic, epicContext, firstRepo]
   )
+
+  const appendOptimisticMessages = (body: string): void => {
+    const userMsg: Message = { id: crypto.randomUUID(), role: 'user', content: body }
+    const assistantMsg: Message = { id: crypto.randomUUID(), role: 'assistant', content: '' }
+    setMessages((prev) => [...prev, userMsg, assistantMsg])
+  }
+
+  const resolveLastAssistantId = (): string => {
+    // The optimistic assistant placeholder was just appended; peek via functional
+    // update to avoid stale-closure capture.
+    let id = ''
+    setMessages((prev) => {
+      id = prev[prev.length - 1]?.id ?? ''
+      return prev
+    })
+    return id
+  }
 
   const handleCardState = (key: string, state: ActionCardState): void => {
     setCardStates((prev) => ({ ...prev, [key]: state }))
@@ -191,7 +163,7 @@ export function PlAssistantColumn({
           flexShrink: 0
         }}
       >
-        {isStreaming ? (
+        {chat.isStreaming ? (
           <span className="fleet-pulse" style={{ background: 'var(--accent)' }} />
         ) : (
           <span style={{ width: 6, height: 6, borderRadius: 3, background: 'var(--st-running)' }} />
@@ -256,7 +228,7 @@ export function PlAssistantColumn({
         {messages.map((msg) => (
           <div key={msg.id}>
             <PlChatMessage role={msg.role}>
-              {msg.content || (msg.role === 'assistant' && isStreaming ? '…' : '')}
+              {msg.content || (msg.role === 'assistant' && chat.isStreaming ? '…' : '')}
             </PlChatMessage>
             {msg.actions?.map((action, i) => {
               const key = `${msg.id}-${i}`
@@ -278,7 +250,7 @@ export function PlAssistantColumn({
           </div>
         ))}
 
-        {isStreaming && (
+        {chat.isStreaming && (
           <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
             <span className="fleet-pulse" style={{ background: 'var(--accent)' }} />
             <span style={{ fontSize: 11, color: 'var(--fg-3)', fontFamily: 'var(--font-mono)' }}>
@@ -343,7 +315,7 @@ export function PlAssistantColumn({
               }
             }}
             rows={1}
-            disabled={isStreaming}
+            disabled={chat.isStreaming}
             placeholder="Ask the assistant…"
             aria-label="Message the planning assistant"
             style={{
