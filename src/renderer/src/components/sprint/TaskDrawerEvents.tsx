@@ -75,10 +75,12 @@ function agentEventToDotKind(type: AgentEventType): StatusDotKind {
 
 /**
  * Extracts a human-readable summary string from a concrete AgentEvent shape.
- * Each branch accesses only the fields defined on that event variant,
- * preventing "[undefined]" from leaking through as output.
+ * Uses a discriminated-union switch so each branch accesses only fields that
+ * exist on that variant — the old `{ type: string; [key: string]: unknown }`
+ * index signature allowed `String(event.text ?? '')` to produce `"undefined"`
+ * for events that lack a `text` field. That cannot happen here.
  */
-function summarizeEvent(event: AgentEvent): string {
+export function summarizeEvent(event: AgentEvent): string {
   switch (event.type) {
     case 'agent:text':
     case 'agent:user_message':
