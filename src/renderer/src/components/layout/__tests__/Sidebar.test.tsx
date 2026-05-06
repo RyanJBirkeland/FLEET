@@ -2,6 +2,11 @@
 import { render, screen } from '@testing-library/react'
 import { describe, it, expect, vi } from 'vitest'
 
+// Force V1 sidebar so these tests remain valid until V1 is deleted
+vi.mock('../../../stores/featureFlags', () => ({
+  useFeatureFlags: vi.fn((sel?: any) => { const s = { v2Shell: false, v2Dashboard: false, v2Pipeline: false, v2Agents: true, v2Planner: false }; return sel ? sel(s) : s })
+}))
+
 vi.mock('framer-motion', () => ({
   motion: { div: ({ children, ...props }: any) => <div {...props}>{children}</div> },
   useReducedMotion: () => false

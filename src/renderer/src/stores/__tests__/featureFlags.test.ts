@@ -13,25 +13,25 @@ describe('featureFlags store', () => {
     vi.resetModules()
   })
 
-  it('defaults v2Agents to true and all other flags to false when localStorage is empty', async () => {
+  it('defaults all flags to true when localStorage is empty', async () => {
     const { useFeatureFlags } = await import('../featureFlags')
     const state = useFeatureFlags.getState()
+    expect(state.v2Shell).toBe(true)
+    expect(state.v2Dashboard).toBe(true)
+    expect(state.v2Pipeline).toBe(true)
     expect(state.v2Agents).toBe(true)
-    expect(state.v2Shell).toBe(false)
-    expect(state.v2Dashboard).toBe(false)
-    expect(state.v2Pipeline).toBe(false)
-    expect(state.v2Planner).toBe(false)
+    expect(state.v2Planner).toBe(true)
   })
 
   it('falls back to defaults when localStorage contains malformed JSON', async () => {
     localStorage.setItem(STORAGE_KEY, '{not-valid-json')
     const { useFeatureFlags } = await import('../featureFlags')
     const state = useFeatureFlags.getState()
+    expect(state.v2Shell).toBe(true)
+    expect(state.v2Dashboard).toBe(true)
+    expect(state.v2Pipeline).toBe(true)
     expect(state.v2Agents).toBe(true)
-    expect(state.v2Shell).toBe(false)
-    expect(state.v2Dashboard).toBe(false)
-    expect(state.v2Pipeline).toBe(false)
-    expect(state.v2Planner).toBe(false)
+    expect(state.v2Planner).toBe(true)
   })
 
   it('falls back to defaults for any non-boolean flag value', async () => {
@@ -47,11 +47,11 @@ describe('featureFlags store', () => {
     )
     const { useFeatureFlags } = await import('../featureFlags')
     const state = useFeatureFlags.getState()
-    expect(state.v2Shell).toBe(false)
-    expect(state.v2Dashboard).toBe(false)
-    expect(state.v2Pipeline).toBe(false)
+    expect(state.v2Shell).toBe(true)
+    expect(state.v2Dashboard).toBe(true)
+    expect(state.v2Pipeline).toBe(true)
     expect(state.v2Agents).toBe(true)
-    expect(state.v2Planner).toBe(false)
+    expect(state.v2Planner).toBe(true)
   })
 
   it('honours a fully-typed valid stored payload', async () => {

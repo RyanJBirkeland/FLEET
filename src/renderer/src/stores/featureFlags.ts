@@ -15,11 +15,11 @@ interface FeatureFlagState extends Flags {
 const STORAGE_KEY = 'fleet:ff'
 
 const defaultFlags: Flags = {
-  v2Shell: false,
-  v2Dashboard: false,
-  v2Pipeline: false,
+  v2Shell: true,
+  v2Dashboard: true,
+  v2Pipeline: true,
   v2Agents: true,
-  v2Planner: false
+  v2Planner: true
 }
 
 function validatedFlag<K extends keyof Flags>(parsed: unknown, key: K): Flags[K] {

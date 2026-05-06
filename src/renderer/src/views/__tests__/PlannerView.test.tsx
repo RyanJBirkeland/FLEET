@@ -1,6 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent } from '@testing-library/react'
 
+// Force V1 planner so these tests remain valid until V1 is deleted
+vi.mock('../../stores/featureFlags', () => ({
+  useFeatureFlags: vi.fn((sel?: any) => { const s = { v2Shell: false, v2Dashboard: false, v2Pipeline: false, v2Agents: true, v2Planner: false }; return sel ? sel(s) : s })
+}))
+
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
