@@ -348,6 +348,17 @@ describe('usePlActivityFeed hook — integration', () => {
     expect(result.current.loading).toBe(false)
   })
 
+  it('string rejection shows the string in error, not "undefined"', async () => {
+    setupWindowApi({ getChanges: vi.fn().mockRejectedValue('plain string error') })
+
+    const { result } = renderHook(() => usePlActivityFeed([makeTask('t1')]))
+
+    await act(async () => {})
+
+    expect(result.current.error).toBe('plain string error')
+    expect(result.current.error).not.toBe('undefined')
+  })
+
   it('live subscription adds an entry at the head and entries stay newest-first', async () => {
     const historicalRow = makeValidChangeRow('t1')
     setupWindowApi({ getChanges: vi.fn().mockResolvedValue([historicalRow]) })

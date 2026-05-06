@@ -167,7 +167,7 @@ export function usePlActivityFeed(tasks: SprintTask[]): {
       )
       setEntries(sortNewestFirst(perTask.flat()))
     } catch (err) {
-      setError((err as Error).message)
+      setError(err instanceof Error ? err.message : String(err))
     } finally {
       setLoading(false)
     }
