@@ -1,9 +1,10 @@
-import type { NeonAccent } from '../components/neon/types'
+/** CSS color string (var(--…) or hex) used to tint a feed event dot. */
+export type EpicAccent = string
 
 export interface FeedEvent {
   id: string
   label: string
-  accent: NeonAccent
+  accent: EpicAccent
   timestamp: number
 }
 
@@ -16,4 +17,10 @@ export interface DashboardStats {
   doneToday: number
   failed: number
   actualFailed: number
+}
+
+export interface ChartBar {
+  value: number
+  accent?: string | undefined
+  label?: string | undefined
 }

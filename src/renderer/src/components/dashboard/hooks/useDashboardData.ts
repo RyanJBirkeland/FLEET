@@ -15,8 +15,7 @@ import { useTaskWorkbenchModalStore } from '../../../stores/taskWorkbenchModal'
 import { partitionSprintTasks } from '../../../lib/partitionSprintTasks'
 import type { SprintTask } from '../../../../../shared/types'
 import type { AgentCostRecord } from '../../../../../shared/types/agent-types'
-import type { DashboardStats } from '../../../lib/dashboard-types'
-import type { ChartBar } from '../../neon'
+import type { DashboardStats, ChartBar } from '../../../lib/dashboard-types'
 import type { CompletionBucket, DailySuccessRate } from '../../../../../shared/ipc-channels'
 import type { SprintPartition } from '../../../lib/partitionSprintTasks'
 import type { DrainPausedState } from '../../../hooks/useDrainStatus'
@@ -105,7 +104,7 @@ export interface DashboardData {
   actions: DashboardActions
 }
 
-function buildBriefHeadlineParts(
+export function buildBriefHeadlineParts(
   activeCount: number,
   reviewCount: number,
   failedCount: number
@@ -138,7 +137,7 @@ function buildBriefHeadlineParts(
   return parts
 }
 
-function deriveAttentionItems(
+export function deriveAttentionItems(
   partitions: SprintPartition,
   now: number
 ): AttentionItem[] {
@@ -217,13 +216,12 @@ function deriveActiveAgents(
   })
 }
 
-function derivePerAgentStats(
+export function derivePerAgentStats(
   agents: AgentCostRecord[],
-  taskQualityMap: Map<string, number>
+  taskQualityMap: Map<string, number>,
+  cutoffTimestamp: number = Date.now() - SEVEN_DAYS_MS
 ): PerAgentRow[] {
-  const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
-
-  const recent = agents.filter((a) => new Date(a.startedAt).getTime() >= sevenDaysAgo)
+  const recent = agents.filter((a) => new Date(a.startedAt).getTime() >= cutoffTimestamp)
 
   const byName = new Map<string, AgentCostRecord[]>()
   for (const a of recent) {
@@ -270,10 +268,12 @@ function derivePerAgentStats(
     .slice(0, 6)
 }
 
-function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
-  const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
+export function derivePerRepoStats(
+  agents: AgentCostRecord[],
+  cutoffTimestamp: number = Date.now() - SEVEN_DAYS_MS
+): PerRepoRow[] {
   const recent = agents.filter(
-    (a) => a.repo != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
+    (a) => a.repo != null && new Date(a.startedAt).getTime() >= cutoffTimestamp
   )
 
   const byRepo = new Map<string, AgentCostRecord[]>()
@@ -295,18 +295,37 @@ function derivePerRepoStats(agents: AgentCostRecord[]): PerRepoRow[] {
     .slice(0, 6)
 }
 
-function deriveAvgCostPerTask(agents: AgentCostRecord[]): number | null {
-  const sevenDaysAgo = Date.now() - SEVEN_DAYS_MS
+function deriveAvgCostPerTask(
+  agents: AgentCostRecord[],
+  cutoffTimestamp: number = Date.now() - SEVEN_DAYS_MS
+): number | null {
   const recent = agents.filter(
     (a): a is typeof a & { costUsd: number } =>
-      a.costUsd != null && new Date(a.startedAt).getTime() >= sevenDaysAgo
+      a.costUsd != null && new Date(a.startedAt).getTime() >= cutoffTimestamp
   )
   if (recent.length === 0) return null
   return recent.reduce((s, a) => s + a.costUsd, 0) / recent.length
 }
 
+/**
+ * Stable fingerprint for the tasks array — only changes string value when a task id
+ * or updated_at timestamp changes. Zustand compares with `===` so polls that find
+ * identical data will NOT trigger re-renders in useDashboardData.
+ */
+function selectTasksFingerprint(s: { tasks: SprintTask[] }): string {
+  return s.tasks.map((t) => `${t.id}:${t.updated_at}`).join(',')
+}
+
 export function useDashboardData(): DashboardData {
-  const tasks = useSprintTasks((s) => s.tasks)
+  const taskFingerprint = useSprintTasks(selectTasksFingerprint)
+  const allTasks = useSprintTasks((s) => s.tasks)
+  const retryTaskFromStore = useSprintTasks((s) => s.retryTask)
+
+  // Re-use the tasks reference only when the fingerprint changes, so the seven
+  // downstream useMemo chains do not recompute on every background poll.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const tasks = useMemo(() => allTasks, [taskFingerprint])
+
   const localAgents = useCostDataStore((s) => s.localAgents)
   const setStatusFilter = useSprintFilters((s) => s.setStatusFilter)
   const setSearchQuery = useSprintFilters((s) => s.setSearchQuery)
@@ -339,6 +358,7 @@ export function useDashboardData(): DashboardData {
   const { maxSlots: capacity } = useAgentManagerStatus()
 
   const now = useNow()
+  const sevenDaysCutoff = now - SEVEN_DAYS_MS
 
   const partitions = useMemo(() => partitionSprintTasks(tasks), [tasks])
 
@@ -361,11 +381,17 @@ export function useDashboardData(): DashboardData {
   }, [tasks])
 
   const perAgentStats = useMemo(
-    () => derivePerAgentStats(localAgents, taskQualityMap),
-    [localAgents, taskQualityMap]
+    () => derivePerAgentStats(localAgents, taskQualityMap, sevenDaysCutoff),
+    [localAgents, taskQualityMap, sevenDaysCutoff]
   )
-  const perRepoStats = useMemo(() => derivePerRepoStats(localAgents), [localAgents])
-  const avgCostPerTask = useMemo(() => deriveAvgCostPerTask(localAgents), [localAgents])
+  const perRepoStats = useMemo(
+    () => derivePerRepoStats(localAgents, sevenDaysCutoff),
+    [localAgents, sevenDaysCutoff]
+  )
+  const avgCostPerTask = useMemo(
+    () => deriveAvgCostPerTask(localAgents, sevenDaysCutoff),
+    [localAgents, sevenDaysCutoff]
+  )
   const failureRate = useMemo(() => {
     const terminal = stats.done + stats.actualFailed
     if (terminal === 0) return null
@@ -388,9 +414,10 @@ export function useDashboardData(): DashboardData {
     [setStatusFilter, setSearchQuery, setRepoFilter, setTagFilter, setView]
   )
 
-  const retryTask = useCallback(async (taskId: string): Promise<void> => {
-    await window.api.sprint.retry(taskId)
-  }, [])
+  const retryTask = useCallback(
+    (taskId: string): Promise<void> => retryTaskFromStore(taskId),
+    [retryTaskFromStore]
+  )
 
   const openAgentsView = useCallback(() => setView('agents'), [setView])
   const openReviewView = useCallback(() => setView('code-review'), [setView])

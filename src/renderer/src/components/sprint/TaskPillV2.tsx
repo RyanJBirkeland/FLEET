@@ -146,12 +146,13 @@ function TaskPillV2Inner({
   const now = useNow()
 
   const isActive = task.status === 'active' && !!task.started_at
-  useBackoffInterval(() => setElapsed(formatElapsed(task.started_at!)), isActive ? 10_000 : null)
+  const safeStartedAt = task.started_at ?? new Date().toISOString()
+  useBackoffInterval(() => setElapsed(formatElapsed(safeStartedAt)), isActive ? 10_000 : null)
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: seed elapsed string once on first active render
-    if (isActive) setElapsed(formatElapsed(task.started_at!))
-  }, [isActive, task.started_at])
+    if (isActive) setElapsed(formatElapsed(safeStartedAt))
+  }, [isActive, safeStartedAt])
 
   const toggleTaskSelection = useSprintSelection((s) => s.toggleTaskSelection)
   const clearSelection = useSprintSelection((s) => s.clearSelection)

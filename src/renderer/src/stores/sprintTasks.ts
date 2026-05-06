@@ -4,8 +4,6 @@ import { TASK_STATUS, PR_STATUS } from '../../../shared/constants'
 import { toast } from './toasts'
 import { sanitizeDependsOn } from '../../../shared/sanitize-depends-on'
 import { isTaskStatus } from '../../../shared/task-state-machine'
-import { WIP_LIMIT_IN_PROGRESS } from '../lib/constants'
-import { canLaunchTask } from '../lib/wip-policy'
 import { nowIso } from '../../../shared/time'
 import {
   mergePendingFields,
@@ -14,9 +12,7 @@ import {
   type PendingUpdates,
   type SprintTaskField
 } from '../lib/optimisticUpdateManager'
-import { getRepoPaths } from '../services/git'
-import { listTasks, updateTask, deleteTask, createTask, batchUpdate, generatePrompt } from '../services/sprint'
-import { spawnLocal } from '../services/agents'
+import { listTasks, updateTask, deleteTask, createTask, batchUpdate, generatePrompt, exportTaskHistory } from '../services/sprint'
 
 export interface CreateTicketInput {
   title: string
@@ -169,12 +165,16 @@ export interface SprintTasksState {
   deleteTask: (taskId: string) => Promise<void>
   createTask: (data: CreateTicketInput) => Promise<string | null>
   generateSpec: (taskId: string, title: string, repo: string, templateHint: string) => Promise<void>
-  launchTask: (task: SprintTask) => Promise<void>
   mergeSseUpdate: (update: { taskId: string; [key: string]: unknown }) => void
   setTasks: (tasks: SprintTask[]) => void
   batchDeleteTasks: (taskIds: string[]) => Promise<void>
   batchRequeueTasks: (taskIds: string[]) => Promise<void>
+  retryTask: (taskId: string) => Promise<void>
+  exportTaskHistory: (taskId: string) => Promise<{ success: boolean; path?: string | undefined }>
 }
+
+export const selectActiveTasks = (state: SprintTasksState): SprintTask[] =>
+  state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE)
 
 export const selectActiveTaskCount = (state: SprintTasksState): number =>
   state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
@@ -462,43 +462,6 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     }
   },
 
-  launchTask: async (task): Promise<void> => {
-    const { updateTask } = get()
-    // Block launch when WIP limit reached (unless task is already active)
-    if (task.status !== TASK_STATUS.ACTIVE) {
-      const activeCount = selectActiveTaskCount(get())
-      if (!canLaunchTask(activeCount, WIP_LIMIT_IN_PROGRESS)) {
-        toast.error(
-          `In Progress is full (${WIP_LIMIT_IN_PROGRESS}/${WIP_LIMIT_IN_PROGRESS}) — finish or stop a task first`
-        )
-        return
-      }
-    }
-
-    try {
-      const repoPaths = await getRepoPaths()
-      const repoPath = repoPaths[task.repo.toLowerCase()] ?? repoPaths[task.repo]
-      if (!repoPath) {
-        toast.error(`No repo path configured for "${task.repo}"`)
-        return
-      }
-
-      const result = await spawnLocal({
-        task: task.spec ?? task.title,
-        repoPath
-      })
-
-      await updateTask(task.id, {
-        status: TASK_STATUS.ACTIVE,
-        agent_run_id: result.id,
-        started_at: nowIso()
-      })
-      toast.success('Agent launched')
-    } catch (e) {
-      toast.error(e instanceof Error ? e.message : 'Failed to launch agent')
-    }
-  },
-
   mergeSseUpdate: (update): void => {
     set((state) => {
       const nextTasks = state.tasks.map((t) => {
@@ -556,6 +519,10 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
     }
   },
 
+  exportTaskHistory: async (taskId): Promise<{ success: boolean; path?: string | undefined }> => {
+    return exportTaskHistory(taskId)
+  },
+
   batchRequeueTasks: async (taskIds): Promise<void> => {
     if (taskIds.length === 0) return
 
@@ -582,6 +549,15 @@ export const useSprintTasks = create<SprintTasksState>((set, get) => ({
       await get().loadData()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to requeue tasks')
+    }
+  },
+
+  retryTask: async (taskId): Promise<void> => {
+    try {
+      await window.api.sprint.retry(taskId)
+      await get().loadData()
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Failed to retry task')
     }
   }
 }))

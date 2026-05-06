@@ -90,6 +90,12 @@ vi.mock('../../../../shared/template-heuristics', () => ({
   detectTemplate: vi.fn().mockReturnValue('feature')
 }))
 
+// Mock useLaunchTask — the extracted use-case hook
+const mockLaunchTaskHook = vi.fn().mockResolvedValue(undefined)
+vi.mock('../useLaunchTask', () => ({
+  useLaunchTask: () => mockLaunchTaskHook
+}))
+
 // Mock framer-motion (used by ConfirmModal, which useConfirm depends on)
 vi.mock('framer-motion', () => ({
   motion: {
@@ -154,9 +160,9 @@ describe('useSprintTaskActions', () => {
     expect(mockUpdateTask).toHaveBeenCalledWith('task-abc', { spec: 'new spec content' })
   })
 
-  it('launchTask is the store launchTask function', () => {
+  it('launchTask delegates to the useLaunchTask hook', () => {
     const { result } = renderHook(() => useSprintTaskActions())
-    expect(result.current.launchTask).toBe(mockLaunchTask)
+    expect(result.current.launchTask).toBe(mockLaunchTaskHook)
   })
 
   it('deleteTask wrapper calls both store and UI', async () => {

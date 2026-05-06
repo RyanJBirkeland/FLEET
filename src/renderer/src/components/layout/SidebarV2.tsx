@@ -15,11 +15,10 @@ import { usePanelLayoutStore, type View } from '../../stores/panelLayout'
 import { VIEW_REGISTRY } from '../../lib/view-registry'
 import {
   useSprintTasks,
+  selectActiveTasks,
   selectReviewTaskCount,
   selectFailedTaskCount,
-  type SprintTasksState
 } from '../../stores/sprintTasks'
-import type { SprintTask } from '../../../../shared/types'
 import { useSprintSelection } from '../../stores/sprintSelection'
 import { useGitTreeStore } from '../../stores/gitTree'
 import { LiveAgentRow } from './LiveAgentRow'
@@ -32,9 +31,6 @@ interface NavItem {
   view: View
   icon: React.ReactNode
 }
-
-const selectActiveTasks = (s: SprintTasksState): SprintTask[] =>
-  s.tasks.filter((t) => t.status === 'active')
 
 const NAV_ITEMS: NavItem[] = [
   { view: 'dashboard',   icon: <LayoutDashboard    size={16} strokeWidth={1.5} /> },

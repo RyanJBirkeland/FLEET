@@ -7,6 +7,7 @@ import { useConfirm } from '../components/ui/ConfirmModal'
 import { toast } from '../stores/toasts'
 import { TASK_STATUS } from '../../../shared/constants'
 import { detectTemplate } from '../../../shared/template-heuristics'
+import { useLaunchTask } from './useLaunchTask'
 import type { SprintTask } from '../../../shared/types'
 
 interface SprintTaskActions {
@@ -35,7 +36,7 @@ export function useSprintTaskActions(): SprintTaskActions {
   const storeCreateTask = useSprintTasks((s) => s.createTask)
   const storeBatchDeleteTasks = useSprintTasks((s) => s.batchDeleteTasks)
   const generateSpec = useSprintTasks((s) => s.generateSpec)
-  const launchTask = useSprintTasks((s) => s.launchTask)
+  const launchTask = useLaunchTask()
   const loadData = useSprintTasks((s) => s.loadData)
 
   const clearTaskIfSelected = useSprintSelection((s) => s.clearTaskIfSelected)
