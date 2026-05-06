@@ -3,7 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import type { SprintTask } from '../../../../shared/types'
 import { useSprintTasks } from '../../stores/sprintTasks'
 import { useSprintSelection } from '../../stores/sprintSelection'
-import { useAgentEventsStore } from '../../stores/agentEvents'
+import { useAgentEvents } from '../../stores/agentEvents'
 import { formatElapsed } from '../../lib/task-format'
 import { useBackoffInterval } from '../../hooks/useBackoffInterval'
 import { useNow } from '../../hooks/useNow'
@@ -80,7 +80,7 @@ export function TaskDetailDrawerV2({
     useShallow((s) => s.tasks.filter((t) => depTaskIds.has(t.id)).map((t) => ({ id: t.id, title: t.title, status: t.status })))
   )
   const agentRunId = task.agent_run_id
-  const allAgentEvents = useAgentEventsStore((s) => agentRunId !== null ? (s.events[agentRunId] ?? []) : [])
+  const allAgentEvents = useAgentEvents(agentRunId)
   const recentAgentErrors = useMemo(() => allAgentEvents.filter((e) => e.type === 'agent:error').slice(-3), [allAgentEvents])
 
   const { costUsd } = useTaskCost(task.agent_run_id)
