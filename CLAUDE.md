@@ -262,16 +262,45 @@ These files are edited frequently across branches. Take extra care when modifyin
 - **MCP server**: `src/main/mcp-server/` — Streamable HTTP on `127.0.0.1:<port>` (default 18792). All mutations route through `sprint-service` / `EpicGroupService`.
 - **Full architecture**: See `docs/architecture.md`
 
-## Packaging
+## Packaging & Releases
+
+### Creating a release (one command)
+
+```bash
+npm run release:patch   # 0.2.0 → 0.2.1
+npm run release:minor   # 0.2.0 → 0.3.0
+npm run release:major   # 0.2.0 → 1.0.0
+npm run release 1.2.3   # explicit version
+```
+
+All four delegate to `scripts/create-release.sh`, which:
+1. Guards: clean working tree, on `main`, up-to-date with `origin/main`
+2. Bumps `package.json` version and commits to `main`
+3. Pushes the commit, then creates and pushes a `vX.Y.Z` tag
+
+The tag push triggers `.github/workflows/release.yml` on a macOS runner, which:
+- Builds the arm64 DMG
+- Signs with the Developer ID certificate (from `MACOS_CERTIFICATE` secret)
+- Notarizes via Apple notary service (from `APPLE_API_KEY*` secrets)
+- Creates a draft GitHub release, uploads all assets, and publishes it
+
+**Never pre-create the GitHub release manually before pushing the tag.** electron-builder expects to own the draft → publish lifecycle. If a non-draft release already exists for the tag, CI silently skips uploading the notarized assets.
+
+### Local dev builds (unsigned, not for distribution)
 
 ```bash
 npm run build:mac    # Build unsigned macOS arm64 DMG → release/FLEET-*.dmg
-npm run package      # Alias for build:mac
+npm run package      # Same as build:mac with native rebuild
 ```
 
-- **Prerequisites for users**: Claude Code CLI installed + `claude login`, `git`, `gh` CLI
-- **Unsigned**: `identity: null` in electron-builder.yml — users right-click → Open to bypass Gatekeeper
-- **Onboarding**: App shows auth check screen on first launch with checks for CLI, token, git, repos (optional). Optional checks warn but don't block. Auto-skips for returning users with valid token.
+### Prerequisites for end users
+
+- Claude Code CLI installed + `claude login`
+- `git`, `gh` CLI
+
+### Onboarding
+
+App shows an auth check screen on first launch with checks for CLI, token, git, and repos (optional). Optional checks warn but don't block. Auto-skips for returning users with a valid token.
 
 ## Key Conventions
 
