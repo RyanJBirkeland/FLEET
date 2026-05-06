@@ -1,5 +1,14 @@
 import { create } from 'zustand'
 import type { PrGroup, SprintTask } from '../../../shared/types/task-types'
+import {
+  listPrGroups,
+  createPrGroup,
+  updatePrGroup,
+  addTaskToPrGroup,
+  removeTaskFromPrGroup,
+  buildPrGroup,
+  deletePrGroup
+} from '../services/prGroups'
 
 interface PrGroupsState {
   groups: PrGroup[]
@@ -22,7 +31,7 @@ export const usePrGroupsStore = create<PrGroupsState>((set, get) => ({
 
   async loadGroups(repo?: string) {
     try {
-      const groups = await window.api.prGroups.list({ repo })
+      const groups = await listPrGroups({ repo })
       set({ groups, error: null })
     } catch (e) {
       set({ error: e instanceof Error ? e.message : 'Failed to load PR groups' })
@@ -30,30 +39,30 @@ export const usePrGroupsStore = create<PrGroupsState>((set, get) => ({
   },
 
   async createGroup(repo, title, branchName, description) {
-    const group = await window.api.prGroups.create({ repo, title, branchName, description })
+    const group = await createPrGroup({ repo, title, branchName, description })
     set((s) => ({ groups: [group, ...s.groups] }))
     return group
   },
 
   async updateGroup(id, updates) {
-    const updated = await window.api.prGroups.update({ id, ...updates })
+    const updated = await updatePrGroup({ id, ...updates })
     set((s) => ({ groups: s.groups.map((g) => (g.id === id ? updated : g)) }))
   },
 
   async addTask(groupId, taskId) {
-    const updated = await window.api.prGroups.addTask({ groupId, taskId })
+    const updated = await addTaskToPrGroup({ groupId, taskId })
     set((s) => ({ groups: s.groups.map((g) => (g.id === groupId ? updated : g)) }))
   },
 
   async removeTask(groupId, taskId) {
-    const updated = await window.api.prGroups.removeTask({ groupId, taskId })
+    const updated = await removeTaskFromPrGroup({ groupId, taskId })
     set((s) => ({ groups: s.groups.map((g) => (g.id === groupId ? updated : g)) }))
   },
 
   async buildGroup(id) {
     set((s) => ({ buildingGroupIds: new Set([...s.buildingGroupIds, id]) }))
     try {
-      const result = await window.api.prGroups.build({ id })
+      const result = await buildPrGroup({ id })
       if (result.success) {
         await get().loadGroups()
       }
@@ -70,7 +79,7 @@ export const usePrGroupsStore = create<PrGroupsState>((set, get) => ({
   },
 
   async deleteGroup(id) {
-    await window.api.prGroups.delete({ id })
+    await deletePrGroup({ id })
     set((s) => ({ groups: s.groups.filter((g) => g.id !== id) }))
   },
 }))

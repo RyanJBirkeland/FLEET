@@ -3,6 +3,7 @@ import type { TaskGroup, SprintTask, EpicDependency } from '../../../../shared/t
 import { useConfirm, ConfirmModal } from '../ui/ConfirmModal'
 import { usePrompt, PromptModal } from '../ui/PromptModal'
 import { toast } from '../../stores/toasts'
+import { updateTask } from '../../services/sprint'
 import { EpicDependencySection } from './EpicDependencySection'
 import { EpicHeader } from './EpicHeader'
 import { EpicProgress } from './EpicProgress'
@@ -132,7 +133,7 @@ export function EpicDetail({
     if (!editingTaskId) return
     setSaving(true)
     try {
-      await window.api.sprint.update(editingTaskId, { spec: editingSpec })
+      await updateTask(editingTaskId, { spec: editingSpec })
       setEditingTaskId(null)
       setEditingSpec('')
     } catch (err) {

@@ -2,6 +2,7 @@ import { create } from 'zustand'
 import type { TaskGroup, SprintTask, EpicDependency } from '../../../shared/types'
 import { toast } from './toasts'
 import { createTask, updateTask } from '../services/sprint'
+import { importPlan } from '../services/planner'
 import {
   listGroups,
   getGroupTasks,
@@ -309,7 +310,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
   },
 
   importPlan: async (repo: string): Promise<ImportPlanResult> => {
-    const result = await window.api.planner.import(repo)
+    const result = await importPlan(repo)
     const imported = await listGroups()
     set({ groups: Array.isArray(imported) ? imported : [] })
     get().selectGroup(result.epicId)
@@ -339,7 +340,7 @@ export const useTaskGroups = create<TaskGroupsState>((set, get) => ({
           })
           if (task) {
             // spec_type is an internal field outside SprintTaskPatch but accepted by UPDATE_ALLOWLIST at runtime.
-            await updateTask(task.id, { spec_type: taskStub.spec_type } as Parameters<typeof window.api.sprint.update>[1])
+            await updateTask(task.id, { spec_type: taskStub.spec_type } as Parameters<typeof updateTask>[1])
             await addTask(task.id, newGroup.id)
           }
         } catch (taskError) {

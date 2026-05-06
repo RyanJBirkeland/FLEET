@@ -1,9 +1,10 @@
-import React, { useEffect, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { Search, FileUp } from 'lucide-react'
-import type { TaskGroup } from '../../../../shared/types'
+import type { TaskGroup, SprintTask } from '../../../../shared/types'
 import { EmptyState } from '../ui/EmptyState'
 import { VARIANTS, SPRINGS, REDUCED_TRANSITION, useReducedMotion } from '../../lib/motion'
+import { useSprintTasks } from '../../stores/sprintTasks'
 import './EpicList.css'
 
 interface EpicListProps {
@@ -31,31 +32,23 @@ export function EpicList({
   onImport
 }: EpicListProps): React.JSX.Element {
   const reduced = useReducedMotion()
-  const [counts, setCounts] = useState<Map<string, GroupCounts>>(new Map())
+  const allTasks = useSprintTasks((s) => s.tasks)
 
-  // Load task counts for each group
-  useEffect(() => {
-    const loadCounts = async (): Promise<void> => {
-      const newCounts = new Map<string, GroupCounts>()
-
-      for (const group of groups) {
-        try {
-          const tasks = await window.api.groups.getGroupTasks(group.id)
-          const total = tasks.length
-          const done = tasks.filter((t): boolean => t.status === 'done').length
-          newCounts.set(group.id, { total, done })
-        } catch {
-          newCounts.set(group.id, { total: 0, done: 0 })
-        }
-      }
-
-      setCounts(newCounts)
+  const counts = useMemo<Map<string, GroupCounts>>(() => {
+    const result = new Map<string, GroupCounts>()
+    for (const group of groups) {
+      result.set(group.id, { total: 0, done: 0 })
     }
-
-    if (groups.length > 0) {
-      loadCounts()
+    for (const task of allTasks as SprintTask[]) {
+      const groupId = task.group_id
+      if (!groupId) continue
+      const entry = result.get(groupId)
+      if (!entry) continue
+      entry.total += 1
+      if (task.status === 'done') entry.done += 1
     }
-  }, [groups])
+    return result
+  }, [groups, allTasks])
 
   const getStatusColor = (status: TaskGroup['status']): string => {
     switch (status) {

@@ -2,6 +2,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { EpicList } from '../EpicList'
 import type { TaskGroup, SprintTask } from '../../../../../shared/types'
+import { useSprintTasks } from '../../../stores/sprintTasks'
+
+const setSprintTasksForTest = (tasks: SprintTask[]): void => {
+  useSprintTasks.setState({ tasks } as Partial<ReturnType<typeof useSprintTasks.getState>> as ReturnType<typeof useSprintTasks.getState>)
+}
 
 const mockGroups: TaskGroup[] = [
   {
@@ -125,10 +130,10 @@ describe('EpicList', () => {
     vi.clearAllMocks()
     window.api = window.api || ({} as typeof window.api)
     window.api.groups = window.api.groups || ({} as typeof window.api.groups)
+    setSprintTasksForTest([])
   })
 
   it('renders header with title and count', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -146,7 +151,6 @@ describe('EpicList', () => {
   })
 
   it('renders all groups', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -174,7 +178,6 @@ describe('EpicList', () => {
   })
 
   it('calls onSelect when group is clicked', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
     const mockOnSelect = vi.fn()
 
     render(
@@ -195,7 +198,6 @@ describe('EpicList', () => {
   })
 
   it('highlights selected group', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     const { container } = render(
       <EpicList
@@ -214,10 +216,7 @@ describe('EpicList', () => {
   })
 
   it('shows task counts after loading', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockImplementation((groupId: string) => {
-      if (groupId === 'group-1') return Promise.resolve(mockTasksActive)
-      return Promise.resolve([])
-    })
+    setSprintTasksForTest(mockTasksActive.map((t) => ({ ...t, group_id: 'group-1' })))
 
     render(
       <EpicList
@@ -235,7 +234,6 @@ describe('EpicList', () => {
   })
 
   it.skip('handles task count loading errors gracefully', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockRejectedValue(new Error('Network error'))
 
     render(
       <EpicList
@@ -255,7 +253,6 @@ describe('EpicList', () => {
   })
 
   it('displays correct status label for in-pipeline', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -273,7 +270,6 @@ describe('EpicList', () => {
   })
 
   it('displays correct status label for draft', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -291,7 +287,6 @@ describe('EpicList', () => {
   })
 
   it('displays correct status label for completed', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -309,7 +304,6 @@ describe('EpicList', () => {
   })
 
   it('renders New Epic button', () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -325,7 +319,6 @@ describe('EpicList', () => {
   })
 
   it('calls onCreateNew when New Epic button is clicked', () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
     const mockOnCreateNew = vi.fn()
 
     render(
@@ -343,7 +336,6 @@ describe('EpicList', () => {
   })
 
   it('renders with empty groups array', () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList
@@ -360,10 +352,7 @@ describe('EpicList', () => {
   })
 
   it('shows progress bar with correct width', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockImplementation((groupId: string) => {
-      if (groupId === 'group-1') return Promise.resolve(mockTasksActive) // 1 done, 2 total = 50%
-      return Promise.resolve([])
-    })
+    setSprintTasksForTest(mockTasksActive.map((t) => ({ ...t, group_id: 'group-1' })))
 
     const { container } = render(
       <EpicList
@@ -382,10 +371,7 @@ describe('EpicList', () => {
   })
 
   it.skip('shows 100% progress for completed tasks', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockImplementation((groupId: string) => {
-      if (groupId === 'group-3') return Promise.resolve(mockTasksDone) // 1 done, 1 total = 100%
-      return Promise.resolve([])
-    })
+    setSprintTasksForTest(mockTasksDone.map((t) => ({ ...t, group_id: 'group-3' })))
 
     const { container } = render(
       <EpicList
@@ -416,7 +402,6 @@ describe('EpicList', () => {
   })
 
   it('shows accent color on selected item', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     const { container } = render(
       <EpicList
@@ -435,7 +420,6 @@ describe('EpicList', () => {
   })
 
   it('renders icon with uppercase character', async () => {
-    window.api.groups.getGroupTasks = vi.fn().mockResolvedValue([])
 
     render(
       <EpicList

@@ -2,6 +2,8 @@ import React, { useState, useCallback, useEffect, useMemo, useRef } from 'react'
 import type { TaskGroup, SprintTask } from '../../../../shared/types'
 import { useRepoOptions } from '../../hooks/useRepoOptions'
 import { useTaskWorkbenchStore } from '../../stores/taskWorkbench'
+import { useSprintTasks } from '../../stores/sprintTasks'
+import { useTaskGroups } from '../../stores/taskGroups'
 import { SpecDiffViewer } from './SpecDiffViewer'
 import './PlannerAssistant.css'
 
@@ -113,7 +115,7 @@ function ActionCard({
   const handleCreate = async (): Promise<void> => {
     try {
       if (action.type === 'create-task') {
-        await window.api.sprint.create({
+        await useSprintTasks.getState().createTask({
           title: action.payload.title ?? 'Untitled Task',
           spec: action.payload.spec ?? '',
           repo: firstRepo,
@@ -122,13 +124,15 @@ function ActionCard({
           group_id: epicId
         })
       } else if (action.type === 'create-epic') {
-        await window.api.groups.create({
+        await useTaskGroups.getState().createGroup({
           name: action.payload.name ?? 'New Epic',
           goal: action.payload.goal ?? ''
         })
       } else if (action.type === 'update-spec') {
         if (action.payload.taskId) {
-          await window.api.sprint.update(action.payload.taskId, { spec: action.payload.spec ?? '' })
+          await useSprintTasks
+            .getState()
+            .updateTask(action.payload.taskId, { spec: action.payload.spec ?? '' })
         }
       }
       const confirmText = action.type === 'create-task' ? '✓ Added to backlog' : '✓ Done'
@@ -401,7 +405,9 @@ function PlannerAssistantInner({
                   for (const { action: a, key } of pendingSpecActions) {
                     if (a.type !== 'update-spec' || !a.payload.taskId) continue
                     try {
-                      await window.api.sprint.update(a.payload.taskId, { spec: a.payload.spec ?? '' })
+                      await useSprintTasks
+                        .getState()
+                        .updateTask(a.payload.taskId, { spec: a.payload.spec ?? '' })
                       setCardStates((prev) => ({
                         ...prev,
                         [key]: { dismissed: false, confirmed: '✓ Done' }
