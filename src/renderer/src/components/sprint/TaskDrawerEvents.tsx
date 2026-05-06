@@ -80,7 +80,7 @@ function agentEventToDotKind(type: AgentEventType): StatusDotKind {
  * index signature allowed `String(event.text ?? '')` to produce `"undefined"`
  * for events that lack a `text` field. That cannot happen here.
  */
-export function summarizeEvent(event: AgentEvent): string {
+function summarizeEvent(event: AgentEvent): string {
   switch (event.type) {
     case 'agent:text':
     case 'agent:user_message':
