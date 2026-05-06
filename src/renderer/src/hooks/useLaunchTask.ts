@@ -38,6 +38,12 @@ export function useLaunchTask(): (task: SprintTask) => Promise<void> {
           return
         }
 
+        // The state machine forbids backlog → active directly; promote to
+        // queued first so the audit trail and transition rules stay consistent.
+        if (task.status === TASK_STATUS.BACKLOG) {
+          await updateTask(task.id, { status: TASK_STATUS.QUEUED })
+        }
+
         const result = await spawnLocal({
           task: task.spec ?? task.title,
           repoPath
