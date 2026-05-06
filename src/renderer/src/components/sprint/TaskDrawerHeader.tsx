@@ -116,7 +116,7 @@ function StatusIndicator({ task }: { task: SprintTask }): React.JSX.Element {
         style={{
           fontFamily: 'var(--font-mono)',
           fontSize: 10,
-          color: colorForTaskStatus(task.status as TaskStatus)
+          color: colorForTaskStatus(task.status)
         }}
       >
         {task.status}
