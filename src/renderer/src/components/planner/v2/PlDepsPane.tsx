@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import type { TaskGroup, EpicDependency } from '../../../../../shared/types'
 
 interface PlDepsPaneProps {
@@ -35,10 +35,14 @@ export function PlDepsPane({
   const [cycleError, setCycleError] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
 
-  const epicLookup = new Map(groups.map((g) => [g.id, g]))
-  const addableEpics = groups
-    .filter((g) => g.id !== epicId && !deps.some((d) => d.id === g.id))
-    .sort((a, b) => a.name.localeCompare(b.name))
+  const epicLookup = useMemo(() => new Map(groups.map((g) => [g.id, g])), [groups])
+  const addableEpics = useMemo(
+    () =>
+      groups
+        .filter((g) => g.id !== epicId && !deps.some((d) => d.id === g.id))
+        .sort((a, b) => a.name.localeCompare(b.name)),
+    [groups, epicId, deps]
+  )
 
   async function handleCycleCondition(dep: EpicDependency): Promise<void> {
     setCycleError(null)
