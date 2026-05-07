@@ -17,20 +17,20 @@ describe('taskWorkbench store', () => {
     expect(s.spec).toBe('')
   })
 
-  it('setField updates a single field', () => {
-    useTaskWorkbenchStore.getState().setField('title', 'Fix auth bug')
+  it('setTitle updates the title field', () => {
+    useTaskWorkbenchStore.getState().setTitle('Fix auth bug')
     expect(useTaskWorkbenchStore.getState().title).toBe('Fix auth bug')
   })
 
-  it('setField updates repo', () => {
-    useTaskWorkbenchStore.getState().setField('repo', 'life-os')
+  it('setRepo updates the repo field', () => {
+    useTaskWorkbenchStore.getState().setRepo('life-os')
     expect(useTaskWorkbenchStore.getState().repo).toBe('life-os')
   })
 
   it('resetForm restores defaults', () => {
     const store = useTaskWorkbenchStore.getState()
-    store.setField('title', 'Something')
-    store.setField('spec', 'Some spec')
+    store.setTitle('Something')
+    store.setSpec('Some spec')
     store.resetForm()
     const s = useTaskWorkbenchStore.getState()
     expect(s.title).toBe('')
@@ -159,7 +159,7 @@ describe('taskWorkbench store', () => {
       updated_at: '2026-01-01',
       created_at: '2026-01-01'
     })
-    useTaskWorkbenchStore.getState().setField('title', 'Modified title')
+    useTaskWorkbenchStore.getState().setTitle('Modified title')
     const s = useTaskWorkbenchStore.getState()
     expect(s.isDirty()).toBe(true)
   })
@@ -188,7 +188,7 @@ describe('taskWorkbench store', () => {
       updated_at: '2026-01-01',
       created_at: '2026-01-01'
     })
-    useTaskWorkbenchStore.getState().setField('spec', '## Modified spec')
+    useTaskWorkbenchStore.getState().setSpec('## Modified spec')
     const s = useTaskWorkbenchStore.getState()
     expect(s.isDirty()).toBe(true)
   })
@@ -217,7 +217,7 @@ describe('taskWorkbench store', () => {
       updated_at: '2026-01-01',
       created_at: '2026-01-01'
     })
-    useTaskWorkbenchStore.getState().setField('dependsOn', [
+    useTaskWorkbenchStore.getState().setDependsOn([
       { id: 'dep-1', type: 'hard' },
       { id: 'dep-2', type: 'soft' }
     ])

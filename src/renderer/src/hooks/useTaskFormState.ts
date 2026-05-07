@@ -20,8 +20,16 @@ export interface TaskFormState {
   model: string
   pendingGroupId: string | null
   crossRepoContract: string | null
-  // Actions
-  setField: (field: string, value: unknown) => void
+  // Typed setters (one per editable field)
+  setTitle: (value: string) => void
+  setRepo: (value: string) => void
+  setPriority: (value: number) => void
+  setSpec: (value: string) => void
+  setDependsOn: (value: TaskDependency[]) => void
+  setPlaygroundEnabled: (value: boolean) => void
+  setMaxCostUsd: (value: number | null) => void
+  setCrossRepoContract: (value: string | null) => void
+  setAdvancedOpen: (value: boolean) => void
   resetForm: () => void
   // Derived state
   isDirty: boolean
@@ -48,7 +56,15 @@ export function useTaskFormState(): TaskFormState {
   const model = useTaskWorkbenchStore((s) => s.model)
   const pendingGroupId = useTaskWorkbenchStore((s) => s.pendingGroupId)
   const crossRepoContract = useTaskWorkbenchStore((s) => s.crossRepoContract)
-  const setField = useTaskWorkbenchStore((s) => s.setField)
+  const setTitle = useTaskWorkbenchStore((s) => s.setTitle)
+  const setRepo = useTaskWorkbenchStore((s) => s.setRepo)
+  const setPriority = useTaskWorkbenchStore((s) => s.setPriority)
+  const setSpec = useTaskWorkbenchStore((s) => s.setSpec)
+  const setDependsOn = useTaskWorkbenchStore((s) => s.setDependsOn)
+  const setPlaygroundEnabled = useTaskWorkbenchStore((s) => s.setPlaygroundEnabled)
+  const setMaxCostUsd = useTaskWorkbenchStore((s) => s.setMaxCostUsd)
+  const setCrossRepoContract = useTaskWorkbenchStore((s) => s.setCrossRepoContract)
+  const setAdvancedOpen = useTaskWorkbenchStore((s) => s.setAdvancedOpen)
   const resetForm = useTaskWorkbenchStore((s) => s.resetForm)
   const isDirtyFn = useTaskWorkbenchStore((s) => s.isDirty)
 
@@ -71,7 +87,15 @@ export function useTaskFormState(): TaskFormState {
     model,
     pendingGroupId,
     crossRepoContract,
-    setField,
+    setTitle,
+    setRepo,
+    setPriority,
+    setSpec,
+    setDependsOn,
+    setPlaygroundEnabled,
+    setMaxCostUsd,
+    setCrossRepoContract,
+    setAdvancedOpen,
     resetForm,
     isDirty,
     isValid,

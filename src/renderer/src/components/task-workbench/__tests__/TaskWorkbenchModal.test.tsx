@@ -15,16 +15,14 @@ vi.mock('../TaskWorkbench', () => ({
 const formMocks = vi.hoisted(() => ({
   isDirty: vi.fn(() => false),
   resetForm: vi.fn(),
-  loadTask: vi.fn(),
-  setField: vi.fn()
+  loadTask: vi.fn()
 }))
 
 vi.mock('../../../stores/taskWorkbench', () => {
   const state = {
     isDirty: formMocks.isDirty,
     resetForm: formMocks.resetForm,
-    loadTask: formMocks.loadTask,
-    setField: formMocks.setField
+    loadTask: formMocks.loadTask
   }
   return {
     useTaskWorkbenchStore: Object.assign(

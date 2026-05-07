@@ -14,11 +14,11 @@ describe('taskWorkbench advancedOpen persistence', () => {
   })
 
   it('persists advancedOpen changes to localStorage', async () => {
-    useTaskWorkbenchStore.getState().setField('advancedOpen', true)
+    useTaskWorkbenchStore.getState().setAdvancedOpen(true)
     await new Promise((r) => setTimeout(r, 0))
     expect(localStorage.getItem(ADVANCED_KEY)).toBe('true')
 
-    useTaskWorkbenchStore.getState().setField('advancedOpen', false)
+    useTaskWorkbenchStore.getState().setAdvancedOpen(false)
     await new Promise((r) => setTimeout(r, 0))
     expect(localStorage.getItem(ADVANCED_KEY)).toBe('false')
   })

@@ -55,7 +55,7 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps): React.JSX.
   const title = useTaskWorkbenchStore((s) => s.title)
   const repo = useTaskWorkbenchStore((s) => s.repo)
   const spec = useTaskWorkbenchStore((s) => s.spec)
-  const setField = useTaskWorkbenchStore((s) => s.setField)
+  const setSpec = useTaskWorkbenchStore((s) => s.setSpec)
 
   const [input, setInput] = useState('')
   const scrollRef = useRef<HTMLDivElement>(null)
@@ -189,9 +189,9 @@ export function WorkbenchCopilot({ onClose }: WorkbenchCopilotProps): React.JSX.
     (msg: CopilotMessage) => {
       const current = useTaskWorkbenchStore.getState().spec
       const separator = current.trim() ? '\n\n' : ''
-      setField('spec', current + separator + msg.content)
+      setSpec(current + separator + msg.content)
     },
-    [setField]
+    [setSpec]
   )
 
   const sendDisabled = !input.trim() || loading

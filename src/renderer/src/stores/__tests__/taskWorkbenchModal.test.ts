@@ -46,7 +46,7 @@ describe('taskWorkbenchModal store', () => {
   })
 
   it('openForCreate opens the modal in create mode and resets the form', () => {
-    useTaskWorkbenchStore.getState().setField('title', 'leftover draft')
+    useTaskWorkbenchStore.getState().setTitle('leftover draft')
     useTaskWorkbenchModalStore.getState().openForCreate()
     expect(useTaskWorkbenchModalStore.getState().open).toBe(true)
     expect(useTaskWorkbenchModalStore.getState().editingTask).toBeNull()

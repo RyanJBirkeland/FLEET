@@ -13,7 +13,9 @@ vi.mock('../../../stores/taskWorkbench', () => ({
   useTaskWorkbenchStore: {
     getState: () => ({
       resetForm: vi.fn(),
-      setField: vi.fn()
+      setTitle: vi.fn(),
+      setSpec: vi.fn(),
+      setPendingGroupId: vi.fn()
     })
   }
 }))

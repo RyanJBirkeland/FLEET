@@ -25,16 +25,16 @@ export const useTaskWorkbenchModalStore = create<TaskWorkbenchModalState>((set) 
   openForCreate: (preset) => {
     const form = useTaskWorkbenchStore.getState()
     form.resetForm()
-    if (preset?.groupId) form.setField('pendingGroupId', preset.groupId)
+    if (preset?.groupId) form.setPendingGroupId(preset.groupId)
     set({ open: true, editingTask: null })
   },
 
   openForCreateWithDefaults: (defaults) => {
     const form = useTaskWorkbenchStore.getState()
     form.resetForm()
-    if (defaults.title != null) form.setField('title', defaults.title)
-    if (defaults.spec != null) form.setField('spec', defaults.spec)
-    if (defaults.groupId != null) form.setField('pendingGroupId', defaults.groupId)
+    if (defaults.title != null) form.setTitle(defaults.title)
+    if (defaults.spec != null) form.setSpec(defaults.spec)
+    if (defaults.groupId != null) form.setPendingGroupId(defaults.groupId)
     set({ open: true, editingTask: null })
   },
 

@@ -147,12 +147,12 @@ function ActionCard({
     const store = useTaskWorkbenchStore.getState()
     store.resetForm()
     if (action.type === 'create-task') {
-      store.setField('title', action.payload.title ?? '')
-      store.setField('spec', action.payload.spec ?? '')
-      store.setField('pendingGroupId', epic.id)
+      store.setTitle(action.payload.title ?? '')
+      store.setSpec(action.payload.spec ?? '')
+      store.setPendingGroupId(epic.id)
     } else if (action.type === 'create-epic') {
-      store.setField('title', action.payload.name ?? '')
-      store.setField('spec', action.payload.goal ?? '')
+      store.setTitle(action.payload.name ?? '')
+      store.setSpec(action.payload.goal ?? '')
     }
     onOpenWorkbench()
     onClose()

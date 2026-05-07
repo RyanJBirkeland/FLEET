@@ -77,7 +77,15 @@ export function WorkbenchForm({
     model,
     pendingGroupId,
     crossRepoContract,
-    setField,
+    setTitle,
+    setRepo,
+    setPriority,
+    setSpec,
+    setDependsOn,
+    setPlaygroundEnabled,
+    setMaxCostUsd,
+    setCrossRepoContract,
+    setAdvancedOpen,
     resetForm
   } = form
 
@@ -174,13 +182,13 @@ export function WorkbenchForm({
         repo,
         templateHint: 'feature'
       })
-      if (result.spec) setField('spec', result.spec)
+      if (result.spec) setSpec(result.spec)
     } catch {
       toast.error('Failed to generate spec')
     } finally {
       setGenerating(false)
     }
-  }, [title, repo, setField])
+  }, [title, repo, setSpec])
 
   const handleResearch = useCallback(() => {
     if (!title.trim()) {
@@ -225,7 +233,7 @@ export function WorkbenchForm({
             ref={titleRef}
             type="text"
             value={title}
-            onChange={(e) => setField('title', e.target.value)}
+            onChange={(e) => setTitle(e.target.value)}
             placeholder='e.g. "Add recipe search to Feast onboarding"'
             className="wb-form__input"
           />
@@ -234,7 +242,7 @@ export function WorkbenchForm({
           <select
             id="wb-form-repo"
             value={repo}
-            onChange={(e) => setField('repo', e.target.value)}
+            onChange={(e) => setRepo(e.target.value)}
             className="wb-form__select fleet-select"
           >
             <option value="" disabled>
@@ -258,7 +266,7 @@ export function WorkbenchForm({
           <select
             id="wb-form-priority"
             value={priority}
-            onChange={(e) => setField('priority', Number(e.target.value))}
+            onChange={(e) => setPriority(Number(e.target.value))}
             className="wb-form__select fleet-select"
           >
             {PRIORITY_OPTIONS.map((p) => (
@@ -273,13 +281,13 @@ export function WorkbenchForm({
       <DependencyPicker
         dependencies={dependsOn ?? []}
         availableTasks={allTasks}
-        onChange={(deps) => setField('dependsOn', deps)}
+        onChange={(deps) => setDependsOn(deps)}
         currentTaskId={taskId ?? undefined}
       />
 
       <div>
         <button
-          onClick={() => setField('advancedOpen', !advancedOpen)}
+          onClick={() => setAdvancedOpen(!advancedOpen)}
           className="wb-form__toggle"
           aria-expanded={advancedOpen}
           aria-controls="wb-form-advanced"
@@ -298,7 +306,7 @@ export function WorkbenchForm({
                   max="50"
                   value={maxCostUsd ?? ''}
                   onChange={(e) =>
-                    setField('maxCostUsd', e.target.value ? Number(e.target.value) : null)
+                    setMaxCostUsd(e.target.value ? Number(e.target.value) : null)
                   }
                   placeholder="No limit"
                   className={`wb-form__input${maxCostUsd && maxCostUsd > 50 ? ' wb-form__input--invalid' : ''}`}
@@ -310,7 +318,7 @@ export function WorkbenchForm({
                   type="checkbox"
                   id="playground-enabled-workbench"
                   checked={playgroundEnabled}
-                  onChange={(e) => setField('playgroundEnabled', e.target.checked)}
+                  onChange={(e) => setPlaygroundEnabled(e.target.checked)}
                 />
                 <label
                   htmlFor="playground-enabled-workbench"
@@ -338,7 +346,7 @@ export function WorkbenchForm({
                       id="wb-form-contract"
                       aria-labelledby="wb-form-contract-toggle"
                       value={crossRepoContract ?? ''}
-                      onChange={(e) => setField('crossRepoContract', e.target.value)}
+                      onChange={(e) => setCrossRepoContract(e.target.value)}
                       placeholder="e.g. SprintTask type definition, API endpoint contracts, shared types..."
                       className="wb-form__textarea wb-form__textarea--code"
                       rows={8}

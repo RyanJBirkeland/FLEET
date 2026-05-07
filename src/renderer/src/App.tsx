@@ -157,9 +157,9 @@ function App(): React.JSX.Element {
         return
       }
       const wb = useTaskWorkbenchStore.getState()
-      wb.setField('title', parsed.title)
-      wb.setField('spec', parsed.spec)
-      wb.setField('repo', parsed.repo)
+      wb.setTitle(parsed.title)
+      wb.setSpec(parsed.spec)
+      wb.setRepo(parsed.repo)
       wb.setSpecType(parsed.specType as Parameters<typeof wb.setSpecType>[0])
       usePanelLayoutStore.getState().setView('planner')
     } catch {

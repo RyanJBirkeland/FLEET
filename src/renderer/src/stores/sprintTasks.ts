@@ -188,7 +188,7 @@ export const selectActiveTasks = (state: SprintTasksState): SprintTask[] =>
   state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE)
 
 export const selectActiveTaskCount = (state: SprintTasksState): number =>
-  state.tasks.filter((t) => t.status === TASK_STATUS.ACTIVE).length
+  selectActiveTasks(state).length
 
 export const selectReviewTaskCount = (state: SprintTasksState): number =>
   state.tasks.reduce((n, t) => (t.status === 'review' ? n + 1 : n), 0)
@@ -215,10 +215,43 @@ function stableTaskRef(incoming: SprintTask, existing: SprintTask | undefined): 
   return existing
 }
 
+/**
+ * Equality for a single MUTABLE_TASK_FIELDS value. Most fields are primitives;
+ * the only array-typed entry today is `revision_feedback: RevisionFeedbackEntry[]`.
+ *
+ * We compare arrays by length then by shallow object equality on each element —
+ * `JSON.stringify` was 10–20× slower per call and would silently report two
+ * structurally-equal objects as different if key insertion order ever drifted.
+ */
 function mutableFieldEqual(a: unknown, b: unknown): boolean {
   if (a === b) return true
-  if (Array.isArray(a) && Array.isArray(b)) return JSON.stringify(a) === JSON.stringify(b)
+  if (Array.isArray(a) && Array.isArray(b)) return arraysShallowEqual(a, b)
   return false
+}
+
+function arraysShallowEqual(a: unknown[], b: unknown[]): boolean {
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    if (!shallowEqual(a[i], b[i])) return false
+  }
+  return true
+}
+
+function shallowEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a == null || b == null) return false
+  if (typeof a !== 'object' || typeof b !== 'object') return false
+  const aKeys = Object.keys(a as Record<string, unknown>)
+  const bKeys = Object.keys(b as Record<string, unknown>)
+  if (aKeys.length !== bKeys.length) return false
+  for (const key of aKeys) {
+    if (
+      (a as Record<string, unknown>)[key] !== (b as Record<string, unknown>)[key]
+    ) {
+      return false
+    }
+  }
+  return true
 }
 
 /**

@@ -46,9 +46,19 @@ interface TaskWorkbenchState {
   // --- Validation UI (expanded state only; check data lives in taskWorkbenchValidation) ---
   checksExpanded: boolean
 
-  // --- Actions ---
-  setField: (field: string, value: unknown) => void
+  // --- Actions: typed per-field setters ---
+  setTitle: (value: string) => void
+  setRepo: (value: string) => void
+  setPriority: (value: number) => void
+  setSpec: (value: string) => void
   setSpecType: (type: SpecType | null) => void
+  setDependsOn: (value: TaskDependency[]) => void
+  setPlaygroundEnabled: (value: boolean) => void
+  setMaxCostUsd: (value: number | null) => void
+  setCrossRepoContract: (value: string | null) => void
+  setAdvancedOpen: (value: boolean) => void
+  setPendingGroupId: (value: string | null) => void
+
   resetForm: () => void
   loadTask: (task: SprintTask) => void
   toggleChecksExpanded: () => void
@@ -242,12 +252,93 @@ const [debouncedPersistDraft, cancelDraftPersist] = createDebouncedPersister<Per
 // Store
 // ---------------------------------------------------------------------------
 
-export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
+/**
+ * Builds a PersistedDraft from a SprintTask. Used by `loadTask` for both
+ * the "current values" the form reads and the "original snapshot" stored
+ * for dirty-state comparison — the two were duplicated inline previously.
+ */
+function snapshotFromTask(task: SprintTask): PersistedDraft {
+  return {
+    title: task.title,
+    repo: task.repo,
+    priority: task.priority,
+    spec: task.spec ?? '',
+    dependsOn: task.depends_on ?? [],
+    playgroundEnabled: task.playground_enabled ?? false,
+    maxCostUsd: task.max_cost_usd ?? null,
+    model: task.model ?? '',
+    specType: (task.spec_type as SpecType) ?? null,
+    crossRepoContract: task.cross_repo_contract ?? null
+  }
+}
+
+function dependsOnEqual(a: TaskDependency[], b: TaskDependency[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const left = a[i]
+    const right = b[i]
+    if (!left || !right) return false
+    if (left.id !== right.id || left.type !== right.type) return false
+  }
+  return true
+}
+
+function snapshotsEqual(a: PersistedDraft, b: PersistedDraft): boolean {
+  return (
+    a.title === b.title &&
+    a.repo === b.repo &&
+    a.priority === b.priority &&
+    a.spec === b.spec &&
+    a.playgroundEnabled === b.playgroundEnabled &&
+    a.maxCostUsd === b.maxCostUsd &&
+    a.model === b.model &&
+    a.crossRepoContract === b.crossRepoContract &&
+    a.specType === b.specType &&
+    dependsOnEqual(a.dependsOn, b.dependsOn)
+  )
+}
+
+function snapshotFromState(state: TaskWorkbenchState): PersistedDraft {
+  return {
+    title: state.title,
+    repo: state.repo,
+    priority: state.priority,
+    spec: state.spec,
+    dependsOn: state.dependsOn,
+    playgroundEnabled: state.playgroundEnabled,
+    maxCostUsd: state.maxCostUsd,
+    model: state.model,
+    crossRepoContract: state.crossRepoContract,
+    specType: state.specType
+  }
+}
+
+/**
+ * Returns true when the current form differs from the originalSnapshot.
+ * Pure: takes state as an argument (no `getState()` call) so it composes
+ * cleanly inside selectors and hook computations.
+ */
+export function isDirtyFromState(state: TaskWorkbenchState): boolean {
+  const original = state.originalSnapshot
+  if (!original) return false
+  return !snapshotsEqual(snapshotFromState(state), original)
+}
+
+export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set, get) => ({
   ...initialState(),
 
-  setField: (field, value) => set({ [field]: value } as Partial<TaskWorkbenchState>),
-
+  setTitle: (value) => set({ title: value }),
+  setRepo: (value) => set({ repo: value }),
+  setPriority: (value) => set({ priority: value }),
+  setSpec: (value) => set({ spec: value }),
   setSpecType: (type) => set({ specType: type }),
+  setDependsOn: (value) => set({ dependsOn: value }),
+  setPlaygroundEnabled: (value) => set({ playgroundEnabled: value }),
+  setMaxCostUsd: (value) => set({ maxCostUsd: value }),
+  setCrossRepoContract: (value) => set({ crossRepoContract: value }),
+  setAdvancedOpen: (value) => set({ advancedOpen: value }),
+  setPendingGroupId: (value) => set({ pendingGroupId: value }),
 
   resetForm: () => {
     cancelDraftPersist()
@@ -256,32 +347,21 @@ export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
   },
 
   loadTask: (task) => {
-    const snapshot: PersistedDraft = {
-      title: task.title,
-      repo: task.repo,
-      priority: task.priority,
-      spec: task.spec ?? '',
-      dependsOn: task.depends_on ?? [],
-      playgroundEnabled: task.playground_enabled ?? false,
-      maxCostUsd: task.max_cost_usd ?? null,
-      model: task.model ?? '',
-      specType: (task.spec_type as SpecType) ?? null,
-      crossRepoContract: task.cross_repo_contract ?? null
-    }
+    const snapshot = snapshotFromTask(task)
     set({
       mode: 'edit',
       taskId: task.id,
-      title: task.title,
-      repo: task.repo,
-      priority: task.priority,
-      spec: task.spec ?? '',
       taskTemplateName: task.template_name ?? '',
-      dependsOn: task.depends_on ?? [],
-      playgroundEnabled: task.playground_enabled ?? false,
-      maxCostUsd: task.max_cost_usd ?? null,
-      model: task.model ?? '',
-      specType: (task.spec_type as SpecType) ?? null,
-      crossRepoContract: task.cross_repo_contract ?? null,
+      title: snapshot.title,
+      repo: snapshot.repo,
+      priority: snapshot.priority,
+      spec: snapshot.spec,
+      dependsOn: snapshot.dependsOn,
+      playgroundEnabled: snapshot.playgroundEnabled,
+      maxCostUsd: snapshot.maxCostUsd,
+      model: snapshot.model,
+      specType: snapshot.specType,
+      crossRepoContract: snapshot.crossRepoContract,
       originalSnapshot: snapshot
     })
     // Clear stale validation checks from prior editing session
@@ -297,39 +377,7 @@ export const useTaskWorkbenchStore = create<TaskWorkbenchState>((set) => ({
   setOperationalChecks: (checks) =>
     useTaskWorkbenchValidation.getState().setOperationalChecks(checks),
 
-  isDirty: (): boolean => {
-    const state: TaskWorkbenchState = useTaskWorkbenchStore.getState()
-    const originalSnapshot: PersistedDraft | null = state.originalSnapshot
-
-    // No original snapshot = pristine create mode
-    if (!originalSnapshot) return false
-
-    const current: PersistedDraft = {
-      title: state.title,
-      repo: state.repo,
-      priority: state.priority,
-      spec: state.spec,
-      dependsOn: state.dependsOn,
-      playgroundEnabled: state.playgroundEnabled,
-      maxCostUsd: state.maxCostUsd,
-      model: state.model,
-      crossRepoContract: state.crossRepoContract,
-      specType: state.specType
-    }
-
-    return (
-      current.title !== originalSnapshot.title ||
-      current.repo !== originalSnapshot.repo ||
-      current.priority !== originalSnapshot.priority ||
-      current.spec !== originalSnapshot.spec ||
-      current.playgroundEnabled !== originalSnapshot.playgroundEnabled ||
-      current.maxCostUsd !== originalSnapshot.maxCostUsd ||
-      current.model !== originalSnapshot.model ||
-      current.crossRepoContract !== originalSnapshot.crossRepoContract ||
-      current.specType !== originalSnapshot.specType ||
-      JSON.stringify(current.dependsOn) !== JSON.stringify(originalSnapshot.dependsOn)
-    )
-  }
+  isDirty: (): boolean => isDirtyFromState(get())
 }))
 
 // Persist advancedOpen to localStorage on change

@@ -26,7 +26,7 @@ export function SpecEditor({
   generating
 }: SpecEditorProps): React.JSX.Element {
   const spec = useTaskWorkbenchStore((s) => s.spec)
-  const setField = useTaskWorkbenchStore((s) => s.setField)
+  const setSpec = useTaskWorkbenchStore((s) => s.setSpec)
   const setSpecType = useTaskWorkbenchStore((s) => s.setSpecType)
   const { confirm, confirmProps } = useConfirm()
 
@@ -34,7 +34,7 @@ export function SpecEditor({
     async (templateSpec: string, templateType: SpecType) => {
       // If spec is empty, apply immediately without confirmation
       if (!spec.trim()) {
-        setField('spec', templateSpec)
+        setSpec(templateSpec)
         setSpecType(templateType)
         return
       }
@@ -47,11 +47,11 @@ export function SpecEditor({
       })
 
       if (confirmed) {
-        setField('spec', templateSpec)
+        setSpec(templateSpec)
         setSpecType(templateType)
       }
     },
-    [spec, setField, setSpecType, confirm]
+    [spec, setSpec, setSpecType, confirm]
   )
 
   const handleKeyDown = useCallback(
@@ -62,13 +62,13 @@ export function SpecEditor({
         const start = target.selectionStart
         const end = target.selectionEnd
         const newValue = spec.substring(0, start) + '  ' + spec.substring(end)
-        setField('spec', newValue)
+        setSpec(newValue)
         requestAnimationFrame(() => {
           target.selectionStart = target.selectionEnd = start + 2
         })
       }
     },
-    [spec, setField]
+    [spec, setSpec]
   )
 
   return (
@@ -107,7 +107,7 @@ export function SpecEditor({
       <textarea
         id="wb-form-spec"
         value={spec}
-        onChange={(e) => setField('spec', e.target.value)}
+        onChange={(e) => setSpec(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder="Describe what the agent should do. The more specific, the better the results."
         className="wb-spec__textarea"

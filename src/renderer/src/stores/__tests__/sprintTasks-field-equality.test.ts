@@ -113,6 +113,69 @@ describe('poll-merge field-wise equality', () => {
     expect(secondRef.status).toBe('active')
   })
 
+  it('preserves object identity when revision_feedback arrays are structurally equal', async () => {
+    const feedback = [{ timestamp: '2026-01-01', feedback: 'fix tests', attempt: 1 }]
+    const task = makeTask('t1', { revision_feedback: feedback })
+    ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([task])
+
+    await useSprintTasks.getState().loadData()
+    const firstRef = useSprintTasks.getState().tasks[0]
+
+    // Different array instance with structurally identical contents — must preserve reference
+    const sameContents = [{ timestamp: '2026-01-01', feedback: 'fix tests', attempt: 1 }]
+    ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([
+      { ...task, revision_feedback: sameContents }
+    ])
+    await useSprintTasks.getState().loadData()
+
+    expect(useSprintTasks.getState().tasks[0]).toBe(firstRef)
+  })
+
+  it('replaces object reference when a revision_feedback entry changes', async () => {
+    const task = makeTask('t1', {
+      revision_feedback: [{ timestamp: '2026-01-01', feedback: 'first', attempt: 1 }],
+      updated_at: '2026-01-01T00:00:00.000Z'
+    })
+    ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([task])
+    await useSprintTasks.getState().loadData()
+    const firstRef = useSprintTasks.getState().tasks[0]
+
+    const updatedTask = {
+      ...task,
+      revision_feedback: [{ timestamp: '2026-01-01', feedback: 'changed', attempt: 1 }],
+      updated_at: '2026-01-01T00:00:01.000Z'
+    }
+    ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([updatedTask])
+    await useSprintTasks.getState().loadData()
+
+    expect(useSprintTasks.getState().tasks[0]).not.toBe(firstRef)
+    expect(useSprintTasks.getState().tasks[0].revision_feedback?.[0]?.feedback).toBe('changed')
+  })
+
+  it('replaces object reference when a revision_feedback entry is appended', async () => {
+    const task = makeTask('t1', {
+      revision_feedback: [{ timestamp: '2026-01-01', feedback: 'first', attempt: 1 }],
+      updated_at: '2026-01-01T00:00:00.000Z'
+    })
+    ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([task])
+    await useSprintTasks.getState().loadData()
+    const firstRef = useSprintTasks.getState().tasks[0]
+
+    const updatedTask = {
+      ...task,
+      revision_feedback: [
+        { timestamp: '2026-01-01', feedback: 'first', attempt: 1 },
+        { timestamp: '2026-01-02', feedback: 'second', attempt: 2 }
+      ],
+      updated_at: '2026-01-01T00:00:01.000Z'
+    }
+    ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([updatedTask])
+    await useSprintTasks.getState().loadData()
+
+    expect(useSprintTasks.getState().tasks[0]).not.toBe(firstRef)
+    expect(useSprintTasks.getState().tasks[0].revision_feedback).toHaveLength(2)
+  })
+
   it('replaces object reference when pr_status changes', async () => {
     const task = makeTask('t1', { status: 'done', pr_status: null, updated_at: '2026-01-01T00:00:00.000Z' })
     ;(window.api.sprint.list as ReturnType<typeof vi.fn>).mockResolvedValue([task])

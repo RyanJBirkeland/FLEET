@@ -3,14 +3,12 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DoneStep } from '../steps/DoneStep'
 
-const mockSetField = vi.fn()
 const mockSetSpecType = vi.fn()
 const mockSetView = vi.fn()
 
 vi.mock('../../../stores/taskWorkbench', () => ({
-  useTaskWorkbenchStore: (
-    sel: (s: { setField: typeof mockSetField; setSpecType: typeof mockSetSpecType }) => unknown
-  ) => sel({ setField: mockSetField, setSpecType: mockSetSpecType })
+  useTaskWorkbenchStore: (sel: (s: { setSpecType: typeof mockSetSpecType }) => unknown) =>
+    sel({ setSpecType: mockSetSpecType })
 }))
 
 vi.mock('../../../stores/panelLayout', () => ({
