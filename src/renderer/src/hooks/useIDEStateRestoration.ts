@@ -40,6 +40,9 @@ export function useIDEStateRestoration(): void {
         }
         useIDEStore.setState({
           rootPath: state.rootPath ?? null,
+          // Reset openTabs / activeFilePath when no rootPath (e.g. watchDir
+          // failed) — they only make sense scoped to the registered root.
+          ...(state.rootPath ? {} : { openTabs: [], activeFilePath: null }),
           sidebarCollapsed: state.sidebarCollapsed ?? false,
           terminalCollapsed: state.terminalCollapsed ?? false,
           recentFolders: state.recentFolders ?? [],

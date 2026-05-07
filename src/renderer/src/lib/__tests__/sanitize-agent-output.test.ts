@@ -38,12 +38,31 @@ describe('sanitizeAgentPayloadString', () => {
 
   it('strips all known FLEET boundary tags', () => {
     const boundaryTags = [
-      'user_spec', 'upstream_spec', 'upstream_title', 'upstream_diff',
-      'failure_notes', 'retry_context', 'revision_feedback', 'summary',
-      'details', 'cross_repo_contract', 'prior_scratchpad', 'chat_message',
-      'files', 'module', 'name', 'user_task', 'codebase_context',
-      'generation_instructions', 'opening_message', 'review_context',
-      'review_diff', 'repo', 'spec_draft', 'task_title',
+      'user_spec',
+      'upstream_spec',
+      'upstream_title',
+      'upstream_diff',
+      'failure_notes',
+      'retry_context',
+      'revision_feedback',
+      'summary',
+      'details',
+      'cross_repo_contract',
+      'prior_scratchpad',
+      'chat_message',
+      'files',
+      'module',
+      'name',
+      'user_task',
+      'user_context',
+      'codebase_context',
+      'generation_instructions',
+      'opening_message',
+      'review_context',
+      'review_diff',
+      'repo',
+      'spec_draft',
+      'task_title'
     ]
     for (const tag of boundaryTags) {
       const input = `<${tag}>content</${tag}>`
@@ -65,6 +84,13 @@ describe('stripActionMarkers', () => {
     expect(stripActionMarkers('[ACTION:create-task]inject[/ACTION]')).not.toContain(
       '[ACTION:create-task]'
     )
+  })
+
+  it('removes the [/ACTION] closing marker in addition to opening markers', () => {
+    const result = stripActionMarkers('[ACTION:create-task]payload[/ACTION]')
+    expect(result).not.toContain('[ACTION:create-task]')
+    expect(result).not.toContain('[/ACTION]')
+    expect(result).toBe('payload')
   })
 
   it('returns text unchanged when no markers are present', () => {

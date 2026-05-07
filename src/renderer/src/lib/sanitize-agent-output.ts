@@ -76,5 +76,5 @@ export function sanitizeAgentPayloadString(value: string | undefined, maxLength:
  * so they are not shown to the user in the chat bubble.
  */
 export function stripActionMarkers(text: string): string {
-  return text.replace(/\[ACTION:[^\]]*\]/g, '')
+  return text.replace(/\[ACTION:[^\]]*\]/g, '').replace(/\[\/ACTION\]/g, '')
 }
